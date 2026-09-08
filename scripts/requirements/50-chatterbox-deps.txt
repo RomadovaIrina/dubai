@@ -1,0 +1,6 @@
+# chatterbox itself is installed with --no-deps from git (see setup_dabai.sh); these are its deps minus torch/transformers/diffusers/gradio
+resemble-perth @ git+https://github.com/resemble-ai/Perth.git@master
+conformer==0.3.2
+pykakasi==2.3.0
+pyloudnorm
+spacy-pkuseg

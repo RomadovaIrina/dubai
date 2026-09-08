@@ -1,0 +1,17 @@
+# Immutable baseline + shared pins. Passed as `-c constraints.txt` to every stage so no package can move them.
+torch==2.7.1+cu128
+torchvision==0.22.1+cu128
+torchaudio==2.7.1+cu128
+numpy==1.26.4
+scipy==1.15.3
+numba==0.61.2
+librosa==0.11.0
+transformers==4.48.0
+tokenizers>=0.21,<0.22
+huggingface_hub==0.30.2
+diffusers==0.32.2
+safetensors==0.5.3
+accelerate==0.26.1
+opencv-python==4.9.0.80
+# never allow these in:
+xformers<0

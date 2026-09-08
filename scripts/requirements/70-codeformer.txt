@@ -1,0 +1,10 @@
+# third_party/CodeFormer/requirements.txt minus torch/torchvision/numpy/opencv/scipy/lpips/tb-nightly (already present or not needed)
+addict
+future
+lmdb
+pyyaml
+requests
+scikit-image
+tqdm
+yapf
+gdown

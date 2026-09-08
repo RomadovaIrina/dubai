@@ -1,0 +1,10 @@
+faster-whisper 1.2.1 requires onnxruntime, which is not installed.
+chatterbox-tts 0.1.7 requires gradio, which is not installed.
+s3tokenizer 0.3.0 requires pre-commit, which is not installed.
+albucore 0.0.24 requires opencv-python-headless, which is not installed.
+albumentations 2.0.8 requires opencv-python-headless, which is not installed.
+chatterbox-tts 0.1.7 has requirement diffusers==0.29.0, but you have diffusers 0.32.2.
+chatterbox-tts 0.1.7 has requirement torch==2.6.0; python_version < "3.14", but you have torch 2.7.1+cu128.
+chatterbox-tts 0.1.7 has requirement torchaudio==2.6.0; python_version < "3.14", but you have torchaudio 2.7.1+cu128.
+chatterbox-tts 0.1.7 has requirement transformers==5.2.0, but you have transformers 4.48.0.
+decord 0.6.0 is not supported on this platform
