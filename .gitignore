@@ -1,58 +1,116 @@
+# ---------------------------------------------------------------------------
 # Secrets
+# ---------------------------------------------------------------------------
 .env
 *.env
 .env.*
 
+# ---------------------------------------------------------------------------
 # Python
+# ---------------------------------------------------------------------------
 __pycache__/
 *.py[cod]
 *.so
+*.egg-info/
 .pytest_cache/
 .ipynb_checkpoints/
+.mypy_cache/
+.ruff_cache/
 
+# ---------------------------------------------------------------------------
 # Virtual environments
-venv/
-.venv/
-env/
+# ---------------------------------------------------------------------------
+# anchored to the repo root on purpose: an unanchored `env/` also matches
+# reports/pilot/env/, which is exactly the provenance we want committed
+/venv/
+/.venv/
+/env/
 .claude
-test_videos
 
-# Model weights / caches
-models/
+# ---------------------------------------------------------------------------
+# Model weights / caches. Restored by scripts/download_models.sh
+# ---------------------------------------------------------------------------
+/models/
+# unanchored: third-party clones place these at their own depth
 checkpoints/
+weights/
 *.pth
 *.pt
 *.ckpt
 *.safetensors
 *.gguf
 *.bin
+*.onnx
 
-# Third-party repositories are restored by setup scripts
-third_party/
+# ---------------------------------------------------------------------------
+# Third-party repositories are restored by scripts/setup_dabai.sh
+# ---------------------------------------------------------------------------
+/third_party/
 
+# ---------------------------------------------------------------------------
 # Runtime artifacts
-artifacts/
-tmp/
-logs/
+# ---------------------------------------------------------------------------
+/artifacts/
+/tmp/
+/logs/
+nohup.out
+*.log
 
-# Generated media
-*.mp4
-*.wav
-*.mp3
-*.flac
-*.mkv
+# ---------------------------------------------------------------------------
+# Generated media. Extensions are matched case-insensitively on purpose:
+# phone cameras write .MP4/.MOV and those slipped past the old lowercase-only list.
+# ---------------------------------------------------------------------------
+*.[mM][pP]4
+*.[mM][kK][vV]
+*.[mM][oO][vV]
+*.[aA][vV][iI]
+*.[wW][eE][bB][mM]
+*.[wW][aA][vV]
+*.[mM][pP]3
+*.[fF][lL][aA][cC]
+*.[mM]4[aA]
+*.[oO][gG][gG]
+*.[sS][rR][tT]
+*.[vV][tT][tT]
+*.[aA][sS][sS]
 
-# Generated large/cache data
+# ---------------------------------------------------------------------------
+# Archives — uploads land here as .zip and must never enter the repo
+# ---------------------------------------------------------------------------
+*.[zZ][iI][pP]
+*.tar
+*.tar.*
+*.tgz
+*.7z
+*.rar
+
+# ---------------------------------------------------------------------------
+# Caches
+# ---------------------------------------------------------------------------
 .cache/
-huggingface/
-hf/
+/huggingface/
+/hf/
 
+# ---------------------------------------------------------------------------
+# Pilot measurement outputs (scripts/pilot/).
+# The RESULTS are small and worth committing — env snapshots, *.json, *.jsonl, *.md —
+# so they are deliberately NOT ignored: that is how a chart stays traceable to a stack.
+# Only scratch work and generated media are excluded.
+# ---------------------------------------------------------------------------
+reports/pilot/stages_work/
+reports/pilot/*.mp4
+
+# ---------------------------------------------------------------------------
+# Generated report media (kept out regardless of directory depth)
+# ---------------------------------------------------------------------------
+reports/**/*.mp4
+reports/**/*.wav
+
+# ---------------------------------------------------------------------------
 # OS / editor
+# ---------------------------------------------------------------------------
 .DS_Store
+Thumbs.db
 .vscode/
 .idea/
-
-# Generated reports that should not go to git
-reports/*.mp4
-reports/*.wav
-EOF
+*.swp

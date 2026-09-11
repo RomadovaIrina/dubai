@@ -1,0 +1,191 @@
+{
+  "gpu": {
+    "nvidia_smi": "NVIDIA GeForce RTX 4090, 8.9, 49140 MiB, 580.126.09",
+    "name": "NVIDIA GeForce RTX 4090",
+    "capability": "sm_89",
+    "total_vram_bytes": 50864390144,
+    "total_vram_gib": 47.37,
+    "free_vram_gib": 46.97,
+    "multi_processor_count": 128,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "torch": "2.7.1+cu128",
+  "torch_cuda": "12.8",
+  "cudnn": 90701,
+  "dtype": "float16",
+  "packages": {
+    "flash-attn": null,
+    "xformers": null,
+    "triton": "3.3.1",
+    "torch": "2.7.1+cu128",
+    "transformers": "4.48.0",
+    "diffusers": "0.32.2"
+  },
+  "sdpa_flags": {
+    "flash": true,
+    "mem_efficient": true,
+    "math": true,
+    "cudnn": true
+  },
+  "shapes": [
+    {
+      "name": "latentsync-unet self-attn 512², 1 frame",
+      "B": 1,
+      "H": 8,
+      "q_len": 4096,
+      "kv_len": 4096,
+      "head_dim": 64,
+      "causal": false,
+      "backends": {
+        "FLASH_ATTENTION": {
+          "ok": true,
+          "ms": 0.24,
+          "peak_torch_mib": 37.3,
+          "max_abs_err_vs_fp32_math": 6.379187107086182e-05
+        },
+        "EFFICIENT_ATTENTION": {
+          "ok": true,
+          "ms": 0.312,
+          "peak_torch_mib": 41.1,
+          "max_abs_err_vs_fp32_math": 6.406009197235107e-05
+        },
+        "CUDNN_ATTENTION": {
+          "ok": true,
+          "ms": 0.233,
+          "peak_torch_mib": 41.1,
+          "max_abs_err_vs_fp32_math": 6.406009197235107e-05
+        },
+        "MATH": {
+          "ok": true,
+          "ms": 5.471,
+          "peak_torch_mib": 1221.2,
+          "max_abs_err_vs_fp32_math": 6.039440631866455e-05
+        }
+      },
+      "default_ms": 0.242
+    },
+    {
+      "name": "latentsync-unet self-attn, 16-frame batch",
+      "B": 16,
+      "H": 8,
+      "q_len": 1024,
+      "kv_len": 1024,
+      "head_dim": 64,
+      "causal": false,
+      "backends": {
+        "FLASH_ATTENTION": {
+          "ok": true,
+          "ms": 0.237,
+          "peak_torch_mib": 125.6,
+          "max_abs_err_vs_fp32_math": 0.00021284818649291992
+        },
+        "EFFICIENT_ATTENTION": {
+          "ok": true,
+          "ms": 0.293,
+          "peak_torch_mib": 137.1,
+          "max_abs_err_vs_fp32_math": 0.00021284818649291992
+        },
+        "CUDNN_ATTENTION": {
+          "ok": true,
+          "ms": 0.209,
+          "peak_torch_mib": 137.1,
+          "max_abs_err_vs_fp32_math": 0.00021284818649291992
+        },
+        "MATH": {
+          "ok": true,
+          "ms": 5.915,
+          "peak_torch_mib": 1401.3,
+          "max_abs_err_vs_fp32_math": 0.00021284818649291992
+        }
+      },
+      "default_ms": 0.217
+    },
+    {
+      "name": "latentsync audio cross-attn (kv=50)",
+      "B": 16,
+      "H": 8,
+      "q_len": 4096,
+      "kv_len": 50,
+      "head_dim": 64,
+      "causal": false,
+      "backends": {
+        "FLASH_ATTENTION": {
+          "ok": true,
+          "ms": 0.162,
+          "peak_torch_mib": 348.7,
+          "max_abs_err_vs_fp32_math": 0.0009770393371582031
+        },
+        "EFFICIENT_ATTENTION": {
+          "ok": true,
+          "ms": 0.153,
+          "peak_torch_mib": 394.7,
+          "max_abs_err_vs_fp32_math": 0.0009770393371582031
+        },
+        "CUDNN_ATTENTION": {
+          "ok": true,
+          "ms": 0.15,
+          "peak_torch_mib": 394.7,
+          "max_abs_err_vs_fp32_math": 0.0009770393371582031
+        },
+        "MATH": {
+          "ok": true,
+          "ms": 2.139,
+          "peak_torch_mib": 931.8,
+          "max_abs_err_vs_fp32_math": 0.0009760856628417969
+        }
+      },
+      "default_ms": 0.21
+    },
+    {
+      "name": "chatterbox t3 decoder (causal)",
+      "B": 1,
+      "H": 16,
+      "q_len": 1024,
+      "kv_len": 1024,
+      "head_dim": 64,
+      "causal": true,
+      "backends": {
+        "FLASH_ATTENTION": {
+          "ok": true,
+          "ms": 0.033,
+          "peak_torch_mib": 87.2,
+          "max_abs_err_vs_fp32_math": 0.0011413097381591797
+        },
+        "EFFICIENT_ATTENTION": {
+          "ok": true,
+          "ms": 0.046,
+          "peak_torch_mib": 25.1,
+          "max_abs_err_vs_fp32_math": 0.0011413097381591797
+        },
+        "CUDNN_ATTENTION": {
+          "ok": true,
+          "ms": 0.033,
+          "peak_torch_mib": 25.1,
+          "max_abs_err_vs_fp32_math": 0.0011413097381591797
+        },
+        "MATH": {
+          "ok": true,
+          "ms": 0.79,
+          "peak_torch_mib": 187.1,
+          "max_abs_err_vs_fp32_math": 0.0009720325469970703
+        }
+      },
+      "default_ms": 0.035
+    }
+  ],
+  "can_use_flash_attention": true,
+  "fastest_backend_per_shape": {
+    "latentsync-unet self-attn 512², 1 frame": "CUDNN_ATTENTION",
+    "latentsync-unet self-attn, 16-frame batch": "CUDNN_ATTENTION",
+    "latentsync audio cross-attn (kv=50)": "CUDNN_ATTENTION",
+    "chatterbox t3 decoder (causal)": "FLASH_ATTENTION"
+  }
+}

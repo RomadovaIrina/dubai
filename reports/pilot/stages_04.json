@@ -1,0 +1,104 @@
+{
+  "input": "04.mp4",
+  "source": {
+    "duration_s": 53.9,
+    "size_bytes": 11309223,
+    "container": "mov,mp4,m4a,3gp,3g2,mj2",
+    "video": {
+      "codec": "h264",
+      "profile": "High",
+      "width": 464,
+      "height": 848,
+      "r_frame_rate": "30/1",
+      "fps": 30.0,
+      "pix_fmt": "yuv420p",
+      "nb_frames": "1617",
+      "bit_rate": "1610898"
+    },
+    "audio": {
+      "codec": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "channel_layout": "stereo",
+      "bit_rate": "62695"
+    }
+  },
+  "split_mode": "reencode",
+  "asr": true,
+  "repeat": 1,
+  "median": {
+    "demux": 0.2181,
+    "vad_split": 7.1793,
+    "concat": 0.229,
+    "subtitle_burn": 2.3821,
+    "S": 9.7904
+  },
+  "segments": 15,
+  "speech_seconds": 29.5,
+  "assembled_seconds": 29.523,
+  "final_seconds": 29.533,
+  "final_resolution": "464x848",
+  "final_fps": 30.0,
+  "seconds_per_minute": 10.898,
+  "runs": [
+    {
+      "demux": {
+        "seconds": 0.2181,
+        "peak_process_mib": 386
+      },
+      "vad_split": {
+        "seconds": 7.1793,
+        "peak_process_mib": 386,
+        "segments": 15,
+        "split_mode": "reencode",
+        "speech_seconds": 29.5
+      },
+      "asr": {
+        "seconds": 1.752,
+        "peak_process_mib": 2612,
+        "cues": 5
+      },
+      "concat": {
+        "seconds": 0.229,
+        "peak_process_mib": 394,
+        "out_seconds": 29.523,
+        "out_resolution": "464x848",
+        "out_fps": 30.0
+      },
+      "subtitle_burn": {
+        "seconds": 2.3821,
+        "peak_process_mib": 394,
+        "cues": 15,
+        "out_resolution": "464x848",
+        "out_fps": 30.0,
+        "out_seconds": 29.533
+      },
+      "_S_seconds": 9.7904,
+      "_final_probe": {
+        "duration_s": 29.533333,
+        "size_bytes": 11206394,
+        "container": "mov,mp4,m4a,3gp,3g2,mj2",
+        "video": {
+          "codec": "h264",
+          "profile": "High",
+          "width": 464,
+          "height": 848,
+          "r_frame_rate": "30/1",
+          "fps": 30.0,
+          "pix_fmt": "yuv420p",
+          "nb_frames": "886",
+          "bit_rate": "2833380"
+        },
+        "audio": {
+          "codec": "aac",
+          "sample_rate": "44100",
+          "channels": 2,
+          "channel_layout": "stereo",
+          "bit_rate": "193119"
+        }
+      }
+    }
+  ],
+  "env_snapshot": "20260911_182453-8125bfd3",
+  "at": "2026-09-11T18:47:47Z"
+}
