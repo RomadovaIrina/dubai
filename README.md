@@ -39,3 +39,9 @@ logs/  reports/         setup + test logs; versions.txt, smoke.md, env-report.md
 - `onnxruntime-gpu==1.26.0` is the only onnxruntime dist (CUDA 12.8 build; ≥1.27 is CUDA 13). CUDA provider verified on sm_120.
 - faster-whisper `int8_float16` executes as float16 on Blackwell (CTranslate2 disables int8 for sm_120).
 - llama.cpp: always pass `n_threads=n_threads_batch=16`; `os.cpu_count()` reports the host's 128 cores and the cgroup quota is ~16.
+
+
+
+
+
+https://drive.google.com/file/d/1vRwRXh3sWnqKUQGsPJcLvDOrJ21lGfLx/view?usp=sharing
