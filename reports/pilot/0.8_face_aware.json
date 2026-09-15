@@ -1,0 +1,1148 @@
+{
+  "task": "0.8-face-aware",
+  "gpu": {
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.173.02",
+    "name": "NVIDIA GeForce RTX 5090",
+    "capability": "sm_120",
+    "total_vram_bytes": 33668726784,
+    "total_vram_gib": 31.36,
+    "free_vram_gib": 11.05,
+    "multi_processor_count": 170,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "latentsync_commit": "a229c3948406bc2cf6eaf4873e662e70c6a04746",
+  "config": {
+    "stage2_512": true,
+    "steps": 20,
+    "guidance": 1.5,
+    "deepcache": true,
+    "fp16": true,
+    "seed": 1247
+  },
+  "videos": [
+    {
+      "video": "/workspace/dub/test_videos/01.MP4",
+      "input_meta": {
+        "duration_s": 101.666667,
+        "fps": 25.003278688524592,
+        "frames": 2542,
+        "width": 480,
+        "height": 848,
+        "codec": "h264"
+      },
+      "master_frames": 2542,
+      "frame_classes": {
+        "VALID_FACE": 260,
+        "SMALL_FACE": 176,
+        "NO_FACE": 2106
+      },
+      "segments": [
+        {
+          "index": 0,
+          "start_frame": 0,
+          "end_frame": 260,
+          "frames": 260,
+          "start_s": 0.0,
+          "end_s": 10.4,
+          "classification": "VALID_FACE",
+          "action": "LATENT_SYNC",
+          "face_bbox_stats": {
+            "n_detected": 260,
+            "w_median": 79.0,
+            "h_median": 110.0,
+            "h_min": 90,
+            "h_max": 117,
+            "score_mean": 0.892,
+            "cx_median": 302.0,
+            "cy_median": 156.25,
+            "x1_min": 249,
+            "y1_min": 95,
+            "x2_max": 352,
+            "y2_max": 221
+          },
+          "latentsync": {
+            "seconds": 73.99,
+            "frames_in": 260,
+            "frames_out": 262,
+            "s_per_video_min": 426.9
+          },
+          "syncnet": {
+            "status": "PASS",
+            "confidence": 5.97,
+            "av_offset_frames": 0,
+            "seconds": 45.935
+          }
+        },
+        {
+          "index": 1,
+          "start_frame": 260,
+          "end_frame": 2247,
+          "frames": 1987,
+          "start_s": 10.4,
+          "end_s": 89.88,
+          "classification": "NO_FACE",
+          "action": "PASS_THROUGH",
+          "face_bbox_stats": null,
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH"
+          }
+        },
+        {
+          "index": 2,
+          "start_frame": 2247,
+          "end_frame": 2423,
+          "frames": 176,
+          "start_s": 89.88,
+          "end_s": 96.92,
+          "classification": "SMALL_FACE",
+          "action": "PASS_THROUGH",
+          "face_bbox_stats": {
+            "n_detected": 176,
+            "w_median": 55.0,
+            "h_median": 73.0,
+            "h_min": 69,
+            "h_max": 78,
+            "score_mean": 0.872,
+            "cx_median": 294.0,
+            "cy_median": 142.5,
+            "x1_min": 249,
+            "y1_min": 95,
+            "x2_max": 325,
+            "y2_max": 198
+          },
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH"
+          }
+        },
+        {
+          "index": 3,
+          "start_frame": 2423,
+          "end_frame": 2542,
+          "frames": 119,
+          "start_s": 96.92,
+          "end_s": 101.68,
+          "classification": "NO_FACE",
+          "action": "PASS_THROUGH",
+          "face_bbox_stats": null,
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH"
+          }
+        }
+      ],
+      "output": "/tmp/dabai_pilot_08fa/facesync_01.mp4",
+      "output_meta": {
+        "duration_s": 101.68,
+        "fps": 25.0,
+        "frames": 2542,
+        "width": 480,
+        "height": 848,
+        "codec": "h264"
+      },
+      "assembly": {
+        "frames_written": 2542,
+        "master_frames": 2542,
+        "padded_with_original": {}
+      },
+      "latentsync_total_s": 74.0,
+      "verify_splits": [],
+      "thresholds": {
+        "valid_w": 50,
+        "valid_h": 80,
+        "valid_score": 0.5,
+        "latentsync_filter": "w>=50 h>=80 score>=0.5",
+        "min_ls_frames": 25
+      },
+      "crop_experiment": {
+        "output": "/tmp/dabai_pilot_08fa/facesync_01_smallface_crop.mp4",
+        "output_meta": {
+          "duration_s": 101.68,
+          "fps": 25.0,
+          "frames": 2542,
+          "width": 480,
+          "height": 848,
+          "codec": "h264"
+        },
+        "assembly": {
+          "frames_written": 2542,
+          "master_frames": 2542,
+          "padded_with_original": {}
+        },
+        "segments": [
+          {
+            "roi": [
+              214,
+              62,
+              374,
+              222
+            ],
+            "roi_side_px": 160,
+            "scale": 2.192,
+            "roi_input_px": 352,
+            "face_h_median_px": 73.0,
+            "face_h_after_scale_px": 160.0,
+            "latentsync_s": 52.96,
+            "roi_frames_out": 178,
+            "preview_roi": "/tmp/dabai_pilot_08fa/work_01/seg002_roi_ls.mp4",
+            "segment": 2,
+            "start_s": 89.88,
+            "end_s": 96.92,
+            "frames": 176,
+            "syncnet_pasted": {
+              "status": "N/A_SYNCNET_NO_FACE",
+              "error": "SyncNet S3FD detector found no >=50-frame face track in this cut"
+            },
+            "syncnet_roi_clip": {
+              "status": "PASS",
+              "confidence": 6.43,
+              "av_offset_frames": 0,
+              "seconds": 35.695
+            }
+          }
+        ],
+        "params": {
+          "target_face_h": 160,
+          "pad": 0.6
+        }
+      },
+      "wall_s_total": 280.4
+    },
+    {
+      "video": "/workspace/dub/test_videos/02.mp4",
+      "input_meta": {
+        "duration_s": 110.866667,
+        "fps": 29.981960312687914,
+        "frames": 3324,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "master_frames": 2773,
+      "frame_classes": {
+        "VALID_FACE": 0,
+        "SMALL_FACE": 0,
+        "NO_FACE": 2773
+      },
+      "segments": [
+        {
+          "index": 0,
+          "start_frame": 0,
+          "end_frame": 2773,
+          "frames": 2773,
+          "start_s": 0.0,
+          "end_s": 110.92,
+          "classification": "NO_FACE",
+          "action": "PASS_THROUGH",
+          "face_bbox_stats": null,
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH"
+          }
+        }
+      ],
+      "output": "/tmp/dabai_pilot_08fa/facesync_02.mp4",
+      "output_meta": {
+        "duration_s": 110.92,
+        "fps": 25.0,
+        "frames": 2773,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "assembly": {
+        "frames_written": 2773,
+        "master_frames": 2773,
+        "padded_with_original": {}
+      },
+      "latentsync_total_s": 0,
+      "verify_splits": [],
+      "thresholds": {
+        "valid_w": 50,
+        "valid_h": 80,
+        "valid_score": 0.5,
+        "latentsync_filter": "w>=50 h>=80 score>=0.5",
+        "min_ls_frames": 25
+      },
+      "wall_s_total": 25.1
+    },
+    {
+      "video": "/workspace/dub/test_videos/03.mp4",
+      "input_meta": {
+        "duration_s": 90.333333,
+        "fps": 30.0,
+        "frames": 2710,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "master_frames": 2260,
+      "frame_classes": {
+        "VALID_FACE": 2260,
+        "SMALL_FACE": 0,
+        "NO_FACE": 0
+      },
+      "segments": [
+        {
+          "index": 0,
+          "start_frame": 0,
+          "end_frame": 2260,
+          "frames": 2260,
+          "start_s": 0.0,
+          "end_s": 90.4,
+          "classification": "VALID_FACE",
+          "action": "LATENT_SYNC",
+          "face_bbox_stats": {
+            "n_detected": 2260,
+            "w_median": 200.0,
+            "h_median": 296.0,
+            "h_min": 277,
+            "h_max": 321,
+            "score_mean": 0.821,
+            "cx_median": 257.0,
+            "cy_median": 444.5,
+            "x1_min": 135,
+            "y1_min": 271,
+            "x2_max": 367,
+            "y2_max": 620
+          },
+          "latentsync": {
+            "reused": "/tmp/dabai_pilot_08/latentsync_03.mp4",
+            "frames_out": 2260
+          },
+          "syncnet": {
+            "status": "PASS",
+            "confidence": 4.92,
+            "av_offset_frames": 0,
+            "seconds": 249.974
+          }
+        }
+      ],
+      "output": "/tmp/dabai_pilot_08fa/facesync_03.mp4",
+      "output_meta": {
+        "duration_s": 90.4,
+        "fps": 25.0,
+        "frames": 2260,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "assembly": {
+        "frames_written": 2260,
+        "master_frames": 2260,
+        "padded_with_original": {}
+      },
+      "latentsync_total_s": 0,
+      "verify_splits": [],
+      "thresholds": {
+        "valid_w": 50,
+        "valid_h": 80,
+        "valid_score": 0.5,
+        "latentsync_filter": "w>=50 h>=80 score>=0.5",
+        "min_ls_frames": 25
+      },
+      "wall_s_total": 280.7
+    },
+    {
+      "video": "/workspace/dub/test_videos/04.mp4",
+      "input_meta": {
+        "duration_s": 53.9,
+        "fps": 30.0,
+        "frames": 1617,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "master_frames": 1349,
+      "frame_classes": {
+        "VALID_FACE": 1349,
+        "SMALL_FACE": 0,
+        "NO_FACE": 0
+      },
+      "segments": [
+        {
+          "index": 0,
+          "start_frame": 0,
+          "end_frame": 1349,
+          "frames": 1349,
+          "start_s": 0.0,
+          "end_s": 53.96,
+          "classification": "VALID_FACE",
+          "action": "LATENT_SYNC",
+          "face_bbox_stats": {
+            "n_detected": 1349,
+            "w_median": 224,
+            "h_median": 302,
+            "h_min": 265,
+            "h_max": 359,
+            "score_mean": 0.768,
+            "cx_median": 276.5,
+            "cy_median": 403.0,
+            "x1_min": 90,
+            "y1_min": 199,
+            "x2_max": 434,
+            "y2_max": 614
+          },
+          "latentsync": {
+            "reused": "/tmp/dabai_pilot_06/latentsync_04.mp4",
+            "frames_out": 1349
+          },
+          "syncnet": {
+            "status": "PASS",
+            "confidence": 3.18,
+            "av_offset_frames": 0,
+            "seconds": 152.88
+          }
+        }
+      ],
+      "output": "/tmp/dabai_pilot_08fa/facesync_04.mp4",
+      "output_meta": {
+        "duration_s": 53.96,
+        "fps": 25.0,
+        "frames": 1349,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "assembly": {
+        "frames_written": 1349,
+        "master_frames": 1349,
+        "padded_with_original": {}
+      },
+      "latentsync_total_s": 0,
+      "verify_splits": [],
+      "thresholds": {
+        "valid_w": 50,
+        "valid_h": 80,
+        "valid_score": 0.5,
+        "latentsync_filter": "w>=50 h>=80 score>=0.5",
+        "min_ls_frames": 25
+      },
+      "wall_s_total": 177.3
+    },
+    {
+      "video": "/workspace/dub/test_videos/05.mp4",
+      "input_meta": {
+        "duration_s": 52.366667,
+        "fps": 29.92361553150859,
+        "frames": 1567,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "master_frames": 1311,
+      "frame_classes": {
+        "VALID_FACE": 1202,
+        "SMALL_FACE": 109,
+        "NO_FACE": 0
+      },
+      "segments": [
+        {
+          "index": 0,
+          "start_frame": 0,
+          "end_frame": 247,
+          "frames": 247,
+          "start_s": 0.0,
+          "end_s": 9.88,
+          "classification": "VALID_FACE",
+          "action": "LATENT_SYNC",
+          "face_bbox_stats": {
+            "n_detected": 247,
+            "w_median": 67,
+            "h_median": 92,
+            "h_min": 80,
+            "h_max": 105,
+            "score_mean": 0.817,
+            "cx_median": 362.0,
+            "cy_median": 107.0,
+            "x1_min": 311,
+            "y1_min": 50,
+            "x2_max": 409,
+            "y2_max": 167
+          },
+          "latentsync": {
+            "seconds": 71.65,
+            "frames_in": 247,
+            "frames_out": 249,
+            "s_per_video_min": 435.1
+          },
+          "syncnet": {
+            "status": "N/A_SYNCNET_NO_FACE",
+            "error": "SyncNet S3FD detector found no >=50-frame face track in this cut"
+          }
+        },
+        {
+          "index": 1,
+          "start_frame": 247,
+          "end_frame": 327,
+          "frames": 80,
+          "start_s": 9.88,
+          "end_s": 13.08,
+          "classification": "SMALL_FACE",
+          "action": "PASS_THROUGH",
+          "face_bbox_stats": {
+            "n_detected": 80,
+            "w_median": 55.0,
+            "h_median": 74.0,
+            "h_min": 66,
+            "h_max": 79,
+            "score_mean": 0.782,
+            "cx_median": 366.5,
+            "cy_median": 114.5,
+            "x1_min": 326,
+            "y1_min": 70,
+            "x2_max": 399,
+            "y2_max": 156
+          },
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH"
+          }
+        },
+        {
+          "index": 2,
+          "start_frame": 327,
+          "end_frame": 328,
+          "frames": 1,
+          "start_s": 13.08,
+          "end_s": 13.12,
+          "classification": "VALID_FACE",
+          "action": "PASS_THROUGH_SHORT_VALID",
+          "face_bbox_stats": {
+            "n_detected": 1,
+            "w_median": 61,
+            "h_median": 81,
+            "h_min": 81,
+            "h_max": 81,
+            "score_mean": 0.769,
+            "cx_median": 353.5,
+            "cy_median": 116.5,
+            "x1_min": 323,
+            "y1_min": 76,
+            "x2_max": 384,
+            "y2_max": 157
+          },
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH_SHORT_VALID"
+          }
+        },
+        {
+          "index": 3,
+          "start_frame": 328,
+          "end_frame": 329,
+          "frames": 1,
+          "start_s": 13.12,
+          "end_s": 13.16,
+          "classification": "SMALL_FACE",
+          "action": "PASS_THROUGH",
+          "face_bbox_stats": {
+            "n_detected": 1,
+            "w_median": 59,
+            "h_median": 79,
+            "h_min": 79,
+            "h_max": 79,
+            "score_mean": 0.764,
+            "cx_median": 352.5,
+            "cy_median": 116.5,
+            "x1_min": 323,
+            "y1_min": 77,
+            "x2_max": 382,
+            "y2_max": 156
+          },
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH"
+          }
+        },
+        {
+          "index": 4,
+          "start_frame": 329,
+          "end_frame": 331,
+          "frames": 2,
+          "start_s": 13.16,
+          "end_s": 13.24,
+          "classification": "VALID_FACE",
+          "action": "PASS_THROUGH_SHORT_VALID",
+          "face_bbox_stats": {
+            "n_detected": 2,
+            "w_median": 60.5,
+            "h_median": 81.5,
+            "h_min": 81,
+            "h_max": 82,
+            "score_mean": 0.705,
+            "cx_median": 351.75,
+            "cy_median": 112.75,
+            "x1_min": 321,
+            "y1_min": 71,
+            "x2_max": 383,
+            "y2_max": 155
+          },
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH_SHORT_VALID"
+          }
+        },
+        {
+          "index": 5,
+          "start_frame": 331,
+          "end_frame": 342,
+          "frames": 11,
+          "start_s": 13.24,
+          "end_s": 13.68,
+          "classification": "SMALL_FACE",
+          "action": "PASS_THROUGH",
+          "face_bbox_stats": {
+            "n_detected": 11,
+            "w_median": 60,
+            "h_median": 76,
+            "h_min": 73,
+            "h_max": 78,
+            "score_mean": 0.769,
+            "cx_median": 353.5,
+            "cy_median": 114.5,
+            "x1_min": 322,
+            "y1_min": 74,
+            "x2_max": 386,
+            "y2_max": 153
+          },
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH"
+          }
+        },
+        {
+          "index": 19,
+          "start_frame": 342,
+          "end_frame": 343,
+          "frames": 1,
+          "start_s": 13.68,
+          "end_s": 13.72,
+          "classification": "VALID_FACE",
+          "face_bbox_stats": {
+            "n_detected": 306,
+            "w_median": 66.0,
+            "h_median": 91.0,
+            "h_min": 80,
+            "h_max": 102,
+            "score_mean": 0.813,
+            "cx_median": 354.75,
+            "cy_median": 103.5,
+            "x1_min": 301,
+            "y1_min": 43,
+            "x2_max": 407,
+            "y2_max": 158
+          },
+          "action": "PASS_THROUGH_SHORT_VALID",
+          "split_from": 6,
+          "note": null,
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH_SHORT_VALID"
+          }
+        },
+        {
+          "index": 20,
+          "start_frame": 343,
+          "end_frame": 344,
+          "frames": 1,
+          "start_s": 13.72,
+          "end_s": 13.76,
+          "classification": "SMALL_FACE",
+          "face_bbox_stats": {
+            "n_detected": 306,
+            "w_median": 66.0,
+            "h_median": 91.0,
+            "h_min": 80,
+            "h_max": 102,
+            "score_mean": 0.813,
+            "cx_median": 354.75,
+            "cy_median": 103.5,
+            "x1_min": 301,
+            "y1_min": 43,
+            "x2_max": 407,
+            "y2_max": 158
+          },
+          "action": "PASS_THROUGH",
+          "split_from": 6,
+          "note": "rejected by LatentSync FaceDetector on the re-encoded segment",
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH"
+          }
+        },
+        {
+          "index": 21,
+          "start_frame": 344,
+          "end_frame": 648,
+          "frames": 304,
+          "start_s": 13.76,
+          "end_s": 25.92,
+          "classification": "VALID_FACE",
+          "face_bbox_stats": {
+            "n_detected": 306,
+            "w_median": 66.0,
+            "h_median": 91.0,
+            "h_min": 80,
+            "h_max": 102,
+            "score_mean": 0.813,
+            "cx_median": 354.75,
+            "cy_median": 103.5,
+            "x1_min": 301,
+            "y1_min": 43,
+            "x2_max": 407,
+            "y2_max": 158
+          },
+          "action": "PASS_THROUGH_LS_FAILED",
+          "split_from": 6,
+          "note": null,
+          "error": "RuntimeError: Face not detected",
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH_LS_FAILED"
+          }
+        },
+        {
+          "index": 7,
+          "start_frame": 648,
+          "end_frame": 649,
+          "frames": 1,
+          "start_s": 25.92,
+          "end_s": 25.96,
+          "classification": "SMALL_FACE",
+          "action": "PASS_THROUGH",
+          "face_bbox_stats": {
+            "n_detected": 1,
+            "w_median": 61,
+            "h_median": 79,
+            "h_min": 79,
+            "h_max": 79,
+            "score_mean": 0.848,
+            "cx_median": 373.5,
+            "cy_median": 103.5,
+            "x1_min": 343,
+            "y1_min": 64,
+            "x2_max": 404,
+            "y2_max": 143
+          },
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH"
+          }
+        },
+        {
+          "index": 8,
+          "start_frame": 649,
+          "end_frame": 653,
+          "frames": 4,
+          "start_s": 25.96,
+          "end_s": 26.12,
+          "classification": "VALID_FACE",
+          "action": "PASS_THROUGH_SHORT_VALID",
+          "face_bbox_stats": {
+            "n_detected": 4,
+            "w_median": 60.5,
+            "h_median": 81.5,
+            "h_min": 81,
+            "h_max": 82,
+            "score_mean": 0.825,
+            "cx_median": 374.25,
+            "cy_median": 102.25,
+            "x1_min": 344,
+            "y1_min": 61,
+            "x2_max": 405,
+            "y2_max": 143
+          },
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH_SHORT_VALID"
+          }
+        },
+        {
+          "index": 9,
+          "start_frame": 653,
+          "end_frame": 657,
+          "frames": 4,
+          "start_s": 26.12,
+          "end_s": 26.28,
+          "classification": "SMALL_FACE",
+          "action": "PASS_THROUGH",
+          "face_bbox_stats": {
+            "n_detected": 4,
+            "w_median": 59.5,
+            "h_median": 78.5,
+            "h_min": 78,
+            "h_max": 79,
+            "score_mean": 0.846,
+            "cx_median": 373.75,
+            "cy_median": 105.25,
+            "x1_min": 344,
+            "y1_min": 65,
+            "x2_max": 405,
+            "y2_max": 145
+          },
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH"
+          }
+        },
+        {
+          "index": 10,
+          "start_frame": 657,
+          "end_frame": 660,
+          "frames": 3,
+          "start_s": 26.28,
+          "end_s": 26.4,
+          "classification": "VALID_FACE",
+          "action": "PASS_THROUGH_SHORT_VALID",
+          "face_bbox_stats": {
+            "n_detected": 3,
+            "w_median": 60,
+            "h_median": 81,
+            "h_min": 81,
+            "h_max": 83,
+            "score_mean": 0.823,
+            "cx_median": 375.0,
+            "cy_median": 101.5,
+            "x1_min": 345,
+            "y1_min": 60,
+            "x2_max": 405,
+            "y2_max": 143
+          },
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH_SHORT_VALID"
+          }
+        },
+        {
+          "index": 11,
+          "start_frame": 660,
+          "end_frame": 663,
+          "frames": 3,
+          "start_s": 26.4,
+          "end_s": 26.52,
+          "classification": "SMALL_FACE",
+          "action": "PASS_THROUGH",
+          "face_bbox_stats": {
+            "n_detected": 3,
+            "w_median": 60,
+            "h_median": 78,
+            "h_min": 78,
+            "h_max": 79,
+            "score_mean": 0.835,
+            "cx_median": 375.0,
+            "cy_median": 102.0,
+            "x1_min": 343,
+            "y1_min": 62,
+            "x2_max": 407,
+            "y2_max": 142
+          },
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH"
+          }
+        },
+        {
+          "index": 12,
+          "start_frame": 663,
+          "end_frame": 664,
+          "frames": 1,
+          "start_s": 26.52,
+          "end_s": 26.56,
+          "classification": "VALID_FACE",
+          "action": "PASS_THROUGH_SHORT_VALID",
+          "face_bbox_stats": {
+            "n_detected": 1,
+            "w_median": 63,
+            "h_median": 82,
+            "h_min": 82,
+            "h_max": 82,
+            "score_mean": 0.826,
+            "cx_median": 374.5,
+            "cy_median": 103.0,
+            "x1_min": 343,
+            "y1_min": 62,
+            "x2_max": 406,
+            "y2_max": 144
+          },
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH_SHORT_VALID"
+          }
+        },
+        {
+          "index": 13,
+          "start_frame": 664,
+          "end_frame": 667,
+          "frames": 3,
+          "start_s": 26.56,
+          "end_s": 26.68,
+          "classification": "SMALL_FACE",
+          "action": "PASS_THROUGH",
+          "face_bbox_stats": {
+            "n_detected": 3,
+            "w_median": 60,
+            "h_median": 78,
+            "h_min": 75,
+            "h_max": 79,
+            "score_mean": 0.827,
+            "cx_median": 374.0,
+            "cy_median": 104.0,
+            "x1_min": 343,
+            "y1_min": 64,
+            "x2_max": 405,
+            "y2_max": 143
+          },
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH"
+          }
+        },
+        {
+          "index": 14,
+          "start_frame": 667,
+          "end_frame": 670,
+          "frames": 3,
+          "start_s": 26.68,
+          "end_s": 26.8,
+          "classification": "VALID_FACE",
+          "action": "PASS_THROUGH_SHORT_VALID",
+          "face_bbox_stats": {
+            "n_detected": 3,
+            "w_median": 60,
+            "h_median": 80,
+            "h_min": 80,
+            "h_max": 80,
+            "score_mean": 0.815,
+            "cx_median": 371.5,
+            "cy_median": 104.0,
+            "x1_min": 341,
+            "y1_min": 63,
+            "x2_max": 402,
+            "y2_max": 145
+          },
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH_SHORT_VALID"
+          }
+        },
+        {
+          "index": 15,
+          "start_frame": 670,
+          "end_frame": 671,
+          "frames": 1,
+          "start_s": 26.8,
+          "end_s": 26.84,
+          "classification": "SMALL_FACE",
+          "action": "PASS_THROUGH",
+          "face_bbox_stats": {
+            "n_detected": 1,
+            "w_median": 61,
+            "h_median": 77,
+            "h_min": 77,
+            "h_max": 77,
+            "score_mean": 0.821,
+            "cx_median": 371.5,
+            "cy_median": 106.5,
+            "x1_min": 341,
+            "y1_min": 68,
+            "x2_max": 402,
+            "y2_max": 145
+          },
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH"
+          }
+        },
+        {
+          "index": 16,
+          "start_frame": 671,
+          "end_frame": 683,
+          "frames": 12,
+          "start_s": 26.84,
+          "end_s": 27.32,
+          "classification": "VALID_FACE",
+          "action": "PASS_THROUGH_SHORT_VALID",
+          "face_bbox_stats": {
+            "n_detected": 12,
+            "w_median": 61.0,
+            "h_median": 81.0,
+            "h_min": 80,
+            "h_max": 84,
+            "score_mean": 0.779,
+            "cx_median": 375.5,
+            "cy_median": 101.0,
+            "x1_min": 341,
+            "y1_min": 56,
+            "x2_max": 407,
+            "y2_max": 148
+          },
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH_SHORT_VALID"
+          }
+        },
+        {
+          "index": 17,
+          "start_frame": 683,
+          "end_frame": 688,
+          "frames": 5,
+          "start_s": 27.32,
+          "end_s": 27.52,
+          "classification": "SMALL_FACE",
+          "action": "PASS_THROUGH",
+          "face_bbox_stats": {
+            "n_detected": 5,
+            "w_median": 61,
+            "h_median": 79,
+            "h_min": 78,
+            "h_max": 79,
+            "score_mean": 0.795,
+            "cx_median": 376.5,
+            "cy_median": 100.0,
+            "x1_min": 345,
+            "y1_min": 59,
+            "x2_max": 408,
+            "y2_max": 141
+          },
+          "syncnet": {
+            "status": "N/A",
+            "reason": "PASS_THROUGH"
+          }
+        },
+        {
+          "index": 18,
+          "start_frame": 688,
+          "end_frame": 1311,
+          "frames": 623,
+          "start_s": 27.52,
+          "end_s": 52.44,
+          "classification": "VALID_FACE",
+          "action": "LATENT_SYNC",
+          "face_bbox_stats": {
+            "n_detected": 623,
+            "w_median": 73,
+            "h_median": 103,
+            "h_min": 80,
+            "h_max": 123,
+            "score_mean": 0.853,
+            "cx_median": 361.0,
+            "cy_median": 96.5,
+            "x1_min": 308,
+            "y1_min": 26,
+            "x2_max": 424,
+            "y2_max": 161
+          },
+          "latentsync": {
+            "seconds": 169.36,
+            "frames_in": 623,
+            "frames_out": 623,
+            "s_per_video_min": 407.8
+          },
+          "syncnet": {
+            "status": "PASS",
+            "confidence": 1.77,
+            "av_offset_frames": 0,
+            "seconds": 89.756
+          }
+        }
+      ],
+      "output": "/tmp/dabai_pilot_08fa/facesync_05.mp4",
+      "output_meta": {
+        "duration_s": 52.44,
+        "fps": 25.0,
+        "frames": 1311,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "assembly": {
+        "frames_written": 1311,
+        "master_frames": 1311,
+        "padded_with_original": {}
+      },
+      "latentsync_total_s": 241.0,
+      "verify_splits": [
+        {
+          "segment": 6,
+          "rejected_frames": 1,
+          "split_into": [
+            19,
+            20,
+            21
+          ]
+        }
+      ],
+      "thresholds": {
+        "valid_w": 50,
+        "valid_h": 80,
+        "valid_score": 0.5,
+        "latentsync_filter": "w>=50 h>=80 score>=0.5",
+        "min_ls_frames": 25
+      },
+      "crop_experiment": {
+        "output": "/tmp/dabai_pilot_08fa/facesync_05_smallface_crop.mp4",
+        "output_meta": {
+          "duration_s": 52.44,
+          "fps": 25.0,
+          "frames": 1311,
+          "width": 464,
+          "height": 848,
+          "codec": "h264"
+        },
+        "assembly": {
+          "frames_written": 1311,
+          "master_frames": 1311,
+          "padded_with_original": {}
+        },
+        "segments": [
+          {
+            "roi": [
+              285,
+              33,
+              447,
+              195
+            ],
+            "roi_side_px": 162,
+            "scale": 2.162,
+            "roi_input_px": 352,
+            "face_h_median_px": 74.0,
+            "face_h_after_scale_px": 160.0,
+            "latentsync_s": 28.42,
+            "roi_frames_out": 82,
+            "preview_roi": "/tmp/dabai_pilot_08fa/work_05/seg001_roi_ls.mp4",
+            "segment": 1,
+            "start_s": 9.88,
+            "end_s": 13.08,
+            "frames": 80,
+            "syncnet_pasted": {
+              "status": "N/A_SYNCNET_NO_FACE",
+              "error": "SyncNet S3FD detector found no >=50-frame face track in this cut"
+            },
+            "syncnet_roi_clip": {
+              "status": "PASS",
+              "confidence": 2.26,
+              "av_offset_frames": 0,
+              "seconds": 26.365
+            }
+          }
+        ],
+        "params": {
+          "target_face_h": 160,
+          "pad": 0.6
+        }
+      },
+      "wall_s_total": 507.8
+    }
+  ],
+  "at": "2026-09-15T14:44:10Z"
+}

@@ -4,7 +4,8 @@
 Per input video:
   1. master = input converted to 25 fps CFR exactly the way LatentSync does it (ffmpeg -r 25 -crf 18), own audio extracted;
   2. every master frame is classified with LatentSync's own FaceDetector (+ raw insightface for the SMALL/NO split):
-       VALID_FACE  bbox passes LatentSync's filter with a safety margin (w>=55, h>=88 px, score>=0.55)
+       VALID_FACE  bbox passes LatentSync's own filter (w>=50, h>=80 px, 0.2<w/h<1.5, score>=0.5); each cut segment is
+                   re-verified with that detector and split at rejected frames before LatentSync runs (--max-verify-depth)
        SMALL_FACE  a face is detected but does not pass the filter (LatentSync would raise "Face not detected")
        NO_FACE     no face at all
   3. frames are grouped into segments; VALID_FACE segments >= --min-ls-frames go through LatentSync (segment video +
@@ -26,9 +27,24 @@ from benchmark_06_codeformer import probe
 
 LS = THIRD_PARTY / "latentsync"
 FPS = 25
-# LatentSync filter is w>=50, h>=80, 0.2<w/h<1.5, score>=0.5 (latentsync/utils/face_detector.py); margin so that the
-# re-encode of a segment cannot flip a borderline frame and crash the pipeline.
-VALID_W, VALID_H, VALID_SCORE = 55, 88, 0.55
+# LatentSync filter is w>=50, h>=80, 0.2<w/h<1.5, score>=0.5 (latentsync/utils/face_detector.py). We use exactly
+# these thresholds for classification; robustness against re-encode flips comes from verify_segment(): every cut
+# segment is re-checked with LatentSync's FaceDetector on the exact frames LatentSync will read, and split at any
+# frame that fails, before LatentSync is called.
+VALID_W, VALID_H, VALID_SCORE = 50, 80, 0.5
+_DET = None
+
+
+def face_detector():
+    global _DET
+    if _DET is None:
+        old = os.getcwd(); os.chdir(LS)
+        try:
+            from latentsync.utils.face_detector import FaceDetector
+            _DET = FaceDetector(device="cuda")
+        finally:
+            os.chdir(old)
+    return _DET
 
 
 def run(cmd: list[str], **kw) -> None:
@@ -51,18 +67,13 @@ def make_master(src: pathlib.Path, work: pathlib.Path) -> tuple[pathlib.Path, pa
 
 def classify_frames(master: pathlib.Path) -> list[dict]:
     import cv2
-    old = os.getcwd(); os.chdir(LS)
-    try:
-        from latentsync.utils.face_detector import FaceDetector
-        det = FaceDetector(device="cuda")
-    finally:
-        os.chdir(old)
+    det = face_detector()
     cap = cv2.VideoCapture(str(master)); rows = []; i = 0
     while True:
         ok, fr = cap.read()
         if not ok:
             break
-        faces = det.app.get(fr)
+        faces = det.app.get(cv2.cvtColor(fr, cv2.COLOR_BGR2RGB))   # LatentSync's read_video feeds RGB to the detector
         best = None
         for f in faces:
             x1, y1, x2, y2 = f.bbox.astype(int).tolist(); w, h = x2 - x1, y2 - y1
@@ -116,6 +127,39 @@ def cut_segment(master: pathlib.Path, wav: pathlib.Path, seg: dict, work: pathli
     if got != n:
         raise RuntimeError(f"segment cut produced {got} frames, expected {n}")
     return v, a
+
+
+def verify_segment(video: pathlib.Path) -> list[bool]:
+    """Run LatentSync's FaceDetector (with its own filters) on the exact frames LatentSync will see: its read_video()
+    re-encodes the input once more with `ffmpeg -r 25 -crf 18`, so we replicate that encode (x264 is deterministic) and
+    detect on the result. True = LatentSync accepts the frame."""
+    import cv2
+    ls_view = video.with_name(video.stem + "_lsview.mp4")
+    run(["ffmpeg", "-loglevel", "error", "-y", "-nostdin", "-i", str(video), "-r", str(FPS), "-crf", "18", str(ls_view)])
+    det = face_detector(); cap = cv2.VideoCapture(str(ls_view)); ok = []
+    while True:
+        r, fr = cap.read()
+        if not r:
+            break
+        bbox, _ = det(cv2.cvtColor(fr, cv2.COLOR_BGR2RGB)); ok.append(bbox is not None)   # RGB, as in LatentSync
+    cap.release(); return ok
+
+
+def split_by_mask(seg: dict, ok: list[bool], min_frames: int, next_index: int) -> list[dict]:
+    """Split a segment into runs of accepted / rejected frames (relative to the master timeline)."""
+    out = []; i = 0
+    while i < len(ok):
+        j = i
+        while j < len(ok) and ok[j] == ok[i]:
+            j += 1
+        n = j - i; good = ok[i]
+        out.append({"index": next_index + len(out), "start_frame": seg["start_frame"] + i, "end_frame": seg["start_frame"] + j, "frames": n,
+                    "start_s": round((seg["start_frame"] + i) / FPS, 3), "end_s": round((seg["start_frame"] + j) / FPS, 3),
+                    "classification": "VALID_FACE" if good else "SMALL_FACE", "face_bbox_stats": seg.get("face_bbox_stats"),
+                    "action": ("LATENT_SYNC" if n >= min_frames else "PASS_THROUGH_SHORT_VALID") if good else "PASS_THROUGH",
+                    "split_from": seg["index"], "note": None if good else "rejected by LatentSync FaceDetector on the re-encoded segment"})
+        i = j
+    return out
 
 
 class LatentSyncRunner:
@@ -219,7 +263,11 @@ def syncnet_on_segment(final: pathlib.Path, seg: dict, work: pathlib.Path, tag: 
     try:
         r = eval_syncnet(cut); return {"status": "PASS", "confidence": r["confidence"], "av_offset_frames": r["av_offset_frames"], "seconds": r["seconds"]}
     except Exception as e:
-        return {"status": "FAIL", "error": str(e).splitlines()[-1][:200]}
+        msg = str(e)
+        if "Face not detected" in msg:
+            return {"status": "N/A_SYNCNET_NO_FACE", "error": "SyncNet S3FD detector found no >=50-frame face track in this cut"}
+        tail = [l for l in msg.splitlines() if l.strip() and "S3FD" not in l][-2:]
+        return {"status": "FAIL", "error": " | ".join(tail)[:300]}
 
 
 def process(src: pathlib.Path, out_dir: pathlib.Path, runner: LatentSyncRunner | None, a) -> dict:
@@ -230,17 +278,29 @@ def process(src: pathlib.Path, out_dir: pathlib.Path, runner: LatentSyncRunner |
     segs = segment(frames, a.min_ls_frames)
     counts = {c: sum(1 for f in frames if f["cls"] == c) for c in ("VALID_FACE", "SMALL_FACE", "NO_FACE")}
     print(f"[{name}] {len(frames)} frames@25fps  {counts}  segments={len(segs)}", flush=True)
-    replacements = {}; ls_runs = []
+    replacements = {}; ls_runs = []; verify_info = []
     reuse = pathlib.Path(a.reuse[name]) if name in a.reuse else None
-    for s in segs:
-        if s["action"] != "LATENT_SYNC":
-            continue
+    queue = [s for s in segs if s["action"] == "LATENT_SYNC"]
+    while queue:
+        s = queue.pop(0)
         if reuse and len(segs) == 1 and reuse.exists():
             frs = read_frames(reuse); s["latentsync"] = {"reused": str(reuse), "frames_out": len(frs)}; replacements[s["index"]] = frs; continue
         if runner is None:
             s["action"] = "PASS_THROUGH_NO_RUNNER"; continue
         try:
-            v, au = cut_segment(master, wav, s, work, "ls")
+            v, au = cut_segment(master, wav, s, work, f"ls{s['index']:03d}")
+            if s.get("verify_depth", 0) < a.max_verify_depth:
+                ok = verify_segment(v); s["verify_depth"] = s.get("verify_depth", 0) + 1
+                if not all(ok):
+                    subs = split_by_mask(s, ok, a.min_ls_frames, next_index=len(segs))
+                    verify_info.append({"segment": s["index"], "rejected_frames": ok.count(False), "split_into": [x["index"] for x in subs]})
+                    print(f"[{name}] seg {s['index']} verify: {ok.count(False)}/{len(ok)} frames rejected by LatentSync detector -> split into {len(subs)}", flush=True)
+                    s["action"] = "SPLIT"; s["split_into"] = [x["index"] for x in subs]
+                    for x in subs:
+                        x["verify_depth"] = s["verify_depth"]; segs.append(x)   # sub-cuts are re-verified up to --max-verify-depth
+                        if x["action"] == "LATENT_SYNC":
+                            queue.append(x)
+                    continue
             o = work / f"seg{s['index']:03d}_ls_out.mp4"
             dt = runner(v, au, o, work / f"ls_temp_{s['index']}")
             frs = read_frames(o); replacements[s["index"]] = frs
@@ -248,10 +308,13 @@ def process(src: pathlib.Path, out_dir: pathlib.Path, runner: LatentSyncRunner |
             ls_runs.append(dt); print(f"[{name}] seg {s['index']} {s['start_s']}-{s['end_s']}s LatentSync {dt}s -> {len(frs)} frames", flush=True)
         except Exception as e:
             s["action"] = "PASS_THROUGH_LS_FAILED"; s["error"] = f"{type(e).__name__}: {e}"; print(f"[{name}] seg {s['index']} LS FAILED: {s['error']}", flush=True)
+    # timeline order for assembly / manifest: split parents are dropped, children take their place
+    segs[:] = sorted([s for s in segs if s["action"] != "SPLIT"], key=lambda s: s["start_frame"])
     final = out_dir / f"facesync_{name}.mp4"
     asm = assemble(master, src, segs, replacements, final, work)
     rep = {"video": str(src), "input_meta": probe(src), "master_frames": len(frames), "frame_classes": counts, "segments": segs,
            "output": str(final), "output_meta": probe(final), "assembly": asm, "latentsync_total_s": round(sum(ls_runs), 1),
+           "verify_splits": verify_info,
            "thresholds": {"valid_w": VALID_W, "valid_h": VALID_H, "valid_score": VALID_SCORE, "latentsync_filter": "w>=50 h>=80 score>=0.5", "min_ls_frames": a.min_ls_frames}}
     # SyncNet only where we lip-synced
     if not a.skip_syncnet:
@@ -275,8 +338,14 @@ def process(src: pathlib.Path, out_dir: pathlib.Path, runner: LatentSyncRunner |
             for info in exp:
                 s = segs[info["segment"]]
                 if "error" not in info:
-                    info["syncnet"] = syncnet_on_segment(final2, s, work, "crop")
-                    print(f"[{name}] crop-exp seg {s['index']} syncnet={info['syncnet']}", flush=True)
+                    info["syncnet_pasted"] = syncnet_on_segment(final2, s, work, "crop")
+                    try:   # the ROI clip itself (face upscaled, audio included) is what SyncNet can actually track
+                        from syncnet_common import eval_syncnet
+                        r = eval_syncnet(pathlib.Path(info["preview_roi"]))
+                        info["syncnet_roi_clip"] = {"status": "PASS", "confidence": r["confidence"], "av_offset_frames": r["av_offset_frames"], "seconds": r["seconds"]}
+                    except Exception as e:
+                        info["syncnet_roi_clip"] = {"status": "N/A_SYNCNET_NO_FACE" if "Face not detected" in str(e) else "FAIL"}
+                    print(f"[{name}] crop-exp seg {s['index']} syncnet pasted={info['syncnet_pasted']} roi={info['syncnet_roi_clip']}", flush=True)
         rep["crop_experiment"] = {"output": str(final2), "output_meta": probe(final2), "assembly": asm2, "segments": exp,
                                   "params": {"target_face_h": a.target_face_h, "pad": a.pad}}
     rep["wall_s_total"] = round(time.perf_counter() - t_all, 1)
@@ -293,6 +362,7 @@ def main() -> int:
     ap.add_argument("--crop-experiment", action="store_true")
     ap.add_argument("--target-face-h", type=int, default=160, help="crop experiment: upscale so the median face height reaches this many px")
     ap.add_argument("--pad", type=float, default=0.6, help="crop experiment: padding around the face as a fraction of face size, each side")
+    ap.add_argument("--max-verify-depth", type=int, default=3, help="how many times a cut may be re-checked/split before LatentSync is called")
     ap.add_argument("--skip-syncnet", action="store_true")
     ap.add_argument("--no-latentsync", action="store_true", help="classify + assemble only (everything passes through)")
     ap.add_argument("--json", default=str(PILOT / "0.8_face_aware.json"))
