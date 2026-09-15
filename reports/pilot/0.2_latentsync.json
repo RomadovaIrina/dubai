@@ -1,0 +1,24 @@
+{
+  "task": "0.2",
+  "at": "2026-09-15T09:11:09Z",
+  "latentsync": {
+    "path": "/workspace/dub/third_party/latentsync",
+    "commit": "a229c3948406bc2cf6eaf4873e662e70c6a04746",
+    "branch": "HEAD",
+    "dirty": false
+  },
+  "baseline": {
+    "torch": "2.7.1+cu128",
+    "torch_cuda": "12.8"
+  },
+  "recorded_commits": "latentsync a229c3948406bc2cf6eaf4873e662e70c6a04746\nCodeFormer b33cc7d639d6545bfcccc7e0bc6ae51f24e79c2b",
+  "smoke": {
+    "returncode": 0,
+    "output_exists": true,
+    "no_kernel_image": false,
+    "log": "reports/pilot/0.2_latentsync_smoke.log"
+  },
+  "verdict": "PASS",
+  "closed": true,
+  "reason": "real LatentSync inference passed on immutable baseline"
+}

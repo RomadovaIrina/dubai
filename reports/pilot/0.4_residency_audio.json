@@ -1,0 +1,99 @@
+{
+  "task": "0.4",
+  "profile": "audio",
+  "models": [
+    "whisper",
+    "retinaface",
+    "pyannote",
+    "chatterbox"
+  ],
+  "gpu": "NVIDIA GeForce RTX 5090",
+  "capability": [
+    12,
+    0
+  ],
+  "actual_gpu_total_mib": 32109.0,
+  "target_mib": 32768.0,
+  "headroom_mib": 3072.0,
+  "baseline": {
+    "nvidia_smi_used_mib": 508,
+    "torch_allocated_mib": 0.0,
+    "torch_reserved_mib": 0.0,
+    "cuda_free_mib": 31601.8,
+    "cuda_total_mib": 32109.0
+  },
+  "rows": [
+    {
+      "model": "whisper",
+      "status": "PASS",
+      "seconds": 7.909,
+      "incremental_device_mib": 1824,
+      "nvidia_smi_used_mib": 2332,
+      "torch_allocated_mib": 0.0,
+      "torch_reserved_mib": 0.0,
+      "cuda_free_mib": 29777.8,
+      "cuda_total_mib": 32109.0
+    },
+    {
+      "model": "retinaface",
+      "status": "PASS",
+      "seconds": 0.918,
+      "incremental_device_mib": 206,
+      "nvidia_smi_used_mib": 2538,
+      "torch_allocated_mib": 52.2,
+      "torch_reserved_mib": 124.0,
+      "cuda_free_mib": 29571.8,
+      "cuda_total_mib": 32109.0
+    },
+    {
+      "model": "pyannote",
+      "status": "PASS",
+      "seconds": 2.366,
+      "incremental_device_mib": 12,
+      "nvidia_smi_used_mib": 2550,
+      "torch_allocated_mib": 84.4,
+      "torch_reserved_mib": 126.0,
+      "cuda_free_mib": 29559.8,
+      "cuda_total_mib": 32109.0
+    },
+    {
+      "model": "chatterbox",
+      "status": "PASS",
+      "seconds": 18.614,
+      "incremental_device_mib": 3054,
+      "nvidia_smi_used_mib": 5604,
+      "torch_allocated_mib": 1624.6,
+      "torch_reserved_mib": 3180.0,
+      "cuda_free_mib": 26505.8,
+      "cuda_total_mib": 32109.0
+    }
+  ],
+  "final": {
+    "nvidia_smi_used_mib": 5604,
+    "torch_allocated_mib": 1624.6,
+    "torch_reserved_mib": 3180.0,
+    "cuda_free_mib": 26505.8,
+    "cuda_total_mib": 32109.0
+  },
+  "steady_resident_delta_mib": 5096,
+  "isolated_peak_delta_mib": {
+    "whisper": 2664.0,
+    "retinaface": 1144.0,
+    "pyannote": 860.0,
+    "chatterbox": 3714.0,
+    "latentsync": 20548.0,
+    "codeformer": 2693.0
+  },
+  "estimated_transient_extra_mib": {
+    "whisper": 840.0,
+    "retinaface": 938.0,
+    "pyannote": 848.0,
+    "chatterbox": 660.0
+  },
+  "max_transient_extra_mib": 938.0,
+  "conservative_required_mib": 9106.0,
+  "verdict": "RESIDENT_SAFE",
+  "closed": true,
+  "reason": "measured steady residency + largest observed transient + headroom fits target",
+  "at": "2026-09-15T09:30:49Z"
+}

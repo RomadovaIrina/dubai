@@ -1,0 +1,66 @@
+{
+  "task": "0.1",
+  "title": "Blackwell image",
+  "at": "2026-09-15T08:59:12Z",
+  "gpu": {
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.173.02",
+    "name": "NVIDIA GeForce RTX 5090",
+    "capability": "sm_120",
+    "total_vram_bytes": 33668726784,
+    "total_vram_gib": 31.36,
+    "free_vram_gib": 30.86,
+    "multi_processor_count": 170,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "nvcc": {
+    "raw": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Fri_Feb_21_20:23:50_PST_2025\nCuda compilation tools, release 12.8, V12.8.93\nBuild cuda_12.8.r12.8/compiler.35583870_0",
+    "release": "12.8",
+    "which": "/usr/local/cuda/bin/nvcc"
+  },
+  "torch_probe": {
+    "torch": "2.7.1+cu128",
+    "torch_cuda": "12.8",
+    "cuda_available": true,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ],
+    "device": "NVIDIA GeForce RTX 5090",
+    "capability": [
+      12,
+      0
+    ],
+    "vram_gib": 31.356,
+    "matmul": {
+      "ok": true,
+      "seconds": 0.1174
+    }
+  },
+  "baseline_checks": {
+    "sm_120": true,
+    "torch_2_7_plus_cu128": true,
+    "system_cuda_12_8": true,
+    "real_cuda_kernel": true
+  },
+  "smoke": {
+    "returncode": 0,
+    "statuses": {},
+    "log": "reports/pilot/0.1_smoke.log"
+  },
+  "verdict": "PASS",
+  "closed": true,
+  "reason": "sm_120 baseline and real model smoke suite passed"
+}

@@ -1,0 +1,147 @@
+{
+  "task": "0.8",
+  "step": "latentsync-preparation",
+  "gpu": {
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.173.02",
+    "name": "NVIDIA GeForce RTX 5090",
+    "capability": "sm_120",
+    "total_vram_bytes": 33668726784,
+    "total_vram_gib": 31.36,
+    "free_vram_gib": 6.48,
+    "multi_processor_count": 170,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "config": {
+    "unet_config": "configs/unet/stage2_512.yaml",
+    "resolution": 512,
+    "num_frames": 16,
+    "inference_steps": 20,
+    "guidance_scale": 1.5,
+    "deepcache": true,
+    "dtype": "float16",
+    "seed": 1247,
+    "commit": "a229c3948406bc2cf6eaf4873e662e70c6a04746",
+    "model_load_s": 8.35
+  },
+  "rows": [
+    {
+      "name": "01",
+      "input": "/workspace/dub/test_videos/01.MP4",
+      "input_meta": {
+        "duration_s": 101.666667,
+        "fps": 25.003278688524592,
+        "frames": 2542,
+        "width": 480,
+        "height": 848,
+        "codec": "h264"
+      },
+      "output": "/tmp/dabai_pilot_08/latentsync_01.mp4",
+      "error": "RuntimeError: Face not detected",
+      "latentsync_wall_s": 14.97,
+      "audio": "/tmp/dabai_pilot_08/audio/01_audio.wav",
+      "peak_torch_reserved_mib": 2994.0,
+      "output_meta": null,
+      "ok": false,
+      "s_per_video_min": 8.83
+    },
+    {
+      "name": "02",
+      "input": "/workspace/dub/test_videos/02.mp4",
+      "input_meta": {
+        "duration_s": 110.866667,
+        "fps": 29.981960312687914,
+        "frames": 3324,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "output": "/tmp/dabai_pilot_08/latentsync_02.mp4",
+      "error": "RuntimeError: Face not detected",
+      "latentsync_wall_s": 13.41,
+      "audio": "/tmp/dabai_pilot_08/audio/02_audio.wav",
+      "peak_torch_reserved_mib": 2994.0,
+      "output_meta": null,
+      "ok": false,
+      "s_per_video_min": 7.26
+    },
+    {
+      "name": "03",
+      "input": "/workspace/dub/test_videos/03.mp4",
+      "input_meta": {
+        "duration_s": 90.333333,
+        "fps": 30.0,
+        "frames": 2710,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "output": "/tmp/dabai_pilot_08/latentsync_03.mp4",
+      "audio": "/tmp/dabai_pilot_08/audio/03_audio.wav",
+      "peak_torch_reserved_mib": 23190.0,
+      "latentsync_wall_s": 596.05,
+      "output_meta": {
+        "duration_s": 90.4,
+        "fps": 25.0,
+        "frames": 2260,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "ok": true,
+      "s_per_video_min": 395.9
+    },
+    {
+      "name": "04",
+      "input": "/workspace/dub/test_videos/04.mp4",
+      "input_meta": {
+        "duration_s": 53.9,
+        "fps": 30.0,
+        "frames": 1617,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "output": "/tmp/dabai_pilot_08/latentsync_04.mp4",
+      "reused": "/tmp/dabai_pilot_06/latentsync_04.mp4",
+      "latentsync_wall_s": null,
+      "output_meta": {
+        "duration_s": 53.96,
+        "fps": 25.0,
+        "frames": 1349,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "ok": true
+    },
+    {
+      "name": "05",
+      "input": "/workspace/dub/test_videos/05.mp4",
+      "input_meta": {
+        "duration_s": 52.366667,
+        "fps": 29.92361553150859,
+        "frames": 1567,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "output": "/tmp/dabai_pilot_08/latentsync_05.mp4",
+      "error": "RuntimeError: Face not detected",
+      "latentsync_wall_s": 12.14,
+      "audio": "/tmp/dabai_pilot_08/audio/05_audio.wav",
+      "peak_torch_reserved_mib": 23190.0,
+      "output_meta": null,
+      "ok": false,
+      "s_per_video_min": 13.91
+    }
+  ],
+  "at": "2026-09-15T12:57:28Z"
+}

@@ -1,0 +1,95 @@
+{
+  "task": "0.6",
+  "component": "latentsync",
+  "gpu": {
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.173.02",
+    "name": "NVIDIA GeForce RTX 5090",
+    "capability": "sm_120",
+    "total_vram_bytes": 33668726784,
+    "total_vram_gib": 31.36,
+    "free_vram_gib": 11.27,
+    "multi_processor_count": 170,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "video": "/workspace/dub/test_videos/04.mp4",
+  "audio": "/tmp/dabai_pilot_06/04_audio.wav",
+  "source": {
+    "duration_s": 53.9,
+    "fps": 30.0,
+    "frames": 1617,
+    "width": 464,
+    "height": 848,
+    "codec": "h264"
+  },
+  "config": {
+    "unet_config": "configs/unet/stage2_512.yaml",
+    "resolution": 512,
+    "num_frames": 16,
+    "inference_steps": 20,
+    "guidance_scale": 1.5,
+    "deepcache": true,
+    "dtype": "float16",
+    "seed": 1247
+  },
+  "model_load": {
+    "seconds": 23.186,
+    "peak_device_mib": 3452,
+    "device_used_after_load_mib": 20572
+  },
+  "runs": [
+    {
+      "run": 1,
+      "kind": "cold",
+      "wall_s": 362.306,
+      "model_load_included": false,
+      "s_per_video_min": 403.309,
+      "peak_device_mib": 20544,
+      "peak_process_mib": 20534,
+      "torch_peak_reserved_mib": 19656.0,
+      "output": "/tmp/dabai_pilot_06/latentsync_04_r1.mp4",
+      "output_probe": {
+        "duration_s": 53.96,
+        "fps": 25.0,
+        "frames": 1349,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "ok": true
+    },
+    {
+      "run": 2,
+      "kind": "warm",
+      "wall_s": 362.23,
+      "model_load_included": false,
+      "s_per_video_min": 403.224,
+      "peak_device_mib": 20607,
+      "peak_process_mib": 20574,
+      "torch_peak_reserved_mib": 19656.0,
+      "output": "/tmp/dabai_pilot_06/latentsync_04_r2.mp4",
+      "output_probe": {
+        "duration_s": 53.96,
+        "fps": 25.0,
+        "frames": 1349,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "ok": true
+    }
+  ],
+  "steady_state": {
+    "wall_s": 362.23,
+    "s_per_video_min": 403.224,
+    "peak_device_mib": 20607
+  },
+  "at": "2026-09-15T10:01:07Z"
+}

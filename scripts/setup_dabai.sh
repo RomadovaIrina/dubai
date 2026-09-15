@@ -18,7 +18,10 @@ log(){ echo "[$(date +%H:%M:%S)] $*"; }
 run_stage(){ local n="$1"; shift; log "=== stage $n: $* ==="; "stage_$n" 2>&1 | tee "${LOGS}/setup_${n}_${TS}.log"; log "=== stage $n done ==="; }
 
 stage_0(){ # env + immutable torch baseline
-  if [ ! -x "${PY}" ]; then conda create -y -n dabai python=3.11; fi
+  if [ ! -x "${PY}" ]; then  # conda `-n` would land wherever this conda keeps envs; we need exactly ${ENV_DIR}
+    if command -v conda >/dev/null 2>&1; then conda create -y -p "${ENV_DIR}" python=3.11
+    else uv venv --python 3.11 --seed "${ENV_DIR}"; fi   # image without conda (uv provides pip via --seed)
+  fi
   "${PY}" --version
   uv pip install --python "${PY}" -r "${REQ}/00-torch.txt"
   "${PY}" "${DUB_ROOT}/scripts/check_torch.py"

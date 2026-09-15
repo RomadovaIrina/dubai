@@ -1,0 +1,409 @@
+{
+  "task": "0.8",
+  "expected_videos": 5,
+  "found_videos": 2,
+  "successful": 2,
+  "confidence": {
+    "mean": 4.125,
+    "median": 4.125,
+    "min": 3.21,
+    "max": 5.04
+  },
+  "abs_av_offset_frames": {
+    "mean": 0,
+    "median": 0.0,
+    "max": 0
+  },
+  "worst_by_confidence": "latentsync_04.mp4",
+  "worst_by_abs_offset": "latentsync_03.mp4",
+  "rows": [
+    {
+      "video": "/tmp/dabai_pilot_08/latentsync_03.mp4",
+      "returncode": 0,
+      "seconds": 242.673,
+      "confidence": 5.04,
+      "av_offset_frames": 0,
+      "stdout_tail": "VideoManager is deprecated and will be removed.\n`base_timecode` argument is deprecated and has no effect.\n[S3FD] loading with cuda\n[S3FD] finished loading (0.2096 sec)\nInput video: /tmp/dabai_pilot_08/latentsync_03.mp4\nSyncNet confidence: 5.04\nAV offset: 0",
+      "name": "latentsync_03.mp4",
+      "key": "03",
+      "status": "PASS",
+      "meta": {
+        "duration_s": 90.4,
+        "fps": 25.0,
+        "frames": 2260,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "original_confidence": 4.89,
+      "original_av_offset_frames": 2,
+      "confidence_delta": 0.15,
+      "abs_offset_delta_frames": -2
+    },
+    {
+      "video": "/tmp/dabai_pilot_06/latentsync_04.mp4",
+      "returncode": 0,
+      "seconds": 166.121,
+      "confidence": 3.21,
+      "av_offset_frames": 0,
+      "stdout_tail": "VideoManager is deprecated and will be removed.\n`base_timecode` argument is deprecated and has no effect.\n[S3FD] loading with cuda\n[S3FD] finished loading (0.2173 sec)\nInput video: /tmp/dabai_pilot_06/latentsync_04.mp4\nSyncNet confidence: 3.21\nAV offset: 0",
+      "name": "latentsync_04.mp4",
+      "key": "04",
+      "status": "PASS",
+      "meta": {
+        "duration_s": 53.96,
+        "fps": 25.0,
+        "frames": 1349,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "original_confidence": 3.24,
+      "original_av_offset_frames": 2,
+      "confidence_delta": -0.03,
+      "abs_offset_delta_frames": -2
+    }
+  ],
+  "originals": [
+    {
+      "video": "/workspace/dub/test_videos/01.MP4",
+      "returncode": 0,
+      "seconds": 145.019,
+      "confidence": 5.36,
+      "av_offset_frames": 1,
+      "stdout_tail": "VideoManager is deprecated and will be removed.\n`base_timecode` argument is deprecated and has no effect.\n[S3FD] loading with cuda\n[S3FD] finished loading (0.2796 sec)\nInput video: /workspace/dub/test_videos/01.MP4\nSyncNet confidence: 5.36\nAV offset: 1",
+      "name": "01.MP4",
+      "key": "01",
+      "status": "PASS",
+      "meta": {
+        "duration_s": 101.666667,
+        "fps": 25.003278688524592,
+        "frames": 2542,
+        "width": 480,
+        "height": 848,
+        "codec": "h264"
+      }
+    },
+    {
+      "name": "02.mp4",
+      "key": "02",
+      "status": "FAIL",
+      "error": "RuntimeError: SyncNet evaluation failed for /workspace/dub/test_videos/02.mp4:\nVideoManager is deprecated and will be removed.\n`base_timecode` argument is deprecated and has no effect.\nTraceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/workspace/dub/third_party/latentsync/eval/eval_sync_conf.py\", line 77, in <module>\n    main()\n  File \"/workspace/dub/third_party/latentsync/eval/eval_sync_conf.py\", line 61, in main\n    syncnet_eval(syncnet, syncnet_detector, args.video_path, args.temp_dir)\n  File \"/workspace/dub/third_party/latentsync/eval/eval_sync_conf.py\", line 29, in syncnet_eval\n    raise Exception(red_text(f\"Face not detected in {video_path}\"))\nException: \u001b[91mFace not detected in /workspace/dub/test_videos/02.mp4\u001b[0m\n[S3FD] loading with cuda\n[S3FD] finished loading (0.2152 sec)"
+    },
+    {
+      "video": "/workspace/dub/test_videos/03.mp4",
+      "returncode": 0,
+      "seconds": 234.27,
+      "confidence": 4.89,
+      "av_offset_frames": 2,
+      "stdout_tail": "VideoManager is deprecated and will be removed.\n`base_timecode` argument is deprecated and has no effect.\n[S3FD] loading with cuda\n[S3FD] finished loading (0.2089 sec)\nInput video: /workspace/dub/test_videos/03.mp4\nSyncNet confidence: 4.89\nAV offset: 2",
+      "name": "03.mp4",
+      "key": "03",
+      "status": "PASS",
+      "meta": {
+        "duration_s": 90.333333,
+        "fps": 30.0,
+        "frames": 2710,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      }
+    },
+    {
+      "video": "/workspace/dub/test_videos/04.mp4",
+      "returncode": 0,
+      "seconds": 149.832,
+      "confidence": 3.24,
+      "av_offset_frames": 2,
+      "stdout_tail": "VideoManager is deprecated and will be removed.\n`base_timecode` argument is deprecated and has no effect.\n[S3FD] loading with cuda\n[S3FD] finished loading (0.2137 sec)\nInput video: /workspace/dub/test_videos/04.mp4\nSyncNet confidence: 3.24\nAV offset: 2",
+      "name": "04.mp4",
+      "key": "04",
+      "status": "PASS",
+      "meta": {
+        "duration_s": 53.9,
+        "fps": 30.0,
+        "frames": 1617,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      }
+    },
+    {
+      "video": "/workspace/dub/test_videos/05.mp4",
+      "returncode": 0,
+      "seconds": 113.911,
+      "confidence": 1.71,
+      "av_offset_frames": 2,
+      "stdout_tail": "VideoManager is deprecated and will be removed.\n`base_timecode` argument is deprecated and has no effect.\n[S3FD] loading with cuda\n[S3FD] finished loading (0.2088 sec)\nInput video: /workspace/dub/test_videos/05.mp4\nSyncNet confidence: 1.71\nAV offset: 2",
+      "name": "05.mp4",
+      "key": "05",
+      "status": "PASS",
+      "meta": {
+        "duration_s": 52.366667,
+        "fps": 29.92361553150859,
+        "frames": 1567,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      }
+    }
+  ],
+  "closed": false,
+  "gpu": {
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.173.02",
+    "name": "NVIDIA GeForce RTX 5090",
+    "capability": "sm_120",
+    "total_vram_bytes": 33668726784,
+    "total_vram_gib": 31.36,
+    "free_vram_gib": 30.86,
+    "multi_processor_count": 170,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "syncnet": {
+    "evaluator": "third_party/latentsync/eval/eval_sync_conf.py (upstream)",
+    "model": "/workspace/dub/third_party/latentsync/checkpoints/auxiliary/syncnet_v2.model"
+  },
+  "prep": {
+    "task": "0.8",
+    "step": "latentsync-preparation",
+    "gpu": {
+      "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.173.02",
+      "name": "NVIDIA GeForce RTX 5090",
+      "capability": "sm_120",
+      "total_vram_bytes": 33668726784,
+      "total_vram_gib": 31.36,
+      "free_vram_gib": 6.48,
+      "multi_processor_count": 170,
+      "arch_list": [
+        "sm_75",
+        "sm_80",
+        "sm_86",
+        "sm_90",
+        "sm_100",
+        "sm_120",
+        "compute_120"
+      ]
+    },
+    "config": {
+      "unet_config": "configs/unet/stage2_512.yaml",
+      "resolution": 512,
+      "num_frames": 16,
+      "inference_steps": 20,
+      "guidance_scale": 1.5,
+      "deepcache": true,
+      "dtype": "float16",
+      "seed": 1247,
+      "commit": "a229c3948406bc2cf6eaf4873e662e70c6a04746",
+      "model_load_s": 8.35
+    },
+    "rows": [
+      {
+        "name": "01",
+        "input": "/workspace/dub/test_videos/01.MP4",
+        "input_meta": {
+          "duration_s": 101.666667,
+          "fps": 25.003278688524592,
+          "frames": 2542,
+          "width": 480,
+          "height": 848,
+          "codec": "h264"
+        },
+        "output": "/tmp/dabai_pilot_08/latentsync_01.mp4",
+        "error": "RuntimeError: Face not detected",
+        "latentsync_wall_s": 14.97,
+        "audio": "/tmp/dabai_pilot_08/audio/01_audio.wav",
+        "peak_torch_reserved_mib": 2994.0,
+        "output_meta": null,
+        "ok": false,
+        "s_per_video_min": 8.83
+      },
+      {
+        "name": "02",
+        "input": "/workspace/dub/test_videos/02.mp4",
+        "input_meta": {
+          "duration_s": 110.866667,
+          "fps": 29.981960312687914,
+          "frames": 3324,
+          "width": 464,
+          "height": 848,
+          "codec": "h264"
+        },
+        "output": "/tmp/dabai_pilot_08/latentsync_02.mp4",
+        "error": "RuntimeError: Face not detected",
+        "latentsync_wall_s": 13.41,
+        "audio": "/tmp/dabai_pilot_08/audio/02_audio.wav",
+        "peak_torch_reserved_mib": 2994.0,
+        "output_meta": null,
+        "ok": false,
+        "s_per_video_min": 7.26
+      },
+      {
+        "name": "03",
+        "input": "/workspace/dub/test_videos/03.mp4",
+        "input_meta": {
+          "duration_s": 90.333333,
+          "fps": 30.0,
+          "frames": 2710,
+          "width": 464,
+          "height": 848,
+          "codec": "h264"
+        },
+        "output": "/tmp/dabai_pilot_08/latentsync_03.mp4",
+        "audio": "/tmp/dabai_pilot_08/audio/03_audio.wav",
+        "peak_torch_reserved_mib": 23190.0,
+        "latentsync_wall_s": 596.05,
+        "output_meta": {
+          "duration_s": 90.4,
+          "fps": 25.0,
+          "frames": 2260,
+          "width": 464,
+          "height": 848,
+          "codec": "h264"
+        },
+        "ok": true,
+        "s_per_video_min": 395.9
+      },
+      {
+        "name": "04",
+        "input": "/workspace/dub/test_videos/04.mp4",
+        "input_meta": {
+          "duration_s": 53.9,
+          "fps": 30.0,
+          "frames": 1617,
+          "width": 464,
+          "height": 848,
+          "codec": "h264"
+        },
+        "output": "/tmp/dabai_pilot_08/latentsync_04.mp4",
+        "reused": "/tmp/dabai_pilot_06/latentsync_04.mp4",
+        "latentsync_wall_s": null,
+        "output_meta": {
+          "duration_s": 53.96,
+          "fps": 25.0,
+          "frames": 1349,
+          "width": 464,
+          "height": 848,
+          "codec": "h264"
+        },
+        "ok": true
+      },
+      {
+        "name": "05",
+        "input": "/workspace/dub/test_videos/05.mp4",
+        "input_meta": {
+          "duration_s": 52.366667,
+          "fps": 29.92361553150859,
+          "frames": 1567,
+          "width": 464,
+          "height": 848,
+          "codec": "h264"
+        },
+        "output": "/tmp/dabai_pilot_08/latentsync_05.mp4",
+        "error": "RuntimeError: Face not detected",
+        "latentsync_wall_s": 12.14,
+        "audio": "/tmp/dabai_pilot_08/audio/05_audio.wav",
+        "peak_torch_reserved_mib": 23190.0,
+        "output_meta": null,
+        "ok": false,
+        "s_per_video_min": 13.91
+      }
+    ],
+    "at": "2026-09-15T12:57:28Z"
+  },
+  "semantics": {
+    "dataset": "real customer/content videos",
+    "lipsync_processing": "real LatentSync",
+    "audio": "original source audio, not translated/TTS",
+    "caveat": "result suitable for pilot technical characterization; final contractual acceptance threshold should be confirmed on production-like dubbed outputs when TTS pipeline exists"
+  },
+  "contract_threshold": "UNDECIDED",
+  "at": "2026-09-15T13:20:35Z",
+  "env_snapshot": "20260915_092530-8d916633",
+  "sm": "sm_120",
+  "latentsync_outputs_produced": {
+    "03": "generated (596.05 s, 395.9 s/video-min)",
+    "04": "reused 0.6 output /tmp/dabai_pilot_06/latentsync_04.mp4 (md5-verified identical run config)",
+    "01": "FAILED \u2014 RuntimeError: Face not detected (latentsync/utils/image_processor.py affine_transform)",
+    "02": "FAILED \u2014 RuntimeError: Face not detected",
+    "05": "FAILED \u2014 RuntimeError: Face not detected"
+  },
+  "face_presence_diagnosis": {
+    "method": "LatentSync's own FaceDetector (insightface buffalo_l det 512, filters bbox w>=50 & h>=80 px, 0.2<w/h<1.5, det_score>=0.5) on the 25-fps frames the pipeline feeds; raw = plain insightface without the size/score filter",
+    "01.MP4": {
+      "frames_25fps": 2542,
+      "rejected_frames": 2282,
+      "rejected_pct": 89.8,
+      "no_face_seconds": "10.4-101.6 (raw: 10.4-89.8 and 96.9-101.6)",
+      "raw_detected_but_below_min_size": 176,
+      "content": "door showcase B-roll; presenter only in intro/outro"
+    },
+    "02.mp4": {
+      "frames_25fps": 2773,
+      "rejected_frames": 2773,
+      "rejected_pct": 100.0,
+      "raw_no_face_frames": 3323,
+      "content": "sauna walkthrough, no person on screen at all"
+    },
+    "05.mp4": {
+      "frames_25fps": 1311,
+      "rejected_frames": 121,
+      "rejected_pct": 9.2,
+      "rejected_seconds": "9.7-14.6 and 25.9-26.4",
+      "raw_face_present_all_frames": true,
+      "reason": "picture-in-picture speaker face ~53-58 x 70-79 px at 464x848 < LatentSync minimum height 80 px",
+      "examples_wxh_score": [
+        [
+          243,
+          58,
+          79,
+          0.79
+        ],
+        [
+          246,
+          57,
+          78,
+          0.82
+        ],
+        [
+          247,
+          56,
+          78,
+          0.78
+        ],
+        [
+          248,
+          56,
+          75,
+          0.77
+        ],
+        [
+          249,
+          55,
+          76,
+          0.78
+        ]
+      ]
+    },
+    "03.mp4": {
+      "rejected_frames": 0
+    },
+    "04.mp4": {
+      "rejected_frames": 0
+    }
+  },
+  "syncnet_original_02_error": "Exception: Face not detected in /workspace/dub/test_videos/02.mp4 (eval/eval_sync_conf.py syncnet_eval, S3FD found no track)",
+  "measured": {
+    "latentsync_outputs": 2,
+    "originals": 4
+  },
+  "result": "BLOCKED",
+  "verdict": "0.8 = BLOCKED \u2014 2/5 real-content videos produced a LatentSync output; 01, 02, 05 fail upstream LatentSync with 'Face not detected' (content has no face / face below 80 px); SyncNet on original 02 also fails (no face)"
+}

@@ -5,6 +5,9 @@ print("pyannote.audio", pyannote.audio.__version__)
 tok = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
 if not tok:
     print("SKIP pyannote: HF_TOKEN not set (put HF_TOKEN=hf_... into /workspace/.env); import OK"); sys.exit(0)
+# pyannote 3.x checkpoints (pytorch_model.bin on HF) pickle TorchVersion etc.; torch>=2.6 defaults to
+# weights_only=True and refuses them. Trusted source (HF pyannote org) -> torch's own opt-out, this process only.
+os.environ.setdefault("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", "1")
 from pyannote.audio import Pipeline
 with Timer() as tl:
     pipe = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1", use_auth_token=tok)

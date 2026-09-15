@@ -1,0 +1,212 @@
+{
+  "task": "0.7",
+  "input": "/tmp/dabai_pilot_06/latentsync_04.mp4",
+  "input_meta": {
+    "duration_s": 53.96,
+    "fps": 25.0,
+    "frames": 1349,
+    "width": 464,
+    "height": 848,
+    "codec": "h264"
+  },
+  "gpu": {
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.173.02",
+    "name": "NVIDIA GeForce RTX 5090",
+    "capability": "sm_120",
+    "total_vram_bytes": 33668726784,
+    "total_vram_gib": 31.36,
+    "free_vram_gib": 30.86,
+    "multi_processor_count": 170,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "before": {
+    "video": "/tmp/dabai_pilot_06/latentsync_04.mp4",
+    "returncode": 0,
+    "seconds": 135.341,
+    "confidence": 3.21,
+    "av_offset_frames": 0,
+    "stdout_tail": "VideoManager is deprecated and will be removed.\n`base_timecode` argument is deprecated and has no effect.\n[S3FD] loading with cuda\n[S3FD] finished loading (0.2168 sec)\nInput video: /tmp/dabai_pilot_06/latentsync_04.mp4\nSyncNet confidence: 3.21\nAV offset: 0"
+  },
+  "weights": [
+    {
+      "w": 0.3,
+      "output": "/tmp/dabai_pilot_07/cf/w_0.3/latentsync_04.mp4",
+      "reused": false,
+      "codeformer_seconds": 196.996,
+      "output_meta": {
+        "duration_s": 53.96,
+        "fps": 25.0,
+        "frames": 1349,
+        "width": 512,
+        "height": 936,
+        "codec": "h264"
+      },
+      "geometry_changed": true,
+      "confidence": 2.85,
+      "av_offset_frames": 0,
+      "abs_offset_before": 0,
+      "abs_offset_after": 0,
+      "confidence_delta": -0.36,
+      "offset_abs_worsening_frames": 0,
+      "syncnet_seconds": 129.604,
+      "syncnet_stdout_tail": "VideoManager is deprecated and will be removed.\n`base_timecode` argument is deprecated and has no effect.\n[S3FD] loading with cuda\n[S3FD] finished loading (0.1993 sec)\nInput video: /tmp/dabai_pilot_07/cf/w_0.3/latentsync_04.mp4\nSyncNet confidence: 2.85\nAV offset: 0",
+      "non_degrading": false
+    },
+    {
+      "w": 0.5,
+      "output": "/tmp/dabai-codeformer-v4_fjem6/latentsync_04.mp4",
+      "reused": true,
+      "codeformer_seconds": null,
+      "output_meta": {
+        "duration_s": 53.96,
+        "fps": 25.0,
+        "frames": 1349,
+        "width": 512,
+        "height": 936,
+        "codec": "h264"
+      },
+      "geometry_changed": true,
+      "confidence": 2.97,
+      "av_offset_frames": 0,
+      "abs_offset_before": 0,
+      "abs_offset_after": 0,
+      "confidence_delta": -0.24,
+      "offset_abs_worsening_frames": 0,
+      "syncnet_seconds": 134.665,
+      "syncnet_stdout_tail": "VideoManager is deprecated and will be removed.\n`base_timecode` argument is deprecated and has no effect.\n[S3FD] loading with cuda\n[S3FD] finished loading (0.2189 sec)\nInput video: /tmp/dabai-codeformer-v4_fjem6/latentsync_04.mp4\nSyncNet confidence: 2.97\nAV offset: 0",
+      "non_degrading": false
+    },
+    {
+      "w": 0.7,
+      "output": "/tmp/dabai_pilot_07/cf/w_0.7/latentsync_04.mp4",
+      "reused": false,
+      "codeformer_seconds": 197.752,
+      "output_meta": {
+        "duration_s": 53.96,
+        "fps": 25.0,
+        "frames": 1349,
+        "width": 512,
+        "height": 936,
+        "codec": "h264"
+      },
+      "geometry_changed": true,
+      "confidence": 3.06,
+      "av_offset_frames": 0,
+      "abs_offset_before": 0,
+      "abs_offset_after": 0,
+      "confidence_delta": -0.15,
+      "offset_abs_worsening_frames": 0,
+      "syncnet_seconds": 127.572,
+      "syncnet_stdout_tail": "VideoManager is deprecated and will be removed.\n`base_timecode` argument is deprecated and has no effect.\n[S3FD] loading with cuda\n[S3FD] finished loading (0.2384 sec)\nInput video: /tmp/dabai_pilot_07/cf/w_0.7/latentsync_04.mp4\nSyncNet confidence: 3.06\nAV offset: 0",
+      "non_degrading": false
+    },
+    {
+      "w": 0.9,
+      "output": "/tmp/dabai_pilot_07/cf/w_0.9/latentsync_04.mp4",
+      "reused": false,
+      "codeformer_seconds": 196.959,
+      "output_meta": {
+        "duration_s": 53.96,
+        "fps": 25.0,
+        "frames": 1349,
+        "width": 512,
+        "height": 936,
+        "codec": "h264"
+      },
+      "geometry_changed": true,
+      "confidence": 3.17,
+      "av_offset_frames": 0,
+      "abs_offset_before": 0,
+      "abs_offset_after": 0,
+      "confidence_delta": -0.04,
+      "offset_abs_worsening_frames": 0,
+      "syncnet_seconds": 135.691,
+      "syncnet_stdout_tail": "VideoManager is deprecated and will be removed.\n`base_timecode` argument is deprecated and has no effect.\n[S3FD] loading with cuda\n[S3FD] finished loading (0.2267 sec)\nInput video: /tmp/dabai_pilot_07/cf/w_0.9/latentsync_04.mp4\nSyncNet confidence: 3.17\nAV offset: 0",
+      "non_degrading": false
+    },
+    {
+      "w": 1.0,
+      "output": "/tmp/dabai_pilot_07/cf/w_1/latentsync_04.mp4",
+      "reused": false,
+      "codeformer_seconds": 199.272,
+      "output_meta": {
+        "duration_s": 53.96,
+        "fps": 25.0,
+        "frames": 1349,
+        "width": 512,
+        "height": 936,
+        "codec": "h264"
+      },
+      "geometry_changed": true,
+      "confidence": 3.17,
+      "av_offset_frames": 0,
+      "abs_offset_before": 0,
+      "abs_offset_after": 0,
+      "confidence_delta": -0.04,
+      "offset_abs_worsening_frames": 0,
+      "syncnet_seconds": 143.653,
+      "syncnet_stdout_tail": "VideoManager is deprecated and will be removed.\n`base_timecode` argument is deprecated and has no effect.\n[S3FD] loading with cuda\n[S3FD] finished loading (0.2254 sec)\nInput video: /tmp/dabai_pilot_07/cf/w_1/latentsync_04.mp4\nSyncNet confidence: 3.17\nAV offset: 0",
+      "non_degrading": false
+    }
+  ],
+  "codeformer_config": {
+    "upscale": 1,
+    "detection_model": "retinaface_resnet50",
+    "bg_upsampler": null,
+    "face_upsample": false
+  },
+  "policy": {
+    "max_confidence_drop": 0.0,
+    "max_offset_worsening_frames": 0,
+    "selection": "lowest w that passes = strongest restoration under stated sync tolerance",
+    "name": "strict"
+  },
+  "selected_fidelity_weight": null,
+  "closed": true,
+  "verdict": "CLOSED \u2014 NO_STRICT_SAFE_WEIGHT",
+  "at": "2026-09-15T10:42:09Z",
+  "env_snapshot": "20260915_092530-8d916633",
+  "sm": "sm_120",
+  "syncnet": {
+    "evaluator": "third_party/latentsync/eval/eval_sync_conf.py (upstream, unchanged)",
+    "model": "checkpoints/auxiliary/syncnet_v2.model (ByteDance/LatentSync-1.6 auxiliary/, downloaded via snapshot_download like download_models.sh)",
+    "detector": "S3FD checkpoints/auxiliary/sfd_face.pth",
+    "reported_precision": "confidence printed with 2 decimals, offset integer frames"
+  },
+  "before_standalone": {
+    "confidence": 3.21,
+    "av_offset_frames": 0,
+    "seconds": 145.011,
+    "raw": "/tmp/dabai_pilot_07/syncnet_before_raw.json"
+  },
+  "control_scaled_only": {
+    "input": "/tmp/dabai_pilot_07/control_scaled_512x936.mp4",
+    "what": "latentsync_04.mp4 bilinear-scaled to 512x936 + libx264 crf18 re-encode, NO CodeFormer",
+    "confidence": 3.2,
+    "av_offset_frames": 0,
+    "confidence_delta": -0.01,
+    "seconds": 175.758
+  },
+  "best_effort": {
+    "w": 0.9,
+    "confidence_delta": -0.04,
+    "relative_drop": 0.0125,
+    "offset_abs_worsening_frames": 0
+  },
+  "side_finding_geometry": {
+    "input": "464x848",
+    "output_all_weights": "512x936",
+    "cause": "third_party/CodeFormer/facelib/utils/face_restoration_helper.py read_image(): if min(h,w)<512 the frame is upscaled so min side = 512, regardless of -s/upscale=1",
+    "not_fixed": true,
+    "effect_on_syncnet": "control scaled-only run: 3.20 vs 3.21 (-0.01, at evaluator print precision) -> geometry change alone is not the cause of the drop"
+  },
+  "result": "NO_STRICT_SAFE_WEIGHT"
+}

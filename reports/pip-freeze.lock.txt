@@ -5,7 +5,7 @@ aiohttp==3.14.3
 aiosignal==1.4.0
 albucore==0.0.24
 albumentations==2.0.8
-alembic==1.19.2
+alembic==1.20.0
 annotated-doc==0.0.5
 annotated-types==0.8.0
 antlr4-python3-runtime==4.9.3
@@ -56,7 +56,7 @@ frozenlist==1.8.0
 fsspec==2026.7.0
 future==1.0.0
 gdown==6.2.0
-greenlet==3.5.5
+greenlet==3.5.6
 huggingface-hub==0.30.2
 hyperpyyaml==1.2.3
 idna==3.19
@@ -91,7 +91,7 @@ lpips==0.1.4
 mako==1.4.1
 markdown-it-py==4.2.0
 markupsafe==3.0.3
-matplotlib==3.11.1
+matplotlib==3.11.2
 matplotlib-inline==0.2.2
 mdurl==0.1.2
 mistune==3.3.4
@@ -126,13 +126,13 @@ onnx==1.22.0
 onnxruntime-gpu==1.26.0
 opencv-python==4.9.0.80
 optuna==5.0.0
-packaging @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_packaging_1785888127/work
+packaging==26.3
 pandas==3.0.5
 pandocfilters==1.5.1
 parso==0.8.7
 pexpect==4.9.0
 pillow==12.3.0
-pip @ file:///home/conda/feedstock_root/build_artifacts/pip_1785914405025/work
+pip==26.2.1
 platformdirs==4.11.8
 pooch==1.9.0
 prettytable==3.18.0
@@ -177,7 +177,7 @@ scenedetect==0.6.1
 scikit-image==0.22.0
 scikit-learn==1.9.1
 scipy==1.15.3
-semver==3.0.4
+semver==3.1.0
 sentencepiece==0.2.2
 setuptools==84.0.0
 shellingham==1.5.4
@@ -190,7 +190,7 @@ soupsieve==2.9.2
 soxr==1.1.0
 spacy-pkuseg==1.0.1
 speechbrain==1.1.1
-sqlalchemy==2.0.52
+sqlalchemy==2.0.53
 srsly==2.5.3
 stack-data==0.6.3
 stringzilla==5.1.2
@@ -207,7 +207,7 @@ torch-pitch-shift==1.2.5
 torchaudio==2.7.1+cu128
 torchmetrics==1.9.0
 torchvision==0.22.1+cu128
-tornado==6.5.8
+tornado==6.5.9
 tqdm==4.70.1
 traitlets==5.16.1
 transformers==4.48.0

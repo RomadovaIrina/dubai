@@ -1,0 +1,121 @@
+{
+  "task": "0.6",
+  "title": "LatentSync + CodeFormer timing on Blackwell",
+  "gpu": "NVIDIA GeForce RTX 5090",
+  "sm": "sm_120",
+  "env_snapshot": "20260915_092530-8d916633",
+  "at": "2026-09-15T10:01:07Z",
+  "input": {
+    "file": "test_videos/04.mp4",
+    "duration_s": 53.9,
+    "width": 464,
+    "height": 848,
+    "fps": 30.0,
+    "frames": 1617,
+    "video_codec": "h264",
+    "audio_codec": "aac 44.1 kHz stereo",
+    "audio_for_benchmark": "/tmp/dabai_pilot_06/04_audio.wav (own audio, pcm 16 kHz mono, extracted before timing)"
+  },
+  "latentsync": {
+    "config": {
+      "unet_config": "configs/unet/stage2_512.yaml",
+      "resolution": 512,
+      "num_frames": 16,
+      "inference_steps": 20,
+      "guidance_scale": 1.5,
+      "deepcache": true,
+      "dtype": "float16",
+      "seed": 1247
+    },
+    "commit": "a229c3948406bc2cf6eaf4873e662e70c6a04746",
+    "cli_cold_run": {
+      "wall_s": 391.224,
+      "model_load_included": true,
+      "peak_device_mib": 21051,
+      "peak_process_mib": 20538,
+      "s_per_video_min": 435.5
+    },
+    "in_process": {
+      "model_load_s": 23.186,
+      "runs": [
+        {
+          "kind": "cold",
+          "wall_s": 362.306,
+          "s_per_video_min": 403.309,
+          "peak_device_mib": 20544,
+          "peak_process_mib": 20534
+        },
+        {
+          "kind": "warm",
+          "wall_s": 362.23,
+          "s_per_video_min": 403.224,
+          "peak_device_mib": 20607,
+          "peak_process_mib": 20574
+        }
+      ]
+    },
+    "steady_state": {
+      "wall_s": 362.23,
+      "model_load_included": false,
+      "s_per_video_min": 403.22,
+      "peak_device_mib": 20607
+    },
+    "output": {
+      "file": "/tmp/dabai_pilot_06/latentsync_04.mp4",
+      "duration_s": 53.96,
+      "fps": 25.0,
+      "frames": 1349,
+      "width": 464,
+      "height": 848,
+      "codec": "h264+aac",
+      "bytes": 22046200,
+      "note": "LatentSync re-encodes at 25 fps: 1617 source frames -> 1349 output frames"
+    }
+  },
+  "codeformer": {
+    "commit": "b33cc7d639d6545bfcccc7e0bc6ae51f24e79c2b",
+    "fidelity_weight": 0.5,
+    "upscale": 1,
+    "detection_model": "retinaface_resnet50",
+    "bg_upsampler": null,
+    "face_upsample": false,
+    "input": "/tmp/dabai_pilot_06/latentsync_04.mp4",
+    "input_frames": 1349,
+    "input_duration_s": 53.96,
+    "faces_detected": "1 per frame, 1349/1349",
+    "wall_s": 199.806,
+    "model_load_included": true,
+    "frames_per_s": 6.752,
+    "seconds_per_frame": 0.1481,
+    "normalized_s_per_1500_frames": 222.17,
+    "s_per_video_min": 222.17,
+    "peak_device_mib": 2198,
+    "peak_process_mib": 2188,
+    "output": {
+      "file": "/tmp/dabai-codeformer-v4_fjem6/latentsync_04.mp4",
+      "frames": 1349,
+      "fps": 25.0,
+      "duration_s": 53.96,
+      "width": 512,
+      "height": 936,
+      "workdir_size": "1.9G (tmp, not tracked)"
+    }
+  },
+  "combined": {
+    "latentsync_s_per_video_min": 403.22,
+    "codeformer_s_per_video_min": 222.17,
+    "total_s_per_video_min": 625.39,
+    "target_s_per_video_min": 300,
+    "verdict": "FAIL_TARGET",
+    "overshoot_factor": 2.08,
+    "note": "LatentSync alone (403 s/min) exceeds the 300 s/min budget; CodeFormer adds 222 s/min"
+  },
+  "verdict": "CLOSED",
+  "closed": true,
+  "evidence": [
+    "reports/pilot/0.6_latentsync.json",
+    "reports/pilot/0.6_codeformer.jsonl",
+    "reports/pilot/vram.jsonl",
+    "logs/pilot06_*.log"
+  ]
+}

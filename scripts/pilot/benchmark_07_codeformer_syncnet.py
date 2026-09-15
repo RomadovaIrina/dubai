@@ -13,8 +13,9 @@ agrees a tolerance.
 from __future__ import annotations
 import argparse, json, pathlib, shutil, subprocess, sys, tempfile, time
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from pilot_common import PILOT, THIRD_PARTY, write_json, sh
+from pilot_common import PILOT, THIRD_PARTY, write_json, sh, gpu_info
 from syncnet_common import eval_syncnet
+from benchmark_06_codeformer import probe  # ffprobe metadata: CodeFormer may change geometry (0.6: 464x848 -> 512x936)
 
 
 def fps_of(p:pathlib.Path)->float:
@@ -43,27 +44,42 @@ def main()->int:
                     help="explicit allowed drop vs BEFORE; spec itself defines no tolerance")
     ap.add_argument("--max-offset-worsening-frames",type=int,default=0)
     ap.add_argument("--keep-work",action="store_true")
+    ap.add_argument("--reuse",nargs="*",default=[],metavar="W:MP4",
+                    help="existing CodeFormer output for a weight (same input/config), e.g. 0.5:/tmp/x/latentsync_04.mp4")
+    ap.add_argument("--work-dir",default=None,help="where CodeFormer outputs go (default: mkdtemp under /tmp)")
     a=ap.parse_args(); src=pathlib.Path(a.input).resolve()
     if not src.exists(): raise SystemExit(f"missing {src}")
-    work=pathlib.Path(tempfile.mkdtemp(prefix="dabai-0.7-"))
+    reuse={float(x.split(":",1)[0]):pathlib.Path(x.split(":",1)[1]) for x in a.reuse}
+    work=pathlib.Path(a.work_dir) if a.work_dir else pathlib.Path(tempfile.mkdtemp(prefix="dabai-0.7-"))
+    work.mkdir(parents=True,exist_ok=True)
+    src_meta=probe(src)
     try:
         print("== SyncNet BEFORE ==",flush=True); before=eval_syncnet(src)
         rows=[]
         for w in sorted(a.weights):
             print(f"\n== CodeFormer w={w} ==",flush=True)
-            out=codeformer(src,w,work)
+            if w in reuse and reuse[w].exists():
+                out=reuse[w]; cf_seconds=None; print(f"reusing {out}")
+            else:
+                t0=time.perf_counter(); out=codeformer(src,w,work); cf_seconds=round(time.perf_counter()-t0,3)
+            meta=probe(out)
             after=eval_syncnet(out)
             delta=after["confidence"]-before["confidence"]
             offset_worse=abs(after["av_offset_frames"])-abs(before["av_offset_frames"])
             passes=(delta>=-a.max_confidence_drop and offset_worse<=a.max_offset_worsening_frames)
-            rows.append({"w":w,"output":str(out) if a.keep_work else None,
+            rows.append({"w":w,"output":str(out) if (a.keep_work or w in reuse) else None,
+                         "reused":w in reuse,"codeformer_seconds":cf_seconds,"output_meta":meta,
+                         "geometry_changed":(meta["width"],meta["height"])!=(src_meta["width"],src_meta["height"]),
                          "confidence":after["confidence"],"av_offset_frames":after["av_offset_frames"],
+                         "abs_offset_before":abs(before["av_offset_frames"]),"abs_offset_after":abs(after["av_offset_frames"]),
                          "confidence_delta":round(delta,4),"offset_abs_worsening_frames":offset_worse,
+                         "syncnet_seconds":after["seconds"],"syncnet_stdout_tail":after["stdout_tail"],
                          "non_degrading":passes})
-            print(rows[-1])
+            print({k:v for k,v in rows[-1].items() if k!="syncnet_stdout_tail"})
         candidates=[r for r in rows if r["non_degrading"]]
         selected=min(candidates,key=lambda r:r["w"])["w"] if candidates else None
-        rep={"task":"0.7","input":str(src),"before":before,"weights":rows,
+        rep={"task":"0.7","input":str(src),"input_meta":src_meta,"gpu":gpu_info(),"before":before,"weights":rows,
+             "codeformer_config":{"upscale":1,"detection_model":"retinaface_resnet50","bg_upsampler":None,"face_upsample":False},
              "policy":{"max_confidence_drop":a.max_confidence_drop,
                        "max_offset_worsening_frames":a.max_offset_worsening_frames,
                        "selection":"lowest w that passes = strongest restoration under stated sync tolerance"},
@@ -75,9 +91,9 @@ def main()->int:
             f"Before: confidence **{before['confidence']:.3f}**, AV offset **{before['av_offset_frames']} frames**  ",
             f"Allowed confidence drop: **{a.max_confidence_drop}**, offset worsening: **{a.max_offset_worsening_frames} frames**  ",
             f"Selected fidelity weight: **{selected if selected is not None else 'NONE'}**","",
-            "| w | confidence | Δconfidence | AV offset | abs offset worsening | non-degrading |",
-            "|---:|---:|---:|---:|---:|---|"]
-        md += [f"| {r['w']} | {r['confidence']:.3f} | {r['confidence_delta']:+.3f} | {r['av_offset_frames']} | {r['offset_abs_worsening_frames']:+d} | {r['non_degrading']} |" for r in rows]
+            "| w | conf before | conf after | Δconf | offset before | offset after | Δ\\|offset\\| | strict pass | output geometry |",
+            "|---:|---:|---:|---:|---:|---:|---:|---|---|"]
+        md += [f"| {r['w']} | {before['confidence']:.2f} | {r['confidence']:.2f} | {r['confidence_delta']:+.2f} | {before['av_offset_frames']} | {r['av_offset_frames']} | {r['offset_abs_worsening_frames']:+d} | {r['non_degrading']} | {r['output_meta']['width']}x{r['output_meta']['height']} {r['output_meta']['frames']}f {r['output_meta']['fps']:g}fps {r['output_meta']['duration_s']:.2f}s |" for r in rows]
         (PILOT/"0.7_codeformer_syncnet.md").write_text("\n".join(md)+"\n")
         print("\n".join(md)); return 0 if selected is not None else 2
     finally:

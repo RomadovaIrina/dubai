@@ -1,0 +1,241 @@
+{
+  "task": "0.4",
+  "title": "VRAM residency on RTX 5090",
+  "at": "2026-09-15T09:35:18Z",
+  "gpu": "NVIDIA GeForce RTX 5090",
+  "capability": "sm_120",
+  "nvidia_smi_total_mib": 32607,
+  "torch_visible_total_mib": 32109.0,
+  "target_gib": 32,
+  "isolated_inference_peaks_mib": {
+    "whisper": {
+      "peak_device_mib": 2666,
+      "peak_process_mib": 2656,
+      "seconds": 10.293,
+      "ok": true
+    },
+    "retinaface": {
+      "peak_device_mib": 1146,
+      "peak_process_mib": 1136,
+      "seconds": 2.571,
+      "ok": true
+    },
+    "pyannote": {
+      "peak_device_mib": 862,
+      "peak_process_mib": 852,
+      "seconds": 5.029,
+      "ok": true
+    },
+    "chatterbox": {
+      "peak_device_mib": 3716,
+      "peak_process_mib": 3706,
+      "seconds": 25.145,
+      "ok": true
+    },
+    "latentsync": {
+      "peak_device_mib": 20550,
+      "peak_process_mib": 20540,
+      "seconds": 109.435,
+      "ok": true
+    },
+    "codeformer": {
+      "peak_device_mib": 2695,
+      "peak_process_mib": 2188,
+      "seconds": 88.457,
+      "ok": true
+    }
+  },
+  "resident_profiles": {
+    "audio": {
+      "models": [
+        "whisper",
+        "retinaface",
+        "pyannote",
+        "chatterbox"
+      ],
+      "steady_device_used_mib": 5604,
+      "steady_delta_mib": 5096,
+      "oom": false,
+      "rows": [
+        {
+          "model": "whisper",
+          "status": "PASS",
+          "incremental_device_mib": 1824,
+          "nvidia_smi_used_mib": 2332,
+          "seconds": 7.909
+        },
+        {
+          "model": "retinaface",
+          "status": "PASS",
+          "incremental_device_mib": 206,
+          "nvidia_smi_used_mib": 2538,
+          "seconds": 0.918
+        },
+        {
+          "model": "pyannote",
+          "status": "PASS",
+          "incremental_device_mib": 12,
+          "nvidia_smi_used_mib": 2550,
+          "seconds": 2.366
+        },
+        {
+          "model": "chatterbox",
+          "status": "PASS",
+          "incremental_device_mib": 3054,
+          "nvidia_smi_used_mib": 5604,
+          "seconds": 18.614
+        }
+      ],
+      "probe_verdict": "RESIDENT_SAFE"
+    },
+    "video": {
+      "models": [
+        "latentsync",
+        "codeformer"
+      ],
+      "steady_device_used_mib": 3970,
+      "steady_delta_mib": 3462,
+      "oom": false,
+      "rows": [
+        {
+          "model": "latentsync",
+          "status": "PASS",
+          "incremental_device_mib": 2926,
+          "nvidia_smi_used_mib": 3434,
+          "seconds": 26.317
+        },
+        {
+          "model": "codeformer",
+          "status": "PASS",
+          "incremental_device_mib": 536,
+          "nvidia_smi_used_mib": 3970,
+          "seconds": 3.474
+        }
+      ],
+      "probe_verdict": "RESIDENT_SAFE"
+    },
+    "all": {
+      "models": [
+        "whisper",
+        "retinaface",
+        "pyannote",
+        "chatterbox",
+        "latentsync",
+        "codeformer"
+      ],
+      "steady_device_used_mib": 7436,
+      "steady_delta_mib": 6928,
+      "oom": false,
+      "rows": [
+        {
+          "model": "whisper",
+          "status": "PASS",
+          "incremental_device_mib": 1824,
+          "nvidia_smi_used_mib": 2332,
+          "seconds": 4.022
+        },
+        {
+          "model": "retinaface",
+          "status": "PASS",
+          "incremental_device_mib": 206,
+          "nvidia_smi_used_mib": 2538,
+          "seconds": 0.849
+        },
+        {
+          "model": "pyannote",
+          "status": "PASS",
+          "incremental_device_mib": 12,
+          "nvidia_smi_used_mib": 2550,
+          "seconds": 2.329
+        },
+        {
+          "model": "chatterbox",
+          "status": "PASS",
+          "incremental_device_mib": 3054,
+          "nvidia_smi_used_mib": 5604,
+          "seconds": 6.045
+        },
+        {
+          "model": "latentsync",
+          "status": "PASS",
+          "incremental_device_mib": 1296,
+          "nvidia_smi_used_mib": 6900,
+          "seconds": 6.527
+        },
+        {
+          "model": "codeformer",
+          "status": "PASS",
+          "incremental_device_mib": 536,
+          "nvidia_smi_used_mib": 7436,
+          "seconds": 1.638
+        }
+      ],
+      "probe_verdict": "RESIDENT_SAFE"
+    }
+  },
+  "all_resident_real_inference": {
+    "steady_device_used_mib": 7446,
+    "per_component": {
+      "whisper": {
+        "peak_device_mib": 7776,
+        "peak_process_mib": 7510,
+        "torch_peak_reserved_mib": 5022.0,
+        "seconds": 0.831,
+        "ok": true
+      },
+      "chatterbox": {
+        "peak_device_mib": 7664,
+        "peak_process_mib": 7654,
+        "torch_peak_reserved_mib": 5146.0,
+        "seconds": 0.916,
+        "ok": true
+      },
+      "latentsync": {
+        "peak_device_mib": 24728,
+        "peak_process_mib": 24718,
+        "torch_peak_reserved_mib": 21930.0,
+        "seconds": 83.207,
+        "ok": true
+      },
+      "codeformer": {
+        "peak_device_mib": 24730,
+        "peak_process_mib": 24722,
+        "torch_peak_reserved_mib": 21930.0,
+        "seconds": 0.229,
+        "ok": true
+      },
+      "retinaface": {
+        "peak_device_mib": 24732,
+        "peak_process_mib": 24722,
+        "torch_peak_reserved_mib": 21930.0,
+        "seconds": 0.134,
+        "ok": true
+      },
+      "pyannote": {
+        "peak_device_mib": 24732,
+        "peak_process_mib": 24722,
+        "torch_peak_reserved_mib": 21930.0,
+        "seconds": 0.118,
+        "ok": true
+      }
+    },
+    "peak_device_mib": 24732,
+    "headroom_vs_32607_mib": 7875,
+    "headroom_vs_32607_gib": 7.69,
+    "latentsync_output_bytes": 4708673,
+    "oom": false
+  },
+  "vram_freed_after_each_process_mib": 2,
+  "verdict": "RESIDENT_ALL",
+  "closed": true,
+  "reason": "all six GPU models loaded simultaneously in one process and real inference of each (incl. LatentSync 512/20 steps) peaked at 24732 MiB of 32607 MiB; no OOM in any profile",
+  "evidence": [
+    "reports/pilot/0.4_isolated_peaks.json",
+    "reports/pilot/vram.jsonl",
+    "reports/pilot/0.4_residency_audio.json",
+    "reports/pilot/0.4_residency_video.json",
+    "reports/pilot/0.4_residency_all.json",
+    "reports/pilot/0.4_resident_inference.json",
+    "reports/pilot/env/20260915_092530-8d916633.json"
+  ]
+}
