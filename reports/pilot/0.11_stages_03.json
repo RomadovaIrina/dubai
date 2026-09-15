@@ -1,0 +1,750 @@
+{
+  "task": "0.11",
+  "methodology": "timeline-preserving (SPEECH + PASS_THROUGH chunks, full-length concat, cues on original timeline)",
+  "input": "03.mp4",
+  "source": {
+    "duration_s": 90.333333,
+    "size_bytes": 18898111,
+    "container": "mov,mp4,m4a,3gp,3g2,mj2",
+    "video": {
+      "codec": "h264",
+      "profile": "High",
+      "width": 464,
+      "height": 848,
+      "r_frame_rate": "30/1",
+      "avg_frame_rate": "30/1",
+      "fps": 30.0,
+      "avg_fps": 30.0,
+      "vfr": false,
+      "pix_fmt": "yuv420p",
+      "nb_frames": "2710",
+      "duration_s": 90.333333,
+      "bit_rate": "1605991"
+    },
+    "audio": {
+      "codec": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "channel_layout": "stereo",
+      "bit_rate": "62788",
+      "duration_s": 90.32
+    },
+    "has_video": true,
+    "has_audio": true
+  },
+  "split_mode": "reencode",
+  "asr": true,
+  "repeat": 2,
+  "median": {
+    "demux": 0.3008,
+    "vad_split": 6.5907,
+    "concat": 0.3207,
+    "subtitle_burn": 3.6096,
+    "asr": 7.1953,
+    "S": 10.521
+  },
+  "S_seconds": 10.521,
+  "S_per_video_min": 6.988,
+  "speech_intervals": 27,
+  "speech_seconds": 60.7,
+  "speech_pct": 67.2,
+  "pass_through_intervals": 28,
+  "pass_through_seconds": 29.633,
+  "chunks_total": 55,
+  "assembled_seconds": 90.3333,
+  "final_seconds": 90.3333,
+  "assembled_delta_s": 0.0,
+  "final_delta_s": 0.0,
+  "final_resolution": "464x848",
+  "final_fps": 30.0,
+  "validation": {
+    "tolerance_s": 0.1,
+    "tolerance_rule": "max(0.10 s, 2 source frames)",
+    "assembled_delta_s": 0.0,
+    "final_delta_s": 0.0,
+    "checks": {
+      "timeline_covered_no_gaps": true,
+      "concat_includes_speech_and_pass_through": true,
+      "assembled_duration_within_tol": true,
+      "final_duration_within_tol": true,
+      "assembled_has_video_audio": true,
+      "final_has_video_audio": true,
+      "resolution_preserved": true,
+      "subtitles_on_original_timeline": true,
+      "timeline_not_compressed": true
+    },
+    "pass": true
+  },
+  "validation_all_runs_pass": true,
+  "excluded_from_S": {
+    "demux_s": 0.3008,
+    "asr_s": 7.1953
+  },
+  "timeline": [
+    {
+      "start_s": 0.0,
+      "end_s": 3.3,
+      "type": "PASS_THROUGH",
+      "index": 0,
+      "duration_s": 3.3,
+      "file": "00000_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 3.3,
+      "end_s": 4.1,
+      "type": "SPEECH",
+      "index": 1,
+      "duration_s": 0.8,
+      "file": "00001_SPEECH.mov"
+    },
+    {
+      "start_s": 4.1,
+      "end_s": 4.2,
+      "type": "PASS_THROUGH",
+      "index": 2,
+      "duration_s": 0.1,
+      "file": "00002_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 4.2,
+      "end_s": 5.5,
+      "type": "SPEECH",
+      "index": 3,
+      "duration_s": 1.3,
+      "file": "00003_SPEECH.mov"
+    },
+    {
+      "start_s": 5.5,
+      "end_s": 6.7,
+      "type": "PASS_THROUGH",
+      "index": 4,
+      "duration_s": 1.2,
+      "file": "00004_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 6.7,
+      "end_s": 8.2,
+      "type": "SPEECH",
+      "index": 5,
+      "duration_s": 1.5,
+      "file": "00005_SPEECH.mov"
+    },
+    {
+      "start_s": 8.2,
+      "end_s": 8.4,
+      "type": "PASS_THROUGH",
+      "index": 6,
+      "duration_s": 0.2,
+      "file": "00006_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 8.4,
+      "end_s": 9.9,
+      "type": "SPEECH",
+      "index": 7,
+      "duration_s": 1.5,
+      "file": "00007_SPEECH.mov"
+    },
+    {
+      "start_s": 9.9,
+      "end_s": 10.3,
+      "type": "PASS_THROUGH",
+      "index": 8,
+      "duration_s": 0.4,
+      "file": "00008_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 10.3,
+      "end_s": 12.4,
+      "type": "SPEECH",
+      "index": 9,
+      "duration_s": 2.1,
+      "file": "00009_SPEECH.mov"
+    },
+    {
+      "start_s": 12.4,
+      "end_s": 14.3,
+      "type": "PASS_THROUGH",
+      "index": 10,
+      "duration_s": 1.9,
+      "file": "00010_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 14.3,
+      "end_s": 17.2,
+      "type": "SPEECH",
+      "index": 11,
+      "duration_s": 2.9,
+      "file": "00011_SPEECH.mov"
+    },
+    {
+      "start_s": 17.2,
+      "end_s": 17.7,
+      "type": "PASS_THROUGH",
+      "index": 12,
+      "duration_s": 0.5,
+      "file": "00012_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 17.7,
+      "end_s": 21.4,
+      "type": "SPEECH",
+      "index": 13,
+      "duration_s": 3.7,
+      "file": "00013_SPEECH.mov"
+    },
+    {
+      "start_s": 21.4,
+      "end_s": 22.3,
+      "type": "PASS_THROUGH",
+      "index": 14,
+      "duration_s": 0.9,
+      "file": "00014_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 22.3,
+      "end_s": 23.8,
+      "type": "SPEECH",
+      "index": 15,
+      "duration_s": 1.5,
+      "file": "00015_SPEECH.mov"
+    },
+    {
+      "start_s": 23.8,
+      "end_s": 23.9,
+      "type": "PASS_THROUGH",
+      "index": 16,
+      "duration_s": 0.1,
+      "file": "00016_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 23.9,
+      "end_s": 25.0,
+      "type": "SPEECH",
+      "index": 17,
+      "duration_s": 1.1,
+      "file": "00017_SPEECH.mov"
+    },
+    {
+      "start_s": 25.0,
+      "end_s": 25.5,
+      "type": "PASS_THROUGH",
+      "index": 18,
+      "duration_s": 0.5,
+      "file": "00018_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 25.5,
+      "end_s": 26.8,
+      "type": "SPEECH",
+      "index": 19,
+      "duration_s": 1.3,
+      "file": "00019_SPEECH.mov"
+    },
+    {
+      "start_s": 26.8,
+      "end_s": 27.8,
+      "type": "PASS_THROUGH",
+      "index": 20,
+      "duration_s": 1.0,
+      "file": "00020_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 27.8,
+      "end_s": 28.9,
+      "type": "SPEECH",
+      "index": 21,
+      "duration_s": 1.1,
+      "file": "00021_SPEECH.mov"
+    },
+    {
+      "start_s": 28.9,
+      "end_s": 30.5,
+      "type": "PASS_THROUGH",
+      "index": 22,
+      "duration_s": 1.6,
+      "file": "00022_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 30.5,
+      "end_s": 35.5,
+      "type": "SPEECH",
+      "index": 23,
+      "duration_s": 5.0,
+      "file": "00023_SPEECH.mov"
+    },
+    {
+      "start_s": 35.5,
+      "end_s": 35.9,
+      "type": "PASS_THROUGH",
+      "index": 24,
+      "duration_s": 0.4,
+      "file": "00024_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 35.9,
+      "end_s": 38.5,
+      "type": "SPEECH",
+      "index": 25,
+      "duration_s": 2.6,
+      "file": "00025_SPEECH.mov"
+    },
+    {
+      "start_s": 38.5,
+      "end_s": 39.3,
+      "type": "PASS_THROUGH",
+      "index": 26,
+      "duration_s": 0.8,
+      "file": "00026_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 39.3,
+      "end_s": 41.1,
+      "type": "SPEECH",
+      "index": 27,
+      "duration_s": 1.8,
+      "file": "00027_SPEECH.mov"
+    },
+    {
+      "start_s": 41.1,
+      "end_s": 42.4,
+      "type": "PASS_THROUGH",
+      "index": 28,
+      "duration_s": 1.3,
+      "file": "00028_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 42.4,
+      "end_s": 44.3,
+      "type": "SPEECH",
+      "index": 29,
+      "duration_s": 1.9,
+      "file": "00029_SPEECH.mov"
+    },
+    {
+      "start_s": 44.3,
+      "end_s": 46.3,
+      "type": "PASS_THROUGH",
+      "index": 30,
+      "duration_s": 2.0,
+      "file": "00030_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 46.3,
+      "end_s": 47.6,
+      "type": "SPEECH",
+      "index": 31,
+      "duration_s": 1.3,
+      "file": "00031_SPEECH.mov"
+    },
+    {
+      "start_s": 47.6,
+      "end_s": 48.2,
+      "type": "PASS_THROUGH",
+      "index": 32,
+      "duration_s": 0.6,
+      "file": "00032_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 48.2,
+      "end_s": 50.8,
+      "type": "SPEECH",
+      "index": 33,
+      "duration_s": 2.6,
+      "file": "00033_SPEECH.mov"
+    },
+    {
+      "start_s": 50.8,
+      "end_s": 51.4,
+      "type": "PASS_THROUGH",
+      "index": 34,
+      "duration_s": 0.6,
+      "file": "00034_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 51.4,
+      "end_s": 55.8,
+      "type": "SPEECH",
+      "index": 35,
+      "duration_s": 4.4,
+      "file": "00035_SPEECH.mov"
+    },
+    {
+      "start_s": 55.8,
+      "end_s": 59.2,
+      "type": "PASS_THROUGH",
+      "index": 36,
+      "duration_s": 3.4,
+      "file": "00036_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 59.2,
+      "end_s": 68.5,
+      "type": "SPEECH",
+      "index": 37,
+      "duration_s": 9.3,
+      "file": "00037_SPEECH.mov"
+    },
+    {
+      "start_s": 68.5,
+      "end_s": 70.1,
+      "type": "PASS_THROUGH",
+      "index": 38,
+      "duration_s": 1.6,
+      "file": "00038_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 70.1,
+      "end_s": 72.5,
+      "type": "SPEECH",
+      "index": 39,
+      "duration_s": 2.4,
+      "file": "00039_SPEECH.mov"
+    },
+    {
+      "start_s": 72.5,
+      "end_s": 73.8,
+      "type": "PASS_THROUGH",
+      "index": 40,
+      "duration_s": 1.3,
+      "file": "00040_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 73.8,
+      "end_s": 76.8,
+      "type": "SPEECH",
+      "index": 41,
+      "duration_s": 3.0,
+      "file": "00041_SPEECH.mov"
+    },
+    {
+      "start_s": 76.8,
+      "end_s": 76.9,
+      "type": "PASS_THROUGH",
+      "index": 42,
+      "duration_s": 0.1,
+      "file": "00042_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 76.9,
+      "end_s": 78.0,
+      "type": "SPEECH",
+      "index": 43,
+      "duration_s": 1.1,
+      "file": "00043_SPEECH.mov"
+    },
+    {
+      "start_s": 78.0,
+      "end_s": 78.8,
+      "type": "PASS_THROUGH",
+      "index": 44,
+      "duration_s": 0.8,
+      "file": "00044_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 78.8,
+      "end_s": 79.3,
+      "type": "SPEECH",
+      "index": 45,
+      "duration_s": 0.5,
+      "file": "00045_SPEECH.mov"
+    },
+    {
+      "start_s": 79.3,
+      "end_s": 79.9,
+      "type": "PASS_THROUGH",
+      "index": 46,
+      "duration_s": 0.6,
+      "file": "00046_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 79.9,
+      "end_s": 82.2,
+      "type": "SPEECH",
+      "index": 47,
+      "duration_s": 2.3,
+      "file": "00047_SPEECH.mov"
+    },
+    {
+      "start_s": 82.2,
+      "end_s": 83.9,
+      "type": "PASS_THROUGH",
+      "index": 48,
+      "duration_s": 1.7,
+      "file": "00048_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 83.9,
+      "end_s": 84.8,
+      "type": "SPEECH",
+      "index": 49,
+      "duration_s": 0.9,
+      "file": "00049_SPEECH.mov"
+    },
+    {
+      "start_s": 84.8,
+      "end_s": 85.2,
+      "type": "PASS_THROUGH",
+      "index": 50,
+      "duration_s": 0.4,
+      "file": "00050_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 85.2,
+      "end_s": 87.3,
+      "type": "SPEECH",
+      "index": 51,
+      "duration_s": 2.1,
+      "file": "00051_SPEECH.mov"
+    },
+    {
+      "start_s": 87.3,
+      "end_s": 88.5,
+      "type": "PASS_THROUGH",
+      "index": 52,
+      "duration_s": 1.2,
+      "file": "00052_PASS_THROUGH.mov"
+    },
+    {
+      "start_s": 88.5,
+      "end_s": 89.2,
+      "type": "SPEECH",
+      "index": 53,
+      "duration_s": 0.7,
+      "file": "00053_SPEECH.mov"
+    },
+    {
+      "start_s": 89.2,
+      "end_s": 90.3333,
+      "type": "PASS_THROUGH",
+      "index": 54,
+      "duration_s": 1.1333,
+      "file": "00054_PASS_THROUGH.mov"
+    }
+  ],
+  "cues": [
+    [
+      0.0,
+      11.76,
+      "друзья ну что всем привет запишу первое видео такое ознакомительно целью познакомиться наверно"
+    ],
+    [
+      11.76,
+      20.4,
+      "больше в общем что хочу сказать рад знакомству с вами рад сотрудничеству сегодня пятница 28"
+    ],
+    [
+      20.4,
+      32.52,
+      "августа будем считать что эта точка начала нашего сотрудничества что хочется сказать пусть это"
+    ],
+    [
+      32.52,
+      40.04,
+      "сотрудничество будет легким принесет нам всем тот желаемый результат который мы загадали чтобы на"
+    ],
+    [
+      40.04,
+      49.7,
+      "пути у нас никаких преград не возникало надеюсь все будет хорошо и подземные действия с вами и"
+    ],
+    [
+      49.7,
+      60.92,
+      "в целом с тем продуктом который мы сегодня собираем и делаем дальше отправлю еще несколько"
+    ],
+    [
+      60.92,
+      70.58,
+      "видео запишу различных форматах в очках без очков посмотрим как будет работать наша система ну и в"
+    ],
+    [
+      70.58,
+      79.04,
+      "принципе все отправлю в наш чат так что давайте ребят всем нам успеха я хочу пожелать пусть"
+    ],
+    [
+      79.04,
+      89.04,
+      "наше взаимодействие будет легким и принесет нам тот результат который мы желаем все вперед"
+    ]
+  ],
+  "runs": [
+    {
+      "demux": {
+        "seconds": 0.4655,
+        "peak_process_mib": 498
+      },
+      "vad_split": {
+        "seconds": 6.5532,
+        "peak_process_mib": 498,
+        "split_mode": "reencode",
+        "speech_intervals": 27,
+        "speech_seconds": 60.7,
+        "speech_pct": 67.2,
+        "pass_through_intervals": 28,
+        "pass_through_seconds": 29.633,
+        "chunks_total": 55,
+        "timeline_covered_s": 90.3333
+      },
+      "asr": {
+        "seconds": 7.2997,
+        "peak_process_mib": 3936,
+        "cues": 10,
+        "source": "faster-whisper large-v3 segment timestamps (original timeline)"
+      },
+      "concat": {
+        "seconds": 0.3207,
+        "peak_process_mib": 502,
+        "out_seconds": 90.3333,
+        "out_resolution": "464x848",
+        "out_fps": 30.0,
+        "has_video": true,
+        "has_audio": true,
+        "chunks": 55
+      },
+      "subtitle_burn": {
+        "seconds": 3.5954,
+        "peak_process_mib": 502,
+        "cues": 10,
+        "first_cue": [
+          0.0,
+          11.76
+        ],
+        "last_cue": [
+          77.82,
+          89.04
+        ],
+        "out_resolution": "464x848",
+        "out_fps": 30.0,
+        "out_seconds": 90.3333,
+        "has_video": true,
+        "has_audio": true
+      },
+      "validation": {
+        "tolerance_s": 0.1,
+        "tolerance_rule": "max(0.10 s, 2 source frames)",
+        "assembled_delta_s": 0.0,
+        "final_delta_s": 0.0,
+        "checks": {
+          "timeline_covered_no_gaps": true,
+          "concat_includes_speech_and_pass_through": true,
+          "assembled_duration_within_tol": true,
+          "final_duration_within_tol": true,
+          "assembled_has_video_audio": true,
+          "final_has_video_audio": true,
+          "resolution_preserved": true,
+          "subtitles_on_original_timeline": true,
+          "timeline_not_compressed": true
+        },
+        "pass": true
+      },
+      "_S_seconds": 10.4693,
+      "work_dir": "/tmp/dabai_pilot_11/03"
+    },
+    {
+      "demux": {
+        "seconds": 0.136,
+        "peak_process_mib": 502
+      },
+      "vad_split": {
+        "seconds": 6.6282,
+        "peak_process_mib": 502,
+        "split_mode": "reencode",
+        "speech_intervals": 27,
+        "speech_seconds": 60.7,
+        "speech_pct": 67.2,
+        "pass_through_intervals": 28,
+        "pass_through_seconds": 29.633,
+        "chunks_total": 55,
+        "timeline_covered_s": 90.3333
+      },
+      "asr": {
+        "seconds": 7.091,
+        "peak_process_mib": 3904,
+        "cues": 9,
+        "source": "faster-whisper large-v3 segment timestamps (original timeline)"
+      },
+      "concat": {
+        "seconds": 0.3207,
+        "peak_process_mib": 502,
+        "out_seconds": 90.3333,
+        "out_resolution": "464x848",
+        "out_fps": 30.0,
+        "has_video": true,
+        "has_audio": true,
+        "chunks": 55
+      },
+      "subtitle_burn": {
+        "seconds": 3.6237,
+        "peak_process_mib": 502,
+        "cues": 9,
+        "first_cue": [
+          0.0,
+          11.76
+        ],
+        "last_cue": [
+          79.04,
+          89.04
+        ],
+        "out_resolution": "464x848",
+        "out_fps": 30.0,
+        "out_seconds": 90.3333,
+        "has_video": true,
+        "has_audio": true
+      },
+      "validation": {
+        "tolerance_s": 0.1,
+        "tolerance_rule": "max(0.10 s, 2 source frames)",
+        "assembled_delta_s": 0.0,
+        "final_delta_s": 0.0,
+        "checks": {
+          "timeline_covered_no_gaps": true,
+          "concat_includes_speech_and_pass_through": true,
+          "assembled_duration_within_tol": true,
+          "final_duration_within_tol": true,
+          "assembled_has_video_audio": true,
+          "final_has_video_audio": true,
+          "resolution_preserved": true,
+          "subtitles_on_original_timeline": true,
+          "timeline_not_compressed": true
+        },
+        "pass": true
+      },
+      "_S_seconds": 10.5726,
+      "work_dir": "/tmp/dabai_pilot_11/03"
+    }
+  ],
+  "final_probe": {
+    "duration_s": 90.333333,
+    "size_bytes": 13913187,
+    "container": "mov,mp4,m4a,3gp,3g2,mj2",
+    "video": {
+      "codec": "h264",
+      "profile": "High",
+      "width": 464,
+      "height": 848,
+      "r_frame_rate": "30/1",
+      "avg_frame_rate": "30/1",
+      "fps": 30.0,
+      "avg_fps": 30.0,
+      "vfr": false,
+      "pix_fmt": "yuv420p",
+      "nb_frames": "2710",
+      "duration_s": 90.333333,
+      "bit_rate": "1028816"
+    },
+    "audio": {
+      "codec": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "channel_layout": "stereo",
+      "bit_rate": "194523",
+      "duration_s": 90.323991
+    },
+    "has_video": true,
+    "has_audio": true
+  },
+  "env_snapshot": "20260915_092530-8d916633",
+  "at": "2026-09-15T15:38:17Z"
+}

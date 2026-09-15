@@ -1,4 +1,7 @@
-# 0.11 — S = T_vad_split + T_concat + T_subtitle_burn
+# 0.11 — LEGACY_INVALID_TIMELINE
+
+The table below was produced by the old measure_stages.py that concatenated **speech segments only** (53.9 s source -> 29.5 s output, timeline compressed, subtitle cues shifted). It is kept for provenance only and is **not** 0.11 evidence. The valid, timeline-preserving results are in `reports/pilot/0.11_s_dataset.md` / `.json` (per-video `0.11_stages_XX.json`).
+
 
 | input | source | dur | split | segs | T_vad_split | T_concat | T_subtitle_burn | **S** | s/min | env |
 |---|---|---|---|---|---|---|---|---|---|---|

@@ -23,13 +23,11 @@ def load(p:pathlib.Path):
     except Exception:return None
 
 def status_011():
-    rows=sorted(PILOT.glob('stages_*.json'))
-    good=[]
-    for p in rows:
-        x=load(p)
-        if x and x.get('median',{}).get('S') is not None: good.append(x)
-    return {'closed':bool(good),'runs':len(good),'files':[x.get('input') for x in good],
-            'verdict':'MEASURED' if good else 'MISSING'}
+    # Status comes ONLY from the dataset-level closure file written by benchmark_11_s_dataset.py.
+    # Legacy stages_*.json (speech-only concat, compressed timeline) must never count as evidence.
+    x=load(PILOT/'0.11_s_dataset.json')
+    if not x: return {'closed':False,'runs':0,'verdict':'MISSING (run benchmark_11_s_dataset.py)'}
+    return {'closed':bool(x.get('closed')),'runs':x.get('validated',0),'verdict':x.get('verdict') or ('CLOSED' if x.get('closed') else 'OPEN')}
 
 def main()->int:
     rows=[]; closed=0

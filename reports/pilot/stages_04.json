@@ -100,5 +100,7 @@
     }
   ],
   "env_snapshot": "20260911_182453-8125bfd3",
-  "at": "2026-09-11T18:47:47Z"
+  "at": "2026-09-11T18:47:47Z",
+  "LEGACY_INVALID_TIMELINE": true,
+  "legacy_note": "Produced by the pre-2026-09-15 measure_stages.py which concatenated speech segments only (53.9 s source -> 29.5 s output, timeline compressed, subtitle cues shifted). Not valid 0.11 evidence; see reports/pilot/0.11_s_dataset.json"
 }
