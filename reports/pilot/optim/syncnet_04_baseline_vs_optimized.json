@@ -1,8 +1,18 @@
 {
  "baseline_sanity_04": {
-  "error": "SyncNet evaluation failed for /tmp/dabai_pilot_05/sanity_04.mp4:\n  File \"/venv/dabai/lib/python3.11/site-packages/huggingface_hub/file_download.py\", line 285, in _request_wrapper\n    response = _request_wrapper(\n               ^^^^^^^^^^^^^^^^^\n  File \"/venv/dabai/lib/python3.11/site-packages/huggingface_hub/file_download.py\", line 309, in _request_wrapper\n    hf_raise_for_status(response)\n  File "
+  "confidence": 3.04,
+  "av_offset_frames": 0,
+  "seconds": 18.125
  },
  "optimized_sanity_04": {
-  "error": "SyncNet evaluation failed for /tmp/dabai_optim/e2e/sanity_04_opt.mp4:\n  File \"/venv/dabai/lib/python3.11/site-packages/huggingface_hub/file_download.py\", line 285, in _request_wrapper\n    response = _request_wrapper(\n               ^^^^^^^^^^^^^^^^^\n  File \"/venv/dabai/lib/python3.11/site-packages/huggingface_hub/file_download.py\", line 309, in _request_wrapper\n    hf_raise_for_status(response)\n  "
- }
+  "confidence": 3.04,
+  "av_offset_frames": 0,
+  "seconds": 18.05
+ },
+ "optimized_dataset_04_r1": {
+  "confidence": 3.04,
+  "av_offset_frames": 0,
+  "seconds": 17.917
+ },
+ "note": "LatentSync upstream eval/eval_sync_conf.py (syncnet_v2.model + S3FD); regression information only, no threshold defined by the spec"
 }
