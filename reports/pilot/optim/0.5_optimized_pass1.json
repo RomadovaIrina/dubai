@@ -1,0 +1,359 @@
+{
+  "task": "0.5",
+  "closed": true,
+  "verdict": "CLOSED — FAIL_TARGET; median 6.4889 GPU-min/video-min vs target 5.0",
+  "gpu": {
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.178.04",
+    "name": "NVIDIA GeForce RTX 5090",
+    "capability": "sm_120",
+    "total_vram_bytes": 33668726784,
+    "total_vram_gib": 31.36,
+    "free_vram_gib": 30.86,
+    "multi_processor_count": 170,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "method": "job process-group CUDA occupancy sampled via nvidia-smi; GPU-min/video-min = GPU-owned seconds / source-video seconds",
+  "clean_pipeline_confirmed": true,
+  "codeformer_disabled_confirmed": true,
+  "target_gpu_min_per_video_min": 5.0,
+  "repeat": 1,
+  "sampling_interval_s": 0.2,
+  "videos": 5,
+  "successful_runs": 5,
+  "total_runs": 5,
+  "per_video": [
+    {
+      "video": "01.MP4",
+      "successful_runs": 1,
+      "required_runs": 1,
+      "median_gpu_min_per_video_min": 1.7862,
+      "median_wall_s_per_video_min": 120.017,
+      "min_gpu_ratio": 1.7862,
+      "max_gpu_ratio": 1.7862
+    },
+    {
+      "video": "02.mp4",
+      "successful_runs": 1,
+      "required_runs": 1,
+      "median_gpu_min_per_video_min": 0.8334,
+      "median_wall_s_per_video_min": 56.286,
+      "min_gpu_ratio": 0.8334,
+      "max_gpu_ratio": 0.8334
+    },
+    {
+      "video": "03.mp4",
+      "successful_runs": 1,
+      "required_runs": 1,
+      "median_gpu_min_per_video_min": 6.9299,
+      "median_wall_s_per_video_min": 449.524,
+      "min_gpu_ratio": 6.9299,
+      "max_gpu_ratio": 6.9299
+    },
+    {
+      "video": "04.mp4",
+      "successful_runs": 1,
+      "required_runs": 1,
+      "median_gpu_min_per_video_min": 7.0761,
+      "median_wall_s_per_video_min": 459.322,
+      "min_gpu_ratio": 7.0761,
+      "max_gpu_ratio": 7.0761
+    },
+    {
+      "video": "05.mp4",
+      "successful_runs": 1,
+      "required_runs": 1,
+      "median_gpu_min_per_video_min": 6.4889,
+      "median_wall_s_per_video_min": 421.093,
+      "min_gpu_ratio": 6.4889,
+      "max_gpu_ratio": 6.4889
+    }
+  ],
+  "dataset": {
+    "mean_gpu_min_per_video_min": 4.6229,
+    "median_gpu_min_per_video_min": 6.4889,
+    "min_gpu_min_per_video_min": 0.8334,
+    "max_gpu_min_per_video_min": 7.0761,
+    "within_target_by_dataset_median": false
+  },
+  "rows": [
+    {
+      "video": "01.MP4",
+      "source": {
+        "duration_s": 101.666667,
+        "video": {
+          "codec": "h264",
+          "width": 480,
+          "height": 848,
+          "fps": 25.003278688524592,
+          "frames": "2542"
+        },
+        "audio": {
+          "codec": "aac",
+          "sample_rate": "44100",
+          "channels": 2
+        }
+      },
+      "run": 1,
+      "returncode": 0,
+      "wall_s": 203.363,
+      "gpu_occupied_s": 181.6,
+      "gpu_min_per_video_min": 1.7862,
+      "wall_s_per_video_min": 120.017,
+      "gpu_occupancy_fraction_of_wall": 0.893,
+      "gpu_first_active_after_s": 1.502,
+      "gpu_peak_process_group_mib": 23152,
+      "gpu_mean_active_process_group_mib": 9369.5,
+      "samples": 915,
+      "active_samples": 908,
+      "output": "/tmp/dabai_optim/e2e/01_r1.mp4",
+      "output_validation": {
+        "pass": true,
+        "reason": null,
+        "duration_delta_s": 0.0133,
+        "tolerance_s": 0.15,
+        "output_meta": {
+          "duration_s": 101.68,
+          "video": {
+            "codec": "h264",
+            "width": 480,
+            "height": 848,
+            "fps": 25.0,
+            "frames": "2542"
+          },
+          "audio": {
+            "codec": "aac",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        }
+      },
+      "command": "python scripts/pilot/run_clean_pipeline_05.py --input /workspace/dub/test_videos/01.MP4 --output /tmp/dabai_optim/e2e/01_r1.mp4 --target-lang en --no-codeformer --video-backend optimized --work-dir /tmp/dabai_optim/e2e",
+      "at": "2026-09-17T21:48:05Z"
+    },
+    {
+      "video": "02.mp4",
+      "source": {
+        "duration_s": 110.866667,
+        "video": {
+          "codec": "h264",
+          "width": 464,
+          "height": 848,
+          "fps": 29.981960312687914,
+          "frames": "3324"
+        },
+        "audio": {
+          "codec": "aac",
+          "sample_rate": "44100",
+          "channels": 2
+        }
+      },
+      "run": 1,
+      "returncode": 0,
+      "wall_s": 104.004,
+      "gpu_occupied_s": 92.4,
+      "gpu_min_per_video_min": 0.8334,
+      "wall_s_per_video_min": 56.286,
+      "gpu_occupancy_fraction_of_wall": 0.8884,
+      "gpu_first_active_after_s": 1.503,
+      "gpu_peak_process_group_mib": 4498,
+      "gpu_mean_active_process_group_mib": 2535.0,
+      "samples": 469,
+      "active_samples": 462,
+      "output": "/tmp/dabai_optim/e2e/02_r1.mp4",
+      "output_validation": {
+        "pass": true,
+        "reason": null,
+        "duration_delta_s": 0.0533,
+        "tolerance_s": 0.15,
+        "output_meta": {
+          "duration_s": 110.92,
+          "video": {
+            "codec": "h264",
+            "width": 464,
+            "height": 848,
+            "fps": 25.0,
+            "frames": "2773"
+          },
+          "audio": {
+            "codec": "aac",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        }
+      },
+      "command": "python scripts/pilot/run_clean_pipeline_05.py --input /workspace/dub/test_videos/02.mp4 --output /tmp/dabai_optim/e2e/02_r1.mp4 --target-lang en --no-codeformer --video-backend optimized --work-dir /tmp/dabai_optim/e2e",
+      "at": "2026-09-17T21:49:49Z"
+    },
+    {
+      "video": "03.mp4",
+      "source": {
+        "duration_s": 90.333333,
+        "video": {
+          "codec": "h264",
+          "width": 464,
+          "height": 848,
+          "fps": 30.0,
+          "frames": "2710"
+        },
+        "audio": {
+          "codec": "aac",
+          "sample_rate": "44100",
+          "channels": 2
+        }
+      },
+      "run": 1,
+      "returncode": 0,
+      "wall_s": 676.783,
+      "gpu_occupied_s": 626.0,
+      "gpu_min_per_video_min": 6.9299,
+      "wall_s_per_video_min": 449.524,
+      "gpu_occupancy_fraction_of_wall": 0.925,
+      "gpu_first_active_after_s": 1.302,
+      "gpu_peak_process_group_mib": 29768,
+      "gpu_mean_active_process_group_mib": 20896.2,
+      "samples": 3137,
+      "active_samples": 3130,
+      "output": "/tmp/dabai_optim/e2e/03_r1.mp4",
+      "output_validation": {
+        "pass": true,
+        "reason": null,
+        "duration_delta_s": 0.0667,
+        "tolerance_s": 0.15,
+        "output_meta": {
+          "duration_s": 90.4,
+          "video": {
+            "codec": "h264",
+            "width": 464,
+            "height": 848,
+            "fps": 25.0,
+            "frames": "2260"
+          },
+          "audio": {
+            "codec": "aac",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        }
+      },
+      "command": "python scripts/pilot/run_clean_pipeline_05.py --input /workspace/dub/test_videos/03.mp4 --output /tmp/dabai_optim/e2e/03_r1.mp4 --target-lang en --no-codeformer --video-backend optimized --work-dir /tmp/dabai_optim/e2e",
+      "at": "2026-09-17T22:01:06Z"
+    },
+    {
+      "video": "04.mp4",
+      "source": {
+        "duration_s": 53.9,
+        "video": {
+          "codec": "h264",
+          "width": 464,
+          "height": 848,
+          "fps": 30.0,
+          "frames": "1617"
+        },
+        "audio": {
+          "codec": "aac",
+          "sample_rate": "44100",
+          "channels": 2
+        }
+      },
+      "run": 1,
+      "returncode": 0,
+      "wall_s": 412.624,
+      "gpu_occupied_s": 381.4,
+      "gpu_min_per_video_min": 7.0761,
+      "wall_s_per_video_min": 459.322,
+      "gpu_occupancy_fraction_of_wall": 0.9243,
+      "gpu_first_active_after_s": 1.3,
+      "gpu_peak_process_group_mib": 26234,
+      "gpu_mean_active_process_group_mib": 19680.4,
+      "samples": 1913,
+      "active_samples": 1907,
+      "output": "/tmp/dabai_optim/e2e/04_r1.mp4",
+      "output_validation": {
+        "pass": true,
+        "reason": null,
+        "duration_delta_s": 0.06,
+        "tolerance_s": 0.15,
+        "output_meta": {
+          "duration_s": 53.96,
+          "video": {
+            "codec": "h264",
+            "width": 464,
+            "height": 848,
+            "fps": 25.0,
+            "frames": "1349"
+          },
+          "audio": {
+            "codec": "aac",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        }
+      },
+      "command": "python scripts/pilot/run_clean_pipeline_05.py --input /workspace/dub/test_videos/04.mp4 --output /tmp/dabai_optim/e2e/04_r1.mp4 --target-lang en --no-codeformer --video-backend optimized --work-dir /tmp/dabai_optim/e2e",
+      "at": "2026-09-17T22:07:59Z"
+    },
+    {
+      "video": "05.mp4",
+      "source": {
+        "duration_s": 52.366667,
+        "video": {
+          "codec": "h264",
+          "width": 464,
+          "height": 848,
+          "fps": 29.92361553150859,
+          "frames": "1567"
+        },
+        "audio": {
+          "codec": "aac",
+          "sample_rate": "44100",
+          "channels": 2
+        }
+      },
+      "run": 1,
+      "returncode": 0,
+      "wall_s": 367.521,
+      "gpu_occupied_s": 339.8,
+      "gpu_min_per_video_min": 6.4889,
+      "wall_s_per_video_min": 421.093,
+      "gpu_occupancy_fraction_of_wall": 0.9246,
+      "gpu_first_active_after_s": 1.086,
+      "gpu_peak_process_group_mib": 23032,
+      "gpu_mean_active_process_group_mib": 19626.4,
+      "samples": 1704,
+      "active_samples": 1699,
+      "output": "/tmp/dabai_optim/e2e/05_r1.mp4",
+      "output_validation": {
+        "pass": true,
+        "reason": null,
+        "duration_delta_s": 0.0733,
+        "tolerance_s": 0.15,
+        "output_meta": {
+          "duration_s": 52.44,
+          "video": {
+            "codec": "h264",
+            "width": 464,
+            "height": 848,
+            "fps": 25.0,
+            "frames": "1311"
+          },
+          "audio": {
+            "codec": "aac",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        }
+      },
+      "command": "python scripts/pilot/run_clean_pipeline_05.py --input /workspace/dub/test_videos/05.mp4 --output /tmp/dabai_optim/e2e/05_r1.mp4 --target-lang en --no-codeformer --video-backend optimized --work-dir /tmp/dabai_optim/e2e",
+      "at": "2026-09-17T22:14:06Z"
+    }
+  ],
+  "at": "2026-09-17T22:14:07Z"
+}
