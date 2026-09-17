@@ -1,0 +1,71 @@
+{
+  "label": "accel_b16",
+  "video": "/workspace/dub/test_videos/04.mp4",
+  "audio": "/tmp/dabai_optim/04_audio16k.wav",
+  "source": {
+    "duration_s": 53.9,
+    "fps": 30.0,
+    "frames": 1617,
+    "width": 464,
+    "height": 848,
+    "codec": "h264"
+  },
+  "config": {
+    "unet_config": "configs/unet/stage2_512.yaml",
+    "resolution": 512,
+    "num_frames": 16,
+    "inference_steps": 20,
+    "guidance_scale": 1.5,
+    "deepcache": true,
+    "dtype": "float16",
+    "seed": 1247,
+    "mode": "accel",
+    "window_batch_size": 16,
+    "compile_backend": "none",
+    "compile_mode": null,
+    "sdpa_backend": "auto"
+  },
+  "gpu": {
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.178.04",
+    "name": "NVIDIA GeForce RTX 5090",
+    "capability": "sm_120",
+    "total_vram_bytes": 33668726784,
+    "total_vram_gib": 31.36,
+    "free_vram_gib": 2.57,
+    "multi_processor_count": 170,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "status": "OOM",
+  "model_load": {
+    "seconds": 6.648,
+    "peak_device_mib": 934,
+    "torch_peak_allocated_mib": 2754.8
+  },
+  "compile_setup_s": 0.0,
+  "runs": [
+    {
+      "run": 1,
+      "kind": "cold",
+      "output": "/tmp/dabai_optim/accel_b16_r1.mp4",
+      "ok": false,
+      "oom": true,
+      "error": "OutOfMemoryError: CUDA out of memory. Tried to allocate 5.00 GiB. GPU 0 has a total capacity of 31.36 GiB of which 2.57 GiB is free. Including non-PyTorch memory, this process has 28.78 GiB memory in use. Of the allocated memory 25.37 GiB is allocated by PyTorch, and 2.55 GiB is reserved by PyTorch but unallocated. I",
+      "output_valid": false,
+      "torch_peak_allocated_mib": 25979.0,
+      "torch_peak_reserved_mib": 29392.0
+    }
+  ],
+  "cold": null,
+  "steady_state": null,
+  "output_frames": null,
+  "psnr_vs_ref": null,
+  "at": "2026-09-17T19:56:03Z"
+}

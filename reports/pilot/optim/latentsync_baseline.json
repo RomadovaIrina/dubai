@@ -1,0 +1,117 @@
+{
+  "label": "baseline",
+  "video": "/workspace/dub/test_videos/04.mp4",
+  "audio": "/tmp/dabai_optim/04_audio16k.wav",
+  "source": {
+    "duration_s": 53.9,
+    "fps": 30.0,
+    "frames": 1617,
+    "width": 464,
+    "height": 848,
+    "codec": "h264"
+  },
+  "config": {
+    "unet_config": "configs/unet/stage2_512.yaml",
+    "resolution": 512,
+    "num_frames": 16,
+    "inference_steps": 20,
+    "guidance_scale": 1.5,
+    "deepcache": true,
+    "dtype": "float16",
+    "seed": 1247,
+    "mode": "baseline",
+    "window_batch_size": 1,
+    "compile_backend": "none",
+    "compile_mode": null,
+    "sdpa_backend": "auto"
+  },
+  "gpu": {
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.178.04",
+    "name": "NVIDIA GeForce RTX 5090",
+    "capability": "sm_120",
+    "total_vram_bytes": 33668726784,
+    "total_vram_gib": 31.36,
+    "free_vram_gib": 11.27,
+    "multi_processor_count": 170,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "status": "PASS",
+  "model_load": {
+    "seconds": 6.522,
+    "peak_device_mib": 1914,
+    "torch_peak_allocated_mib": 2754.8
+  },
+  "compile_setup_s": null,
+  "runs": [
+    {
+      "run": 1,
+      "kind": "cold",
+      "output": "/tmp/dabai_optim/baseline_r1.mp4",
+      "ok": true,
+      "oom": false,
+      "wall_s": 348.041,
+      "s_per_video_min": 387.43,
+      "peak_device_mib": 20544,
+      "peak_process_mib": 20534,
+      "torch_peak_allocated_mib": 15099.4,
+      "torch_peak_reserved_mib": 19656.0,
+      "output_probe": {
+        "duration_s": 53.96,
+        "fps": 25.0,
+        "frames": 1349,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "output_frames": 1349,
+      "output_valid": true
+    },
+    {
+      "run": 2,
+      "kind": "warm",
+      "output": "/tmp/dabai_optim/baseline_r2.mp4",
+      "ok": true,
+      "oom": false,
+      "wall_s": 348.502,
+      "s_per_video_min": 387.943,
+      "peak_device_mib": 21075,
+      "peak_process_mib": 20878,
+      "torch_peak_allocated_mib": 15097.8,
+      "torch_peak_reserved_mib": 19656.0,
+      "output_probe": {
+        "duration_s": 53.96,
+        "fps": 25.0,
+        "frames": 1349,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "output_frames": 1349,
+      "output_valid": true
+    }
+  ],
+  "cold": {
+    "wall_s": 348.041,
+    "s_per_video_min": 387.43,
+    "peak_process_mib": 20534,
+    "torch_peak_allocated_mib": 15099.4
+  },
+  "steady_state": {
+    "wall_s": 348.502,
+    "s_per_video_min": 387.943,
+    "peak_process_mib": 20878,
+    "torch_peak_allocated_mib": 15097.8,
+    "torch_peak_reserved_mib": 19656.0
+  },
+  "output_frames": 1349,
+  "psnr_vs_ref": null,
+  "at": "2026-09-17T19:19:46Z"
+}

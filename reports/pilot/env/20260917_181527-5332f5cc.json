@@ -1,0 +1,80 @@
+{
+  "captured_at": "2026-09-17T18:15:27+0000",
+  "captured_at_utc": "2026-09-17T18:15:27Z",
+  "host": {
+    "hostname": "4836450efcf8",
+    "platform": "Linux-6.8.0-139-generic-x86_64-with-glibc2.39",
+    "kernel": "6.8.0-139-generic",
+    "libc": "glibc 2.39"
+  },
+  "python": {
+    "version": "3.11.13",
+    "executable": "/venv/dabai/bin/python",
+    "venv": "/venv/dabai"
+  },
+  "gpu": {
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.178.04",
+    "name": "NVIDIA GeForce RTX 5090",
+    "capability": "sm_120",
+    "total_vram_bytes": 33668726784,
+    "total_vram_gib": 31.36,
+    "free_vram_gib": 30.86,
+    "multi_processor_count": 170,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "cuda_system": {
+    "nvcc": "Cuda compilation tools, release 12.8, V12.8.93",
+    "cuda_home": "/usr/local/cuda",
+    "cuda_symlink": "/usr/local/cuda-12.8"
+  },
+  "torch": {
+    "torch": "2.7.1+cu128",
+    "torch_cuda": "12.8",
+    "cudnn": 90701,
+    "cuda_available": true,
+    "torchvision": "0.22.1+cu128",
+    "torchaudio": "2.7.1+cu128"
+  },
+  "ffmpeg": "ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers",
+  "limits": {
+    "cpu": {
+      "cgroup": "v2",
+      "quota_us": 1360000,
+      "period_us": 100000,
+      "vcpu": 13.6
+    },
+    "memory_limit_bytes": 59999997952,
+    "os_cpu_count": 32
+  },
+  "git": {
+    "dub": {
+      "path": "/workspace/dub",
+      "commit": "d774a4ffcbea560a6f786bd0d22d069889633b18",
+      "branch": "main",
+      "dirty": true
+    },
+    "latentsync": {
+      "path": "/workspace/dub/third_party/latentsync",
+      "commit": "a229c3948406bc2cf6eaf4873e662e70c6a04746",
+      "branch": "main",
+      "dirty": false
+    },
+    "CodeFormer": {
+      "path": "/workspace/dub/third_party/CodeFormer",
+      "commit": "b33cc7d639d6545bfcccc7e0bc6ae51f24e79c2b",
+      "branch": "master",
+      "dirty": false
+    }
+  },
+  "pip_freeze_lines": 222,
+  "fingerprint": "5332f5cc",
+  "id": "20260917_181527-5332f5cc"
+}
