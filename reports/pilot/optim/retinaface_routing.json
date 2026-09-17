@@ -1,0 +1,420 @@
+{
+  "task": "optim/retinaface-routing",
+  "router": {
+    "detector": "facexlib retinaface_resnet50 fp16",
+    "weights": "/workspace/dub/models/facexlib",
+    "face_min_w": 50,
+    "face_min_h": 80,
+    "retina_conf": 0.8,
+    "aspect_range": [
+      0.2,
+      1.5
+    ]
+  },
+  "router_load_s": 1.382,
+  "min_ls_frames": 25,
+  "gpu": {
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.178.04",
+    "name": "NVIDIA GeForce RTX 5090",
+    "capability": "sm_120",
+    "total_vram_bytes": 33668726784,
+    "total_vram_gib": 31.36,
+    "free_vram_gib": 30.63,
+    "multi_processor_count": 170,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "videos": [
+    {
+      "video": "01.MP4",
+      "master": "/tmp/dabai_optim/routing/01/master_25fps.mp4",
+      "classify_seconds": 28.769,
+      "ms_per_frame": 11.32,
+      "total_frames": 2542,
+      "frame_classes": {
+        "VALID_FACE": 260,
+        "SMALL_FACE": 176,
+        "NO_FACE": 2106
+      },
+      "skip_reasons": {
+        "no_face": 2072,
+        "low_confidence": 34,
+        "height_below_threshold": 176
+      },
+      "segments": 4,
+      "ls_eligible_frames": 260,
+      "ls_eligible_seconds": 10.4,
+      "pass_through_frames": 2282,
+      "pass_through_seconds": 91.28,
+      "eligible_fraction": 0.1023,
+      "by_action": {
+        "LATENT_SYNC": 260,
+        "PASS_THROUGH": 2282
+      },
+      "segments_detail": [
+        {
+          "index": 0,
+          "start_s": 0.0,
+          "end_s": 10.4,
+          "frames": 260,
+          "classification": "VALID_FACE",
+          "action": "LATENT_SYNC"
+        },
+        {
+          "index": 1,
+          "start_s": 10.4,
+          "end_s": 89.88,
+          "frames": 1987,
+          "classification": "NO_FACE",
+          "action": "PASS_THROUGH"
+        },
+        {
+          "index": 2,
+          "start_s": 89.88,
+          "end_s": 96.92,
+          "frames": 176,
+          "classification": "SMALL_FACE",
+          "action": "PASS_THROUGH"
+        },
+        {
+          "index": 3,
+          "start_s": 96.92,
+          "end_s": 101.68,
+          "frames": 119,
+          "classification": "NO_FACE",
+          "action": "PASS_THROUGH"
+        }
+      ],
+      "previous_insightface_result": {
+        "frame_classes": {
+          "VALID_FACE": 260,
+          "SMALL_FACE": 176,
+          "NO_FACE": 2106
+        },
+        "master_frames": 2542,
+        "by_action": {
+          "LATENT_SYNC": 260,
+          "PASS_THROUGH": 2282
+        }
+      }
+    },
+    {
+      "video": "02.mp4",
+      "master": "/tmp/dabai_optim/routing/02/master_25fps.mp4",
+      "classify_seconds": 30.314,
+      "ms_per_frame": 10.93,
+      "total_frames": 2773,
+      "frame_classes": {
+        "VALID_FACE": 0,
+        "SMALL_FACE": 0,
+        "NO_FACE": 2773
+      },
+      "skip_reasons": {
+        "no_face": 2514,
+        "low_confidence": 259
+      },
+      "segments": 1,
+      "ls_eligible_frames": 0,
+      "ls_eligible_seconds": 0.0,
+      "pass_through_frames": 2773,
+      "pass_through_seconds": 110.92,
+      "eligible_fraction": 0.0,
+      "by_action": {
+        "PASS_THROUGH": 2773
+      },
+      "segments_detail": [
+        {
+          "index": 0,
+          "start_s": 0.0,
+          "end_s": 110.92,
+          "frames": 2773,
+          "classification": "NO_FACE",
+          "action": "PASS_THROUGH"
+        }
+      ],
+      "previous_insightface_result": {
+        "frame_classes": {
+          "VALID_FACE": 0,
+          "SMALL_FACE": 0,
+          "NO_FACE": 2773
+        },
+        "master_frames": 2773,
+        "by_action": {
+          "PASS_THROUGH": 2773
+        }
+      }
+    },
+    {
+      "video": "03.mp4",
+      "master": "/tmp/dabai_optim/routing/03/master_25fps.mp4",
+      "classify_seconds": 24.817,
+      "ms_per_frame": 10.98,
+      "total_frames": 2260,
+      "frame_classes": {
+        "VALID_FACE": 2260,
+        "SMALL_FACE": 0,
+        "NO_FACE": 0
+      },
+      "skip_reasons": {},
+      "segments": 1,
+      "ls_eligible_frames": 2260,
+      "ls_eligible_seconds": 90.4,
+      "pass_through_frames": 0,
+      "pass_through_seconds": 0.0,
+      "eligible_fraction": 1.0,
+      "by_action": {
+        "LATENT_SYNC": 2260
+      },
+      "segments_detail": [
+        {
+          "index": 0,
+          "start_s": 0.0,
+          "end_s": 90.4,
+          "frames": 2260,
+          "classification": "VALID_FACE",
+          "action": "LATENT_SYNC"
+        }
+      ],
+      "previous_insightface_result": {
+        "frame_classes": {
+          "VALID_FACE": 2260,
+          "SMALL_FACE": 0,
+          "NO_FACE": 0
+        },
+        "master_frames": 2260,
+        "by_action": {
+          "LATENT_SYNC": 2260
+        }
+      }
+    },
+    {
+      "video": "04.mp4",
+      "master": "/tmp/dabai_optim/routing/04/master_25fps.mp4",
+      "classify_seconds": 14.833,
+      "ms_per_frame": 11.0,
+      "total_frames": 1349,
+      "frame_classes": {
+        "VALID_FACE": 1349,
+        "SMALL_FACE": 0,
+        "NO_FACE": 0
+      },
+      "skip_reasons": {},
+      "segments": 1,
+      "ls_eligible_frames": 1349,
+      "ls_eligible_seconds": 53.96,
+      "pass_through_frames": 0,
+      "pass_through_seconds": 0.0,
+      "eligible_fraction": 1.0,
+      "by_action": {
+        "LATENT_SYNC": 1349
+      },
+      "segments_detail": [
+        {
+          "index": 0,
+          "start_s": 0.0,
+          "end_s": 53.96,
+          "frames": 1349,
+          "classification": "VALID_FACE",
+          "action": "LATENT_SYNC"
+        }
+      ],
+      "previous_insightface_result": {
+        "frame_classes": {
+          "VALID_FACE": 1349,
+          "SMALL_FACE": 0,
+          "NO_FACE": 0
+        },
+        "master_frames": 1349,
+        "by_action": {
+          "LATENT_SYNC": 1349
+        }
+      }
+    },
+    {
+      "video": "05.mp4",
+      "master": "/tmp/dabai_optim/routing/05/master_25fps.mp4",
+      "classify_seconds": 14.444,
+      "ms_per_frame": 11.02,
+      "total_frames": 1311,
+      "frame_classes": {
+        "VALID_FACE": 1190,
+        "SMALL_FACE": 121,
+        "NO_FACE": 0
+      },
+      "skip_reasons": {
+        "height_below_threshold": 118,
+        "width_below_threshold": 3
+      },
+      "segments": 17,
+      "ls_eligible_frames": 1163,
+      "ls_eligible_seconds": 46.52,
+      "pass_through_frames": 148,
+      "pass_through_seconds": 5.92,
+      "eligible_fraction": 0.8871,
+      "by_action": {
+        "LATENT_SYNC": 1163,
+        "PASS_THROUGH": 121,
+        "PASS_THROUGH_SHORT_VALID": 27
+      },
+      "segments_detail": [
+        {
+          "index": 0,
+          "start_s": 0.0,
+          "end_s": 0.28,
+          "frames": 7,
+          "classification": "VALID_FACE",
+          "action": "PASS_THROUGH_SHORT_VALID"
+        },
+        {
+          "index": 1,
+          "start_s": 0.28,
+          "end_s": 0.4,
+          "frames": 3,
+          "classification": "SMALL_FACE",
+          "action": "PASS_THROUGH"
+        },
+        {
+          "index": 2,
+          "start_s": 0.4,
+          "end_s": 1.44,
+          "frames": 26,
+          "classification": "VALID_FACE",
+          "action": "LATENT_SYNC"
+        },
+        {
+          "index": 3,
+          "start_s": 1.44,
+          "end_s": 1.52,
+          "frames": 2,
+          "classification": "SMALL_FACE",
+          "action": "PASS_THROUGH"
+        },
+        {
+          "index": 4,
+          "start_s": 1.52,
+          "end_s": 9.28,
+          "frames": 194,
+          "classification": "VALID_FACE",
+          "action": "LATENT_SYNC"
+        },
+        {
+          "index": 5,
+          "start_s": 9.28,
+          "end_s": 9.36,
+          "frames": 2,
+          "classification": "SMALL_FACE",
+          "action": "PASS_THROUGH"
+        },
+        {
+          "index": 6,
+          "start_s": 9.36,
+          "end_s": 9.68,
+          "frames": 8,
+          "classification": "VALID_FACE",
+          "action": "PASS_THROUGH_SHORT_VALID"
+        },
+        {
+          "index": 7,
+          "start_s": 9.68,
+          "end_s": 13.68,
+          "frames": 100,
+          "classification": "SMALL_FACE",
+          "action": "PASS_THROUGH"
+        },
+        {
+          "index": 8,
+          "start_s": 13.68,
+          "end_s": 25.88,
+          "frames": 305,
+          "classification": "VALID_FACE",
+          "action": "LATENT_SYNC"
+        },
+        {
+          "index": 9,
+          "start_s": 25.88,
+          "end_s": 25.92,
+          "frames": 1,
+          "classification": "SMALL_FACE",
+          "action": "PASS_THROUGH"
+        },
+        {
+          "index": 10,
+          "start_s": 25.92,
+          "end_s": 25.96,
+          "frames": 1,
+          "classification": "VALID_FACE",
+          "action": "PASS_THROUGH_SHORT_VALID"
+        },
+        {
+          "index": 11,
+          "start_s": 25.96,
+          "end_s": 26.0,
+          "frames": 1,
+          "classification": "SMALL_FACE",
+          "action": "PASS_THROUGH"
+        },
+        {
+          "index": 12,
+          "start_s": 26.0,
+          "end_s": 26.08,
+          "frames": 2,
+          "classification": "VALID_FACE",
+          "action": "PASS_THROUGH_SHORT_VALID"
+        },
+        {
+          "index": 13,
+          "start_s": 26.08,
+          "end_s": 26.28,
+          "frames": 5,
+          "classification": "SMALL_FACE",
+          "action": "PASS_THROUGH"
+        },
+        {
+          "index": 14,
+          "start_s": 26.28,
+          "end_s": 26.64,
+          "frames": 9,
+          "classification": "VALID_FACE",
+          "action": "PASS_THROUGH_SHORT_VALID"
+        },
+        {
+          "index": 15,
+          "start_s": 26.64,
+          "end_s": 26.92,
+          "frames": 7,
+          "classification": "SMALL_FACE",
+          "action": "PASS_THROUGH"
+        },
+        {
+          "index": 16,
+          "start_s": 26.92,
+          "end_s": 52.44,
+          "frames": 638,
+          "classification": "VALID_FACE",
+          "action": "LATENT_SYNC"
+        }
+      ],
+      "previous_insightface_result": {
+        "frame_classes": {
+          "VALID_FACE": 1190,
+          "SMALL_FACE": 121,
+          "NO_FACE": 0
+        },
+        "master_frames": 1311,
+        "by_action": {
+          "LATENT_SYNC": 1148,
+          "PASS_THROUGH": 121,
+          "PASS_THROUGH_SHORT_VALID": 42
+        }
+      }
+    }
+  ],
+  "at": "2026-09-17T21:33:57Z"
+}

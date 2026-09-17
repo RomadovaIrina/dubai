@@ -57,7 +57,9 @@ from benchmark_09_qwen_quant import SYSTEM_PROMPT                     # noqa: E4
 DEFAULT_WORK = pathlib.Path("/tmp/dabai_pilot_05")
 # Defaults of --video-backend optimized. They are the configuration verified by the optimization track
 # (reports/pilot/optim/batch_sweep.md, compile_inductor.json); baseline mode ignores them.
-OPTIMIZED_DEFAULTS = {"face_router": "retinaface", "window_batch_size": 1, "compile_backend": "none", "sdpa_backend": "auto"}
+OPTIMIZED_DEFAULTS = {"face_router": "retinaface", "window_batch_size": 2, "compile_backend": "none", "sdpa_backend": "auto"}
+# batch 2: largest batch that leaves VRAM headroom (25.8 GB peak vs 30.8 GB at batch 4 for +0.7 %); inductor gave no gain over
+# DeepCache eager; "auto" SDPA already dispatches the fused FLASH_ATTENTION kernel (forced flash = bit-identical, same time).
 TTS_SR = 24000
 REF_MAX_S = 10.0          # Chatterbox DEC_COND_LEN = 10 s @ 24 kHz
 REF_MIN_S = 1.0

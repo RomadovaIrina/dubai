@@ -1,0 +1,5 @@
+{
+ "label": "accel_b2_inductor",
+ "status": "ABORTED_BY_USER",
+ "note": "compile/batch experiments declared exhausted after b1 inductor (+DeepCache: no gain, -DeepCache: 1.11x over eager-no-DeepCache but 1.66x slower than DeepCache eager); run 1 killed mid-way, no timing recorded"
+}
