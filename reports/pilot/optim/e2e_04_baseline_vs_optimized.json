@@ -1,0 +1,134 @@
+{
+ "baseline": {
+  "duration_s": 53.96,
+  "fps": 25.0,
+  "frames": 1349,
+  "width": 464,
+  "height": 848,
+  "codec": "h264"
+ },
+ "optimized": {
+  "duration_s": 53.96,
+  "fps": 25.0,
+  "frames": 1349,
+  "width": 464,
+  "height": 848,
+  "codec": "h264"
+ },
+ "video_psnr_optimized_vs_baseline": {
+  "frames_a": 1349,
+  "frames_b": 1349,
+  "compared": 1349,
+  "psnr_mean": 40.23,
+  "psnr_min": 35.86,
+  "psnr_p05": 37.64
+ },
+ "audio": {
+  "len_s_baseline": 53.931,
+  "len_s_optimized": 53.931,
+  "corr_opt_vs_base": 1.0,
+  "maxabs_diff": 0.0,
+  "dubbed_track_exists_in_work": true,
+  "corr_opt_output_vs_dubbed_track": 0.9997
+ },
+ "stage_seconds": {
+  "baseline": {
+   "audio_extract": 0.079,
+   "vad": 0.849,
+   "asr": 2.985,
+   "diarization": 3.058,
+   "translation_load": 1.368,
+   "translation": 11.81,
+   "tts_load": 4.671,
+   "tts": 5.594,
+   "alignment": 0.162,
+   "dubbed_track": 0.223,
+   "ls_master_25fps": 2.344,
+   "face_classify": 5.706,
+   "latentsync_load": 5.578,
+   "latentsync": 358.895,
+   "final_assembly": 2.979,
+   "total": 407.507
+  },
+  "optimized": {
+   "audio_extract": 0.067,
+   "vad": 0.838,
+   "asr": 2.964,
+   "diarization": 3.052,
+   "translation_load": 1.35,
+   "translation": 12.007,
+   "tts_load": 4.659,
+   "tts": 5.589,
+   "alignment": 0.16,
+   "dubbed_track": 0.225,
+   "face_router_load": 0.179,
+   "latentsync_load": 5.355,
+   "ls_master_25fps": 2.364,
+   "face_classify": 14.985,
+   "latentsync": 352.472,
+   "final_assembly": 2.898,
+   "total": 411.661
+  }
+ },
+ "lipsync": {
+  "baseline": {
+   "frame_classes": {
+    "VALID_FACE": 1349,
+    "SMALL_FACE": 0,
+    "NO_FACE": 0
+   },
+   "by_action": {
+    "LATENT_SYNC": {
+     "segments": 1,
+     "frames": 1349,
+     "seconds": 53.96
+    }
+   },
+   "latentsync_inference_total_s": 347.31,
+   "latentsync_calls": 1
+  },
+  "optimized": {
+   "router": "retinaface",
+   "frame_classes": {
+    "VALID_FACE": 1349,
+    "SMALL_FACE": 0,
+    "NO_FACE": 0
+   },
+   "skip_reasons": {},
+   "by_action": {
+    "LATENT_SYNC": {
+     "segments": 1,
+     "frames": 1349,
+     "seconds": 53.96
+    }
+   },
+   "latentsync_inference_total_s": 340.49,
+   "latentsync_calls": 1,
+   "output_frame_check": {
+    "decoded_frames": 1349,
+    "expected_frames": 1349,
+    "blank_frames": 0,
+    "undecodable_frames": 0,
+    "pass": true
+   },
+   "runner": {
+    "window_batch_size": 2,
+    "deepcache": true,
+    "compile_backend": "none",
+    "sdpa_backend": "auto",
+    "steps": 20,
+    "guidance": 1.5,
+    "seed": 1247,
+    "fp16": true,
+    "stage2_512": true
+   },
+   "codeformer": "OFF (gate metadata only: codeformer_eligible on LATENT_SYNC segments)"
+  }
+ },
+ "vram_peak_device_mib": {
+  "optimized_sanity": 26244,
+  "baseline_latentsync_component_process_peak": 20878
+ },
+ "translations_identical": true,
+ "tts_seconds_identical": true
+}
