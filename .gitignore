@@ -114,3 +114,16 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# ---------------------------------------------------------------------------
+# Smoke / QA image dumps and QA video outputs (2026-09-18).
+# CodeFormer smoke rewrites reports/codeformer/*/ (726 PNG, ~500 MB per run); visual-QA outputs live in qa_outputs/
+# (videos are already excluded by the media rules above; keep only the small manifests / summaries there).
+# ---------------------------------------------------------------------------
+reports/codeformer/
+reports/**/*.png
+reports/**/*.jpg
+reports/**/*.jpeg
+qa_outputs/**/*.png
+qa_outputs/**/*.jpg
+qa_outputs/**/boundaries/

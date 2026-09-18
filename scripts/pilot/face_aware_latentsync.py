@@ -145,6 +145,14 @@ def verify_segment(video: pathlib.Path) -> list[bool]:
     cap.release(); return ok
 
 
+def detect_frames(frames_rgb) -> list[tuple]:
+    """LatentSync's own FaceDetector (with its own filters) on in-memory RGB frames, in order. Returns one
+    (bbox, landmark_2d_106) per frame ((None, None) = LatentSync would raise "Face not detected"). This is the verify pass
+    of the in-memory optimized path; the results are replayed inside LatentSync so the frames are detected exactly once."""
+    det = face_detector()
+    return [det(fr) for fr in frames_rgb]
+
+
 def split_by_mask(seg: dict, ok: list[bool], min_frames: int, next_index: int) -> list[dict]:
     """Split a segment into runs of accepted / rejected frames (relative to the master timeline)."""
     out = []; i = 0

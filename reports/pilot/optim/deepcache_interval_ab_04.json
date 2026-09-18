@@ -1,0 +1,59 @@
+{
+ "task": "optim-deepcache-interval-ab",
+ "video": "test_videos/04.mp4 (own audio, whole video, no speech gate, batch 2, fp16, 20 steps, guidance 1.5, seed 1247)",
+ "gpu": "NVIDIA GeForce RTX 5090 / sm_120",
+ "at": "2026-09-18T15:28:33Z",
+ "runs": {
+  "interval_3": {
+   "confidence": 3.23,
+   "av_offset_frames": 0,
+   "eval_s": 46.978,
+   "latentsync_s": 352.0,
+   "stages": {
+    "preprocess_audio_video": 0.167,
+    "affine": 14.881,
+    "vae_and_cond": 69.117,
+    "unet_denoise": 255.777,
+    "restore": 8.87,
+    "write": 0.0,
+    "total": 351.821
+   },
+   "wall_s_total": 400.23,
+   "unet_calls": 860
+  },
+  "interval_5": {
+   "confidence": 3.21,
+   "av_offset_frames": 0,
+   "eval_s": 49.494,
+   "latentsync_s": 281.47,
+   "stages": {
+    "preprocess_audio_video": 0.17,
+    "affine": 14.211,
+    "vae_and_cond": 69.269,
+    "unet_denoise": 186.091,
+    "restore": 8.932,
+    "write": 0.0,
+    "total": 281.31
+   },
+   "wall_s_total": 329.44,
+   "unet_calls": 860
+  }
+ },
+ "original_04_syncnet": {
+  "confidence": 3.24,
+  "av_offset_frames": 2,
+  "eval_s": 50.628
+ },
+ "psnr_interval5_vs_interval3": {
+  "frames_a": 1349,
+  "frames_b": 1349,
+  "compared": 1349,
+  "psnr_mean": 44.19,
+  "psnr_min": 39.46,
+  "psnr_p05": 41.43
+ },
+ "speedup_latentsync": 1.251,
+ "speedup_unet": 1.374,
+ "decision": "cache_interval 5 adopted as the optimized-backend default (run_clean_pipeline_05.py OPTIMIZED_DEFAULTS); --deepcache-interval 3 restores the previous setting",
+ "gate": "SyncNet confidence within 0.02 of interval 3 and of the original, AV offset 0 for both; visual check of /tmp/dabai_ab/dc{3,5}/facesync_04.mp4 still recommended"
+}

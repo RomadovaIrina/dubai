@@ -1,0 +1,122 @@
+[
+ {
+  "video": "01",
+  "output": "qa_outputs/final_optimized/01_optimized.mp4",
+  "duration": 101.68,
+  "frames": 2542,
+  "transitions": 0,
+  "ls_s": 10.4,
+  "pt_s": 91.28,
+  "validation": "PASS",
+  "checks": {
+   "output_exists_nonempty": true,
+   "video_and_audio_streams": true,
+   "dubbed_audio_present": true,
+   "source_resolution_preserved": true,
+   "duration_delta_within_tolerance": true,
+   "frame_count_preserved": true,
+   "all_frames_decodable": true,
+   "no_blank_frames": true,
+   "no_latentsync_crash": true,
+   "no_face_not_detected_crash": true,
+   "codeformer_invoked_no": true,
+   "runner_validation_pass": true
+  }
+ },
+ {
+  "video": "02",
+  "output": "qa_outputs/final_optimized/02_optimized.mp4",
+  "duration": 110.92,
+  "frames": 2773,
+  "transitions": 0,
+  "ls_s": 0.0,
+  "pt_s": 110.92,
+  "validation": "PASS",
+  "checks": {
+   "output_exists_nonempty": true,
+   "video_and_audio_streams": true,
+   "dubbed_audio_present": true,
+   "source_resolution_preserved": true,
+   "duration_delta_within_tolerance": true,
+   "frame_count_preserved": true,
+   "all_frames_decodable": true,
+   "no_blank_frames": true,
+   "no_latentsync_crash": true,
+   "no_face_not_detected_crash": true,
+   "codeformer_invoked_no": true,
+   "runner_validation_pass": true
+  }
+ },
+ {
+  "video": "03",
+  "output": "qa_outputs/final_optimized/03_optimized.mp4",
+  "duration": 90.4,
+  "frames": 2260,
+  "transitions": 10,
+  "ls_s": 81.12,
+  "pt_s": 9.28,
+  "validation": "PASS",
+  "checks": {
+   "output_exists_nonempty": true,
+   "video_and_audio_streams": true,
+   "dubbed_audio_present": true,
+   "source_resolution_preserved": true,
+   "duration_delta_within_tolerance": true,
+   "frame_count_preserved": true,
+   "all_frames_decodable": true,
+   "no_blank_frames": true,
+   "no_latentsync_crash": true,
+   "no_face_not_detected_crash": true,
+   "codeformer_invoked_no": true,
+   "runner_validation_pass": true
+  }
+ },
+ {
+  "video": "04",
+  "output": "qa_outputs/final_optimized/04_optimized.mp4",
+  "duration": 53.96,
+  "frames": 1349,
+  "transitions": 14,
+  "ls_s": 44.48,
+  "pt_s": 9.48,
+  "validation": "PASS",
+  "checks": {
+   "output_exists_nonempty": true,
+   "video_and_audio_streams": true,
+   "dubbed_audio_present": true,
+   "source_resolution_preserved": true,
+   "duration_delta_within_tolerance": true,
+   "frame_count_preserved": true,
+   "all_frames_decodable": true,
+   "no_blank_frames": true,
+   "no_latentsync_crash": true,
+   "no_face_not_detected_crash": true,
+   "codeformer_invoked_no": true,
+   "runner_validation_pass": true
+  }
+ },
+ {
+  "video": "05",
+  "output": "qa_outputs/final_optimized/05_optimized.mp4",
+  "duration": 52.44,
+  "frames": 1311,
+  "transitions": 10,
+  "ls_s": 36.32,
+  "pt_s": 16.12,
+  "validation": "PASS",
+  "checks": {
+   "output_exists_nonempty": true,
+   "video_and_audio_streams": true,
+   "dubbed_audio_present": true,
+   "source_resolution_preserved": true,
+   "duration_delta_within_tolerance": true,
+   "frame_count_preserved": true,
+   "all_frames_decodable": true,
+   "no_blank_frames": true,
+   "no_latentsync_crash": true,
+   "no_face_not_detected_crash": true,
+   "codeformer_invoked_no": true,
+   "runner_validation_pass": true
+  }
+ }
+]

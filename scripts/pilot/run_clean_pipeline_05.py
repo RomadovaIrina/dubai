@@ -21,7 +21,12 @@ frozen dabai baseline, wired in pipeline order on the ORIGINAL timeline (pauses 
    9. dubbed audio track               full source length; aligned TTS at the unit slots, silence elsewhere
   10. face-aware LatentSync 1.6        scripts/pilot/face_aware_latentsync.py functions: VALID_FACE segments ->
                                        LatentSync driven by the DUBBED audio, SMALL_FACE / NO_FACE -> pass-through,
-                                       "Face not detected" never aborts the run; frame order / count preserved
+                                       "Face not detected" never aborts the run; frame order / count preserved.
+                                       --video-backend optimized (face_aware_latentsync_accel.py) additionally gates
+                                       LatentSync to speech: frames outside VAD(original) U VAD(dubbed track) (+margin,
+                                       merged gaps) keep the original mouth (nobody speaks there in either track),
+                                       runs RetinaFace on every --router-stride-th frame, keeps segments in memory
+                                       (LatentSync's detector runs once per frame) and crossfades LS/original boundaries
   11. CodeFormer                       NOT part of the clean pipeline; --no-codeformer is mandatory
   12. final assembly                   lipsynced/pass-through frames (25 fps CFR master, as LatentSync works) + dubbed
                                        AAC track -> output MP4 on the full original timeline; no subtitles (the 0.5
@@ -57,7 +62,14 @@ from benchmark_09_qwen_quant import SYSTEM_PROMPT                     # noqa: E4
 DEFAULT_WORK = pathlib.Path("/tmp/dabai_pilot_05")
 # Defaults of --video-backend optimized. They are the configuration verified by the optimization track
 # (reports/pilot/optim/batch_sweep.md, compile_inductor.json); baseline mode ignores them.
-OPTIMIZED_DEFAULTS = {"face_router": "retinaface", "window_batch_size": 2, "compile_backend": "none", "sdpa_backend": "auto"}
+OPTIMIZED_DEFAULTS = {"face_router": "retinaface", "window_batch_size": 2, "compile_backend": "none", "sdpa_backend": "auto",
+                      "deepcache_interval": 5, "speech_gate": "on", "gate_margin_s": 0.24, "gate_merge_gap_s": 0.6,
+                      "crossfade_frames": 4, "router_stride": 3}
+# speech gate / stride / in-memory segments: quality-neutral work reduction (2026-09-18); LatentSync's own detector still
+# checks every frame it processes; the dubbed track always covers the whole timeline.
+# DeepCache cache_interval 5 (was 3): A/B on 04.mp4 2026-09-18 (reports/pilot/optim/deepcache_interval_ab_04.md): SyncNet
+# confidence 3.23 -> 3.21 (original 3.24), AV offset 0 both, PSNR 44.2 dB between outputs, UNet -27 %, LatentSync -20 %.
+# --deepcache-interval 3 restores the previous setting.
 # batch 2: largest batch that leaves VRAM headroom (25.8 GB peak vs 30.8 GB at batch 4 for +0.7 %); inductor gave no gain over
 # DeepCache eager; "auto" SDPA already dispatches the fused FLASH_ATTENTION kernel (forced flash = bit-identical, same time).
 TTS_SR = 24000
@@ -406,16 +418,19 @@ def run_lipsync(src: pathlib.Path, work: pathlib.Path, dubbed16k: pathlib.Path, 
             "segments": [{k: v for k, v in s.items() if k != "face_bbox_stats"} for s in segs]}
 
 
-def run_lipsync_optimized(src: pathlib.Path, work: pathlib.Path, dubbed16k: pathlib.Path, dubbed_aac: pathlib.Path, out: pathlib.Path, a, times: dict) -> dict:
-    """Optimized video backend: RetinaFace routing + batched LatentSync windows (face_aware_latentsync_accel.py).
+def run_lipsync_optimized(src: pathlib.Path, work: pathlib.Path, dubbed16k: pathlib.Path, dubbed_aac: pathlib.Path, out: pathlib.Path, a, times: dict,
+                          speech_gate: list | None = None) -> dict:
+    """Optimized video backend: RetinaFace routing + speech gate + batched LatentSync windows (face_aware_latentsync_accel.py).
     Same audio/video semantics as run_lipsync: pass-through keeps master frames, the dubbed track covers the whole timeline."""
     import face_aware_latentsync_accel as faa
     with timed(times, "face_router_load"):
         router = faa.make_router(a.face_router, a.face_min_w, a.face_min_h, a.retina_conf)
     with timed(times, "latentsync_load"):
-        runner = faa.AccelRunner(a.window_batch_size, not a.no_deepcache, a.compile_backend, a.sdpa_backend)
+        runner = faa.AccelRunner(a.window_batch_size, not a.no_deepcache, a.compile_backend, a.sdpa_backend, deepcache_interval=a.deepcache_interval)
     rep = faa.process_video(src, work, dubbed16k, dubbed_aac, out, router=router, runner=runner, min_ls_frames=a.min_ls_frames,
-                            max_verify_depth=a.max_verify_depth, times=times, log=lambda m: print(m, flush=True))
+                            max_verify_depth=a.max_verify_depth, times=times, log=lambda m: print(m, flush=True),
+                            speech_gate=speech_gate, crossfade_frames=a.crossfade_frames, router_stride=a.router_stride,
+                            in_memory=not a.segment_files)
     rep["backend"] = "optimized"
     free_cuda(runner)
     return rep
@@ -443,6 +458,14 @@ def main() -> int:
     ap.add_argument("--compile-backend", choices=["none", "inductor", "tensorrt"], default=OPTIMIZED_DEFAULTS["compile_backend"], help="optimized backend only")
     ap.add_argument("--sdpa-backend", choices=["auto", "flash", "efficient", "math"], default=OPTIMIZED_DEFAULTS["sdpa_backend"], help="optimized backend only")
     ap.add_argument("--no-deepcache", action="store_true", help="optimized backend only (A/B); baseline always uses DeepCache")
+    ap.add_argument("--deepcache-interval", type=int, default=OPTIMIZED_DEFAULTS["deepcache_interval"], help="optimized backend only; 5 = A/B-validated default, 3 = previous setting")
+    ap.add_argument("--speech-gate", choices=["on", "off"], default=OPTIMIZED_DEFAULTS["speech_gate"],
+                    help="optimized backend only: LatentSync only inside VAD(original) U VAD(dubbed) (+margin); elsewhere the original mouth is kept")
+    ap.add_argument("--gate-margin-s", type=float, default=OPTIMIZED_DEFAULTS["gate_margin_s"])
+    ap.add_argument("--gate-merge-gap-s", type=float, default=OPTIMIZED_DEFAULTS["gate_merge_gap_s"])
+    ap.add_argument("--crossfade-frames", type=int, default=OPTIMIZED_DEFAULTS["crossfade_frames"], help="LS/original boundary blend length (0 = off)")
+    ap.add_argument("--router-stride", type=int, default=OPTIMIZED_DEFAULTS["router_stride"], help="RetinaFace on every N-th gated frame")
+    ap.add_argument("--segment-files", action="store_true", help="optimized backend: legacy per-segment mp4 path instead of in-memory segments")
     a = ap.parse_args()
     if not a.no_codeformer:
         print("pilot 0.5 requires CodeFormer disabled: pass --no-codeformer", file=sys.stderr); return 2
@@ -510,7 +533,22 @@ def main() -> int:
 
         man["video_backend"] = a.video_backend
         if a.video_backend == "optimized":
-            man["lipsync"] = run_lipsync_optimized(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), pathlib.Path(man["dubbed_track"]["aac"]), out, a, times)
+            speech_gate = None
+            if a.speech_gate == "on":
+                import face_aware_latentsync_accel as faa
+                with timed(times, "speech_gate"):
+                    dub_speech = run_vad(pathlib.Path(man["dubbed_track"]["wav16k"]))
+                    speech_gate = faa.build_speech_gate([speech, dub_speech], duration, a.gate_margin_s, a.gate_merge_gap_s)
+                gated = sum(e - s for s, e in speech_gate)
+                man["speech_gate"] = {"enabled": True, "margin_s": a.gate_margin_s, "merge_gap_s": a.gate_merge_gap_s, "crossfade_frames": a.crossfade_frames,
+                                      "source_speech_seconds": round(sum(i["end"] - i["start"] for i in speech), 3),
+                                      "dubbed_speech_seconds": round(sum(i["end"] - i["start"] for i in dub_speech), 3),
+                                      "gate_seconds": round(gated, 3), "gate_fraction": round(gated / duration, 4), "intervals": speech_gate}
+                print(f"  [gate] {len(speech_gate)} intervals, {gated:.1f}s of {duration:.1f}s ({gated / duration:.0%}) eligible for LatentSync", flush=True)
+            else:
+                man["speech_gate"] = {"enabled": False}
+            man["lipsync"] = run_lipsync_optimized(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), pathlib.Path(man["dubbed_track"]["aac"]), out, a, times,
+                                                   speech_gate=speech_gate)
         else:
             man["lipsync"] = run_lipsync(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), pathlib.Path(man["dubbed_track"]["aac"]),
                                          out, a.min_ls_frames, a.max_verify_depth, times)

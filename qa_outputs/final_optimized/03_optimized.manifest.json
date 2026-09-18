@@ -1,0 +1,2676 @@
+{
+ "task": "0.5-runner",
+ "input": "/workspace/dub/test_videos/03.mp4",
+ "output": "/workspace/dub/qa_outputs/final_optimized/03_optimized.mp4",
+ "target_lang": "en",
+ "codeformer": "DISABLED (not invoked)",
+ "work_dir": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03",
+ "config": {
+  "seed": 1247,
+  "max_unit_s": 20.0,
+  "threads": 16
+ },
+ "source": {
+  "duration_s": 90.333333,
+  "size_bytes": 18898111,
+  "container": "mov,mp4,m4a,3gp,3g2,mj2",
+  "video": {
+   "codec": "h264",
+   "profile": "High",
+   "width": 464,
+   "height": 848,
+   "r_frame_rate": "30/1",
+   "avg_frame_rate": "30/1",
+   "fps": 30.0,
+   "avg_fps": 30.0,
+   "vfr": false,
+   "pix_fmt": "yuv420p",
+   "nb_frames": "2710",
+   "duration_s": 90.333333,
+   "bit_rate": "1605991"
+  },
+  "audio": {
+   "codec": "aac",
+   "sample_rate": "44100",
+   "channels": 2,
+   "channel_layout": "stereo",
+   "bit_rate": "62788",
+   "duration_s": 90.32
+  },
+  "has_video": true,
+  "has_audio": true
+ },
+ "speech_intervals": [
+  {
+   "start": 3.3,
+   "end": 4.1
+  },
+  {
+   "start": 4.2,
+   "end": 5.5
+  },
+  {
+   "start": 6.7,
+   "end": 8.2
+  },
+  {
+   "start": 8.4,
+   "end": 9.9
+  },
+  {
+   "start": 10.3,
+   "end": 12.4
+  },
+  {
+   "start": 14.3,
+   "end": 17.2
+  },
+  {
+   "start": 17.7,
+   "end": 21.4
+  },
+  {
+   "start": 22.3,
+   "end": 23.8
+  },
+  {
+   "start": 23.9,
+   "end": 25.0
+  },
+  {
+   "start": 25.5,
+   "end": 26.8
+  },
+  {
+   "start": 27.8,
+   "end": 28.9
+  },
+  {
+   "start": 30.5,
+   "end": 35.5
+  },
+  {
+   "start": 35.9,
+   "end": 38.5
+  },
+  {
+   "start": 39.3,
+   "end": 41.1
+  },
+  {
+   "start": 42.4,
+   "end": 44.3
+  },
+  {
+   "start": 46.3,
+   "end": 47.6
+  },
+  {
+   "start": 48.2,
+   "end": 50.8
+  },
+  {
+   "start": 51.4,
+   "end": 55.8
+  },
+  {
+   "start": 59.2,
+   "end": 68.5
+  },
+  {
+   "start": 70.1,
+   "end": 72.5
+  },
+  {
+   "start": 73.8,
+   "end": 76.8
+  },
+  {
+   "start": 76.9,
+   "end": 78.0
+  },
+  {
+   "start": 78.8,
+   "end": 79.3
+  },
+  {
+   "start": 79.9,
+   "end": 82.2
+  },
+  {
+   "start": 83.9,
+   "end": 84.8
+  },
+  {
+   "start": 85.2,
+   "end": 87.3
+  },
+  {
+   "start": 88.5,
+   "end": 89.2
+  }
+ ],
+ "timeline": {
+  "chunks": [
+   {
+    "start_s": 0.0,
+    "end_s": 3.3,
+    "type": "PASS_THROUGH",
+    "index": 0,
+    "duration_s": 3.3
+   },
+   {
+    "start_s": 3.3,
+    "end_s": 4.1,
+    "type": "SPEECH",
+    "index": 1,
+    "duration_s": 0.8
+   },
+   {
+    "start_s": 4.1,
+    "end_s": 4.2,
+    "type": "PASS_THROUGH",
+    "index": 2,
+    "duration_s": 0.1
+   },
+   {
+    "start_s": 4.2,
+    "end_s": 5.5,
+    "type": "SPEECH",
+    "index": 3,
+    "duration_s": 1.3
+   },
+   {
+    "start_s": 5.5,
+    "end_s": 6.7,
+    "type": "PASS_THROUGH",
+    "index": 4,
+    "duration_s": 1.2
+   },
+   {
+    "start_s": 6.7,
+    "end_s": 8.2,
+    "type": "SPEECH",
+    "index": 5,
+    "duration_s": 1.5
+   },
+   {
+    "start_s": 8.2,
+    "end_s": 8.4,
+    "type": "PASS_THROUGH",
+    "index": 6,
+    "duration_s": 0.2
+   },
+   {
+    "start_s": 8.4,
+    "end_s": 9.9,
+    "type": "SPEECH",
+    "index": 7,
+    "duration_s": 1.5
+   },
+   {
+    "start_s": 9.9,
+    "end_s": 10.3,
+    "type": "PASS_THROUGH",
+    "index": 8,
+    "duration_s": 0.4
+   },
+   {
+    "start_s": 10.3,
+    "end_s": 12.4,
+    "type": "SPEECH",
+    "index": 9,
+    "duration_s": 2.1
+   },
+   {
+    "start_s": 12.4,
+    "end_s": 14.3,
+    "type": "PASS_THROUGH",
+    "index": 10,
+    "duration_s": 1.9
+   },
+   {
+    "start_s": 14.3,
+    "end_s": 17.2,
+    "type": "SPEECH",
+    "index": 11,
+    "duration_s": 2.9
+   },
+   {
+    "start_s": 17.2,
+    "end_s": 17.7,
+    "type": "PASS_THROUGH",
+    "index": 12,
+    "duration_s": 0.5
+   },
+   {
+    "start_s": 17.7,
+    "end_s": 21.4,
+    "type": "SPEECH",
+    "index": 13,
+    "duration_s": 3.7
+   },
+   {
+    "start_s": 21.4,
+    "end_s": 22.3,
+    "type": "PASS_THROUGH",
+    "index": 14,
+    "duration_s": 0.9
+   },
+   {
+    "start_s": 22.3,
+    "end_s": 23.8,
+    "type": "SPEECH",
+    "index": 15,
+    "duration_s": 1.5
+   },
+   {
+    "start_s": 23.8,
+    "end_s": 23.9,
+    "type": "PASS_THROUGH",
+    "index": 16,
+    "duration_s": 0.1
+   },
+   {
+    "start_s": 23.9,
+    "end_s": 25.0,
+    "type": "SPEECH",
+    "index": 17,
+    "duration_s": 1.1
+   },
+   {
+    "start_s": 25.0,
+    "end_s": 25.5,
+    "type": "PASS_THROUGH",
+    "index": 18,
+    "duration_s": 0.5
+   },
+   {
+    "start_s": 25.5,
+    "end_s": 26.8,
+    "type": "SPEECH",
+    "index": 19,
+    "duration_s": 1.3
+   },
+   {
+    "start_s": 26.8,
+    "end_s": 27.8,
+    "type": "PASS_THROUGH",
+    "index": 20,
+    "duration_s": 1.0
+   },
+   {
+    "start_s": 27.8,
+    "end_s": 28.9,
+    "type": "SPEECH",
+    "index": 21,
+    "duration_s": 1.1
+   },
+   {
+    "start_s": 28.9,
+    "end_s": 30.5,
+    "type": "PASS_THROUGH",
+    "index": 22,
+    "duration_s": 1.6
+   },
+   {
+    "start_s": 30.5,
+    "end_s": 35.5,
+    "type": "SPEECH",
+    "index": 23,
+    "duration_s": 5.0
+   },
+   {
+    "start_s": 35.5,
+    "end_s": 35.9,
+    "type": "PASS_THROUGH",
+    "index": 24,
+    "duration_s": 0.4
+   },
+   {
+    "start_s": 35.9,
+    "end_s": 38.5,
+    "type": "SPEECH",
+    "index": 25,
+    "duration_s": 2.6
+   },
+   {
+    "start_s": 38.5,
+    "end_s": 39.3,
+    "type": "PASS_THROUGH",
+    "index": 26,
+    "duration_s": 0.8
+   },
+   {
+    "start_s": 39.3,
+    "end_s": 41.1,
+    "type": "SPEECH",
+    "index": 27,
+    "duration_s": 1.8
+   },
+   {
+    "start_s": 41.1,
+    "end_s": 42.4,
+    "type": "PASS_THROUGH",
+    "index": 28,
+    "duration_s": 1.3
+   },
+   {
+    "start_s": 42.4,
+    "end_s": 44.3,
+    "type": "SPEECH",
+    "index": 29,
+    "duration_s": 1.9
+   },
+   {
+    "start_s": 44.3,
+    "end_s": 46.3,
+    "type": "PASS_THROUGH",
+    "index": 30,
+    "duration_s": 2.0
+   },
+   {
+    "start_s": 46.3,
+    "end_s": 47.6,
+    "type": "SPEECH",
+    "index": 31,
+    "duration_s": 1.3
+   },
+   {
+    "start_s": 47.6,
+    "end_s": 48.2,
+    "type": "PASS_THROUGH",
+    "index": 32,
+    "duration_s": 0.6
+   },
+   {
+    "start_s": 48.2,
+    "end_s": 50.8,
+    "type": "SPEECH",
+    "index": 33,
+    "duration_s": 2.6
+   },
+   {
+    "start_s": 50.8,
+    "end_s": 51.4,
+    "type": "PASS_THROUGH",
+    "index": 34,
+    "duration_s": 0.6
+   },
+   {
+    "start_s": 51.4,
+    "end_s": 55.8,
+    "type": "SPEECH",
+    "index": 35,
+    "duration_s": 4.4
+   },
+   {
+    "start_s": 55.8,
+    "end_s": 59.2,
+    "type": "PASS_THROUGH",
+    "index": 36,
+    "duration_s": 3.4
+   },
+   {
+    "start_s": 59.2,
+    "end_s": 68.5,
+    "type": "SPEECH",
+    "index": 37,
+    "duration_s": 9.3
+   },
+   {
+    "start_s": 68.5,
+    "end_s": 70.1,
+    "type": "PASS_THROUGH",
+    "index": 38,
+    "duration_s": 1.6
+   },
+   {
+    "start_s": 70.1,
+    "end_s": 72.5,
+    "type": "SPEECH",
+    "index": 39,
+    "duration_s": 2.4
+   },
+   {
+    "start_s": 72.5,
+    "end_s": 73.8,
+    "type": "PASS_THROUGH",
+    "index": 40,
+    "duration_s": 1.3
+   },
+   {
+    "start_s": 73.8,
+    "end_s": 76.8,
+    "type": "SPEECH",
+    "index": 41,
+    "duration_s": 3.0
+   },
+   {
+    "start_s": 76.8,
+    "end_s": 76.9,
+    "type": "PASS_THROUGH",
+    "index": 42,
+    "duration_s": 0.1
+   },
+   {
+    "start_s": 76.9,
+    "end_s": 78.0,
+    "type": "SPEECH",
+    "index": 43,
+    "duration_s": 1.1
+   },
+   {
+    "start_s": 78.0,
+    "end_s": 78.8,
+    "type": "PASS_THROUGH",
+    "index": 44,
+    "duration_s": 0.8
+   },
+   {
+    "start_s": 78.8,
+    "end_s": 79.3,
+    "type": "SPEECH",
+    "index": 45,
+    "duration_s": 0.5
+   },
+   {
+    "start_s": 79.3,
+    "end_s": 79.9,
+    "type": "PASS_THROUGH",
+    "index": 46,
+    "duration_s": 0.6
+   },
+   {
+    "start_s": 79.9,
+    "end_s": 82.2,
+    "type": "SPEECH",
+    "index": 47,
+    "duration_s": 2.3
+   },
+   {
+    "start_s": 82.2,
+    "end_s": 83.9,
+    "type": "PASS_THROUGH",
+    "index": 48,
+    "duration_s": 1.7
+   },
+   {
+    "start_s": 83.9,
+    "end_s": 84.8,
+    "type": "SPEECH",
+    "index": 49,
+    "duration_s": 0.9
+   },
+   {
+    "start_s": 84.8,
+    "end_s": 85.2,
+    "type": "PASS_THROUGH",
+    "index": 50,
+    "duration_s": 0.4
+   },
+   {
+    "start_s": 85.2,
+    "end_s": 87.3,
+    "type": "SPEECH",
+    "index": 51,
+    "duration_s": 2.1
+   },
+   {
+    "start_s": 87.3,
+    "end_s": 88.5,
+    "type": "PASS_THROUGH",
+    "index": 52,
+    "duration_s": 1.2
+   },
+   {
+    "start_s": 88.5,
+    "end_s": 89.2,
+    "type": "SPEECH",
+    "index": 53,
+    "duration_s": 0.7
+   },
+   {
+    "start_s": 89.2,
+    "end_s": 90.3333,
+    "type": "PASS_THROUGH",
+    "index": 54,
+    "duration_s": 1.1333
+   }
+  ],
+  "speech_seconds": 60.7,
+  "pass_through_seconds": 29.633
+ },
+ "asr": {
+  "language": "ru",
+  "language_probability": 0.999,
+  "audio_duration_s": 90.324,
+  "compute_type": "int8_float16",
+  "model": "faster-whisper large-v3",
+  "segments": [
+   {
+    "id": 1,
+    "start": 2.68,
+    "end": 11.72,
+    "text": "\u0434\u0440\u0443\u0437\u044c\u044f \u043d\u0443 \u0447\u0442\u043e \u0432\u0441\u0435\u043c \u043f\u0440\u0438\u0432\u0435\u0442 \u0437\u0430\u043f\u0438\u0448\u0443 \u043f\u0435\u0440\u0432\u043e\u0435 \u0432\u0438\u0434\u0435\u043e \u0442\u0430\u043a\u043e\u0435 \u043e\u0437\u043d\u0430\u043a\u043e\u043c\u0438\u0442\u0435\u043b\u044c\u043d\u043e \u0446\u0435\u043b\u044c\u044e \u043f\u043e\u0437\u043d\u0430\u043a\u043e\u043c\u0438\u0442\u044c\u0441\u044f \u043d\u0430\u0432\u0435\u0440\u043d\u043e",
+    "words": [
+     {
+      "word": " \u0434\u0440\u0443\u0437\u044c\u044f",
+      "start": 2.68,
+      "end": 3.56,
+      "p": 0.404
+     },
+     {
+      "word": " \u043d\u0443",
+      "start": 3.56,
+      "end": 4.26,
+      "p": 0.945
+     },
+     {
+      "word": " \u0447\u0442\u043e",
+      "start": 4.26,
+      "end": 4.48,
+      "p": 0.996
+     },
+     {
+      "word": " \u0432\u0441\u0435\u043c",
+      "start": 4.48,
+      "end": 4.68,
+      "p": 0.995
+     },
+     {
+      "word": " \u043f\u0440\u0438\u0432\u0435\u0442",
+      "start": 4.68,
+      "end": 5.1,
+      "p": 1.0
+     },
+     {
+      "word": " \u0437\u0430\u043f\u0438\u0448\u0443",
+      "start": 5.1,
+      "end": 7.0,
+      "p": 0.984
+     },
+     {
+      "word": " \u043f\u0435\u0440\u0432\u043e\u0435",
+      "start": 7.0,
+      "end": 7.46,
+      "p": 0.993
+     },
+     {
+      "word": " \u0432\u0438\u0434\u0435\u043e",
+      "start": 7.46,
+      "end": 7.82,
+      "p": 1.0
+     },
+     {
+      "word": " \u0442\u0430\u043a\u043e\u0435",
+      "start": 7.82,
+      "end": 8.52,
+      "p": 0.936
+     },
+     {
+      "word": " \u043e\u0437\u043d\u0430\u043a\u043e\u043c\u0438\u0442\u0435\u043b\u044c\u043d\u043e",
+      "start": 8.52,
+      "end": 9.36,
+      "p": 0.684
+     },
+     {
+      "word": " \u0446\u0435\u043b\u044c\u044e",
+      "start": 9.36,
+      "end": 10.62,
+      "p": 0.885
+     },
+     {
+      "word": " \u043f\u043e\u0437\u043d\u0430\u043a\u043e\u043c\u0438\u0442\u044c\u0441\u044f",
+      "start": 10.62,
+      "end": 11.36,
+      "p": 0.995
+     },
+     {
+      "word": " \u043d\u0430\u0432\u0435\u0440\u043d\u043e",
+      "start": 11.36,
+      "end": 11.72,
+      "p": 0.877
+     }
+    ]
+   },
+   {
+    "id": 2,
+    "start": 11.72,
+    "end": 19.96,
+    "text": "\u0431\u043e\u043b\u044c\u0448\u0435 \u0432 \u043e\u0431\u0449\u0435\u043c \u0447\u0442\u043e \u0445\u043e\u0447\u0443 \u0441\u043a\u0430\u0437\u0430\u0442\u044c \u0440\u0430\u0434 \u0437\u043d\u0430\u043a\u043e\u043c\u0441\u0442\u0432\u0443 \u0441 \u0432\u0430\u043c\u0438 \u0440\u0430\u0434 \u0441\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u0447\u0435\u0441\u0442\u0432\u0443 \u0441\u0435\u0433\u043e\u0434\u043d\u044f \u043f\u044f\u0442\u043d\u0438\u0446\u0430 28",
+    "words": [
+     {
+      "word": " \u0431\u043e\u043b\u044c\u0448\u0435",
+      "start": 11.72,
+      "end": 12.02,
+      "p": 0.999
+     },
+     {
+      "word": " \u0432",
+      "start": 12.02,
+      "end": 14.36,
+      "p": 0.993
+     },
+     {
+      "word": " \u043e\u0431\u0449\u0435\u043c",
+      "start": 14.36,
+      "end": 14.7,
+      "p": 0.997
+     },
+     {
+      "word": " \u0447\u0442\u043e",
+      "start": 14.7,
+      "end": 14.94,
+      "p": 0.987
+     },
+     {
+      "word": " \u0445\u043e\u0447\u0443",
+      "start": 14.94,
+      "end": 15.18,
+      "p": 0.995
+     },
+     {
+      "word": " \u0441\u043a\u0430\u0437\u0430\u0442\u044c",
+      "start": 15.18,
+      "end": 15.46,
+      "p": 0.987
+     },
+     {
+      "word": " \u0440\u0430\u0434",
+      "start": 15.46,
+      "end": 15.72,
+      "p": 0.936
+     },
+     {
+      "word": " \u0437\u043d\u0430\u043a\u043e\u043c\u0441\u0442\u0432\u0443",
+      "start": 15.72,
+      "end": 16.38,
+      "p": 0.958
+     },
+     {
+      "word": " \u0441",
+      "start": 16.38,
+      "end": 16.52,
+      "p": 0.997
+     },
+     {
+      "word": " \u0432\u0430\u043c\u0438",
+      "start": 16.52,
+      "end": 16.74,
+      "p": 1.0
+     },
+     {
+      "word": " \u0440\u0430\u0434",
+      "start": 16.74,
+      "end": 17.82,
+      "p": 0.927
+     },
+     {
+      "word": " \u0441\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u0447\u0435\u0441\u0442\u0432\u0443",
+      "start": 17.82,
+      "end": 18.66,
+      "p": 0.941
+     },
+     {
+      "word": " \u0441\u0435\u0433\u043e\u0434\u043d\u044f",
+      "start": 18.66,
+      "end": 18.94,
+      "p": 0.967
+     },
+     {
+      "word": " \u043f\u044f\u0442\u043d\u0438\u0446\u0430",
+      "start": 18.94,
+      "end": 19.48,
+      "p": 0.99
+     },
+     {
+      "word": " 28",
+      "start": 19.48,
+      "end": 19.96,
+      "p": 0.984
+     }
+    ]
+   },
+   {
+    "id": 3,
+    "start": 19.96,
+    "end": 32.42,
+    "text": "\u0430\u0432\u0433\u0443\u0441\u0442\u0430 \u0431\u0443\u0434\u0435\u043c \u0441\u0447\u0438\u0442\u0430\u0442\u044c \u0447\u0442\u043e \u044d\u0442\u043e . \u043d\u0430\u0447\u0430\u043b\u043e \u043d\u0430\u0448\u0435\u0433\u043e \u0441\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u0447\u0435\u0441\u0442\u0432\u0430 \u0447\u0442\u043e \u0445\u043e\u0447\u0435\u0442\u0441\u044f \u0441\u043a\u0430\u0437\u0430\u0442\u044c \u043f\u0443\u0441\u0442\u044c \u044d\u0442\u043e",
+    "words": [
+     {
+      "word": " \u0430\u0432\u0433\u0443\u0441\u0442\u0430",
+      "start": 19.96,
+      "end": 20.88,
+      "p": 0.666
+     },
+     {
+      "word": " \u0431\u0443\u0434\u0435\u043c",
+      "start": 20.88,
+      "end": 22.36,
+      "p": 0.633
+     },
+     {
+      "word": " \u0441\u0447\u0438\u0442\u0430\u0442\u044c",
+      "start": 22.36,
+      "end": 22.96,
+      "p": 1.0
+     },
+     {
+      "word": " \u0447\u0442\u043e",
+      "start": 22.96,
+      "end": 23.18,
+      "p": 0.803
+     },
+     {
+      "word": " \u044d\u0442\u043e",
+      "start": 23.18,
+      "end": 24.02,
+      "p": 0.622
+     },
+     {
+      "word": " .",
+      "start": 24.02,
+      "end": 24.42,
+      "p": 0.365
+     },
+     {
+      "word": " \u043d\u0430\u0447\u0430\u043b\u043e",
+      "start": 24.42,
+      "end": 25.98,
+      "p": 0.77
+     },
+     {
+      "word": " \u043d\u0430\u0448\u0435\u0433\u043e",
+      "start": 25.98,
+      "end": 26.32,
+      "p": 0.998
+     },
+     {
+      "word": " \u0441\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u0447\u0435\u0441\u0442\u0432\u0430",
+      "start": 26.32,
+      "end": 28.58,
+      "p": 0.97
+     },
+     {
+      "word": " \u0447\u0442\u043e",
+      "start": 28.58,
+      "end": 31.06,
+      "p": 0.614
+     },
+     {
+      "word": " \u0445\u043e\u0447\u0435\u0442\u0441\u044f",
+      "start": 31.06,
+      "end": 31.44,
+      "p": 0.998
+     },
+     {
+      "word": " \u0441\u043a\u0430\u0437\u0430\u0442\u044c",
+      "start": 31.44,
+      "end": 31.84,
+      "p": 1.0
+     },
+     {
+      "word": " \u043f\u0443\u0441\u0442\u044c",
+      "start": 31.84,
+      "end": 32.24,
+      "p": 0.973
+     },
+     {
+      "word": " \u044d\u0442\u043e",
+      "start": 32.24,
+      "end": 32.42,
+      "p": 0.97
+     }
+    ]
+   },
+   {
+    "id": 4,
+    "start": 32.42,
+    "end": 40.06,
+    "text": "\u0441\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u0431\u0443\u0434\u0435\u0442 \u043b\u0435\u0433\u043a\u0438\u043c \u043f\u0440\u0438\u043d\u0435\u0441\u0435\u0442 \u043d\u0430\u043c \u0432\u0441\u0435\u043c \u0442\u043e\u0442 \u0436\u0435\u043b\u0430\u0435\u043c\u044b\u0439 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u043a\u043e\u0442\u043e\u0440\u044b\u0439 \u043c\u044b \u0437\u0430\u0433\u0430\u0434\u0430\u043b\u0438 \u0447\u0442\u043e\u0431\u044b \u043d\u0430",
+    "words": [
+     {
+      "word": " \u0441\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u0447\u0435\u0441\u0442\u0432\u043e",
+      "start": 32.42,
+      "end": 33.18,
+      "p": 0.989
+     },
+     {
+      "word": " \u0431\u0443\u0434\u0435\u0442",
+      "start": 33.18,
+      "end": 33.38,
+      "p": 0.994
+     },
+     {
+      "word": " \u043b\u0435\u0433\u043a\u0438\u043c",
+      "start": 33.38,
+      "end": 33.9,
+      "p": 0.984
+     },
+     {
+      "word": " \u043f\u0440\u0438\u043d\u0435\u0441\u0435\u0442",
+      "start": 33.9,
+      "end": 34.56,
+      "p": 0.987
+     },
+     {
+      "word": " \u043d\u0430\u043c",
+      "start": 34.56,
+      "end": 34.74,
+      "p": 0.995
+     },
+     {
+      "word": " \u0432\u0441\u0435\u043c",
+      "start": 34.74,
+      "end": 35.08,
+      "p": 0.991
+     },
+     {
+      "word": " \u0442\u043e\u0442",
+      "start": 35.08,
+      "end": 35.96,
+      "p": 0.995
+     },
+     {
+      "word": " \u0436\u0435\u043b\u0430\u0435\u043c\u044b\u0439",
+      "start": 35.96,
+      "end": 36.58,
+      "p": 0.999
+     },
+     {
+      "word": " \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442",
+      "start": 36.58,
+      "end": 36.94,
+      "p": 1.0
+     },
+     {
+      "word": " \u043a\u043e\u0442\u043e\u0440\u044b\u0439",
+      "start": 36.94,
+      "end": 37.4,
+      "p": 0.971
+     },
+     {
+      "word": " \u043c\u044b",
+      "start": 37.4,
+      "end": 37.6,
+      "p": 0.989
+     },
+     {
+      "word": " \u0437\u0430\u0433\u0430\u0434\u0430\u043b\u0438",
+      "start": 37.6,
+      "end": 38.12,
+      "p": 0.998
+     },
+     {
+      "word": " \u0447\u0442\u043e\u0431\u044b",
+      "start": 38.12,
+      "end": 39.6,
+      "p": 0.996
+     },
+     {
+      "word": " \u043d\u0430",
+      "start": 39.6,
+      "end": 40.06,
+      "p": 0.999
+     }
+    ]
+   },
+   {
+    "id": 5,
+    "start": 40.06,
+    "end": 49.8,
+    "text": "\u043f\u0443\u0442\u0438 \u0443 \u043d\u0430\u0441 \u043d\u0438\u043a\u0430\u043a\u0438\u0445 \u043f\u0440\u0435\u0433\u0440\u0430\u0434 \u043d\u0435 \u0432\u043e\u0437\u043d\u0438\u043a\u0430\u043b\u043e \u043d\u0430\u0434\u0435\u044e\u0441\u044c \u0432\u0441\u0435 \u0431\u0443\u0434\u0435\u0442 \u0445\u043e\u0440\u043e\u0448\u043e \u0438\u0431\u043e \u0432\u0437\u0438\u043c\u043d\u044b\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f \u0441 \u0432\u0430\u043c\u0438 \u0438",
+    "words": [
+     {
+      "word": " \u043f\u0443\u0442\u0438",
+      "start": 40.06,
+      "end": 40.38,
+      "p": 0.998
+     },
+     {
+      "word": " \u0443",
+      "start": 40.38,
+      "end": 40.48,
+      "p": 0.999
+     },
+     {
+      "word": " \u043d\u0430\u0441",
+      "start": 40.48,
+      "end": 40.76,
+      "p": 1.0
+     },
+     {
+      "word": " \u043d\u0438\u043a\u0430\u043a\u0438\u0445",
+      "start": 40.76,
+      "end": 42.6,
+      "p": 0.995
+     },
+     {
+      "word": " \u043f\u0440\u0435\u0433\u0440\u0430\u0434",
+      "start": 42.6,
+      "end": 43.28,
+      "p": 0.996
+     },
+     {
+      "word": " \u043d\u0435",
+      "start": 43.28,
+      "end": 43.38,
+      "p": 0.985
+     },
+     {
+      "word": " \u0432\u043e\u0437\u043d\u0438\u043a\u0430\u043b\u043e",
+      "start": 43.38,
+      "end": 43.92,
+      "p": 0.986
+     },
+     {
+      "word": " \u043d\u0430\u0434\u0435\u044e\u0441\u044c",
+      "start": 43.92,
+      "end": 46.6,
+      "p": 0.995
+     },
+     {
+      "word": " \u0432\u0441\u0435",
+      "start": 46.6,
+      "end": 46.74,
+      "p": 0.952
+     },
+     {
+      "word": " \u0431\u0443\u0434\u0435\u0442",
+      "start": 46.74,
+      "end": 46.88,
+      "p": 0.999
+     },
+     {
+      "word": " \u0445\u043e\u0440\u043e\u0448\u043e",
+      "start": 46.88,
+      "end": 47.28,
+      "p": 0.999
+     },
+     {
+      "word": " \u0438\u0431\u043e",
+      "start": 47.28,
+      "end": 48.32,
+      "p": 0.722
+     },
+     {
+      "word": " \u0432\u0437\u0438\u043c\u043d\u044b\u0435",
+      "start": 48.32,
+      "end": 48.68,
+      "p": 0.488
+     },
+     {
+      "word": " \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f",
+      "start": 48.68,
+      "end": 49.14,
+      "p": 0.893
+     },
+     {
+      "word": " \u0441",
+      "start": 49.14,
+      "end": 49.26,
+      "p": 0.99
+     },
+     {
+      "word": " \u0432\u0430\u043c\u0438",
+      "start": 49.26,
+      "end": 49.46,
+      "p": 0.998
+     },
+     {
+      "word": " \u0438",
+      "start": 49.46,
+      "end": 49.8,
+      "p": 0.994
+     }
+    ]
+   },
+   {
+    "id": 6,
+    "start": 49.8,
+    "end": 60.74,
+    "text": "\u0432 \u0446\u0435\u043b\u043e\u043c \u0441 \u0442\u0435\u043c \u043f\u0440\u043e\u0434\u0443\u043a\u0442\u043e\u043c \u043a\u043e\u0442\u043e\u0440\u044b\u0439 \u043c\u044b \u0441\u0435\u0433\u043e\u0434\u043d\u044f \u0441\u043e\u0431\u0438\u0440\u0430\u0435\u043c \u0438 \u0434\u0435\u043b\u0430\u0435\u043c \u0434\u0430\u043b\u044c\u0448\u0435 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u044e \u0435\u0449\u0435 \u043d\u0435\u0441\u043a\u043e\u043b\u044c\u043a\u043e",
+    "words": [
+     {
+      "word": " \u0432",
+      "start": 49.8,
+      "end": 50.02,
+      "p": 0.46
+     },
+     {
+      "word": " \u0446\u0435\u043b\u043e\u043c",
+      "start": 50.02,
+      "end": 50.62,
+      "p": 0.999
+     },
+     {
+      "word": " \u0441",
+      "start": 50.62,
+      "end": 52.24,
+      "p": 0.988
+     },
+     {
+      "word": " \u0442\u0435\u043c",
+      "start": 52.24,
+      "end": 52.42,
+      "p": 0.995
+     },
+     {
+      "word": " \u043f\u0440\u043e\u0434\u0443\u043a\u0442\u043e\u043c",
+      "start": 52.42,
+      "end": 52.9,
+      "p": 0.96
+     },
+     {
+      "word": " \u043a\u043e\u0442\u043e\u0440\u044b\u0439",
+      "start": 52.9,
+      "end": 53.16,
+      "p": 0.912
+     },
+     {
+      "word": " \u043c\u044b",
+      "start": 53.16,
+      "end": 53.46,
+      "p": 0.999
+     },
+     {
+      "word": " \u0441\u0435\u0433\u043e\u0434\u043d\u044f",
+      "start": 53.46,
+      "end": 54.22,
+      "p": 0.999
+     },
+     {
+      "word": " \u0441\u043e\u0431\u0438\u0440\u0430\u0435\u043c",
+      "start": 54.22,
+      "end": 55.04,
+      "p": 0.999
+     },
+     {
+      "word": " \u0438",
+      "start": 55.04,
+      "end": 55.14,
+      "p": 0.988
+     },
+     {
+      "word": " \u0434\u0435\u043b\u0430\u0435\u043c",
+      "start": 55.14,
+      "end": 55.54,
+      "p": 0.997
+     },
+     {
+      "word": " \u0434\u0430\u043b\u044c\u0448\u0435",
+      "start": 55.54,
+      "end": 59.7,
+      "p": 0.948
+     },
+     {
+      "word": " \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u044e",
+      "start": 59.7,
+      "end": 60.3,
+      "p": 0.999
+     },
+     {
+      "word": " \u0435\u0449\u0435",
+      "start": 60.3,
+      "end": 60.44,
+      "p": 0.922
+     },
+     {
+      "word": " \u043d\u0435\u0441\u043a\u043e\u043b\u044c\u043a\u043e",
+      "start": 60.44,
+      "end": 60.74,
+      "p": 0.999
+     }
+    ]
+   },
+   {
+    "id": 7,
+    "start": 60.74,
+    "end": 70.58,
+    "text": "\u0432\u0438\u0434\u0435\u043e \u0437\u0430\u043f\u0438\u0448\u0443 \u0440\u0430\u0437\u043b\u0438\u0447\u043d\u044b\u0445 \u0444\u043e\u0440\u043c\u0430\u0442\u0430\u0445 \u0432 \u043e\u0447\u043a\u0430\u0445 \u0431\u0435\u0437 \u043e\u0447\u043a\u043e\u0432 \u043f\u043e\u0441\u043c\u043e\u0442\u0440\u0438\u043c \u043a\u0430\u043a \u0431\u0443\u0434\u0435\u0442 \u0440\u0430\u0431\u043e\u0442\u0430\u0442\u044c \u043d\u0430\u0448\u0430 \u0441\u0438\u0441\u0442\u0435\u043c\u0430 \u043d\u0443 \u0438 \u0432",
+    "words": [
+     {
+      "word": " \u0432\u0438\u0434\u0435\u043e",
+      "start": 60.74,
+      "end": 61.18,
+      "p": 0.999
+     },
+     {
+      "word": " \u0437\u0430\u043f\u0438\u0448\u0443",
+      "start": 61.18,
+      "end": 61.74,
+      "p": 0.996
+     },
+     {
+      "word": " \u0440\u0430\u0437\u043b\u0438\u0447\u043d\u044b\u0445",
+      "start": 61.74,
+      "end": 62.66,
+      "p": 0.974
+     },
+     {
+      "word": " \u0444\u043e\u0440\u043c\u0430\u0442\u0430\u0445",
+      "start": 62.66,
+      "end": 63.46,
+      "p": 0.982
+     },
+     {
+      "word": " \u0432",
+      "start": 63.46,
+      "end": 63.82,
+      "p": 0.951
+     },
+     {
+      "word": " \u043e\u0447\u043a\u0430\u0445",
+      "start": 63.82,
+      "end": 64.44,
+      "p": 0.999
+     },
+     {
+      "word": " \u0431\u0435\u0437",
+      "start": 64.44,
+      "end": 64.66,
+      "p": 0.985
+     },
+     {
+      "word": " \u043e\u0447\u043a\u043e\u0432",
+      "start": 64.66,
+      "end": 65.08,
+      "p": 0.999
+     },
+     {
+      "word": " \u043f\u043e\u0441\u043c\u043e\u0442\u0440\u0438\u043c",
+      "start": 65.08,
+      "end": 65.68,
+      "p": 0.997
+     },
+     {
+      "word": " \u043a\u0430\u043a",
+      "start": 65.68,
+      "end": 66.12,
+      "p": 1.0
+     },
+     {
+      "word": " \u0431\u0443\u0434\u0435\u0442",
+      "start": 66.12,
+      "end": 66.4,
+      "p": 0.976
+     },
+     {
+      "word": " \u0440\u0430\u0431\u043e\u0442\u0430\u0442\u044c",
+      "start": 66.4,
+      "end": 67.42,
+      "p": 0.996
+     },
+     {
+      "word": " \u043d\u0430\u0448\u0430",
+      "start": 67.42,
+      "end": 67.68,
+      "p": 0.944
+     },
+     {
+      "word": " \u0441\u0438\u0441\u0442\u0435\u043c\u0430",
+      "start": 67.68,
+      "end": 68.14,
+      "p": 1.0
+     },
+     {
+      "word": " \u043d\u0443",
+      "start": 68.14,
+      "end": 70.26,
+      "p": 0.931
+     },
+     {
+      "word": " \u0438",
+      "start": 70.26,
+      "end": 70.44,
+      "p": 0.998
+     },
+     {
+      "word": " \u0432",
+      "start": 70.44,
+      "end": 70.58,
+      "p": 0.964
+     }
+    ]
+   },
+   {
+    "id": 8,
+    "start": 70.58,
+    "end": 79.08,
+    "text": "\u043f\u0440\u0438\u043d\u0446\u0438\u043f\u0435 \u0432\u0441\u0435 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u044e \u0432 \u043d\u0430\u0448 \u0447\u0430\u0442 \u0442\u0430\u043a \u0447\u0442\u043e \u0434\u0430\u0432\u0430\u0439\u0442\u0435 \u0440\u0435\u0431\u044f\u0442 \u0432\u0441\u0435\u043c \u043d\u0430\u043c \u0443\u0441\u043f\u0435\u0445\u0430 \u044f \u0445\u043e\u0447\u0443 \u043f\u043e\u0436\u0435\u043b\u0430\u0442\u044c \u043f\u0443\u0441\u0442\u044c",
+    "words": [
+     {
+      "word": " \u043f\u0440\u0438\u043d\u0446\u0438\u043f\u0435",
+      "start": 70.58,
+      "end": 70.9,
+      "p": 1.0
+     },
+     {
+      "word": " \u0432\u0441\u0435",
+      "start": 70.9,
+      "end": 71.14,
+      "p": 0.974
+     },
+     {
+      "word": " \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u044e",
+      "start": 71.14,
+      "end": 71.78,
+      "p": 0.996
+     },
+     {
+      "word": " \u0432",
+      "start": 71.78,
+      "end": 71.84,
+      "p": 0.971
+     },
+     {
+      "word": " \u043d\u0430\u0448",
+      "start": 71.84,
+      "end": 72.0,
+      "p": 0.982
+     },
+     {
+      "word": " \u0447\u0430\u0442",
+      "start": 72.0,
+      "end": 72.3,
+      "p": 0.958
+     },
+     {
+      "word": " \u0442\u0430\u043a",
+      "start": 72.3,
+      "end": 73.86,
+      "p": 0.976
+     },
+     {
+      "word": " \u0447\u0442\u043e",
+      "start": 73.86,
+      "end": 74.18,
+      "p": 1.0
+     },
+     {
+      "word": " \u0434\u0430\u0432\u0430\u0439\u0442\u0435",
+      "start": 74.18,
+      "end": 74.8,
+      "p": 0.997
+     },
+     {
+      "word": " \u0440\u0435\u0431\u044f\u0442",
+      "start": 74.8,
+      "end": 75.26,
+      "p": 0.99
+     },
+     {
+      "word": " \u0432\u0441\u0435\u043c",
+      "start": 75.26,
+      "end": 75.56,
+      "p": 0.992
+     },
+     {
+      "word": " \u043d\u0430\u043c",
+      "start": 75.56,
+      "end": 75.86,
+      "p": 0.996
+     },
+     {
+      "word": " \u0443\u0441\u043f\u0435\u0445\u0430",
+      "start": 75.86,
+      "end": 76.54,
+      "p": 0.997
+     },
+     {
+      "word": " \u044f",
+      "start": 76.54,
+      "end": 77.0,
+      "p": 0.982
+     },
+     {
+      "word": " \u0445\u043e\u0447\u0443",
+      "start": 77.0,
+      "end": 77.16,
+      "p": 0.999
+     },
+     {
+      "word": " \u043f\u043e\u0436\u0435\u043b\u0430\u0442\u044c",
+      "start": 77.16,
+      "end": 77.8,
+      "p": 0.999
+     },
+     {
+      "word": " \u043f\u0443\u0441\u0442\u044c",
+      "start": 77.8,
+      "end": 79.08,
+      "p": 0.986
+     }
+    ]
+   },
+   {
+    "id": 9,
+    "start": 79.8,
+    "end": 88.98,
+    "text": "\u043d\u0430\u0448\u0435 \u0432\u0437\u0430\u0438\u043c\u043e\u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0431\u0443\u0434\u0435\u0442 \u043b\u0435\u0433\u043a\u0438\u043c \u0438 \u043f\u0440\u0438\u043d\u0435\u0441\u0435\u0442 \u043d\u0430\u043c \u0442\u043e\u0442 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u043a\u043e\u0442\u043e\u0440\u044b\u0439 \u043c\u044b \u0436\u0435\u043b\u0430\u0435\u043c \u0432\u0441\u0435 \u0432\u043f\u0435\u0440\u0435\u0434",
+    "words": [
+     {
+      "word": " \u043d\u0430\u0448\u0435",
+      "start": 79.8,
+      "end": 80.08,
+      "p": 0.73
+     },
+     {
+      "word": " \u0432\u0437\u0430\u0438\u043c\u043e\u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435",
+      "start": 80.08,
+      "end": 80.94,
+      "p": 1.0
+     },
+     {
+      "word": " \u0431\u0443\u0434\u0435\u0442",
+      "start": 80.94,
+      "end": 81.36,
+      "p": 0.998
+     },
+     {
+      "word": " \u043b\u0435\u0433\u043a\u0438\u043c",
+      "start": 81.36,
+      "end": 81.98,
+      "p": 0.953
+     },
+     {
+      "word": " \u0438",
+      "start": 81.98,
+      "end": 83.42,
+      "p": 0.963
+     },
+     {
+      "word": " \u043f\u0440\u0438\u043d\u0435\u0441\u0435\u0442",
+      "start": 83.42,
+      "end": 84.64,
+      "p": 0.995
+     },
+     {
+      "word": " \u043d\u0430\u043c",
+      "start": 84.64,
+      "end": 85.38,
+      "p": 0.993
+     },
+     {
+      "word": " \u0442\u043e\u0442",
+      "start": 85.38,
+      "end": 85.62,
+      "p": 0.996
+     },
+     {
+      "word": " \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442",
+      "start": 85.62,
+      "end": 86.04,
+      "p": 1.0
+     },
+     {
+      "word": " \u043a\u043e\u0442\u043e\u0440\u044b\u0439",
+      "start": 86.04,
+      "end": 86.44,
+      "p": 0.036
+     },
+     {
+      "word": " \u043c\u044b",
+      "start": 86.44,
+      "end": 86.68,
+      "p": 0.986
+     },
+     {
+      "word": " \u0436\u0435\u043b\u0430\u0435\u043c",
+      "start": 86.68,
+      "end": 87.06,
+      "p": 0.997
+     },
+     {
+      "word": " \u0432\u0441\u0435",
+      "start": 87.06,
+      "end": 88.48,
+      "p": 0.36
+     },
+     {
+      "word": " \u0432\u043f\u0435\u0440\u0435\u0434",
+      "start": 88.48,
+      "end": 88.98,
+      "p": 0.977
+     }
+    ]
+   }
+  ]
+ },
+ "source_lang": "ru",
+ "diarization": {
+  "model": "pyannote/speaker-diarization-3.1",
+  "turns": [
+   {
+    "start": 3.254,
+    "end": 5.414,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 6.663,
+    "end": 8.097,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 8.384,
+    "end": 9.751,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 10.358,
+    "end": 12.316,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 14.307,
+    "end": 17.007,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 17.716,
+    "end": 21.142,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 22.306,
+    "end": 23.622,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 23.926,
+    "end": 24.871,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 25.546,
+    "end": 26.693,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 27.824,
+    "end": 28.752,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 30.49,
+    "end": 35.401,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 35.941,
+    "end": 38.303,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 39.518,
+    "end": 41.138,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 42.421,
+    "end": 44.176,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 46.319,
+    "end": 47.5,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 48.125,
+    "end": 50.723,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 51.348,
+    "end": 55.685,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 59.262,
+    "end": 68.425,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 70.13,
+    "end": 72.425,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 73.758,
+    "end": 76.643,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 76.846,
+    "end": 77.842,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 78.803,
+    "end": 79.225,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 79.867,
+    "end": 81.082,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 81.25,
+    "end": 82.128,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 83.9,
+    "end": 84.642,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 85.25,
+    "end": 87.14,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 88.388,
+    "end": 89.114,
+    "speaker": "SPEAKER_00"
+   }
+  ],
+  "speakers": [
+   "SPEAKER_00"
+  ]
+ },
+ "translation": {
+  "model": "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf",
+  "n_ctx": 4096,
+  "n_threads": 16,
+  "n_gpu_layers": 0,
+  "system_prompt": "You are a professional translator. Return only the translation, with no explanation.",
+  "direction": "Russian->English",
+  "usage": {
+   "prompt_tokens": 546,
+   "completion_tokens": 179
+  }
+ },
+ "tts": {
+  "model": "ChatterboxMultilingualTTS t3=v3 (models/chatterbox)",
+  "sr": 24000,
+  "dtype": "float16",
+  "language_id": "en",
+  "voice_reference": "speaker's own diarized speech via audio_prompt_path/prepare_conditionals",
+  "references": {
+   "SPEAKER_00": {
+    "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/ref_SPEAKER_00.wav",
+    "seconds": 10.0,
+    "turns_used": 2,
+    "source": "diarized_speech"
+   }
+  }
+ },
+ "dubbed_track": {
+  "wav24k": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/dubbed_24k.wav",
+  "wav16k": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/dubbed_16k.wav",
+  "aac": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/dubbed_aac.m4a",
+  "seconds": 90.333,
+  "sr": 24000,
+  "peak_before_norm": 1.0,
+  "speech_seconds": 85.44,
+  "non_speech": "silence (original timing preserved)"
+ },
+ "units": [
+  {
+   "asr_segment": 1,
+   "start": 2.68,
+   "end": 11.72,
+   "text": "\u0434\u0440\u0443\u0437\u044c\u044f \u043d\u0443 \u0447\u0442\u043e \u0432\u0441\u0435\u043c \u043f\u0440\u0438\u0432\u0435\u0442 \u0437\u0430\u043f\u0438\u0448\u0443 \u043f\u0435\u0440\u0432\u043e\u0435 \u0432\u0438\u0434\u0435\u043e \u0442\u0430\u043a\u043e\u0435 \u043e\u0437\u043d\u0430\u043a\u043e\u043c\u0438\u0442\u0435\u043b\u044c\u043d\u043e \u0446\u0435\u043b\u044c\u044e \u043f\u043e\u0437\u043d\u0430\u043a\u043e\u043c\u0438\u0442\u044c\u0441\u044f \u043d\u0430\u0432\u0435\u0440\u043d\u043e",
+   "words": 13,
+   "id": 0,
+   "speaker": "SPEAKER_00",
+   "speaker_method": "max_overlap",
+   "speaker_overlap_s": 6.323,
+   "translation": "friends hey what everyone hi I'll record the first video kind of an introduction to get to know each other I guess",
+   "tts": {
+    "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/tts_u00.wav",
+    "seconds": 5.4,
+    "sr": 24000,
+    "reference": "diarized_speech",
+    "dtype": "float16"
+   },
+   "slot": {
+    "start": 2.68,
+    "end": 11.7,
+    "seconds": 9.02
+   },
+   "alignment": {
+    "tts_seconds": 5.4,
+    "ratio_tts_to_slot": 0.5987,
+    "mode": "natural_speed_pad_silence",
+    "atempo": 1.0,
+    "aligned_seconds": 9.02,
+    "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/aligned_u00.wav"
+   }
+  },
+  {
+   "asr_segment": 2,
+   "start": 11.72,
+   "end": 19.96,
+   "text": "\u0431\u043e\u043b\u044c\u0448\u0435 \u0432 \u043e\u0431\u0449\u0435\u043c \u0447\u0442\u043e \u0445\u043e\u0447\u0443 \u0441\u043a\u0430\u0437\u0430\u0442\u044c \u0440\u0430\u0434 \u0437\u043d\u0430\u043a\u043e\u043c\u0441\u0442\u0432\u0443 \u0441 \u0432\u0430\u043c\u0438 \u0440\u0430\u0434 \u0441\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u0447\u0435\u0441\u0442\u0432\u0443 \u0441\u0435\u0433\u043e\u0434\u043d\u044f \u043f\u044f\u0442\u043d\u0438\u0446\u0430 28",
+   "words": 15,
+   "id": 1,
+   "speaker": "SPEAKER_00",
+   "speaker_method": "max_overlap",
+   "speaker_overlap_s": 5.54,
+   "translation": "more in general what I want to say is glad to meet you glad to cooperate today Friday",
+   "tts": {
+    "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/tts_u01.wav",
+    "seconds": 5.64,
+    "sr": 24000,
+    "reference": "diarized_speech",
+    "dtype": "float16"
+   },
+   "slot": {
+    "start": 11.72,
+    "end": 19.94,
+    "seconds": 8.22
+   },
+   "alignment": {
+    "tts_seconds": 5.64,
+    "ratio_tts_to_slot": 0.6861,
+    "mode": "natural_speed_pad_silence",
+    "atempo": 1.0,
+    "aligned_seconds": 8.22,
+    "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/aligned_u01.wav"
+   }
+  },
+  {
+   "asr_segment": 3,
+   "start": 19.96,
+   "end": 32.42,
+   "text": "\u0430\u0432\u0433\u0443\u0441\u0442\u0430 \u0431\u0443\u0434\u0435\u043c \u0441\u0447\u0438\u0442\u0430\u0442\u044c \u0447\u0442\u043e \u044d\u0442\u043e . \u043d\u0430\u0447\u0430\u043b\u043e \u043d\u0430\u0448\u0435\u0433\u043e \u0441\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u0447\u0435\u0441\u0442\u0432\u0430 \u0447\u0442\u043e \u0445\u043e\u0447\u0435\u0442\u0441\u044f \u0441\u043a\u0430\u0437\u0430\u0442\u044c \u043f\u0443\u0441\u0442\u044c \u044d\u0442\u043e",
+   "words": 14,
+   "id": 2,
+   "speaker": "SPEAKER_00",
+   "speaker_method": "max_overlap",
+   "speaker_overlap_s": 7.448,
+   "translation": "August we will consider as this. The beginning of our cooperation what we want to say let this",
+   "tts": {
+    "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/tts_u02.wav",
+    "seconds": 5.0,
+    "sr": 24000,
+    "reference": "diarized_speech",
+    "dtype": "float16"
+   },
+   "slot": {
+    "start": 19.96,
+    "end": 32.4,
+    "seconds": 12.44
+   },
+   "alignment": {
+    "tts_seconds": 5.0,
+    "ratio_tts_to_slot": 0.4019,
+    "mode": "natural_speed_pad_silence",
+    "atempo": 1.0,
+    "aligned_seconds": 12.44,
+    "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/aligned_u02.wav"
+   }
+  },
+  {
+   "asr_segment": 4,
+   "start": 32.42,
+   "end": 40.06,
+   "text": "\u0441\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u0431\u0443\u0434\u0435\u0442 \u043b\u0435\u0433\u043a\u0438\u043c \u043f\u0440\u0438\u043d\u0435\u0441\u0435\u0442 \u043d\u0430\u043c \u0432\u0441\u0435\u043c \u0442\u043e\u0442 \u0436\u0435\u043b\u0430\u0435\u043c\u044b\u0439 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u043a\u043e\u0442\u043e\u0440\u044b\u0439 \u043c\u044b \u0437\u0430\u0433\u0430\u0434\u0430\u043b\u0438 \u0447\u0442\u043e\u0431\u044b \u043d\u0430",
+   "words": 14,
+   "id": 3,
+   "speaker": "SPEAKER_00",
+   "speaker_method": "max_overlap",
+   "speaker_overlap_s": 5.885,
+   "translation": "cooperation will be easy and bring us all the desired result that we wished for to",
+   "tts": {
+    "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/tts_u03.wav",
+    "seconds": 5.36,
+    "sr": 24000,
+    "reference": "diarized_speech",
+    "dtype": "float16"
+   },
+   "slot": {
+    "start": 32.42,
+    "end": 40.04,
+    "seconds": 7.62
+   },
+   "alignment": {
+    "tts_seconds": 5.36,
+    "ratio_tts_to_slot": 0.7034,
+    "mode": "natural_speed_pad_silence",
+    "atempo": 1.0,
+    "aligned_seconds": 7.62,
+    "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/aligned_u03.wav"
+   }
+  },
+  {
+   "asr_segment": 5,
+   "start": 40.06,
+   "end": 49.8,
+   "text": "\u043f\u0443\u0442\u0438 \u0443 \u043d\u0430\u0441 \u043d\u0438\u043a\u0430\u043a\u0438\u0445 \u043f\u0440\u0435\u0433\u0440\u0430\u0434 \u043d\u0435 \u0432\u043e\u0437\u043d\u0438\u043a\u0430\u043b\u043e \u043d\u0430\u0434\u0435\u044e\u0441\u044c \u0432\u0441\u0435 \u0431\u0443\u0434\u0435\u0442 \u0445\u043e\u0440\u043e\u0448\u043e \u0438\u0431\u043e \u0432\u0437\u0438\u043c\u043d\u044b\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f \u0441 \u0432\u0430\u043c\u0438 \u0438",
+   "words": 17,
+   "id": 4,
+   "speaker": "SPEAKER_00",
+   "speaker_method": "max_overlap",
+   "speaker_overlap_s": 5.689,
+   "translation": "there were no obstacles on our part, I hope everything will be fine and regarding the subsequent actions with you,",
+   "tts": {
+    "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/tts_u04.wav",
+    "seconds": 6.36,
+    "sr": 24000,
+    "reference": "diarized_speech",
+    "dtype": "float16"
+   },
+   "slot": {
+    "start": 40.06,
+    "end": 49.78,
+    "seconds": 9.72
+   },
+   "alignment": {
+    "tts_seconds": 6.36,
+    "ratio_tts_to_slot": 0.6543,
+    "mode": "natural_speed_pad_silence",
+    "atempo": 1.0,
+    "aligned_seconds": 9.72,
+    "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/aligned_u04.wav"
+   }
+  },
+  {
+   "asr_segment": 6,
+   "start": 49.8,
+   "end": 60.74,
+   "text": "\u0432 \u0446\u0435\u043b\u043e\u043c \u0441 \u0442\u0435\u043c \u043f\u0440\u043e\u0434\u0443\u043a\u0442\u043e\u043c \u043a\u043e\u0442\u043e\u0440\u044b\u0439 \u043c\u044b \u0441\u0435\u0433\u043e\u0434\u043d\u044f \u0441\u043e\u0431\u0438\u0440\u0430\u0435\u043c \u0438 \u0434\u0435\u043b\u0430\u0435\u043c \u0434\u0430\u043b\u044c\u0448\u0435 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u044e \u0435\u0449\u0435 \u043d\u0435\u0441\u043a\u043e\u043b\u044c\u043a\u043e",
+   "words": 15,
+   "id": 5,
+   "speaker": "SPEAKER_00",
+   "speaker_method": "max_overlap",
+   "speaker_overlap_s": 6.738,
+   "translation": "overall with the product we are collecting today and will continue to make further, I will send a few more",
+   "tts": {
+    "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/tts_u05.wav",
+    "seconds": 5.76,
+    "sr": 24000,
+    "reference": "diarized_speech",
+    "dtype": "float16"
+   },
+   "slot": {
+    "start": 49.8,
+    "end": 60.72,
+    "seconds": 10.92
+   },
+   "alignment": {
+    "tts_seconds": 5.76,
+    "ratio_tts_to_slot": 0.5275,
+    "mode": "natural_speed_pad_silence",
+    "atempo": 1.0,
+    "aligned_seconds": 10.92,
+    "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/aligned_u05.wav"
+   }
+  },
+  {
+   "asr_segment": 7,
+   "start": 60.74,
+   "end": 70.58,
+   "text": "\u0432\u0438\u0434\u0435\u043e \u0437\u0430\u043f\u0438\u0448\u0443 \u0440\u0430\u0437\u043b\u0438\u0447\u043d\u044b\u0445 \u0444\u043e\u0440\u043c\u0430\u0442\u0430\u0445 \u0432 \u043e\u0447\u043a\u0430\u0445 \u0431\u0435\u0437 \u043e\u0447\u043a\u043e\u0432 \u043f\u043e\u0441\u043c\u043e\u0442\u0440\u0438\u043c \u043a\u0430\u043a \u0431\u0443\u0434\u0435\u0442 \u0440\u0430\u0431\u043e\u0442\u0430\u0442\u044c \u043d\u0430\u0448\u0430 \u0441\u0438\u0441\u0442\u0435\u043c\u0430 \u043d\u0443 \u0438 \u0432",
+   "words": 17,
+   "id": 6,
+   "speaker": "SPEAKER_00",
+   "speaker_method": "max_overlap",
+   "speaker_overlap_s": 8.135,
+   "translation": "video I will record in various formats with glasses without glasses let's see how our system will work and well",
+   "tts": {
+    "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/tts_u06.wav",
+    "seconds": 6.88,
+    "sr": 24000,
+    "reference": "diarized_speech",
+    "dtype": "float16"
+   },
+   "slot": {
+    "start": 60.74,
+    "end": 70.56,
+    "seconds": 9.82
+   },
+   "alignment": {
+    "tts_seconds": 6.88,
+    "ratio_tts_to_slot": 0.7006,
+    "mode": "natural_speed_pad_silence",
+    "atempo": 1.0,
+    "aligned_seconds": 9.82,
+    "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/aligned_u06.wav"
+   }
+  },
+  {
+   "asr_segment": 8,
+   "start": 70.58,
+   "end": 79.08,
+   "text": "\u043f\u0440\u0438\u043d\u0446\u0438\u043f\u0435 \u0432\u0441\u0435 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u044e \u0432 \u043d\u0430\u0448 \u0447\u0430\u0442 \u0442\u0430\u043a \u0447\u0442\u043e \u0434\u0430\u0432\u0430\u0439\u0442\u0435 \u0440\u0435\u0431\u044f\u0442 \u0432\u0441\u0435\u043c \u043d\u0430\u043c \u0443\u0441\u043f\u0435\u0445\u0430 \u044f \u0445\u043e\u0447\u0443 \u043f\u043e\u0436\u0435\u043b\u0430\u0442\u044c \u043f\u0443\u0441\u0442\u044c",
+   "words": 17,
+   "id": 7,
+   "speaker": "SPEAKER_00",
+   "speaker_method": "max_overlap",
+   "speaker_overlap_s": 6.003,
+   "translation": "on principle, i'll send everything to our chat so let's all wish each other success i want to wish",
+   "tts": {
+    "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/tts_u07.wav",
+    "seconds": 5.6,
+    "sr": 24000,
+    "reference": "diarized_speech",
+    "dtype": "float16"
+   },
+   "slot": {
+    "start": 70.58,
+    "end": 79.08,
+    "seconds": 8.5
+   },
+   "alignment": {
+    "tts_seconds": 5.6,
+    "ratio_tts_to_slot": 0.6588,
+    "mode": "natural_speed_pad_silence",
+    "atempo": 1.0,
+    "aligned_seconds": 8.5,
+    "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/aligned_u07.wav"
+   }
+  },
+  {
+   "asr_segment": 9,
+   "start": 79.8,
+   "end": 88.98,
+   "text": "\u043d\u0430\u0448\u0435 \u0432\u0437\u0430\u0438\u043c\u043e\u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0431\u0443\u0434\u0435\u0442 \u043b\u0435\u0433\u043a\u0438\u043c \u0438 \u043f\u0440\u0438\u043d\u0435\u0441\u0435\u0442 \u043d\u0430\u043c \u0442\u043e\u0442 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u043a\u043e\u0442\u043e\u0440\u044b\u0439 \u043c\u044b \u0436\u0435\u043b\u0430\u0435\u043c \u0432\u0441\u0435 \u0432\u043f\u0435\u0440\u0435\u0434",
+   "words": 14,
+   "id": 8,
+   "speaker": "SPEAKER_00",
+   "speaker_method": "max_overlap",
+   "speaker_overlap_s": 5.317,
+   "translation": "Our interaction will be smooth and will bring us the result we all desire forward.",
+   "tts": {
+    "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/tts_u08.wav",
+    "seconds": 4.84,
+    "sr": 24000,
+    "reference": "diarized_speech",
+    "dtype": "float16"
+   },
+   "slot": {
+    "start": 79.8,
+    "end": 88.98,
+    "seconds": 9.18
+   },
+   "alignment": {
+    "tts_seconds": 4.84,
+    "ratio_tts_to_slot": 0.5272,
+    "mode": "natural_speed_pad_silence",
+    "atempo": 1.0,
+    "aligned_seconds": 9.18,
+    "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/qa_work/work_03/aligned_u08.wav"
+   }
+  }
+ ],
+ "video_backend": "optimized",
+ "speech_gate": {
+  "enabled": true,
+  "margin_s": 0.24,
+  "merge_gap_s": 0.6,
+  "crossfade_frames": 4,
+  "source_speech_seconds": 60.7,
+  "dubbed_speech_seconds": 50.1,
+  "gate_seconds": 81.0,
+  "gate_fraction": 0.8967,
+  "intervals": [
+   [
+    2.56,
+    29.14
+   ],
+   [
+    30.26,
+    56.04
+   ],
+   [
+    58.96,
+    68.74
+   ],
+   [
+    69.86,
+    87.54
+   ],
+   [
+    88.26,
+    89.44
+   ]
+  ]
+ },
+ "lipsync": {
+  "router": "retinaface",
+  "router_params": {
+   "detector": "facexlib retinaface_resnet50 fp16",
+   "weights": "/workspace/dub/models/facexlib",
+   "face_min_w": 50,
+   "face_min_h": 80,
+   "retina_conf": 0.8,
+   "aspect_range": [
+    0.2,
+    1.5
+   ]
+  },
+  "router_stride": 3,
+  "router_detections": 677,
+  "speech_gate": {
+   "enabled": true,
+   "intervals": [
+    [
+     2.56,
+     29.14
+    ],
+    [
+     30.26,
+     56.04
+    ],
+    [
+     58.96,
+     68.74
+    ],
+    [
+     69.86,
+     87.54
+    ],
+    [
+     88.26,
+     89.44
+    ]
+   ],
+   "gated_in_frames": 2028,
+   "gated_out_frames": 232,
+   "gated_in_seconds": 81.12,
+   "gated_out_seconds": 9.28
+  },
+  "execution": "in_memory_segments (detector shared with LatentSync)",
+  "crossfade_frames": 4,
+  "master_fps": 25,
+  "master_frames": 2260,
+  "frame_classes": {
+   "VALID_FACE": 2028,
+   "SMALL_FACE": 0,
+   "NO_FACE": 0,
+   "NO_SPEECH": 232
+  },
+  "skip_reasons": {
+   "outside_speech_gate": 232
+  },
+  "by_action": {
+   "PASS_THROUGH": {
+    "segments": 6,
+    "frames": 232,
+    "seconds": 9.28
+   },
+   "LATENT_SYNC": {
+    "segments": 5,
+    "frames": 2028,
+    "seconds": 81.12
+   }
+  },
+  "latentsync_seconds_of_video": 81.12,
+  "pass_through_seconds_of_video": 9.28,
+  "ls_fraction": 0.8973,
+  "latentsync_inference_total_s": 424.56,
+  "verify_seconds": 13.58,
+  "latentsync_calls": 5,
+  "verify_splits": [],
+  "assembly": {
+   "frames_written": 2260,
+   "master_frames": 2260,
+   "padded_with_original": {},
+   "crossfaded_frames": 40
+  },
+  "output_frame_check": {
+   "decoded_frames": 2260,
+   "expected_frames": 2260,
+   "blank_frames": 0,
+   "undecodable_frames": 0,
+   "pass": true
+  },
+  "codeformer": "OFF (gate metadata only: codeformer_eligible on LATENT_SYNC segments)",
+  "codeformer_eligible_segments": [
+   1,
+   3,
+   5,
+   7,
+   9
+  ],
+  "runner": {
+   "window_batch_size": 2,
+   "deepcache": true,
+   "deepcache_interval": 5,
+   "compile_backend": "none",
+   "sdpa_backend": "auto",
+   "steps": 20,
+   "guidance": 1.5,
+   "seed": 1247,
+   "fp16": true,
+   "stage2_512": true
+  },
+  "runner_calls": [
+   {
+    "frames": 667,
+    "windows": 42,
+    "groups": 22,
+    "unet_calls": 440,
+    "seconds": 141.07,
+    "stages": {
+     "preprocess_audio_video": 0.126,
+     "affine": 9.34,
+     "vae_and_cond": 34.041,
+     "unet_denoise": 91.493,
+     "restore": 3.254,
+     "write": 0.0,
+     "total": 140.956
+    },
+    "detector": "replayed_verify_pass",
+    "detector_fallback_calls": 0
+   },
+   {
+    "frames": 647,
+    "windows": 41,
+    "groups": 21,
+    "unet_calls": 420,
+    "seconds": 133.2,
+    "stages": {
+     "preprocess_audio_video": 0.11,
+     "affine": 7.739,
+     "vae_and_cond": 32.912,
+     "unet_denoise": 89.204,
+     "restore": 3.152,
+     "write": 0.0,
+     "total": 133.121
+    },
+    "detector": "replayed_verify_pass",
+    "detector_fallback_calls": 0
+   },
+   {
+    "frames": 247,
+    "windows": 16,
+    "groups": 9,
+    "unet_calls": 180,
+    "seconds": 51.18,
+    "stages": {
+     "preprocess_audio_video": 0.08,
+     "affine": 2.607,
+     "vae_and_cond": 13.075,
+     "unet_denoise": 34.23,
+     "restore": 1.154,
+     "write": 0.0,
+     "total": 51.151
+    },
+    "detector": "replayed_verify_pass",
+    "detector_fallback_calls": 0
+   },
+   {
+    "frames": 445,
+    "windows": 28,
+    "groups": 15,
+    "unet_calls": 300,
+    "seconds": 92.45,
+    "stages": {
+     "preprocess_audio_video": 0.093,
+     "affine": 4.791,
+     "vae_and_cond": 23.317,
+     "unet_denoise": 61.476,
+     "restore": 2.674,
+     "write": 0.0,
+     "total": 92.355
+    },
+    "detector": "replayed_verify_pass",
+    "detector_fallback_calls": 0
+   },
+   {
+    "frames": 32,
+    "windows": 2,
+    "groups": 1,
+    "unet_calls": 20,
+    "seconds": 6.66,
+    "stages": {
+     "preprocess_audio_video": 0.064,
+     "affine": 0.336,
+     "vae_and_cond": 1.648,
+     "unet_denoise": 4.409,
+     "restore": 0.164,
+     "write": 0.0,
+     "total": 6.626
+    },
+    "detector": "replayed_verify_pass",
+    "detector_fallback_calls": 0
+   }
+  ],
+  "segments": [
+   {
+    "index": 0,
+    "start_frame": 0,
+    "end_frame": 64,
+    "frames": 64,
+    "start_s": 0.0,
+    "end_s": 2.56,
+    "classification": "NO_SPEECH",
+    "action": "PASS_THROUGH",
+    "codeformer_eligible": false
+   },
+   {
+    "index": 1,
+    "start_frame": 64,
+    "end_frame": 729,
+    "frames": 665,
+    "start_s": 2.56,
+    "end_s": 29.16,
+    "classification": "VALID_FACE",
+    "action": "LATENT_SYNC",
+    "verify_depth": 1,
+    "latentsync": {
+     "seconds": 141.07,
+     "frames_in": 665,
+     "frames_out": 667
+    },
+    "codeformer_eligible": true,
+    "crossfade": {
+     "in": 4,
+     "out": 4
+    }
+   },
+   {
+    "index": 2,
+    "start_frame": 729,
+    "end_frame": 756,
+    "frames": 27,
+    "start_s": 29.16,
+    "end_s": 30.24,
+    "classification": "NO_SPEECH",
+    "action": "PASS_THROUGH",
+    "codeformer_eligible": false
+   },
+   {
+    "index": 3,
+    "start_frame": 756,
+    "end_frame": 1401,
+    "frames": 645,
+    "start_s": 30.24,
+    "end_s": 56.04,
+    "classification": "VALID_FACE",
+    "action": "LATENT_SYNC",
+    "verify_depth": 1,
+    "latentsync": {
+     "seconds": 133.2,
+     "frames_in": 645,
+     "frames_out": 647
+    },
+    "codeformer_eligible": true,
+    "crossfade": {
+     "in": 4,
+     "out": 4
+    }
+   },
+   {
+    "index": 4,
+    "start_frame": 1401,
+    "end_frame": 1474,
+    "frames": 73,
+    "start_s": 56.04,
+    "end_s": 58.96,
+    "classification": "NO_SPEECH",
+    "action": "PASS_THROUGH",
+    "codeformer_eligible": false
+   },
+   {
+    "index": 5,
+    "start_frame": 1474,
+    "end_frame": 1719,
+    "frames": 245,
+    "start_s": 58.96,
+    "end_s": 68.76,
+    "classification": "VALID_FACE",
+    "action": "LATENT_SYNC",
+    "verify_depth": 1,
+    "latentsync": {
+     "seconds": 51.18,
+     "frames_in": 245,
+     "frames_out": 247
+    },
+    "codeformer_eligible": true,
+    "crossfade": {
+     "in": 4,
+     "out": 4
+    }
+   },
+   {
+    "index": 6,
+    "start_frame": 1719,
+    "end_frame": 1746,
+    "frames": 27,
+    "start_s": 68.76,
+    "end_s": 69.84,
+    "classification": "NO_SPEECH",
+    "action": "PASS_THROUGH",
+    "codeformer_eligible": false
+   },
+   {
+    "index": 7,
+    "start_frame": 1746,
+    "end_frame": 2189,
+    "frames": 443,
+    "start_s": 69.84,
+    "end_s": 87.56,
+    "classification": "VALID_FACE",
+    "action": "LATENT_SYNC",
+    "verify_depth": 1,
+    "latentsync": {
+     "seconds": 92.45,
+     "frames_in": 443,
+     "frames_out": 445
+    },
+    "codeformer_eligible": true,
+    "crossfade": {
+     "in": 4,
+     "out": 4
+    }
+   },
+   {
+    "index": 8,
+    "start_frame": 2189,
+    "end_frame": 2206,
+    "frames": 17,
+    "start_s": 87.56,
+    "end_s": 88.24,
+    "classification": "NO_SPEECH",
+    "action": "PASS_THROUGH",
+    "codeformer_eligible": false
+   },
+   {
+    "index": 9,
+    "start_frame": 2206,
+    "end_frame": 2236,
+    "frames": 30,
+    "start_s": 88.24,
+    "end_s": 89.44,
+    "classification": "VALID_FACE",
+    "action": "LATENT_SYNC",
+    "verify_depth": 1,
+    "latentsync": {
+     "seconds": 6.66,
+     "frames_in": 30,
+     "frames_out": 32
+    },
+    "codeformer_eligible": true,
+    "crossfade": {
+     "in": 4,
+     "out": 4
+    }
+   },
+   {
+    "index": 10,
+    "start_frame": 2236,
+    "end_frame": 2260,
+    "frames": 24,
+    "start_s": 89.44,
+    "end_s": 90.4,
+    "classification": "NO_SPEECH",
+    "action": "PASS_THROUGH",
+    "codeformer_eligible": false
+   }
+  ],
+  "backend": "optimized"
+ },
+ "output_meta": {
+  "duration_s": 90.4,
+  "size_bytes": 32995880,
+  "container": "mov,mp4,m4a,3gp,3g2,mj2",
+  "video": {
+   "codec": "h264",
+   "profile": "High",
+   "width": 464,
+   "height": 848,
+   "r_frame_rate": "25/1",
+   "avg_frame_rate": "25/1",
+   "fps": 25.0,
+   "avg_fps": 25.0,
+   "vfr": false,
+   "pix_fmt": "yuv420p",
+   "nb_frames": "2260",
+   "duration_s": 90.4,
+   "bit_rate": "2856836"
+  },
+  "audio": {
+   "codec": "aac",
+   "sample_rate": "24000",
+   "channels": 1,
+   "channel_layout": "mono",
+   "bit_rate": "58112",
+   "duration_s": 90.333
+  },
+  "has_video": true,
+  "has_audio": true
+ },
+ "validation": {
+  "tolerance_s": 0.15,
+  "tolerance_rule": "max(0.15 s, 2 source frames)",
+  "duration_delta_s": 0.0667,
+  "checks": {
+   "output_exists_nonempty": true,
+   "output_has_video_audio": true,
+   "duration_within_tolerance": true,
+   "resolution_preserved": true,
+   "all_units_have_tts_and_translation": true,
+   "frame_count_preserved": true,
+   "output_frames_decodable_no_blank": true
+  },
+  "pass": true
+ },
+ "stage_seconds": {
+  "audio_extract": 0.18,
+  "vad": 2.263,
+  "asr": 8.364,
+  "diarization": 5.193,
+  "translation_load": 3.132,
+  "translation": 9.823,
+  "tts_load": 7.958,
+  "tts": 21.501,
+  "alignment": 0.515,
+  "dubbed_track": 0.961,
+  "speech_gate": 1.136,
+  "face_router_load": 0.313,
+  "latentsync_load": 10.81,
+  "ls_master_25fps": 5.498,
+  "ls_master_decode": 1.377,
+  "face_classify": 14.272,
+  "latentsync": 439.501,
+  "latentsync_verify": 13.58,
+  "final_assembly": 6.158,
+  "total": 545.174
+ },
+ "gpu": {
+  "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.126.16",
+  "name": "NVIDIA GeForce RTX 5090",
+  "capability": "sm_120",
+  "total_vram_bytes": 33668857856,
+  "total_vram_gib": 31.36,
+  "free_vram_gib": 19.93,
+  "multi_processor_count": 170,
+  "arch_list": [
+   "sm_75",
+   "sm_80",
+   "sm_86",
+   "sm_90",
+   "sm_100",
+   "sm_120",
+   "compute_120"
+  ]
+ },
+ "at": "2026-09-18T15:52:51Z",
+ "qa": {
+  "speech_gated_seconds": 81.12,
+  "gate_out_seconds": 9.28,
+  "latentsync_seconds": 81.12,
+  "pass_through_seconds": 9.28,
+  "speech_gate_transitions": 10,
+  "latentsync_segments": 5,
+  "frames": {
+   "VALID_FACE": 2028,
+   "SMALL_FACE": 0,
+   "NO_FACE": 0,
+   "NO_SPEECH": 232
+  },
+  "by_action": {
+   "PASS_THROUGH": {
+    "segments": 6,
+    "frames": 232,
+    "seconds": 9.28
+   },
+   "LATENT_SYNC": {
+    "segments": 5,
+    "frames": 2028,
+    "seconds": 81.12
+   }
+  },
+  "output_probe": {
+   "duration_s": 90.4,
+   "has_video": true,
+   "has_audio": true,
+   "width": 464,
+   "height": 848,
+   "fps": 25.0,
+   "audio_codec": "aac",
+   "size_bytes": 32995880
+  },
+  "decode_check": {
+   "decoded_frames": 2260,
+   "undecodable_frames": 0,
+   "blank_frames": 0
+  },
+  "duration_delta_s": 0.067,
+  "tolerance_s": 0.15,
+  "audio_corr_output_vs_dubbed_track": 0.9999,
+  "audio_corr_output_vs_original_audio": 0.0004,
+  "runner_exit_code": 0,
+  "checks": {
+   "output_exists_nonempty": true,
+   "video_and_audio_streams": true,
+   "dubbed_audio_present": true,
+   "source_resolution_preserved": true,
+   "duration_delta_within_tolerance": true,
+   "frame_count_preserved": true,
+   "all_frames_decodable": true,
+   "no_blank_frames": true,
+   "no_latentsync_crash": true,
+   "no_face_not_detected_crash": true,
+   "codeformer_invoked_no": true,
+   "runner_validation_pass": true
+  },
+  "pass": true,
+  "transitions": [
+   {
+    "frame": 64,
+    "t": 2.56,
+    "direction": "NO_SPEECH -> LATENT_SYNC",
+    "left": {
+     "index": 0,
+     "action": "PASS_THROUGH",
+     "frames": 64
+    },
+    "right": {
+     "index": 1,
+     "action": "LATENT_SYNC",
+     "frames": 665
+    }
+   },
+   {
+    "frame": 729,
+    "t": 29.16,
+    "direction": "LATENT_SYNC -> NO_SPEECH",
+    "left": {
+     "index": 1,
+     "action": "LATENT_SYNC",
+     "frames": 665
+    },
+    "right": {
+     "index": 2,
+     "action": "PASS_THROUGH",
+     "frames": 27
+    }
+   },
+   {
+    "frame": 756,
+    "t": 30.24,
+    "direction": "NO_SPEECH -> LATENT_SYNC",
+    "left": {
+     "index": 2,
+     "action": "PASS_THROUGH",
+     "frames": 27
+    },
+    "right": {
+     "index": 3,
+     "action": "LATENT_SYNC",
+     "frames": 645
+    }
+   },
+   {
+    "frame": 1401,
+    "t": 56.04,
+    "direction": "LATENT_SYNC -> NO_SPEECH",
+    "left": {
+     "index": 3,
+     "action": "LATENT_SYNC",
+     "frames": 645
+    },
+    "right": {
+     "index": 4,
+     "action": "PASS_THROUGH",
+     "frames": 73
+    }
+   },
+   {
+    "frame": 1474,
+    "t": 58.96,
+    "direction": "NO_SPEECH -> LATENT_SYNC",
+    "left": {
+     "index": 4,
+     "action": "PASS_THROUGH",
+     "frames": 73
+    },
+    "right": {
+     "index": 5,
+     "action": "LATENT_SYNC",
+     "frames": 245
+    }
+   },
+   {
+    "frame": 1719,
+    "t": 68.76,
+    "direction": "LATENT_SYNC -> NO_SPEECH",
+    "left": {
+     "index": 5,
+     "action": "LATENT_SYNC",
+     "frames": 245
+    },
+    "right": {
+     "index": 6,
+     "action": "PASS_THROUGH",
+     "frames": 27
+    }
+   },
+   {
+    "frame": 1746,
+    "t": 69.84,
+    "direction": "NO_SPEECH -> LATENT_SYNC",
+    "left": {
+     "index": 6,
+     "action": "PASS_THROUGH",
+     "frames": 27
+    },
+    "right": {
+     "index": 7,
+     "action": "LATENT_SYNC",
+     "frames": 443
+    }
+   },
+   {
+    "frame": 2189,
+    "t": 87.56,
+    "direction": "LATENT_SYNC -> NO_SPEECH",
+    "left": {
+     "index": 7,
+     "action": "LATENT_SYNC",
+     "frames": 443
+    },
+    "right": {
+     "index": 8,
+     "action": "PASS_THROUGH",
+     "frames": 17
+    }
+   },
+   {
+    "frame": 2206,
+    "t": 88.24,
+    "direction": "NO_SPEECH -> LATENT_SYNC",
+    "left": {
+     "index": 8,
+     "action": "PASS_THROUGH",
+     "frames": 17
+    },
+    "right": {
+     "index": 9,
+     "action": "LATENT_SYNC",
+     "frames": 30
+    }
+   },
+   {
+    "frame": 2236,
+    "t": 89.44,
+    "direction": "LATENT_SYNC -> NO_SPEECH",
+    "left": {
+     "index": 9,
+     "action": "LATENT_SYNC",
+     "frames": 30
+    },
+    "right": {
+     "index": 10,
+     "action": "PASS_THROUGH",
+     "frames": 24
+    }
+   }
+  ],
+  "boundary_clips": [
+   {
+    "file": "qa_outputs/final_optimized/boundaries/03_boundary_01.mp4",
+    "clip_start_s": 0.06,
+    "clip_end_s": 5.06,
+    "frame": 64,
+    "t": 2.56,
+    "direction": "NO_SPEECH -> LATENT_SYNC",
+    "left": {
+     "index": 0,
+     "action": "PASS_THROUGH",
+     "frames": 64
+    },
+    "right": {
+     "index": 1,
+     "action": "LATENT_SYNC",
+     "frames": 665
+    }
+   },
+   {
+    "file": "qa_outputs/final_optimized/boundaries/03_boundary_02.mp4",
+    "clip_start_s": 56.46,
+    "clip_end_s": 61.46,
+    "frame": 1474,
+    "t": 58.96,
+    "direction": "NO_SPEECH -> LATENT_SYNC",
+    "left": {
+     "index": 4,
+     "action": "PASS_THROUGH",
+     "frames": 73
+    },
+    "right": {
+     "index": 5,
+     "action": "LATENT_SYNC",
+     "frames": 245
+    }
+   },
+   {
+    "file": "qa_outputs/final_optimized/boundaries/03_boundary_03.mp4",
+    "clip_start_s": 85.4,
+    "clip_end_s": 90.4,
+    "frame": 2236,
+    "t": 89.44,
+    "direction": "LATENT_SYNC -> NO_SPEECH",
+    "left": {
+     "index": 9,
+     "action": "LATENT_SYNC",
+     "frames": 30
+    },
+    "right": {
+     "index": 10,
+     "action": "PASS_THROUGH",
+     "frames": 24
+    }
+   }
+  ]
+ }
+}

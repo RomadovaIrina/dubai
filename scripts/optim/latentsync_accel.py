@@ -56,12 +56,30 @@ def _sdpa_context(name: str):
     return sdpa_kernel(be)
 
 
+class _ReplayDetector:
+    """Replays LatentSync FaceDetector results that were computed earlier on the SAME frames (the verify pass of the
+    face-aware wrapper), in frame order. LatentSync's affine_transform_video() calls the detector exactly once per frame,
+    in order, so the safety check ("Face not detected" -> RuntimeError) is preserved with one detection pass instead of two.
+    Falls back to the real detector if more calls arrive than cached results."""
+
+    def __init__(self, real, results):
+        self.real, self.results, self.i, self.fallbacks = real, results, 0, 0
+        self.app = getattr(real, "app", None)
+
+    def __call__(self, frame, threshold=0.5):
+        if self.i < len(self.results):
+            r = self.results[self.i]; self.i += 1
+            return r
+        self.fallbacks += 1
+        return self.real(frame, threshold)
+
+
 class AccelLatentSync:
     def __init__(self, pipe, window_batch_size: int = 1, deepcache: bool = True, compile_backend: str = "none",
                  sdpa_backend: str = "auto", steps: int = 20, guidance: float = 1.5, seed: int = 1247,
-                 compile_options: dict | None = None):
+                 compile_options: dict | None = None, deepcache_interval: int = 3):
         from omegaconf import OmegaConf
-        assert window_batch_size >= 1
+        assert window_batch_size >= 1 and deepcache_interval >= 1
         assert sdpa_backend in SDPA_CHOICES and compile_backend in COMPILE_CHOICES
         self.pipe = pipe
         self.B = window_batch_size
@@ -72,9 +90,10 @@ class AccelLatentSync:
         self.resolution = int(self.cfg.data.resolution)
         self.mask_image_path = str(LS / self.cfg.data.mask_image_path)
         self.deepcache_helper = None
+        self.deepcache_interval = int(deepcache_interval) if deepcache else None
         if deepcache:
             from DeepCache import DeepCacheSDHelper
-            h = DeepCacheSDHelper(pipe=pipe); h.set_params(cache_interval=3, cache_branch_id=0); h.enable()
+            h = DeepCacheSDHelper(pipe=pipe); h.set_params(cache_interval=int(deepcache_interval), cache_branch_id=0); h.enable()
             self.deepcache_helper = h
         self.compile_backend = compile_backend
         self.compile_s = 0.0
@@ -109,12 +128,12 @@ class AccelLatentSync:
         return self._image_processor
 
     @torch.no_grad()
-    def __call__(self, video_path, audio_path, video_out_path, temp_dir, weight_dtype=torch.float16,
-                 video_fps: int = 25, audio_sample_rate: int = 16000, generator=None) -> dict:
+    def _core(self, video_frames: np.ndarray, audio_path, detections: list | None = None, weight_dtype=torch.float16,
+              video_fps: int = 25, generator=None) -> tuple[np.ndarray, dict]:
+        """Shared execution core. `video_frames`: (N, H, W, 3) uint8 RGB at `video_fps` (25 fps CFR, as LatentSync's
+        read_video would produce). `detections`: optional per-frame (bbox, landmark_2d_106) results of LatentSync's own
+        FaceDetector on exactly these frames (replayed instead of detecting a second time). Returns (synced RGB frames, stats)."""
         from accelerate.utils import set_seed
-        from latentsync.utils.util import read_audio, read_video, write_video
-        import soundfile as sf
-        import shutil
 
         pipe = self.pipe
         set_seed(self.seed)
@@ -124,6 +143,7 @@ class AccelLatentSync:
             pipe.unet.eval()
             device = pipe._execution_device
             ip = self.image_processor()
+            ip.restorer.p_bias = None       # upstream builds a fresh ImageProcessor per call: reset the affine temporal smoothing state
             height = width = self.resolution
             nf = self.num_frames
             do_cfg = self.guidance > 1.0
@@ -134,12 +154,16 @@ class AccelLatentSync:
             t0 = time.perf_counter()
             whisper_feature = pipe.audio_encoder.audio2feat(str(audio_path))
             whisper_chunks = pipe.audio_encoder.feature2chunks(feature_array=whisper_feature, fps=video_fps)
-            audio_samples = read_audio(str(audio_path))
-            video_frames = read_video(str(video_path), use_decord=False)
             t_pre = time.perf_counter() - t0
 
             t0 = time.perf_counter()
-            video_frames, faces, boxes, affine_matrices = pipe.loop_video(whisper_chunks, video_frames)
+            real_det = ip.face_detector; replay = None
+            if detections is not None:
+                replay = _ReplayDetector(real_det, detections); ip.face_detector = replay
+            try:
+                video_frames, faces, boxes, affine_matrices = pipe.loop_video(whisper_chunks, video_frames)
+            finally:
+                ip.face_detector = real_det
             t_affine = time.perf_counter() - t0
 
             n_chunks = len(whisper_chunks)
@@ -202,28 +226,63 @@ class AccelLatentSync:
             t0 = time.perf_counter()
             synced_video_frames = pipe.restore_video(torch.cat(synced), video_frames, boxes, affine_matrices)
             t_restore = time.perf_counter() - t0
-            remain = int(synced_video_frames.shape[0] / video_fps * audio_sample_rate)
-            audio_samples = audio_samples[:remain].cpu().numpy()
-
-            t0 = time.perf_counter()
-            temp_dir = str(temp_dir)
-            if os.path.exists(temp_dir):
-                shutil.rmtree(temp_dir)
-            os.makedirs(temp_dir, exist_ok=True)
-            write_video(os.path.join(temp_dir, "video.mp4"), synced_video_frames, fps=video_fps)
-            sf.write(os.path.join(temp_dir, "audio.wav"), audio_samples, audio_sample_rate)
-            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-nostdin", "-i", os.path.join(temp_dir, "video.mp4"),
-                            "-i", os.path.join(temp_dir, "audio.wav"), "-c:v", "libx264", "-crf", "18", "-c:a", "aac",
-                            "-q:v", "0", "-q:a", "0", str(video_out_path)], check=True)
-            t_write = time.perf_counter() - t0
-            self.last_stats = {"frames": int(synced_video_frames.shape[0]), "windows": num_inf, "full_windows": len(full),
-                               "partial_windows": len(partial), "groups": len(groups), "window_batch_size": self.B,
-                               "unet_calls": unet_calls, "seconds": {"preprocess_audio_video": round(t_pre, 3), "affine": round(t_affine, 3),
-                               "vae_and_cond": round(t_vae, 3), "unet_denoise": round(t_unet, 3), "restore": round(t_restore, 3),
-                               "write": round(t_write, 3), "total": round(time.perf_counter() - t_all, 3)}}
-            return self.last_stats
+            stats = {"frames": int(synced_video_frames.shape[0]), "windows": num_inf, "full_windows": len(full),
+                     "partial_windows": len(partial), "groups": len(groups), "window_batch_size": self.B, "unet_calls": unet_calls,
+                     "detector": "replayed_verify_pass" if replay is not None else "latentsync_internal",
+                     "detector_fallback_calls": replay.fallbacks if replay is not None else 0,
+                     "seconds": {"preprocess_audio_video": round(t_pre, 3), "affine": round(t_affine, 3), "vae_and_cond": round(t_vae, 3),
+                                 "unet_denoise": round(t_unet, 3), "restore": round(t_restore, 3), "write": 0.0,
+                                 "total": round(time.perf_counter() - t_all, 3)}}
+            return synced_video_frames, stats
         finally:
             os.chdir(old)
+
+    @torch.no_grad()
+    def run_frames(self, video_frames: np.ndarray, audio_path, detections: list | None = None, weight_dtype=torch.float16,
+                   video_fps: int = 25) -> np.ndarray:
+        """In-memory entry point: frames in (RGB uint8, 25 fps CFR), lip-synced frames out (RGB uint8). No video files are
+        read or written; the caller owns assembly. Stats in self.last_stats."""
+        frames, stats = self._core(np.ascontiguousarray(video_frames), audio_path, detections, weight_dtype, video_fps)
+        self.last_stats = stats
+        return frames
+
+    @torch.no_grad()
+    def __call__(self, video_path, audio_path, video_out_path, temp_dir, weight_dtype=torch.float16,
+                 video_fps: int = 25, audio_sample_rate: int = 16000, generator=None) -> dict:
+        """File-based entry point with upstream semantics (read_video re-encodes to 25 fps, output muxed with the audio)."""
+        from latentsync.utils.util import read_audio, read_video, write_video
+        import soundfile as sf
+        import shutil
+
+        old = os.getcwd(); os.chdir(LS)
+        try:
+            t_all = time.perf_counter()
+            t0 = time.perf_counter()
+            audio_samples = read_audio(str(audio_path))
+            video_frames = read_video(str(video_path), use_decord=False)
+            t_read = time.perf_counter() - t0
+        finally:
+            os.chdir(old)
+        synced_video_frames, stats = self._core(video_frames, audio_path, None, weight_dtype, video_fps, generator)
+        remain = int(synced_video_frames.shape[0] / video_fps * audio_sample_rate)
+        audio_samples = audio_samples[:remain].cpu().numpy()
+
+        t0 = time.perf_counter()
+        temp_dir = str(temp_dir)
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+        os.makedirs(temp_dir, exist_ok=True)
+        write_video(os.path.join(temp_dir, "video.mp4"), synced_video_frames, fps=video_fps)
+        sf.write(os.path.join(temp_dir, "audio.wav"), audio_samples, audio_sample_rate)
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-nostdin", "-i", os.path.join(temp_dir, "video.mp4"),
+                        "-i", os.path.join(temp_dir, "audio.wav"), "-c:v", "libx264", "-crf", "18", "-c:a", "aac",
+                        "-q:v", "0", "-q:a", "0", str(video_out_path)], check=True)
+        t_write = time.perf_counter() - t0
+        stats["seconds"]["preprocess_audio_video"] = round(stats["seconds"]["preprocess_audio_video"] + t_read, 3)
+        stats["seconds"]["write"] = round(t_write, 3)
+        stats["seconds"]["total"] = round(time.perf_counter() - t_all, 3)
+        self.last_stats = stats
+        return self.last_stats
 
 
 def compare_videos(a: pathlib.Path, b: pathlib.Path, max_frames: int | None = None) -> dict:
