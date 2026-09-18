@@ -305,14 +305,19 @@ def main() -> int:
         rr = [r for r in good if r["video"] == v.name]
         vals = [r["gpu_min_per_video_min"] for r in rr]
         walls = [r["wall_s_per_video_min"] for r in rr]
+        allr = [r for r in rows if r["video"] == v.name]
         per_video.append({
             "video": v.name,
+            "source_duration_s": round(float(allr[0]["source"]["duration_s"]), 3) if allr else None,
             "successful_runs": len(rr),
             "required_runs": a.repeat,
             "median_gpu_min_per_video_min": round(statistics.median(vals), 4) if vals else None,
             "median_wall_s_per_video_min": round(statistics.median(walls), 3) if walls else None,
             "min_gpu_ratio": min(vals) if vals else None,
             "max_gpu_ratio": max(vals) if vals else None,
+            "peak_mib": max((r["gpu_peak_process_group_mib"] for r in allr), default=None),
+            "output_validation": "PASS" if allr and len(rr) == len(allr) else ("FAIL" if allr else None),
+            "validation_reasons": [r["output_validation"].get("reason") for r in allr if not r["output_validation"].get("pass")],
         })
 
     dataset_vals = [
@@ -328,6 +333,10 @@ def main() -> int:
 
     dataset_mean = round(statistics.mean(dataset_vals), 4) if dataset_vals else None
     dataset_median = round(statistics.median(dataset_vals), 4) if dataset_vals else None
+    # informational only (the formal criterion stays the dataset median): GPU-seconds summed over all valid videos / source seconds
+    dw_pairs = [(x["median_gpu_min_per_video_min"], x["source_duration_s"]) for x in per_video
+                if x["median_gpu_min_per_video_min"] is not None and x["source_duration_s"]]
+    dataset_duration_weighted = round(sum(m * d for m, d in dw_pairs) / sum(d for _, d in dw_pairs), 4) if dw_pairs else None
     within_target = dataset_median <= a.target_ratio if dataset_median is not None else None
 
     if closed:
@@ -370,6 +379,7 @@ def main() -> int:
             "median_gpu_min_per_video_min": dataset_median,
             "min_gpu_min_per_video_min": min(dataset_vals) if dataset_vals else None,
             "max_gpu_min_per_video_min": max(dataset_vals) if dataset_vals else None,
+            "duration_weighted_gpu_min_per_video_min": dataset_duration_weighted,
             "within_target_by_dataset_median": within_target,
         },
         "rows": rows,
@@ -386,17 +396,20 @@ def main() -> int:
         f"Clean E2E confirmed: **{a.confirm_clean_pipeline}**  ",
         f"Dataset median: **{dataset_median} GPU-min/video-min**  ",
         f"Dataset mean: **{dataset_mean} GPU-min/video-min**  ",
-        f"Target: **{a.target_ratio} GPU-min/video-min**",
+        f"Dataset duration-weighted (informational): **{dataset_duration_weighted} GPU-min/video-min**  ",
+        f"Dataset min / max: **{rep['dataset']['min_gpu_min_per_video_min']} / {rep['dataset']['max_gpu_min_per_video_min']}**  ",
+        f"Target: **{a.target_ratio} GPU-min/video-min** (formal criterion: dataset median)",
         "",
-        "| video | successful runs | median GPU-min/video-min | median wall s/video-min | min | max |",
-        "|---|---:|---:|---:|---:|---:|",
+        "| video | src s | successful runs | median GPU-min/video-min | median wall s/video-min | min | max | peak VRAM MiB | output validation |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---|",
     ]
     for x in per_video:
         md.append(
-            f"| {x['video']} | {x['successful_runs']}/{a.repeat} | "
+            f"| {x['video']} | {x['source_duration_s']} | {x['successful_runs']}/{a.repeat} | "
             f"{x['median_gpu_min_per_video_min']} | {x['median_wall_s_per_video_min']} | "
-            f"{x['min_gpu_ratio']} | {x['max_gpu_ratio']} |"
+            f"{x['min_gpu_ratio']} | {x['max_gpu_ratio']} | {x['peak_mib']} | {x['output_validation']} |"
         )
+    md += ["", f"Command template: `{a.command_template}`"]
     pathlib.Path(a.md).write_text("\n".join(md) + "\n", encoding="utf-8")
     print("\n" + "\n".join(md))
     print(f"\n-> {a.json}\n-> {a.md}")

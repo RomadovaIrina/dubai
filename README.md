@@ -28,7 +28,7 @@ scripts/requirements/   per-stage pins + constraints.txt (torch/numpy/transforme
 scripts/check_*.py|sh   one smoke test per component; smoke_common.py has shared paths
 third_party/latentsync  bytedance/LatentSync (checkpoints/ -> symlinks into models/latentsync)
 third_party/CodeFormer  sczhou/CodeFormer (vendored basicsr + facelib; weights/ downloaded by download_models.sh)
-models/                 whisper-large-v3, qwen2.5-7b-instruct-gguf (q4_k_m), chatterbox (v3), latentsync, sd-vae-ft-mse, facexlib, hf/ cache
+models/                 whisper-large-v3, qwen2.5-7b-instruct-gguf (q8_0, pilot 0.9 decision), chatterbox (v3), latentsync, sd-vae-ft-mse, facexlib, hf/ cache
 logs/  reports/         setup + test logs; versions.txt, smoke.md, env-report.md, demo outputs
 ```
 

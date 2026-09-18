@@ -1,0 +1,650 @@
+{
+  "task": "0.5",
+  "closed": true,
+  "verdict": "CLOSED — PASS_TARGET; median 4.6365 GPU-min/video-min vs target 5.0",
+  "gpu": {
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.126.16",
+    "name": "NVIDIA GeForce RTX 5090",
+    "capability": "sm_120",
+    "total_vram_bytes": 33668857856,
+    "total_vram_gib": 31.36,
+    "free_vram_gib": 30.86,
+    "multi_processor_count": 170,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "method": "job process-group CUDA occupancy sampled via nvidia-smi; GPU-min/video-min = GPU-owned seconds / source-video seconds",
+  "clean_pipeline_confirmed": true,
+  "codeformer_disabled_confirmed": true,
+  "target_gpu_min_per_video_min": 5.0,
+  "repeat": 2,
+  "sampling_interval_s": 0.2,
+  "videos": 5,
+  "successful_runs": 10,
+  "total_runs": 10,
+  "per_video": [
+    {
+      "video": "01.MP4",
+      "source_duration_s": 101.667,
+      "successful_runs": 2,
+      "required_runs": 2,
+      "median_gpu_min_per_video_min": 1.805,
+      "median_wall_s_per_video_min": 125.029,
+      "min_gpu_ratio": 1.7961,
+      "max_gpu_ratio": 1.8138,
+      "peak_mib": 23024,
+      "output_validation": "PASS",
+      "validation_reasons": []
+    },
+    {
+      "video": "02.mp4",
+      "source_duration_s": 110.867,
+      "successful_runs": 2,
+      "required_runs": 2,
+      "median_gpu_min_per_video_min": 0.9345,
+      "median_wall_s_per_video_min": 64.672,
+      "min_gpu_ratio": 0.929,
+      "max_gpu_ratio": 0.9399,
+      "peak_mib": 4498,
+      "output_validation": "PASS",
+      "validation_reasons": []
+    },
+    {
+      "video": "03.mp4",
+      "source_duration_s": 90.333,
+      "successful_runs": 2,
+      "required_runs": 2,
+      "median_gpu_min_per_video_min": 5.4454,
+      "median_wall_s_per_video_min": 373.208,
+      "min_gpu_ratio": 5.4332,
+      "max_gpu_ratio": 5.4576,
+      "peak_mib": 23038,
+      "output_validation": "PASS",
+      "validation_reasons": []
+    },
+    {
+      "video": "04.mp4",
+      "source_duration_s": 53.9,
+      "successful_runs": 2,
+      "required_runs": 2,
+      "median_gpu_min_per_video_min": 5.141,
+      "median_wall_s_per_video_min": 353.521,
+      "min_gpu_ratio": 5.1132,
+      "max_gpu_ratio": 5.1688,
+      "peak_mib": 23024,
+      "output_validation": "PASS",
+      "validation_reasons": []
+    },
+    {
+      "video": "05.mp4",
+      "source_duration_s": 52.367,
+      "successful_runs": 2,
+      "required_runs": 2,
+      "median_gpu_min_per_video_min": 4.6365,
+      "median_wall_s_per_video_min": 318.659,
+      "min_gpu_ratio": 4.6251,
+      "max_gpu_ratio": 4.648,
+      "peak_mib": 23026,
+      "output_validation": "PASS",
+      "validation_reasons": []
+    }
+  ],
+  "dataset": {
+    "mean_gpu_min_per_video_min": 3.5925,
+    "median_gpu_min_per_video_min": 4.6365,
+    "min_gpu_min_per_video_min": 0.9345,
+    "max_gpu_min_per_video_min": 5.4454,
+    "duration_weighted_gpu_min_per_video_min": 3.1748,
+    "within_target_by_dataset_median": true
+  },
+  "rows": [
+    {
+      "video": "01.MP4",
+      "source": {
+        "duration_s": 101.666667,
+        "video": {
+          "codec": "h264",
+          "width": 480,
+          "height": 848,
+          "fps": 25.003278688524592,
+          "frames": "2542"
+        },
+        "audio": {
+          "codec": "aac",
+          "sample_rate": "44100",
+          "channels": 2
+        }
+      },
+      "run": 1,
+      "returncode": 0,
+      "wall_s": 212.849,
+      "gpu_occupied_s": 184.4,
+      "gpu_min_per_video_min": 1.8138,
+      "wall_s_per_video_min": 125.616,
+      "gpu_occupancy_fraction_of_wall": 0.8663,
+      "gpu_first_active_after_s": 2.984,
+      "gpu_peak_process_group_mib": 23022,
+      "gpu_mean_active_process_group_mib": 8470.5,
+      "samples": 935,
+      "active_samples": 922,
+      "output": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/01_r1.mp4",
+      "output_validation": {
+        "pass": true,
+        "reason": null,
+        "duration_delta_s": 0.0133,
+        "tolerance_s": 0.15,
+        "output_meta": {
+          "duration_s": 101.68,
+          "video": {
+            "codec": "h264",
+            "width": 480,
+            "height": 848,
+            "fps": 25.0,
+            "frames": "2542"
+          },
+          "audio": {
+            "codec": "aac",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        }
+      },
+      "command": "python scripts/pilot/run_clean_pipeline_05.py --input /workspace/dub/test_videos/01.MP4 --output /tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/01_r1.mp4 --target-lang en --no-codeformer --video-backend optimized --face-router retinaface --face-min-w 50 --face-min-h 80 --retina-conf 0.8 --router-stride 3 --speech-gate on --gate-margin-s 0.24 --gate-merge-gap-s 0.6 --crossfade-frames 4 --deepcache-interval 5 --window-batch-size 2 --sdpa-backend auto --compile-backend none --seed 1247 --work-dir /tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work",
+      "at": "2026-09-18T16:50:27Z"
+    },
+    {
+      "video": "01.MP4",
+      "source": {
+        "duration_s": 101.666667,
+        "video": {
+          "codec": "h264",
+          "width": 480,
+          "height": 848,
+          "fps": 25.003278688524592,
+          "frames": "2542"
+        },
+        "audio": {
+          "codec": "aac",
+          "sample_rate": "44100",
+          "channels": 2
+        }
+      },
+      "run": 2,
+      "returncode": 0,
+      "wall_s": 210.861,
+      "gpu_occupied_s": 182.6,
+      "gpu_min_per_video_min": 1.7961,
+      "wall_s_per_video_min": 124.442,
+      "gpu_occupancy_fraction_of_wall": 0.866,
+      "gpu_first_active_after_s": 2.941,
+      "gpu_peak_process_group_mib": 23024,
+      "gpu_mean_active_process_group_mib": 8439.6,
+      "samples": 926,
+      "active_samples": 913,
+      "output": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/01_r2.mp4",
+      "output_validation": {
+        "pass": true,
+        "reason": null,
+        "duration_delta_s": 0.0133,
+        "tolerance_s": 0.15,
+        "output_meta": {
+          "duration_s": 101.68,
+          "video": {
+            "codec": "h264",
+            "width": 480,
+            "height": 848,
+            "fps": 25.0,
+            "frames": "2542"
+          },
+          "audio": {
+            "codec": "aac",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        }
+      },
+      "command": "python scripts/pilot/run_clean_pipeline_05.py --input /workspace/dub/test_videos/01.MP4 --output /tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/01_r2.mp4 --target-lang en --no-codeformer --video-backend optimized --face-router retinaface --face-min-w 50 --face-min-h 80 --retina-conf 0.8 --router-stride 3 --speech-gate on --gate-margin-s 0.24 --gate-merge-gap-s 0.6 --crossfade-frames 4 --deepcache-interval 5 --window-batch-size 2 --sdpa-backend auto --compile-backend none --seed 1247 --work-dir /tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work",
+      "at": "2026-09-18T16:53:58Z"
+    },
+    {
+      "video": "02.mp4",
+      "source": {
+        "duration_s": 110.866667,
+        "video": {
+          "codec": "h264",
+          "width": 464,
+          "height": 848,
+          "fps": 29.981960312687914,
+          "frames": "3324"
+        },
+        "audio": {
+          "codec": "aac",
+          "sample_rate": "44100",
+          "channels": 2
+        }
+      },
+      "run": 1,
+      "returncode": 0,
+      "wall_s": 120.284,
+      "gpu_occupied_s": 104.2,
+      "gpu_min_per_video_min": 0.9399,
+      "wall_s_per_video_min": 65.096,
+      "gpu_occupancy_fraction_of_wall": 0.8663,
+      "gpu_first_active_after_s": 3.26,
+      "gpu_peak_process_group_mib": 4498,
+      "gpu_mean_active_process_group_mib": 2570.0,
+      "samples": 536,
+      "active_samples": 521,
+      "output": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/02_r1.mp4",
+      "output_validation": {
+        "pass": true,
+        "reason": null,
+        "duration_delta_s": 0.0533,
+        "tolerance_s": 0.15,
+        "output_meta": {
+          "duration_s": 110.92,
+          "video": {
+            "codec": "h264",
+            "width": 464,
+            "height": 848,
+            "fps": 25.0,
+            "frames": "2773"
+          },
+          "audio": {
+            "codec": "aac",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        }
+      },
+      "command": "python scripts/pilot/run_clean_pipeline_05.py --input /workspace/dub/test_videos/02.mp4 --output /tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/02_r1.mp4 --target-lang en --no-codeformer --video-backend optimized --face-router retinaface --face-min-w 50 --face-min-h 80 --retina-conf 0.8 --router-stride 3 --speech-gate on --gate-margin-s 0.24 --gate-merge-gap-s 0.6 --crossfade-frames 4 --deepcache-interval 5 --window-batch-size 2 --sdpa-backend auto --compile-backend none --seed 1247 --work-dir /tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work",
+      "at": "2026-09-18T16:55:58Z"
+    },
+    {
+      "video": "02.mp4",
+      "source": {
+        "duration_s": 110.866667,
+        "video": {
+          "codec": "h264",
+          "width": 464,
+          "height": 848,
+          "fps": 29.981960312687914,
+          "frames": "3324"
+        },
+        "audio": {
+          "codec": "aac",
+          "sample_rate": "44100",
+          "channels": 2
+        }
+      },
+      "run": 2,
+      "returncode": 0,
+      "wall_s": 118.717,
+      "gpu_occupied_s": 103.0,
+      "gpu_min_per_video_min": 0.929,
+      "wall_s_per_video_min": 64.248,
+      "gpu_occupancy_fraction_of_wall": 0.8676,
+      "gpu_first_active_after_s": 3.195,
+      "gpu_peak_process_group_mib": 4498,
+      "gpu_mean_active_process_group_mib": 2568.5,
+      "samples": 529,
+      "active_samples": 515,
+      "output": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/02_r2.mp4",
+      "output_validation": {
+        "pass": true,
+        "reason": null,
+        "duration_delta_s": 0.0533,
+        "tolerance_s": 0.15,
+        "output_meta": {
+          "duration_s": 110.92,
+          "video": {
+            "codec": "h264",
+            "width": 464,
+            "height": 848,
+            "fps": 25.0,
+            "frames": "2773"
+          },
+          "audio": {
+            "codec": "aac",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        }
+      },
+      "command": "python scripts/pilot/run_clean_pipeline_05.py --input /workspace/dub/test_videos/02.mp4 --output /tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/02_r2.mp4 --target-lang en --no-codeformer --video-backend optimized --face-router retinaface --face-min-w 50 --face-min-h 80 --retina-conf 0.8 --router-stride 3 --speech-gate on --gate-margin-s 0.24 --gate-merge-gap-s 0.6 --crossfade-frames 4 --deepcache-interval 5 --window-batch-size 2 --sdpa-backend auto --compile-backend none --seed 1247 --work-dir /tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work",
+      "at": "2026-09-18T16:57:57Z"
+    },
+    {
+      "video": "03.mp4",
+      "source": {
+        "duration_s": 90.333333,
+        "video": {
+          "codec": "h264",
+          "width": 464,
+          "height": 848,
+          "fps": 30.0,
+          "frames": "2710"
+        },
+        "audio": {
+          "codec": "aac",
+          "sample_rate": "44100",
+          "channels": 2
+        }
+      },
+      "run": 1,
+      "returncode": 0,
+      "wall_s": 563.252,
+      "gpu_occupied_s": 493.0,
+      "gpu_min_per_video_min": 5.4576,
+      "wall_s_per_video_min": 374.116,
+      "gpu_occupancy_fraction_of_wall": 0.8753,
+      "gpu_first_active_after_s": 2.993,
+      "gpu_peak_process_group_mib": 23038,
+      "gpu_mean_active_process_group_mib": 18666.5,
+      "samples": 2479,
+      "active_samples": 2465,
+      "output": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/03_r1.mp4",
+      "output_validation": {
+        "pass": true,
+        "reason": null,
+        "duration_delta_s": 0.0667,
+        "tolerance_s": 0.15,
+        "output_meta": {
+          "duration_s": 90.4,
+          "video": {
+            "codec": "h264",
+            "width": 464,
+            "height": 848,
+            "fps": 25.0,
+            "frames": "2260"
+          },
+          "audio": {
+            "codec": "aac",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        }
+      },
+      "command": "python scripts/pilot/run_clean_pipeline_05.py --input /workspace/dub/test_videos/03.mp4 --output /tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/03_r1.mp4 --target-lang en --no-codeformer --video-backend optimized --face-router retinaface --face-min-w 50 --face-min-h 80 --retina-conf 0.8 --router-stride 3 --speech-gate on --gate-margin-s 0.24 --gate-merge-gap-s 0.6 --crossfade-frames 4 --deepcache-interval 5 --window-batch-size 2 --sdpa-backend auto --compile-backend none --seed 1247 --work-dir /tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work",
+      "at": "2026-09-18T17:07:20Z"
+    },
+    {
+      "video": "03.mp4",
+      "source": {
+        "duration_s": 90.333333,
+        "video": {
+          "codec": "h264",
+          "width": 464,
+          "height": 848,
+          "fps": 30.0,
+          "frames": "2710"
+        },
+        "audio": {
+          "codec": "aac",
+          "sample_rate": "44100",
+          "channels": 2
+        }
+      },
+      "run": 2,
+      "returncode": 0,
+      "wall_s": 560.518,
+      "gpu_occupied_s": 490.8,
+      "gpu_min_per_video_min": 5.4332,
+      "wall_s_per_video_min": 372.3,
+      "gpu_occupancy_fraction_of_wall": 0.8756,
+      "gpu_first_active_after_s": 2.796,
+      "gpu_peak_process_group_mib": 23038,
+      "gpu_mean_active_process_group_mib": 18846.7,
+      "samples": 2467,
+      "active_samples": 2454,
+      "output": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/03_r2.mp4",
+      "output_validation": {
+        "pass": true,
+        "reason": null,
+        "duration_delta_s": 0.0667,
+        "tolerance_s": 0.15,
+        "output_meta": {
+          "duration_s": 90.4,
+          "video": {
+            "codec": "h264",
+            "width": 464,
+            "height": 848,
+            "fps": 25.0,
+            "frames": "2260"
+          },
+          "audio": {
+            "codec": "aac",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        }
+      },
+      "command": "python scripts/pilot/run_clean_pipeline_05.py --input /workspace/dub/test_videos/03.mp4 --output /tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/03_r2.mp4 --target-lang en --no-codeformer --video-backend optimized --face-router retinaface --face-min-w 50 --face-min-h 80 --retina-conf 0.8 --router-stride 3 --speech-gate on --gate-margin-s 0.24 --gate-merge-gap-s 0.6 --crossfade-frames 4 --deepcache-interval 5 --window-batch-size 2 --sdpa-backend auto --compile-backend none --seed 1247 --work-dir /tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work",
+      "at": "2026-09-18T17:16:41Z"
+    },
+    {
+      "video": "04.mp4",
+      "source": {
+        "duration_s": 53.9,
+        "video": {
+          "codec": "h264",
+          "width": 464,
+          "height": 848,
+          "fps": 30.0,
+          "frames": "1617"
+        },
+        "audio": {
+          "codec": "aac",
+          "sample_rate": "44100",
+          "channels": 2
+        }
+      },
+      "run": 1,
+      "returncode": 0,
+      "wall_s": 316.871,
+      "gpu_occupied_s": 275.6,
+      "gpu_min_per_video_min": 5.1132,
+      "wall_s_per_video_min": 352.732,
+      "gpu_occupancy_fraction_of_wall": 0.8698,
+      "gpu_first_active_after_s": 2.519,
+      "gpu_peak_process_group_mib": 23024,
+      "gpu_mean_active_process_group_mib": 17758.9,
+      "samples": 1389,
+      "active_samples": 1378,
+      "output": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/04_r1.mp4",
+      "output_validation": {
+        "pass": true,
+        "reason": null,
+        "duration_delta_s": 0.06,
+        "tolerance_s": 0.15,
+        "output_meta": {
+          "duration_s": 53.96,
+          "video": {
+            "codec": "h264",
+            "width": 464,
+            "height": 848,
+            "fps": 25.0,
+            "frames": "1349"
+          },
+          "audio": {
+            "codec": "aac",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        }
+      },
+      "command": "python scripts/pilot/run_clean_pipeline_05.py --input /workspace/dub/test_videos/04.mp4 --output /tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/04_r1.mp4 --target-lang en --no-codeformer --video-backend optimized --face-router retinaface --face-min-w 50 --face-min-h 80 --retina-conf 0.8 --router-stride 3 --speech-gate on --gate-margin-s 0.24 --gate-merge-gap-s 0.6 --crossfade-frames 4 --deepcache-interval 5 --window-batch-size 2 --sdpa-backend auto --compile-backend none --seed 1247 --work-dir /tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work",
+      "at": "2026-09-18T17:21:58Z"
+    },
+    {
+      "video": "04.mp4",
+      "source": {
+        "duration_s": 53.9,
+        "video": {
+          "codec": "h264",
+          "width": 464,
+          "height": 848,
+          "fps": 30.0,
+          "frames": "1617"
+        },
+        "audio": {
+          "codec": "aac",
+          "sample_rate": "44100",
+          "channels": 2
+        }
+      },
+      "run": 2,
+      "returncode": 0,
+      "wall_s": 318.288,
+      "gpu_occupied_s": 278.6,
+      "gpu_min_per_video_min": 5.1688,
+      "wall_s_per_video_min": 354.31,
+      "gpu_occupancy_fraction_of_wall": 0.8753,
+      "gpu_first_active_after_s": 2.268,
+      "gpu_peak_process_group_mib": 22014,
+      "gpu_mean_active_process_group_mib": 16974.6,
+      "samples": 1404,
+      "active_samples": 1393,
+      "output": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/04_r2.mp4",
+      "output_validation": {
+        "pass": true,
+        "reason": null,
+        "duration_delta_s": 0.06,
+        "tolerance_s": 0.15,
+        "output_meta": {
+          "duration_s": 53.96,
+          "video": {
+            "codec": "h264",
+            "width": 464,
+            "height": 848,
+            "fps": 25.0,
+            "frames": "1349"
+          },
+          "audio": {
+            "codec": "aac",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        }
+      },
+      "command": "python scripts/pilot/run_clean_pipeline_05.py --input /workspace/dub/test_videos/04.mp4 --output /tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/04_r2.mp4 --target-lang en --no-codeformer --video-backend optimized --face-router retinaface --face-min-w 50 --face-min-h 80 --retina-conf 0.8 --router-stride 3 --speech-gate on --gate-margin-s 0.24 --gate-merge-gap-s 0.6 --crossfade-frames 4 --deepcache-interval 5 --window-batch-size 2 --sdpa-backend auto --compile-backend none --seed 1247 --work-dir /tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work",
+      "at": "2026-09-18T17:27:16Z"
+    },
+    {
+      "video": "05.mp4",
+      "source": {
+        "duration_s": 52.366667,
+        "video": {
+          "codec": "h264",
+          "width": 464,
+          "height": 848,
+          "fps": 29.92361553150859,
+          "frames": "1567"
+        },
+        "audio": {
+          "codec": "aac",
+          "sample_rate": "44100",
+          "channels": 2
+        }
+      },
+      "run": 1,
+      "returncode": 0,
+      "wall_s": 279.304,
+      "gpu_occupied_s": 243.4,
+      "gpu_min_per_video_min": 4.648,
+      "wall_s_per_video_min": 320.018,
+      "gpu_occupancy_fraction_of_wall": 0.8715,
+      "gpu_first_active_after_s": 2.489,
+      "gpu_peak_process_group_mib": 22016,
+      "gpu_mean_active_process_group_mib": 16455.7,
+      "samples": 1229,
+      "active_samples": 1217,
+      "output": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/05_r1.mp4",
+      "output_validation": {
+        "pass": true,
+        "reason": null,
+        "duration_delta_s": 0.0733,
+        "tolerance_s": 0.15,
+        "output_meta": {
+          "duration_s": 52.44,
+          "video": {
+            "codec": "h264",
+            "width": 464,
+            "height": 848,
+            "fps": 25.0,
+            "frames": "1311"
+          },
+          "audio": {
+            "codec": "aac",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        }
+      },
+      "command": "python scripts/pilot/run_clean_pipeline_05.py --input /workspace/dub/test_videos/05.mp4 --output /tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/05_r1.mp4 --target-lang en --no-codeformer --video-backend optimized --face-router retinaface --face-min-w 50 --face-min-h 80 --retina-conf 0.8 --router-stride 3 --speech-gate on --gate-margin-s 0.24 --gate-merge-gap-s 0.6 --crossfade-frames 4 --deepcache-interval 5 --window-batch-size 2 --sdpa-backend auto --compile-backend none --seed 1247 --work-dir /tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work",
+      "at": "2026-09-18T17:31:56Z"
+    },
+    {
+      "video": "05.mp4",
+      "source": {
+        "duration_s": 52.366667,
+        "video": {
+          "codec": "h264",
+          "width": 464,
+          "height": 848,
+          "fps": 29.92361553150859,
+          "frames": "1567"
+        },
+        "audio": {
+          "codec": "aac",
+          "sample_rate": "44100",
+          "channels": 2
+        }
+      },
+      "run": 2,
+      "returncode": 0,
+      "wall_s": 276.931,
+      "gpu_occupied_s": 242.2,
+      "gpu_min_per_video_min": 4.6251,
+      "wall_s_per_video_min": 317.299,
+      "gpu_occupancy_fraction_of_wall": 0.8746,
+      "gpu_first_active_after_s": 2.475,
+      "gpu_peak_process_group_mib": 23026,
+      "gpu_mean_active_process_group_mib": 17143.2,
+      "samples": 1222,
+      "active_samples": 1211,
+      "output": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/05_r2.mp4",
+      "output_validation": {
+        "pass": true,
+        "reason": null,
+        "duration_delta_s": 0.0733,
+        "tolerance_s": 0.15,
+        "output_meta": {
+          "duration_s": 52.44,
+          "video": {
+            "codec": "h264",
+            "width": 464,
+            "height": 848,
+            "fps": 25.0,
+            "frames": "1311"
+          },
+          "audio": {
+            "codec": "aac",
+            "sample_rate": "24000",
+            "channels": 1
+          }
+        }
+      },
+      "command": "python scripts/pilot/run_clean_pipeline_05.py --input /workspace/dub/test_videos/05.mp4 --output /tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/05_r2.mp4 --target-lang en --no-codeformer --video-backend optimized --face-router retinaface --face-min-w 50 --face-min-h 80 --retina-conf 0.8 --router-stride 3 --speech-gate on --gate-margin-s 0.24 --gate-merge-gap-s 0.6 --crossfade-frames 4 --deepcache-interval 5 --window-batch-size 2 --sdpa-backend auto --compile-backend none --seed 1247 --work-dir /tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work",
+      "at": "2026-09-18T17:36:33Z"
+    }
+  ],
+  "at": "2026-09-18T17:36:34Z"
+}

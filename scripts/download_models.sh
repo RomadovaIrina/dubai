@@ -1,5 +1,5 @@
 #!/bin/bash
-# Downloads every weight the pilot needs into models/ (idempotent; re-run to resume).
+# Downloads every weight the pilot needs into models/ (idempotent; re-run to resume). Qwen: Q8_0 since the pilot 0.9 decision (2026-09-18).
 # Gated pyannote models are pulled lazily by check_pyannote.py using HF_TOKEN from /workspace/.env.
 set -euo pipefail
 DUB_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -20,7 +20,7 @@ PYEOF
 }
 
 echo "== faster-whisper large-v3 (~3.1 GB)"; snap Systran/faster-whisper-large-v3 "$M/whisper-large-v3"
-echo "== Qwen2.5-7B-Instruct GGUF q4_k_m (~4.7 GB, 2 shards)"; snap Qwen/Qwen2.5-7B-Instruct-GGUF "$M/qwen2.5-7b-instruct-gguf" "qwen2.5-7b-instruct-q4_k_m*.gguf"
+echo "== Qwen2.5-7B-Instruct GGUF Q8_0 (~8.1 GB, 3 shards; production quant per pilot 0.9)"; snap Qwen/Qwen2.5-7B-Instruct-GGUF "$M/qwen2.5-7b-instruct-gguf" "qwen2.5-7b-instruct-q8_0*.gguf"
 echo "== Chatterbox multilingual v3"; snap ResembleAI/chatterbox "$M/chatterbox" "ve.pt" "s3gen.pt" "conds.pt" "t3_mtl23ls_v3.safetensors" "grapheme_mtl_merged_expanded_v1.json" "Cangjie5_TC.json" "*.json"
 echo "== LatentSync 1.6 (unet 5 GB + whisper tiny)"; snap ByteDance/LatentSync-1.6 "$M/latentsync" "latentsync_unet.pt" "whisper/tiny.pt"
 echo "== sd-vae-ft-mse (LatentSync VAE)"; snap stabilityai/sd-vae-ft-mse "$M/sd-vae-ft-mse" "*.json" "*.safetensors"

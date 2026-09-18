@@ -1,0 +1,2003 @@
+{
+  "task": "0.5-runner",
+  "input": "/workspace/dub/test_videos/05.mp4",
+  "output": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/05_r1.mp4",
+  "target_lang": "en",
+  "codeformer": "DISABLED (not invoked)",
+  "work_dir": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work/work_05",
+  "config": {
+    "seed": 1247,
+    "max_unit_s": 20.0,
+    "threads": 16
+  },
+  "source": {
+    "duration_s": 52.366667,
+    "size_bytes": 11034329,
+    "container": "mov,mp4,m4a,3gp,3g2,mj2",
+    "video": {
+      "codec": "h264",
+      "profile": "High",
+      "width": 464,
+      "height": 848,
+      "r_frame_rate": "30/1",
+      "avg_frame_rate": "47010/1571",
+      "fps": 30.0,
+      "avg_fps": 29.9236,
+      "vfr": true,
+      "pix_fmt": "yuv420p",
+      "nb_frames": "1567",
+      "duration_s": 52.366667,
+      "bit_rate": "1618092"
+    },
+    "audio": {
+      "codec": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "channel_layout": "stereo",
+      "bit_rate": "62616",
+      "duration_s": 52.365011
+    },
+    "has_video": true,
+    "has_audio": true
+  },
+  "speech_intervals": [
+    {
+      "start": 1.8,
+      "end": 4.0
+    },
+    {
+      "start": 4.8,
+      "end": 6.3
+    },
+    {
+      "start": 7.4,
+      "end": 9.5
+    },
+    {
+      "start": 10.9,
+      "end": 12.7
+    },
+    {
+      "start": 13.7,
+      "end": 15.8
+    },
+    {
+      "start": 17.0,
+      "end": 17.6
+    },
+    {
+      "start": 19.6,
+      "end": 21.5
+    },
+    {
+      "start": 22.9,
+      "end": 24.6
+    },
+    {
+      "start": 26.2,
+      "end": 29.2
+    },
+    {
+      "start": 30.4,
+      "end": 32.3
+    },
+    {
+      "start": 32.9,
+      "end": 34.0
+    },
+    {
+      "start": 36.3,
+      "end": 37.0
+    },
+    {
+      "start": 38.4,
+      "end": 39.9
+    },
+    {
+      "start": 40.3,
+      "end": 41.9
+    },
+    {
+      "start": 42.8,
+      "end": 44.8
+    },
+    {
+      "start": 46.0,
+      "end": 46.7
+    },
+    {
+      "start": 47.6,
+      "end": 49.1
+    }
+  ],
+  "timeline": {
+    "chunks": [
+      {
+        "start_s": 0.0,
+        "end_s": 1.8,
+        "type": "PASS_THROUGH",
+        "index": 0,
+        "duration_s": 1.8
+      },
+      {
+        "start_s": 1.8,
+        "end_s": 4.0,
+        "type": "SPEECH",
+        "index": 1,
+        "duration_s": 2.2
+      },
+      {
+        "start_s": 4.0,
+        "end_s": 4.8,
+        "type": "PASS_THROUGH",
+        "index": 2,
+        "duration_s": 0.8
+      },
+      {
+        "start_s": 4.8,
+        "end_s": 6.3,
+        "type": "SPEECH",
+        "index": 3,
+        "duration_s": 1.5
+      },
+      {
+        "start_s": 6.3,
+        "end_s": 7.4,
+        "type": "PASS_THROUGH",
+        "index": 4,
+        "duration_s": 1.1
+      },
+      {
+        "start_s": 7.4,
+        "end_s": 9.5,
+        "type": "SPEECH",
+        "index": 5,
+        "duration_s": 2.1
+      },
+      {
+        "start_s": 9.5,
+        "end_s": 10.9,
+        "type": "PASS_THROUGH",
+        "index": 6,
+        "duration_s": 1.4
+      },
+      {
+        "start_s": 10.9,
+        "end_s": 12.7,
+        "type": "SPEECH",
+        "index": 7,
+        "duration_s": 1.8
+      },
+      {
+        "start_s": 12.7,
+        "end_s": 13.7,
+        "type": "PASS_THROUGH",
+        "index": 8,
+        "duration_s": 1.0
+      },
+      {
+        "start_s": 13.7,
+        "end_s": 15.8,
+        "type": "SPEECH",
+        "index": 9,
+        "duration_s": 2.1
+      },
+      {
+        "start_s": 15.8,
+        "end_s": 17.0,
+        "type": "PASS_THROUGH",
+        "index": 10,
+        "duration_s": 1.2
+      },
+      {
+        "start_s": 17.0,
+        "end_s": 17.6,
+        "type": "SPEECH",
+        "index": 11,
+        "duration_s": 0.6
+      },
+      {
+        "start_s": 17.6,
+        "end_s": 19.6,
+        "type": "PASS_THROUGH",
+        "index": 12,
+        "duration_s": 2.0
+      },
+      {
+        "start_s": 19.6,
+        "end_s": 21.5,
+        "type": "SPEECH",
+        "index": 13,
+        "duration_s": 1.9
+      },
+      {
+        "start_s": 21.5,
+        "end_s": 22.9,
+        "type": "PASS_THROUGH",
+        "index": 14,
+        "duration_s": 1.4
+      },
+      {
+        "start_s": 22.9,
+        "end_s": 24.6,
+        "type": "SPEECH",
+        "index": 15,
+        "duration_s": 1.7
+      },
+      {
+        "start_s": 24.6,
+        "end_s": 26.2,
+        "type": "PASS_THROUGH",
+        "index": 16,
+        "duration_s": 1.6
+      },
+      {
+        "start_s": 26.2,
+        "end_s": 29.2,
+        "type": "SPEECH",
+        "index": 17,
+        "duration_s": 3.0
+      },
+      {
+        "start_s": 29.2,
+        "end_s": 30.4,
+        "type": "PASS_THROUGH",
+        "index": 18,
+        "duration_s": 1.2
+      },
+      {
+        "start_s": 30.4,
+        "end_s": 32.3,
+        "type": "SPEECH",
+        "index": 19,
+        "duration_s": 1.9
+      },
+      {
+        "start_s": 32.3,
+        "end_s": 32.9,
+        "type": "PASS_THROUGH",
+        "index": 20,
+        "duration_s": 0.6
+      },
+      {
+        "start_s": 32.9,
+        "end_s": 34.0,
+        "type": "SPEECH",
+        "index": 21,
+        "duration_s": 1.1
+      },
+      {
+        "start_s": 34.0,
+        "end_s": 36.3,
+        "type": "PASS_THROUGH",
+        "index": 22,
+        "duration_s": 2.3
+      },
+      {
+        "start_s": 36.3,
+        "end_s": 37.0,
+        "type": "SPEECH",
+        "index": 23,
+        "duration_s": 0.7
+      },
+      {
+        "start_s": 37.0,
+        "end_s": 38.4,
+        "type": "PASS_THROUGH",
+        "index": 24,
+        "duration_s": 1.4
+      },
+      {
+        "start_s": 38.4,
+        "end_s": 39.9,
+        "type": "SPEECH",
+        "index": 25,
+        "duration_s": 1.5
+      },
+      {
+        "start_s": 39.9,
+        "end_s": 40.3,
+        "type": "PASS_THROUGH",
+        "index": 26,
+        "duration_s": 0.4
+      },
+      {
+        "start_s": 40.3,
+        "end_s": 41.9,
+        "type": "SPEECH",
+        "index": 27,
+        "duration_s": 1.6
+      },
+      {
+        "start_s": 41.9,
+        "end_s": 42.8,
+        "type": "PASS_THROUGH",
+        "index": 28,
+        "duration_s": 0.9
+      },
+      {
+        "start_s": 42.8,
+        "end_s": 44.8,
+        "type": "SPEECH",
+        "index": 29,
+        "duration_s": 2.0
+      },
+      {
+        "start_s": 44.8,
+        "end_s": 46.0,
+        "type": "PASS_THROUGH",
+        "index": 30,
+        "duration_s": 1.2
+      },
+      {
+        "start_s": 46.0,
+        "end_s": 46.7,
+        "type": "SPEECH",
+        "index": 31,
+        "duration_s": 0.7
+      },
+      {
+        "start_s": 46.7,
+        "end_s": 47.6,
+        "type": "PASS_THROUGH",
+        "index": 32,
+        "duration_s": 0.9
+      },
+      {
+        "start_s": 47.6,
+        "end_s": 49.1,
+        "type": "SPEECH",
+        "index": 33,
+        "duration_s": 1.5
+      },
+      {
+        "start_s": 49.1,
+        "end_s": 52.3667,
+        "type": "PASS_THROUGH",
+        "index": 34,
+        "duration_s": 3.2667
+      }
+    ],
+    "speech_seconds": 27.9,
+    "pass_through_seconds": 24.467
+  },
+  "asr": {
+    "language": "ru",
+    "language_probability": 0.999,
+    "audio_duration_s": 52.383,
+    "compute_type": "int8_float16",
+    "model": "faster-whisper large-v3",
+    "segments": [
+      {
+        "id": 1,
+        "start": 0.98,
+        "end": 5.84,
+        "text": "Давайте протестируем еще вот такой формат съемки видео",
+        "words": [
+          {
+            "word": " Давайте",
+            "start": 0.98,
+            "end": 1.92,
+            "p": 0.653
+          },
+          {
+            "word": " протестируем",
+            "start": 1.92,
+            "end": 2.86,
+            "p": 0.999
+          },
+          {
+            "word": " еще",
+            "start": 2.86,
+            "end": 3.04,
+            "p": 0.924
+          },
+          {
+            "word": " вот",
+            "start": 3.04,
+            "end": 3.26,
+            "p": 0.952
+          },
+          {
+            "word": " такой",
+            "start": 3.26,
+            "end": 3.5,
+            "p": 1.0
+          },
+          {
+            "word": " формат",
+            "start": 3.5,
+            "end": 5.1,
+            "p": 0.972
+          },
+          {
+            "word": " съемки",
+            "start": 5.1,
+            "end": 5.62,
+            "p": 0.997
+          },
+          {
+            "word": " видео",
+            "start": 5.62,
+            "end": 5.84,
+            "p": 0.998
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "start": 5.84,
+        "end": 12.0,
+        "text": "Все-таки современные телефоны уже позволяют это делать",
+        "words": [
+          {
+            "word": " Все",
+            "start": 5.84,
+            "end": 7.36,
+            "p": 0.05
+          },
+          {
+            "word": "-таки",
+            "start": 7.36,
+            "end": 7.6,
+            "p": 0.889
+          },
+          {
+            "word": " современные",
+            "start": 7.6,
+            "end": 8.28,
+            "p": 0.99
+          },
+          {
+            "word": " телефоны",
+            "start": 8.28,
+            "end": 8.9,
+            "p": 1.0
+          },
+          {
+            "word": " уже",
+            "start": 8.9,
+            "end": 9.18,
+            "p": 0.974
+          },
+          {
+            "word": " позволяют",
+            "start": 9.18,
+            "end": 11.36,
+            "p": 0.982
+          },
+          {
+            "word": " это",
+            "start": 11.36,
+            "end": 11.58,
+            "p": 0.998
+          },
+          {
+            "word": " делать",
+            "start": 11.58,
+            "end": 12.0,
+            "p": 0.999
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "start": 12.0,
+        "end": 21.24,
+        "text": "И такая функция добавляет, конечно же, у нас популярности и возможностей",
+        "words": [
+          {
+            "word": " И",
+            "start": 12.0,
+            "end": 12.3,
+            "p": 0.821
+          },
+          {
+            "word": " такая",
+            "start": 12.3,
+            "end": 13.76,
+            "p": 0.997
+          },
+          {
+            "word": " функция",
+            "start": 13.76,
+            "end": 14.32,
+            "p": 1.0
+          },
+          {
+            "word": " добавляет,",
+            "start": 14.32,
+            "end": 14.98,
+            "p": 0.999
+          },
+          {
+            "word": " конечно",
+            "start": 14.98,
+            "end": 15.24,
+            "p": 1.0
+          },
+          {
+            "word": " же,",
+            "start": 15.24,
+            "end": 15.62,
+            "p": 1.0
+          },
+          {
+            "word": " у",
+            "start": 15.64,
+            "end": 17.02,
+            "p": 0.999
+          },
+          {
+            "word": " нас",
+            "start": 17.02,
+            "end": 17.32,
+            "p": 1.0
+          },
+          {
+            "word": " популярности",
+            "start": 17.32,
+            "end": 20.4,
+            "p": 0.983
+          },
+          {
+            "word": " и",
+            "start": 20.4,
+            "end": 20.48,
+            "p": 0.999
+          },
+          {
+            "word": " возможностей",
+            "start": 20.48,
+            "end": 21.24,
+            "p": 0.998
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "start": 21.24,
+        "end": 28.86,
+        "text": "Вот, хочется просто посмотреть, как справится наше приложение в таком формате",
+        "words": [
+          {
+            "word": " Вот,",
+            "start": 21.24,
+            "end": 23.0,
+            "p": 0.596
+          },
+          {
+            "word": " хочется",
+            "start": 23.0,
+            "end": 23.32,
+            "p": 1.0
+          },
+          {
+            "word": " просто",
+            "start": 23.32,
+            "end": 23.66,
+            "p": 1.0
+          },
+          {
+            "word": " посмотреть,",
+            "start": 23.66,
+            "end": 24.18,
+            "p": 1.0
+          },
+          {
+            "word": " как",
+            "start": 24.4,
+            "end": 26.22,
+            "p": 1.0
+          },
+          {
+            "word": " справится",
+            "start": 26.22,
+            "end": 26.94,
+            "p": 0.976
+          },
+          {
+            "word": " наше",
+            "start": 26.94,
+            "end": 27.24,
+            "p": 1.0
+          },
+          {
+            "word": " приложение",
+            "start": 27.24,
+            "end": 27.88,
+            "p": 1.0
+          },
+          {
+            "word": " в",
+            "start": 27.88,
+            "end": 28.06,
+            "p": 0.999
+          },
+          {
+            "word": " таком",
+            "start": 28.06,
+            "end": 28.34,
+            "p": 1.0
+          },
+          {
+            "word": " формате",
+            "start": 28.34,
+            "end": 28.86,
+            "p": 1.0
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "start": 29.76,
+        "end": 33.52,
+        "text": "Просто вот иду, снимаю и что-то говорю",
+        "words": [
+          {
+            "word": " Просто",
+            "start": 29.76,
+            "end": 30.6,
+            "p": 0.07
+          },
+          {
+            "word": " вот",
+            "start": 30.6,
+            "end": 30.88,
+            "p": 0.838
+          },
+          {
+            "word": " иду,",
+            "start": 30.88,
+            "end": 31.44,
+            "p": 0.935
+          },
+          {
+            "word": " снимаю",
+            "start": 31.48,
+            "end": 31.94,
+            "p": 0.993
+          },
+          {
+            "word": " и",
+            "start": 31.94,
+            "end": 32.56,
+            "p": 0.822
+          },
+          {
+            "word": " что",
+            "start": 32.56,
+            "end": 33.08,
+            "p": 0.993
+          },
+          {
+            "word": "-то",
+            "start": 33.08,
+            "end": 33.26,
+            "p": 0.988
+          },
+          {
+            "word": " говорю",
+            "start": 33.26,
+            "end": 33.52,
+            "p": 0.995
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "start": 35.48,
+        "end": 41.58,
+        "text": "Так что пускай будет такое видео, лишним оно точно не будет",
+        "words": [
+          {
+            "word": " Так",
+            "start": 35.48,
+            "end": 36.32,
+            "p": 0.059
+          },
+          {
+            "word": " что",
+            "start": 36.32,
+            "end": 36.6,
+            "p": 0.994
+          },
+          {
+            "word": " пускай",
+            "start": 36.6,
+            "end": 38.68,
+            "p": 0.799
+          },
+          {
+            "word": " будет",
+            "start": 38.68,
+            "end": 38.88,
+            "p": 0.989
+          },
+          {
+            "word": " такое",
+            "start": 38.88,
+            "end": 39.16,
+            "p": 0.993
+          },
+          {
+            "word": " видео,",
+            "start": 39.16,
+            "end": 39.6,
+            "p": 0.997
+          },
+          {
+            "word": " лишним",
+            "start": 39.64,
+            "end": 40.64,
+            "p": 0.995
+          },
+          {
+            "word": " оно",
+            "start": 40.64,
+            "end": 40.8,
+            "p": 0.982
+          },
+          {
+            "word": " точно",
+            "start": 40.8,
+            "end": 41.08,
+            "p": 0.995
+          },
+          {
+            "word": " не",
+            "start": 41.08,
+            "end": 41.34,
+            "p": 0.998
+          },
+          {
+            "word": " будет",
+            "start": 41.34,
+            "end": 41.58,
+            "p": 0.999
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "start": 41.58,
+        "end": 48.78,
+        "text": "Тестим полностью все варианты, которые возможно придумать",
+        "words": [
+          {
+            "word": " Тестим",
+            "start": 41.58,
+            "end": 43.12,
+            "p": 0.849
+          },
+          {
+            "word": " полностью",
+            "start": 43.12,
+            "end": 43.46,
+            "p": 0.998
+          },
+          {
+            "word": " все",
+            "start": 43.46,
+            "end": 43.86,
+            "p": 0.997
+          },
+          {
+            "word": " варианты,",
+            "start": 43.86,
+            "end": 44.54,
+            "p": 0.999
+          },
+          {
+            "word": " которые",
+            "start": 44.54,
+            "end": 46.2,
+            "p": 0.997
+          },
+          {
+            "word": " возможно",
+            "start": 46.2,
+            "end": 47.94,
+            "p": 0.973
+          },
+          {
+            "word": " придумать",
+            "start": 47.94,
+            "end": 48.78,
+            "p": 0.999
+          }
+        ]
+      }
+    ]
+  },
+  "source_lang": "ru",
+  "diarization": {
+    "model": "pyannote/speaker-diarization-3.1",
+    "turns": [
+      {
+        "start": 1.786,
+        "end": 3.845,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 4.756,
+        "end": 6.14,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 7.321,
+        "end": 9.447,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 10.882,
+        "end": 12.586,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 13.649,
+        "end": 15.792,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 16.99,
+        "end": 17.547,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 19.201,
+        "end": 21.412,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 22.846,
+        "end": 24.533,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 26.17,
+        "end": 29.056,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 30.389,
+        "end": 32.482,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 32.802,
+        "end": 33.815,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 36.228,
+        "end": 37.055,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 38.388,
+        "end": 40.042,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 40.21,
+        "end": 41.813,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 42.742,
+        "end": 44.632,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 45.897,
+        "end": 47.382,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 47.467,
+        "end": 48.952,
+        "speaker": "SPEAKER_00"
+      }
+    ],
+    "speakers": [
+      "SPEAKER_00"
+    ]
+  },
+  "translation": {
+    "model": "qwen2.5-7b-instruct-q8_0-00001-of-00003.gguf",
+    "quant": "q8_0",
+    "n_ctx": 4096,
+    "n_threads": 16,
+    "n_gpu_layers": 0,
+    "system_prompt": "You are a professional translator. Return only the translation, with no explanation.",
+    "direction": "Russian->English",
+    "usage": {
+      "prompt_tokens": 357,
+      "completion_tokens": 83
+    }
+  },
+  "tts": {
+    "model": "ChatterboxMultilingualTTS t3=v3 (models/chatterbox)",
+    "sr": 24000,
+    "dtype": "float16",
+    "language_id": "en",
+    "voice_reference": "speaker's own diarized speech via audio_prompt_path/prepare_conditionals",
+    "references": {
+      "SPEAKER_00": {
+        "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work/work_05/ref_SPEAKER_00.wav",
+        "seconds": 10.0,
+        "turns_used": 5,
+        "source": "diarized_speech"
+      }
+    }
+  },
+  "dubbed_track": {
+    "wav24k": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work/work_05/dubbed_24k.wav",
+    "wav16k": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work/work_05/dubbed_16k.wav",
+    "aac": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work/work_05/dubbed_aac.m4a",
+    "seconds": 52.367,
+    "sr": 24000,
+    "peak_before_norm": 0.8803,
+    "speech_seconds": 44.86,
+    "non_speech": "silence (original timing preserved)"
+  },
+  "units": [
+    {
+      "asr_segment": 1,
+      "start": 0.98,
+      "end": 5.84,
+      "text": "Давайте протестируем еще вот такой формат съемки видео",
+      "words": 8,
+      "id": 0,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 3.143,
+      "translation": "Let's test another such format for video shooting",
+      "tts": {
+        "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work/work_05/tts_u00.wav",
+        "seconds": 2.84,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16"
+      },
+      "slot": {
+        "start": 0.98,
+        "end": 5.82,
+        "seconds": 4.84
+      },
+      "alignment": {
+        "tts_seconds": 2.84,
+        "ratio_tts_to_slot": 0.5868,
+        "mode": "natural_speed_pad_silence",
+        "atempo": 1.0,
+        "aligned_seconds": 4.84,
+        "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work/work_05/aligned_u00.wav"
+      }
+    },
+    {
+      "asr_segment": 2,
+      "start": 5.84,
+      "end": 12.0,
+      "text": "Все-таки современные телефоны уже позволяют это делать",
+      "words": 8,
+      "id": 1,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 3.544,
+      "translation": "After all, modern phones already allow this to be done",
+      "tts": {
+        "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work/work_05/tts_u01.wav",
+        "seconds": 2.68,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16"
+      },
+      "slot": {
+        "start": 5.84,
+        "end": 11.98,
+        "seconds": 6.14
+      },
+      "alignment": {
+        "tts_seconds": 2.68,
+        "ratio_tts_to_slot": 0.4365,
+        "mode": "natural_speed_pad_silence",
+        "atempo": 1.0,
+        "aligned_seconds": 6.14,
+        "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work/work_05/aligned_u01.wav"
+      }
+    },
+    {
+      "asr_segment": 3,
+      "start": 12.0,
+      "end": 21.24,
+      "text": "И такая функция добавляет, конечно же, у нас популярности и возможностей",
+      "words": 11,
+      "id": 2,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 5.325,
+      "translation": "And such a function, of course, adds us popularity and opportunities.",
+      "tts": {
+        "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work/work_05/tts_u02.wav",
+        "seconds": 3.76,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16"
+      },
+      "slot": {
+        "start": 12.0,
+        "end": 21.22,
+        "seconds": 9.22
+      },
+      "alignment": {
+        "tts_seconds": 3.76,
+        "ratio_tts_to_slot": 0.4078,
+        "mode": "natural_speed_pad_silence",
+        "atempo": 1.0,
+        "aligned_seconds": 9.22,
+        "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work/work_05/aligned_u02.wav"
+      }
+    },
+    {
+      "asr_segment": 4,
+      "start": 21.24,
+      "end": 28.86,
+      "text": "Вот, хочется просто посмотреть, как справится наше приложение в таком формате",
+      "words": 11,
+      "id": 3,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 4.549,
+      "translation": "Here, just want to see how our application will handle this format.",
+      "tts": {
+        "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work/work_05/tts_u03.wav",
+        "seconds": 3.56,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16"
+      },
+      "slot": {
+        "start": 21.24,
+        "end": 28.86,
+        "seconds": 7.62
+      },
+      "alignment": {
+        "tts_seconds": 3.56,
+        "ratio_tts_to_slot": 0.4672,
+        "mode": "natural_speed_pad_silence",
+        "atempo": 1.0,
+        "aligned_seconds": 7.62,
+        "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work/work_05/aligned_u03.wav"
+      }
+    },
+    {
+      "asr_segment": 5,
+      "start": 29.76,
+      "end": 33.52,
+      "text": "Просто вот иду, снимаю и что-то говорю",
+      "words": 8,
+      "id": 4,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 2.811,
+      "translation": "Just here I go, take it off and say something",
+      "tts": {
+        "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work/work_05/tts_u04.wav",
+        "seconds": 2.8,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16"
+      },
+      "slot": {
+        "start": 29.76,
+        "end": 33.52,
+        "seconds": 3.76
+      },
+      "alignment": {
+        "tts_seconds": 2.8,
+        "ratio_tts_to_slot": 0.7447,
+        "mode": "natural_speed_pad_silence",
+        "atempo": 1.0,
+        "aligned_seconds": 3.76,
+        "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work/work_05/aligned_u04.wav"
+      }
+    },
+    {
+      "asr_segment": 6,
+      "start": 35.48,
+      "end": 41.58,
+      "text": "Так что пускай будет такое видео, лишним оно точно не будет",
+      "words": 11,
+      "id": 5,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 3.851,
+      "translation": "So let there be such a video; it will definitely not be多余的",
+      "tts": {
+        "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work/work_05/tts_u05.wav",
+        "seconds": 3.08,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16"
+      },
+      "slot": {
+        "start": 35.48,
+        "end": 41.56,
+        "seconds": 6.08
+      },
+      "alignment": {
+        "tts_seconds": 3.08,
+        "ratio_tts_to_slot": 0.5066,
+        "mode": "natural_speed_pad_silence",
+        "atempo": 1.0,
+        "aligned_seconds": 6.08,
+        "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work/work_05/aligned_u05.wav"
+      }
+    },
+    {
+      "asr_segment": 7,
+      "start": 41.58,
+      "end": 48.78,
+      "text": "Тестим полностью все варианты, которые возможно придумать",
+      "words": 7,
+      "id": 6,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 4.921,
+      "translation": "We test all possible variants that can be imagined.",
+      "tts": {
+        "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work/work_05/tts_u06.wav",
+        "seconds": 2.76,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16"
+      },
+      "slot": {
+        "start": 41.58,
+        "end": 48.78,
+        "seconds": 7.2
+      },
+      "alignment": {
+        "tts_seconds": 2.76,
+        "ratio_tts_to_slot": 0.3833,
+        "mode": "natural_speed_pad_silence",
+        "atempo": 1.0,
+        "aligned_seconds": 7.2,
+        "file": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/work/work_05/aligned_u06.wav"
+      }
+    }
+  ],
+  "video_backend": "optimized",
+  "speech_gate": {
+    "enabled": true,
+    "margin_s": 0.24,
+    "merge_gap_s": 0.6,
+    "crossfade_frames": 4,
+    "source_speech_seconds": 27.9,
+    "dubbed_speech_seconds": 20.9,
+    "gate_seconds": 42.76,
+    "gate_fraction": 0.8165,
+    "intervals": [
+      [
+        0.76,
+        9.74
+      ],
+      [
+        10.66,
+        16.04
+      ],
+      [
+        16.76,
+        17.84
+      ],
+      [
+        19.36,
+        25.04
+      ],
+      [
+        25.96,
+        34.24
+      ],
+      [
+        35.26,
+        45.04
+      ],
+      [
+        45.76,
+        49.34
+      ]
+    ]
+  },
+  "lipsync": {
+    "router": "retinaface",
+    "router_params": {
+      "detector": "facexlib retinaface_resnet50 fp16",
+      "weights": "/workspace/dub/models/facexlib",
+      "face_min_w": 50,
+      "face_min_h": 80,
+      "retina_conf": 0.8,
+      "aspect_range": [
+        0.2,
+        1.5
+      ]
+    },
+    "router_stride": 3,
+    "router_detections": 358,
+    "speech_gate": {
+      "enabled": true,
+      "intervals": [
+        [
+          0.76,
+          9.74
+        ],
+        [
+          10.66,
+          16.04
+        ],
+        [
+          16.76,
+          17.84
+        ],
+        [
+          19.36,
+          25.04
+        ],
+        [
+          25.96,
+          34.24
+        ],
+        [
+          35.26,
+          45.04
+        ],
+        [
+          45.76,
+          49.34
+        ]
+      ],
+      "gated_in_frames": 1071,
+      "gated_out_frames": 240,
+      "gated_in_seconds": 42.84,
+      "gated_out_seconds": 9.6
+    },
+    "execution": "in_memory_segments (detector shared with LatentSync)",
+    "crossfade_frames": 4,
+    "master_fps": 25,
+    "master_frames": 1311,
+    "frame_classes": {
+      "VALID_FACE": 972,
+      "SMALL_FACE": 99,
+      "NO_FACE": 0,
+      "NO_SPEECH": 240
+    },
+    "skip_reasons": {
+      "outside_speech_gate": 240,
+      "height_below_threshold": 96,
+      "width_below_threshold": 3
+    },
+    "by_action": {
+      "PASS_THROUGH": {
+        "segments": 17,
+        "frames": 349,
+        "seconds": 13.96
+      },
+      "PASS_THROUGH_SHORT_VALID": {
+        "segments": 6,
+        "frames": 63,
+        "seconds": 2.52
+      },
+      "LATENT_SYNC": {
+        "segments": 7,
+        "frames": 899,
+        "seconds": 35.96
+      }
+    },
+    "latentsync_seconds_of_video": 35.96,
+    "pass_through_seconds_of_video": 16.48,
+    "ls_fraction": 0.6857,
+    "latentsync_inference_total_s": 191.16,
+    "verify_seconds": 8.75,
+    "latentsync_calls": 7,
+    "verify_splits": [
+      {
+        "segment": 8,
+        "rejected_frames": 6,
+        "split_into": [
+          23,
+          24,
+          25,
+          26,
+          27,
+          28
+        ]
+      },
+      {
+        "segment": 17,
+        "rejected_frames": 4,
+        "split_into": [
+          29,
+          30,
+          31
+        ]
+      }
+    ],
+    "assembly": {
+      "frames_written": 1311,
+      "master_frames": 1311,
+      "padded_with_original": {},
+      "crossfaded_frames": 56
+    },
+    "output_frame_check": {
+      "decoded_frames": 1311,
+      "expected_frames": 1311,
+      "blank_frames": 0,
+      "undecodable_frames": 0,
+      "pass": true
+    },
+    "codeformer": "OFF (gate metadata only: codeformer_eligible on LATENT_SYNC segments)",
+    "codeformer_eligible_segments": [
+      3,
+      28,
+      10,
+      12,
+      31,
+      19,
+      21
+    ],
+    "runner": {
+      "window_batch_size": 2,
+      "deepcache": true,
+      "deepcache_interval": 5,
+      "compile_backend": "none",
+      "sdpa_backend": "auto",
+      "steps": 20,
+      "guidance": 1.5,
+      "seed": 1247,
+      "fp16": true,
+      "stage2_512": true
+    },
+    "runner_calls": [
+      {
+        "frames": 194,
+        "windows": 13,
+        "groups": 7,
+        "unet_calls": 140,
+        "seconds": 42.5,
+        "stages": {
+          "preprocess_audio_video": 0.083,
+          "affine": 2.183,
+          "vae_and_cond": 9.965,
+          "unet_denoise": 26.669,
+          "restore": 0.941,
+          "write": 0.0,
+          "total": 42.492
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      },
+      {
+        "frames": 29,
+        "windows": 2,
+        "groups": 2,
+        "unet_calls": 40,
+        "seconds": 6.14,
+        "stages": {
+          "preprocess_audio_video": 0.06,
+          "affine": 0.283,
+          "vae_and_cond": 1.511,
+          "unet_denoise": 4.145,
+          "restore": 0.132,
+          "write": 0.0,
+          "total": 6.135
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      },
+      {
+        "frames": 144,
+        "windows": 9,
+        "groups": 5,
+        "unet_calls": 100,
+        "seconds": 29.44,
+        "stages": {
+          "preprocess_audio_video": 0.07,
+          "affine": 1.636,
+          "vae_and_cond": 7.309,
+          "unet_denoise": 19.787,
+          "restore": 0.633,
+          "write": 0.0,
+          "total": 29.438
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      },
+      {
+        "frames": 247,
+        "windows": 16,
+        "groups": 9,
+        "unet_calls": 180,
+        "seconds": 51.21,
+        "stages": {
+          "preprocess_audio_video": 0.078,
+          "affine": 2.939,
+          "vae_and_cond": 12.72,
+          "unet_denoise": 34.112,
+          "restore": 1.351,
+          "write": 0.0,
+          "total": 51.203
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      },
+      {
+        "frames": 92,
+        "windows": 6,
+        "groups": 4,
+        "unet_calls": 80,
+        "seconds": 19.06,
+        "stages": {
+          "preprocess_audio_video": 0.071,
+          "affine": 1.01,
+          "vae_and_cond": 4.722,
+          "unet_denoise": 12.843,
+          "restore": 0.407,
+          "write": 0.0,
+          "total": 19.058
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      },
+      {
+        "frames": 37,
+        "windows": 3,
+        "groups": 2,
+        "unet_calls": 40,
+        "seconds": 7.8,
+        "stages": {
+          "preprocess_audio_video": 0.059,
+          "affine": 0.379,
+          "vae_and_cond": 1.898,
+          "unet_denoise": 5.279,
+          "restore": 0.181,
+          "write": 0.0,
+          "total": 7.8
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      },
+      {
+        "frames": 170,
+        "windows": 11,
+        "groups": 6,
+        "unet_calls": 120,
+        "seconds": 35.01,
+        "stages": {
+          "preprocess_audio_video": 0.073,
+          "affine": 2.01,
+          "vae_and_cond": 8.651,
+          "unet_denoise": 23.506,
+          "restore": 0.761,
+          "write": 0.0,
+          "total": 35.004
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      }
+    ],
+    "segments": [
+      {
+        "index": 0,
+        "start_frame": 0,
+        "end_frame": 19,
+        "frames": 19,
+        "start_s": 0.0,
+        "end_s": 0.76,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 1,
+        "start_frame": 19,
+        "end_frame": 37,
+        "frames": 18,
+        "start_s": 0.76,
+        "end_s": 1.48,
+        "classification": "VALID_FACE",
+        "action": "PASS_THROUGH_SHORT_VALID",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 2,
+        "start_frame": 37,
+        "end_frame": 40,
+        "frames": 3,
+        "start_s": 1.48,
+        "end_s": 1.6,
+        "classification": "SMALL_FACE",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 3,
+        "start_frame": 40,
+        "end_frame": 232,
+        "frames": 192,
+        "start_s": 1.6,
+        "end_s": 9.28,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "verify_depth": 1,
+        "latentsync": {
+          "seconds": 42.5,
+          "frames_in": 192,
+          "frames_out": 194
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 4,
+        "start_frame": 232,
+        "end_frame": 235,
+        "frames": 3,
+        "start_s": 9.28,
+        "end_s": 9.4,
+        "classification": "SMALL_FACE",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 5,
+        "start_frame": 235,
+        "end_frame": 244,
+        "frames": 9,
+        "start_s": 9.4,
+        "end_s": 9.76,
+        "classification": "VALID_FACE",
+        "action": "PASS_THROUGH_SHORT_VALID",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 6,
+        "start_frame": 244,
+        "end_frame": 266,
+        "frames": 22,
+        "start_s": 9.76,
+        "end_s": 10.64,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 7,
+        "start_frame": 266,
+        "end_frame": 344,
+        "frames": 78,
+        "start_s": 10.64,
+        "end_s": 13.76,
+        "classification": "SMALL_FACE",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 23,
+        "start_frame": 344,
+        "end_frame": 345,
+        "frames": 1,
+        "start_s": 13.76,
+        "end_s": 13.8,
+        "classification": "SMALL_FACE",
+        "action": "PASS_THROUGH",
+        "split_from": 8,
+        "note": "rejected by LatentSync FaceDetector on the master frames",
+        "verify_depth": 1,
+        "codeformer_eligible": false
+      },
+      {
+        "index": 24,
+        "start_frame": 345,
+        "end_frame": 357,
+        "frames": 12,
+        "start_s": 13.8,
+        "end_s": 14.28,
+        "classification": "VALID_FACE",
+        "action": "PASS_THROUGH_SHORT_VALID",
+        "split_from": 8,
+        "note": null,
+        "verify_depth": 1,
+        "codeformer_eligible": false
+      },
+      {
+        "index": 25,
+        "start_frame": 357,
+        "end_frame": 359,
+        "frames": 2,
+        "start_s": 14.28,
+        "end_s": 14.36,
+        "classification": "SMALL_FACE",
+        "action": "PASS_THROUGH",
+        "split_from": 8,
+        "note": "rejected by LatentSync FaceDetector on the master frames",
+        "verify_depth": 1,
+        "codeformer_eligible": false
+      },
+      {
+        "index": 26,
+        "start_frame": 359,
+        "end_frame": 363,
+        "frames": 4,
+        "start_s": 14.36,
+        "end_s": 14.52,
+        "classification": "VALID_FACE",
+        "action": "PASS_THROUGH_SHORT_VALID",
+        "split_from": 8,
+        "note": null,
+        "verify_depth": 1,
+        "codeformer_eligible": false
+      },
+      {
+        "index": 27,
+        "start_frame": 363,
+        "end_frame": 366,
+        "frames": 3,
+        "start_s": 14.52,
+        "end_s": 14.64,
+        "classification": "SMALL_FACE",
+        "action": "PASS_THROUGH",
+        "split_from": 8,
+        "note": "rejected by LatentSync FaceDetector on the master frames",
+        "verify_depth": 1,
+        "codeformer_eligible": false
+      },
+      {
+        "index": 28,
+        "start_frame": 366,
+        "end_frame": 401,
+        "frames": 35,
+        "start_s": 14.64,
+        "end_s": 16.04,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "split_from": 8,
+        "note": null,
+        "verify_depth": 2,
+        "latentsync": {
+          "seconds": 7.8,
+          "frames_in": 35,
+          "frames_out": 37
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 9,
+        "start_frame": 401,
+        "end_frame": 419,
+        "frames": 18,
+        "start_s": 16.04,
+        "end_s": 16.76,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 10,
+        "start_frame": 419,
+        "end_frame": 446,
+        "frames": 27,
+        "start_s": 16.76,
+        "end_s": 17.84,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "verify_depth": 1,
+        "latentsync": {
+          "seconds": 6.14,
+          "frames_in": 27,
+          "frames_out": 29
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 11,
+        "start_frame": 446,
+        "end_frame": 484,
+        "frames": 38,
+        "start_s": 17.84,
+        "end_s": 19.36,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 12,
+        "start_frame": 484,
+        "end_frame": 626,
+        "frames": 142,
+        "start_s": 19.36,
+        "end_s": 25.04,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "verify_depth": 1,
+        "latentsync": {
+          "seconds": 29.44,
+          "frames_in": 142,
+          "frames_out": 144
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 13,
+        "start_frame": 626,
+        "end_frame": 649,
+        "frames": 23,
+        "start_s": 25.04,
+        "end_s": 25.96,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 14,
+        "start_frame": 649,
+        "end_frame": 658,
+        "frames": 9,
+        "start_s": 25.96,
+        "end_s": 26.32,
+        "classification": "SMALL_FACE",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 15,
+        "start_frame": 658,
+        "end_frame": 667,
+        "frames": 9,
+        "start_s": 26.32,
+        "end_s": 26.68,
+        "classification": "VALID_FACE",
+        "action": "PASS_THROUGH_SHORT_VALID",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 16,
+        "start_frame": 667,
+        "end_frame": 673,
+        "frames": 6,
+        "start_s": 26.68,
+        "end_s": 26.92,
+        "classification": "SMALL_FACE",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 29,
+        "start_frame": 673,
+        "end_frame": 684,
+        "frames": 11,
+        "start_s": 26.92,
+        "end_s": 27.36,
+        "classification": "VALID_FACE",
+        "action": "PASS_THROUGH_SHORT_VALID",
+        "split_from": 17,
+        "note": null,
+        "verify_depth": 1,
+        "codeformer_eligible": false
+      },
+      {
+        "index": 30,
+        "start_frame": 684,
+        "end_frame": 688,
+        "frames": 4,
+        "start_s": 27.36,
+        "end_s": 27.52,
+        "classification": "SMALL_FACE",
+        "action": "PASS_THROUGH",
+        "split_from": 17,
+        "note": "rejected by LatentSync FaceDetector on the master frames",
+        "verify_depth": 1,
+        "codeformer_eligible": false
+      },
+      {
+        "index": 31,
+        "start_frame": 688,
+        "end_frame": 856,
+        "frames": 168,
+        "start_s": 27.52,
+        "end_s": 34.24,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "split_from": 17,
+        "note": null,
+        "verify_depth": 2,
+        "latentsync": {
+          "seconds": 35.01,
+          "frames_in": 168,
+          "frames_out": 170
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 18,
+        "start_frame": 856,
+        "end_frame": 881,
+        "frames": 25,
+        "start_s": 34.24,
+        "end_s": 35.24,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 19,
+        "start_frame": 881,
+        "end_frame": 1126,
+        "frames": 245,
+        "start_s": 35.24,
+        "end_s": 45.04,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "verify_depth": 1,
+        "latentsync": {
+          "seconds": 51.21,
+          "frames_in": 245,
+          "frames_out": 247
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 20,
+        "start_frame": 1126,
+        "end_frame": 1144,
+        "frames": 18,
+        "start_s": 45.04,
+        "end_s": 45.76,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 21,
+        "start_frame": 1144,
+        "end_frame": 1234,
+        "frames": 90,
+        "start_s": 45.76,
+        "end_s": 49.36,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "verify_depth": 1,
+        "latentsync": {
+          "seconds": 19.06,
+          "frames_in": 90,
+          "frames_out": 92
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 22,
+        "start_frame": 1234,
+        "end_frame": 1311,
+        "frames": 77,
+        "start_s": 49.36,
+        "end_s": 52.44,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      }
+    ],
+    "backend": "optimized"
+  },
+  "output_meta": {
+    "duration_s": 52.44,
+    "size_bytes": 40281112,
+    "container": "mov,mp4,m4a,3gp,3g2,mj2",
+    "video": {
+      "codec": "h264",
+      "profile": "High",
+      "width": 464,
+      "height": 848,
+      "r_frame_rate": "25/1",
+      "avg_frame_rate": "25/1",
+      "fps": 25.0,
+      "avg_fps": 25.0,
+      "vfr": false,
+      "pix_fmt": "yuv420p",
+      "nb_frames": "1311",
+      "duration_s": 52.44,
+      "bit_rate": "6099648"
+    },
+    "audio": {
+      "codec": "aac",
+      "sample_rate": "24000",
+      "channels": 1,
+      "channel_layout": "mono",
+      "bit_rate": "40601",
+      "duration_s": 52.367
+    },
+    "has_video": true,
+    "has_audio": true
+  },
+  "validation": {
+    "tolerance_s": 0.15,
+    "tolerance_rule": "max(0.15 s, 2 source frames)",
+    "duration_delta_s": 0.0733,
+    "checks": {
+      "output_exists_nonempty": true,
+      "output_has_video_audio": true,
+      "duration_within_tolerance": true,
+      "resolution_preserved": true,
+      "all_units_have_tts_and_translation": true,
+      "frame_count_preserved": true,
+      "output_frames_decodable_no_blank": true
+    },
+    "pass": true
+  },
+  "stage_seconds": {
+    "audio_extract": 0.149,
+    "vad": 1.819,
+    "asr": 6.705,
+    "diarization": 4.694,
+    "translation_load": 0.831,
+    "translation": 7.231,
+    "tts_load": 9.141,
+    "tts": 11.611,
+    "alignment": 0.401,
+    "dubbed_track": 0.502,
+    "speech_gate": 0.709,
+    "face_router_load": 0.316,
+    "latentsync_load": 10.102,
+    "ls_master_25fps": 4.27,
+    "ls_master_decode": 0.767,
+    "face_classify": 7.267,
+    "latentsync": 200.433,
+    "latentsync_verify": 8.754,
+    "final_assembly": 5.122,
+    "total": 276.664
+  },
+  "gpu": {
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.126.16",
+    "name": "NVIDIA GeForce RTX 5090",
+    "capability": "sm_120",
+    "total_vram_bytes": 33668857856,
+    "total_vram_gib": 31.36,
+    "free_vram_gib": 22.5,
+    "multi_processor_count": 170,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "at": "2026-09-18T17:31:53Z"
+}

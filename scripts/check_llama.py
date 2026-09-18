@@ -1,9 +1,10 @@
-"""Qwen2.5-7B-Instruct GGUF q4_k_m via llama.cpp, CPU only, explicit thread count."""
+"""Qwen2.5-7B-Instruct GGUF Q8_0 (production quant, pilot 0.9; q4_k_m fallback) via llama.cpp, CPU only, explicit thread count."""
 from smoke_common import *
 import glob
 from llama_cpp import Llama
-files = sorted(glob.glob(str(MODELS / "qwen2.5-7b-instruct-gguf" / "*q4_k_m*.gguf")))
-if not files: fail("no q4_k_m gguf found")
+files = sorted(glob.glob(str(MODELS / "qwen2.5-7b-instruct-gguf" / "*q8_0*.gguf")))   # Q8_0 = production quant (pilot 0.9)
+files = files or sorted(glob.glob(str(MODELS / "qwen2.5-7b-instruct-gguf" / "*q4_k_m*.gguf")))
+if not files: fail("no q8_0 / q4_k_m gguf found")
 print("shards:", [os.path.basename(f) for f in files])
 with Timer() as tl:
     llm = Llama(model_path=files[0], n_ctx=4096, n_threads=THREADS, n_threads_batch=THREADS, n_gpu_layers=0, verbose=False)

@@ -1,157 +1,172 @@
 {
-  "task": "0.9",
-  "languages": [
-    "English",
-    "German",
-    "Russian"
-  ],
-  "directions": [
-    "EN->DE",
-    "EN->RU",
-    "RU->EN"
-  ],
-  "samples": 36,
-  "metrics": {
-    "q5_k_m": {
-      "model_path": "/workspace/dub/models/qwen2.5-7b-instruct-gguf/qwen2.5-7b-instruct-q5_k_m-00001-of-00002.gguf",
-      "size_gib": 5.071,
-      "load_s": 2.55,
-      "threads": 13,
-      "n_ctx": 4096,
-      "max_tokens": 256,
-      "n_gpu_layers": 0,
-      "warmup": 1,
-      "repeats": 3,
-      "temperature": 0.0,
-      "gen_tok_per_s_mean": 7.842,
-      "gen_tok_per_s_median": 7.992,
-      "prompt_tok_per_s_mean": 289.63,
-      "completion_tokens_total": 1133,
-      "wall_s_total_measured": 441.9,
-      "format_ok": 33,
-      "format_total": 36,
-      "truncated": 0,
-      "mean_chrf": null,
-      "per_direction": {
-        "EN->DE": {
-          "format_ok": 11,
-          "n": 12,
-          "gen_tok_per_s_mean": 7.869
-        },
-        "EN->RU": {
-          "format_ok": 10,
-          "n": 12,
-          "gen_tok_per_s_mean": 7.973
-        },
-        "RU->EN": {
-          "format_ok": 12,
-          "n": 12,
-          "gen_tok_per_s_mean": 7.685
-        }
-      }
+ "task": "0.9",
+ "languages": [
+  "English",
+  "German",
+  "Russian"
+ ],
+ "directions": [
+  "EN->DE",
+  "EN->RU",
+  "RU->EN"
+ ],
+ "samples": 36,
+ "metrics": {
+  "q5_k_m": {
+   "model_path": "/workspace/dub/models/qwen2.5-7b-instruct-gguf/qwen2.5-7b-instruct-q5_k_m-00001-of-00002.gguf",
+   "size_gib": 5.071,
+   "load_s": 2.55,
+   "threads": 13,
+   "n_ctx": 4096,
+   "max_tokens": 256,
+   "n_gpu_layers": 0,
+   "warmup": 1,
+   "repeats": 3,
+   "temperature": 0.0,
+   "gen_tok_per_s_mean": 7.842,
+   "gen_tok_per_s_median": 7.992,
+   "prompt_tok_per_s_mean": 289.63,
+   "completion_tokens_total": 1133,
+   "wall_s_total_measured": 441.9,
+   "format_ok": 33,
+   "format_total": 36,
+   "truncated": 0,
+   "mean_chrf": null,
+   "per_direction": {
+    "EN->DE": {
+     "format_ok": 11,
+     "n": 12,
+     "gen_tok_per_s_mean": 7.869
     },
-    "q8_0": {
-      "model_path": "/workspace/dub/models/qwen2.5-7b-instruct-gguf/qwen2.5-7b-instruct-q8_0-00001-of-00003.gguf",
-      "size_gib": 7.542,
-      "load_s": 12.36,
-      "threads": 13,
-      "n_ctx": 4096,
-      "max_tokens": 256,
-      "n_gpu_layers": 0,
-      "warmup": 1,
-      "repeats": 3,
-      "temperature": 0.0,
-      "gen_tok_per_s_mean": 5.326,
-      "gen_tok_per_s_median": 5.395,
-      "prompt_tok_per_s_mean": 217.66,
-      "completion_tokens_total": 1129,
-      "wall_s_total_measured": 628.4,
-      "format_ok": 35,
-      "format_total": 36,
-      "truncated": 0,
-      "mean_chrf": null,
-      "per_direction": {
-        "EN->DE": {
-          "format_ok": 12,
-          "n": 12,
-          "gen_tok_per_s_mean": 5.407
-        },
-        "EN->RU": {
-          "format_ok": 11,
-          "n": 12,
-          "gen_tok_per_s_mean": 5.376
-        },
-        "RU->EN": {
-          "format_ok": 12,
-          "n": 12,
-          "gen_tok_per_s_mean": 5.196
-        }
-      }
+    "EN->RU": {
+     "format_ok": 10,
+     "n": 12,
+     "gen_tok_per_s_mean": 7.973
+    },
+    "RU->EN": {
+     "format_ok": 12,
+     "n": 12,
+     "gen_tok_per_s_mean": 7.685
     }
+   }
   },
-  "quality_method": "references missing; manual quality review required",
-  "identical_outputs_q5_vs_q8": 21,
-  "q5_not_worse": null,
-  "speed_winner": "Q5_K_M",
-  "quality_verdict": "MANUAL_REVIEW_REQUIRED",
-  "selected_quant": "UNDECIDED",
-  "recommendation": "UNDECIDED",
-  "measurement_complete": true,
-  "closed": false,
-  "outputs_csv": "/workspace/dub/reports/pilot/0.9_qwen_translations.csv",
-  "at": "2026-09-15T13:46:31Z",
-  "format_check": {
-    "rule": "non-empty, < max_tokens, no 'Translation:' preamble, single paragraph, >80% letters in target script, no CJK characters",
-    "issues": [
-      {
-        "id": "en-ru-03",
-        "quant": "q5_k_m",
-        "failed": [
-          "target_script_ok"
-        ],
-        "output": "Сервис экспонирует конечную точку REST, которая возвращает paginated список счетов в формате JSON."
-      },
-      {
-        "id": "en-ru-09",
-        "quant": "q5_k_m",
-        "failed": [
-          "no_cjk"
-        ],
-        "output": "Хотя комитет сначала согласился отложить решение до окончания аудита, внезапное辞去主席职务，以及来自已经失去耐心的投资方不断增加的压力相结合，迫使董事会在同一天晚上召开紧急会议。"
-      },
-      {
-        "id": "en-ru-09",
-        "quant": "q8_0",
-        "failed": [
-          "no_cjk"
-        ],
-        "output": "Хотя комитет сначала согласился отложить решение до окончания аудита, внезапное辞去主席职务，以及来自已经失去耐心的投资方不断增加的压力，迫使董事会在同一天晚上召开紧急会议。"
-      },
-      {
-        "id": "en-de-01",
-        "quant": "q5_k_m",
-        "failed": [
-          "no_cjk"
-        ],
-        "output": "Hey, sind wir immer noch aufs Mittagessen morgen ver約ltigt, oder sollten wir es auf die Woche darauf verschieben?"
-      }
+  "q8_0": {
+   "model_path": "/workspace/dub/models/qwen2.5-7b-instruct-gguf/qwen2.5-7b-instruct-q8_0-00001-of-00003.gguf",
+   "size_gib": 7.542,
+   "load_s": 12.36,
+   "threads": 13,
+   "n_ctx": 4096,
+   "max_tokens": 256,
+   "n_gpu_layers": 0,
+   "warmup": 1,
+   "repeats": 3,
+   "temperature": 0.0,
+   "gen_tok_per_s_mean": 5.326,
+   "gen_tok_per_s_median": 5.395,
+   "prompt_tok_per_s_mean": 217.66,
+   "completion_tokens_total": 1129,
+   "wall_s_total_measured": 628.4,
+   "format_ok": 35,
+   "format_total": 36,
+   "truncated": 0,
+   "mean_chrf": null,
+   "per_direction": {
+    "EN->DE": {
+     "format_ok": 12,
+     "n": 12,
+     "gen_tok_per_s_mean": 5.407
+    },
+    "EN->RU": {
+     "format_ok": 11,
+     "n": 12,
+     "gen_tok_per_s_mean": 5.376
+    },
+    "RU->EN": {
+     "format_ok": 12,
+     "n": 12,
+     "gen_tok_per_s_mean": 5.196
+    }
+   }
+  }
+ },
+ "quality_method": "references missing; manual quality review required",
+ "identical_outputs_q5_vs_q8": 21,
+ "q5_not_worse": null,
+ "speed_winner": "Q5_K_M",
+ "quality_verdict": "Q8_0 selected after manual review (2026-09-18)",
+ "selected_quant": "Q8_0",
+ "recommendation": "UNDECIDED",
+ "measurement_complete": true,
+ "closed": true,
+ "outputs_csv": "/workspace/dub/reports/pilot/0.9_qwen_translations.csv",
+ "at": "2026-09-15T13:46:31Z",
+ "format_check": {
+  "rule": "non-empty, < max_tokens, no 'Translation:' preamble, single paragraph, >80% letters in target script, no CJK characters",
+  "issues": [
+   {
+    "id": "en-ru-03",
+    "quant": "q5_k_m",
+    "failed": [
+     "target_script_ok"
     ],
-    "note": "format_ok was miscomputed by the first version of the script (truncated flag inverted) and lacked the CJK check; recomputed offline from the saved outputs with the fixed rule, script fixed for future runs"
-  },
-  "cpu": {
-    "model": "AMD Ryzen 9 9950X 16-Core (Zen 5)",
-    "logical_cpus_visible": 32,
-    "physical_cores": 16,
-    "cgroup_cpu_max": "1360000 100000 = 13.6 vCPU",
-    "threads_used": 13,
-    "n_threads_batch": 13,
-    "n_gpu_layers": 0,
-    "llama_cpp_python": "0.3.35 (prebuilt CPU wheel: AVX2/FMA/F16C, OPENMP, no AVX-512 path although the CPU has avx512f/bf16/vnni)",
-    "background_load_note": "only the Claude Code harness process (~0.5-0.8 core) and no other jobs; GPU idle"
-  },
-  "env_snapshot": "20260915_092530-8d916633",
-  "dataset": "scripts/pilot/qwen_eval.jsonl (36 rows: EN->RU, RU->EN, EN->DE x 12; categories colloquial/technical/numbers/long/ambiguous; no references)",
-  "determinism_note": "temperature 0, yet 21/36 sentences identical between Q5 and Q8; repeats within one quant occasionally differ in wording (llama.cpp multi-thread float reduction order) - recorded per row as outputs_identical_across_repeats in the run log",
+    "output": "Сервис экспонирует конечную точку REST, которая возвращает paginated список счетов в формате JSON."
+   },
+   {
+    "id": "en-ru-09",
+    "quant": "q5_k_m",
+    "failed": [
+     "no_cjk"
+    ],
+    "output": "Хотя комитет сначала согласился отложить решение до окончания аудита, внезапное辞去主席职务，以及来自已经失去耐心的投资方不断增加的压力相结合，迫使董事会在同一天晚上召开紧急会议。"
+   },
+   {
+    "id": "en-ru-09",
+    "quant": "q8_0",
+    "failed": [
+     "no_cjk"
+    ],
+    "output": "Хотя комитет сначала согласился отложить решение до окончания аудита, внезапное辞去主席职务，以及来自已经失去耐心的投资方不断增加的压力，迫使董事会在同一天晚上召开紧急会议。"
+   },
+   {
+    "id": "en-de-01",
+    "quant": "q5_k_m",
+    "failed": [
+     "no_cjk"
+    ],
+    "output": "Hey, sind wir immer noch aufs Mittagessen morgen ver約ltigt, oder sollten wir es auf die Woche darauf verschieben?"
+   }
+  ],
+  "note": "format_ok was miscomputed by the first version of the script (truncated flag inverted) and lacked the CJK check; recomputed offline from the saved outputs with the fixed rule, script fixed for future runs"
+ },
+ "cpu": {
+  "model": "AMD Ryzen 9 9950X 16-Core (Zen 5)",
+  "logical_cpus_visible": 32,
+  "physical_cores": 16,
+  "cgroup_cpu_max": "1360000 100000 = 13.6 vCPU",
+  "threads_used": 13,
+  "n_threads_batch": 13,
+  "n_gpu_layers": 0,
+  "llama_cpp_python": "0.3.35 (prebuilt CPU wheel: AVX2/FMA/F16C, OPENMP, no AVX-512 path although the CPU has avx512f/bf16/vnni)",
+  "background_load_note": "only the Claude Code harness process (~0.5-0.8 core) and no other jobs; GPU idle"
+ },
+ "env_snapshot": "20260915_092530-8d916633",
+ "dataset": "scripts/pilot/qwen_eval.jsonl (36 rows: EN->RU, RU->EN, EN->DE x 12; categories colloquial/technical/numbers/long/ambiguous; no references)",
+ "determinism_note": "temperature 0, yet 21/36 sentences identical between Q5 and Q8; repeats within one quant occasionally differ in wording (llama.cpp multi-thread float reduction order) - recorded per row as outputs_identical_across_repeats in the run log",
+ "speedup_q5_vs_q8": 1.481,
+ "status": "CLOSED — Q8_0 selected",
+ "verdict": "CLOSED — Q8_0 selected (speed winner Q5_K_M 1.48x; quality decision after manual review)",
+ "decision": {
+  "selected_quant": "Q8_0",
+  "speed_winner": "Q5_K_M",
   "speedup_q5_vs_q8": 1.481,
-  "status": "measurement-complete, quality-decision pending"
+  "identical_outputs_q5_vs_q8": 21,
+  "reason": "Q5_K_M ~1.48x faster on CPU, but Q8_0 slightly yet more consistently better in manual review (Q5: mixed-script/CJK corruption, weaker formulations, esp. EN->DE); errors common to both quants are model/prompt issues; quality preferred over CPU speed for dubbing",
+  "reviewed": "reports/pilot/0.9_qwen_translations.csv",
+  "decided_at": "2026-09-18",
+  "applied_to": [
+   "scripts/pilot/run_clean_pipeline_05.py (QWEN_QUANT=q8_0)",
+   "scripts/download_models.sh",
+   "scripts/check_llama.py"
+  ]
+ }
 }

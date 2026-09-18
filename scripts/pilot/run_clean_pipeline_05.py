@@ -10,8 +10,10 @@ frozen dabai baseline, wired in pipeline order on the ORIGINAL timeline (pauses 
    4. faster-whisper large-v3          real ASR, word_timestamps=True; speech units = whisper segments, slots = first/last
                                        word timestamps, units longer than --max-unit-s are split at the widest word gap
    5. pyannote speaker-diarization-3.1 real diarization (HF_TOKEN); speaker per unit = max overlap, else nearest turn
-   6. Qwen2.5-7B-Instruct q4_k_m       real translation via llama.cpp, CPU only (n_gpu_layers=0, DUB_THREADS), the
-                                       pilot 0.9 system prompt, temperature 0
+   6. Qwen2.5-7B-Instruct Q8_0         real translation via llama.cpp, CPU only (n_gpu_layers=0, DUB_THREADS), the
+                                       pilot 0.9 system prompt, temperature 0. Q8_0 = pilot 0.9 decision (2026-09-18):
+                                       Q5_K_M is ~1.48x faster on CPU but Q8_0 was selected after manual review for
+                                       more stable translation quality; q4_k_m (the old smoke quant) is no longer used
    7. Chatterbox Multilingual v3       real TTS per unit; the speaker's own diarized speech (<=10 s, cut from the source
                                        audio) is the voice reference via the upstream `audio_prompt_path` API;
                                        fp16 cast like scripts/check_chatterbox.py, fp32 fallback
@@ -72,6 +74,7 @@ OPTIMIZED_DEFAULTS = {"face_router": "retinaface", "window_batch_size": 2, "comp
 # --deepcache-interval 3 restores the previous setting.
 # batch 2: largest batch that leaves VRAM headroom (25.8 GB peak vs 30.8 GB at batch 4 for +0.7 %); inductor gave no gain over
 # DeepCache eager; "auto" SDPA already dispatches the fused FLASH_ATTENTION kernel (forced flash = bit-identical, same time).
+QWEN_QUANT = "q8_0"       # pilot 0.9 decision: Q8_0 production quant (reports/pilot/0.9_qwen_quant.md), CPU, n_gpu_layers=0
 TTS_SR = 24000
 REF_MAX_S = 10.0          # Chatterbox DEC_COND_LEN = 10 s @ 24 kHz
 REF_MIN_S = 1.0
@@ -204,9 +207,9 @@ def assign_speakers(units: list[dict], turns: list[dict]) -> None:
 def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict) -> dict:
     import glob
     from llama_cpp import Llama
-    files = sorted(glob.glob(str(MODELS / "qwen2.5-7b-instruct-gguf" / "*q4_k_m*.gguf")))
+    files = sorted(glob.glob(str(MODELS / "qwen2.5-7b-instruct-gguf" / f"*{QWEN_QUANT}*.gguf")))
     if not files:
-        raise Blocker("Qwen2.5-7B q4_k_m GGUF not found under models/")
+        raise Blocker(f"Qwen2.5-7B {QWEN_QUANT} GGUF not found under models/ (python scripts/pilot/fetch_09_qwen_quant.py {QWEN_QUANT} --yes)")
     with timed(times, "translation_load"):
         llm = Llama(model_path=files[0], n_ctx=4096, n_threads=THREADS, n_threads_batch=THREADS, n_gpu_layers=0, verbose=False)
     src_name, tgt_name = lang_name(src_lang), lang_name(tgt_lang)
@@ -226,7 +229,7 @@ def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict
                 usage[k] += int(r["usage"].get(k, 0))
             print(f"  [translate] u{u['id']:02d} {u['speaker']} {u['start']:.2f}-{u['end']:.2f}s | {u['text'][:60]} -> {txt[:60]}", flush=True)
     del llm
-    return {"model": os.path.basename(files[0]), "n_ctx": 4096, "n_threads": THREADS, "n_gpu_layers": 0,
+    return {"model": os.path.basename(files[0]), "quant": QWEN_QUANT, "n_ctx": 4096, "n_threads": THREADS, "n_gpu_layers": 0,
             "system_prompt": SYSTEM_PROMPT, "direction": f"{src_name}->{tgt_name}", "usage": usage}
 
 

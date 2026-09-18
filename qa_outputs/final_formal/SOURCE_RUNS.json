@@ -1,0 +1,50 @@
+{
+ "note": "one valid output per video from the formal 0.5 benchmark (reports/pilot/0.5_gpu_coefficient.json)",
+ "chosen": {
+  "01": {
+   "from": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/01_r1.mp4",
+   "run": 1,
+   "gpu_min_per_video_min": 1.8138,
+   "runner_validation": true,
+   "translation": "q8_0",
+   "backend": "optimized",
+   "codeformer": "DISABLED (not invoked)"
+  },
+  "02": {
+   "from": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/02_r1.mp4",
+   "run": 1,
+   "gpu_min_per_video_min": 0.9399,
+   "runner_validation": true,
+   "translation": "q8_0",
+   "backend": "optimized",
+   "codeformer": "DISABLED (not invoked)"
+  },
+  "03": {
+   "from": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/03_r1.mp4",
+   "run": 1,
+   "gpu_min_per_video_min": 5.4576,
+   "runner_validation": true,
+   "translation": "q8_0",
+   "backend": "optimized",
+   "codeformer": "DISABLED (not invoked)"
+  },
+  "04": {
+   "from": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/04_r1.mp4",
+   "run": 1,
+   "gpu_min_per_video_min": 5.1132,
+   "runner_validation": true,
+   "translation": "q8_0",
+   "backend": "optimized",
+   "codeformer": "DISABLED (not invoked)"
+  },
+  "05": {
+   "from": "/tmp/claude-0/-workspace-dub/d41e1d11-5eb1-434e-aa0a-b74c60d7f359/scratchpad/formal05/out/05_r1.mp4",
+   "run": 1,
+   "gpu_min_per_video_min": 4.648,
+   "runner_validation": true,
+   "translation": "q8_0",
+   "backend": "optimized",
+   "codeformer": "DISABLED (not invoked)"
+  }
+ }
+}

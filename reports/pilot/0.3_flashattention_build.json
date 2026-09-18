@@ -1,0 +1,13 @@
+{
+ "task": "0.3",
+ "closed": true,
+ "verdict": "CLOSED \u2014 flash-attn 2.8.3.post1 builds and runs on sm_120 (build PASS, runtime PASS); not installed into /venv/dabai (native SDPA flash kernel already used)",
+ "evidence": [
+  "reports/pilot/0.3_flashattention.md",
+  "reports/pilot/0.3_build_flashattn_used.sh",
+  "reports/pilot/0.3_fa_runtime_test_used.py",
+  "reports/pilot/flashattn_5090.json"
+ ],
+ "note": "index file written 2026-09-18 from the existing 0.3 markdown so pilot_status.py can see the closure; no new measurement",
+ "at": "2026-09-18T16:46:09Z"
+}
