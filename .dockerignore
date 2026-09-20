@@ -1,0 +1,23 @@
+# Build context for infra/serverless/Dockerfile (context = repo root). Keep it tiny: code + pins only.
+.git
+.github
+.claude
+qa_outputs
+test-pipeline.ipynb
+reports/**
+!reports/pip-freeze.lock.txt
+!reports/third_party-commits.txt
+logs
+models
+third_party
+venv
+.venv
+.env
+*.env
+**/__pycache__
+**/*.py[cod]
+**/.ipynb_checkpoints
+infra/serverless/state
+infra/serverless/mock-volume
+*.mp4
+*.wav
