@@ -1,0 +1,78 @@
+{
+  "task": "0.10",
+  "closed": true,
+  "verdict": "CLOSED — FAIL_TARGET; median 15.701s, max 271.17s, target <60.0s",
+  "target_seconds": 60.0,
+  "topology_note": "RunPod Serverless RTX 5090 sm_120; ghcr.io/romadovairina/dabai-worker:v0.10.0; dabai-models network volume in EUR-IS-1; FlashBoot off; workersMin=0; workersMax=1",
+  "topology": {
+    "cold_node_confirmed": true,
+    "multistage_image_confirmed": true,
+    "network_nvme_confirmed": true
+  },
+  "repeat": 3,
+  "rows": [
+    {
+      "run": 1,
+      "status": "PASS",
+      "seconds": 271.17,
+      "start_command_return_s": 0.359,
+      "poll_attempts": 126,
+      "start_output": "[start_node.sh 19:46:30] submitted readiness job 200f7c96-6c3b-45f7-89eb-542439d88da2-e1 (status IN_QUEUE)\n200f7c96-6c3b-45f7-89eb-542439d88da2-e1\n",
+      "ready_output": "{\"status\": \"COMPLETED\", \"ready\": true, \"gpu\": \"NVIDIA GeForce RTX 5090\", \"sm\": \"sm_120\", \"missing\": [], \"delayTime_ms\": 269387, \"executionTime_ms\": 284, \"workerId\": \"80bn9jfb3f74tc\"}\n",
+      "preflight": {
+        "returncode": 0,
+        "output": "[ensure_stopped.sh 19:46:28] endpoint d03krhd3y37pjp (dabai-endpoint): workersMin=0 workersMax=1 flashboot=False idleTimeout=5s\n[ensure_stopped.sh 19:46:29] endpoint is cold: live_workers=0 pods_alive=0 pending_jobs=0 (standby idle/throttled slots=0/1)\n"
+      },
+      "stop": {
+        "returncode": 0,
+        "seconds": 7.423,
+        "output": "[stop_node.sh 19:51:01] previous job 200f7c96-6c3b-45f7-89eb-542439d88da2-e1 is COMPLETED\n[stop_node.sh 19:51:02] waiting for scale-down: live_workers=0 pods_alive=1 pending_jobs=0 slots(idle/throttled)=1/0\n[stop_node.sh 19:51:08] endpoint is cold: live_workers=0 pods_alive=0 pending_jobs=0 (standby idle/throttled slots=1/0)\n"
+      }
+    },
+    {
+      "run": 2,
+      "status": "PASS",
+      "seconds": 15.701,
+      "start_command_return_s": 0.355,
+      "poll_attempts": 8,
+      "start_output": "[start_node.sh 19:51:15] submitted readiness job 27edc238-6319-417a-a055-8da4066854f9-e2 (status IN_QUEUE)\n27edc238-6319-417a-a055-8da4066854f9-e2\n",
+      "ready_output": "{\"status\": \"COMPLETED\", \"ready\": true, \"gpu\": \"NVIDIA GeForce RTX 5090\", \"sm\": \"sm_120\", \"missing\": [], \"delayTime_ms\": 14616, \"executionTime_ms\": 352, \"workerId\": \"80bn9jfb3f74tc\"}\n",
+      "preflight": {
+        "returncode": 0,
+        "output": "[ensure_stopped.sh 19:51:14] endpoint d03krhd3y37pjp (dabai-endpoint): workersMin=0 workersMax=1 flashboot=False idleTimeout=5s\n[ensure_stopped.sh 19:51:14] previous job 200f7c96-6c3b-45f7-89eb-542439d88da2-e1 is COMPLETED\n[ensure_stopped.sh 19:51:15] endpoint is cold: live_workers=0 pods_alive=0 pending_jobs=0 (standby idle/throttled slots=1/0)\n"
+      },
+      "stop": {
+        "returncode": 0,
+        "seconds": 25.595,
+        "output": "[stop_node.sh 19:51:31] previous job 27edc238-6319-417a-a055-8da4066854f9-e2 is COMPLETED\n[stop_node.sh 19:51:32] waiting for scale-down: live_workers=1 pods_alive=1 pending_jobs=0 slots(idle/throttled)=0/0\n[stop_node.sh 19:51:38] waiting for scale-down: live_workers=1 pods_alive=0 pending_jobs=0 slots(idle/throttled)=0/0\n[stop_node.sh 19:51:44] waiting for scale-down: live_workers=1 pods_alive=0 pending_jobs=0 slots(idle/throttled)=0/0\n[stop_node.sh 19:51:50] waiting for scale-down: live_workers=1 pods_alive=0 pending_jobs=0 slots(idle/throttled)=1/0\n[stop_node.sh 19:51:56] endpoint is cold: live_workers=0 pods_alive=0 pending_jobs=0 (standby idle/throttled slots=1/0)\n"
+      }
+    },
+    {
+      "run": 3,
+      "status": "PASS",
+      "seconds": 11.28,
+      "start_command_return_s": 0.268,
+      "poll_attempts": 6,
+      "start_output": "[start_node.sh 19:52:03] submitted readiness job 3acb79c7-e462-4f82-8396-197707b843e0-e2 (status IN_QUEUE)\n3acb79c7-e462-4f82-8396-197707b843e0-e2\n",
+      "ready_output": "{\"status\": \"COMPLETED\", \"ready\": true, \"gpu\": \"NVIDIA GeForce RTX 5090\", \"sm\": \"sm_120\", \"missing\": [], \"delayTime_ms\": 8710, \"executionTime_ms\": 327, \"workerId\": \"80bn9jfb3f74tc\"}\n",
+      "preflight": {
+        "returncode": 0,
+        "output": "[ensure_stopped.sh 19:52:02] endpoint d03krhd3y37pjp (dabai-endpoint): workersMin=0 workersMax=1 flashboot=False idleTimeout=5s\n[ensure_stopped.sh 19:52:02] previous job 27edc238-6319-417a-a055-8da4066854f9-e2 is COMPLETED\n[ensure_stopped.sh 19:52:03] endpoint is cold: live_workers=0 pods_alive=0 pending_jobs=0 (standby idle/throttled slots=1/0)\n"
+      },
+      "stop": {
+        "returncode": 0,
+        "seconds": 19.437,
+        "output": "[stop_node.sh 19:52:15] previous job 3acb79c7-e462-4f82-8396-197707b843e0-e2 is COMPLETED\n[stop_node.sh 19:52:16] waiting for scale-down: live_workers=1 pods_alive=1 pending_jobs=0 slots(idle/throttled)=0/0\n[stop_node.sh 19:52:22] waiting for scale-down: live_workers=1 pods_alive=0 pending_jobs=0 slots(idle/throttled)=0/0\n[stop_node.sh 19:52:28] waiting for scale-down: live_workers=1 pods_alive=0 pending_jobs=0 slots(idle/throttled)=0/0\n[stop_node.sh 19:52:34] endpoint is cold: live_workers=0 pods_alive=0 pending_jobs=0 (standby idle/throttled slots=1/0)\n"
+      }
+    }
+  ],
+  "successful_runs": 3,
+  "mean_seconds": 99.384,
+  "median_seconds": 15.701,
+  "min_seconds": 11.28,
+  "max_seconds": 271.17,
+  "within_target_all": false,
+  "timing_definition": "t0 immediately before provider start-command; READY only when ready-command exits 0 after worker + required model weights are usable",
+  "anti_fake_note": "Restarting Python, clearing CUDA/cache, or timing an already-running pod is not accepted as a formal cold start.",
+  "at": "2026-09-20T19:52:34Z"
+}

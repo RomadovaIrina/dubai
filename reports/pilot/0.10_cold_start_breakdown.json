@@ -1,0 +1,103 @@
+{
+  "task": "0.10",
+  "source": "reports/pilot/0.10_cold_start.json",
+  "at": "2026-09-20T19:52:34Z",
+  "topology_note": "RunPod Serverless RTX 5090 sm_120; ghcr.io/romadovairina/dabai-worker:v0.10.0; dabai-models network volume in EUR-IS-1; FlashBoot off; workersMin=0; workersMax=1",
+  "runs": [
+    {
+      "run": 1,
+      "status": "PASS",
+      "start_to_ready_s": 271.17,
+      "runpod_delayTime_s": 269.387,
+      "runpod_executionTime_s": 0.284,
+      "provider_delay_fraction": 0.9934,
+      "job_id": "200f7c96-6c3b-45f7-89eb-542439d88da2-e1",
+      "workerId": "80bn9jfb3f74tc",
+      "ready": true,
+      "gpu": "NVIDIA GeForce RTX 5090",
+      "sm": "sm_120",
+      "missing": [],
+      "poll_attempts": 126
+    },
+    {
+      "run": 2,
+      "status": "PASS",
+      "start_to_ready_s": 15.701,
+      "runpod_delayTime_s": 14.616,
+      "runpod_executionTime_s": 0.352,
+      "provider_delay_fraction": 0.9309,
+      "job_id": "27edc238-6319-417a-a055-8da4066854f9-e2",
+      "workerId": "80bn9jfb3f74tc",
+      "ready": true,
+      "gpu": "NVIDIA GeForce RTX 5090",
+      "sm": "sm_120",
+      "missing": [],
+      "poll_attempts": 8
+    },
+    {
+      "run": 3,
+      "status": "PASS",
+      "start_to_ready_s": 11.28,
+      "runpod_delayTime_s": 8.71,
+      "runpod_executionTime_s": 0.327,
+      "provider_delay_fraction": 0.7722,
+      "job_id": "3acb79c7-e462-4f82-8396-197707b843e0-e2",
+      "workerId": "80bn9jfb3f74tc",
+      "ready": true,
+      "gpu": "NVIDIA GeForce RTX 5090",
+      "sm": "sm_120",
+      "missing": [],
+      "poll_attempts": 6
+    }
+  ],
+  "aggregate": {
+    "successful_runs": 3,
+    "repeat": 3,
+    "min_s": 11.28,
+    "mean_s": 99.384,
+    "median_s": 15.701,
+    "max_s": 271.17,
+    "all_below_target": false,
+    "target_s": 60.0,
+    "verdict": "CLOSED — FAIL_TARGET; median 15.701s, max 271.17s, target <60.0s",
+    "closed": true
+  },
+  "note": "start_to_ready_s is the formal metric (t0 before POST /run -> first ready=true). RunPod delayTime/executionTime are provider-reported diagnostics only and do not replace it.",
+  "cold_precondition": {
+    "definition_used": "FlashBoot off; pending_jobs = 0; initializing = 0; running = 0; all endpoint pods EXITED / uptime 0 (GraphQL). A logical RunPod standby slot (idle/throttled) is not by itself a live worker/container.",
+    "original_definition": "sum of ALL /health worker states == 0 (including idle/throttled standby slots).",
+    "why_changed": "RunPod keeps one standby slot assigned to the endpoint (workersStandby=1) even with zero traffic; /health reports it as idle ('scaled down, waiting for requests', pod desiredStatus=EXITED, uptime 0) or throttled (host GPU busy). The all-states-zero condition is only met transiently while RunPod is between hosts, so attempt 1 with the original precondition spent the full 900 s preflight timeout on run 1 without ever submitting a job.",
+    "script_change": "scripts/pilot/infra_10/_common.sh: workers_total -> workers_alive (initializing+running) + pods_alive (GraphQL EXITED check); wait_zero_workers requires both plus empty queue.",
+    "attempt1_strict_precondition": {
+      "launched": "2026-09-20T19:26:14Z",
+      "stopped": "2026-09-20T19:44Z (manually, no job submitted, no reports written)",
+      "health_timeline_utc": [
+        "19:26:46 job=none job=none | Q=0 P=0 idle=0 init=1 ready=0 run=0 thr=0 unh=0",
+        "19:27:46 job=none job=none | Q=0 P=0 idle=1 init=0 ready=1 run=0 thr=0 unh=0",
+        "19:31:48 job=none job=none | Q=0 P=0 idle=0 init=0 ready=0 run=0 thr=1 unh=0",
+        "19:38:22 job=none job=none | Q=0 P=0 idle=1 init=0 ready=1 run=0 thr=0 unh=0",
+        "19:40:53 job=none job=none | Q=0 P=0 idle=0 init=0 ready=0 run=0 thr=1 unh=0",
+        "19:44:25 BENCHMARK PROCESS EXITED"
+      ]
+    },
+    "attempt2_health_timeline_utc": [
+      "19:47:17 job=200f7c96-6c3b-45f7-89eb-542439d88da2-e1 status=IN_QUEUE delay_ms=None exec_ms=None worker=None ready=None gpu=None sm=None | Q=1 P=0 idle=0 init=0 ready=0 run=0 thr=1 unh=0",
+      "19:49:49 job=200f7c96-6c3b-45f7-89eb-542439d88da2-e1 status=IN_QUEUE delay_ms=None exec_ms=None worker=None ready=None gpu=None sm=None | Q=1 P=0 idle=0 init=1 ready=0 run=0 thr=0 unh=0",
+      "19:50:50 job=200f7c96-6c3b-45f7-89eb-542439d88da2-e1 status=IN_QUEUE delay_ms=None exec_ms=None worker=None ready=None gpu=None sm=None | Q=1 P=0 idle=1 init=0 ready=1 run=0 thr=0 unh=0",
+      "19:51:21 job=27edc238-6319-417a-a055-8da4066854f9-e2 status=IN_QUEUE delay_ms=None exec_ms=None worker=None ready=None gpu=None sm=None | Q=1 P=0 idle=1 init=0 ready=1 run=0 thr=0 unh=0",
+      "19:51:51 job=27edc238-6319-417a-a055-8da4066854f9-e2 status=COMPLETED delay_ms=14616 exec_ms=352 worker=80bn9jfb3f74tc ready=True gpu=NVIDIA GeForce RTX 5090 sm=sm_120 | Q=0 P=0 idle=1 init=0 ready=1 run=0 thr=0 unh=0",
+      "19:52:21 job=3acb79c7-e462-4f82-8396-197707b843e0-e2 status=COMPLETED delay_ms=8710 exec_ms=327 worker=80bn9jfb3f74tc ready=True gpu=NVIDIA GeForce RTX 5090 sm=sm_120 | Q=0 P=0 idle=0 init=0 ready=0 run=1 thr=0 unh=0",
+      "19:52:52 job=3acb79c7-e462-4f82-8396-197707b843e0-e2 status=COMPLETED delay_ms=8710 exec_ms=327 worker=80bn9jfb3f74tc ready=True gpu=NVIDIA GeForce RTX 5090 sm=sm_120 | Q=0 P=0 idle=1 init=0 ready=1 run=0 thr=0 unh=0",
+      "19:52:52 BENCHMARK PROCESS EXITED"
+    ],
+    "what_is_measured": "container start on an assigned RTX 5090 host + network volume mount + handler start (torch import, CUDA context) + weight/path validation + RunPod scheduling. Image pull onto the host is NOT included when the slot is idle; it IS included when RunPod must (re)initialize the worker (run 1 started from a throttled slot: throttled -> initializing -> idle -> running).",
+    "accepted": true,
+    "accepted_on": "2026-09-20",
+    "measures": "scale-to-zero Serverless cold container start",
+    "does_not_guarantee": [
+      "fresh physical host",
+      "empty Docker/image cache"
+    ]
+  },
+  "runpod_timings_note": "delayTime = provider-reported pre-execution delay (not to be called GPU queue time as a whole); executionTime = readiness handler execution (0.28-0.35 s in all runs). Kept separately; never subtracted from the formal start-to-READY metric."
+}

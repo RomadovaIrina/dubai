@@ -1,6 +1,6 @@
 # Pilot status
 
-**10/11 formally closed**
+**11/11 formally closed**
 
 | ID | state | task | verdict/evidence |
 |---|---|---|---|
@@ -13,5 +13,5 @@
 | 0.7 | CLOSED | CodeFormer vs SyncNet | CLOSED — NO_STRICT_SAFE_WEIGHT |
 | 0.8 | CLOSED | SyncNet real content | CLOSED — 5/5 final E2E outputs valid; SyncNet measured on 4/5, 1 N/A (no face); contract threshold still UNDECIDED |
 | 0.9 | CLOSED | Qwen Q8 vs Q5 | CLOSED — Q8_0 selected (speed winner Q5_K_M 1.48x; quality decision after manual review) |
-| 0.10 | MISSING | Cold start | - |
+| 0.10 | CLOSED | Cold start | CLOSED — FAIL_TARGET; median 15.701s, max 271.17s, target <60.0s |
 | 0.11 | CLOSED | Sequential S | CLOSED — 5/5 TIMELINE-PRESERVING S MEASURED |

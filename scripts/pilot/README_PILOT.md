@@ -151,19 +151,29 @@ pretending an unspecified metric is authoritative.
 
 ## 0.10 cold start
 
-Do **not** close this on a normal already-running Vast box. Run on the target topology:
+Do **not** close this on a normal already-running Vast box. Run on the target topology (RunPod Serverless, RTX 5090,
+`ghcr.io/romadovairina/dabai-worker:v0.10.0`, weights on the `dabai-models` network volume, FlashBoot off, workersMin=0):
 
 ```bash
+export RUNPOD_API_KEY=...          # never commit
+export RUNPOD_ENDPOINT_ID=...
+I=scripts/pilot/infra_10
 python scripts/pilot/benchmark_10_cold_start.py \
-  --start-command './infra/start_node.sh' \
-  --ready-command './infra/is_ready.sh' \
-  --stop-command './infra/stop_node.sh' \
-  --repeat 3 \
-  --confirm-target-topology
+  --start-command "$I/start_node.sh" --ready-command "$I/is_ready.sh" \
+  --stop-command "$I/stop_node.sh" --ensure-stopped-command "$I/ensure_stopped.sh" \
+  --repeat 3 --timeout 3600 --poll-interval 2 --stop-timeout 900 \
+  --confirm-cold-node --confirm-multistage-image --confirm-network-nvme \
+  --topology-note '...'
 ```
 
-`is_ready.sh` must return 0 only when the worker and required weights are actually ready
-for a job, not merely when SSH/HTTP is reachable.
+`is_ready.sh` returns 0 only when the worker completed `{"action":"ready"}` with `ready:true` (CUDA + every weight on
+the volume verified), not merely when the endpoint is reachable. Cold state (accepted 2026-09-20): FlashBoot off,
+`pending_jobs = 0`, `initializing = 0`, `running = 0`, all endpoint pods `EXITED` / uptime 0. A RunPod standby
+idle/throttled slot is not a live worker. This measures a **scale-to-zero Serverless cold container start**, not a
+fresh physical host or an empty Docker/image cache — see `scripts/pilot/infra_10/README.md`.
+
+Result: `CLOSED — FAIL_TARGET` — 271.170 / 15.701 / 11.280 s vs target <60 s per run; RunPod provider-reported
+pre-execution delay kept separately in `reports/pilot/0.10_cold_start_breakdown.md`.
 
 ## 0.11 S
 
