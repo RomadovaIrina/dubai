@@ -127,3 +127,6 @@ reports/**/*.jpeg
 qa_outputs/**/*.png
 qa_outputs/**/*.jpg
 qa_outputs/**/boundaries/
+
+# quality-optimization: generated dubbed outputs for manual review (never committed)
+result_videos/
