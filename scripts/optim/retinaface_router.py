@@ -6,6 +6,13 @@ Frame classes (compatible with scripts/pilot/face_aware_latentsync.py::segment()
   SMALL_FACE   a face is detected but fails a size/aspect test          reason: width_below_threshold | height_below_threshold | aspect_out_of_range
   NO_FACE      no detection at all, or best detection below --retina-conf   reason: no_face | low_confidence
 
+Every row with a detection also carries the detector's raw output for the chosen face (facexlib RetinaFace.detect_faces()
+returns an (N, 15) array: x1 y1 x2 y2 score + 5 landmarks (x, y): left eye, right eye, nose, left mouth, right mouth):
+  bbox         {x1 y1 x2 y2 w h score}
+  landmarks_5  [[x, y] x 5] in master-frame pixels, the same 5 points / order FaceRestoreHelper (CodeFormer) aligns with
+  confidence   the detection score
+so a later stage (week-2 CodeFormer) can align the face without running a second detector.
+
 The defaults mirror LatentSync's own FaceDetector filter (latentsync/utils/face_detector.py: w<50 or h<80 -> rejected),
 so a VALID_FACE frame is one LatentSync itself would accept; the business wish "<50 px" is covered by --face-min-w/-h.
 This router is the routing decision only; LatentSync's own detector is still run on every cut segment right before
@@ -32,6 +39,13 @@ ASPECT = (0.2, 1.5)                                         # LatentSync FaceDet
 FPS = 25
 
 
+def landmarks_of(det) -> list | None:
+    """5 facial landmarks [[x, y] x 5] from one facexlib detection row (15 values); None when the row has no landmarks."""
+    if det is None or len(det) < 15:
+        return None
+    return [[round(float(det[5 + 2 * k]), 2), round(float(det[6 + 2 * k]), 2)] for k in range(5)]
+
+
 class RetinaFaceRouter:
     def __init__(self, min_w: int = DEFAULT_MIN_W, min_h: int = DEFAULT_MIN_H, conf: float = DEFAULT_CONF,
                  device: str = "cuda", half: bool = True):
@@ -44,26 +58,28 @@ class RetinaFaceRouter:
         with torch.no_grad():
             dets = self.det.detect_faces(frame_bgr, conf_threshold=0.02)   # everything; our confidence gate is applied below
         if len(dets) == 0:
-            return {"cls": "NO_FACE", "reason": "no_face", "bbox": None}
+            return {"cls": "NO_FACE", "reason": "no_face", "bbox": None, "landmarks_5": None, "confidence": None}
         best = max(dets, key=lambda d: float(d[4]))                          # highest confidence first
         x1, y1, x2, y2, score = [float(v) for v in best[:5]]
         if score < self.conf:
             return {"cls": "NO_FACE", "reason": "low_confidence", "bbox": {"x1": int(x1), "y1": int(y1), "x2": int(x2), "y2": int(y2),
-                                                                           "w": int(x2 - x1), "h": int(y2 - y1), "score": round(score, 3)}}
+                                                                           "w": int(x2 - x1), "h": int(y2 - y1), "score": round(score, 3)},
+                    "landmarks_5": landmarks_of(best), "confidence": round(score, 4)}
         # among confident detections take the largest (LatentSync picks the largest accepted face)
         conf_dets = [d for d in dets if float(d[4]) >= self.conf]
         big = max(conf_dets, key=lambda d: (float(d[2]) - float(d[0])) * (float(d[3]) - float(d[1])))
         x1, y1, x2, y2, score = [float(v) for v in big[:5]]
         w, h = int(x2 - x1), int(y2 - y1)
         bbox = {"x1": int(x1), "y1": int(y1), "x2": int(x2), "y2": int(y2), "w": w, "h": h, "score": round(score, 3)}
+        extra = {"landmarks_5": landmarks_of(big), "confidence": round(score, 4)}
         if w < self.min_w:
-            return {"cls": "SMALL_FACE", "reason": "width_below_threshold", "bbox": bbox}
+            return {"cls": "SMALL_FACE", "reason": "width_below_threshold", "bbox": bbox, **extra}
         if h < self.min_h:
-            return {"cls": "SMALL_FACE", "reason": "height_below_threshold", "bbox": bbox}
+            return {"cls": "SMALL_FACE", "reason": "height_below_threshold", "bbox": bbox, **extra}
         ar = w / max(h, 1)
         if not (ASPECT[0] < ar < ASPECT[1]):
-            return {"cls": "SMALL_FACE", "reason": "aspect_out_of_range", "bbox": bbox}
-        return {"cls": "VALID_FACE", "reason": None, "bbox": bbox}
+            return {"cls": "SMALL_FACE", "reason": "aspect_out_of_range", "bbox": bbox, **extra}
+        return {"cls": "VALID_FACE", "reason": None, "bbox": bbox, **extra}
 
     def classify_video(self, path: pathlib.Path) -> list[dict]:
         """Rows in the schema face_aware_latentsync.segment() consumes: {frame, cls, bbox} (+ reason)."""

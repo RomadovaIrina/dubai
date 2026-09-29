@@ -22,9 +22,14 @@ Baseline (face_aware_latentsync.py) stays untouched and selectable. This module 
   --deepcache-interval N     DeepCache cache_interval (5 = default, A/B-validated on 04; 3 = previous frozen setting)
   --sdpa-backend auto|flash  PyTorch SDPA backend for the UNet (flash = force the fused FLASH_ATTENTION kernel)
   --compile-backend none|inductor|tensorrt   optional UNet compilation
-  CodeFormer gate            OFF. The gate exists only as routing metadata: `codeformer_eligible` marks the segments
-                             that a later, explicitly approved CodeFormer stage could touch (LATENT_SYNC segments only);
-                             NO_FACE / SMALL_FACE / NO_SPEECH segments are never eligible. Pilot 0.7 found no strict-safe weight.
+  CodeFormer gate            codeformer="off" (frozen pilot baseline, default): never invoked; `codeformer_eligible` marks the
+                             LATENT_SYNC segments as routing metadata only.
+                             codeformer="optimized" (week 2): scripts/optim/codeformer_accel.CodeFormerAccel restores the faces of
+                             the LatentSync OUTPUT frames of successful LATENT_SYNC segments only, in memory, right after
+                             LatentSync and before the boundary crossfade / assembly. NO_FACE / SMALL_FACE / NO_SPEECH /
+                             PASS_THROUGH / PASS_THROUGH_LS_FAILED frames are never touched. Face alignment reuses the 5 points
+                             derived from LatentSync's own insightface landmarks (verify pass) -> no second detector; a frame
+                             without them falls back to one RetinaFace router detection (counted). Geometry is preserved.
 
 Audio/video semantics are those of the E2E runner: the master frames of a pass-through interval stay untouched, the
 DUBBED audio track covers the whole timeline (it is muxed as the only audio stream). Frame order and count follow the
@@ -223,18 +228,38 @@ def check_output_frames(path: pathlib.Path, expected: int) -> dict:
             "pass": n == expected and bad == 0 and blank == 0}
 
 
+def _router_lm5(router, frame_bgr):
+    """One fresh RetinaFace router detection -> 5 landmarks (float32 5x2) or None. Used only when a LATENT_SYNC frame has no
+    insightface landmarks (verify depth exhausted); never inherited from a neighbouring frame."""
+    r = router.classify_frame(frame_bgr)
+    lm = r.get("landmarks_5")
+    return np.asarray(lm, dtype=np.float32) if (lm and r["cls"] != "NO_FACE") else None
+
+
 # --------------------------------------------------------------------------------------------------------------
 def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path, audio_mux: pathlib.Path, out: pathlib.Path, *,
                   router, runner: AccelRunner | None, min_ls_frames: int = 25, max_verify_depth: int = 3, codeformer: str = "off",
                   times: dict | None = None, log=print, speech_gate: list | None = None,
-                  crossfade_frames: int = GATE_DEFAULTS["crossfade_frames"], router_stride: int = 1, in_memory: bool = True) -> dict:
+                  crossfade_frames: int = GATE_DEFAULTS["crossfade_frames"], router_stride: int = 1, in_memory: bool = True,
+                  cf_runner=None) -> dict:
     """Face-aware LatentSync on `src` driven by `audio16k` (the dubbed track); `audio_mux` (AAC of the same track) is muxed.
-    `speech_gate`: list of (start_s, end_s) intervals (build_speech_gate); frames outside them are passed through."""
+    `speech_gate`: list of (start_s, end_s) intervals (build_speech_gate); frames outside them are passed through.
+    `codeformer`: "off" (frozen baseline) or "optimized" (`cf_runner` = codeformer_accel.CodeFormerAccel, applied to the
+    LatentSync output frames of LATENT_SYNC segments only, before crossfade/assembly)."""
     import cv2
     import soundfile as sf
     times = times if times is not None else {}
-    if codeformer != "off":
-        raise NotImplementedError("CodeFormer gate: only LATENT_SYNC segments would be eligible; CodeFormer is disabled for pilot 0.5")
+    if codeformer not in ("off", "optimized"):
+        raise NotImplementedError(f"codeformer mode {codeformer!r}: only 'off' (pilot baseline) and 'optimized' (week 2 in-memory stage) exist")
+    if codeformer == "optimized":
+        if cf_runner is None:
+            raise ValueError("codeformer='optimized' needs cf_runner (codeformer_accel.CodeFormerAccel)")
+        if not in_memory:
+            raise NotImplementedError("codeformer='optimized' is implemented for the in-memory segment path only")
+        from codeformer_accel import lm5_from_insightface106
+        if cf_runner.fallback_detector is None and router is not None:
+            cf_runner.fallback_detector = lambda fr_bgr: _router_lm5(router, fr_bgr)
+    t_cf = 0.0
     t0 = time.perf_counter(); master, _own = fa.make_master(src, work); times["ls_master_25fps"] = round(time.perf_counter() - t0, 3)
     t0 = time.perf_counter(); master_frames = fa.read_frames(master); times["ls_master_decode"] = round(time.perf_counter() - t0, 3)
     n = len(master_frames)
@@ -307,6 +332,17 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
                 frs_rgb, dt = runner.run_frames(seg_rgb, wav, dets)
                 frs = [cv2.cvtColor(f, cv2.COLOR_RGB2BGR) for f in frs_rgb]
                 wav.unlink(missing_ok=True); del seg_rgb, frs_rgb
+                if codeformer == "optimized":                                                     # week 2: restore LatentSync output faces only
+                    tc = time.perf_counter(); n_use = min(len(frs), s["frames"])                  # frames beyond s["frames"] are dropped by assembly
+                    if cf_runner.landmark_source == "insightface" and dets is not None:
+                        lms = [lm5_from_insightface106(dets[k][1]) if k < len(dets) else None for k in range(n_use)]; lm_src = "insightface106->5 (verify pass)"
+                    else:
+                        lms = [None] * n_use; lm_src = "retinaface router per frame"          # fresh detection on every frame (fallback_detector)
+                    frs[:n_use], cf_st = cf_runner.restore_frames(frs[:n_use], lms)
+                    s["codeformer"] = {k: v for k, v in cf_st.items() if k != "batches"} | {"landmarks": lm_src}
+                    t_cf += time.perf_counter() - tc
+                    log(f"  [codeformer] seg {s['index']} {cf_st['faces_restored']}/{cf_st['frames_in']} faces restored in {cf_st['seconds']['total']}s "
+                        f"({cf_st['faces_per_s']} faces/s, fallback det {cf_st['fallback_detections']}, no-landmark {cf_st['frames_without_landmarks']}, peak {cf_st['peak_vram_mib']} MiB)")
             else:
                 v, au = fa.cut_segment(master, audio16k, s, work, f"ls{s['index']:03d}")          # audio = DUBBED track slice
                 if s.get("verify_depth", 0) < max_verify_depth:
@@ -334,8 +370,10 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
         except Exception as e:                                                                    # "Face not detected" etc. -> pass-through
             s["action"] = "PASS_THROUGH_LS_FAILED"; s["error"] = f"{type(e).__name__}: {str(e)[:300]}"
             log(f"  [lipsync] seg {s['index']} LatentSync FAILED -> pass-through: {s['error']}")
-    times["latentsync"] = round(time.perf_counter() - t0, 3)
+    times["latentsync"] = round(time.perf_counter() - t0 - t_cf, 3)      # LatentSync-only; CodeFormer is reported separately
     times["latentsync_verify"] = round(t_verify, 3)
+    if codeformer == "optimized":
+        times["codeformer"] = round(t_cf, 3)
     segs[:] = sorted([s for s in segs if s["action"] != "SPLIT"], key=lambda s: s["start_frame"])
     xf = max(0, int(crossfade_frames))
     for j, s in enumerate(segs):
@@ -360,7 +398,10 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
             "latentsync_seconds_of_video": round(lipsynced / FPS, 3), "pass_through_seconds_of_video": round((n - lipsynced) / FPS, 3),
             "ls_fraction": round(lipsynced / max(n, 1), 4), "latentsync_inference_total_s": round(sum(ls_runs), 2), "verify_seconds": round(t_verify, 2),
             "latentsync_calls": len(ls_runs), "verify_splits": verify_info, "assembly": asm, "output_frame_check": frame_check,
-            "codeformer": "OFF (gate metadata only: codeformer_eligible on LATENT_SYNC segments)",
+            "codeformer": ("OFF (gate metadata only: codeformer_eligible on LATENT_SYNC segments)" if codeformer == "off" else
+                           {"mode": "optimized", "config": cf_runner.config, "load_s": cf_runner.load_s, "totals": dict(cf_runner.totals),
+                            "eligible_frames": sum(s["frames"] for s in segs if s["action"] == "LATENT_SYNC"), "master_frames": n,
+                            "restored_segments": [s["index"] for s in segs if s.get("codeformer")], "seconds": round(t_cf, 3)}),
             "codeformer_eligible_segments": [s["index"] for s in segs if s["codeformer_eligible"]],
             "runner": runner.config if runner is not None else None, "runner_calls": runner.calls if runner is not None else None,
             "segments": [{k: v for k, v in s.items() if k != "face_bbox_stats"} for s in segs]}
@@ -389,6 +430,9 @@ def main() -> int:
     ap.add_argument("--max-verify-depth", type=int, default=3)
     ap.add_argument("--segment-files", action="store_true", help="legacy path: per-segment mp4 cut / verify re-encode / LatentSync file I/O")
     ap.add_argument("--no-latentsync", action="store_true", help="routing + assembly only")
+    ap.add_argument("--codeformer", choices=["off", "optimized"], default="off", help="off = frozen baseline; optimized = week-2 in-memory CodeFormer on LATENT_SYNC frames")
+    ap.add_argument("--codeformer-w", type=float, default=0.5); ap.add_argument("--codeformer-batch", type=int, default=4)
+    ap.add_argument("--codeformer-landmarks", choices=["insightface", "retinaface"], default="insightface")
     ap.add_argument("--json", default=None)
     a = ap.parse_args()
     src = pathlib.Path(a.video).resolve(); out_dir = pathlib.Path(a.out_dir); work = out_dir / f"work_{src.stem}"
@@ -410,12 +454,16 @@ def main() -> int:
     router = make_router(a.face_router, a.face_min_w, a.face_min_h, a.retina_conf)
     runner = None if a.no_latentsync else AccelRunner(a.window_batch_size, not a.no_deepcache, a.compile_backend, a.sdpa_backend,
                                                       deepcache_interval=a.deepcache_interval)
+    cf_runner = None
+    if a.codeformer == "optimized":
+        from codeformer_accel import CodeFormerAccel
+        cf_runner = CodeFormerAccel(fidelity_weight=a.codeformer_w, batch_size=a.codeformer_batch, landmark_source=a.codeformer_landmarks)
     times: dict = {}
     out = out_dir / f"facesync_{src.stem}.mp4"
     t0 = time.perf_counter()
     rep = process_video(src, work, audio16k, audio_mux, out, router=router, runner=runner, min_ls_frames=a.min_ls_frames,
-                        max_verify_depth=a.max_verify_depth, times=times, speech_gate=gate, crossfade_frames=a.crossfade_frames,
-                        router_stride=a.router_stride, in_memory=not a.segment_files)
+                        max_verify_depth=a.max_verify_depth, codeformer=a.codeformer, times=times, speech_gate=gate, crossfade_frames=a.crossfade_frames,
+                        router_stride=a.router_stride, in_memory=not a.segment_files, cf_runner=cf_runner)
     rep.update(video=str(src), output=str(out), output_meta=fa.probe(out), stage_seconds=times, wall_s_total=round(time.perf_counter() - t0, 2),
                model_load_s=runner.load_s if runner else None, gpu=gpu_info(), at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
     if a.json:
