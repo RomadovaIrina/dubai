@@ -62,8 +62,11 @@ def group_phrases(phrases: list[tuple[float, float]], n_bursts: int, burst_dur: 
 class PlaceOpts:
     """Placement parameters shared by E1 (phrase groups of one TTS clip) and the burst-aware path (one TTS chunk per burst)."""
 
-    def __init__(self, atempo_cap=1.3, hard_cap=1.6, extend=True, gap=0.06, fill_slowdown=1.0):
+    def __init__(self, atempo_cap=1.3, hard_cap=1.6, extend=True, gap=0.06, fill_slowdown=1.0, spill=False):
         self.atempo_cap, self.hard_cap, self.extend, self.gap, self.fill_slowdown = atempo_cap, hard_cap, extend, gap, fill_slowdown
+        # spill (burst-aware path only): the LAST group of a unit may run past the slot end into the pause before `next_start`
+        # (= the next unit's first burst) and uses the hard cap before anything is cut, so words are never truncated at the slot end
+        self.spill = spill
 
 
 def place_groups(groups: list, bursts: list, slot: tuple, next_start: float, opts: PlaceOpts, tmp: pathlib.Path, tag: str,
@@ -73,14 +76,15 @@ def place_groups(groups: list, bursts: list, slot: tuple, next_start: float, opt
     atempo_cap (hard_cap when the overflow into the next burst would exceed 0.4 s); optional slow-down towards the burst end
     (fill_slowdown < 1); overflow shifts the next group; the slot is never left (cut at slot end). Returns (slot track, placements)."""
     import soundfile as sf
-    slot_s, slot_e = slot; n_slot = int(round((slot_e - slot_s) * sr)); track = np.zeros(n_slot, dtype=np.float32); cursor = slot_s; placements = []
+    slot_s, slot_e = slot; track_e = max(slot_e, next_start - opts.gap) if opts.spill else slot_e
+    n_slot = int(round((track_e - slot_s) * sr)); track = np.zeros(n_slot, dtype=np.float32); cursor = slot_s; placements = []
     for j, (bs, be) in enumerate(bursts):
         seg = groups[j]; lab = labels[j] if labels else None
         if seg is None or len(seg) == 0:
             placements.append({"burst": [round(bs, 3), round(be, 3)], "phrases": lab if lab is not None else [], "note": "no phrase assigned"}); continue
         g = len(seg) / sr
         start = max(bs, cursor)
-        win_end = (min(next_start - opts.gap, bursts[j + 1][0] - opts.gap) if j + 1 < len(bursts) else min(slot_e, next_start - opts.gap)) if opts.extend else min(be, slot_e)
+        win_end = (min(next_start - opts.gap, bursts[j + 1][0] - opts.gap) if j + 1 < len(bursts) else (max(slot_e, next_start - opts.gap) if opts.spill else min(slot_e, next_start - opts.gap))) if opts.extend else min(be, slot_e)
         win_end = max(win_end, start + 0.2); win = win_end - start; ratio = g / win; tempo = 1.0
         p_in = tmp / f"grp_{tag}_{j}.wav"; p_out = tmp / f"grp_{tag}_{j}_t.wav"
         if ratio < 0.995 and opts.fill_slowdown < 1.0:   # E1b: stretch a short group towards the ORIGINAL burst end (never beyond it), floor at fill_slowdown
@@ -93,14 +97,17 @@ def place_groups(groups: list, bursts: list, slot: tuple, next_start: float, opt
             tempo = min(ratio, opts.atempo_cap)
             if g / tempo > win and j + 1 < len(bursts) and (g / tempo - win) > 0.4:   # collides with the next burst by > 0.4 s: hard cap; smaller overflows just shift the next group
                 tempo = min(ratio, opts.hard_cap)
+            elif opts.spill and j + 1 == len(bursts) and g / tempo > win + 0.05:       # last group would be truncated at the track end: hard cap rather than cutting words
+                tempo = min(ratio, opts.hard_cap)
             sf.write(str(p_in), seg, sr, subtype="PCM_16")
             ff(["-i", str(p_in), "-af", f"atempo={tempo:.6f}", "-ar", str(sr), "-ac", "1", "-c:a", "pcm_s16le", str(p_out)]); seg, _ = sf.read(str(p_out), dtype="float32")
             p_in.unlink(); p_out.unlink()
         a0 = int(round((start - slot_s) * sr)); b0 = min(n_slot, a0 + len(seg))
         if b0 > a0: track[a0:b0] += seg[:b0 - a0]
-        end = start + len(seg) / sr; cut = max(0.0, end - slot_e)
+        end = start + len(seg) / sr; cut = max(0.0, end - track_e)
         placements.append({"burst": [round(bs, 3), round(be, 3)], "window": [round(start, 3), round(win_end, 3)], "phrases": lab if lab is not None else [j], "group_s": round(g, 3), "ratio": round(ratio, 3),
-                           "atempo": round(tempo, 3), "placed": [round(start, 3), round(min(end, slot_e), 3)], "overflow_into_next_burst_s": round(max(0.0, end - win_end), 3), "cut_at_slot_end_s": round(cut, 3)})
+                           "atempo": round(tempo, 3), "placed": [round(start, 3), round(min(end, track_e), 3)], "overflow_into_next_burst_s": round(max(0.0, end - win_end), 3), "cut_at_slot_end_s": round(cut, 3),
+                           "spilled_past_slot_s": round(max(0.0, min(end, track_e) - slot_e), 3)})
         cursor = end + opts.gap
     return track, placements
 

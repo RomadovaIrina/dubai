@@ -81,9 +81,11 @@ def proportional_split(translation: str, counts: list[int]) -> list[str]:
 
 
 def validate_parts(obj, n: int, translation: str) -> tuple[list[str] | None, str | None]:
+    if isinstance(obj, list):                       # a bare JSON list of strings is accepted as the parts
+        obj = {"parts": obj}
     if not isinstance(obj, dict) or "parts" not in obj or not isinstance(obj["parts"], list):
         return None, "no 'parts' list"
-    parts = [str(p).strip() for p in obj["parts"]]
+    parts = [str(p).strip().strip('"') for p in obj["parts"]]
     if len(parts) != n:
         return None, f"expected exactly {n} parts, got {len(parts)}"
     if any(not norm_tokens(p) for p in parts):
@@ -106,7 +108,7 @@ def qwen_split(llm, src_groups: list[str], translation: str, src_name: str, tgt_
         r = llm.create_chat_completion(msgs, max_tokens=512, temperature=0.0)
         txt = r["choices"][0]["message"]["content"].strip(); raw = txt
         txt = re.sub(r"^```(?:json)?\s*|\s*```$", "", txt.strip())
-        m = re.search(r"\{.*\}", txt, re.S); obj = None; err = None
+        m = re.search(r"\{.*\}", txt, re.S) or re.search(r"\[.*\]", txt, re.S); obj = None; err = None
         try:
             obj = json.loads(m.group(0) if m else txt)
         except Exception as e:
@@ -129,6 +131,7 @@ def main() -> int:
     ap.add_argument("--atempo-cap", type=float, default=1.3); ap.add_argument("--hard-cap", type=float, default=1.6); ap.add_argument("--extend", choices=["on", "off"], default="on")
     ap.add_argument("--gap", type=float, default=0.06); ap.add_argument("--fill-slowdown", type=float, default=1.0); ap.add_argument("--seed", type=int, default=1247)
     ap.add_argument("--min-burst-words", type=int, default=1)
+    ap.add_argument("--spill", choices=["on", "off"], default="off", help="last chunk of a unit may run into the pause before the next unit's first burst (hard cap before any cut)")
     ap.add_argument("--min-burst-s", type=float, default=0.0, help="merge a source burst shorter than this into its neighbour (closer gap) before grouping words; 0 = keep every VAD burst")
     a = ap.parse_args()
     man = json.loads((pathlib.Path(a.run_dir) / f"{a.id}_baseline.manifest.json").read_text())
@@ -144,9 +147,12 @@ def main() -> int:
         keep = [(b, g) for b, g in zip(bursts, groups) if len(g) >= a.min_burst_words]
         if not keep:
             keep = [((slot_s, slot_e), words)]
-        plan.append({"unit": u, "slot": (slot_s, slot_e), "next_start": next_start, "bursts_all": bursts, "bursts": [b for b, _ in keep],
+        plan.append({"unit": u, "slot": (slot_s, slot_e), "next_start": next_start, "next_slot_start": next_start, "bursts_all": bursts, "bursts": [b for b, _ in keep],
                      "groups": [" ".join(w["word"].strip() for w in g) for _, g in keep], "group_counts": [len(g) for _, g in keep],
                      "bursts_without_words": len(bursts) - len(keep)})
+    if a.spill == "on":   # the last chunk may spill up to the next unit's FIRST BURST (not its slot start): the pause between units is usable
+        for p, q in zip(plan, plan[1:]):
+            p["next_start"] = q["bursts"][0][0]
     # ---- 4: split the existing translations
     t0 = time.perf_counter(); llm = None
     if a.split == "qwen" and any(len(p["bursts"]) > 1 for p in plan):
@@ -209,7 +215,7 @@ def main() -> int:
         raise RuntimeError("TTS failed in every dtype")
     times["tts"] = round(time.perf_counter() - t0, 3); del m; torch.cuda.empty_cache()
     # ---- 6: placement (shared E1 functions)
-    opts = PlaceOpts(a.atempo_cap, a.hard_cap, a.extend == "on", a.gap, a.fill_slowdown); report_units = []
+    opts = PlaceOpts(a.atempo_cap, a.hard_cap, a.extend == "on", a.gap, a.fill_slowdown, spill=a.spill == "on"); report_units = []
     for p in plan:
         u = p["unit"]; chunks = []
         for k, t in enumerate(p["tts"]):
@@ -229,7 +235,7 @@ def main() -> int:
                              "placements": placements, "max_atempo": max(pl.get("atempo", 1.0) for pl in placements), "file": str(aligned)})
         print(f"u{u['id']:02d} slot {p['slot'][0]:.2f}-{p['slot'][1]:.2f} bursts {len(p['bursts'])} -> " + " ".join(f"[{pl['placed'][0]:.2f}-{pl['placed'][1]:.2f} x{pl['atempo']}]" for pl in placements if pl.get("placed")), flush=True)
     tr = build_dubbed_track([(r["file"], r["slot"][0]) for r in report_units], duration, out)
-    report = {"id": a.id, "mode": "burst_aware", "split": a.split, "min_burst_s": a.min_burst_s, "atempo_cap": a.atempo_cap, "hard_cap": a.hard_cap, "extend": a.extend, "fill_slowdown": a.fill_slowdown, "seed": a.seed,
+    report = {"id": a.id, "mode": "burst_aware", "split": a.split, "min_burst_s": a.min_burst_s, "spill": a.spill, "atempo_cap": a.atempo_cap, "hard_cap": a.hard_cap, "extend": a.extend, "fill_slowdown": a.fill_slowdown, "seed": a.seed,
               "tts_dtype": str(used).replace("torch.", ""), "units": report_units, "stage_seconds": times,
               "summary": {**placement_summary(report_units), **tr, "units": len(units), "units_single_burst": n_single, "units_qwen_split": n_qwen, "units_proportional_fallback": n_fb,
                           "chunks": sum(len(r["tts"]) for r in report_units), "bursts_without_words": sum(r["bursts_without_words"] for r in report_units)}}

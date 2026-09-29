@@ -17,9 +17,16 @@ frozen dabai baseline, wired in pipeline order on the ORIGINAL timeline (pauses 
    7. Chatterbox Multilingual v3       real TTS per unit; the speaker's own diarized speech (<=10 s, cut from the source
                                        audio) is the voice reference via the upstream `audio_prompt_path` API;
                                        fp16 cast like scripts/check_chatterbox.py, fp32 fallback
-   8. duration alignment               ffmpeg atempo (scripts/check_atempo.py path): TTS longer than its slot is
-                                       sped up to fit exactly; TTS shorter than its slot keeps natural speed and is
-                                       padded with silence -> the global timeline never moves
+   8. duration alignment               --alignment slot (default, frozen baseline): ffmpeg atempo (scripts/check_atempo.py
+                                       path): TTS longer than its slot is sped up to fit exactly; TTS shorter than its
+                                       slot keeps natural speed and is padded with silence -> the global timeline never moves
+                                       --alignment burst (week 3): per unit, the source speech bursts (Silero VAD in the
+                                       slot) get the source words by whisper word start, Qwen cuts the unit translation
+                                       into exactly N validated parts (scripts/quality/burst_aware_audio.py), Chatterbox
+                                       synthesises each part, and scripts/quality/e1_burst_align.place_groups fits every
+                                       chunk into its burst (extension into the following silence, atempo cap / hard cap,
+                                       optional spill into the pause before the next unit) -> the dubbed speech lies on
+                                       the original speech; slots and the timeline still never move
    9. dubbed audio track               full source length; aligned TTS at the unit slots, silence elsewhere
   10. face-aware LatentSync 1.6        scripts/pilot/face_aware_latentsync.py functions: VALID_FACE segments ->
                                        LatentSync driven by the DUBBED audio, SMALL_FACE / NO_FACE -> pass-through,
@@ -207,7 +214,28 @@ def assign_speakers(units: list[dict], turns: list[dict]) -> None:
             u["speaker"] = t["speaker"]; u["speaker_method"] = "nearest_turn_to_center"; u["speaker_overlap_s"] = 0.0
 
 
-def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict) -> dict:
+def burst_plan(units: list[dict], segments: list[dict], speech: list[dict], duration: float, min_burst_s: float, spill: bool) -> list[dict]:
+    """--alignment burst, step 1: per unit the source bursts (Silero VAD clipped to the slot, short ones merged), the whisper
+    words of the unit assigned to bursts by word start, bursts without words dropped. Slot rule identical to align_units()."""
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
+    from burst_aware_audio import assign_words, merge_short_bursts
+    from e1_burst_align import bursts_in_slot
+    vad = [(v["start"], v["end"]) for v in speech]; seg_by_id = {sg["id"]: sg for sg in segments}; plans = []
+    for i, u in enumerate(units):
+        slot_s = u["start"]; slot_e = min(u["end"], duration, units[i + 1]["start"] - 0.02 if i + 1 < len(units) else duration); slot_e = max(slot_e, slot_s + 0.2)
+        next_start = units[i + 1]["start"] if i + 1 < len(units) else duration
+        bursts = merge_short_bursts(bursts_in_slot(vad, slot_s, slot_e), min_burst_s)
+        sg = seg_by_id[u["asr_segment"]]; words = [w for w in sg["words"] if w["start"] >= u["start"] - 0.011 and w["end"] <= u["end"] + 0.011]
+        groups = assign_words(words, bursts); keep = [(b, g) for b, g in zip(bursts, groups) if g] or [((slot_s, slot_e), words)]
+        plans.append({"slot": (slot_s, slot_e), "next_start": next_start, "bursts": [b for b, _ in keep], "groups": [" ".join(w["word"].strip() for w in g) for _, g in keep],
+                      "group_counts": [len(g) for _, g in keep], "bursts_without_words": len(bursts) - len(keep)})
+    if spill:
+        for p, q in zip(plans, plans[1:]):
+            p["next_start"] = q["bursts"][0][0]
+    return plans
+
+
+def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict, plans: list | None = None, split_retries: int = 2) -> dict:
     import glob
     from llama_cpp import Llama
     files = sorted(glob.glob(str(MODELS / "qwen2.5-7b-instruct-gguf" / f"*{QWEN_QUANT}*.gguf")))
@@ -231,9 +259,23 @@ def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict
             for k in usage:
                 usage[k] += int(r["usage"].get(k, 0))
             print(f"  [translate] u{u['id']:02d} {u['speaker']} {u['start']:.2f}-{u['end']:.2f}s | {u['text'][:60]} -> {txt[:60]}", flush=True)
+    split_stats = None
+    if plans is not None:   # --alignment burst, step 2: cut every unit translation into one part per source burst (Qwen still loaded)
+        from burst_aware_audio import norm_tokens, proportional_split, qwen_split
+        split_stats = {"single": 0, "qwen": 0, "proportional_fallback": 0}
+        with timed(times, "translation_split"):
+            for u, p in zip(units, plans):
+                if len(p["bursts"]) == 1:
+                    u["parts"] = [u["translation"]]; u["split"] = {"method": "single"}; split_stats["single"] += 1; continue
+                parts, log = qwen_split(llm, p["groups"], u["translation"], src_name, tgt_name, split_retries)
+                if parts is None:
+                    parts = proportional_split(u["translation"], p["group_counts"]); log["method"] = "proportional_fallback"
+                assert norm_tokens(" ".join(parts)) == norm_tokens(u["translation"]), "split lost words"
+                u["parts"] = parts; u["split"] = log; split_stats[log["method"]] += 1
+                print(f"  [split] u{u['id']:02d} {len(parts)} parts [{log['method']}]: " + " | ".join(f"{g} -> {t}" for g, t in zip(p["groups"], parts))[:300], flush=True)
     del llm
     return {"model": os.path.basename(files[0]), "quant": QWEN_QUANT, "n_ctx": 4096, "n_threads": THREADS, "n_gpu_layers": 0,
-            "system_prompt": SYSTEM_PROMPT, "direction": f"{src_name}->{tgt_name}", "usage": usage}
+            "system_prompt": SYSTEM_PROMPT, "direction": f"{src_name}->{tgt_name}", "usage": usage, "burst_split": split_stats}
 
 
 def speaker_references(units: list[dict], turns: list[dict], wav16: pathlib.Path, work: pathlib.Path) -> dict:
@@ -289,6 +331,21 @@ def run_tts(units: list[dict], refs: dict, tgt_lang: str, work: pathlib.Path, se
                 else:
                     m.conds = builtin.to(device="cuda")
             for u in us:
+                if "parts" in u:   # --alignment burst: one clip per part (seed per part), keeps the slot-mode path below byte-identical
+                    u["tts_parts"] = []
+                    for k, text in enumerate(u["parts"]):
+                        torch.manual_seed(seed + 100 * u["id"] + k)
+                        with torch.autocast("cuda", dtype=dtype, enabled=dtype != torch.float32):
+                            wav = m.generate(text, language_id=tgt_lang)
+                        wav = wav.detach().float().cpu()
+                        if not torch.isfinite(wav).all() or wav.abs().max() < 1e-4:
+                            raise RuntimeError(f"non-finite or silent TTS for unit {u['id']} part {k}")
+                        p = work / f"tts_u{u['id']:02d}_p{k}.wav"; torchaudio.save(str(p), wav, m.sr)
+                        u["tts_parts"].append({"file": str(p), "seconds": round(wav.shape[-1] / m.sr, 3), "text": text})
+                    u["tts"] = {"file": None, "parts": len(u["parts"]), "seconds": round(sum(t["seconds"] for t in u["tts_parts"]), 3), "sr": m.sr,
+                                "reference": refs[spk]["source"], "dtype": str(dtype).replace("torch.", "")}
+                    print(f"  [tts] u{u['id']:02d} {spk} {len(u['parts'])} parts {u['tts']['seconds']:.2f}s", flush=True)
+                    continue
                 torch.manual_seed(seed + u["id"])
                 with torch.autocast("cuda", dtype=dtype, enabled=dtype != torch.float32):
                     wav = m.generate(u["translation"], language_id=tgt_lang)
@@ -342,6 +399,36 @@ def align_units(units: list[dict], duration: float, work: pathlib.Path) -> None:
         u["slot"] = {"start": round(slot_start, 3), "end": round(slot_end, 3), "seconds": round(slot_s, 3)}
         u["alignment"] = {"tts_seconds": tts_s, "ratio_tts_to_slot": round(ratio, 4), "mode": mode, "atempo": atempo,
                           "aligned_seconds": round(len(y) / sr, 3), "file": str(aligned)}
+
+
+def align_units_burst(units: list[dict], plans: list[dict], work: pathlib.Path, opts) -> dict:
+    """--alignment burst, step 3: trim every part to its Silero speech span and fit the chunks into their bursts with
+    e1_burst_align.place_groups (shared with the E1 / burst_aware_audio candidates). Slot fields as in align_units()."""
+    import numpy as np
+    import soundfile as sf
+    from e1_burst_align import SR16, TTS_SR as E1_SR, place_groups, placement_summary, vad_intervals
+    report = []
+    for u, p in zip(units, plans):
+        chunks = []
+        for k, t in enumerate(u["tts_parts"]):
+            y, sr = sf.read(t["file"], dtype="float32"); assert sr == E1_SR
+            if y.ndim > 1: y = y.mean(axis=1)
+            t16 = work / f"tts16_u{u['id']:02d}_p{k}.wav"; ff(["-i", t["file"], "-ar", str(SR16), "-ac", "1", "-c:a", "pcm_s16le", str(t16)])
+            raw = vad_intervals(t16) or [(0.0, len(y) / sr)]; t16.unlink()
+            s_, e_ = max(0.0, raw[0][0] - 0.04), min(len(y) / sr, raw[-1][1] + 0.06); t["speech_span"] = [round(s_, 3), round(e_, 3)]
+            chunks.append(y[int(s_ * sr):int(e_ * sr)])
+        slot_s, slot_e = p["slot"]
+        track, placements = place_groups(chunks, p["bursts"], p["slot"], p["next_start"], opts, work, f"u{u['id']:02d}", sr=E1_SR, labels=[[k] for k in range(len(chunks))])
+        for pl, t, g in zip(placements, u["tts_parts"], p["groups"]):
+            pl["text"] = t["text"]; pl["source_words"] = g
+        aligned = work / f"aligned_u{u['id']:02d}.wav"; sf.write(str(aligned), track, E1_SR, subtype="PCM_16")
+        u["slot"] = {"start": round(slot_s, 3), "end": round(slot_e, 3), "seconds": round(slot_e - slot_s, 3)}
+        u["alignment"] = {"tts_seconds": u["tts"]["seconds"], "ratio_tts_to_slot": round(u["tts"]["seconds"] / max(slot_e - slot_s, 1e-6), 4), "mode": "burst",
+                          "atempo": max(pl.get("atempo", 1.0) for pl in placements), "bursts": len(p["bursts"]), "bursts_without_words": p["bursts_without_words"],
+                          "placements": placements, "aligned_seconds": round(len(track) / E1_SR, 3), "file": str(aligned)}
+        report.append({"id": u["id"], "placements": placements})
+    return {"mode": "burst", "min_burst_s": getattr(opts, "min_burst_s", None), "spill": opts.spill, "atempo_cap": opts.atempo_cap, "hard_cap": opts.hard_cap,
+            "fill_slowdown": opts.fill_slowdown, "summary": placement_summary(report)}
 
 
 def build_dubbed_track(units: list[dict], duration: float, work: pathlib.Path) -> dict:
@@ -468,6 +555,11 @@ def main() -> int:
     ap.add_argument("--source-lang", default=None, help="whisper language code; default: auto-detect")
     ap.add_argument("--work-dir", default=str(DEFAULT_WORK), help="runtime media root (work_<stem>/ inside it is recreated per run)")
     ap.add_argument("--max-unit-s", type=float, default=20.0, help="split speech units longer than this at the widest word gap")
+    ap.add_argument("--alignment", choices=["slot", "burst"], default="slot", help="slot = frozen baseline aligner; burst = week-3 burst-aware translation split / TTS / placement")
+    ap.add_argument("--burst-min-s", type=float, default=0.0, help="burst mode: merge source bursts shorter than this into a neighbour")
+    ap.add_argument("--burst-spill", choices=["on", "off"], default="on", help="burst mode: last chunk may run into the pause before the next unit (hard cap before any cut)")
+    ap.add_argument("--atempo-cap", type=float, default=1.3); ap.add_argument("--hard-cap", type=float, default=1.6); ap.add_argument("--fill-slowdown", type=float, default=1.0)
+    ap.add_argument("--split-retries", type=int, default=2, help="burst mode: Qwen JSON split retries before the lossless proportional fallback")
     ap.add_argument("--min-ls-frames", type=int, default=25, help="VALID_FACE runs shorter than this are passed through")
     ap.add_argument("--max-verify-depth", type=int, default=3)
     ap.add_argument("--seed", type=int, default=1247)
@@ -508,7 +600,7 @@ def main() -> int:
         shutil.rmtree(work)
     work.mkdir(parents=True)
     times: dict = {}; t_all = time.perf_counter()
-    man: dict = {"task": "0.5-runner", "input": str(src), "output": str(out), "target_lang": tgt,
+    man: dict = {"task": "0.5-runner", "input": str(src), "output": str(out), "target_lang": tgt, "alignment_mode": a.alignment,
                  "codeformer": "DISABLED (not invoked)" if a.codeformer == "off" else {"mode": a.codeformer, "w": a.codeformer_w, "batch": a.codeformer_batch, "landmarks": a.codeformer_landmarks, "precision": a.codeformer_precision},
                  "work_dir": str(work), "config": {"seed": a.seed, "max_unit_s": a.max_unit_s, "threads": THREADS}}
     try:
@@ -548,13 +640,23 @@ def main() -> int:
         man["diarization"] = {"model": "pyannote/speaker-diarization-3.1", "turns": turns, "speakers": sorted({t["speaker"] for t in turns})}
         print(f"  [diarization] {len(turns)} turns, speakers={man['diarization']['speakers']}", flush=True)
 
-        man["translation"] = run_translation(units, src_lang, tgt, times)
+        plans = None
+        if a.alignment == "burst":
+            plans = burst_plan(units, segments, speech, duration, a.burst_min_s, a.burst_spill == "on")
+            print(f"  [burst] {sum(len(p['bursts']) for p in plans)} bursts with words in {len(units)} units, {sum(p['bursts_without_words'] for p in plans)} bursts without words", flush=True)
+        man["translation"] = run_translation(units, src_lang, tgt, times, plans=plans, split_retries=a.split_retries)
 
         refs = speaker_references(units, turns, wav16, work)
         man["tts"] = run_tts(units, refs, tgt, work, a.seed, times)
 
         with timed(times, "alignment"):
-            align_units(units, duration, work)
+            if a.alignment == "burst":
+                sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
+                from e1_burst_align import PlaceOpts
+                opts = PlaceOpts(a.atempo_cap, a.hard_cap, True, 0.06, a.fill_slowdown, spill=a.burst_spill == "on"); opts.min_burst_s = a.burst_min_s
+                man["alignment"] = align_units_burst(units, plans, work, opts)
+            else:
+                align_units(units, duration, work); man["alignment"] = {"mode": "slot"}
         with timed(times, "dubbed_track"):
             man["dubbed_track"] = build_dubbed_track(units, duration, work)
         man["units"] = units
