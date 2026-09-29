@@ -24,4 +24,61 @@ rest of the slot silent (tts/slot 0.40-0.58 on 03/04/05). Result: 38-51 % of the
    on all, but it absorbs leading/trailing silence, so chunk trimming stays on Silero VAD and placement is driven by the source side.
    WhisperX is the tool for TTS word boundaries (cut-word verification, future intra-part splits), not part of the production path.
 
-## Results — see the tables below (filled from `/tmp/dabai_quality/manifests/*_dub_coverage.json`)
+## Results — dataset, LS-only video stage on the baseline work dirs (candidate path), SyncNet on the full output
+
+| video | policy | silent while speaking (pilot RMS metric) | VAD IoU | orig speech w/o dub s | dub outside orig s | SyncNet (LS-only base / orig) | AV | groups | atempo > 1.25 / > 1.3 / max | overflow / cut | units on slot fallback | Qwen split ok / proportional |
+|---|---|---:|---:|---:|---:|---|---:|---:|---|---|---|---|
+| 04 | baseline | 423 | 0.356 | 15.4 | 10.1 | 2.76 (2.76 / 3.24) | 0 | 5 | 0 / 0 / 1.0 | – / – | – / 5 | – |
+| 04 | e1 | 229 | 0.678 | 7.8 | 2.5 | 3.42 (2.76 / 3.24) | 0 | 19 | 1 / 0 / 1.3 | 1 / 0 | – / 5 | – |
+| 04 | burst_s | 186 | 0.695 | 5.4 | 5.2 | 3.31 (2.76 / 3.24) | 0 | 19 | 3 / 2 / 1.6 | 2 / 0 | 0 / 5 | 5 / 0 |
+| 04 | burst_sfb | 190 | 0.602 | 6.7 | 8.4 | 3.3 (2.76 / 3.24) | 0 | 14 | 1 / 0 / 1.276 | 0 / 0 | 1 / 5 | 5 / 0 |
+| 05 | baseline | 458 | 0.348 | 15.3 | 8.3 | 2.61 (2.61 / 1.71) | 0 | 7 | 0 / 0 / 1.0 | – / – | – / 7 | – |
+| 05 | e1 | 453 | 0.509 | 11.3 | 4.7 | 2.88 (2.61 / 1.71) | 0 | 20 | 1 / 0 / 1.3 | 1 / 1 | – / 7 | – |
+| 05 | burst_s | 305 | 0.699 | 4.9 | 5.0 | 2.93 (2.61 / 1.71) | 0 | 21 | 3 / 2 / 1.6 | 1 / 1 | 0 / 7 | 6 / 1 |
+| 05 | burst_sfb | 305 | 0.699 | 4.9 | 5.0 | 2.93 (2.61 / 1.71) | 0 | 21 | 3 / 2 / 1.6 | 1 / 1 | 0 / 7 | 6 / 1 |
+| 03 | burst_s | 155 | 0.756 | 7.3 | 9.9 | 6.1 (4.65 / 4.89) | 0 | 33 | 9 / 4 / 1.6 | 7 / 2 | 0 / 9 | 6 / 3 |
+| 03 | burst_sfb | 141 | 0.766 | 6.6 | 9.9 | 6.12 (4.65 / 4.89) | 0 | 32 | 8 / 3 / 1.6 | 6 / 1 | 1 / 9 | 6 / 3 |
+| 01 | burst_s | 40 | 0.816 | 14.3 | 3.2 | 6.22 (6.84 / 5.36) | 0 | 44 | 15 / 10 / 1.6 | 14 / 2 | 0 / 29 | 11 / 0 |
+| 01 | burst_sfb | 29 | 0.848 | 10.9 | 3.6 | 6.61 (6.84 / 5.36) | 0 | 32 | 5 / 2 / 1.6 | 3 / 2 | 9 / 29 | 11 / 0 |
+
+Baseline pilot metric per video: 04 423, 05 458, 03 444, 01 46. Timeline unchanged in every run (slots never move; output duration / frame count validated).
+
+## Final policy: `--alignment burst` = spill on + per-unit slot fallback at 50 % (`burst_sfb`)
+
+| video | silent while speaking | VAD IoU | SyncNet vs LS-only baseline | atempo > 1.3 | cut groups |
+|---|---:|---:|---|---:|---:|
+| 04 | 190 (baseline 423, 55 % fewer) | 0.602 | 3.3 vs 2.76 (+0.54) | 0 of 14 | 0 |
+| 05 | 305 (baseline 458, 33 % fewer) | 0.699 | 2.93 vs 2.61 (+0.32) | 2 of 21 | 1 |
+| 03 | 141 (baseline 444, 68 % fewer) | 0.766 | 6.12 vs 4.65 (+1.47) | 3 of 32 | 1 |
+| 01 | 29 (baseline 46, 37 % fewer) | 0.848 | 6.61 vs 6.84 (-0.23) | 2 of 32 | 2 |
+
+E2E rows (full pipeline from the source video, `--alignment burst --codeformer optimized`) are appended below as they complete.
+
+
+## Reading
+- The silent-while-speaking frames fall by 33-68 % on every video (dataset: 1371 -> 665 on the pilot metric), the dubbed speech now
+  lies on the original speech (VAD IoU 0.35 -> 0.60-0.85), AV offset stays 0 everywhere, and SyncNet rises on the three
+  conversational videos (+0.32 / +0.54 / +1.47) because the lip-synced frames now carry speech in the driving audio.
+- 01 (narrated, English TTS as long as the Russian) is the case where burst fitting has nothing to gain and can only speed things up:
+  pure burst fitting cost 10/44 groups > 1.3x and -0.62 SyncNet; the per-unit slot fallback (9 of 29 units keep the baseline rule)
+  brings it to 2/32 groups and -0.23. The remaining SyncNet gap on 01 is explained, not hidden: those 20 units are still burst-fitted
+  with mild speed-ups the slot rule did not need.
+- Residual "silent while speaking" (141-305 frames) = burst tails after a chunk shorter than its burst (the English part is shorter
+  than the Russian burst; Chatterbox chunk length varies). `--fill-slowdown 0.85` recovers ~20 % more (04: 186 -> 147, 05: 305 -> 275)
+  at the price of slowed chunks and -0.12 SyncNet on 04; kept as an option, not the default ("no robotic stretching").
+- Still open: 1-2 chunks per video are cut at a unit boundary where there is no pause to spill into (05/03: 1, 01: 2), 2-3 groups per
+  video run at the 1.6 hard cap, and the Qwen cut follows the English word order, not the Russian one, so a burst sometimes carries the
+  neighbouring clause. These are translation-length and TTS-duration issues; the next lever is asking Qwen for parts whose length
+  matches the burst (or re-synthesising an over-long part), not finer word timestamps.
+
+## Acceptance
+| criterion | status |
+|---|---|
+| silent-while-speaking -> ~0 | not reached: -55 % / -33 % / -68 % / -37 % (04/05/03/01); residual explained above |
+| AV offset = 0 | met on every run |
+| SyncNet >= baseline or explained | 04/05/03 above baseline; 01 -0.23, explained (narrated, TTS not shorter than source) |
+| no cut words | met (whole translation parts; WhisperX-verified for E1 as the negative control) |
+| no robotic stretching | no slow-down in the default policy (fill-slowdown off) |
+| atempo > 1.3 only exceptional | 0 / 2 / 3 / 2 groups of 14 / 21 / 32 / 32 (hard-capped 1.6); 1-2 chunks per video cut at unit ends |
+| original timeline unchanged | met (slots never move; duration / frame count validated on every output) |
+| WhisperX (B2B) | measured A/B, not in the production path; kept as the TTS word-boundary tool (`phaseC_whisperx.md`) |
