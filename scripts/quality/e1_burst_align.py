@@ -140,6 +140,7 @@ def main() -> int:
             cursor = end + a.gap
         aligned = out / f"aligned_u{u['id']:02d}.wav"; sf.write(str(aligned), track, sr, subtype="PCM_16"); t16.unlink()
         report["units"].append({"id": u["id"], "slot": [slot_s, slot_e], "tts_s": tts_s, "tts_speech_s": round(trimmed_s, 3), "bursts": len(bursts), "phrases": len(phrases), "baseline_ratio": u["alignment"]["ratio_tts_to_slot"],
+                                "phrase_spans": [[round(s_, 3), round(e_, 3)] for s_, e_ in phrases], "vad_phrases": len(raw),
                                 "baseline_atempo": u["alignment"]["atempo"], "placements": placements, "max_atempo": max(p.get("atempo", 1.0) for p in placements), "file": str(aligned)})
         print(f"u{u['id']:02d} slot {slot_s:.2f}-{slot_e:.2f} tts {tts_s:.2f}s bursts {len(bursts)} phrases {len(phrases)} -> " + " ".join(f"[{p['placed'][0]:.2f}-{p['placed'][1]:.2f} x{p['atempo']}]" for p in placements if p.get("placed")), flush=True)
     # dubbed track (same construction as the runner)
