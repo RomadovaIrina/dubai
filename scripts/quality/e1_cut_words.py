@@ -17,16 +17,26 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--id", required=True); ap.add_argument("--e1-dir", required=True); ap.add_argument("--run-dir", default="/tmp/dabai_quality/baseline")
     ap.add_argument("--tol-ms", type=int, default=40); ap.add_argument("--out", default=None)
+    ap.add_argument("--aligner", choices=["fw", "wx"], default="fw", help="fw = faster-whisper transcription word timestamps; wx = WhisperX wav2vec2 forced alignment of the KNOWN translation text (Phase C)")
     a = ap.parse_args()
     import torch  # noqa: F401
-    from faster_whisper import WhisperModel
     from pilot_common import MODELS
     man = json.loads((pathlib.Path(a.run_dir) / f"{a.id}_baseline.manifest.json").read_text()); rep = json.loads((pathlib.Path(a.e1_dir) / "e1_alignment.json").read_text())
-    m = WhisperModel(str(MODELS / "whisper-large-v3"), device="cuda", compute_type="int8_float16")
+    if a.aligner == "fw":
+        from faster_whisper import WhisperModel
+        m = WhisperModel(str(MODELS / "whisper-large-v3"), device="cuda", compute_type="int8_float16")
+    else:
+        import whisperx
+        align_model, meta = whisperx.load_align_model(language_code="en", device="cuda")
     tol = a.tol_ms / 1000; rows = []; n_cuts = n_bad = 0
     for u, r in zip(man["units"], rep["units"]):
-        segs, _ = m.transcribe(u["tts"]["file"], word_timestamps=True, beam_size=5, language="en", vad_filter=False)
-        words = [(w.word.strip(), float(w.start), float(w.end)) for s in segs for w in (s.words or [])]
+        if a.aligner == "fw":
+            segs, _ = m.transcribe(u["tts"]["file"], word_timestamps=True, beam_size=5, language="en", vad_filter=False)
+            words = [(w.word.strip(), float(w.start), float(w.end)) for s in segs for w in (s.words or [])]
+        else:
+            audio = whisperx.load_audio(u["tts"]["file"]); dur = len(audio) / 16000
+            res = whisperx.align([{"text": u["translation"], "start": 0.0, "end": dur}], align_model, meta, audio, "cuda", return_char_alignments=False)
+            words = [(w["word"], float(w["start"]), float(w["end"])) for sg in res["segments"] for w in sg.get("words", []) if "start" in w]
         # cut points = boundaries between consecutive phrases of the TTS clip (e1_alignment.json phrase_spans); a boundary that is
         # a real pause (gap >= 100 ms) cannot cut a word, so only tight boundaries (valley cuts) are checked against the words
         spans = r.get("phrase_spans") or []; bad = []; tight = 0
@@ -40,12 +50,12 @@ def main() -> int:
                     bad.append({"cut_s": round(c, 3), "word": w, "word_span": [round(ws, 3), round(we, 3)]}); n_bad += 1; break
         rows.append({"unit": u["id"], "translation": u["translation"], "words": len(words), "phrases": len(spans), "tight_cuts": tight, "cut_words": bad,
                      "word_timestamps": [(w, round(ws, 2), round(we, 2)) for w, ws, we in words]})
-    res = {"id": a.id, "tol_ms": a.tol_ms, "cuts": n_cuts, "cut_words": n_bad, "units": rows}
+    res = {"id": a.id, "aligner": a.aligner, "tol_ms": a.tol_ms, "cuts": n_cuts, "cut_words": n_bad, "units": rows}
     print(json.dumps({k: v for k, v in res.items() if k != "units"}))
     for r in rows:
         if r["cut_words"]:
             print(f"  u{r['unit']:02d} {len(r['cut_words'])}/{r['tight_cuts']} valley cuts inside words: " + ", ".join(f"'{b['word']}'@{b['cut_s']}" for b in r["cut_words"]))
-    out = pathlib.Path(a.out or (pathlib.Path("/tmp/dabai_quality/manifests") / f"{a.id}_e1.cut_words.json")); out.write_text(json.dumps(res, indent=1)); print(f"-> {out}")
+    out = pathlib.Path(a.out or (pathlib.Path("/tmp/dabai_quality/manifests") / f"{a.id}_e1.cut_words_{a.aligner}.json")); out.write_text(json.dumps(res, indent=1)); print(f"-> {out}")
     return 0
 
 
