@@ -25,7 +25,7 @@ import argparse, json, pathlib, re, sys, time
 import numpy as np
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent / "pilot"))
-from e1_burst_align import PlaceOpts, TTS_SR, SR16, bursts_in_slot, build_dubbed_track, ff, place_groups, placement_summary, vad_intervals  # noqa: E402
+from e1_burst_align import PlaceOpts, TTS_SR, SR16, burst_fit_ratios, bursts_in_slot, build_dubbed_track, ff, place_groups, place_slot_fallback, placement_summary, vad_intervals  # noqa: E402
 from pilot_common import MODELS, THREADS  # noqa: E402
 
 Q = pathlib.Path("/tmp/dabai_quality")
@@ -132,6 +132,7 @@ def main() -> int:
     ap.add_argument("--gap", type=float, default=0.06); ap.add_argument("--fill-slowdown", type=float, default=1.0); ap.add_argument("--seed", type=int, default=1247)
     ap.add_argument("--min-burst-words", type=int, default=1)
     ap.add_argument("--spill", choices=["on", "off"], default="off", help="last chunk of a unit may run into the pause before the next unit's first burst (hard cap before any cut)")
+    ap.add_argument("--fallback-frac", type=float, default=0.5, help="a unit whose burst fit needs more than --atempo-cap on >= this fraction of its groups (and >1 group) falls back to the baseline slot rule; 1.01 = never")
     ap.add_argument("--min-burst-s", type=float, default=0.0, help="merge a source burst shorter than this into its neighbour (closer gap) before grouping words; 0 = keep every VAD burst")
     a = ap.parse_args()
     man = json.loads((pathlib.Path(a.run_dir) / f"{a.id}_baseline.manifest.json").read_text())
@@ -225,9 +226,14 @@ def main() -> int:
             raw = vad_intervals(t16) or [(0.0, len(y) / sr)]; t16.unlink()
             s_, e_ = max(0.0, raw[0][0] - 0.04), min(len(y) / sr, raw[-1][1] + 0.06); t["speech_span"] = [round(s_, 3), round(e_, 3)]
             chunks.append(y[int(s_ * sr):int(e_ * sr)])
-        track, placements = place_groups(chunks, p["bursts"], p["slot"], p["next_start"], opts, out, f"u{u['id']:02d}", sr=TTS_SR, labels=[[k] for k in range(len(chunks))])
-        for pl, t, g in zip(placements, p["tts"], p["groups"]):
-            pl["text"] = t["text"]; pl["source_words"] = g
+        need = burst_fit_ratios(chunks, p["bursts"], p["slot"], p["next_start"], opts); over = [r for r in need if r is not None and r > opts.atempo_cap]
+        if len(need) > 1 and len(over) >= a.fallback_frac * len([r for r in need if r is not None]):
+            track, placements = place_slot_fallback(chunks, p["slot"], out, f"u{u['id']:02d}"); placements[0]["text"] = " ".join(t["text"] for t in p["tts"]); placements[0]["source_words"] = " | ".join(p["groups"])
+            placements[0]["burst_fit_ratios"] = need; print(f"u{u['id']:02d} slot fallback ({len(over)}/{len(need)} groups would need > {opts.atempo_cap}x: {need})", flush=True)
+        else:
+            track, placements = place_groups(chunks, p["bursts"], p["slot"], p["next_start"], opts, out, f"u{u['id']:02d}", sr=TTS_SR, labels=[[k] for k in range(len(chunks))])
+            for pl, t, g in zip(placements, p["tts"], p["groups"]):
+                pl["text"] = t["text"]; pl["source_words"] = g
         aligned = out / f"aligned_u{u['id']:02d}.wav"; sf.write(str(aligned), track, TTS_SR, subtype="PCM_16")
         report_units.append({"id": u["id"], "slot": list(p["slot"]), "tts_s": round(sum(t["seconds"] for t in p["tts"]), 3), "tts_speech_s": round(sum(len(c) / TTS_SR for c in chunks), 3),
                              "bursts": len(p["bursts"]), "bursts_without_words": p["bursts_without_words"], "phrases": len(chunks), "baseline_ratio": u["alignment"]["ratio_tts_to_slot"], "baseline_atempo": u["alignment"]["atempo"],
@@ -235,10 +241,10 @@ def main() -> int:
                              "placements": placements, "max_atempo": max(pl.get("atempo", 1.0) for pl in placements), "file": str(aligned)})
         print(f"u{u['id']:02d} slot {p['slot'][0]:.2f}-{p['slot'][1]:.2f} bursts {len(p['bursts'])} -> " + " ".join(f"[{pl['placed'][0]:.2f}-{pl['placed'][1]:.2f} x{pl['atempo']}]" for pl in placements if pl.get("placed")), flush=True)
     tr = build_dubbed_track([(r["file"], r["slot"][0]) for r in report_units], duration, out)
-    report = {"id": a.id, "mode": "burst_aware", "split": a.split, "min_burst_s": a.min_burst_s, "spill": a.spill, "atempo_cap": a.atempo_cap, "hard_cap": a.hard_cap, "extend": a.extend, "fill_slowdown": a.fill_slowdown, "seed": a.seed,
+    report = {"id": a.id, "mode": "burst_aware", "split": a.split, "min_burst_s": a.min_burst_s, "spill": a.spill, "fallback_frac": a.fallback_frac, "atempo_cap": a.atempo_cap, "hard_cap": a.hard_cap, "extend": a.extend, "fill_slowdown": a.fill_slowdown, "seed": a.seed,
               "tts_dtype": str(used).replace("torch.", ""), "units": report_units, "stage_seconds": times,
               "summary": {**placement_summary(report_units), **tr, "units": len(units), "units_single_burst": n_single, "units_qwen_split": n_qwen, "units_proportional_fallback": n_fb,
-                          "chunks": sum(len(r["tts"]) for r in report_units), "bursts_without_words": sum(r["bursts_without_words"] for r in report_units)}}
+                          "chunks": sum(len(r["tts"]) for r in report_units), "units_slot_fallback": sum(1 for r in report_units if r["placements"] and r["placements"][0].get("mode") == "slot_fallback"), "bursts_without_words": sum(r["bursts_without_words"] for r in report_units)}}
     (out / "burst_alignment.json").write_text(json.dumps(report, indent=1, ensure_ascii=False)); (out / "e1_alignment.json").write_text(json.dumps(report, indent=1, ensure_ascii=False))
     print("summary", json.dumps(report["summary"]), "\ntimes", json.dumps(times)); return 0
 

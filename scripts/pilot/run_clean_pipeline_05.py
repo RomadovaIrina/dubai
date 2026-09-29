@@ -406,8 +406,8 @@ def align_units_burst(units: list[dict], plans: list[dict], work: pathlib.Path, 
     e1_burst_align.place_groups (shared with the E1 / burst_aware_audio candidates). Slot fields as in align_units()."""
     import numpy as np
     import soundfile as sf
-    from e1_burst_align import SR16, TTS_SR as E1_SR, place_groups, placement_summary, vad_intervals
-    report = []
+    from e1_burst_align import SR16, TTS_SR as E1_SR, burst_fit_ratios, place_groups, place_slot_fallback, placement_summary, vad_intervals
+    report = []; n_fallback = 0
     for u, p in zip(units, plans):
         chunks = []
         for k, t in enumerate(u["tts_parts"]):
@@ -418,9 +418,15 @@ def align_units_burst(units: list[dict], plans: list[dict], work: pathlib.Path, 
             s_, e_ = max(0.0, raw[0][0] - 0.04), min(len(y) / sr, raw[-1][1] + 0.06); t["speech_span"] = [round(s_, 3), round(e_, 3)]
             chunks.append(y[int(s_ * sr):int(e_ * sr)])
         slot_s, slot_e = p["slot"]
-        track, placements = place_groups(chunks, p["bursts"], p["slot"], p["next_start"], opts, work, f"u{u['id']:02d}", sr=E1_SR, labels=[[k] for k in range(len(chunks))])
-        for pl, t, g in zip(placements, u["tts_parts"], p["groups"]):
-            pl["text"] = t["text"]; pl["source_words"] = g
+        need = burst_fit_ratios(chunks, p["bursts"], p["slot"], p["next_start"], opts); over = [r for r in need if r is not None and r > opts.atempo_cap]
+        if len(need) > 1 and len(over) >= getattr(opts, "fallback_frac", 0.5) * len([r for r in need if r is not None]):
+            track, placements = place_slot_fallback(chunks, p["slot"], work, f"u{u['id']:02d}"); n_fallback += 1
+            placements[0]["text"] = " ".join(t["text"] for t in u["tts_parts"]); placements[0]["source_words"] = " | ".join(p["groups"]); placements[0]["burst_fit_ratios"] = need
+            print(f"  [align] u{u['id']:02d} slot fallback ({len(over)}/{len(need)} groups would need > {opts.atempo_cap}x)", flush=True)
+        else:
+            track, placements = place_groups(chunks, p["bursts"], p["slot"], p["next_start"], opts, work, f"u{u['id']:02d}", sr=E1_SR, labels=[[k] for k in range(len(chunks))])
+            for pl, t, g in zip(placements, u["tts_parts"], p["groups"]):
+                pl["text"] = t["text"]; pl["source_words"] = g
         aligned = work / f"aligned_u{u['id']:02d}.wav"; sf.write(str(aligned), track, E1_SR, subtype="PCM_16")
         u["slot"] = {"start": round(slot_s, 3), "end": round(slot_e, 3), "seconds": round(slot_e - slot_s, 3)}
         u["alignment"] = {"tts_seconds": u["tts"]["seconds"], "ratio_tts_to_slot": round(u["tts"]["seconds"] / max(slot_e - slot_s, 1e-6), 4), "mode": "burst",
@@ -428,7 +434,7 @@ def align_units_burst(units: list[dict], plans: list[dict], work: pathlib.Path, 
                           "placements": placements, "aligned_seconds": round(len(track) / E1_SR, 3), "file": str(aligned)}
         report.append({"id": u["id"], "placements": placements})
     return {"mode": "burst", "min_burst_s": getattr(opts, "min_burst_s", None), "spill": opts.spill, "atempo_cap": opts.atempo_cap, "hard_cap": opts.hard_cap,
-            "fill_slowdown": opts.fill_slowdown, "summary": placement_summary(report)}
+            "fill_slowdown": opts.fill_slowdown, "fallback_frac": getattr(opts, "fallback_frac", 0.5), "units_slot_fallback": n_fallback, "summary": placement_summary(report)}
 
 
 def build_dubbed_track(units: list[dict], duration: float, work: pathlib.Path) -> dict:
@@ -560,6 +566,7 @@ def main() -> int:
     ap.add_argument("--burst-spill", choices=["on", "off"], default="on", help="burst mode: last chunk may run into the pause before the next unit (hard cap before any cut)")
     ap.add_argument("--atempo-cap", type=float, default=1.3); ap.add_argument("--hard-cap", type=float, default=1.6); ap.add_argument("--fill-slowdown", type=float, default=1.0)
     ap.add_argument("--split-retries", type=int, default=2, help="burst mode: Qwen JSON split retries before the lossless proportional fallback")
+    ap.add_argument("--burst-fallback-frac", type=float, default=0.5, help="burst mode: a unit whose fit needs > atempo-cap on >= this fraction of its groups uses the baseline slot rule (1.01 = never)")
     ap.add_argument("--min-ls-frames", type=int, default=25, help="VALID_FACE runs shorter than this are passed through")
     ap.add_argument("--max-verify-depth", type=int, default=3)
     ap.add_argument("--seed", type=int, default=1247)
@@ -653,7 +660,7 @@ def main() -> int:
             if a.alignment == "burst":
                 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
                 from e1_burst_align import PlaceOpts
-                opts = PlaceOpts(a.atempo_cap, a.hard_cap, True, 0.06, a.fill_slowdown, spill=a.burst_spill == "on"); opts.min_burst_s = a.burst_min_s
+                opts = PlaceOpts(a.atempo_cap, a.hard_cap, True, 0.06, a.fill_slowdown, spill=a.burst_spill == "on"); opts.min_burst_s = a.burst_min_s; opts.fallback_frac = a.burst_fallback_frac
                 man["alignment"] = align_units_burst(units, plans, work, opts)
             else:
                 align_units(units, duration, work); man["alignment"] = {"mode": "slot"}

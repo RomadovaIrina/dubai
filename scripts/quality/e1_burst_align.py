@@ -112,6 +112,37 @@ def place_groups(groups: list, bursts: list, slot: tuple, next_start: float, opt
     return track, placements
 
 
+def burst_fit_ratios(groups: list, bursts: list, slot: tuple, next_start: float, opts: PlaceOpts, sr: int = TTS_SR) -> list:
+    """Dry run of place_groups' window logic: the speed-up every group would need (group seconds / its window), no audio written."""
+    slot_s, slot_e = slot; cursor = slot_s; out = []
+    for j, (bs, be) in enumerate(bursts):
+        seg = groups[j]
+        if seg is None or len(seg) == 0:
+            out.append(None); continue
+        g = len(seg) / sr; start = max(bs, cursor)
+        win_end = (min(next_start - opts.gap, bursts[j + 1][0] - opts.gap) if j + 1 < len(bursts) else (max(slot_e, next_start - opts.gap) if opts.spill else min(slot_e, next_start - opts.gap))) if opts.extend else min(be, slot_e)
+        win_end = max(win_end, start + 0.2); ratio = g / (win_end - start); out.append(round(ratio, 3))
+        cursor = start + g / min(max(ratio, 1.0), opts.atempo_cap) + opts.gap
+    return out
+
+
+def place_slot_fallback(groups: list, slot: tuple, tmp: pathlib.Path, tag: str, sr: int = TTS_SR, gap_s: float = 0.06) -> tuple:
+    """Baseline slot rule for one unit (run_clean_pipeline_05.align_units semantics): the chunks are concatenated with gap_s of
+    silence, placed at the slot start at natural speed, sped up (uncapped) only when longer than the slot, never cut."""
+    import soundfile as sf
+    slot_s, slot_e = slot; n_slot = int(round((slot_e - slot_s) * sr)); gap = np.zeros(int(gap_s * sr), dtype=np.float32)
+    parts = [g for g in groups if g is not None and len(g)]
+    seg = np.concatenate(sum([[g, gap] for g in parts], [])[:-1]) if parts else np.zeros(0, dtype=np.float32)
+    g = len(seg) / sr; ratio = g / max(slot_e - slot_s, 1e-6); tempo = 1.0
+    if ratio > 1.005:
+        tempo = min(ratio, 100.0); p_in = tmp / f"grp_{tag}_slot.wav"; p_out = tmp / f"grp_{tag}_slot_t.wav"; sf.write(str(p_in), seg, sr, subtype="PCM_16")
+        ff(["-i", str(p_in), "-af", f"atempo={tempo:.6f}", "-ar", str(sr), "-ac", "1", "-c:a", "pcm_s16le", str(p_out)]); seg, _ = sf.read(str(p_out), dtype="float32"); p_in.unlink(); p_out.unlink()
+    track = np.zeros(n_slot, dtype=np.float32); n = min(n_slot, len(seg)); track[:n] = seg[:n]
+    placements = [{"burst": [round(slot_s, 3), round(slot_e, 3)], "window": [round(slot_s, 3), round(slot_e, 3)], "phrases": list(range(len(parts))), "group_s": round(g, 3), "ratio": round(ratio, 3),
+                   "atempo": round(tempo, 3), "placed": [round(slot_s, 3), round(min(slot_s + len(seg) / sr, slot_e), 3)], "overflow_into_next_burst_s": 0.0, "cut_at_slot_end_s": 0.0, "mode": "slot_fallback"}]
+    return track, placements
+
+
 def bursts_in_slot(vad: list, slot_s: float, slot_e: float, min_overlap: float = 0.15) -> list:
     """Original Silero VAD intervals clipped to the unit slot (overlap > min_overlap); the whole slot when none."""
     b = [(max(s, slot_s), min(e, slot_e)) for s, e in vad if min(e, slot_e) - max(s, slot_s) > min_overlap]
