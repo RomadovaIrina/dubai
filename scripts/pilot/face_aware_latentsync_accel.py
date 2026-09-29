@@ -431,9 +431,9 @@ def main() -> int:
     ap.add_argument("--segment-files", action="store_true", help="legacy path: per-segment mp4 cut / verify re-encode / LatentSync file I/O")
     ap.add_argument("--no-latentsync", action="store_true", help="routing + assembly only")
     ap.add_argument("--codeformer", choices=["off", "optimized"], default="off", help="off = frozen baseline; optimized = week-2 in-memory CodeFormer on LATENT_SYNC frames")
-    ap.add_argument("--codeformer-w", type=float, default=0.5); ap.add_argument("--codeformer-batch", type=int, default=4)
+    ap.add_argument("--codeformer-w", type=float, default=1.0); ap.add_argument("--codeformer-batch", type=int, default=8)
     ap.add_argument("--codeformer-landmarks", choices=["insightface", "retinaface"], default="insightface")
-    ap.add_argument("--codeformer-precision", choices=["fp32", "parse16", "fp16"], default="fp32")
+    ap.add_argument("--codeformer-precision", choices=["fp32", "parse16", "fp16"], default="fp16")
     ap.add_argument("--json", default=None)
     a = ap.parse_args()
     src = pathlib.Path(a.video).resolve(); out_dir = pathlib.Path(a.out_dir); work = out_dir / f"work_{src.stem}"

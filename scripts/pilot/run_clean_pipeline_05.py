@@ -459,11 +459,11 @@ def main() -> int:
     ap.add_argument("--no-codeformer", action="store_true", help="pilot 0.5 contract: the clean pipeline without CodeFormer (= --codeformer off)")
     ap.add_argument("--codeformer", choices=["off", "optimized"], default=None,
                     help="off = frozen baseline (never invoked); optimized = week-2 in-memory CodeFormer on LATENT_SYNC frames (optimized backend only)")
-    ap.add_argument("--codeformer-w", type=float, default=0.5, help="CodeFormer fidelity weight w (optimized mode)")
-    ap.add_argument("--codeformer-batch", type=int, default=4, help="faces per CodeFormer batch (optimized mode)")
+    ap.add_argument("--codeformer-w", type=float, default=1.0, help="CodeFormer fidelity weight w (optimized mode); 1.0 = week-2 A/B choice on 04 (smallest SyncNet drop, AV offset 0)")
+    ap.add_argument("--codeformer-batch", type=int, default=8, help="faces per CodeFormer batch (optimized mode); 8 = week-2 choice (5 GB alone, no E2E peak increase)")
     ap.add_argument("--codeformer-landmarks", choices=["insightface", "retinaface"], default="insightface",
                     help="optimized mode: align with LatentSync's insightface landmarks (no extra detector) or a fresh RetinaFace pass per frame (A/B)")
-    ap.add_argument("--codeformer-precision", choices=["fp32", "parse16", "fp16"], default="fp32",
+    ap.add_argument("--codeformer-precision", choices=["fp32", "parse16", "fp16"], default="fp16",
                     help="optimized mode: fp32 = upstream numerics; parse16 = ParseNet under fp16 autocast; fp16 = CodeFormer net + ParseNet under autocast")
     ap.add_argument("--source-lang", default=None, help="whisper language code; default: auto-detect")
     ap.add_argument("--work-dir", default=str(DEFAULT_WORK), help="runtime media root (work_<stem>/ inside it is recreated per run)")

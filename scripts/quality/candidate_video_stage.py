@@ -55,10 +55,10 @@ def main() -> int:
     ap.add_argument("--mask-top", type=float, default=0.52, help="E4: mask starts at this fraction of the detected face height (0 = top of bbox)")
     ap.add_argument("--mask-feather", type=float, default=0.08, help="E4: gaussian feather as a fraction of the face width")
     ap.add_argument("--codeformer", choices=["off", "optimized"], default="off", help="week 2: in-memory CodeFormer on LATENT_SYNC frames (codeformer_accel)")
-    ap.add_argument("--codeformer-w", type=float, default=0.5); ap.add_argument("--codeformer-batch", type=int, default=4)
+    ap.add_argument("--codeformer-w", type=float, default=1.0); ap.add_argument("--codeformer-batch", type=int, default=8)
     ap.add_argument("--codeformer-empty-cache", action="store_true", help="A/B: upstream per-face torch.cuda.empty_cache()")
     ap.add_argument("--codeformer-landmarks", choices=["insightface", "retinaface"], default="insightface")
-    ap.add_argument("--codeformer-precision", choices=["fp32", "parse16", "fp16"], default="fp32", help="fp32 = upstream numerics; parse16 = ParseNet under fp16 autocast; fp16 = CodeFormer net + ParseNet under autocast")
+    ap.add_argument("--codeformer-precision", choices=["fp32", "parse16", "fp16"], default="fp16", help="fp32 = upstream numerics; parse16 = ParseNet under fp16 autocast; fp16 = CodeFormer net + ParseNet under autocast")
     a = ap.parse_args()
     import run_clean_pipeline_05 as rp
     import face_aware_latentsync_accel as faa

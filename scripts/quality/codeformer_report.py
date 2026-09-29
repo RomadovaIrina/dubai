@@ -73,8 +73,8 @@ def main() -> int:
                   f"upstream functions unbatched run at {u['faces_per_s_unbatched_upstream_functions']} faces/s."]
         L.append("")
     L += ["## E2E candidates (video stage only, audio reused from the baseline; `candidate_video_stage.py --codeformer optimized`)", "",
-          "| video | tag | eligible / master frames | faces restored | fallback det | CF s | CF s/video-min | LS s | stage total s | peak VRAM MiB (nvsmi) | valid | geometry | untouched bit-identical | SyncNet out (base / orig) | AV off | mouth sharp | upper sharp | flicker | eyes sharp vs LS | outside-face px | seam ratio | mask jitter px |",
-          "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+          "| video | tag | eligible / master frames | faces restored | fallback det | CF s | CF s/video-min | LS s | stage total s | peak VRAM MiB (nvsmi) | valid | geometry | untouched frames PSNR dB (re-encode) | changed px outside face square (pre-encode) | SyncNet out (LS-only / orig) | AV off | mouth sharp | upper sharp | flicker | eyes sharp vs LS | seam ratio (p95) |",
+          "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|---:|---:|---|---:|---:|---:|---:|---:|---|"]
     for spec in a.candidates:
         vid, tags = spec.split(":"); base_q = load(Q / "manifests" / f"{vid}_baseline.quality.json") or {}
         bsn = (base_q.get("syncnet") or {}).get("output", {}).get("confidence"); osn = (base_q.get("syncnet") or {}).get("original", {}).get("confidence")
@@ -90,10 +90,10 @@ def main() -> int:
                 el, tot, cfs = cfd["eligible_frames"], cfd["master_frames"], cfd["seconds"]; faces, fb = cfd["totals"]["faces_restored"], cfd["totals"]["fallback_detections"]
             else:
                 el, tot, cfs, faces, fb = sum(s["frames"] for s in Lp["segments"] if s["action"] == "LATENT_SYNC"), Lp["master_frames"], 0.0, 0, 0
-            g = cq.get("geometry", {}); un = cq.get("untouched_frames", {}); loc = cq.get("locality", {}); seam = cq.get("seam", {}); sh = cq.get("sharpness", {}); mm = cq.get("mask_motion", {})
+            g = cq.get("geometry", {}); un = cq.get("untouched_frames", {}); pre = cq.get("locality_pre_encode") or {}; seam = cq.get("seam", {}); sh = cq.get("sharpness", {})
             L.append(f"| {vid} | {tag} | {el} / {tot} | {faces} | {fb} | {cfs} | {round(cfs / dur * 60, 2)} | {st.get('latentsync')} | {st['total']} | {nvsmi_peak(Q / 'candidates' / f'{vid}_{tag}.nvsmi.log')} | "
-                     f"{'PASS' if m['validation']['pass'] else 'FAIL'} | {'same' if g.get('identical') else 'DIFF'} | {un.get('bit_identical')} | {sn.get('confidence')} ({bsn} / {osn}) | {sn.get('av_offset_frames')} | "
-                     f"{mean('mouth_sharp_ratio')} | {mean('upper_sharp_ratio')} | {mean('flicker_ratio')} | {sh.get('upper_face_ratio_mean')} | {loc.get('outside_dilated_face_px_max')} | {seam.get('ratio_mean')} | {mm.get('centroid_rel_jitter_px_mean')} |")
+                     f"{'PASS' if m['validation']['pass'] else 'FAIL'} | {'same' if g.get('identical') else 'DIFF'} | {un.get('psnr_mean')} | {pre.get('change_outside_square_max_px', 'n/a')} | {sn.get('confidence')} ({bsn} / {osn}) | {sn.get('av_offset_frames')} | "
+                     f"{mean('mouth_sharp_ratio')} | {mean('upper_sharp_ratio')} | {mean('flicker_ratio')} | {sh.get('upper_face_ratio_mean')} | {seam.get('ratio_mean')} ({seam.get('ratio_p95')}) |")
     L.append("")
     out = pathlib.Path(a.out); out.parent.mkdir(parents=True, exist_ok=True); out.write_text("\n".join(L) + "\n"); print(f"-> {out}")
     return 0
