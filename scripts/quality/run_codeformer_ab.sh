@@ -30,5 +30,5 @@ print(f"== {i} {t}: validation {m['validation']['pass']} | stage s {m['stage_sec
       f"cf {cf if isinstance(cf, str) else {k: cf[k] for k in ('eligible_frames', 'master_frames', 'seconds')} } totals {None if isinstance(cf, str) else cf['totals']}")
 print(f"   syncnet out {sn.get('output', {}).get('confidence')} / offset {sn.get('output', {}).get('av_offset_frames')} (orig {sn.get('original', {}).get('confidence')}) | "
       f"mouth sharp {mean('mouth_sharp_ratio')} upper sharp {mean('upper_sharp_ratio')} flicker {mean('flicker_ratio')} | geometry identical {cq['geometry']['identical']} untouched bit-identical {cq['untouched_frames']['bit_identical']} "
-      f"outside-face px max {cq['locality']['outside_dilated_face_px_max']} seam ratio {cq['seam']['ratio_mean']} (p95 {cq['seam']['ratio_p95']}) eyes sharp {cq['sharpness']['upper_face_ratio_mean']} mask jitter {cq['mask_motion']['centroid_rel_jitter_px_mean']}")
+      f"untouched PSNR {cq['untouched_frames'].get('psnr_mean')} pre-encode locality {cq.get('locality_pre_encode')} seam ratio {cq['seam']['ratio_mean']} (p95 {cq['seam']['ratio_p95']}) eyes sharp {cq['sharpness']['upper_face_ratio_mean']} mask jitter {cq['mask_motion']['centroid_rel_jitter_px_mean']}")
 PY

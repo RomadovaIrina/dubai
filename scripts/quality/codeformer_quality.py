@@ -53,7 +53,7 @@ def main() -> int:
            "identical": all(pc[k] == pb[k] for k in ("width", "height", "fps", "frames")) and abs(pc["duration_s"] - pb["duration_s"]) < 0.02}}
     router = RetinaFaceRouter(50, 80, 0.8)
     cc, cb = cv2.VideoCapture(str(cand)), cv2.VideoCapture(str(base)); i = 0
-    untouched_max = 0; untouched_n = 0; ls_rows = []; sheets = []; want = set()
+    untouched_max = 0; untouched_n = 0; untouched_mse = 0.0; ls_rows = []; sheets = []; want = set()
     for s in ls[:6]:
         n_ = s["end_frame"] - s["start_frame"]; want.update(s["start_frame"] + int(n_ * f) for f in (0.1, 0.5, 0.9))
     for t in trs: want.update((t - 1, t))
@@ -64,7 +64,7 @@ def main() -> int:
         if not (okc and okb): break
         d = np.abs(fc.astype(np.int16) - fb.astype(np.int16)).max(axis=2)
         if not in_ls[i]:
-            untouched_max = max(untouched_max, int(d.max())); untouched_n += 1
+            untouched_max = max(untouched_max, int(d.max())); untouched_n += 1; untouched_mse += float(np.mean((fc.astype(np.float32) - fb.astype(np.float32)) ** 2))
         elif i % a.sample_every == 0:
             r = router.classify_frame(fb)
             if r["bbox"] and r["cls"] != "NO_FACE": bb = (r["bbox"]["x1"], r["bbox"]["y1"], r["bbox"]["x2"], r["bbox"]["y2"])
@@ -106,7 +106,19 @@ def main() -> int:
     rows = [r for r in ls_rows if "outside_fraction" in r]
     def agg(k, fn=np.mean):
         v = [r[k] for r in rows if k in r]; return round(float(fn(v)), 4) if v else None
-    res.update(frames_compared=i, untouched_frames={"n": untouched_n, "max_abs_diff": untouched_max, "bit_identical": untouched_max == 0},
+    mse = untouched_mse / max(untouched_n, 1); un_psnr = 99.0 if mse == 0 else round(10 * np.log10(255 ** 2 / mse), 2)
+    # both files are libx264 re-encodes of the same pass-through master frames; inter prediction from changed neighbours makes them
+    # differ by encoder noise (max ~20 levels, PSNR > 40 dB), so bit-identity is only expected before encoding (see manifest locality)
+    pre = [s.get("codeformer", {}).get("locality") for s in ls if isinstance(s.get("codeformer"), dict) and s["codeformer"].get("locality")]
+    pre_loc = None
+    if pre:
+        fr = sum(p_["frames"] for p_ in pre)
+        pre_loc = {"frames": fr, "changed_fraction_of_frame_mean": round(sum(p_["changed_px_sum"] for p_ in pre) / max(fr, 1) / max(pre[0]["frame_px"], 1), 4),
+                   "roi_fraction_of_frame_mean": round(sum(p_["roi_px_sum"] for p_ in pre) / max(fr, 1) / max(pre[0]["frame_px"], 1), 4),
+                   "change_outside_square_max_px": max(p_["change_outside_square_max_px"] for p_ in pre), "source": "runner stats before encoding (exact)"}
+    res.update(frames_compared=i, untouched_frames={"n": untouched_n, "max_abs_diff": untouched_max, "psnr_mean": un_psnr, "bit_identical": untouched_max == 0,
+                                                     "note": "differences on untouched frames = libx264 re-encode noise (same master frames, different references)"},
+               locality_pre_encode=pre_loc,
                ls_frames_measured=len(rows), ls_frames_changed=sum(1 for r in ls_rows if r["changed_px"] > 0),
                locality={"outside_dilated_face_px_max": agg("outside_dilated_face_px", np.max), "outside_fraction_mean": agg("outside_fraction"), "background_max_diff": agg("background_max_diff", np.max)},
                seam={"ratio_mean": agg("seam_ratio"), "ratio_p95": agg("seam_ratio", lambda v: np.percentile(v, 95)), "grad_cand_mean": agg("seam_grad_cand"), "grad_base_mean": agg("seam_grad_base")},
@@ -114,7 +126,7 @@ def main() -> int:
                mask_motion={"centroid_rel_jitter_px_mean": agg("centroid_rel_jitter_px"), "p95": agg("centroid_rel_jitter_px", lambda v: np.percentile(v, 95))},
                transitions=len(trs), sheets=sheets)
     op = pathlib.Path(a.out) / f"{a.id}_{a.tag}.codeformer_quality.json"; op.parent.mkdir(parents=True, exist_ok=True); op.write_text(json.dumps(res, indent=1))
-    print(json.dumps({k: res[k] for k in ("geometry", "untouched_frames", "ls_frames_measured", "ls_frames_changed", "locality", "seam", "sharpness", "mask_motion")}, indent=1))
+    print(json.dumps({k: res[k] for k in ("geometry", "untouched_frames", "locality_pre_encode", "ls_frames_measured", "ls_frames_changed", "locality", "seam", "sharpness", "mask_motion")}, indent=1))
     print(f"-> {op} ({len(sheets)} sheets in {fd})")
     return 0
 

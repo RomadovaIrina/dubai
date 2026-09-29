@@ -137,9 +137,12 @@ class CodeFormerAccel:
         return cv2.warpAffine(frame_bgr, affine, (FACE_SIZE, FACE_SIZE), borderMode=cv2.BORDER_CONSTANT, borderValue=BORDER_GRAY_BGR)
 
     @staticmethod
-    def paste_back(frame_bgr: np.ndarray, restored_bgr: np.ndarray, affine: np.ndarray, parse_mask: np.ndarray | None, roi: bool = True) -> np.ndarray:
+    def paste_back(frame_bgr: np.ndarray, restored_bgr: np.ndarray, affine: np.ndarray, parse_mask: np.ndarray | None, roi: bool = True,
+                   stats: dict | None = None) -> np.ndarray:
         """FaceRestoreHelper.paste_faces_to_input_image for ONE face, upscale_factor 1, no upsampler, no draw_box.
-        roi=True evaluates the identical arithmetic only inside the region the warped 512 square (+ blur margin) can reach."""
+        roi=True evaluates the identical arithmetic only inside the region the warped 512 square (+ blur margin) can reach.
+        `stats` (optional dict) receives exact pre-encode locality numbers: roi box, warped-square box, changed pixels and
+        the box of the changed pixels."""
         h, w = frame_bgr.shape[:2]
         inverse_affine = cv2.invertAffineTransform(affine)          # upscale 1 -> no extra offset
         x0 = y0 = 0; W, H = w, h; M = inverse_affine
@@ -170,6 +173,14 @@ class CodeFormerAccel:
             fuse_mask = (pm < inv_soft_mask).astype("int")
             inv_soft_mask = pm * fuse_mask + inv_soft_mask * (1 - fuse_mask)
         blended = (inv_soft_mask * pasted_face + (1 - inv_soft_mask) * sub).astype(np.uint8)   # upstream truncates, no rounding
+        if stats is not None:
+            ch = np.abs(blended.astype(np.int16) - sub.astype(np.int16)).max(axis=2) > 0
+            ys, xs = np.nonzero(ch)
+            sq = np.array([[0, 0, 1], [FACE_SIZE, 0, 1], [0, FACE_SIZE, 1], [FACE_SIZE, FACE_SIZE, 1]], dtype=np.float64) @ inverse_affine.T
+            stats.update(roi=[x0, y0, x0 + W, y0 + H], square=[int(sq[:, 0].min()), int(sq[:, 1].min()), int(np.ceil(sq[:, 0].max())), int(np.ceil(sq[:, 1].max()))],
+                         changed_px=int(ch.sum()), frame_px=int(h * w),
+                         change_box=[int(xs.min()) + x0, int(ys.min()) + y0, int(xs.max()) + x0 + 1, int(ys.max()) + y0 + 1] if len(xs) else None,
+                         soft_mask_px=int((inv_soft_mask[..., 0] > 0.01).sum()))
         if not roi:
             return blended
         out = frame_bgr.copy(); out[y0:y0 + H, x0:x0 + W] = blended
@@ -246,10 +257,17 @@ class CodeFormerAccel:
             if is_gray_bgr(crops[k]):                                  # FaceRestoreHelper.add_restored_face gray path
                 from facelib.utils.misc import adain_npy, bgr2gray
                 restored[k] = adain_npy(bgr2gray(restored[k]), crops[k]); st["gray_faces"] += 1
-        outs = list(self._pool.map(lambda z: self.paste_back(frames_bgr[z[0]], z[1], z[2], z[3], self.roi_paste),
-                                   [(i, restored[k], af, masks[k] if masks else None) for k, ((i, _), af) in enumerate(zip(chunk, affines))]))
-        for (i, _), fr in zip(chunk, outs):
+        stats = [dict() for _ in chunk]
+        outs = list(self._pool.map(lambda z: self.paste_back(frames_bgr[z[0]], z[1], z[2], z[3], self.roi_paste, z[4]),
+                                   [(i, restored[k], af, masks[k] if masks else None, stats[k]) for k, ((i, _), af) in enumerate(zip(chunk, affines))]))
+        for (i, _), fr, sd in zip(chunk, outs, stats):
             out[i] = fr
+            if sd:
+                loc = st["locality"]; loc["frames"] += 1; loc["changed_px_sum"] += sd["changed_px"]; loc["soft_mask_px_sum"] += sd["soft_mask_px"]
+                loc["roi_px_sum"] += (sd["roi"][2] - sd["roi"][0]) * (sd["roi"][3] - sd["roi"][1]); loc["frame_px"] = sd["frame_px"]
+                cb, sq = sd["change_box"], sd["square"]
+                if cb is not None:   # pixels changed outside the warped 512 face square = the feather / parse-mask blur zone only
+                    loc["change_outside_square_max_px"] = max(loc["change_outside_square_max_px"], max(0, sq[0] - cb[0]), max(0, sq[1] - cb[1]), max(0, cb[2] - sq[2]), max(0, cb[3] - sq[3]))
         st["faces_restored"] += len(chunk)
 
     def restore_frames(self, frames_bgr, landmarks5: list, inplace: bool = False) -> tuple[list, dict]:
@@ -257,7 +275,8 @@ class CodeFormerAccel:
         Returns (frames, stats). Frames without landmarks are returned unchanged (or detected with fallback_detector)."""
         t_all = time.perf_counter(); n = len(frames_bgr)
         st = {"frames_in": n, "faces_restored": 0, "frames_without_landmarks": 0, "fallback_detections": 0, "gray_faces": 0,
-              "seconds": {"landmarks": 0.0, "align": 0.0, "net": 0.0, "parse": 0.0, "paste": 0.0, "gpu_wait": 0.0}, "batches": 0}
+              "seconds": {"landmarks": 0.0, "align": 0.0, "net": 0.0, "parse": 0.0, "paste": 0.0, "gpu_wait": 0.0}, "batches": 0,
+              "locality": {"frames": 0, "changed_px_sum": 0, "soft_mask_px_sum": 0, "roi_px_sum": 0, "frame_px": 0, "change_outside_square_max_px": 0}}
         out = list(frames_bgr) if not inplace else frames_bgr
         if torch.cuda.is_available():
             torch.cuda.reset_peak_memory_stats()
@@ -296,6 +315,11 @@ class CodeFormerAccel:
         st["seconds"]["total"] = round(time.perf_counter() - t_all, 3)
         for k in list(st["seconds"]):
             st["seconds"][k] = round(st["seconds"][k], 3)
+        loc = st["locality"]
+        if loc["frames"]:
+            loc["changed_fraction_of_frame_mean"] = round(loc["changed_px_sum"] / loc["frames"] / max(loc["frame_px"], 1), 4)
+            loc["roi_fraction_of_frame_mean"] = round(loc["roi_px_sum"] / loc["frames"] / max(loc["frame_px"], 1), 4)
+            loc["changed_px_per_soft_mask_px"] = round(loc["changed_px_sum"] / max(loc["soft_mask_px_sum"], 1), 3)
         st["peak_vram_mib"] = round(torch.cuda.max_memory_allocated() / 2 ** 20) if torch.cuda.is_available() else None
         st["faces_per_s"] = round(st["faces_restored"] / max(st["seconds"]["total"], 1e-6), 2)
         self.calls.append(st)
