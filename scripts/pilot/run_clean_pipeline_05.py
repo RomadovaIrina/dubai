@@ -29,7 +29,10 @@ frozen dabai baseline, wired in pipeline order on the ORIGINAL timeline (pauses 
                                        merged gaps) keep the original mouth (nobody speaks there in either track),
                                        runs RetinaFace on every --router-stride-th frame, keeps segments in memory
                                        (LatentSync's detector runs once per frame) and crossfades LS/original boundaries
-  11. CodeFormer                       NOT part of the clean pipeline; --no-codeformer is mandatory
+  11. CodeFormer                       --codeformer off (default, = --no-codeformer): NOT invoked, the frozen pilot baseline.
+                                       --codeformer optimized (week 2): scripts/optim/codeformer_accel.py in-memory stage on the
+                                       LatentSync output frames of LATENT_SYNC segments only (optimized backend), before the
+                                       crossfade/assembly; geometry, frame count and duration unchanged
   12. final assembly                   lipsynced/pass-through frames (25 fps CFR master, as LatentSync works) + dubbed
                                        AAC track -> output MP4 on the full original timeline; no subtitles (the 0.5
                                        spec measures the clean pipeline without the 0.11 subtitle stage)
@@ -430,12 +433,20 @@ def run_lipsync_optimized(src: pathlib.Path, work: pathlib.Path, dubbed16k: path
         router = faa.make_router(a.face_router, a.face_min_w, a.face_min_h, a.retina_conf)
     with timed(times, "latentsync_load"):
         runner = faa.AccelRunner(a.window_batch_size, not a.no_deepcache, a.compile_backend, a.sdpa_backend, deepcache_interval=a.deepcache_interval)
+    cf_runner = None
+    if a.codeformer == "optimized":
+        from codeformer_accel import CodeFormerAccel
+        with timed(times, "codeformer_load"):
+            cf_runner = CodeFormerAccel(fidelity_weight=a.codeformer_w, batch_size=a.codeformer_batch, landmark_source=a.codeformer_landmarks,
+                                        autocast=a.codeformer_precision == "fp16", parse_autocast=a.codeformer_precision != "fp32")
     rep = faa.process_video(src, work, dubbed16k, dubbed_aac, out, router=router, runner=runner, min_ls_frames=a.min_ls_frames,
-                            max_verify_depth=a.max_verify_depth, times=times, log=lambda m: print(m, flush=True),
+                            max_verify_depth=a.max_verify_depth, codeformer=a.codeformer, times=times, log=lambda m: print(m, flush=True),
                             speech_gate=speech_gate, crossfade_frames=a.crossfade_frames, router_stride=a.router_stride,
-                            in_memory=not a.segment_files)
+                            in_memory=not a.segment_files, cf_runner=cf_runner)
     rep["backend"] = "optimized"
-    free_cuda(runner)
+    if cf_runner is not None:
+        cf_runner.close()
+    free_cuda(runner, cf_runner)
     return rep
 
 
@@ -445,7 +456,15 @@ def main() -> int:
     ap.add_argument("--input", required=True, help="source video")
     ap.add_argument("--output", required=True, help="final dubbed + lip-synced MP4")
     ap.add_argument("--target-lang", required=True, help="Chatterbox language id (en, de, ru, ...)")
-    ap.add_argument("--no-codeformer", action="store_true", help="REQUIRED: pilot 0.5 measures the clean pipeline without CodeFormer")
+    ap.add_argument("--no-codeformer", action="store_true", help="pilot 0.5 contract: the clean pipeline without CodeFormer (= --codeformer off)")
+    ap.add_argument("--codeformer", choices=["off", "optimized"], default=None,
+                    help="off = frozen baseline (never invoked); optimized = week-2 in-memory CodeFormer on LATENT_SYNC frames (optimized backend only)")
+    ap.add_argument("--codeformer-w", type=float, default=0.5, help="CodeFormer fidelity weight w (optimized mode)")
+    ap.add_argument("--codeformer-batch", type=int, default=4, help="faces per CodeFormer batch (optimized mode)")
+    ap.add_argument("--codeformer-landmarks", choices=["insightface", "retinaface"], default="insightface",
+                    help="optimized mode: align with LatentSync's insightface landmarks (no extra detector) or a fresh RetinaFace pass per frame (A/B)")
+    ap.add_argument("--codeformer-precision", choices=["fp32", "parse16", "fp16"], default="fp32",
+                    help="optimized mode: fp32 = upstream numerics; parse16 = ParseNet under fp16 autocast; fp16 = CodeFormer net + ParseNet under autocast")
     ap.add_argument("--source-lang", default=None, help="whisper language code; default: auto-detect")
     ap.add_argument("--work-dir", default=str(DEFAULT_WORK), help="runtime media root (work_<stem>/ inside it is recreated per run)")
     ap.add_argument("--max-unit-s", type=float, default=20.0, help="split speech units longer than this at the widest word gap")
@@ -470,8 +489,14 @@ def main() -> int:
     ap.add_argument("--router-stride", type=int, default=OPTIMIZED_DEFAULTS["router_stride"], help="RetinaFace on every N-th gated frame")
     ap.add_argument("--segment-files", action="store_true", help="optimized backend: legacy per-segment mp4 path instead of in-memory segments")
     a = ap.parse_args()
-    if not a.no_codeformer:
-        print("pilot 0.5 requires CodeFormer disabled: pass --no-codeformer", file=sys.stderr); return 2
+    if a.codeformer is None:
+        a.codeformer = "off" if a.no_codeformer else None
+    if a.codeformer is None:
+        print("CodeFormer mode not chosen: pass --no-codeformer (= --codeformer off, pilot baseline) or --codeformer optimized", file=sys.stderr); return 2
+    if a.no_codeformer and a.codeformer != "off":
+        print("--no-codeformer contradicts --codeformer optimized", file=sys.stderr); return 2
+    if a.codeformer != "off" and a.video_backend != "optimized":
+        print("--codeformer optimized needs --video-backend optimized", file=sys.stderr); return 2
     tgt = a.target_lang.lower()
 
     src = pathlib.Path(a.input).resolve(); out = pathlib.Path(a.output).resolve()
@@ -483,7 +508,8 @@ def main() -> int:
         shutil.rmtree(work)
     work.mkdir(parents=True)
     times: dict = {}; t_all = time.perf_counter()
-    man: dict = {"task": "0.5-runner", "input": str(src), "output": str(out), "target_lang": tgt, "codeformer": "DISABLED (not invoked)",
+    man: dict = {"task": "0.5-runner", "input": str(src), "output": str(out), "target_lang": tgt,
+                 "codeformer": "DISABLED (not invoked)" if a.codeformer == "off" else {"mode": a.codeformer, "w": a.codeformer_w, "batch": a.codeformer_batch, "landmarks": a.codeformer_landmarks, "precision": a.codeformer_precision},
                  "work_dir": str(work), "config": {"seed": a.seed, "max_unit_s": a.max_unit_s, "threads": THREADS}}
     try:
         source = probe(src); man["source"] = source; duration = source["duration_s"]

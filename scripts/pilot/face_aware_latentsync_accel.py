@@ -433,6 +433,7 @@ def main() -> int:
     ap.add_argument("--codeformer", choices=["off", "optimized"], default="off", help="off = frozen baseline; optimized = week-2 in-memory CodeFormer on LATENT_SYNC frames")
     ap.add_argument("--codeformer-w", type=float, default=0.5); ap.add_argument("--codeformer-batch", type=int, default=4)
     ap.add_argument("--codeformer-landmarks", choices=["insightface", "retinaface"], default="insightface")
+    ap.add_argument("--codeformer-precision", choices=["fp32", "parse16", "fp16"], default="fp32")
     ap.add_argument("--json", default=None)
     a = ap.parse_args()
     src = pathlib.Path(a.video).resolve(); out_dir = pathlib.Path(a.out_dir); work = out_dir / f"work_{src.stem}"
@@ -457,7 +458,8 @@ def main() -> int:
     cf_runner = None
     if a.codeformer == "optimized":
         from codeformer_accel import CodeFormerAccel
-        cf_runner = CodeFormerAccel(fidelity_weight=a.codeformer_w, batch_size=a.codeformer_batch, landmark_source=a.codeformer_landmarks)
+        cf_runner = CodeFormerAccel(fidelity_weight=a.codeformer_w, batch_size=a.codeformer_batch, landmark_source=a.codeformer_landmarks,
+                                    autocast=a.codeformer_precision == "fp16", parse_autocast=a.codeformer_precision != "fp32")
     times: dict = {}
     out = out_dir / f"facesync_{src.stem}.mp4"
     t0 = time.perf_counter()
