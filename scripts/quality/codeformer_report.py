@@ -30,6 +30,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--profile-id", default="04"); ap.add_argument("--candidates", nargs="+", default=["04:cf_w05"])
     ap.add_argument("--out", default="reports/quality/codeformer_week2.md"); ap.add_argument("--title", default="CodeFormer optimized stage — week 2 results")
+    ap.add_argument("--notes", default=None, help="markdown file appended verbatim after the tables (reading / decisions)")
     a = ap.parse_args()
     L = [f"# {a.title} ({time.strftime('%Y-%m-%d')})", "",
          "Scripts: `scripts/optim/codeformer_accel.py` (runner), `scripts/quality/codeformer_profile.py` (legacy profile), `codeformer_landmark_check.py`, "
@@ -95,6 +96,8 @@ def main() -> int:
                      f"{'PASS' if m['validation']['pass'] else 'FAIL'} | {'same' if g.get('identical') else 'DIFF'} | {un.get('psnr_mean')} | {pre.get('change_outside_square_max_px', 'n/a')} | {sn.get('confidence')} ({bsn} / {osn}) | {sn.get('av_offset_frames')} | "
                      f"{mean('mouth_sharp_ratio')} | {mean('upper_sharp_ratio')} | {mean('flicker_ratio')} | {sh.get('upper_face_ratio_mean')} | {seam.get('ratio_mean')} ({seam.get('ratio_p95')}) |")
     L.append("")
+    if a.notes and pathlib.Path(a.notes).exists():
+        L += ["", pathlib.Path(a.notes).read_text().rstrip(), ""]
     out = pathlib.Path(a.out); out.parent.mkdir(parents=True, exist_ok=True); out.write_text("\n".join(L) + "\n"); print(f"-> {out}")
     return 0
 
