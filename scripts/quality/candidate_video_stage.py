@@ -54,6 +54,11 @@ def main() -> int:
     ap.add_argument("--mouth-only-pasteback", choices=["on", "off"], default="off", help="E4: outside a feathered lower-face mask keep the master pixels (LatentSync upstream untouched)")
     ap.add_argument("--mask-top", type=float, default=0.52, help="E4: mask starts at this fraction of the detected face height (0 = top of bbox)")
     ap.add_argument("--mask-feather", type=float, default=0.08, help="E4: gaussian feather as a fraction of the face width")
+    ap.add_argument("--codeformer", choices=["off", "optimized"], default="off", help="week 2: in-memory CodeFormer on LATENT_SYNC frames (codeformer_accel)")
+    ap.add_argument("--codeformer-w", type=float, default=1.0); ap.add_argument("--codeformer-batch", type=int, default=8)
+    ap.add_argument("--codeformer-empty-cache", action="store_true", help="A/B: upstream per-face torch.cuda.empty_cache()")
+    ap.add_argument("--codeformer-landmarks", choices=["insightface", "retinaface"], default="insightface")
+    ap.add_argument("--codeformer-precision", choices=["fp32", "parse16", "fp16"], default="fp16", help="fp32 = upstream numerics; parse16 = ParseNet under fp16 autocast; fp16 = CodeFormer net + ParseNet under autocast")
     a = ap.parse_args()
     import run_clean_pipeline_05 as rp
     import face_aware_latentsync_accel as faa
@@ -89,9 +94,15 @@ def main() -> int:
     with rp.timed(times, "latentsync_load"): runner = faa.AccelRunner(a.window_batch_size, not a.no_deepcache, "none", "auto", steps=a.steps, guidance=a.guidance, deepcache_interval=a.deepcache_interval)
     if a.mouth_only_pasteback == "on":
         runner = MouthOnlyRunner(runner, a.mask_top, a.mask_feather)
-    rep = faa.process_video(src, work, dub16, dub_aac, out, router=router, runner=runner, min_ls_frames=a.min_ls_frames, max_verify_depth=a.max_verify_depth, times=times,
-                            log=lambda m: print(m, flush=True), speech_gate=gate, crossfade_frames=a.crossfade_frames, router_stride=a.router_stride, in_memory=True)
-    rep["backend"] = "optimized"; man["lipsync"] = rep; rp.free_cuda(runner)
+    cf_runner = None
+    if a.codeformer == "optimized":
+        from codeformer_accel import CodeFormerAccel
+        with rp.timed(times, "codeformer_load"): cf_runner = CodeFormerAccel(fidelity_weight=a.codeformer_w, batch_size=a.codeformer_batch, empty_cache_per_face=a.codeformer_empty_cache, landmark_source=a.codeformer_landmarks, autocast=a.codeformer_precision == "fp16", parse_autocast=a.codeformer_precision != "fp32")
+    rep = faa.process_video(src, work, dub16, dub_aac, out, router=router, runner=runner, min_ls_frames=a.min_ls_frames, max_verify_depth=a.max_verify_depth, codeformer=a.codeformer, times=times,
+                            log=lambda m: print(m, flush=True), speech_gate=gate, crossfade_frames=a.crossfade_frames, router_stride=a.router_stride, in_memory=True, cf_runner=cf_runner)
+    rep["backend"] = "optimized"; man["lipsync"] = rep; man["codeformer"] = "DISABLED (not invoked)" if a.codeformer == "off" else {"mode": a.codeformer, "w": a.codeformer_w, "batch": a.codeformer_batch, "landmarks": a.codeformer_landmarks, "precision": a.codeformer_precision}
+    if cf_runner is not None: cf_runner.close()
+    rp.free_cuda(runner, cf_runner)
     times["total"] = round(time.perf_counter() - t_all, 3); op = probe(out); fps = man["source"]["video"].get("avg_fps") or 25.0; tol = max(0.15, 2.0 / fps); delta = round(op["duration_s"] - duration, 4)
     checks = {"output_exists_nonempty": out.exists() and out.stat().st_size > 0, "output_has_video_audio": op["has_video"] and op["has_audio"], "duration_within_tolerance": abs(delta) <= tol,
               "resolution_preserved": (op["video"]["width"], op["video"]["height"]) == (man["source"]["video"]["width"], man["source"]["video"]["height"]),
