@@ -52,7 +52,18 @@ Baseline pilot metric per video: 04 423, 05 458, 03 444, 01 46. Timeline unchang
 | 03 | 141 (baseline 444, 68 % fewer) | 0.766 | 6.12 vs 4.65 (+1.47) | 3 of 32 | 1 |
 | 01 | 29 (baseline 46, 37 % fewer) | 0.848 | 6.61 vs 6.84 (-0.23) | 2 of 32 | 2 |
 
-E2E rows (full pipeline from the source video, `--alignment burst --codeformer optimized`) are appended below as they complete.
+
+## E2E — full pipeline from the source video, `--alignment burst --codeformer optimized` (frozen CodeFormer w 1.0 / batch 8 / fp16)
+
+| video | valid | silent while speaking | VAD IoU | SyncNet (LS-only baseline / +CodeFormer baseline) | AV | units on slot fallback | atempo > 1.3 / cut | Qwen split ok / proportional | CodeFormer faces / s | wall s | peak VRAM MiB |
+|---|---|---:|---:|---|---:|---:|---|---|---|---:|---:|
+| 04 | PASS | 190 | 0.602 | 3.2 (2.76 / 2.67) | 0 | 1 / 5 | 0 / 0 | 5 / 0 (single-burst units 0) | 1090 / 31.114 | 372.892 | 22492 |
+| 05 | PASS | 305 | 0.699 | 2.94 (2.61 / 2.5) | 0 | 0 / 7 | 2 / 1 | 6 / 1 (single-burst units 0) | 882 / 25.835 | 336.154 | 22492 |
+| 03 | PASS | 141 | 0.766 | 5.88 (4.65 / 4.37) | 0 | 1 / 9 | 3 / 1 | 6 / 3 (single-burst units 0) | 2016 / 58.076 | 778.299 | 23516 |
+| 01 | PASS | 29 | 0.848 | 6.45 (6.84 / 6.57) | 0 | 9 / 29 | 2 / 2 | 11 / 0 (single-burst units 18) | 260 / 7.364 | 269.54 | 22498 |
+
+05 was run before the fallback rule existed; the rule does not trigger on 05 (0 units), so its numbers are the final policy's. SyncNet with CodeFormer is 0.1-0.2 below the LS-only value of the same audio (the known CodeFormer cost) and still above the CodeFormer-only baseline on 04/05/03 (3.20 vs 2.67, 2.94 vs 2.50, 5.88 vs 4.37); 01: 6.45 vs 6.57. Outputs: `result_videos/week3_audio/final/`.
+
 
 
 ## Reading
