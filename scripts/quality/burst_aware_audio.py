@@ -80,6 +80,43 @@ def proportional_split(translation: str, counts: list[int]) -> list[str]:
     return parts
 
 
+def consolidate_parts(parts: list[str], bursts: list, groups: list[str], counts: list[int], min_words: int = 3, soft_words: int = 4, max_words: int = 16) -> tuple:
+    """Merge TTS parts that are too short to be a natural phrase into a neighbour (Fix 2, first_res review: 1-2 word parts such as "what" / "and will" / "you and"
+    hallucinated, were 1.3-2x too long and were the ones forced to atempo 1.6; one natural phrase per call is clearer: CER 0.052 vs 0.092).
+    Hard rule: every part has >= min_words words whenever the unit has more than one part. Soft rule: parts with < soft_words words are merged too as long
+    as the merged part stays <= max_words. A merged part takes the union of its bursts (first start .. last end, the pause in between included); text, source
+    groups and word counts are concatenated in order, so the parts still concatenate to the full translation word for word.
+    Returns (parts, bursts, groups, counts, merges) where merges is a list of (index_a, index_b, words_a, words_b) applied."""
+    parts, groups, counts = list(parts), list(groups), list(counts); bursts = [tuple(b) for b in bursts]; merges = []
+    nw = lambda t: len(norm_tokens(t))
+    for limit, cap in ((min_words, None), (soft_words, max_words)):
+        while len(parts) > 1:
+            cand = [i for i, t in enumerate(parts) if nw(t) < limit]
+            if not cand:
+                break
+            i = min(cand, key=lambda k: nw(parts[k]))
+            opts = [j for j in (i - 1, i + 1) if 0 <= j < len(parts)]
+            j = min(opts, key=lambda k: nw(parts[k]))            # merge into the shorter neighbour (keeps the parts balanced)
+            if cap is not None and nw(parts[i]) + nw(parts[j]) > cap:
+                others = [k for k in opts if nw(parts[i]) + nw(parts[k]) <= cap]
+                if not others:
+                    break                                          # soft rule: never build a part longer than max_words
+                j = others[0]
+            a, b = sorted((i, j))
+            merges.append((a, b, nw(parts[a]), nw(parts[b])))
+            parts[a:b + 1] = [parts[a] + " " + parts[b]]; groups[a:b + 1] = [groups[a] + " " + groups[b]]; counts[a:b + 1] = [counts[a] + counts[b]]; bursts[a:b + 1] = [(bursts[a][0], bursts[b][1])]
+    return parts, bursts, groups, counts, merges
+
+
+_NUM = re.compile(r"\d+")
+
+
+def missing_numbers(source: str, translation: str) -> list[str]:
+    """Digit sequences of the source that do not occur in the translation (Whisper writes numbers as digits; Qwen sometimes drops them: "... пятница 28" -> "today Friday")."""
+    tr = set(_NUM.findall(translation.replace(",", "").replace(" ", "")) + _NUM.findall(translation))
+    return [n for n in _NUM.findall(source) if n not in tr]
+
+
 def validate_parts(obj, n: int, translation: str) -> tuple[list[str] | None, str | None]:
     if isinstance(obj, list):                       # a bare JSON list of strings is accepted as the parts
         obj = {"parts": obj}

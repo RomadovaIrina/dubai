@@ -235,8 +235,11 @@ def burst_plan(units: list[dict], segments: list[dict], speech: list[dict], dura
     return plans
 
 
-def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict, plans: list | None = None, split_retries: int = 2) -> dict:
+def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict, plans: list | None = None, split_retries: int = 2,
+                    min_part_words: int = 3, soft_part_words: int = 4, part_max_words: int = 16) -> dict:
     import glob
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
+    from burst_aware_audio import missing_numbers
     from llama_cpp import Llama
     files = sorted(glob.glob(str(MODELS / "qwen2.5-7b-instruct-gguf" / f"*{QWEN_QUANT}*.gguf")))
     if not files:
@@ -244,6 +247,7 @@ def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict
     with timed(times, "translation_load"):
         llm = Llama(model_path=files[0], n_ctx=4096, n_threads=THREADS, n_threads_batch=THREADS, n_gpu_layers=0, verbose=False)
     src_name, tgt_name = lang_name(src_lang), lang_name(tgt_lang)
+    tgt_lang_name = tgt_name
     usage = {"prompt_tokens": 0, "completion_tokens": 0}
     with timed(times, "translation"):
         for u in units:
@@ -255,24 +259,42 @@ def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict
                 txt = txt[1:-1].strip()
             if not txt:
                 raise RuntimeError(f"empty translation for unit {u['id']}: {u['text'][:80]!r}")
+            miss = missing_numbers(u["text"], txt)
+            if miss:   # Qwen dropped a number ("... пятница 28" -> "today Friday"): one retry that names the missing numbers
+                r2 = llm.create_chat_completion(msgs[:1] + [{"role": "user", "content": f"Translate from {src_name} to {tgt_lang_name}. Keep every number exactly as written in the source ({', '.join(miss)}):\n{u['text']}"}], max_tokens=512, temperature=0.0)
+                t2 = " ".join(r2["choices"][0]["message"]["content"].split()).strip()
+                if len(t2) >= 2 and t2[0] in "\"«“" and t2[-1] in "\"»”":
+                    t2 = t2[1:-1].strip()
+                for k in usage:
+                    usage[k] += int(r2["usage"].get(k, 0))
+                u["translation_number_retry"] = {"missing": miss, "first": txt, "second": t2, "fixed": bool(t2) and not missing_numbers(u["text"], t2)}
+                if t2 and len(missing_numbers(u["text"], t2)) < len(miss):
+                    txt = t2
             u["translation"] = txt
             for k in usage:
                 usage[k] += int(r["usage"].get(k, 0))
             print(f"  [translate] u{u['id']:02d} {u['speaker']} {u['start']:.2f}-{u['end']:.2f}s | {u['text'][:60]} -> {txt[:60]}", flush=True)
     split_stats = None
     if plans is not None:   # --alignment burst, step 2: cut every unit translation into one part per source burst (Qwen still loaded)
-        from burst_aware_audio import norm_tokens, proportional_split, qwen_split
-        split_stats = {"single": 0, "qwen": 0, "proportional_fallback": 0}
+        from burst_aware_audio import consolidate_parts, norm_tokens, qwen_split
+        split_stats = {"single": 0, "qwen": 0, "single_fallback": 0, "merged_parts": 0, "parts_total": 0}
         with timed(times, "translation_split"):
             for u, p in zip(units, plans):
                 if len(p["bursts"]) == 1:
-                    u["parts"] = [u["translation"]]; u["split"] = {"method": "single"}; split_stats["single"] += 1; continue
+                    u["parts"] = [u["translation"]]; u["split"] = {"method": "single"}; split_stats["single"] += 1; split_stats["parts_total"] += 1; continue
                 parts, log = qwen_split(llm, p["groups"], u["translation"], src_name, tgt_name, split_retries)
                 if parts is None:
-                    parts = proportional_split(u["translation"], p["group_counts"]); log["method"] = "proportional_fallback"
+                    # no valid Qwen cut: the old lossless PROPORTIONAL cut produced 1-2 word fragments ("what", "and will") -> synthesise the unit as ONE natural phrase over the span of all its bursts
+                    parts = [u["translation"]]; log["method"] = "single_fallback"
+                    p["bursts"] = [(p["bursts"][0][0], p["bursts"][-1][1])]; p["groups"] = [" ".join(p["groups"])]; p["group_counts"] = [sum(p["group_counts"])]
+                else:
+                    parts, p["bursts"], p["groups"], p["group_counts"], merges = consolidate_parts(parts, p["bursts"], p["groups"], p["group_counts"], min_part_words, soft_part_words, part_max_words)
+                    if merges:
+                        log["merges"] = merges; split_stats["merged_parts"] += len(merges)
                 assert norm_tokens(" ".join(parts)) == norm_tokens(u["translation"]), "split lost words"
-                u["parts"] = parts; u["split"] = log; split_stats[log["method"]] += 1
-                print(f"  [split] u{u['id']:02d} {len(parts)} parts [{log['method']}]: " + " | ".join(f"{g} -> {t}" for g, t in zip(p["groups"], parts))[:300], flush=True)
+                assert len(parts) == len(p["bursts"]) == len(p["groups"]), "parts / bursts out of sync"
+                u["parts"] = parts; u["split"] = log; split_stats[log["method"]] = split_stats.get(log["method"], 0) + 1; split_stats["parts_total"] += len(parts)
+                print(f"  [split] u{u['id']:02d} {len(parts)} parts [{log['method']}{'+merged' if log.get('merges') else ''}]: " + " | ".join(f"{g} -> {t}" for g, t in zip(p["groups"], parts))[:300], flush=True)
     del llm
     return {"model": os.path.basename(files[0]), "quant": QWEN_QUANT, "n_ctx": 4096, "n_threads": THREADS, "n_gpu_layers": 0,
             "system_prompt": SYSTEM_PROMPT, "direction": f"{src_name}->{tgt_name}", "usage": usage, "burst_split": split_stats}
@@ -567,7 +589,10 @@ def main() -> int:
     ap.add_argument("--burst-min-s", type=float, default=0.0, help="burst mode: merge source bursts shorter than this into a neighbour")
     ap.add_argument("--burst-spill", choices=["on", "off"], default="on", help="burst mode: last chunk may run into the pause before the next unit (hard cap before any cut)")
     ap.add_argument("--atempo-cap", type=float, default=1.3); ap.add_argument("--hard-cap", type=float, default=1.6); ap.add_argument("--fill-slowdown", type=float, default=1.0)
-    ap.add_argument("--split-retries", type=int, default=2, help="burst mode: Qwen JSON split retries before the lossless proportional fallback")
+    ap.add_argument("--split-retries", type=int, default=2, help="burst mode: Qwen JSON split retries before falling back to ONE natural phrase per unit")
+    ap.add_argument("--min-part-words", type=int, default=3, help="burst mode: hard minimum words of a TTS part (shorter parts are merged into a neighbour)")
+    ap.add_argument("--soft-part-words", type=int, default=4, help="burst mode: preferred minimum words; parts below it are merged while the merged part stays <= --part-max-words")
+    ap.add_argument("--part-max-words", type=int, default=16)
     ap.add_argument("--burst-fallback-frac", type=float, default=0.5, help="burst mode: a unit whose fit needs > atempo-cap on >= this fraction of its groups uses the baseline slot rule (1.01 = never)")
     ap.add_argument("--min-ls-frames", type=int, default=25, help="VALID_FACE runs shorter than this are passed through")
     ap.add_argument("--max-verify-depth", type=int, default=3)
@@ -653,7 +678,8 @@ def main() -> int:
         if a.alignment == "burst":
             plans = burst_plan(units, segments, speech, duration, a.burst_min_s, a.burst_spill == "on")
             print(f"  [burst] {sum(len(p['bursts']) for p in plans)} bursts with words in {len(units)} units, {sum(p['bursts_without_words'] for p in plans)} bursts without words", flush=True)
-        man["translation"] = run_translation(units, src_lang, tgt, times, plans=plans, split_retries=a.split_retries)
+        man["translation"] = run_translation(units, src_lang, tgt, times, plans=plans, split_retries=a.split_retries,
+                                             min_part_words=a.min_part_words, soft_part_words=a.soft_part_words, part_max_words=a.part_max_words)
 
         refs = speaker_references(units, turns, wav16, work)
         man["tts"] = run_tts(units, refs, tgt, work, a.seed, times)
