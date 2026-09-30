@@ -180,7 +180,9 @@ def main() -> int:
     # ---- 5: TTS per part
     import torch, torchaudio
     from chatterbox.mtl_tts import ChatterboxMultilingualTTS
+    from chatterbox_fp16 import install_speech_token_guard
     t0 = time.perf_counter(); m = ChatterboxMultilingualTTS.from_local(MODELS / "chatterbox", "cuda", t3_model="v3"); builtin = m.conds; times["tts_load"] = round(time.perf_counter() - t0, 3)
+    guard = install_speech_token_guard(m)
 
     def cast(dtype):
         for mod in (m.t3, m.s3gen, m.ve):
@@ -195,7 +197,7 @@ def main() -> int:
             if cur != spk:
                 with torch.autocast("cuda", dtype=dtype, enabled=dtype != torch.float32):
                     if ref: m.prepare_conditionals(ref)
-                    else: m.conds = builtin.to(device="cuda")
+                    else: m.conds = builtin.to(device="cuda"); guard.use_builtin()
                 cur = spk
             p["tts"] = []
             for k, text in enumerate(p["parts"]):

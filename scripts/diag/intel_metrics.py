@@ -74,7 +74,7 @@ class Asr:
         import glob
         self.torch = torch
         self.wh = WhisperModel("/workspace/dub/dubai/models/whisper-large-v3", device=device, compute_type="float16")
-        p = glob.glob("/workspace/dub/dubai/models/hf/models--facebook--wav2vec2-base-960h/snapshots/*")[0]
+        p = "/workspace/dub/dubai/models/wav2vec2-base-960h"
         self.proc = Wav2Vec2Processor.from_pretrained(p); self.w2v = Wav2Vec2ForCTC.from_pretrained(p).to(device).eval(); self.device = device
 
     @staticmethod

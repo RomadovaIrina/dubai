@@ -306,11 +306,13 @@ def run_tts(units: list[dict], refs: dict, tgt_lang: str, work: pathlib.Path, se
     import torch
     import torchaudio
     from chatterbox.mtl_tts import ChatterboxMultilingualTTS, SUPPORTED_LANGUAGES
+    from chatterbox_fp16 import install_speech_token_guard
     if tgt_lang not in SUPPORTED_LANGUAGES:
         raise Blocker(f"target language {tgt_lang!r} not supported by Chatterbox: {sorted(SUPPORTED_LANGUAGES)}")
     with timed(times, "tts_load"):
         m = ChatterboxMultilingualTTS.from_local(MODELS / "chatterbox", "cuda", t3_model="v3")
     builtin = m.conds
+    guard = install_speech_token_guard(m)   # keeps the speech-token ids int64 under the fp16 cast (chatterbox_fp16.py: fp16 corrupted them -> unintelligible speech)
 
     def cast(dtype):
         for mod in (m.t3, m.s3gen, m.ve):
@@ -329,7 +331,7 @@ def run_tts(units: list[dict], refs: dict, tgt_lang: str, work: pathlib.Path, se
                 if ref:
                     m.prepare_conditionals(ref)
                 else:
-                    m.conds = builtin.to(device="cuda")
+                    m.conds = builtin.to(device="cuda"); guard.use_builtin()
             for u in us:
                 if "parts" in u:   # --alignment burst: one clip per part (seed per part), keeps the slot-mode path below byte-identical
                     u["tts_parts"] = []
@@ -370,7 +372,7 @@ def run_tts(units: list[dict], refs: dict, tgt_lang: str, work: pathlib.Path, se
     free_cuda(m)
     return {"model": "ChatterboxMultilingualTTS t3=v3 (models/chatterbox)", "sr": sr, "dtype": str(used).replace("torch.", ""),
             "language_id": tgt_lang, "voice_reference": "speaker's own diarized speech via audio_prompt_path/prepare_conditionals",
-            "references": refs}
+            "speech_token_guard": {"enabled": True, "flow_calls": guard.calls, "violations": guard.violations}, "references": refs}
 
 
 def align_units(units: list[dict], duration: float, work: pathlib.Path) -> None:

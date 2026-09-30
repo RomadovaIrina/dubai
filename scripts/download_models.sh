@@ -24,6 +24,7 @@ echo "== Qwen2.5-7B-Instruct GGUF Q8_0 (~8.1 GB, 3 shards; production quant per 
 echo "== Chatterbox multilingual v3"; snap ResembleAI/chatterbox "$M/chatterbox" "ve.pt" "s3gen.pt" "conds.pt" "t3_mtl23ls_v3.safetensors" "grapheme_mtl_merged_expanded_v1.json" "Cangjie5_TC.json" "*.json"
 echo "== LatentSync 1.6 (unet 5 GB + whisper tiny)"; snap ByteDance/LatentSync-1.6 "$M/latentsync" "latentsync_unet.pt" "whisper/tiny.pt"
 echo "== sd-vae-ft-mse (LatentSync VAE)"; snap stabilityai/sd-vae-ft-mse "$M/sd-vae-ft-mse" "*.json" "*.safetensors"
+echo "== wav2vec2-base-960h (independent CTC ASR for the TTS intelligibility QA, 0.4 GB)"; snap facebook/wav2vec2-base-960h "$M/wav2vec2-base-960h" "*.json" "model.safetensors"
 # LatentSync expects ./checkpoints/{latentsync_unet.pt,whisper/tiny.pt} relative to its repo root
 LS="${DUB_ROOT}/third_party/latentsync/checkpoints"; mkdir -p "$LS"
 ln -sfn "$M/latentsync/latentsync_unet.pt" "$LS/latentsync_unet.pt"; ln -sfn "$M/latentsync/whisper" "$LS/whisper"

@@ -3,7 +3,7 @@
 . "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 cd "${DUB_ROOT}"; MD="${DUB_ROOT}/reports/smoke.md"
 echo "# Smoke results $(date -Iseconds)" > "$MD"; echo >> "$MD"; echo "| component | result | time | log |" >> "$MD"; echo "|---|---|---|---|" >> "$MD"
-TESTS=("chatterbox:python scripts/check_chatterbox.py" "faster-whisper:python scripts/check_whisper.py" "silero-vad:python scripts/check_vad.py"
+TESTS=("chatterbox:python scripts/check_chatterbox.py" "tts-intelligibility:python scripts/check_tts_intelligibility.py" "faster-whisper:python scripts/check_whisper.py" "silero-vad:python scripts/check_vad.py"
        "pyannote:python scripts/check_pyannote.py" "librosa/atempo:python scripts/check_atempo.py" "llama.cpp:python scripts/check_llama.py"
        "retinaface:python scripts/check_retinaface.py" "latentsync:bash scripts/check_latentsync.sh" "codeformer:bash scripts/check_codeformer.sh"
        "ffmpeg-mux:bash scripts/check_ffmpeg_mux.sh")
