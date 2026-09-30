@@ -236,7 +236,7 @@ def burst_plan(units: list[dict], segments: list[dict], speech: list[dict], dura
 
 
 def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict, plans: list | None = None, split_retries: int = 2,
-                    min_part_words: int = 3, soft_part_words: int = 4, part_max_words: int = 16) -> dict:
+                    min_part_words: int = 3, soft_part_words: int = 4, part_max_words: int = 16, keep_llm: bool = False):
     import glob
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
     from burst_aware_audio import missing_numbers
@@ -295,9 +295,12 @@ def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict
                 assert len(parts) == len(p["bursts"]) == len(p["groups"]), "parts / bursts out of sync"
                 u["parts"] = parts; u["split"] = log; split_stats[log["method"]] = split_stats.get(log["method"], 0) + 1; split_stats["parts_total"] += len(parts)
                 print(f"  [split] u{u['id']:02d} {len(parts)} parts [{log['method']}{'+merged' if log.get('merges') else ''}]: " + " | ".join(f"{g} -> {t}" for g, t in zip(p["groups"], parts))[:300], flush=True)
-    del llm
-    return {"model": os.path.basename(files[0]), "quant": QWEN_QUANT, "n_ctx": 4096, "n_threads": THREADS, "n_gpu_layers": 0,
+    meta = {"model": os.path.basename(files[0]), "quant": QWEN_QUANT, "n_ctx": 4096, "n_threads": THREADS, "n_gpu_layers": 0,
             "system_prompt": SYSTEM_PROMPT, "direction": f"{src_name}->{tgt_name}", "usage": usage, "burst_split": split_stats}
+    if keep_llm:
+        return meta, llm, src_name, tgt_name    # the burst TTS session re-translates over-long parts with the same model (tts_burst.py), caller deletes it
+    del llm
+    return meta
 
 
 def speaker_references(units: list[dict], turns: list[dict], wav16: pathlib.Path, work: pathlib.Path) -> dict:
@@ -431,31 +434,36 @@ def align_units_burst(units: list[dict], plans: list[dict], work: pathlib.Path, 
     import numpy as np
     import soundfile as sf
     from e1_burst_align import SR16, TTS_SR as E1_SR, burst_fit_ratios, place_groups, place_slot_fallback, placement_summary, vad_intervals
-    report = []; n_fallback = 0
+    report = []; n_fallback = 0; prev_end = None
     for u, p in zip(units, plans):
         chunks = []
         for k, t in enumerate(u["tts_parts"]):
             y, sr = sf.read(t["file"], dtype="float32"); assert sr == E1_SR
             if y.ndim > 1: y = y.mean(axis=1)
-            t16 = work / f"tts16_u{u['id']:02d}_p{k}.wav"; ff(["-i", t["file"], "-ar", str(SR16), "-ac", "1", "-c:a", "pcm_s16le", str(t16)])
-            raw = vad_intervals(t16) or [(0.0, len(y) / sr)]; t16.unlink()
-            s_, e_ = max(0.0, raw[0][0] - 0.04), min(len(y) / sr, raw[-1][1] + 0.06); t["speech_span"] = [round(s_, 3), round(e_, 3)]
+            if t.get("speech_span"):   # already computed (and possibly re-synthesised) by the burst TTS session: same rule, same clip
+                s_, e_ = t["speech_span"]
+            else:
+                from tts_burst import speech_span
+                s_, e_ = speech_span(y, sr, work, f"u{u['id']:02d}_p{k}"); t["speech_span"] = [round(s_, 3), round(e_, 3)]
             chunks.append(y[int(s_ * sr):int(e_ * sr)])
         slot_s, slot_e = p["slot"]
-        need = burst_fit_ratios(chunks, p["bursts"], p["slot"], p["next_start"], opts); over = [r for r in need if r is not None and r > opts.atempo_cap]
+        need = burst_fit_ratios(chunks, p["bursts"], p["slot"], p["next_start"], opts, prev_end=prev_end); over = [r for r in need if r is not None and r > opts.atempo_cap]
         if len(need) > 1 and len(over) >= getattr(opts, "fallback_frac", 0.5) * len([r for r in need if r is not None]):
             track, placements = place_slot_fallback(chunks, p["slot"], work, f"u{u['id']:02d}"); n_fallback += 1
             placements[0]["text"] = " ".join(t["text"] for t in u["tts_parts"]); placements[0]["source_words"] = " | ".join(p["groups"]); placements[0]["burst_fit_ratios"] = need
             print(f"  [align] u{u['id']:02d} slot fallback ({len(over)}/{len(need)} groups would need > {opts.atempo_cap}x)", flush=True)
         else:
-            track, placements = place_groups(chunks, p["bursts"], p["slot"], p["next_start"], opts, work, f"u{u['id']:02d}", sr=E1_SR, labels=[[k] for k in range(len(chunks))])
+            track, placements = place_groups(chunks, p["bursts"], p["slot"], p["next_start"], opts, work, f"u{u['id']:02d}", sr=E1_SR, labels=[[k] for k in range(len(chunks))], prev_end=prev_end)
             for pl, t, g in zip(placements, u["tts_parts"], p["groups"]):
                 pl["text"] = t["text"]; pl["source_words"] = g
         aligned = work / f"aligned_u{u['id']:02d}.wav"; sf.write(str(aligned), track, E1_SR, subtype="PCM_16")
         u["slot"] = {"start": round(slot_s, 3), "end": round(slot_e, 3), "seconds": round(slot_e - slot_s, 3)}
         u["alignment"] = {"tts_seconds": u["tts"]["seconds"], "ratio_tts_to_slot": round(u["tts"]["seconds"] / max(slot_e - slot_s, 1e-6), 4), "mode": "burst",
                           "atempo": max(pl.get("atempo", 1.0) for pl in placements), "bursts": len(p["bursts"]), "bursts_without_words": p["bursts_without_words"],
-                          "placements": placements, "aligned_seconds": round(len(track) / E1_SR, 3), "file": str(aligned)}
+                          "placements": placements, "aligned_seconds": round(len(track) / E1_SR, 3), "file": str(aligned),
+                          "track_start": next((pl["track_start"] for pl in placements if "track_start" in pl), round(slot_s, 3))}
+        placed_ends = [pl["placed"][1] for pl in placements if pl.get("placed")]
+        prev_end = max(placed_ends) if placed_ends else prev_end
         report.append({"id": u["id"], "placements": placements})
     return {"mode": "burst", "min_burst_s": getattr(opts, "min_burst_s", None), "spill": opts.spill, "atempo_cap": opts.atempo_cap, "hard_cap": opts.hard_cap,
             "fill_slowdown": opts.fill_slowdown, "fallback_frac": getattr(opts, "fallback_frac", 0.5), "units_slot_fallback": n_fallback, "summary": placement_summary(report)}
@@ -467,7 +475,7 @@ def build_dubbed_track(units: list[dict], duration: float, work: pathlib.Path) -
     n = int(round(duration * TTS_SR)); track = np.zeros(n, dtype=np.float32)
     for u in units:
         y, sr = sf.read(u["alignment"]["file"], dtype="float32")
-        a = int(round(u["slot"]["start"] * sr)); b = min(n, a + len(y))
+        a = max(0, int(round(u["alignment"].get("track_start", u["slot"]["start"]) * sr))); b = min(n, a + len(y))   # burst mode may start a short phrase up to --burst-max-lead before its burst
         track[a:b] += y[: b - a]
     peak = float(np.abs(track).max()) if n else 0.0
     if peak > 0.99:
@@ -588,12 +596,20 @@ def main() -> int:
     ap.add_argument("--alignment", choices=["slot", "burst"], default="slot", help="slot = frozen baseline aligner; burst = week-3 burst-aware translation split / TTS / placement")
     ap.add_argument("--burst-min-s", type=float, default=0.0, help="burst mode: merge source bursts shorter than this into a neighbour")
     ap.add_argument("--burst-spill", choices=["on", "off"], default="on", help="burst mode: last chunk may run into the pause before the next unit (hard cap before any cut)")
-    ap.add_argument("--atempo-cap", type=float, default=1.3); ap.add_argument("--hard-cap", type=float, default=1.6); ap.add_argument("--fill-slowdown", type=float, default=1.0)
+    ap.add_argument("--atempo-cap", type=float, default=1.15, help="burst mode: preferred max speed-up of a part (intelligibility degrades above ~1.15-1.2, first_res review)")
+    ap.add_argument("--hard-cap", type=float, default=1.2, help="burst mode: absolute max speed-up (used only when a part would collide with the next burst / be cut at the track end)")
+    ap.add_argument("--fill-slowdown", type=float, default=1.0)
     ap.add_argument("--split-retries", type=int, default=2, help="burst mode: Qwen JSON split retries before falling back to ONE natural phrase per unit")
     ap.add_argument("--min-part-words", type=int, default=3, help="burst mode: hard minimum words of a TTS part (shorter parts are merged into a neighbour)")
     ap.add_argument("--soft-part-words", type=int, default=4, help="burst mode: preferred minimum words; parts below it are merged while the merged part stays <= --part-max-words")
     ap.add_argument("--part-max-words", type=int, default=16)
-    ap.add_argument("--burst-fallback-frac", type=float, default=0.5, help="burst mode: a unit whose fit needs > atempo-cap on >= this fraction of its groups uses the baseline slot rule (1.01 = never)")
+    ap.add_argument("--burst-fallback-frac", type=float, default=1.01, help="burst mode: a unit whose fit needs > atempo-cap on >= this fraction of its groups uses the baseline slot rule, which speeds up WITHOUT a cap (1.01 = never; default since the first_res review)")
+    ap.add_argument("--fit-retranslate", choices=["on", "off"], default="on", help="burst mode: a part that would need more than --atempo-cap is re-translated concisely (Qwen) and re-synthesised before any speed-up")
+    ap.add_argument("--fit-rounds", type=int, default=4); ap.add_argument("--fit-target-ratio", type=float, default=1.05)
+    ap.add_argument("--burst-max-lead", type=float, default=0.4, help="burst mode: a part that would need more than --atempo-cap may start up to this many seconds before its burst, into free silence, instead of being sped up")
+    ap.add_argument("--tts-qa", choices=["on", "off"], default="off", help="burst mode: independent-ASR QA of every TTS part with per-part retry (English targets only)")
+    ap.add_argument("--tts-retries", type=int, default=2, help="QA retry ladder length after the first attempt: new seed, then new seed + --qa-temp")
+    ap.add_argument("--qa-temp", type=float, default=0.6)
     ap.add_argument("--min-ls-frames", type=int, default=25, help="VALID_FACE runs shorter than this are passed through")
     ap.add_argument("--max-verify-depth", type=int, default=3)
     ap.add_argument("--seed", type=int, default=1247)
@@ -678,18 +694,36 @@ def main() -> int:
         if a.alignment == "burst":
             plans = burst_plan(units, segments, speech, duration, a.burst_min_s, a.burst_spill == "on")
             print(f"  [burst] {sum(len(p['bursts']) for p in plans)} bursts with words in {len(units)} units, {sum(p['bursts_without_words'] for p in plans)} bursts without words", flush=True)
-        man["translation"] = run_translation(units, src_lang, tgt, times, plans=plans, split_retries=a.split_retries,
-                                             min_part_words=a.min_part_words, soft_part_words=a.soft_part_words, part_max_words=a.part_max_words)
+        burst_opts = None
+        if a.alignment == "burst":
+            sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
+            from e1_burst_align import PlaceOpts
+            burst_opts = PlaceOpts(a.atempo_cap, a.hard_cap, True, 0.06, a.fill_slowdown, spill=a.burst_spill == "on", max_lead=a.burst_max_lead); burst_opts.min_burst_s = a.burst_min_s; burst_opts.fallback_frac = a.burst_fallback_frac
+        tr = run_translation(units, src_lang, tgt, times, plans=plans, split_retries=a.split_retries,
+                             min_part_words=a.min_part_words, soft_part_words=a.soft_part_words, part_max_words=a.part_max_words, keep_llm=burst_opts is not None and a.fit_retranslate == "on")
+        llm = None
+        if isinstance(tr, tuple):
+            man["translation"], llm, src_name, tgt_name = tr
+        else:
+            man["translation"] = tr
 
         refs = speaker_references(units, turns, wav16, work)
-        man["tts"] = run_tts(units, refs, tgt, work, a.seed, times)
+        if a.alignment == "burst":
+            from tts_burst import run_tts_burst
+            qa_on = a.tts_qa == "on"
+            if qa_on and tgt != "en":
+                print(f"  [warn] --tts-qa uses English ASR models; disabled for target language {tgt}", flush=True); qa_on = False
+            man["tts"] = run_tts_burst(units, plans, refs, tgt, work, a.seed, times, opts=burst_opts, llm=llm, src_name=lang_name(src_lang), tgt_name=lang_name(tgt),
+                                       fit={"enabled": llm is not None, "rounds": a.fit_rounds, "target_ratio": a.fit_target_ratio},
+                                       qa_cfg={"enabled": qa_on, "retries": a.tts_retries, "low_temp": a.qa_temp}, min_part_words=a.min_part_words,
+                                       log=lambda m_: print(m_, flush=True))
+            llm = tr = None    # release Qwen (the translation tuple also holds a reference)
+        else:
+            man["tts"] = run_tts(units, refs, tgt, work, a.seed, times)
 
         with timed(times, "alignment"):
             if a.alignment == "burst":
-                sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
-                from e1_burst_align import PlaceOpts
-                opts = PlaceOpts(a.atempo_cap, a.hard_cap, True, 0.06, a.fill_slowdown, spill=a.burst_spill == "on"); opts.min_burst_s = a.burst_min_s; opts.fallback_frac = a.burst_fallback_frac
-                man["alignment"] = align_units_burst(units, plans, work, opts)
+                man["alignment"] = align_units_burst(units, plans, work, burst_opts)
             else:
                 align_units(units, duration, work); man["alignment"] = {"mode": "slot"}
         with timed(times, "dubbed_track"):

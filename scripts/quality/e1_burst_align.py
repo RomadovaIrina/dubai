@@ -62,22 +62,27 @@ def group_phrases(phrases: list[tuple[float, float]], n_bursts: int, burst_dur: 
 class PlaceOpts:
     """Placement parameters shared by E1 (phrase groups of one TTS clip) and the burst-aware path (one TTS chunk per burst)."""
 
-    def __init__(self, atempo_cap=1.3, hard_cap=1.6, extend=True, gap=0.06, fill_slowdown=1.0, spill=False):
+    def __init__(self, atempo_cap=1.3, hard_cap=1.6, extend=True, gap=0.06, fill_slowdown=1.0, spill=False, max_lead=0.0):
         self.atempo_cap, self.hard_cap, self.extend, self.gap, self.fill_slowdown = atempo_cap, hard_cap, extend, gap, fill_slowdown
+        # max_lead: a group that would need more than atempo_cap may START up to this many seconds BEFORE its burst, into silence that is really free (between the
+        # previous group / unit and this burst), instead of being sped up (first_res review: speed-ups above ~1.15-1.2 hurt intelligibility; intelligibility ranks above
+        # exact onset alignment). 0 = off (old behaviour).
+        self.max_lead = max_lead
         # spill (burst-aware path only): the LAST group of a unit may run past the slot end into the pause before `next_start`
         # (= the next unit's first burst) and uses the hard cap before anything is cut, so words are never truncated at the slot end
         self.spill = spill
 
 
 def place_groups(groups: list, bursts: list, slot: tuple, next_start: float, opts: PlaceOpts, tmp: pathlib.Path, tag: str,
-                 sr: int = TTS_SR, labels: list | None = None) -> tuple:
+                 sr: int = TTS_SR, labels: list | None = None, prev_end: float | None = None) -> tuple:
     """Fit audio groups (one float32 array per burst, None = nothing for that burst) into their bursts on the unit slot.
     Window of group j = [max(burst start, cursor), next burst start - gap] (extend) or the burst itself; speed-up capped at
     atempo_cap (hard_cap when the overflow into the next burst would exceed 0.4 s); optional slow-down towards the burst end
     (fill_slowdown < 1); overflow shifts the next group; the slot is never left (cut at slot end). Returns (slot track, placements)."""
     import soundfile as sf
     slot_s, slot_e = slot; track_e = max(slot_e, next_start - opts.gap) if opts.spill else slot_e
-    n_slot = int(round((track_e - slot_s) * sr)); track = np.zeros(n_slot, dtype=np.float32); cursor = slot_s; placements = []
+    pad = opts.max_lead if (opts.max_lead > 0 and prev_end is not None) else 0.0     # the returned track starts at slot_s - pad (see placements[*]["track_start"])
+    n_slot = int(round((track_e - slot_s + pad) * sr)); track = np.zeros(n_slot, dtype=np.float32); cursor = slot_s; placements = []
     for j, (bs, be) in enumerate(bursts):
         seg = groups[j]; lab = labels[j] if labels else None
         if seg is None or len(seg) == 0:
@@ -85,7 +90,12 @@ def place_groups(groups: list, bursts: list, slot: tuple, next_start: float, opt
         g = len(seg) / sr
         start = max(bs, cursor)
         win_end = (min(next_start - opts.gap, bursts[j + 1][0] - opts.gap) if j + 1 < len(bursts) else (max(slot_e, next_start - opts.gap) if opts.spill else min(slot_e, next_start - opts.gap))) if opts.extend else min(be, slot_e)
-        win_end = max(win_end, start + 0.2); win = win_end - start; ratio = g / win; tempo = 1.0
+        win_end = max(win_end, start + 0.2); win = win_end - start; ratio = g / win; tempo = 1.0; lead = 0.0
+        if opts.max_lead > 0 and ratio > opts.atempo_cap:
+            room = (bs - cursor) if start > cursor else 0.0
+            if j == 0 and prev_end is not None: room = max(room, slot_s - prev_end - opts.gap) if start <= slot_s + 1e-6 else room
+            lead = max(0.0, min(opts.max_lead, g / opts.atempo_cap - win, room))
+            start -= lead; win += lead; ratio = g / win
         p_in = tmp / f"grp_{tag}_{j}.wav"; p_out = tmp / f"grp_{tag}_{j}_t.wav"
         if ratio < 0.995 and opts.fill_slowdown < 1.0:   # E1b: stretch a short group towards the ORIGINAL burst end (never beyond it), floor at fill_slowdown
             target = min(be, win_end) - start
@@ -102,17 +112,17 @@ def place_groups(groups: list, bursts: list, slot: tuple, next_start: float, opt
             sf.write(str(p_in), seg, sr, subtype="PCM_16")
             ff(["-i", str(p_in), "-af", f"atempo={tempo:.6f}", "-ar", str(sr), "-ac", "1", "-c:a", "pcm_s16le", str(p_out)]); seg, _ = sf.read(str(p_out), dtype="float32")
             p_in.unlink(); p_out.unlink()
-        a0 = int(round((start - slot_s) * sr)); b0 = min(n_slot, a0 + len(seg))
+        a0 = int(round((start - slot_s + pad) * sr)); b0 = min(n_slot, a0 + len(seg))
         if b0 > a0: track[a0:b0] += seg[:b0 - a0]
         end = start + len(seg) / sr; cut = max(0.0, end - track_e)
         placements.append({"burst": [round(bs, 3), round(be, 3)], "window": [round(start, 3), round(win_end, 3)], "phrases": lab if lab is not None else [j], "group_s": round(g, 3), "ratio": round(ratio, 3),
                            "atempo": round(tempo, 3), "placed": [round(start, 3), round(min(end, track_e), 3)], "overflow_into_next_burst_s": round(max(0.0, end - win_end), 3), "cut_at_slot_end_s": round(cut, 3),
-                           "spilled_past_slot_s": round(max(0.0, min(end, track_e) - slot_e), 3)})
+                           "spilled_past_slot_s": round(max(0.0, min(end, track_e) - slot_e), 3), "lead_s": round(lead, 3), "track_start": round(slot_s - pad, 3)})
         cursor = end + opts.gap
     return track, placements
 
 
-def burst_fit_ratios(groups: list, bursts: list, slot: tuple, next_start: float, opts: PlaceOpts, sr: int = TTS_SR) -> list:
+def burst_fit_ratios(groups: list, bursts: list, slot: tuple, next_start: float, opts: PlaceOpts, sr: int = TTS_SR, prev_end: float | None = None) -> list:
     """Dry run of place_groups' window logic: the speed-up every group would need (group seconds / its window), no audio written."""
     slot_s, slot_e = slot; cursor = slot_s; out = []
     for j, (bs, be) in enumerate(bursts):
@@ -121,7 +131,12 @@ def burst_fit_ratios(groups: list, bursts: list, slot: tuple, next_start: float,
             out.append(None); continue
         g = len(seg) / sr; start = max(bs, cursor)
         win_end = (min(next_start - opts.gap, bursts[j + 1][0] - opts.gap) if j + 1 < len(bursts) else (max(slot_e, next_start - opts.gap) if opts.spill else min(slot_e, next_start - opts.gap))) if opts.extend else min(be, slot_e)
-        win_end = max(win_end, start + 0.2); ratio = g / (win_end - start); out.append(round(ratio, 3))
+        win_end = max(win_end, start + 0.2); win = win_end - start; ratio = g / win
+        if opts.max_lead > 0 and ratio > opts.atempo_cap:     # same lead rule as place_groups
+            room = (bs - cursor) if start > cursor else 0.0
+            if j == 0 and prev_end is not None: room = max(room, slot_s - prev_end - opts.gap) if start <= slot_s + 1e-6 else room
+            lead = max(0.0, min(opts.max_lead, g / opts.atempo_cap - win, room)); start -= lead; ratio = g / (win + lead)
+        out.append(round(ratio, 3))
         cursor = start + g / min(max(ratio, 1.0), opts.atempo_cap) + opts.gap
     return out
 
