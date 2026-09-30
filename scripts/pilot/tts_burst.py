@@ -29,14 +29,31 @@ def words_of(text: str) -> int:
     return len(re.findall(r"[\w']+", text))
 
 
-def speech_span(y: np.ndarray, sr: int, work: pathlib.Path, tag: str) -> tuple[float, float]:
-    """Silero VAD speech span of one TTS part: first start - 40 ms .. last end + 60 ms (clamped to the clip)."""
+def energy_onset(y: np.ndarray, sr: int, rel_db: float = -28.0, frames: int = 3, hop_s: float = 0.01) -> float:
+    """First time (s) where the signal stays within rel_db of the clip's loud level (90th percentile of 10 ms RMS) for `frames` consecutive frames."""
+    h = int(hop_s * sr); n = len(y) // h
+    if n < frames + 1:
+        return 0.0
+    e = 20 * np.log10(np.array([np.sqrt(np.mean(y[i * h:(i + 1) * h] ** 2) + 1e-12) for i in range(n)]) + 1e-9)
+    ok = e > np.percentile(e, 90) + rel_db
+    for i in range(n - frames):
+        if ok[i:i + frames].all():
+            return i * hop_s
+    return 0.0
+
+
+def speech_span(y: np.ndarray, sr: int, work: pathlib.Path, tag: str, preroll_max: float = 0.25, onset_margin: float = 0.03) -> tuple[float, float]:
+    """Speech span of one TTS part: Silero VAD first start - 40 ms .. last end + 60 ms (clamped), with onset protection (Fix 5): Silero often reports the start
+    of a word late (first_res review: 50-60 ms of the first consonant were cut in 20 of 77 parts, 160 ms = "Ba" of "Balcony." in one), so the start is moved
+    back to the energy onset (- onset_margin) when that is earlier, by at most preroll_max. The post-roll is NOT changed (extending it helped nothing)."""
     t16 = work / f"tts16_{tag}.wav"
     sf.write(str(work / f"_span_{tag}.wav"), y, sr, subtype="PCM_16")
     ff(["-i", str(work / f"_span_{tag}.wav"), "-ar", str(SR16), "-ac", "1", "-c:a", "pcm_s16le", str(t16)])
     raw = vad_intervals(t16) or [(0.0, len(y) / sr)]
     t16.unlink(); (work / f"_span_{tag}.wav").unlink()
-    return max(0.0, raw[0][0] - 0.04), min(len(y) / sr, raw[-1][1] + 0.06)
+    s_vad = max(0.0, raw[0][0] - 0.04)
+    s_ = max(0.0, s_vad - preroll_max, min(s_vad, energy_onset(y, sr) - onset_margin))
+    return s_, min(len(y) / sr, raw[-1][1] + 0.06)
 
 
 def concise_rewrite(llm, src_name: str, tgt_name: str, source_group: str, text: str, max_words: int, seconds: float) -> str | None:
