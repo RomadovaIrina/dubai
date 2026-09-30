@@ -607,7 +607,7 @@ def main() -> int:
     ap.add_argument("--fit-retranslate", choices=["on", "off"], default="on", help="burst mode: a part that would need more than --atempo-cap is re-translated concisely (Qwen) and re-synthesised before any speed-up")
     ap.add_argument("--fit-rounds", type=int, default=4); ap.add_argument("--fit-target-ratio", type=float, default=1.05)
     ap.add_argument("--burst-max-lead", type=float, default=0.4, help="burst mode: a part that would need more than --atempo-cap may start up to this many seconds before its burst, into free silence, instead of being sped up")
-    ap.add_argument("--tts-qa", choices=["on", "off"], default="off", help="burst mode: independent-ASR QA of every TTS part with per-part retry (English targets only)")
+    ap.add_argument("--tts-qa", choices=["on", "off"], default="on", help="burst mode: independent-ASR QA of every TTS part with per-part retry (English targets only)")
     ap.add_argument("--tts-retries", type=int, default=2, help="QA retry ladder length after the first attempt: new seed, then new seed + --qa-temp")
     ap.add_argument("--qa-temp", type=float, default=0.6)
     ap.add_argument("--min-ls-frames", type=int, default=25, help="VALID_FACE runs shorter than this are passed through")

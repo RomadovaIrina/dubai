@@ -63,9 +63,26 @@ def wer(expected: str, recognized: str) -> float:
     return _distance(r, h) / max(len(r), 1)
 
 
+EDGE_VOCAL = {"a", "am", "um", "uh", "ah", "aah", "oh", "eh", "er", "erm", "hm", "hmm", "mm", "ha", "huh", "aha", "ohh", "umm"}
+
+
 def stray_interjections(recognized: str, expected: str) -> list[str]:
     exp = set(norm(expected))
     return [w for w in INTERJECTION.findall(recognized.lower()) if w not in exp]
+
+
+def stray_edge_tokens(recognized: str, expected: str) -> list[str]:
+    """Short vocalization-like tokens the decoder hears BEFORE the first / AFTER the last expected word ("am the desired result ..." = a hummed lead-in that Whisper's
+    language model drops but the acoustic CTC hears). Only inserted tokens at the very edges count, and only from a small set of non-lexical sounds."""
+    ref, hyp = norm(expected), re.findall(r"[a-z']+", recognized.lower())
+    if not ref or not hyp:
+        return []
+    ops = difflib.SequenceMatcher(None, ref, hyp, autojunk=False).get_opcodes(); out = []
+    if ops[0][0] == "insert":
+        out += [w for w in hyp[ops[0][3]:ops[0][4]] if w in EDGE_VOCAL and w not in ref]
+    if ops[-1][0] == "insert":
+        out += [w for w in hyp[ops[-1][3]:ops[-1][4]] if w in EDGE_VOCAL and w not in ref]
+    return out
 
 
 def final_word_missing(expected: str, recognized: str) -> bool:
@@ -111,7 +128,7 @@ class TtsQA:
             return {"bad": True, "score": 1.0, "reasons": ["silent_or_empty"], "ctc": "", "whisper": "", "ctc_cer": 1.0, "w_cer": 1.0, "interjections": [], "words": words}
         c_txt, w_txt = self.ctc(y16), self.whisper(y16, language)
         c_cer, w_cer = cer(expected, c_txt), cer(expected, w_txt)
-        ints = stray_interjections(c_txt, expected) + stray_interjections(w_txt, expected)
+        ints = stray_interjections(c_txt, expected) + stray_interjections(w_txt, expected) + stray_edge_tokens(c_txt, expected)
         score = c_cer if words <= 2 else 0.5 * (c_cer + w_cer)
         dur = len(y) / sr
         reasons = []
