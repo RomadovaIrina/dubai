@@ -22,12 +22,14 @@ PYEOF
 echo "== faster-whisper large-v3 (~3.1 GB)"; snap Systran/faster-whisper-large-v3 "$M/whisper-large-v3"
 echo "== Qwen2.5-7B-Instruct GGUF Q8_0 (~8.1 GB, 3 shards; production quant per pilot 0.9)"; snap Qwen/Qwen2.5-7B-Instruct-GGUF "$M/qwen2.5-7b-instruct-gguf" "qwen2.5-7b-instruct-q8_0*.gguf"
 echo "== Chatterbox multilingual v3"; snap ResembleAI/chatterbox "$M/chatterbox" "ve.pt" "s3gen.pt" "conds.pt" "t3_mtl23ls_v3.safetensors" "grapheme_mtl_merged_expanded_v1.json" "Cangjie5_TC.json" "*.json"
-echo "== LatentSync 1.6 (unet 5 GB + whisper tiny)"; snap ByteDance/LatentSync-1.6 "$M/latentsync" "latentsync_unet.pt" "whisper/tiny.pt"
+echo "== LatentSync 1.6 (unet 5 GB + whisper tiny)"; snap ByteDance/LatentSync-1.6 "$M/latentsync" "latentsync_unet.pt" "whisper/tiny.pt" "auxiliary/syncnet_v2.model" "auxiliary/sfd_face.pth"
 echo "== sd-vae-ft-mse (LatentSync VAE)"; snap stabilityai/sd-vae-ft-mse "$M/sd-vae-ft-mse" "*.json" "*.safetensors"
 echo "== wav2vec2-base-960h (independent CTC ASR for the TTS intelligibility QA, 0.4 GB)"; snap facebook/wav2vec2-base-960h "$M/wav2vec2-base-960h" "*.json" "model.safetensors"
 # LatentSync expects ./checkpoints/{latentsync_unet.pt,whisper/tiny.pt} relative to its repo root
 LS="${DUB_ROOT}/third_party/latentsync/checkpoints"; mkdir -p "$LS"
 ln -sfn "$M/latentsync/latentsync_unet.pt" "$LS/latentsync_unet.pt"; ln -sfn "$M/latentsync/whisper" "$LS/whisper"
+# SyncNet evaluator weights (scripts/pilot/syncnet_common.py -> eval/eval_sync_conf.py reads checkpoints/auxiliary/)
+mkdir -p "$LS/auxiliary"; for f in syncnet_v2.model sfd_face.pth; do ln -sfn "$M/latentsync/auxiliary/$f" "$LS/auxiliary/$f"; done
 # CodeFormer + facelib weights (github releases) into the clone's weights/ dir
 CF="${DUB_ROOT}/third_party/CodeFormer"; mkdir -p "$CF/weights/CodeFormer" "$CF/weights/facelib"
 dl(){ [ -s "$2" ] || curl -fL --retry 3 -o "$2" "$1"; echo "ok $2"; }
