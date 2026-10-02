@@ -88,5 +88,35 @@ SyncNet here = `quality_manifest.py --syncnet` (upstream evaluator) on the full 
 AV offset is 0 on every scoreable video; no video lost LatentSync coverage (frames equal or lower), so the 0.6 contour is not loaded more. The wall time grows by 3-6 min per video in the
 audio stages (CPU Qwen: punctuation pass, fit-up rewrites + judge; extra Chatterbox generations with QA) — see the runtime note below.
 
-(0.8 aggregate on the five new outputs: pending — `reports/pilot/coverage_fix/0.8_new_e2e.md`, filled in the follow-up commit)
+### 0.8 on the five NEW outputs (`reports/pilot/coverage_fix/0.8_new_e2e.md`, same methodology as the refresh)
+
+| | refresh (TTS v2, parts) | NEW |
+|---|---|---|
+| per video (conf / offset) | 01 6.74/0 · 02 N/A · 03 5.02/0 · 04 2.82/0 · 05 2.51/0 | 01 7.82/0 · 02 N/A · 03 5.85/0 · 04 3.48/0 · 05 3.30/0 |
+| Δ vs original | +1.38 · – · +0.13 · −0.42 · +0.80 | +2.46 · – · +0.96 · +0.24 · +1.59 (every scoreable video now above its original) |
+| aggregate mean / median / min / max | 4.273 / 3.92 / 2.51 / 6.74 | **5.113 / 4.665 / 3.30 / 7.82** |
+| valid / scoreable / N/A / FAIL | 5 / 4 / 1 / 0 | 5 / 4 / 1 / 0 |
+
+## Residuals and costs (honest list)
+
+- **Runtime**: audio stages +3-6 min per video (Qwen on the CPU: punctuation pass 18-75 s, fit-up rewrite + judge calls; up to 3 extra Chatterbox generations + QA per fit-up round).
+  03: 746 -> 956 s total; LatentSync + CodeFormer unchanged, lip-synced frames equal or fewer on every video (0.6 contour not loaded more). Levers if needed: fewer fit-up rounds, judge only when the rewrite grew by > 30 %.
+- **04**: Whisper WER 0.024 -> 0.040 (+0.016 vs the +0.01 tolerance of the harness) while CTC CER improved 0.059 -> 0.053 and 0 units are bad; 6 short units, 1-2 word substitutions in the Whisper hypotheses — within noise, reported as a soft fail.
+- **02** (no face): coverage 23.2 -> 8.6 s without dub, but one 5-word unit ("Relaxation zone: lying areas.", 1.82 s source) is still cut by 0.40 s at its window end at the hard cap 1.2 (the OLD track cut a different unit by 0.25 s): the concise rewrite (fit-down) only triggers for >= 6 words. Candidate follow-up: allow fit-down from 4 words when the overflow exceeds 0.3 s.
+- **05**: 344 LS frames still silent while the original speaks (05 has a fast speaker; the dubbed speech reaches 0.75 IoU); SyncNet nevertheless 2.51 -> 3.30.
+- **Fit-up faithfulness** relies on Qwen judging Qwen; the judge rejected 20 of 41 candidate rewrites across the five videos. Accepted rewrites are longer, more literal renderings (spelled-out subjects, full verb forms); spot checks on 03 (`03_audio_iter5b_fill_slowdown_0.9.md`, NEW units table) show no invented facts, but a human read of the fitted translations is still advisable before shipping.
+- Not changed (as required): Chatterbox dtype fix, CodeFormer w 1.0, LatentSync guidance, temperature, speaker reference policy; the VAD(dub)-only gate was not used.
+
+## Exact changed files
+
+| file | change |
+|---|---|
+| `scripts/pilot/sentence_units.py` | new: punctuation pass, boundary mapping, sentence units, tiny-unit merge |
+| `scripts/pilot/tts_align.py` | new: CTC forced alignment (wav2vec2-base-960h), safe inter-word cut points |
+| `scripts/pilot/tts_burst.py` | new `run_tts_phrase`, `distribute_words`, `fuller_rewrite`, `faithful_check`; `run_tts_burst` untouched |
+| `scripts/pilot/run_clean_pipeline_05.py` | `load_llm`, sentence segmentation + tiny merge wiring, `--tts-mode/--segmentation/--tiny-unit-merge/--fit-up*/--phrase-split/--stop-after`, `--fill-slowdown` default 0.9, `burst_plan` words across segments, honest banner |
+| `scripts/pilot/compare_audio_candidates.py` | new: OLD/NEW audio comparison + acceptance block |
+| `reports/pilot/coverage_fix/` | iteration comparisons 03 (1-5b), audio regressions 01/02/04/05, 0.8 on the new outputs, per-video pages |
+
+Commits: `32ecc9a` (checkpoint: refresh harness + reports), `fcbfafb` (this change), follow-up commit with the 0.8 aggregate + per-video pages.
 

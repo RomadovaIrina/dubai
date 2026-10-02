@@ -1,0 +1,389 @@
+{
+  "facts": {
+    "source_duration_s": 53.9,
+    "source_lang": "ru",
+    "units": 6,
+    "speakers": [
+      "SPEAKER_00"
+    ],
+    "translation": {
+      "quant": "q8_0",
+      "tokens": {
+        "prompt_tokens": 316,
+        "completion_tokens": 85
+      },
+      "burst_split": null,
+      "number_retries": 0,
+      "fitted_units": 3
+    },
+    "tts": {
+      "dtype": "float16",
+      "guard_violations": 0,
+      "parts": 6,
+      "attempts": 9,
+      "retried_parts": 0,
+      "retry_success": 0,
+      "retry_success_rate": null,
+      "final_bad_parts": 0,
+      "fit_parts_rewritten": 0,
+      "fit_parts_merged": 0,
+      "fit_rewrite_rejected": 0,
+      "fit_rounds_used": 0,
+      "gen_seconds": 15.7,
+      "qa_seconds": 1.97,
+      "qa": {
+        "enabled": true,
+        "retries": 2,
+        "low_temp": 0.6
+      }
+    },
+    "alignment": {
+      "mode": "burst",
+      "atempo_cap": 1.15,
+      "hard_cap": 1.2,
+      "units_slot_fallback": 0,
+      "groups": 18,
+      "atempo_max": 1.0,
+      "atempo_min": 0.9,
+      "atempo_mean": 0.9353,
+      "atempo_median": 0.9,
+      "gt_1_15": 0,
+      "gt_1_25": 0,
+      "gt_1_3": 0,
+      "slowed_lt_1": 12,
+      "overflow_groups": 0,
+      "cut_groups": 0,
+      "atempo_histogram": {
+        "<1 (slowed)": 12,
+        "1.0": 6,
+        "(1.0,1.05]": 0,
+        "(1.05,1.10]": 0,
+        "(1.10,1.15]": 0,
+        "(1.15,1.20]": 0,
+        ">1.20": 0
+      }
+    },
+    "video": {
+      "backend": "optimized",
+      "frame_classes": {
+        "VALID_FACE": 967,
+        "SMALL_FACE": 0,
+        "NO_FACE": 0,
+        "NO_SPEECH": 382
+      },
+      "by_action": {
+        "PASS_THROUGH": {
+          "segments": 11,
+          "frames": 382,
+          "seconds": 15.28
+        },
+        "LATENT_SYNC": {
+          "segments": 10,
+          "frames": 967,
+          "seconds": 38.68
+        }
+      },
+      "master_frames": 1349,
+      "latentsync_seconds_of_video": 38.68,
+      "ls_fraction": 0.7168,
+      "latentsync_segments": 10,
+      "ls_failed_segments": 0,
+      "verify_splits": 0,
+      "latentsync_stage_s": 226.633,
+      "latentsync_verify_s": 15.021,
+      "latentsync_s_per_video_min": 252.28,
+      "codeformer": {
+        "mode": "optimized",
+        "w": 1.0,
+        "batch": 8,
+        "landmarks": "insightface",
+        "precision": "fp16"
+      },
+      "codeformer_stage_s": 29.501,
+      "codeformer_faces": 967,
+      "codeformer_eligible_frames": 967,
+      "codeformer_fallback_detections": 0,
+      "codeformer_s_per_video_min": 32.84,
+      "codeformer_torch_peak_mib": 13132,
+      "speech_gate": {
+        "enabled": true,
+        "margin_s": 0.24,
+        "merge_gap_s": 0.6,
+        "crossfade_frames": 4,
+        "source_speech_seconds": 29.5,
+        "dubbed_speech_seconds": 26.2,
+        "gate_seconds": 38.5,
+        "gate_fraction": 0.7143
+      }
+    },
+    "timing": {
+      "total_wall_s": 556.977,
+      "stage_seconds": {
+        "audio_extract": 0.323,
+        "vad": 2.48,
+        "asr": 5.423,
+        "translation_load": 0.497,
+        "segmentation": 18.313,
+        "diarization": 10.417,
+        "translation": 14.111,
+        "tts_load": 7.412,
+        "qa_load": 1.781,
+        "tts": 192.325,
+        "alignment": 0.729,
+        "dubbed_track": 0.596,
+        "speech_gate": 0.708,
+        "face_router_load": 0.537,
+        "latentsync_load": 10.236,
+        "codeformer_load": 0.668,
+        "ls_master_25fps": 6.048,
+        "ls_master_decode": 0.802,
+        "face_classify": 11.068,
+        "latentsync": 226.633,
+        "latentsync_verify": 15.021,
+        "codeformer": 29.501,
+        "final_assembly": 7.697,
+        "total": 556.977
+      },
+      "wall_s_per_video_min": 620.01
+    },
+    "peak_vram_nvsmi_mib": 25204,
+    "validation": {
+      "pass": true,
+      "checks": {
+        "output_exists_nonempty": true,
+        "output_has_video_audio": true,
+        "duration_within_tolerance": true,
+        "resolution_preserved": true,
+        "all_units_have_tts_and_translation": true,
+        "frame_count_preserved": true,
+        "output_frames_decodable_no_blank": true
+      },
+      "duration_delta_s": 0.06,
+      "tolerance_s": 0.15,
+      "frames_written": 1349,
+      "output_frame_check": {
+        "decoded_frames": 1349,
+        "expected_frames": 1349,
+        "blank_frames": 0,
+        "undecodable_frames": 0,
+        "pass": true
+      },
+      "output_meta": {
+        "duration_s": 53.96,
+        "size_bytes": 39018819
+      },
+      "output_video": {
+        "codec": "h264",
+        "profile": "High",
+        "width": 464,
+        "height": 848,
+        "r_frame_rate": "25/1",
+        "avg_frame_rate": "25/1",
+        "fps": 25.0,
+        "avg_fps": 25.0,
+        "vfr": false,
+        "pix_fmt": "yuv420p",
+        "nb_frames": "1349",
+        "duration_s": 53.96,
+        "bit_rate": "5721993"
+      }
+    },
+    "gpu": {
+      "name": "NVIDIA GeForce RTX 5090",
+      "capability": "sm_120"
+    },
+    "at": "2026-10-02T20:37:54Z",
+    "syncnet": {
+      "status": "PASS",
+      "confidence": 3.48,
+      "av_offset_frames": 0,
+      "original_confidence": 3.24,
+      "original_av_offset_frames": 2,
+      "confidence_delta": 0.24,
+      "reason": null
+    },
+    "coverage": null
+  },
+  "units": [
+    {
+      "id": 0,
+      "speaker": "SPEAKER_00",
+      "start": 1.6,
+      "end": 4.96,
+      "text": "Сделаем видео с очками посмотрим.",
+      "translation": "Let's make a video with glasses and watch it.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 2.36,
+      "slot_s": 3.34,
+      "ratio": 0.7066,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.028
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 1,
+      "speaker": "SPEAKER_00",
+      "start": 4.96,
+      "end": 11.08,
+      "text": "Опять же потестируем как наше приложение будет на это все реагировать.",
+      "translation": "Again, let's test how our application will react to all of this.",
+      "translation_fitted": "Once more, we will test how our application will react to all of this.",
+      "parts": 3,
+      "tts_s": 3.64,
+      "slot_s": 6.1,
+      "ratio": 0.5967,
+      "atempo_max": 0.9,
+      "atempos": [
+        0.9,
+        0.9,
+        0.9
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.009,
+        0.009,
+        0.009
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 2,
+      "speaker": "SPEAKER_00",
+      "start": 11.08,
+      "end": 29.46,
+      "text": "город сочи 28 августа сегодня и мы начинаем рабочие процессы по созданию нашего магического приложения которое",
+      "translation": "Sochi city today, August 28, and we start the working processes for creating our magical application which",
+      "translation_fitted": null,
+      "parts": 4,
+      "tts_s": 8.08,
+      "slot_s": 18.36,
+      "ratio": 0.4401,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0,
+        1.0,
+        0.9,
+        0.9
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.041,
+        0.041,
+        0.041,
+        0.041
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 3,
+      "speaker": "SPEAKER_00",
+      "start": 29.46,
+      "end": 42.28,
+      "text": "облегчит жизнь людям которая я надеюсь будет пользоваться популярностью блогеров всего мира и не только блогеров",
+      "translation": "will make life easier for people whom I hope will be popular with bloggers from all over the world and not just bloggers",
+      "translation_fitted": null,
+      "parts": 5,
+      "tts_s": 7.04,
+      "slot_s": 12.8,
+      "ratio": 0.55,
+      "atempo_max": 0.9,
+      "atempos": [
+        0.9,
+        0.9,
+        0.9,
+        0.9,
+        0.9
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.087,
+        0.087,
+        0.087,
+        0.087,
+        0.087
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 4,
+      "speaker": "SPEAKER_00",
+      "start": 42.28,
+      "end": 48.2,
+      "text": "Поэтому вот такое вот прекрасное видео.",
+      "translation": "Therefore, here is such wonderful video.",
+      "translation_fitted": "Therefore, here is a video that is quite wonderful.",
+      "parts": 3,
+      "tts_s": 2.88,
+      "slot_s": 5.9,
+      "ratio": 0.4881,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0,
+        0.9,
+        0.935
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.012,
+        0.012,
+        0.012
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 5,
+      "speaker": "SPEAKER_00",
+      "start": 48.2,
+      "end": 52.34,
+      "text": "Классная погода что вперед.",
+      "translation": "Nice weather, here comes.",
+      "translation_fitted": "The weather is really nice, isn't it? That's great.",
+      "parts": 2,
+      "tts_s": 2.92,
+      "slot_s": 4.14,
+      "ratio": 0.7053,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0,
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0,
+        0.0
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    }
+  ]
+}

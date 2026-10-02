@@ -1,0 +1,513 @@
+{
+  "facts": {
+    "source_duration_s": 90.333333,
+    "source_lang": "ru",
+    "units": 10,
+    "speakers": [
+      "SPEAKER_00"
+    ],
+    "translation": {
+      "quant": "q8_0",
+      "tokens": {
+        "prompt_tokens": 587,
+        "completion_tokens": 191
+      },
+      "burst_split": null,
+      "number_retries": 0,
+      "fitted_units": 4
+    },
+    "tts": {
+      "dtype": "float16",
+      "guard_violations": 0,
+      "parts": 10,
+      "attempts": 18,
+      "retried_parts": 1,
+      "retry_success": 1,
+      "retry_success_rate": 1.0,
+      "final_bad_parts": 0,
+      "fit_parts_rewritten": 0,
+      "fit_parts_merged": 0,
+      "fit_rewrite_rejected": 0,
+      "fit_rounds_used": 0,
+      "gen_seconds": 37.61,
+      "qa_seconds": 4.51,
+      "qa": {
+        "enabled": true,
+        "retries": 2,
+        "low_temp": 0.6
+      }
+    },
+    "alignment": {
+      "mode": "burst",
+      "atempo_cap": 1.15,
+      "hard_cap": 1.2,
+      "units_slot_fallback": 0,
+      "groups": 32,
+      "atempo_max": 1.15,
+      "atempo_min": 0.9,
+      "atempo_mean": 0.9444,
+      "atempo_median": 0.9,
+      "gt_1_15": 0,
+      "gt_1_25": 0,
+      "gt_1_3": 0,
+      "slowed_lt_1": 24,
+      "overflow_groups": 0,
+      "cut_groups": 0,
+      "atempo_histogram": {
+        "<1 (slowed)": 24,
+        "1.0": 5,
+        "(1.0,1.05]": 0,
+        "(1.05,1.10]": 1,
+        "(1.10,1.15]": 2,
+        "(1.15,1.20]": 0,
+        ">1.20": 0
+      }
+    },
+    "video": {
+      "backend": "optimized",
+      "frame_classes": {
+        "VALID_FACE": 1863,
+        "SMALL_FACE": 0,
+        "NO_FACE": 0,
+        "NO_SPEECH": 397
+      },
+      "by_action": {
+        "PASS_THROUGH": {
+          "segments": 12,
+          "frames": 397,
+          "seconds": 15.88
+        },
+        "LATENT_SYNC": {
+          "segments": 11,
+          "frames": 1863,
+          "seconds": 74.52
+        }
+      },
+      "master_frames": 2260,
+      "latentsync_seconds_of_video": 74.52,
+      "ls_fraction": 0.8243,
+      "latentsync_segments": 11,
+      "ls_failed_segments": 0,
+      "verify_splits": 0,
+      "latentsync_stage_s": 414.284,
+      "latentsync_verify_s": 19.411,
+      "latentsync_s_per_video_min": 275.17,
+      "codeformer": {
+        "mode": "optimized",
+        "w": 1.0,
+        "batch": 8,
+        "landmarks": "insightface",
+        "precision": "fp16"
+      },
+      "codeformer_stage_s": 54.974,
+      "codeformer_faces": 1863,
+      "codeformer_eligible_frames": 1863,
+      "codeformer_fallback_detections": 0,
+      "codeformer_s_per_video_min": 36.51,
+      "codeformer_torch_peak_mib": 13130,
+      "speech_gate": {
+        "enabled": true,
+        "margin_s": 0.24,
+        "merge_gap_s": 0.6,
+        "crossfade_frames": 4,
+        "source_speech_seconds": 60.7,
+        "dubbed_speech_seconds": 53.0,
+        "gate_seconds": 74.28,
+        "gate_fraction": 0.8223
+      }
+    },
+    "timing": {
+      "total_wall_s": 955.623,
+      "stage_seconds": {
+        "audio_extract": 0.435,
+        "vad": 4.363,
+        "asr": 10.07,
+        "translation_load": 0.494,
+        "segmentation": 38.821,
+        "diarization": 8.294,
+        "translation": 29.86,
+        "tts_load": 7.476,
+        "qa_load": 1.79,
+        "tts": 322.46,
+        "alignment": 1.588,
+        "dubbed_track": 1.898,
+        "speech_gate": 0.721,
+        "face_router_load": 0.312,
+        "latentsync_load": 10.313,
+        "codeformer_load": 1.1,
+        "ls_master_25fps": 7.034,
+        "ls_master_decode": 1.16,
+        "face_classify": 15.517,
+        "latentsync": 414.284,
+        "latentsync_verify": 19.411,
+        "codeformer": 54.974,
+        "final_assembly": 10.06,
+        "total": 955.623
+      },
+      "wall_s_per_video_min": 634.73
+    },
+    "peak_vram_nvsmi_mib": 25711,
+    "validation": {
+      "pass": true,
+      "checks": {
+        "output_exists_nonempty": true,
+        "output_has_video_audio": true,
+        "duration_within_tolerance": true,
+        "resolution_preserved": true,
+        "all_units_have_tts_and_translation": true,
+        "frame_count_preserved": true,
+        "output_frames_decodable_no_blank": true
+      },
+      "duration_delta_s": 0.0667,
+      "tolerance_s": 0.15,
+      "frames_written": 2260,
+      "output_frame_check": {
+        "decoded_frames": 2260,
+        "expected_frames": 2260,
+        "blank_frames": 0,
+        "undecodable_frames": 0,
+        "pass": true
+      },
+      "output_meta": {
+        "duration_s": 90.4,
+        "size_bytes": 39730033
+      },
+      "output_video": {
+        "codec": "h264",
+        "profile": "High",
+        "width": 464,
+        "height": 848,
+        "r_frame_rate": "25/1",
+        "avg_frame_rate": "25/1",
+        "fps": 25.0,
+        "avg_fps": 25.0,
+        "vfr": false,
+        "pix_fmt": "yuv420p",
+        "nb_frames": "2260",
+        "duration_s": 90.4,
+        "bit_rate": "3449213"
+      }
+    },
+    "gpu": {
+      "name": "NVIDIA GeForce RTX 5090",
+      "capability": "sm_120"
+    },
+    "at": "2026-10-02T19:47:48Z",
+    "syncnet": {
+      "status": "PASS",
+      "confidence": 5.85,
+      "av_offset_frames": 0,
+      "original_confidence": 4.89,
+      "original_av_offset_frames": 2,
+      "confidence_delta": 0.96,
+      "reason": null
+    },
+    "coverage": null
+  },
+  "units": [
+    {
+      "id": 0,
+      "speaker": "SPEAKER_00",
+      "start": 2.6,
+      "end": 5.1,
+      "text": "Друзья ну что всем привет.",
+      "translation": "Friends, hey everyone, greetings.",
+      "translation_fitted": null,
+      "parts": 2,
+      "tts_s": 1.88,
+      "slot_s": 2.48,
+      "ratio": 0.7581,
+      "atempo_max": 1.15,
+      "atempos": [
+        1.15,
+        0.9
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0,
+        0.0
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0.006
+    },
+    {
+      "id": 1,
+      "speaker": "SPEAKER_00",
+      "start": 5.1,
+      "end": 11.36,
+      "text": "Запишу первое видео такое ознакомительное целью познакомиться.",
+      "translation": "I'll record the first video as an introduction to get to know it.",
+      "translation_fitted": "I will record the first video as an introductory one to acquaint myself with it.",
+      "parts": 4,
+      "tts_s": 4.12,
+      "slot_s": 6.24,
+      "ratio": 0.6603,
+      "atempo_max": 0.9,
+      "atempos": [
+        0.9,
+        0.9,
+        0.9,
+        0.9
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.031,
+        0.031,
+        0.031,
+        0.031
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 2,
+      "speaker": "SPEAKER_00",
+      "start": 11.36,
+      "end": 18.66,
+      "text": "Наверно больше в общем что хочу сказать рад знакомству с вами рад сотрудничеству.",
+      "translation": "Probably more in general what I want to say is that I am glad to meet you and glad to cooperate.",
+      "translation_fitted": null,
+      "parts": 3,
+      "tts_s": 5.16,
+      "slot_s": 7.28,
+      "ratio": 0.7088,
+      "atempo_max": 1.09,
+      "atempos": [
+        0.9,
+        1.0,
+        1.09
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.007,
+        0.007,
+        0.007
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 3,
+      "speaker": "SPEAKER_00",
+      "start": 18.66,
+      "end": 28.56,
+      "text": "Сегодня пятница 28 августа будем считать что это начало нашего сотрудничества.",
+      "translation": "Today is Friday, August 28th; let's consider this the beginning of our cooperation.",
+      "translation_fitted": "Today is Friday, August 28th, and we will consider this the start of our cooperation.",
+      "parts": 4,
+      "tts_s": 5.44,
+      "slot_s": 9.9,
+      "ratio": 0.5495,
+      "atempo_max": 0.977,
+      "atempos": [
+        0.9,
+        0.977,
+        0.9,
+        0.9
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.019,
+        0.019,
+        0.019,
+        0.019
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 4,
+      "speaker": "SPEAKER_00",
+      "start": 30.26,
+      "end": 43.94,
+      "text": "Что хочется сказать пусть это сотрудничество будет легким принесет нам всем тот желаемый результат который мы загадали чтобы на пути у нас никаких преград не возникало.",
+      "translation": "Let's hope that this cooperation will be smooth, bringing us all the desired result that we wished for, so that on our path, no obstacles arise.",
+      "translation_fitted": "Let this cooperation be easy, bringing us the desired result we wished for, ensuring no obstacles arise on our path, and may it be smooth, facilitating our journey.",
+      "parts": 4,
+      "tts_s": 10.28,
+      "slot_s": 13.66,
+      "ratio": 0.7526,
+      "atempo_max": 1.0,
+      "atempos": [
+        0.939,
+        1.0,
+        0.9,
+        0.993
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.023,
+        0.023,
+        0.023,
+        0.023
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 5,
+      "speaker": "SPEAKER_00",
+      "start": 43.94,
+      "end": 55.54,
+      "text": "Надеюсь все будет хорошо ибо земные действия с вами и в целом с тем продуктом который мы сегодня собираем и делаем.",
+      "translation": "I hope everything will be well, for the earthly actions with you and in general with the product which we are collecting and making today.",
+      "translation_fitted": null,
+      "parts": 4,
+      "tts_s": 6.56,
+      "slot_s": 11.6,
+      "ratio": 0.5655,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0,
+        0.9,
+        0.9,
+        0.9
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 6,
+      "speaker": "SPEAKER_00",
+      "start": 58.86,
+      "end": 68.12,
+      "text": "Дальше отправлю еще несколько видео запишу различных форматах в очках без очков посмотрим как будет работать наша система.",
+      "translation": "Next, I will send a few more videos recorded in different formats, both with and without glasses, to see how our system will work.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 6.76,
+      "slot_s": 9.24,
+      "ratio": 0.7316,
+      "atempo_max": 0.9,
+      "atempos": [
+        0.9
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.01
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 7,
+      "speaker": "SPEAKER_00",
+      "start": 68.12,
+      "end": 71.14,
+      "text": "Ну и в принципе все.",
+      "translation": "Well, and basically that's it.",
+      "translation_fitted": null,
+      "parts": 2,
+      "tts_s": 1.88,
+      "slot_s": 3.0,
+      "ratio": 0.6267,
+      "atempo_max": 1.15,
+      "atempos": [
+        0.9,
+        1.15
+      ],
+      "retried": 2,
+      "bad_final": 0,
+      "qa_scores": [
+        0.021,
+        0.021
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0.012,
+      "overflow_s": 0.012
+    },
+    {
+      "id": 8,
+      "speaker": "SPEAKER_00",
+      "start": 71.14,
+      "end": 76.54,
+      "text": "Отправлю в наш чат так что давайте ребят всем нам успеха.",
+      "translation": "I'll send it to our chat so let's all have success.",
+      "translation_fitted": null,
+      "parts": 2,
+      "tts_s": 3.12,
+      "slot_s": 5.38,
+      "ratio": 0.5799,
+      "atempo_max": 0.9,
+      "atempos": [
+        0.9,
+        0.9
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0,
+        0.0
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 9,
+      "speaker": "SPEAKER_00",
+      "start": 76.54,
+      "end": 88.98,
+      "text": "Я хочу пожелать пусть наше взаимодействие будет легким и принесет нам тот результат который мы желаем. Вперед.",
+      "translation": "I wish to wish that our interaction be smooth and bring us the result we desire. Forward.",
+      "translation_fitted": "I wish to express my hope that our interaction will be smooth and easy, bringing us the result that we desire, moving forward.",
+      "parts": 6,
+      "tts_s": 7.24,
+      "slot_s": 12.44,
+      "ratio": 0.582,
+      "atempo_max": 1.0,
+      "atempos": [
+        0.923,
+        0.9,
+        1.0,
+        0.9,
+        0.9,
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.02,
+        0.02,
+        0.02,
+        0.02,
+        0.02,
+        0.02
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    }
+  ]
+}

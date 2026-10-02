@@ -1,0 +1,1416 @@
+{
+  "task": "0.8",
+  "closed": true,
+  "verdict": "CLOSED — 5/5 final E2E outputs valid; SyncNet measured on 4/5, 1 N/A (no face); contract threshold still UNDECIDED",
+  "expected_videos": 5,
+  "found_videos": 5,
+  "pipeline_valid": 5,
+  "scoreable": 4,
+  "not_applicable_no_face": 1,
+  "failed": 0,
+  "confidence": {
+    "mean": 5.1125,
+    "median": 4.665,
+    "min": 3.3,
+    "max": 7.82
+  },
+  "abs_av_offset_frames": {
+    "mean": 0,
+    "median": 0.0,
+    "max": 0
+  },
+  "worst_by_confidence": "05_final.mp4",
+  "worst_by_abs_offset": "01_final.mp4",
+  "rows": [
+    {
+      "name": "01_final.mp4",
+      "key": "01",
+      "meta": {
+        "duration_s": 101.68,
+        "fps": 25.0,
+        "frames": 2542,
+        "width": 480,
+        "height": 848,
+        "codec": "h264"
+      },
+      "pipeline": {
+        "manifest": true,
+        "pipeline_valid": true,
+        "codeformer": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        },
+        "codeformer_desc": "optimized w=1.0 batch 8 fp16 (insightface landmarks)",
+        "alignment_mode": "burst",
+        "dubbed_audio": true,
+        "translation_quant": "q8_0",
+        "frame_classes": {
+          "VALID_FACE": 261,
+          "SMALL_FACE": 177,
+          "NO_FACE": 1996,
+          "NO_SPEECH": 108
+        },
+        "latentsync_segments": 1,
+        "latentsync_seconds": 10.4,
+        "speech_gate": true,
+        "video_backend": "optimized",
+        "has_face": true
+      },
+      "confidence": 7.82,
+      "av_offset_frames": 0,
+      "eval_s": 73.386,
+      "status": "PASS",
+      "measurable": true,
+      "original_confidence": 5.36,
+      "original_av_offset_frames": 1,
+      "confidence_delta": 2.46,
+      "abs_offset_delta_frames": -1
+    },
+    {
+      "name": "02_final.mp4",
+      "key": "02",
+      "meta": {
+        "duration_s": 110.92,
+        "fps": 25.0,
+        "frames": 2773,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "pipeline": {
+        "manifest": true,
+        "pipeline_valid": true,
+        "codeformer": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        },
+        "codeformer_desc": "optimized w=1.0 batch 8 fp16 (insightface landmarks)",
+        "alignment_mode": "burst",
+        "dubbed_audio": true,
+        "translation_quant": "q8_0",
+        "frame_classes": {
+          "VALID_FACE": 0,
+          "SMALL_FACE": 0,
+          "NO_FACE": 1918,
+          "NO_SPEECH": 855
+        },
+        "latentsync_segments": 0,
+        "latentsync_seconds": 0.0,
+        "speech_gate": true,
+        "video_backend": "optimized",
+        "has_face": false
+      },
+      "status": "N/A_NO_FACE",
+      "measurable": false,
+      "reason": "SyncNet/S3FD cannot obtain a face track (no face in content: VALID_FACE=0, LatentSync segments=0)",
+      "error": "RuntimeError: SyncNet evaluation failed for /tmp/pilot_refresh/e2e_new/02_final.mp4:\nVideoManager is deprecated and will be removed.\n`base_timecode` argument is deprecated and has no effect.\nTraceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/workspace/dub/dubai/third_party/latentsync/eval/eval_sync_conf.py\", line 7"
+    },
+    {
+      "name": "03_final.mp4",
+      "key": "03",
+      "meta": {
+        "duration_s": 90.4,
+        "fps": 25.0,
+        "frames": 2260,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "pipeline": {
+        "manifest": true,
+        "pipeline_valid": true,
+        "codeformer": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        },
+        "codeformer_desc": "optimized w=1.0 batch 8 fp16 (insightface landmarks)",
+        "alignment_mode": "burst",
+        "dubbed_audio": true,
+        "translation_quant": "q8_0",
+        "frame_classes": {
+          "VALID_FACE": 1863,
+          "SMALL_FACE": 0,
+          "NO_FACE": 0,
+          "NO_SPEECH": 397
+        },
+        "latentsync_segments": 11,
+        "latentsync_seconds": 74.52,
+        "speech_gate": true,
+        "video_backend": "optimized",
+        "has_face": true
+      },
+      "confidence": 5.85,
+      "av_offset_frames": 0,
+      "eval_s": 96.846,
+      "status": "PASS",
+      "measurable": true,
+      "original_confidence": 4.89,
+      "original_av_offset_frames": 2,
+      "confidence_delta": 0.96,
+      "abs_offset_delta_frames": -2
+    },
+    {
+      "name": "04_final.mp4",
+      "key": "04",
+      "meta": {
+        "duration_s": 53.96,
+        "fps": 25.0,
+        "frames": 1349,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "pipeline": {
+        "manifest": true,
+        "pipeline_valid": true,
+        "codeformer": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        },
+        "codeformer_desc": "optimized w=1.0 batch 8 fp16 (insightface landmarks)",
+        "alignment_mode": "burst",
+        "dubbed_audio": true,
+        "translation_quant": "q8_0",
+        "frame_classes": {
+          "VALID_FACE": 967,
+          "SMALL_FACE": 0,
+          "NO_FACE": 0,
+          "NO_SPEECH": 382
+        },
+        "latentsync_segments": 10,
+        "latentsync_seconds": 38.68,
+        "speech_gate": true,
+        "video_backend": "optimized",
+        "has_face": true
+      },
+      "confidence": 3.48,
+      "av_offset_frames": 0,
+      "eval_s": 64.031,
+      "status": "PASS",
+      "measurable": true,
+      "original_confidence": 3.24,
+      "original_av_offset_frames": 2,
+      "confidence_delta": 0.24,
+      "abs_offset_delta_frames": -2
+    },
+    {
+      "name": "05_final.mp4",
+      "key": "05",
+      "meta": {
+        "duration_s": 52.44,
+        "fps": 25.0,
+        "frames": 1311,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "pipeline": {
+        "manifest": true,
+        "pipeline_valid": true,
+        "codeformer": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        },
+        "codeformer_desc": "optimized w=1.0 batch 8 fp16 (insightface landmarks)",
+        "alignment_mode": "burst",
+        "dubbed_audio": true,
+        "translation_quant": "q8_0",
+        "frame_classes": {
+          "VALID_FACE": 897,
+          "SMALL_FACE": 94,
+          "NO_FACE": 0,
+          "NO_SPEECH": 320
+        },
+        "latentsync_segments": 9,
+        "latentsync_seconds": 34.04,
+        "speech_gate": true,
+        "video_backend": "optimized",
+        "has_face": true
+      },
+      "confidence": 3.3,
+      "av_offset_frames": 0,
+      "eval_s": 58.865,
+      "status": "PASS",
+      "measurable": true,
+      "original_confidence": 1.71,
+      "original_av_offset_frames": 2,
+      "confidence_delta": 1.59,
+      "abs_offset_delta_frames": -2
+    }
+  ],
+  "originals": [
+    {
+      "name": "01.MP4",
+      "key": "01",
+      "meta": {
+        "duration_s": 101.666667,
+        "fps": 25.003278688524592,
+        "frames": 2542,
+        "width": 480,
+        "height": 848,
+        "codec": "h264"
+      },
+      "pipeline": {
+        "manifest": false
+      },
+      "confidence": 5.36,
+      "av_offset_frames": 1,
+      "eval_s": 75.513,
+      "status": "PASS",
+      "measurable": true
+    },
+    {
+      "name": "02.mp4",
+      "key": "02",
+      "meta": {
+        "duration_s": 110.866667,
+        "fps": 29.981960312687914,
+        "frames": 3324,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "pipeline": {
+        "manifest": false
+      },
+      "status": "FAIL",
+      "measurable": false,
+      "reason": "SyncNet evaluation failed on content that contains faces",
+      "error": "RuntimeError: SyncNet evaluation failed for /workspace/test_videos/02.mp4:\nVideoManager is deprecated and will be removed.\n`base_timecode` argument is deprecated and has no effect.\nTraceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/workspace/dub/dubai/third_party/latentsync/eval/eval_sync_conf.py\", line 77, in <mod"
+    },
+    {
+      "name": "03.mp4",
+      "key": "03",
+      "meta": {
+        "duration_s": 90.333333,
+        "fps": 30.0,
+        "frames": 2710,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "pipeline": {
+        "manifest": false
+      },
+      "confidence": 4.89,
+      "av_offset_frames": 2,
+      "eval_s": 99.263,
+      "status": "PASS",
+      "measurable": true
+    },
+    {
+      "name": "04.mp4",
+      "key": "04",
+      "meta": {
+        "duration_s": 53.9,
+        "fps": 30.0,
+        "frames": 1617,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "pipeline": {
+        "manifest": false
+      },
+      "confidence": 3.24,
+      "av_offset_frames": 2,
+      "eval_s": 65.179,
+      "status": "PASS",
+      "measurable": true
+    },
+    {
+      "name": "05.mp4",
+      "key": "05",
+      "meta": {
+        "duration_s": 52.366667,
+        "fps": 29.92361553150859,
+        "frames": 1567,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "pipeline": {
+        "manifest": false
+      },
+      "confidence": 1.71,
+      "av_offset_frames": 2,
+      "eval_s": 53.892,
+      "status": "PASS",
+      "measurable": true
+    }
+  ],
+  "gpu": {
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.126.09",
+    "name": "NVIDIA GeForce RTX 5090",
+    "capability": "sm_120",
+    "total_vram_bytes": 33668857856,
+    "total_vram_gib": 31.36,
+    "free_vram_gib": 30.86,
+    "multi_processor_count": 170,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "syncnet": {
+    "evaluator": "third_party/latentsync/eval/eval_sync_conf.py (upstream, S3FD face tracker)",
+    "model": "/workspace/dub/dubai/third_party/latentsync/checkpoints/auxiliary/syncnet_v2.model"
+  },
+  "semantics": {
+    "dataset": "five real customer/content videos, FINAL dubbed E2E outputs",
+    "lipsync_processing": "optimized face-aware LatentSync (speech gate, RetinaFace routing), CodeFormer optimized w=1.0 batch 8 fp16 (insightface landmarks); audio alignment burst",
+    "audio": "coverage fix: sentence units + phrase-first TTS with CTC alignment + fit-up + fill 0.9, optimized CodeFormer",
+    "config": "run_clean_pipeline_05.py --target-lang en --alignment burst --video-backend optimized --codeformer optimized (new defaults 2026-10-02)",
+    "no_face_rule": "content without any face cannot be scored by SyncNet; recorded as N/A_NO_FACE, not a pipeline failure",
+    "old_blocker": "'LatentSync fails on 01/02/05 with Face not detected' is NO LONGER RELEVANT: face-aware routing passes such frames through"
+  },
+  "contract_threshold": "UNDECIDED — spec does not define aggregation rule",
+  "at": "2026-10-02T21:14:20Z",
+  "informational_from_manifests": {
+    "01": {
+      "source_duration_s": 101.666667,
+      "source_lang": "ru",
+      "units": 26,
+      "speakers": [
+        "SPEAKER_00"
+      ],
+      "translation": {
+        "quant": "q8_0",
+        "tokens": {
+          "prompt_tokens": 1403,
+          "completion_tokens": 319
+        },
+        "burst_split": null,
+        "number_retries": 0,
+        "fitted_units": 11
+      },
+      "tts": {
+        "dtype": "float16",
+        "guard_violations": 0,
+        "parts": 26,
+        "attempts": 39,
+        "retried_parts": 0,
+        "retry_success": 0,
+        "retry_success_rate": null,
+        "final_bad_parts": 0,
+        "fit_parts_rewritten": 0,
+        "fit_parts_merged": 0,
+        "fit_rewrite_rejected": 0,
+        "fit_rounds_used": 0,
+        "gen_seconds": 69.41,
+        "qa_seconds": 8.16,
+        "qa": {
+          "enabled": true,
+          "retries": 2,
+          "low_temp": 0.6
+        }
+      },
+      "alignment": {
+        "mode": "burst",
+        "atempo_cap": 1.15,
+        "hard_cap": 1.2,
+        "units_slot_fallback": 0,
+        "groups": 40,
+        "atempo_max": 1.15,
+        "atempo_min": 0.9,
+        "atempo_mean": 1.0011,
+        "atempo_median": 1.0,
+        "gt_1_15": 0,
+        "gt_1_25": 0,
+        "gt_1_3": 0,
+        "slowed_lt_1": 14,
+        "overflow_groups": 0,
+        "cut_groups": 0,
+        "atempo_histogram": {
+          "<1 (slowed)": 14,
+          "1.0": 13,
+          "(1.0,1.05]": 3,
+          "(1.05,1.10]": 1,
+          "(1.10,1.15]": 9,
+          "(1.15,1.20]": 0,
+          ">1.20": 0
+        }
+      },
+      "video": {
+        "backend": "optimized",
+        "frame_classes": {
+          "VALID_FACE": 261,
+          "SMALL_FACE": 177,
+          "NO_FACE": 1996,
+          "NO_SPEECH": 108
+        },
+        "by_action": {
+          "LATENT_SYNC": {
+            "segments": 1,
+            "frames": 260,
+            "seconds": 10.4
+          },
+          "PASS_THROUGH": {
+            "segments": 5,
+            "frames": 2282,
+            "seconds": 91.28
+          }
+        },
+        "master_frames": 2542,
+        "latentsync_seconds_of_video": 10.4,
+        "ls_fraction": 0.1023,
+        "latentsync_segments": 1,
+        "ls_failed_segments": 0,
+        "verify_splits": 1,
+        "latentsync_stage_s": 77.853,
+        "latentsync_verify_s": 13.793,
+        "latentsync_s_per_video_min": 45.95,
+        "codeformer": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        },
+        "codeformer_stage_s": 7.679,
+        "codeformer_faces": 260,
+        "codeformer_eligible_frames": 260,
+        "codeformer_fallback_detections": 0,
+        "codeformer_s_per_video_min": 4.53,
+        "codeformer_torch_peak_mib": 9733,
+        "speech_gate": {
+          "enabled": true,
+          "margin_s": 0.24,
+          "merge_gap_s": 0.6,
+          "crossfade_frames": 4,
+          "source_speech_seconds": 91.9,
+          "dubbed_speech_seconds": 86.4,
+          "gate_seconds": 97.34,
+          "gate_fraction": 0.9574
+        }
+      },
+      "timing": {
+        "total_wall_s": 714.003,
+        "stage_seconds": {
+          "audio_extract": 0.54,
+          "vad": 3.055,
+          "asr": 10.629,
+          "translation_load": 0.873,
+          "segmentation": 74.797,
+          "diarization": 13.744,
+          "translation": 55.699,
+          "tts_load": 8.427,
+          "qa_load": 1.803,
+          "tts": 392.915,
+          "alignment": 2.09,
+          "dubbed_track": 2.698,
+          "speech_gate": 0.807,
+          "face_router_load": 0.312,
+          "latentsync_load": 9.966,
+          "codeformer_load": 0.68,
+          "ls_master_25fps": 8.29,
+          "ls_master_decode": 0.841,
+          "face_classify": 15.195,
+          "latentsync": 77.853,
+          "latentsync_verify": 13.793,
+          "codeformer": 7.679,
+          "final_assembly": 11.78,
+          "total": 714.003
+        },
+        "wall_s_per_video_min": 421.38
+      },
+      "peak_vram_nvsmi_mib": 25196,
+      "validation": {
+        "pass": true,
+        "checks": {
+          "output_exists_nonempty": true,
+          "output_has_video_audio": true,
+          "duration_within_tolerance": true,
+          "resolution_preserved": true,
+          "all_units_have_tts_and_translation": true,
+          "frame_count_preserved": true,
+          "output_frames_decodable_no_blank": true
+        },
+        "duration_delta_s": 0.0133,
+        "tolerance_s": 0.15,
+        "frames_written": 2542,
+        "output_frame_check": {
+          "decoded_frames": 2542,
+          "expected_frames": 2542,
+          "blank_frames": 0,
+          "undecodable_frames": 0,
+          "pass": true
+        },
+        "output_meta": {
+          "duration_s": 101.68,
+          "size_bytes": 22855662
+        },
+        "output_video": {
+          "codec": "h264",
+          "profile": "High",
+          "width": 480,
+          "height": 848,
+          "r_frame_rate": "25/1",
+          "avg_frame_rate": "25/1",
+          "fps": 25.0,
+          "avg_fps": 25.0,
+          "vfr": false,
+          "pix_fmt": "yuv420p",
+          "nb_frames": "2542",
+          "duration_s": 101.68,
+          "bit_rate": "1701099"
+        }
+      },
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5090",
+        "capability": "sm_120"
+      },
+      "at": "2026-10-02T20:25:34Z",
+      "syncnet": {
+        "status": "PASS",
+        "confidence": 7.82,
+        "av_offset_frames": 0,
+        "original_confidence": 5.36,
+        "original_av_offset_frames": 1,
+        "confidence_delta": 2.46,
+        "reason": null
+      },
+      "coverage": null
+    },
+    "02": {
+      "source_duration_s": 110.866667,
+      "source_lang": "ru",
+      "units": 19,
+      "speakers": [
+        "SPEAKER_00"
+      ],
+      "translation": {
+        "quant": "q8_0",
+        "tokens": {
+          "prompt_tokens": 918,
+          "completion_tokens": 207
+        },
+        "burst_split": null,
+        "number_retries": 0,
+        "fitted_units": 8
+      },
+      "tts": {
+        "dtype": "float16",
+        "guard_violations": 0,
+        "parts": 19,
+        "attempts": 33,
+        "retried_parts": 0,
+        "retry_success": 0,
+        "retry_success_rate": null,
+        "final_bad_parts": 0,
+        "fit_parts_rewritten": 1,
+        "fit_parts_merged": 0,
+        "fit_rewrite_rejected": 0,
+        "fit_rounds_used": 2,
+        "gen_seconds": 48.11,
+        "qa_seconds": 5.67,
+        "qa": {
+          "enabled": true,
+          "retries": 2,
+          "low_temp": 0.6
+        }
+      },
+      "alignment": {
+        "mode": "burst",
+        "atempo_cap": 1.15,
+        "hard_cap": 1.2,
+        "units_slot_fallback": 0,
+        "groups": 41,
+        "atempo_max": 1.2,
+        "atempo_min": 0.9,
+        "atempo_mean": 0.9903,
+        "atempo_median": 1.0,
+        "gt_1_15": 1,
+        "gt_1_25": 0,
+        "gt_1_3": 0,
+        "slowed_lt_1": 18,
+        "overflow_groups": 1,
+        "cut_groups": 1,
+        "atempo_histogram": {
+          "<1 (slowed)": 18,
+          "1.0": 12,
+          "(1.0,1.05]": 2,
+          "(1.05,1.10]": 1,
+          "(1.10,1.15]": 7,
+          "(1.15,1.20]": 1,
+          ">1.20": 0
+        }
+      },
+      "video": {
+        "backend": "optimized",
+        "frame_classes": {
+          "VALID_FACE": 0,
+          "SMALL_FACE": 0,
+          "NO_FACE": 1918,
+          "NO_SPEECH": 855
+        },
+        "by_action": {
+          "PASS_THROUGH": {
+            "segments": 27,
+            "frames": 2773,
+            "seconds": 110.92
+          }
+        },
+        "master_frames": 2773,
+        "latentsync_seconds_of_video": 0.0,
+        "ls_fraction": 0.0,
+        "latentsync_segments": 0,
+        "ls_failed_segments": 0,
+        "verify_splits": 0,
+        "latentsync_stage_s": 0.0,
+        "latentsync_verify_s": 0.0,
+        "latentsync_s_per_video_min": 0.0,
+        "codeformer": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        },
+        "codeformer_stage_s": 0.0,
+        "codeformer_faces": 0,
+        "codeformer_eligible_frames": 0,
+        "codeformer_fallback_detections": 0,
+        "codeformer_s_per_video_min": 0.0,
+        "codeformer_torch_peak_mib": null,
+        "speech_gate": {
+          "enabled": true,
+          "margin_s": 0.24,
+          "merge_gap_s": 0.6,
+          "crossfade_frames": 4,
+          "source_speech_seconds": 56.9,
+          "dubbed_speech_seconds": 52.6,
+          "gate_seconds": 76.54,
+          "gate_fraction": 0.6904
+        }
+      },
+      "timing": {
+        "total_wall_s": 459.165,
+        "stage_seconds": {
+          "audio_extract": 0.448,
+          "vad": 4.433,
+          "asr": 8.532,
+          "translation_load": 0.869,
+          "segmentation": 40.042,
+          "diarization": 11.119,
+          "translation": 34.745,
+          "tts_load": 7.558,
+          "qa_load": 1.835,
+          "tts": 277.746,
+          "alignment": 1.774,
+          "dubbed_track": 2.25,
+          "speech_gate": 0.901,
+          "face_router_load": 0.325,
+          "latentsync_load": 9.733,
+          "codeformer_load": 0.666,
+          "ls_master_25fps": 13.122,
+          "ls_master_decode": 1.12,
+          "face_classify": 11.827,
+          "latentsync": 0.0,
+          "latentsync_verify": 0.0,
+          "codeformer": 0.0,
+          "final_assembly": 15.85,
+          "total": 459.165
+        },
+        "wall_s_per_video_min": 248.5
+      },
+      "peak_vram_nvsmi_mib": 8240,
+      "validation": {
+        "pass": true,
+        "checks": {
+          "output_exists_nonempty": true,
+          "output_has_video_audio": true,
+          "duration_within_tolerance": true,
+          "resolution_preserved": true,
+          "all_units_have_tts_and_translation": true,
+          "frame_count_preserved": true,
+          "output_frames_decodable_no_blank": true
+        },
+        "duration_delta_s": 0.0533,
+        "tolerance_s": 0.15,
+        "frames_written": 2773,
+        "output_frame_check": {
+          "decoded_frames": 2773,
+          "expected_frames": 2773,
+          "blank_frames": 0,
+          "undecodable_frames": 0,
+          "pass": true
+        },
+        "output_meta": {
+          "duration_s": 110.92,
+          "size_bytes": 36705794
+        },
+        "output_video": {
+          "codec": "h264",
+          "profile": "High",
+          "width": 464,
+          "height": 848,
+          "r_frame_rate": "25/1",
+          "avg_frame_rate": "25/1",
+          "fps": 25.0,
+          "avg_fps": 25.0,
+          "vfr": false,
+          "pix_fmt": "yuv420p",
+          "nb_frames": "2773",
+          "duration_s": 110.92,
+          "bit_rate": "2594043"
+        }
+      },
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5090",
+        "capability": "sm_120"
+      },
+      "at": "2026-10-02T21:00:33Z",
+      "syncnet": {
+        "status": "N/A_NO_FACE",
+        "confidence": null,
+        "av_offset_frames": null,
+        "original_confidence": null,
+        "original_av_offset_frames": null,
+        "confidence_delta": null,
+        "reason": "SyncNet/S3FD cannot obtain a face track (no face in content: VALID_FACE=0, LatentSync segments=0)"
+      },
+      "coverage": null
+    },
+    "03": {
+      "source_duration_s": 90.333333,
+      "source_lang": "ru",
+      "units": 10,
+      "speakers": [
+        "SPEAKER_00"
+      ],
+      "translation": {
+        "quant": "q8_0",
+        "tokens": {
+          "prompt_tokens": 587,
+          "completion_tokens": 191
+        },
+        "burst_split": null,
+        "number_retries": 0,
+        "fitted_units": 4
+      },
+      "tts": {
+        "dtype": "float16",
+        "guard_violations": 0,
+        "parts": 10,
+        "attempts": 18,
+        "retried_parts": 1,
+        "retry_success": 1,
+        "retry_success_rate": 1.0,
+        "final_bad_parts": 0,
+        "fit_parts_rewritten": 0,
+        "fit_parts_merged": 0,
+        "fit_rewrite_rejected": 0,
+        "fit_rounds_used": 0,
+        "gen_seconds": 37.61,
+        "qa_seconds": 4.51,
+        "qa": {
+          "enabled": true,
+          "retries": 2,
+          "low_temp": 0.6
+        }
+      },
+      "alignment": {
+        "mode": "burst",
+        "atempo_cap": 1.15,
+        "hard_cap": 1.2,
+        "units_slot_fallback": 0,
+        "groups": 32,
+        "atempo_max": 1.15,
+        "atempo_min": 0.9,
+        "atempo_mean": 0.9444,
+        "atempo_median": 0.9,
+        "gt_1_15": 0,
+        "gt_1_25": 0,
+        "gt_1_3": 0,
+        "slowed_lt_1": 24,
+        "overflow_groups": 0,
+        "cut_groups": 0,
+        "atempo_histogram": {
+          "<1 (slowed)": 24,
+          "1.0": 5,
+          "(1.0,1.05]": 0,
+          "(1.05,1.10]": 1,
+          "(1.10,1.15]": 2,
+          "(1.15,1.20]": 0,
+          ">1.20": 0
+        }
+      },
+      "video": {
+        "backend": "optimized",
+        "frame_classes": {
+          "VALID_FACE": 1863,
+          "SMALL_FACE": 0,
+          "NO_FACE": 0,
+          "NO_SPEECH": 397
+        },
+        "by_action": {
+          "PASS_THROUGH": {
+            "segments": 12,
+            "frames": 397,
+            "seconds": 15.88
+          },
+          "LATENT_SYNC": {
+            "segments": 11,
+            "frames": 1863,
+            "seconds": 74.52
+          }
+        },
+        "master_frames": 2260,
+        "latentsync_seconds_of_video": 74.52,
+        "ls_fraction": 0.8243,
+        "latentsync_segments": 11,
+        "ls_failed_segments": 0,
+        "verify_splits": 0,
+        "latentsync_stage_s": 414.284,
+        "latentsync_verify_s": 19.411,
+        "latentsync_s_per_video_min": 275.17,
+        "codeformer": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        },
+        "codeformer_stage_s": 54.974,
+        "codeformer_faces": 1863,
+        "codeformer_eligible_frames": 1863,
+        "codeformer_fallback_detections": 0,
+        "codeformer_s_per_video_min": 36.51,
+        "codeformer_torch_peak_mib": 13130,
+        "speech_gate": {
+          "enabled": true,
+          "margin_s": 0.24,
+          "merge_gap_s": 0.6,
+          "crossfade_frames": 4,
+          "source_speech_seconds": 60.7,
+          "dubbed_speech_seconds": 53.0,
+          "gate_seconds": 74.28,
+          "gate_fraction": 0.8223
+        }
+      },
+      "timing": {
+        "total_wall_s": 955.623,
+        "stage_seconds": {
+          "audio_extract": 0.435,
+          "vad": 4.363,
+          "asr": 10.07,
+          "translation_load": 0.494,
+          "segmentation": 38.821,
+          "diarization": 8.294,
+          "translation": 29.86,
+          "tts_load": 7.476,
+          "qa_load": 1.79,
+          "tts": 322.46,
+          "alignment": 1.588,
+          "dubbed_track": 1.898,
+          "speech_gate": 0.721,
+          "face_router_load": 0.312,
+          "latentsync_load": 10.313,
+          "codeformer_load": 1.1,
+          "ls_master_25fps": 7.034,
+          "ls_master_decode": 1.16,
+          "face_classify": 15.517,
+          "latentsync": 414.284,
+          "latentsync_verify": 19.411,
+          "codeformer": 54.974,
+          "final_assembly": 10.06,
+          "total": 955.623
+        },
+        "wall_s_per_video_min": 634.73
+      },
+      "peak_vram_nvsmi_mib": 25711,
+      "validation": {
+        "pass": true,
+        "checks": {
+          "output_exists_nonempty": true,
+          "output_has_video_audio": true,
+          "duration_within_tolerance": true,
+          "resolution_preserved": true,
+          "all_units_have_tts_and_translation": true,
+          "frame_count_preserved": true,
+          "output_frames_decodable_no_blank": true
+        },
+        "duration_delta_s": 0.0667,
+        "tolerance_s": 0.15,
+        "frames_written": 2260,
+        "output_frame_check": {
+          "decoded_frames": 2260,
+          "expected_frames": 2260,
+          "blank_frames": 0,
+          "undecodable_frames": 0,
+          "pass": true
+        },
+        "output_meta": {
+          "duration_s": 90.4,
+          "size_bytes": 39730033
+        },
+        "output_video": {
+          "codec": "h264",
+          "profile": "High",
+          "width": 464,
+          "height": 848,
+          "r_frame_rate": "25/1",
+          "avg_frame_rate": "25/1",
+          "fps": 25.0,
+          "avg_fps": 25.0,
+          "vfr": false,
+          "pix_fmt": "yuv420p",
+          "nb_frames": "2260",
+          "duration_s": 90.4,
+          "bit_rate": "3449213"
+        }
+      },
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5090",
+        "capability": "sm_120"
+      },
+      "at": "2026-10-02T19:47:48Z",
+      "syncnet": {
+        "status": "PASS",
+        "confidence": 5.85,
+        "av_offset_frames": 0,
+        "original_confidence": 4.89,
+        "original_av_offset_frames": 2,
+        "confidence_delta": 0.96,
+        "reason": null
+      },
+      "coverage": null
+    },
+    "04": {
+      "source_duration_s": 53.9,
+      "source_lang": "ru",
+      "units": 6,
+      "speakers": [
+        "SPEAKER_00"
+      ],
+      "translation": {
+        "quant": "q8_0",
+        "tokens": {
+          "prompt_tokens": 316,
+          "completion_tokens": 85
+        },
+        "burst_split": null,
+        "number_retries": 0,
+        "fitted_units": 3
+      },
+      "tts": {
+        "dtype": "float16",
+        "guard_violations": 0,
+        "parts": 6,
+        "attempts": 9,
+        "retried_parts": 0,
+        "retry_success": 0,
+        "retry_success_rate": null,
+        "final_bad_parts": 0,
+        "fit_parts_rewritten": 0,
+        "fit_parts_merged": 0,
+        "fit_rewrite_rejected": 0,
+        "fit_rounds_used": 0,
+        "gen_seconds": 15.7,
+        "qa_seconds": 1.97,
+        "qa": {
+          "enabled": true,
+          "retries": 2,
+          "low_temp": 0.6
+        }
+      },
+      "alignment": {
+        "mode": "burst",
+        "atempo_cap": 1.15,
+        "hard_cap": 1.2,
+        "units_slot_fallback": 0,
+        "groups": 18,
+        "atempo_max": 1.0,
+        "atempo_min": 0.9,
+        "atempo_mean": 0.9353,
+        "atempo_median": 0.9,
+        "gt_1_15": 0,
+        "gt_1_25": 0,
+        "gt_1_3": 0,
+        "slowed_lt_1": 12,
+        "overflow_groups": 0,
+        "cut_groups": 0,
+        "atempo_histogram": {
+          "<1 (slowed)": 12,
+          "1.0": 6,
+          "(1.0,1.05]": 0,
+          "(1.05,1.10]": 0,
+          "(1.10,1.15]": 0,
+          "(1.15,1.20]": 0,
+          ">1.20": 0
+        }
+      },
+      "video": {
+        "backend": "optimized",
+        "frame_classes": {
+          "VALID_FACE": 967,
+          "SMALL_FACE": 0,
+          "NO_FACE": 0,
+          "NO_SPEECH": 382
+        },
+        "by_action": {
+          "PASS_THROUGH": {
+            "segments": 11,
+            "frames": 382,
+            "seconds": 15.28
+          },
+          "LATENT_SYNC": {
+            "segments": 10,
+            "frames": 967,
+            "seconds": 38.68
+          }
+        },
+        "master_frames": 1349,
+        "latentsync_seconds_of_video": 38.68,
+        "ls_fraction": 0.7168,
+        "latentsync_segments": 10,
+        "ls_failed_segments": 0,
+        "verify_splits": 0,
+        "latentsync_stage_s": 226.633,
+        "latentsync_verify_s": 15.021,
+        "latentsync_s_per_video_min": 252.28,
+        "codeformer": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        },
+        "codeformer_stage_s": 29.501,
+        "codeformer_faces": 967,
+        "codeformer_eligible_frames": 967,
+        "codeformer_fallback_detections": 0,
+        "codeformer_s_per_video_min": 32.84,
+        "codeformer_torch_peak_mib": 13132,
+        "speech_gate": {
+          "enabled": true,
+          "margin_s": 0.24,
+          "merge_gap_s": 0.6,
+          "crossfade_frames": 4,
+          "source_speech_seconds": 29.5,
+          "dubbed_speech_seconds": 26.2,
+          "gate_seconds": 38.5,
+          "gate_fraction": 0.7143
+        }
+      },
+      "timing": {
+        "total_wall_s": 556.977,
+        "stage_seconds": {
+          "audio_extract": 0.323,
+          "vad": 2.48,
+          "asr": 5.423,
+          "translation_load": 0.497,
+          "segmentation": 18.313,
+          "diarization": 10.417,
+          "translation": 14.111,
+          "tts_load": 7.412,
+          "qa_load": 1.781,
+          "tts": 192.325,
+          "alignment": 0.729,
+          "dubbed_track": 0.596,
+          "speech_gate": 0.708,
+          "face_router_load": 0.537,
+          "latentsync_load": 10.236,
+          "codeformer_load": 0.668,
+          "ls_master_25fps": 6.048,
+          "ls_master_decode": 0.802,
+          "face_classify": 11.068,
+          "latentsync": 226.633,
+          "latentsync_verify": 15.021,
+          "codeformer": 29.501,
+          "final_assembly": 7.697,
+          "total": 556.977
+        },
+        "wall_s_per_video_min": 620.01
+      },
+      "peak_vram_nvsmi_mib": 25204,
+      "validation": {
+        "pass": true,
+        "checks": {
+          "output_exists_nonempty": true,
+          "output_has_video_audio": true,
+          "duration_within_tolerance": true,
+          "resolution_preserved": true,
+          "all_units_have_tts_and_translation": true,
+          "frame_count_preserved": true,
+          "output_frames_decodable_no_blank": true
+        },
+        "duration_delta_s": 0.06,
+        "tolerance_s": 0.15,
+        "frames_written": 1349,
+        "output_frame_check": {
+          "decoded_frames": 1349,
+          "expected_frames": 1349,
+          "blank_frames": 0,
+          "undecodable_frames": 0,
+          "pass": true
+        },
+        "output_meta": {
+          "duration_s": 53.96,
+          "size_bytes": 39018819
+        },
+        "output_video": {
+          "codec": "h264",
+          "profile": "High",
+          "width": 464,
+          "height": 848,
+          "r_frame_rate": "25/1",
+          "avg_frame_rate": "25/1",
+          "fps": 25.0,
+          "avg_fps": 25.0,
+          "vfr": false,
+          "pix_fmt": "yuv420p",
+          "nb_frames": "1349",
+          "duration_s": 53.96,
+          "bit_rate": "5721993"
+        }
+      },
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5090",
+        "capability": "sm_120"
+      },
+      "at": "2026-10-02T20:37:54Z",
+      "syncnet": {
+        "status": "PASS",
+        "confidence": 3.48,
+        "av_offset_frames": 0,
+        "original_confidence": 3.24,
+        "original_av_offset_frames": 2,
+        "confidence_delta": 0.24,
+        "reason": null
+      },
+      "coverage": null
+    },
+    "05": {
+      "source_duration_s": 52.366667,
+      "source_lang": "ru",
+      "units": 7,
+      "speakers": [
+        "SPEAKER_00"
+      ],
+      "translation": {
+        "quant": "q8_0",
+        "tokens": {
+          "prompt_tokens": 364,
+          "completion_tokens": 83
+        },
+        "burst_split": null,
+        "number_retries": 0,
+        "fitted_units": 6
+      },
+      "tts": {
+        "dtype": "float16",
+        "guard_violations": 0,
+        "parts": 7,
+        "attempts": 16,
+        "retried_parts": 0,
+        "retry_success": 0,
+        "retry_success_rate": null,
+        "final_bad_parts": 0,
+        "fit_parts_rewritten": 0,
+        "fit_parts_merged": 0,
+        "fit_rewrite_rejected": 0,
+        "fit_rounds_used": 0,
+        "gen_seconds": 23.89,
+        "qa_seconds": 3.41,
+        "qa": {
+          "enabled": true,
+          "retries": 2,
+          "low_temp": 0.6
+        }
+      },
+      "alignment": {
+        "mode": "burst",
+        "atempo_cap": 1.15,
+        "hard_cap": 1.2,
+        "units_slot_fallback": 0,
+        "groups": 21,
+        "atempo_max": 1.15,
+        "atempo_min": 0.9,
+        "atempo_mean": 0.9529,
+        "atempo_median": 0.9,
+        "gt_1_15": 0,
+        "gt_1_25": 0,
+        "gt_1_3": 0,
+        "slowed_lt_1": 13,
+        "overflow_groups": 0,
+        "cut_groups": 0,
+        "atempo_histogram": {
+          "<1 (slowed)": 13,
+          "1.0": 7,
+          "(1.0,1.05]": 0,
+          "(1.05,1.10]": 0,
+          "(1.10,1.15]": 1,
+          "(1.15,1.20]": 0,
+          ">1.20": 0
+        }
+      },
+      "video": {
+        "backend": "optimized",
+        "frame_classes": {
+          "VALID_FACE": 897,
+          "SMALL_FACE": 94,
+          "NO_FACE": 0,
+          "NO_SPEECH": 320
+        },
+        "by_action": {
+          "PASS_THROUGH": {
+            "segments": 18,
+            "frames": 424,
+            "seconds": 16.96
+          },
+          "LATENT_SYNC": {
+            "segments": 9,
+            "frames": 851,
+            "seconds": 34.04
+          },
+          "PASS_THROUGH_SHORT_VALID": {
+            "segments": 4,
+            "frames": 36,
+            "seconds": 1.44
+          }
+        },
+        "master_frames": 1311,
+        "latentsync_seconds_of_video": 34.04,
+        "ls_fraction": 0.6491,
+        "latentsync_segments": 9,
+        "ls_failed_segments": 0,
+        "verify_splits": 2,
+        "latentsync_stage_s": 198.931,
+        "latentsync_verify_s": 12.965,
+        "latentsync_s_per_video_min": 227.93,
+        "codeformer": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        },
+        "codeformer_stage_s": 25.165,
+        "codeformer_faces": 851,
+        "codeformer_eligible_frames": 851,
+        "codeformer_fallback_detections": 0,
+        "codeformer_s_per_video_min": 28.83,
+        "codeformer_torch_peak_mib": 10783,
+        "speech_gate": {
+          "enabled": true,
+          "margin_s": 0.24,
+          "merge_gap_s": 0.6,
+          "crossfade_frames": 4,
+          "source_speech_seconds": 27.9,
+          "dubbed_speech_seconds": 24.1,
+          "gate_seconds": 39.52,
+          "gate_fraction": 0.7547
+        }
+      },
+      "timing": {
+        "total_wall_s": 593.616,
+        "stage_seconds": {
+          "audio_extract": 0.197,
+          "vad": 3.87,
+          "asr": 8.014,
+          "translation_load": 0.993,
+          "segmentation": 19.203,
+          "diarization": 10.834,
+          "translation": 14.516,
+          "tts_load": 7.648,
+          "qa_load": 1.843,
+          "tts": 260.074,
+          "alignment": 0.818,
+          "dubbed_track": 1.048,
+          "speech_gate": 0.471,
+          "face_router_load": 0.335,
+          "latentsync_load": 9.864,
+          "codeformer_load": 0.675,
+          "ls_master_25fps": 5.888,
+          "ls_master_decode": 0.89,
+          "face_classify": 6.179,
+          "latentsync": 198.931,
+          "latentsync_verify": 12.965,
+          "codeformer": 25.165,
+          "final_assembly": 7.408,
+          "total": 593.616
+        },
+        "wall_s_per_video_min": 680.15
+      },
+      "peak_vram_nvsmi_mib": 24176,
+      "validation": {
+        "pass": true,
+        "checks": {
+          "output_exists_nonempty": true,
+          "output_has_video_audio": true,
+          "duration_within_tolerance": true,
+          "resolution_preserved": true,
+          "all_units_have_tts_and_translation": true,
+          "frame_count_preserved": true,
+          "output_frames_decodable_no_blank": true
+        },
+        "duration_delta_s": 0.0733,
+        "tolerance_s": 0.15,
+        "frames_written": 1311,
+        "output_frame_check": {
+          "decoded_frames": 1311,
+          "expected_frames": 1311,
+          "blank_frames": 0,
+          "undecodable_frames": 0,
+          "pass": true
+        },
+        "output_meta": {
+          "duration_s": 52.44,
+          "size_bytes": 41032218
+        },
+        "output_video": {
+          "codec": "h264",
+          "profile": "High",
+          "width": 464,
+          "height": 848,
+          "r_frame_rate": "25/1",
+          "avg_frame_rate": "25/1",
+          "fps": 25.0,
+          "avg_fps": 25.0,
+          "vfr": false,
+          "pix_fmt": "yuv420p",
+          "nb_frames": "1311",
+          "duration_s": 52.44,
+          "bit_rate": "6207866"
+        }
+      },
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5090",
+        "capability": "sm_120"
+      },
+      "at": "2026-10-02T20:50:20Z",
+      "syncnet": {
+        "status": "PASS",
+        "confidence": 3.3,
+        "av_offset_frames": 0,
+        "original_confidence": 1.71,
+        "original_av_offset_frames": 2,
+        "confidence_delta": 1.59,
+        "reason": null
+      },
+      "coverage": null
+    }
+  }
+}

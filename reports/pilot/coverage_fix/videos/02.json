@@ -1,0 +1,745 @@
+{
+  "facts": {
+    "source_duration_s": 110.866667,
+    "source_lang": "ru",
+    "units": 19,
+    "speakers": [
+      "SPEAKER_00"
+    ],
+    "translation": {
+      "quant": "q8_0",
+      "tokens": {
+        "prompt_tokens": 918,
+        "completion_tokens": 207
+      },
+      "burst_split": null,
+      "number_retries": 0,
+      "fitted_units": 8
+    },
+    "tts": {
+      "dtype": "float16",
+      "guard_violations": 0,
+      "parts": 19,
+      "attempts": 33,
+      "retried_parts": 0,
+      "retry_success": 0,
+      "retry_success_rate": null,
+      "final_bad_parts": 0,
+      "fit_parts_rewritten": 1,
+      "fit_parts_merged": 0,
+      "fit_rewrite_rejected": 0,
+      "fit_rounds_used": 2,
+      "gen_seconds": 48.11,
+      "qa_seconds": 5.67,
+      "qa": {
+        "enabled": true,
+        "retries": 2,
+        "low_temp": 0.6
+      }
+    },
+    "alignment": {
+      "mode": "burst",
+      "atempo_cap": 1.15,
+      "hard_cap": 1.2,
+      "units_slot_fallback": 0,
+      "groups": 41,
+      "atempo_max": 1.2,
+      "atempo_min": 0.9,
+      "atempo_mean": 0.9903,
+      "atempo_median": 1.0,
+      "gt_1_15": 1,
+      "gt_1_25": 0,
+      "gt_1_3": 0,
+      "slowed_lt_1": 18,
+      "overflow_groups": 1,
+      "cut_groups": 1,
+      "atempo_histogram": {
+        "<1 (slowed)": 18,
+        "1.0": 12,
+        "(1.0,1.05]": 2,
+        "(1.05,1.10]": 1,
+        "(1.10,1.15]": 7,
+        "(1.15,1.20]": 1,
+        ">1.20": 0
+      }
+    },
+    "video": {
+      "backend": "optimized",
+      "frame_classes": {
+        "VALID_FACE": 0,
+        "SMALL_FACE": 0,
+        "NO_FACE": 1918,
+        "NO_SPEECH": 855
+      },
+      "by_action": {
+        "PASS_THROUGH": {
+          "segments": 27,
+          "frames": 2773,
+          "seconds": 110.92
+        }
+      },
+      "master_frames": 2773,
+      "latentsync_seconds_of_video": 0.0,
+      "ls_fraction": 0.0,
+      "latentsync_segments": 0,
+      "ls_failed_segments": 0,
+      "verify_splits": 0,
+      "latentsync_stage_s": 0.0,
+      "latentsync_verify_s": 0.0,
+      "latentsync_s_per_video_min": 0.0,
+      "codeformer": {
+        "mode": "optimized",
+        "w": 1.0,
+        "batch": 8,
+        "landmarks": "insightface",
+        "precision": "fp16"
+      },
+      "codeformer_stage_s": 0.0,
+      "codeformer_faces": 0,
+      "codeformer_eligible_frames": 0,
+      "codeformer_fallback_detections": 0,
+      "codeformer_s_per_video_min": 0.0,
+      "codeformer_torch_peak_mib": null,
+      "speech_gate": {
+        "enabled": true,
+        "margin_s": 0.24,
+        "merge_gap_s": 0.6,
+        "crossfade_frames": 4,
+        "source_speech_seconds": 56.9,
+        "dubbed_speech_seconds": 52.6,
+        "gate_seconds": 76.54,
+        "gate_fraction": 0.6904
+      }
+    },
+    "timing": {
+      "total_wall_s": 459.165,
+      "stage_seconds": {
+        "audio_extract": 0.448,
+        "vad": 4.433,
+        "asr": 8.532,
+        "translation_load": 0.869,
+        "segmentation": 40.042,
+        "diarization": 11.119,
+        "translation": 34.745,
+        "tts_load": 7.558,
+        "qa_load": 1.835,
+        "tts": 277.746,
+        "alignment": 1.774,
+        "dubbed_track": 2.25,
+        "speech_gate": 0.901,
+        "face_router_load": 0.325,
+        "latentsync_load": 9.733,
+        "codeformer_load": 0.666,
+        "ls_master_25fps": 13.122,
+        "ls_master_decode": 1.12,
+        "face_classify": 11.827,
+        "latentsync": 0.0,
+        "latentsync_verify": 0.0,
+        "codeformer": 0.0,
+        "final_assembly": 15.85,
+        "total": 459.165
+      },
+      "wall_s_per_video_min": 248.5
+    },
+    "peak_vram_nvsmi_mib": 8240,
+    "validation": {
+      "pass": true,
+      "checks": {
+        "output_exists_nonempty": true,
+        "output_has_video_audio": true,
+        "duration_within_tolerance": true,
+        "resolution_preserved": true,
+        "all_units_have_tts_and_translation": true,
+        "frame_count_preserved": true,
+        "output_frames_decodable_no_blank": true
+      },
+      "duration_delta_s": 0.0533,
+      "tolerance_s": 0.15,
+      "frames_written": 2773,
+      "output_frame_check": {
+        "decoded_frames": 2773,
+        "expected_frames": 2773,
+        "blank_frames": 0,
+        "undecodable_frames": 0,
+        "pass": true
+      },
+      "output_meta": {
+        "duration_s": 110.92,
+        "size_bytes": 36705794
+      },
+      "output_video": {
+        "codec": "h264",
+        "profile": "High",
+        "width": 464,
+        "height": 848,
+        "r_frame_rate": "25/1",
+        "avg_frame_rate": "25/1",
+        "fps": 25.0,
+        "avg_fps": 25.0,
+        "vfr": false,
+        "pix_fmt": "yuv420p",
+        "nb_frames": "2773",
+        "duration_s": 110.92,
+        "bit_rate": "2594043"
+      }
+    },
+    "gpu": {
+      "name": "NVIDIA GeForce RTX 5090",
+      "capability": "sm_120"
+    },
+    "at": "2026-10-02T21:00:33Z",
+    "syncnet": {
+      "status": "N/A_NO_FACE",
+      "confidence": null,
+      "av_offset_frames": null,
+      "original_confidence": null,
+      "original_av_offset_frames": null,
+      "confidence_delta": null,
+      "reason": "SyncNet/S3FD cannot obtain a face track (no face in content: VALID_FACE=0, LatentSync segments=0)"
+    },
+    "coverage": null
+  },
+  "units": [
+    {
+      "id": 0,
+      "speaker": "SPEAKER_00",
+      "start": 0.0,
+      "end": 7.38,
+      "text": "Также на территории у нас банный комплекс все готово к первым парением.",
+      "translation": "Also on our premises, there is a bath complex that is ready for the first steam room sessions.",
+      "translation_fitted": null,
+      "parts": 3,
+      "tts_s": 5.04,
+      "slot_s": 7.36,
+      "ratio": 0.6848,
+      "atempo_max": 1.008,
+      "atempos": [
+        1.0,
+        1.0,
+        1.008
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.007,
+        0.007,
+        0.007
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0.005,
+      "overflow_s": 0.005
+    },
+    {
+      "id": 1,
+      "speaker": "SPEAKER_00",
+      "start": 7.38,
+      "end": 12.36,
+      "text": "Через 3 -4 дня буквально уже тут начнутся парения.",
+      "translation": "Within 3-4 days, the floating will start right here.",
+      "translation_fitted": null,
+      "parts": 2,
+      "tts_s": 5.24,
+      "slot_s": 4.96,
+      "ratio": 1.0565,
+      "atempo_max": 1.15,
+      "atempos": [
+        1.0,
+        1.15
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.042,
+        0.042
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0.014,
+      "overflow_s": 0.014
+    },
+    {
+      "id": 2,
+      "speaker": "SPEAKER_00",
+      "start": 12.36,
+      "end": 15.08,
+      "text": "Сейчас покажу бассейн.",
+      "translation": "Now I will show the pool.",
+      "translation_fitted": "Right now, I am going to demonstrate the swimming pool.",
+      "parts": 2,
+      "tts_s": 2.8,
+      "slot_s": 2.7,
+      "ratio": 1.037,
+      "atempo_max": 1.053,
+      "atempos": [
+        1.053,
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.011,
+        0.011
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0.012
+    },
+    {
+      "id": 3,
+      "speaker": "SPEAKER_00",
+      "start": 15.08,
+      "end": 26.36,
+      "text": "Вот такие вот у нас тут разные штуки зона для переодевания бочки шезлонги.",
+      "translation": "Here are our various things here zone for changing clothes barrel chaise longues.",
+      "translation_fitted": null,
+      "parts": 4,
+      "tts_s": 5.4,
+      "slot_s": 11.26,
+      "ratio": 0.4796,
+      "atempo_max": 1.0,
+      "atempos": [
+        0.9,
+        1.0,
+        0.9,
+        0.9
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.154,
+        0.154,
+        0.154,
+        0.154
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 4,
+      "speaker": "SPEAKER_00",
+      "start": 26.36,
+      "end": 30.42,
+      "text": "Здесь у нас финская сауна.",
+      "translation": "Here we have a Finnish sauna.",
+      "translation_fitted": "In this place, we have a Finnish sauna.",
+      "parts": 2,
+      "tts_s": 2.4,
+      "slot_s": 4.04,
+      "ratio": 0.5941,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0,
+        0.9
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.1,
+        0.1
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 5,
+      "speaker": "SPEAKER_00",
+      "start": 30.42,
+      "end": 41.52,
+      "text": "Покажу русскую баню.",
+      "translation": "I will show the Russian sauna.",
+      "translation_fitted": null,
+      "parts": 2,
+      "tts_s": 2.52,
+      "slot_s": 11.08,
+      "ratio": 0.2274,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0,
+        0.9
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.167,
+        0.167
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 6,
+      "speaker": "SPEAKER_00",
+      "start": 41.52,
+      "end": 45.72,
+      "text": "Русская баня как положено на дровах печка.",
+      "translation": "The Russian bath should have a stove burning wood.",
+      "translation_fitted": null,
+      "parts": 2,
+      "tts_s": 2.32,
+      "slot_s": 4.18,
+      "ratio": 0.555,
+      "atempo_max": 0.9,
+      "atempos": [
+        0.9,
+        0.9
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.037,
+        0.037
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 7,
+      "speaker": "SPEAKER_00",
+      "start": 45.72,
+      "end": 47.96,
+      "text": "Так все выглядит.",
+      "translation": "So it all looks like this.",
+      "translation_fitted": null,
+      "parts": 2,
+      "tts_s": 1.84,
+      "slot_s": 2.22,
+      "ratio": 0.8288,
+      "atempo_max": 1.15,
+      "atempos": [
+        1.0,
+        1.15
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0,
+        0.0
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0.013,
+      "overflow_s": 0.013
+    },
+    {
+      "id": 8,
+      "speaker": "SPEAKER_00",
+      "start": 47.96,
+      "end": 51.52,
+      "text": "Какой запах здесь хороший.",
+      "translation": "What a nice smell here.",
+      "translation_fitted": "What is such a nice smell here?",
+      "parts": 3,
+      "tts_s": 1.84,
+      "slot_s": 3.54,
+      "ratio": 0.5198,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0,
+        0.9,
+        0.9
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 9,
+      "speaker": "SPEAKER_00",
+      "start": 51.52,
+      "end": 70.38,
+      "text": "Есть еще у нас второй этаж это также все входит в инфраструктуру комплекса.",
+      "translation": "There is also our second floor, this also all falls into the infrastructure of the complex.",
+      "translation_fitted": null,
+      "parts": 2,
+      "tts_s": 5.52,
+      "slot_s": 18.84,
+      "ratio": 0.293,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0,
+        0.9
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.047,
+        0.047
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 10,
+      "speaker": "SPEAKER_00",
+      "start": 70.38,
+      "end": 74.44,
+      "text": "Конечно за банный комплекс за эти процедуры все нужно будет платить.",
+      "translation": "Of course, for the bath complex for these procedures, you will need to pay.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 4.72,
+      "slot_s": 4.04,
+      "ratio": 1.1683,
+      "atempo_max": 1.104,
+      "atempos": [
+        1.104
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.042
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 11,
+      "speaker": "SPEAKER_00",
+      "start": 74.44,
+      "end": 79.0,
+      "text": "Ну это точно вас не разорит.",
+      "translation": "Well, this definitely won't break the bank.",
+      "translation_fitted": null,
+      "parts": 2,
+      "tts_s": 2.24,
+      "slot_s": 4.54,
+      "ratio": 0.4934,
+      "atempo_max": 1.118,
+      "atempos": [
+        0.9,
+        1.118
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.071,
+        0.071
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0.011,
+      "overflow_s": 0.011
+    },
+    {
+      "id": 12,
+      "speaker": "SPEAKER_00",
+      "start": 79.0,
+      "end": 83.44,
+      "text": "То есть все мы хотим в бане все мы платим за это деньги.",
+      "translation": "That is, we all want everything in the sauna, and we all pay for it with money.",
+      "translation_fitted": null,
+      "parts": 2,
+      "tts_s": 4.56,
+      "slot_s": 4.42,
+      "ratio": 1.0317,
+      "atempo_max": 1.15,
+      "atempos": [
+        1.0,
+        1.15
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.067,
+        0.067
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0.004,
+      "overflow_s": 0.004
+    },
+    {
+      "id": 13,
+      "speaker": "SPEAKER_00",
+      "start": 83.44,
+      "end": 85.8,
+      "text": "И хамам также здесь есть.",
+      "translation": "And the hamam is also here.",
+      "translation_fitted": "And the hamam is also available here.",
+      "parts": 2,
+      "tts_s": 2.8,
+      "slot_s": 2.34,
+      "ratio": 1.1966,
+      "atempo_max": 1.15,
+      "atempos": [
+        1.0,
+        1.15
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.1,
+        0.1
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0.003,
+      "overflow_s": 0.003
+    },
+    {
+      "id": 14,
+      "speaker": "SPEAKER_00",
+      "start": 85.8,
+      "end": 94.9,
+      "text": "Массажная комната холодильничек.",
+      "translation": "Massage room fridge.",
+      "translation_fitted": "The massage room has a small refrigerator.",
+      "parts": 3,
+      "tts_s": 2.52,
+      "slot_s": 9.08,
+      "ratio": 0.2775,
+      "atempo_max": 1.107,
+      "atempos": [
+        0.9,
+        0.988,
+        1.107
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.114,
+        0.114,
+        0.114
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0.014,
+      "overflow_s": 0.014
+    },
+    {
+      "id": 15,
+      "speaker": "SPEAKER_00",
+      "start": 94.9,
+      "end": 101.2,
+      "text": "И вот здесь такое место для распития чая или минералочки.",
+      "translation": "And here is a spot for drinking tea or mineral water.",
+      "translation_fitted": "And here is a place where one can drink tea or mineral water.",
+      "parts": 2,
+      "tts_s": 3.92,
+      "slot_s": 6.28,
+      "ratio": 0.6242,
+      "atempo_max": 0.9,
+      "atempos": [
+        0.9,
+        0.9
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.031,
+        0.031
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 16,
+      "speaker": "SPEAKER_00",
+      "start": 101.2,
+      "end": 103.04,
+      "text": "Зона отдыха также лежачки.",
+      "translation": "The relaxation zone also includes lying down areas.",
+      "translation_fitted": "Relaxation zone: lying areas.",
+      "parts": 1,
+      "tts_s": 4.44,
+      "slot_s": 1.82,
+      "ratio": 2.4396,
+      "atempo_max": 1.2,
+      "atempos": [
+        1.2
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.188
+      ],
+      "split": "timing",
+      "fit": [
+        "concise_rewrite",
+        "kept"
+      ],
+      "cut_s": 0.397,
+      "overflow_s": 0.397
+    },
+    {
+      "id": 17,
+      "speaker": "SPEAKER_00",
+      "start": 103.04,
+      "end": 106.76,
+      "text": "Вот такая вот у нас интересная баня сауна.",
+      "translation": "Here's our interesting sauna bath.",
+      "translation_fitted": "Here is a rather interesting sauna we have.",
+      "parts": 2,
+      "tts_s": 2.84,
+      "slot_s": 3.7,
+      "ratio": 0.7676,
+      "atempo_max": 1.038,
+      "atempos": [
+        0.9,
+        1.038
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.1,
+        0.1
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0.01,
+      "overflow_s": 0.01
+    },
+    {
+      "id": 18,
+      "speaker": "SPEAKER_00",
+      "start": 106.76,
+      "end": 109.56,
+      "text": "Хамам ну и все это пространство.",
+      "translation": "Hamam and all this space.",
+      "translation_fitted": null,
+      "parts": 2,
+      "tts_s": 1.96,
+      "slot_s": 2.8,
+      "ratio": 0.7,
+      "atempo_max": 0.988,
+      "atempos": [
+        0.988,
+        0.9
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.225,
+        0.225
+      ],
+      "split": "timing",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    }
+  ]
+}
