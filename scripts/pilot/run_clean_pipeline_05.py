@@ -57,6 +57,7 @@ from __future__ import annotations
 
 import argparse
 import gc
+import re
 import json
 import os
 import pathlib
@@ -225,7 +226,7 @@ def burst_plan(units: list[dict], segments: list[dict], speech: list[dict], dura
         slot_s = u["start"]; slot_e = min(u["end"], duration, units[i + 1]["start"] - 0.02 if i + 1 < len(units) else duration); slot_e = max(slot_e, slot_s + 0.2)
         next_start = units[i + 1]["start"] if i + 1 < len(units) else duration
         bursts = merge_short_bursts(bursts_in_slot(vad, slot_s, slot_e), min_burst_s)
-        sg = seg_by_id[u["asr_segment"]]; words = [w for w in sg["words"] if w["start"] >= u["start"] - 0.011 and w["end"] <= u["end"] + 0.011]
+        words = sorted((w for sg in segments for w in sg["words"] if w["start"] >= u["start"] - 0.011 and w["end"] <= u["end"] + 0.011 and re.findall(r"[\w']+", w["word"])), key=lambda w: (w["start"], w["end"]))
         groups = assign_words(words, bursts); keep = [(b, g) for b, g in zip(bursts, groups) if g] or [((slot_s, slot_e), words)]
         plans.append({"slot": (slot_s, slot_e), "next_start": next_start, "bursts": [b for b, _ in keep], "groups": [" ".join(w["word"].strip() for w in g) for _, g in keep],
                       "group_counts": [len(g) for _, g in keep], "bursts_without_words": len(bursts) - len(keep)})
@@ -235,17 +236,28 @@ def burst_plan(units: list[dict], segments: list[dict], speech: list[dict], dura
     return plans
 
 
-def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict, plans: list | None = None, split_retries: int = 2,
-                    min_part_words: int = 3, soft_part_words: int = 4, part_max_words: int = 16, keep_llm: bool = False):
+def load_llm(times: dict):
+    """Qwen2.5-7B Q8_0 via llama.cpp (CPU), loaded once and shared by sentence segmentation, translation, burst split and the fit rewrites."""
     import glob
-    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
-    from burst_aware_audio import missing_numbers
     from llama_cpp import Llama
     files = sorted(glob.glob(str(MODELS / "qwen2.5-7b-instruct-gguf" / f"*{QWEN_QUANT}*.gguf")))
     if not files:
         raise Blocker(f"Qwen2.5-7B {QWEN_QUANT} GGUF not found under models/ (python scripts/pilot/fetch_09_qwen_quant.py {QWEN_QUANT} --yes)")
     with timed(times, "translation_load"):
         llm = Llama(model_path=files[0], n_ctx=4096, n_threads=THREADS, n_threads_batch=THREADS, n_gpu_layers=0, verbose=False)
+    return llm, os.path.basename(files[0])
+
+
+def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict, plans: list | None = None, split_retries: int = 2,
+                    min_part_words: int = 3, soft_part_words: int = 4, part_max_words: int = 16, keep_llm: bool = False, llm=None, split: bool = True):
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
+    from burst_aware_audio import missing_numbers
+    if llm is None:
+        llm, model_name = load_llm(times)
+    else:
+        model_name = getattr(llm, "model_path", "qwen2.5-7b-instruct") if isinstance(getattr(llm, "model_path", None), str) else "qwen2.5-7b-instruct"
+        model_name = os.path.basename(model_name)
+    files = [model_name]
     src_name, tgt_name = lang_name(src_lang), lang_name(tgt_lang)
     tgt_lang_name = tgt_name
     usage = {"prompt_tokens": 0, "completion_tokens": 0}
@@ -275,7 +287,7 @@ def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict
                 usage[k] += int(r["usage"].get(k, 0))
             print(f"  [translate] u{u['id']:02d} {u['speaker']} {u['start']:.2f}-{u['end']:.2f}s | {u['text'][:60]} -> {txt[:60]}", flush=True)
     split_stats = None
-    if plans is not None:   # --alignment burst, step 2: cut every unit translation into one part per source burst (Qwen still loaded)
+    if plans is not None and split:   # --alignment burst, step 2: cut every unit translation into one part per source burst (Qwen still loaded)
         from burst_aware_audio import consolidate_parts, norm_tokens, qwen_split
         split_stats = {"single": 0, "qwen": 0, "single_fallback": 0, "merged_parts": 0, "parts_total": 0}
         with timed(times, "translation_split"):
@@ -598,7 +610,7 @@ def main() -> int:
     ap.add_argument("--burst-spill", choices=["on", "off"], default="on", help="burst mode: last chunk may run into the pause before the next unit (hard cap before any cut)")
     ap.add_argument("--atempo-cap", type=float, default=1.15, help="burst mode: preferred max speed-up of a part (intelligibility degrades above ~1.15-1.2, first_res review)")
     ap.add_argument("--hard-cap", type=float, default=1.2, help="burst mode: absolute max speed-up (used only when a part would collide with the next burst / be cut at the track end)")
-    ap.add_argument("--fill-slowdown", type=float, default=1.0)
+    ap.add_argument("--fill-slowdown", type=float, default=0.9, help="burst mode: a span shorter than its source burst may be slowed down to this tempo to fill it (2026-10-02: 0.9 after the fit-up re-translation; 1.0 = never slow down, previous default)")
     ap.add_argument("--split-retries", type=int, default=2, help="burst mode: Qwen JSON split retries before falling back to ONE natural phrase per unit")
     ap.add_argument("--min-part-words", type=int, default=3, help="burst mode: hard minimum words of a TTS part (shorter parts are merged into a neighbour)")
     ap.add_argument("--soft-part-words", type=int, default=4, help="burst mode: preferred minimum words; parts below it are merged while the merged part stays <= --part-max-words")
@@ -610,6 +622,18 @@ def main() -> int:
     ap.add_argument("--tts-qa", choices=["on", "off"], default="on", help="burst mode: independent-ASR QA of every TTS part with per-part retry (English targets only)")
     ap.add_argument("--tts-retries", type=int, default=2, help="QA retry ladder length after the first attempt: new seed, then new seed + --qa-temp")
     ap.add_argument("--qa-temp", type=float, default=0.6)
+    ap.add_argument("--segmentation", choices=["whisper", "sentence"], default="sentence",
+                    help="burst mode (2026-10-02): sentence = Qwen punctuation pass -> units are sentences (lossless, whisper fallback); whisper = previous behaviour (whisper segments)")
+    ap.add_argument("--tiny-unit-merge", choices=["on", "off"], default="on", help="burst mode: merge units with < --tiny-min-words words or < --tiny-min-s seconds into the neighbour (same speaker, pause <= --tiny-max-gap-s)")
+    ap.add_argument("--tiny-min-words", type=int, default=3); ap.add_argument("--tiny-min-s", type=float, default=1.0); ap.add_argument("--tiny-max-gap-s", type=float, default=2.0)
+    ap.add_argument("--tts-mode", choices=["parts", "phrase"], default="phrase",
+                    help="burst mode: phrase = ONE Chatterbox generation per unit, CTC word alignment, cuts between words distributed over the source bursts (2026-10-02); parts = one generation per burst part (previous behaviour)")
+    ap.add_argument("--fit-up", choices=["on", "off"], default="on", help="phrase mode: fuller Qwen re-translation when the synthesized speech is shorter than --fit-up-ratio x the unit's source speech (accepted only if closer and not less intelligible)")
+    ap.add_argument("--fit-up-ratio", type=float, default=0.8, help="phrase mode: fit-up when synthesized speech / source speech of the unit is below this"); ap.add_argument("--fit-up-rounds", type=int, default=3)
+    ap.add_argument("--fit-up-aim", type=float, default=1.0, help="phrase mode: the fuller rewrite targets aim x the source speech duration")
+    ap.add_argument("--phrase-split", choices=["timing", "qwen"], default="timing", help="phrase mode: timing = distribute the aligned TTS words over the source bursts by duration (cuts between words, at punctuation / pauses when near); qwen = semantic JSON split with lossless fallbacks")
+    ap.add_argument("--phrase-min-part-words", type=int, default=1); ap.add_argument("--phrase-soft-part-words", type=int, default=2)
+    ap.add_argument("--stop-after", choices=["none", "audio"], default="none", help="audio = stop after the dubbed track (audio-only candidate: manifest + dubbed_24k/16k.wav, no LatentSync)")
     ap.add_argument("--min-ls-frames", type=int, default=25, help="VALID_FACE runs shorter than this are passed through")
     ap.add_argument("--max-verify-depth", type=int, default=3)
     ap.add_argument("--seed", type=int, default=1247)
@@ -651,13 +675,14 @@ def main() -> int:
     work.mkdir(parents=True)
     times: dict = {}; t_all = time.perf_counter()
     man: dict = {"task": "0.5-runner", "input": str(src), "output": str(out), "target_lang": tgt, "alignment_mode": a.alignment,
+                 "tts_mode": a.tts_mode if a.alignment == "burst" else "slot", "segmentation_mode": a.segmentation if a.alignment == "burst" else "whisper",
                  "codeformer": "DISABLED (not invoked)" if a.codeformer == "off" else {"mode": a.codeformer, "w": a.codeformer_w, "batch": a.codeformer_batch, "landmarks": a.codeformer_landmarks, "precision": a.codeformer_precision},
                  "work_dir": str(work), "config": {"seed": a.seed, "max_unit_s": a.max_unit_s, "threads": THREADS}}
     try:
         source = probe(src); man["source"] = source; duration = source["duration_s"]
         if duration <= 0 or not source["has_audio"]:
             raise Blocker("source has no duration/audio")
-        print(f"== 0.5 clean pipeline: {src.name} {duration:.3f}s -> {tgt} (CodeFormer disabled)", flush=True)
+        print(f"== 0.5 clean pipeline: {src.name} {duration:.3f}s -> {tgt} (CodeFormer {a.codeformer}; alignment {a.alignment}" + (f", segmentation {a.segmentation}, tts {a.tts_mode}" if a.alignment == "burst" else "") + ")", flush=True)
 
         wav16 = work / "audio16k.wav"
         with timed(times, "audio_extract"):
@@ -674,7 +699,16 @@ def main() -> int:
         with timed(times, "asr"):
             segments, asr_meta = run_asr(wav16, a.source_lang)
         src_lang = a.source_lang or asr_meta["language"]
-        units = build_units(segments, duration, a.max_unit_s)
+        llm = None; man["segmentation"] = {"mode": "whisper"}
+        if a.alignment == "burst" and a.segmentation == "sentence":
+            from sentence_units import sentence_units
+            llm, _model_name = load_llm(times)
+            with timed(times, "segmentation"):
+                units, seg_rep = sentence_units(segments, llm, lang_name(src_lang), duration, a.max_unit_s)
+            man["segmentation"] = {"mode": "sentence", **seg_rep}
+            print(f"  [segmentation] sentence units={len(units)} (sentences {seg_rep['sentences']}, whisper-fallback chunks {seg_rep['fallback_chunks']}/{len(seg_rep['chunks'])}, long split {seg_rep['split_long']})", flush=True)
+        else:
+            units = build_units(segments, duration, a.max_unit_s)
         man["asr"] = {**asr_meta, "model": "faster-whisper large-v3", "segments": segments}
         man["source_lang"] = src_lang
         print(f"  [asr] language={asr_meta['language']} p={asr_meta['language_probability']} segments={len(segments)} "
@@ -689,6 +723,14 @@ def main() -> int:
         assign_speakers(units, turns)
         man["diarization"] = {"model": "pyannote/speaker-diarization-3.1", "turns": turns, "speakers": sorted({t["speaker"] for t in turns})}
         print(f"  [diarization] {len(turns)} turns, speakers={man['diarization']['speakers']}", flush=True)
+        man["tiny_unit_merge"] = {"enabled": False}
+        if a.alignment == "burst" and a.tiny_unit_merge == "on":
+            from sentence_units import merge_tiny_units
+            n_before = len(units); units, merges = merge_tiny_units(units, a.tiny_min_words, a.tiny_min_s, a.tiny_max_gap_s, a.max_unit_s * 1.25)
+            man["tiny_unit_merge"] = {"enabled": True, "min_words": a.tiny_min_words, "min_s": a.tiny_min_s, "max_gap_s": a.tiny_max_gap_s, "units_before": n_before, "units_after": len(units), "merges": merges,
+                                      "unmerged_tiny": [u["tiny_unmerged"] | {"text": u["text"]} for u in units if u.get("tiny_unmerged")]}
+            if merges:
+                print(f"  [units] tiny-unit merge: {len(merges)} merged -> {len(units)} units: " + "; ".join(f"'{m_['tiny']['text']}' -> {m_['merged']}" for m_ in merges), flush=True)
 
         plans = None
         if a.alignment == "burst":
@@ -699,8 +741,10 @@ def main() -> int:
             sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
             from e1_burst_align import PlaceOpts
             burst_opts = PlaceOpts(a.atempo_cap, a.hard_cap, True, 0.06, a.fill_slowdown, spill=a.burst_spill == "on", max_lead=a.burst_max_lead); burst_opts.min_burst_s = a.burst_min_s; burst_opts.fallback_frac = a.burst_fallback_frac
+        phrase_mode = a.alignment == "burst" and a.tts_mode == "phrase"
         tr = run_translation(units, src_lang, tgt, times, plans=plans, split_retries=a.split_retries,
-                             min_part_words=a.min_part_words, soft_part_words=a.soft_part_words, part_max_words=a.part_max_words, keep_llm=burst_opts is not None and a.fit_retranslate == "on")
+                             min_part_words=a.min_part_words, soft_part_words=a.soft_part_words, part_max_words=a.part_max_words,
+                             keep_llm=burst_opts is not None and (a.fit_retranslate == "on" or phrase_mode), llm=llm, split=not phrase_mode)
         llm = None
         if isinstance(tr, tuple):
             man["translation"], llm, src_name, tgt_name = tr
@@ -713,10 +757,19 @@ def main() -> int:
             qa_on = a.tts_qa == "on"
             if qa_on and tgt != "en":
                 print(f"  [warn] --tts-qa uses English ASR models; disabled for target language {tgt}", flush=True); qa_on = False
-            man["tts"] = run_tts_burst(units, plans, refs, tgt, work, a.seed, times, opts=burst_opts, llm=llm, src_name=lang_name(src_lang), tgt_name=lang_name(tgt),
-                                       fit={"enabled": llm is not None, "rounds": a.fit_rounds, "target_ratio": a.fit_target_ratio},
-                                       qa_cfg={"enabled": qa_on, "retries": a.tts_retries, "low_temp": a.qa_temp}, min_part_words=a.min_part_words,
-                                       log=lambda m_: print(m_, flush=True))
+            if phrase_mode:
+                from tts_burst import run_tts_phrase
+                man["tts"] = run_tts_phrase(units, plans, refs, tgt, work, a.seed, times, opts=burst_opts, llm=llm, src_name=lang_name(src_lang), tgt_name=lang_name(tgt),
+                                            fit={"enabled": llm is not None and a.fit_retranslate == "on", "rounds": a.fit_rounds, "target_ratio": a.fit_target_ratio},
+                                            qa_cfg={"enabled": qa_on, "retries": a.tts_retries, "low_temp": a.qa_temp},
+                                            fit_up={"enabled": a.fit_up == "on" and llm is not None, "ratio": a.fit_up_ratio, "rounds": a.fit_up_rounds, "aim": a.fit_up_aim},
+                                            split_retries=a.split_retries, min_part_words=a.phrase_min_part_words, soft_part_words=a.phrase_soft_part_words, part_max_words=a.part_max_words,
+                                            phrase_split=a.phrase_split, log=lambda m_: print(m_, flush=True))
+            else:
+                man["tts"] = run_tts_burst(units, plans, refs, tgt, work, a.seed, times, opts=burst_opts, llm=llm, src_name=lang_name(src_lang), tgt_name=lang_name(tgt),
+                                           fit={"enabled": llm is not None, "rounds": a.fit_rounds, "target_ratio": a.fit_target_ratio},
+                                           qa_cfg={"enabled": qa_on, "retries": a.tts_retries, "low_temp": a.qa_temp}, min_part_words=a.min_part_words,
+                                           log=lambda m_: print(m_, flush=True))
             llm = tr = None    # release Qwen (the translation tuple also holds a reference)
         else:
             man["tts"] = run_tts(units, refs, tgt, work, a.seed, times)
@@ -730,6 +783,18 @@ def main() -> int:
             man["dubbed_track"] = build_dubbed_track(units, duration, work)
         man["units"] = units
         print(f"  [align] ratios tts/slot: " + " ".join(f"{u['alignment']['ratio_tts_to_slot']:.2f}" for u in units), flush=True)
+        if a.stop_after == "audio":
+            times["total"] = round(time.perf_counter() - t_all, 3); man["stage_seconds"] = times; man["gpu"] = gpu_info(); man["at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            man["audio_only"] = True
+            checks = {"all_units_have_tts_and_translation": all("tts" in u and u.get("translation") for u in units),
+                      "dubbed_track_exists": pathlib.Path(man["dubbed_track"]["wav24k"]).exists(), "dubbed_track_full_length": abs(man["dubbed_track"]["seconds"] - duration) < 0.05}
+            man["validation"] = {"audio_only": True, "checks": checks, "pass": all(checks.values())}
+            mp = out.with_name(out.stem + ".manifest.json"); write_json(mp, man)
+            print("\n== stage wall times (s)")
+            for k, v in times.items():
+                print(f"  {k:<20} {v:9.3f}")
+            print(f"== audio-only candidate: dubbed track {man['dubbed_track']['wav24k']} ({man['dubbed_track']['seconds']}s)\n== validation {'PASS' if man['validation']['pass'] else 'FAIL'} {checks}\n-> {mp}")
+            return 0 if man["validation"]["pass"] else 4
 
         man["video_backend"] = a.video_backend
         if a.video_backend == "optimized":

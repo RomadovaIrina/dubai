@@ -1,0 +1,1149 @@
+{
+ "old": {
+  "duration_s": 90.333333,
+  "orig_speech_s": 60.7,
+  "dub_speech_s": 48.3,
+  "overlap_s": 41.5,
+  "iou": 0.6148,
+  "orig_without_dub_s": 19.2,
+  "dub_outside_orig_s": 6.8,
+  "bursts": 27,
+  "bursts_covered_lt_50pct": 8,
+  "bursts_uncovered": 2,
+  "silent_while_speaking_frames_vad": 481,
+  "silent_while_speaking_s_vad": 19.24,
+  "rms_metric": {
+   "ls_frames": 1926,
+   "ls_frames_dub_silent": 761,
+   "ls_frames_dub_silent_while_original_speaks": 376,
+   "all_frames_dub_silent_while_original_speaks": 428
+  },
+  "units": 10,
+  "tts_mode": "parts",
+  "segmentation": null,
+  "tiny_merges": 0,
+  "tts_stats": {
+   "parts": 21,
+   "attempts": 26,
+   "retried_parts": 2,
+   "retry_success": 1,
+   "final_bad": 1,
+   "fit_parts_rewritten": 0,
+   "fit_parts_merged": 2,
+   "fit_rounds_used": 2,
+   "fit_rewrite_rejected": 0,
+   "gen_seconds": 29.89,
+   "qa_seconds": 4.89,
+   "retry_success_rate": 0.5
+  },
+  "translation_split": {
+   "single": 2,
+   "qwen": 7,
+   "single_fallback": 1,
+   "merged_parts": 6,
+   "parts_total": 21
+  },
+  "eval": {
+   "wer_whisper_mean": 0.11,
+   "cer_ctc_mean": 0.087,
+   "cer_whisper_mean": 0.062,
+   "units_bad(cer_ctc>=0.3)": 0,
+   "interjection_units": 0,
+   "final_word_missing_units": 0,
+   "tts_parts": 19,
+   "retried_parts": 2,
+   "retry_success": 1
+  },
+  "repeated_words": {
+   "units": [],
+   "count": 0
+  },
+  "lost_numbers": [],
+  "atempo": {
+   "max": 1.15,
+   "gt_1_15": 0,
+   "gt_1_20": 0,
+   "mean": 1.0152,
+   "histogram": {
+    "<1": 0,
+    "1.0": 17,
+    "<=1.05": 0,
+    "<=1.10": 0,
+    "<=1.15": 2,
+    "<=1.20": 0,
+    ">1.20": 0
+   },
+   "groups": 19
+  },
+  "cut_groups": 0,
+  "cut_seconds": 0.005,
+  "cut_max_s": 0.005,
+  "overflow_groups": 0,
+  "units_slot_fallback": 0,
+  "units_table": [
+   {
+    "id": 0,
+    "slot": [
+     2.6,
+     11.36
+    ],
+    "source": "друзья ну что всем привет запишу первое видео такое ознакомительное целью познакомиться",
+    "final": "friends hey what's up everyone hello i'll record the first video kind of an introduction to get to know everyone",
+    "fitted": false,
+    "parts": 1,
+    "tts_s": 6.04,
+    "ratio_src": null,
+    "qa_bad": 0,
+    "fit_up": [],
+    "placed": [
+     [
+      3.3,
+      9.2
+     ]
+    ]
+   },
+   {
+    "id": 1,
+    "slot": [
+     11.36,
+     18.66
+    ],
+    "source": "наверно больше в общем что хочу сказать рад знакомству с вами рад сотрудничеству",
+    "final": "probably more in general what I want to say is glad to meet you glad to cooperate",
+    "fitted": true,
+    "parts": 2,
+    "tts_s": 5.24,
+    "ratio_src": null,
+    "qa_bad": 0,
+    "fit_up": [],
+    "placed": [
+     [
+      11.36,
+      12.82
+     ],
+     [
+      14.3,
+      17.66
+     ]
+    ]
+   },
+   {
+    "id": 2,
+    "slot": [
+     18.66,
+     28.56
+    ],
+    "source": "сегодня пятница 28 августа будем считать что это . начало нашего сотрудничества",
+    "final": "today is Friday, August 28th let's consider this as the beginning of our cooperation",
+    "fitted": false,
+    "parts": 3,
+    "tts_s": 6.76,
+    "ratio_src": null,
+    "qa_bad": 0,
+    "fit_up": [],
+    "placed": [
+     [
+      18.66,
+      20.72
+     ],
+     [
+      22.17,
+      23.846
+     ],
+     [
+      23.906,
+      25.856
+     ]
+    ]
+   },
+   {
+    "id": 3,
+    "slot": [
+     30.26,
+     36.56
+    ],
+    "source": "что хочется сказать пусть это сотрудничество будет легким принесет нам всем тот желаемый",
+    "final": "what wants to be said let this cooperation be easy and bring us all the desired",
+    "fitted": false,
+    "parts": 1,
+    "tts_s": 4.4,
+    "ratio_src": null,
+    "qa_bad": 0,
+    "fit_up": [],
+    "placed": [
+     [
+      30.5,
+      34.76
+     ]
+    ]
+   },
+   {
+    "id": 4,
+    "slot": [
+     36.56,
+     46.74
+    ],
+    "source": "результат который мы загадали чтобы на пути у нас никаких преград не возникало надеюсь все",
+    "final": "the result we wished for so that nothing would obstruct our way, I hope everything",
+    "fitted": false,
+    "parts": 2,
+    "tts_s": 4.96,
+    "ratio_src": null,
+    "qa_bad": 0,
+    "fit_up": [],
+    "placed": [
+     [
+      36.56,
+      38.42
+     ],
+     [
+      39.3,
+      42.06
+     ]
+    ]
+   },
+   {
+    "id": 5,
+    "slot": [
+     46.74,
+     55.54
+    ],
+    "source": "будет хорошо ибо земные действия с вами и в целом с тем продуктом который мы сегодня собираем и делаем",
+    "final": "will be good because earthly actions with you and in general with the product which we are collecting and making today",
+    "fitted": true,
+    "parts": 2,
+    "tts_s": 6.08,
+    "ratio_src": null,
+    "qa_bad": 0,
+    "fit_up": [],
+    "placed": [
+     [
+      46.74,
+      48.0
+     ],
+     [
+      48.2,
+      52.66
+     ]
+    ]
+   },
+   {
+    "id": 6,
+    "slot": [
+     58.86,
+     66.42
+    ],
+    "source": "дальше отправлю еще несколько видео запишу различных форматах в очках без очков посмотрим как будет",
+    "final": "I will send a few more videos further, record them in different formats with and without glasses, and see how it will be.",
+    "fitted": false,
+    "parts": 1,
+    "tts_s": 6.96,
+    "ratio_src": null,
+    "qa_bad": 0,
+    "fit_up": [],
+    "placed": [
+     [
+      59.2,
+      65.86
+     ]
+    ]
+   },
+   {
+    "id": 7,
+    "slot": [
+     66.42,
+     77.0
+    ],
+    "source": "работать наша система ну и в принципе все отправлю в наш чат так что давайте ребят всем нам успеха я",
+    "final": "our system works well and anyway I'll send everything to our chat so let's all have success",
+    "fitted": false,
+    "parts": 3,
+    "tts_s": 5.88,
+    "ratio_src": null,
+    "qa_bad": 0,
+    "fit_up": [],
+    "placed": [
+     [
+      66.42,
+      68.48
+     ],
+     [
+      70.1,
+      71.86
+     ],
+     [
+      73.8,
+      75.22
+     ]
+    ]
+   },
+   {
+    "id": 8,
+    "slot": [
+     77.0,
+     87.08
+    ],
+    "source": "хочу пожелать пусть наше взаимодействие будет легким и принесет нам тот результат который мы желаем",
+    "final": "I want to wish that our interaction be smooth and bring us the result we desire",
+    "fitted": false,
+    "parts": 3,
+    "tts_s": 6.0,
+    "ratio_src": null,
+    "qa_bad": 0,
+    "fit_up": [],
+    "placed": [
+     [
+      77.0,
+      78.26
+     ],
+     [
+      78.8,
+      81.26
+     ],
+     [
+      83.9,
+      85.46
+     ]
+    ]
+   },
+   {
+    "id": 9,
+    "slot": [
+     88.56,
+     88.98
+    ],
+    "source": "вперед",
+    "final": "forward",
+    "fitted": false,
+    "parts": 1,
+    "tts_s": 2.16,
+    "ratio_src": null,
+    "qa_bad": 1,
+    "fit_up": [],
+    "placed": [
+     [
+      88.56,
+      90.273
+     ]
+    ]
+   }
+  ]
+ },
+ "new": {
+  "duration_s": 90.333333,
+  "orig_speech_s": 60.7,
+  "dub_speech_s": 53.0,
+  "overlap_s": 52.2,
+  "iou": 0.8488,
+  "orig_without_dub_s": 8.5,
+  "dub_outside_orig_s": 0.8,
+  "bursts": 27,
+  "bursts_covered_lt_50pct": 2,
+  "bursts_uncovered": 1,
+  "silent_while_speaking_frames_vad": 210,
+  "silent_while_speaking_s_vad": 8.4,
+  "rms_metric": {
+   "ls_frames": 1926,
+   "ls_frames_dub_silent": 670,
+   "ls_frames_dub_silent_while_original_speaks": 202,
+   "all_frames_dub_silent_while_original_speaks": 254
+  },
+  "units": 10,
+  "tts_mode": "phrase",
+  "segmentation": "sentence",
+  "tiny_merges": 1,
+  "tts_stats": {
+   "parts": 10,
+   "attempts": 18,
+   "retried_parts": 1,
+   "retry_success": 1,
+   "final_bad": 0,
+   "fit_parts_rewritten": 0,
+   "fit_parts_merged": 0,
+   "fit_rounds_used": 0,
+   "fit_rewrite_rejected": 0,
+   "fit_up_units": 4,
+   "fit_up_rounds": 10,
+   "fit_up_accepted": 6,
+   "fit_up_rejected": 4,
+   "fit_up_candidates": 7,
+   "units_single_burst": 1,
+   "units_qwen_split": 0,
+   "units_single_fallback": 0,
+   "spans": 32,
+   "span_merges": 1,
+   "align_ok": 10,
+   "align_fallback": 0,
+   "units_timing_split": 9,
+   "units_proportional_fallback": 0,
+   "gen_seconds": 37.19,
+   "qa_seconds": 5.53,
+   "align_seconds": 0.16,
+   "retry_success_rate": 1.0
+  },
+  "translation_split": null,
+  "eval": {
+   "wer_whisper_mean": 0.004,
+   "cer_ctc_mean": 0.041,
+   "cer_whisper_mean": 0.001,
+   "units_bad(cer_ctc>=0.3)": 0,
+   "interjection_units": 0,
+   "final_word_missing_units": 0,
+   "tts_parts": 32,
+   "retried_parts": 2,
+   "retry_success": 2
+  },
+  "repeated_words": {
+   "units": [],
+   "count": 0
+  },
+  "lost_numbers": [],
+  "atempo": {
+   "max": 1.15,
+   "gt_1_15": 0,
+   "gt_1_20": 0,
+   "mean": 0.9444,
+   "histogram": {
+    "<1": 24,
+    "1.0": 5,
+    "<=1.05": 0,
+    "<=1.10": 1,
+    "<=1.15": 2,
+    "<=1.20": 0,
+    ">1.20": 0
+   },
+   "groups": 32
+  },
+  "cut_groups": 0,
+  "cut_seconds": 0.012,
+  "cut_max_s": 0.012,
+  "overflow_groups": 0,
+  "units_slot_fallback": 0,
+  "units_table": [
+   {
+    "id": 0,
+    "slot": [
+     2.6,
+     5.1
+    ],
+    "source": "Друзья ну что всем привет.",
+    "final": "Friends, hey everyone, greetings.",
+    "fitted": false,
+    "parts": 2,
+    "tts_s": 1.88,
+    "ratio_src": 0.842,
+    "qa_bad": 0,
+    "fit_up": [],
+    "placed": [
+     [
+      3.25,
+      4.146
+     ],
+     [
+      4.206,
+      4.781
+     ]
+    ]
+   },
+   {
+    "id": 1,
+    "slot": [
+     5.1,
+     11.36
+    ],
+    "source": "Запишу первое видео такое ознакомительное целью познакомиться.",
+    "final": "I will record the first video as an introductory one to acquaint myself with it.",
+    "fitted": true,
+    "parts": 4,
+    "tts_s": 4.12,
+    "ratio_src": 0.806,
+    "qa_bad": 0,
+    "fit_up": [
+     "accepted"
+    ],
+    "placed": [
+     [
+      5.1,
+      5.446
+     ],
+     [
+      6.7,
+      8.101
+     ],
+     [
+      8.4,
+      9.84
+     ],
+     [
+      10.3,
+      11.218
+     ]
+    ]
+   },
+   {
+    "id": 2,
+    "slot": [
+     11.36,
+     18.66
+    ],
+    "source": "Наверно больше в общем что хочу сказать рад знакомству с вами рад сотрудничеству.",
+    "final": "Probably more in general what I want to say is that I am glad to meet you and glad to cooperate.",
+    "fitted": false,
+    "parts": 3,
+    "tts_s": 5.16,
+    "ratio_src": 0.987,
+    "qa_bad": 0,
+    "fit_up": [],
+    "placed": [
+     [
+      11.36,
+      12.369
+     ],
+     [
+      14.3,
+      17.294
+     ],
+     [
+      17.7,
+      18.634
+     ]
+    ]
+   },
+   {
+    "id": 3,
+    "slot": [
+     18.66,
+     28.56
+    ],
+    "source": "Сегодня пятница 28 августа будем считать что это начало нашего сотрудничества.",
+    "final": "Today is Friday, August 28th, and we will consider this the start of our cooperation.",
+    "fitted": true,
+    "parts": 4,
+    "tts_s": 5.44,
+    "ratio_src": 0.768,
+    "qa_bad": 0,
+    "fit_up": [
+     "accepted",
+     "rewrite_rejected"
+    ],
+    "placed": [
+     [
+      18.66,
+      20.937
+     ],
+     [
+      22.3,
+      23.789
+     ],
+     [
+      23.9,
+      24.613
+     ],
+     [
+      25.5,
+      26.626
+     ]
+    ]
+   },
+   {
+    "id": 4,
+    "slot": [
+     30.26,
+     43.94
+    ],
+    "source": "Что хочется сказать пусть это сотрудничество будет легким принесет нам всем тот желаемый результат который мы загадали чтобы на пути у нас никаких преград не возникало.",
+    "final": "Let this cooperation be easy, bringing us the desired result we wished for, ensuring no obstacles arise on our path, and may it be smooth, facilitating our journey.",
+    "fitted": true,
+    "parts": 4,
+    "tts_s": 10.28,
+    "ratio_src": 0.899,
+    "qa_bad": 0,
+    "fit_up": [
+     "accepted"
+    ],
+    "placed": [
+     [
+      30.5,
+      35.483
+     ],
+     [
+      35.9,
+      38.56
+     ],
+     [
+      39.3,
+      40.505
+     ],
+     [
+      42.4,
+      43.912
+     ]
+    ]
+   },
+   {
+    "id": 5,
+    "slot": [
+     43.94,
+     55.54
+    ],
+    "source": "Надеюсь все будет хорошо ибо земные действия с вами и в целом с тем продуктом который мы сегодня собираем и делаем.",
+    "final": "I hope everything will be well, for the earthly actions with you and in general with the product which we are collecting and making today.",
+    "fitted": false,
+    "parts": 4,
+    "tts_s": 6.56,
+    "ratio_src": 0.721,
+    "qa_bad": 0,
+    "fit_up": [
+     "rewrite_rejected"
+    ],
+    "placed": [
+     [
+      43.94,
+      44.317
+     ],
+     [
+      46.3,
+      47.571
+     ],
+     [
+      48.2,
+      49.96
+     ],
+     [
+      51.4,
+      54.806
+     ]
+    ]
+   },
+   {
+    "id": 6,
+    "slot": [
+     58.86,
+     68.12
+    ],
+    "source": "Дальше отправлю еще несколько видео запишу различных форматах в очках без очков посмотрим как будет работать наша система.",
+    "final": "Next, I will send a few more videos recorded in different formats, both with and without glasses, to see how our system will work.",
+    "fitted": false,
+    "parts": 1,
+    "tts_s": 6.76,
+    "ratio_src": 0.712,
+    "qa_bad": 0,
+    "fit_up": [
+     "rewrite_rejected"
+    ],
+    "placed": [
+     [
+      59.2,
+      66.413
+     ]
+    ]
+   },
+   {
+    "id": 7,
+    "slot": [
+     68.12,
+     71.14
+    ],
+    "source": "Ну и в принципе все.",
+    "final": "Well, and basically that's it.",
+    "fitted": false,
+    "parts": 2,
+    "tts_s": 1.88,
+    "ratio_src": 0.982,
+    "qa_bad": 0,
+    "fit_up": [],
+    "placed": [
+     [
+      68.12,
+      68.472
+     ],
+     [
+      70.045,
+      71.12
+     ]
+    ]
+   },
+   {
+    "id": 8,
+    "slot": [
+     71.14,
+     76.54
+    ],
+    "source": "Отправлю в наш чат так что давайте ребят всем нам успеха.",
+    "final": "I'll send it to our chat so let's all have success.",
+    "fitted": false,
+    "parts": 2,
+    "tts_s": 3.12,
+    "ratio_src": 0.651,
+    "qa_bad": 0,
+    "fit_up": [
+     "rejected (not closer)"
+    ],
+    "placed": [
+     [
+      71.14,
+      72.159
+     ],
+     [
+      73.8,
+      75.906
+     ]
+    ]
+   },
+   {
+    "id": 9,
+    "slot": [
+     76.54,
+     88.98
+    ],
+    "source": "Я хочу пожелать пусть наше взаимодействие будет легким и принесет нам тот результат который мы желаем. Вперед.",
+    "final": "I wish to express my hope that our interaction will be smooth and easy, bringing us the result that we desire, moving forward.",
+    "fitted": true,
+    "parts": 6,
+    "tts_s": 7.24,
+    "ratio_src": 0.874,
+    "qa_bad": 0,
+    "fit_up": [
+     "accepted",
+     "accepted",
+     "accepted"
+    ],
+    "placed": [
+     [
+      76.54,
+      77.99
+     ],
+     [
+      78.8,
+      79.269
+     ],
+     [
+      79.9,
+      82.23
+     ],
+     [
+      83.9,
+      84.273
+     ],
+     [
+      85.2,
+      87.254
+     ],
+     [
+      88.5,
+      89.024
+     ]
+    ]
+   }
+  ]
+ },
+ "per_burst": {
+  "old": [
+   {
+    "burst": [
+     3.3,
+     4.1
+    ],
+    "covered": 1.0
+   },
+   {
+    "burst": [
+     4.2,
+     5.5
+    ],
+    "covered": 0.923
+   },
+   {
+    "burst": [
+     6.7,
+     8.2
+    ],
+    "covered": 1.0
+   },
+   {
+    "burst": [
+     8.4,
+     9.9
+    ],
+    "covered": 0.467
+   },
+   {
+    "burst": [
+     10.3,
+     12.4
+    ],
+    "covered": 0.476
+   },
+   {
+    "burst": [
+     14.3,
+     17.2
+    ],
+    "covered": 1.0
+   },
+   {
+    "burst": [
+     17.7,
+     21.4
+    ],
+    "covered": 0.541
+   },
+   {
+    "burst": [
+     22.3,
+     23.8
+    ],
+    "covered": 1.0
+   },
+   {
+    "burst": [
+     23.9,
+     25.0
+    ],
+    "covered": 1.0
+   },
+   {
+    "burst": [
+     25.5,
+     26.8
+    ],
+    "covered": 0.231
+   },
+   {
+    "burst": [
+     27.8,
+     28.9
+    ],
+    "covered": 0.0
+   },
+   {
+    "burst": [
+     30.5,
+     35.5
+    ],
+    "covered": 0.84
+   },
+   {
+    "burst": [
+     35.9,
+     38.5
+    ],
+    "covered": 0.692
+   },
+   {
+    "burst": [
+     39.3,
+     41.1
+    ],
+    "covered": 1.0
+   },
+   {
+    "burst": [
+     42.4,
+     44.3
+    ],
+    "covered": 0.0
+   },
+   {
+    "burst": [
+     46.3,
+     47.6
+    ],
+    "covered": 0.692
+   },
+   {
+    "burst": [
+     48.2,
+     50.8
+    ],
+    "covered": 1.0
+   },
+   {
+    "burst": [
+     51.4,
+     55.8
+    ],
+    "covered": 0.273
+   },
+   {
+    "burst": [
+     59.2,
+     68.5
+    ],
+    "covered": 0.903
+   },
+   {
+    "burst": [
+     70.1,
+     72.5
+    ],
+    "covered": 0.708
+   },
+   {
+    "burst": [
+     73.8,
+     76.8
+    ],
+    "covered": 0.433
+   },
+   {
+    "burst": [
+     76.9,
+     78.0
+    ],
+    "covered": 0.909
+   },
+   {
+    "burst": [
+     78.8,
+     79.3
+    ],
+    "covered": 1.0
+   },
+   {
+    "burst": [
+     79.9,
+     82.2
+    ],
+    "covered": 0.565
+   },
+   {
+    "burst": [
+     83.9,
+     84.8
+    ],
+    "covered": 1.0
+   },
+   {
+    "burst": [
+     85.2,
+     87.3
+    ],
+    "covered": 0.095
+   },
+   {
+    "burst": [
+     88.5,
+     89.2
+    ],
+    "covered": 1.0
+   }
+  ],
+  "new": [
+   {
+    "burst": [
+     3.3,
+     4.1
+    ],
+    "covered": 1.0
+   },
+   {
+    "burst": [
+     4.2,
+     5.5
+    ],
+    "covered": 0.846
+   },
+   {
+    "burst": [
+     6.7,
+     8.2
+    ],
+    "covered": 1.0
+   },
+   {
+    "burst": [
+     8.4,
+     9.9
+    ],
+    "covered": 1.0
+   },
+   {
+    "burst": [
+     10.3,
+     12.4
+    ],
+    "covered": 1.0
+   },
+   {
+    "burst": [
+     14.3,
+     17.2
+    ],
+    "covered": 1.0
+   },
+   {
+    "burst": [
+     17.7,
+     21.4
+    ],
+    "covered": 0.892
+   },
+   {
+    "burst": [
+     22.3,
+     23.8
+    ],
+    "covered": 1.0
+   },
+   {
+    "burst": [
+     23.9,
+     25.0
+    ],
+    "covered": 0.636
+   },
+   {
+    "burst": [
+     25.5,
+     26.8
+    ],
+    "covered": 0.846
+   },
+   {
+    "burst": [
+     27.8,
+     28.9
+    ],
+    "covered": 0.0
+   },
+   {
+    "burst": [
+     30.5,
+     35.5
+    ],
+    "covered": 0.98
+   },
+   {
+    "burst": [
+     35.9,
+     38.5
+    ],
+    "covered": 0.962
+   },
+   {
+    "burst": [
+     39.3,
+     41.1
+    ],
+    "covered": 0.667
+   },
+   {
+    "burst": [
+     42.4,
+     44.3
+    ],
+    "covered": 1.0
+   },
+   {
+    "burst": [
+     46.3,
+     47.6
+    ],
+    "covered": 1.0
+   },
+   {
+    "burst": [
+     48.2,
+     50.8
+    ],
+    "covered": 0.692
+   },
+   {
+    "burst": [
+     51.4,
+     55.8
+    ],
+    "covered": 0.773
+   },
+   {
+    "burst": [
+     59.2,
+     68.5
+    ],
+    "covered": 0.796
+   },
+   {
+    "burst": [
+     70.1,
+     72.5
+    ],
+    "covered": 0.875
+   },
+   {
+    "burst": [
+     73.8,
+     76.8
+    ],
+    "covered": 0.8
+   },
+   {
+    "burst": [
+     76.9,
+     78.0
+    ],
+    "covered": 1.0
+   },
+   {
+    "burst": [
+     78.8,
+     79.3
+    ],
+    "covered": 1.0
+   },
+   {
+    "burst": [
+     79.9,
+     82.2
+    ],
+    "covered": 0.913
+   },
+   {
+    "burst": [
+     83.9,
+     84.8
+    ],
+    "covered": 0.444
+   },
+   {
+    "burst": [
+     85.2,
+     87.3
+    ],
+    "covered": 1.0
+   },
+   {
+    "burst": [
+     88.5,
+     89.2
+    ],
+    "covered": 0.857
+   }
+  ]
+ },
+ "acceptance": {
+  "intelligibility_not_worse": true,
+  "no_systematic_interjections": true,
+  "no_repeated_words": true,
+  "no_cut_words": true,
+  "no_lost_numbers": true,
+  "atempo_hard_le_1_20": true,
+  "atempo_preferred_le_1_15": true,
+  "orig_without_dub_lt_target": true,
+  "coverage_improved": true,
+  "no_qa_bad_parts": true
+ },
+ "hard_criteria": [
+  "intelligibility_not_worse",
+  "no_systematic_interjections",
+  "no_repeated_words",
+  "no_cut_words",
+  "no_lost_numbers",
+  "atempo_hard_le_1_20",
+  "orig_without_dub_lt_target",
+  "coverage_improved"
+ ],
+ "verdict": "PASS",
+ "target_without_dub_s": 10.0,
+ "at": "2026-10-02T20:04:45Z"
+}
