@@ -1,0 +1,300 @@
+{
+  "task": "0.6-refresh",
+  "video": "/tmp/pilot_refresh/final/04_final.manifest.json",
+  "source_duration_s": 53.9,
+  "target_s_per_video_min": 300.0,
+  "formula": "stage_seconds / source_duration_seconds * 60",
+  "new": {
+    "samples": 2,
+    "latentsync_s": 247.085,
+    "codeformer_s": 31.154,
+    "latentsync_s_per_video_min": 275.049,
+    "codeformer_s_per_video_min": 34.679,
+    "combined_s_per_video_min": 309.728,
+    "latentsync_s_per_video_min_min_max": [
+      272.694,
+      277.404
+    ],
+    "codeformer_s_per_video_min_min_max": [
+      33.884,
+      35.475
+    ],
+    "codeformer_faces": 1044,
+    "codeformer_s_per_face": 0.0298,
+    "peak_vram_nvsmi_mib": 24156,
+    "video_stage_total_s_per_video_min": 355.084,
+    "within_target": false
+  },
+  "verdict": "FAIL_TARGET",
+  "samples": [
+    {
+      "label": "e2e",
+      "manifest": "/tmp/pilot_refresh/final/04_final.manifest.json",
+      "at": "2026-10-02T17:20:22Z",
+      "kind": "e2e",
+      "source_duration_s": 53.9,
+      "validation_pass": true,
+      "duration_delta_s": 0.06,
+      "frames": {
+        "master": 1349,
+        "written": 1349,
+        "lipsynced": 1044,
+        "ls_fraction": 0.7739
+      },
+      "latentsync": {
+        "stage_s": 244.97,
+        "verify_s": 15.326,
+        "inference_total_s": 229.08,
+        "calls": 9,
+        "unet_denoise_s": 146.873,
+        "load_s": 10.879,
+        "s_per_video_min": 272.694,
+        "s_per_lipsynced_min": 351.968,
+        "config": {
+          "window_batch_size": 2,
+          "deepcache": true,
+          "deepcache_interval": 5,
+          "compile_backend": "none",
+          "sdpa_backend": "auto",
+          "steps": 20,
+          "guidance": 1.5,
+          "seed": 1247,
+          "fp16": true,
+          "stage2_512": true
+        }
+      },
+      "codeformer": {
+        "stage_s": 31.868,
+        "load_s": 1.125,
+        "faces_restored": 1044,
+        "frames_in": 1044,
+        "eligible_frames": 1044,
+        "fallback_detections": 0,
+        "frames_without_landmarks": 0,
+        "s_per_video_min": 35.475,
+        "s_per_face": 0.0305,
+        "faces_per_s": 32.76,
+        "torch_peak_mib_max_segment": 13117,
+        "config": {
+          "fidelity_weight": 1.0,
+          "batch_size": 8,
+          "use_parse": true,
+          "empty_cache_per_face": false,
+          "autocast": true,
+          "parse_autocast": true,
+          "pinned": true,
+          "workers": 4,
+          "mask_blur": "gpu",
+          "roi_paste": true,
+          "overlap": true,
+          "template": "FFHQ 512 (facelib)",
+          "geometry": "preserved (no read_image upscale)",
+          "landmark_source": "insightface"
+        },
+        "mode": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        }
+      },
+      "combined": {
+        "ls_plus_cf_s": 276.838,
+        "s_per_video_min": 308.168,
+        "within_target": false
+      },
+      "video_stage_total_s": 315.775,
+      "video_stage_s_per_video_min": 351.512,
+      "pipeline_total_s": 436.054,
+      "stage_seconds": {
+        "audio_extract": 0.281,
+        "vad": 3.945,
+        "asr": 7.217,
+        "diarization": 13.985,
+        "translation_load": 1.006,
+        "translation": 13.929,
+        "translation_split": 33.947,
+        "tts_load": 9.886,
+        "qa_load": 1.843,
+        "tts": 23.613,
+        "alignment": 0.094,
+        "dubbed_track": 0.813,
+        "speech_gate": 0.413,
+        "face_router_load": 0.307,
+        "latentsync_load": 10.879,
+        "codeformer_load": 1.125,
+        "ls_master_25fps": 6.36,
+        "ls_master_decode": 0.759,
+        "face_classify": 11.27,
+        "latentsync": 244.97,
+        "latentsync_verify": 15.326,
+        "codeformer": 31.868,
+        "final_assembly": 7.824,
+        "total": 436.054
+      },
+      "peak_vram_nvsmi_mib": 24156,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5090",
+        "capability": "sm_120"
+      }
+    },
+    {
+      "label": "r2",
+      "manifest": "/tmp/pilot_refresh/r06/04_cf_prod_r2.manifest.json",
+      "at": "2026-10-02T17:33:04Z",
+      "kind": "video_stage_repeat",
+      "source_duration_s": 53.9,
+      "validation_pass": true,
+      "duration_delta_s": 0.06,
+      "frames": {
+        "master": 1349,
+        "written": 1349,
+        "lipsynced": 1044,
+        "ls_fraction": 0.7739
+      },
+      "latentsync": {
+        "stage_s": 249.201,
+        "verify_s": 16.209,
+        "inference_total_s": 232.48,
+        "calls": 9,
+        "unet_denoise_s": 146.857,
+        "load_s": 17.526,
+        "s_per_video_min": 277.404,
+        "s_per_lipsynced_min": 358.047,
+        "config": {
+          "window_batch_size": 2,
+          "deepcache": true,
+          "deepcache_interval": 5,
+          "compile_backend": "none",
+          "sdpa_backend": "auto",
+          "steps": 20,
+          "guidance": 1.5,
+          "seed": 1247,
+          "fp16": true,
+          "stage2_512": true
+        }
+      },
+      "codeformer": {
+        "stage_s": 30.439,
+        "load_s": 0.674,
+        "faces_restored": 1044,
+        "frames_in": 1044,
+        "eligible_frames": 1044,
+        "fallback_detections": 0,
+        "frames_without_landmarks": 0,
+        "s_per_video_min": 33.884,
+        "s_per_face": 0.0292,
+        "faces_per_s": 34.3,
+        "torch_peak_mib_max_segment": 10981,
+        "config": {
+          "fidelity_weight": 1.0,
+          "batch_size": 8,
+          "use_parse": true,
+          "empty_cache_per_face": false,
+          "autocast": true,
+          "parse_autocast": true,
+          "pinned": true,
+          "workers": 4,
+          "mask_blur": "gpu",
+          "roi_paste": true,
+          "overlap": true,
+          "template": "FFHQ 512 (facelib)",
+          "geometry": "preserved (no read_image upscale)",
+          "landmark_source": "insightface"
+        },
+        "mode": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        }
+      },
+      "combined": {
+        "ls_plus_cf_s": 279.64,
+        "s_per_video_min": 311.288,
+        "within_target": false
+      },
+      "video_stage_total_s": 322.193,
+      "video_stage_s_per_video_min": 358.656,
+      "pipeline_total_s": 328.003,
+      "stage_seconds": {
+        "speech_gate": 3.993,
+        "face_router_load": 4.63,
+        "latentsync_load": 17.526,
+        "codeformer_load": 0.674,
+        "ls_master_25fps": 0.571,
+        "ls_master_decode": 0.684,
+        "face_classify": 6.75,
+        "latentsync": 249.201,
+        "latentsync_verify": 16.209,
+        "codeformer": 30.439,
+        "final_assembly": 7.725,
+        "total": 328.003
+      },
+      "peak_vram_nvsmi_mib": 23909,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5090",
+        "capability": "sm_120"
+      }
+    }
+  ],
+  "sweep_sample": {
+    "json": "reports/pilot/refresh_0.7_current_codeformer.json",
+    "latentsync_stage_s": 251.225,
+    "latentsync_s_per_video_min": 279.657,
+    "codeformer_prod_w": 1.0,
+    "codeformer_wall_s": 29.399,
+    "codeformer_s_per_video_min": 32.726,
+    "faces": 1044,
+    "torch_peak_mib_video_stage": 9528,
+    "note": "5 CodeFormer instances resident; informational sample"
+  },
+  "old_legacy": {
+    "latentsync_s": 362.23,
+    "latentsync_s_per_video_min": 403.224,
+    "latentsync_peak_mib": 20607,
+    "codeformer_s": 199.806,
+    "codeformer_s_per_video_min": 222.17,
+    "codeformer_faces": 1349,
+    "codeformer_peak_mib": 2198,
+    "codeformer_w": 0.5,
+    "combined_s_per_video_min": 625.39,
+    "within_target": false,
+    "old_verdict": "FAIL_TARGET",
+    "implementation": "LatentSync CLI on the whole video (no gate/router) + upstream inference_codeformer.py CLI (w 0.5, 512x936 output, PNG round trips)",
+    "at": "2026-09-15T10:01:07Z"
+  },
+  "git": {
+    "path": "/workspace/dub/dubai",
+    "commit": "afa9b0d5dd0f7490c1955826b009b1ba9f40eedc",
+    "branch": "tts-intelligibility-fix",
+    "dirty": true
+  },
+  "gpu": {
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.126.09",
+    "name": "NVIDIA GeForce RTX 5090",
+    "capability": "sm_120",
+    "total_vram_bytes": 33668857856,
+    "total_vram_gib": 31.36,
+    "free_vram_gib": 30.01,
+    "multi_processor_count": 170,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "at": "2026-10-02T17:49:41Z",
+  "notes": [
+    "LatentSync time = stage wall incl. LatentSync's own detector verify pass and in-memory segment prep, excl. model load (reported separately);",
+    "CodeFormer time = in-memory stage wall on the LATENT_SYNC frames only (model load reported separately);",
+    "the current pipeline lip-syncs only speech-gated VALID_FACE frames, so s/video-min is also given per lip-synced minute for comparison with the old whole-video number;",
+    "VRAM informational only (0.4 not reopened)."
+  ]
+}

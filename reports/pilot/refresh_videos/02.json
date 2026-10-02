@@ -1,0 +1,782 @@
+{
+  "facts": {
+    "source_duration_s": 110.866667,
+    "source_lang": "ru",
+    "units": 12,
+    "speakers": [
+      "SPEAKER_00"
+    ],
+    "translation": {
+      "quant": "q8_0",
+      "tokens": {
+        "prompt_tokens": 652,
+        "completion_tokens": 192
+      },
+      "burst_split": {
+        "single": 2,
+        "qwen": 8,
+        "single_fallback": 2,
+        "merged_parts": 7,
+        "parts_total": 19
+      },
+      "number_retries": 0,
+      "fitted_units": 1
+    },
+    "tts": {
+      "dtype": "float16",
+      "guard_violations": 0,
+      "parts": 19,
+      "attempts": 24,
+      "retried_parts": 3,
+      "retry_success": 3,
+      "retry_success_rate": 1.0,
+      "final_bad_parts": 0,
+      "fit_parts_rewritten": 0,
+      "fit_parts_merged": 1,
+      "fit_rewrite_rejected": 0,
+      "fit_rounds_used": 2,
+      "gen_seconds": 32.25,
+      "qa_seconds": 4.56,
+      "qa": {
+        "enabled": true,
+        "retries": 2,
+        "low_temp": 0.6
+      }
+    },
+    "alignment": {
+      "mode": "burst",
+      "atempo_cap": 1.15,
+      "hard_cap": 1.2,
+      "units_slot_fallback": 0,
+      "groups": 18,
+      "atempo_max": 1.2,
+      "atempo_min": 1.0,
+      "atempo_mean": 1.0278,
+      "atempo_median": 1.0,
+      "gt_1_15": 1,
+      "gt_1_25": 0,
+      "gt_1_3": 0,
+      "slowed_lt_1": 0,
+      "overflow_groups": 1,
+      "cut_groups": 1,
+      "atempo_histogram": {
+        "<1 (slowed)": 0,
+        "1.0": 15,
+        "(1.0,1.05]": 0,
+        "(1.05,1.10]": 0,
+        "(1.10,1.15]": 2,
+        "(1.15,1.20]": 1,
+        ">1.20": 0
+      }
+    },
+    "video": {
+      "backend": "optimized",
+      "frame_classes": {
+        "VALID_FACE": 0,
+        "SMALL_FACE": 0,
+        "NO_FACE": 2191,
+        "NO_SPEECH": 582
+      },
+      "by_action": {
+        "PASS_THROUGH": {
+          "segments": 19,
+          "frames": 2773,
+          "seconds": 110.92
+        }
+      },
+      "master_frames": 2773,
+      "latentsync_seconds_of_video": 0.0,
+      "ls_fraction": 0.0,
+      "latentsync_segments": 0,
+      "ls_failed_segments": 0,
+      "verify_splits": 0,
+      "latentsync_stage_s": 0.0,
+      "latentsync_verify_s": 0.0,
+      "latentsync_s_per_video_min": 0.0,
+      "codeformer": {
+        "mode": "optimized",
+        "w": 1.0,
+        "batch": 8,
+        "landmarks": "insightface",
+        "precision": "fp16"
+      },
+      "codeformer_stage_s": 0.0,
+      "codeformer_faces": 0,
+      "codeformer_eligible_frames": 0,
+      "codeformer_fallback_detections": 0,
+      "codeformer_s_per_video_min": 0.0,
+      "codeformer_torch_peak_mib": null,
+      "speech_gate": {
+        "enabled": true,
+        "margin_s": 0.24,
+        "merge_gap_s": 0.6,
+        "crossfade_frames": 4,
+        "source_speech_seconds": 56.9,
+        "dubbed_speech_seconds": 49.7,
+        "gate_seconds": 87.52,
+        "gate_fraction": 0.7894
+      }
+    },
+    "timing": {
+      "total_wall_s": 267.237,
+      "stage_seconds": {
+        "audio_extract": 0.474,
+        "vad": 4.442,
+        "asr": 9.488,
+        "diarization": 13.158,
+        "translation_load": 0.574,
+        "translation": 27.901,
+        "translation_split": 85.865,
+        "tts_load": 7.89,
+        "qa_load": 1.414,
+        "tts": 40.953,
+        "alignment": 0.271,
+        "dubbed_track": 2.258,
+        "speech_gate": 1.225,
+        "face_router_load": 0.516,
+        "latentsync_load": 14.236,
+        "codeformer_load": 0.671,
+        "ls_master_25fps": 11.322,
+        "ls_master_decode": 1.033,
+        "face_classify": 15.082,
+        "latentsync": 0.0,
+        "latentsync_verify": 0.0,
+        "codeformer": 0.0,
+        "final_assembly": 13.544,
+        "total": 267.237
+      },
+      "wall_s_per_video_min": 144.63
+    },
+    "peak_vram_nvsmi_mib": 8252,
+    "validation": {
+      "pass": true,
+      "checks": {
+        "output_exists_nonempty": true,
+        "output_has_video_audio": true,
+        "duration_within_tolerance": true,
+        "resolution_preserved": true,
+        "all_units_have_tts_and_translation": true,
+        "frame_count_preserved": true,
+        "output_frames_decodable_no_blank": true
+      },
+      "duration_delta_s": 0.0533,
+      "tolerance_s": 0.15,
+      "frames_written": 2773,
+      "output_frame_check": {
+        "decoded_frames": 2773,
+        "expected_frames": 2773,
+        "blank_frames": 0,
+        "undecodable_frames": 0,
+        "pass": true
+      },
+      "output_meta": {
+        "duration_s": 110.92,
+        "size_bytes": 36689793
+      },
+      "output_video": {
+        "codec": "h264",
+        "profile": "High",
+        "width": 464,
+        "height": 848,
+        "r_frame_rate": "25/1",
+        "avg_frame_rate": "25/1",
+        "fps": 25.0,
+        "avg_fps": 25.0,
+        "vfr": false,
+        "pix_fmt": "yuv420p",
+        "nb_frames": "2773",
+        "duration_s": 110.92,
+        "bit_rate": "2594043"
+      }
+    },
+    "gpu": {
+      "name": "NVIDIA GeForce RTX 5090",
+      "capability": "sm_120"
+    },
+    "at": "2026-10-02T17:00:34Z",
+    "syncnet": {
+      "status": "N/A_NO_FACE",
+      "confidence": null,
+      "av_offset_frames": null,
+      "original_confidence": null,
+      "original_av_offset_frames": null,
+      "confidence_delta": null,
+      "reason": "SyncNet/S3FD cannot obtain a face track (no face in content: VALID_FACE=0, LatentSync segments=0)"
+    },
+    "coverage": {
+      "orig_speech_s": 56.9,
+      "dub_speech_s": 49.7,
+      "overlap_s": 33.7,
+      "iou": 0.4623,
+      "orig_without_dub_s": 23.2,
+      "dub_outside_orig_s": 16.0,
+      "orig_bursts": 29,
+      "bursts_covered_lt_50pct": 12,
+      "bursts_uncovered": 8,
+      "per_burst": [
+        {
+          "burst": [
+            1.0,
+            3.5
+          ],
+          "seconds": 2.5,
+          "covered_fraction": 0.88
+        },
+        {
+          "burst": [
+            5.1,
+            6.0
+          ],
+          "seconds": 0.9,
+          "covered_fraction": 1.0
+        },
+        {
+          "burst": [
+            6.7,
+            10.4
+          ],
+          "seconds": 3.7,
+          "covered_fraction": 0.919
+        },
+        {
+          "burst": [
+            11.5,
+            12.9
+          ],
+          "seconds": 1.4,
+          "covered_fraction": 1.0
+        },
+        {
+          "burst": [
+            13.1,
+            14.4
+          ],
+          "seconds": 1.3,
+          "covered_fraction": 1.0
+        },
+        {
+          "burst": [
+            14.6,
+            15.6
+          ],
+          "seconds": 1.0,
+          "covered_fraction": 0.0
+        },
+        {
+          "burst": [
+            16.4,
+            18.0
+          ],
+          "seconds": 1.6,
+          "covered_fraction": 0.0
+        },
+        {
+          "burst": [
+            19.0,
+            22.0
+          ],
+          "seconds": 3.0,
+          "covered_fraction": 0.333
+        },
+        {
+          "burst": [
+            24.0,
+            24.9
+          ],
+          "seconds": 0.9,
+          "covered_fraction": 0.222
+        },
+        {
+          "burst": [
+            25.6,
+            26.8
+          ],
+          "seconds": 1.2,
+          "covered_fraction": 0.0
+        },
+        {
+          "burst": [
+            28.7,
+            30.8
+          ],
+          "seconds": 2.1,
+          "covered_fraction": 0.619
+        },
+        {
+          "burst": [
+            39.0,
+            39.5
+          ],
+          "seconds": 0.5,
+          "covered_fraction": 0.0
+        },
+        {
+          "burst": [
+            40.3,
+            41.8
+          ],
+          "seconds": 1.5,
+          "covered_fraction": 0.0
+        },
+        {
+          "burst": [
+            43.2,
+            46.0
+          ],
+          "seconds": 2.8,
+          "covered_fraction": 0.786
+        },
+        {
+          "burst": [
+            47.3,
+            48.3
+          ],
+          "seconds": 1.0,
+          "covered_fraction": 0.9
+        },
+        {
+          "burst": [
+            49.6,
+            50.6
+          ],
+          "seconds": 1.0,
+          "covered_fraction": 0.0
+        },
+        {
+          "burst": [
+            51.0,
+            51.6
+          ],
+          "seconds": 0.6,
+          "covered_fraction": 1.0
+        },
+        {
+          "burst": [
+            57.9,
+            59.8
+          ],
+          "seconds": 1.9,
+          "covered_fraction": 0.0
+        },
+        {
+          "burst": [
+            65.5,
+            68.9
+          ],
+          "seconds": 3.4,
+          "covered_fraction": 0.0
+        },
+        {
+          "burst": [
+            69.9,
+            74.7
+          ],
+          "seconds": 4.8,
+          "covered_fraction": 0.729
+        },
+        {
+          "burst": [
+            77.6,
+            79.5
+          ],
+          "seconds": 1.9,
+          "covered_fraction": 1.0
+        },
+        {
+          "burst": [
+            80.7,
+            83.8
+          ],
+          "seconds": 3.1,
+          "covered_fraction": 0.903
+        },
+        {
+          "burst": [
+            84.3,
+            86.0
+          ],
+          "seconds": 1.7,
+          "covered_fraction": 0.765
+        },
+        {
+          "burst": [
+            88.2,
+            89.5
+          ],
+          "seconds": 1.3,
+          "covered_fraction": 0.846
+        },
+        {
+          "burst": [
+            94.2,
+            97.1
+          ],
+          "seconds": 2.9,
+          "covered_fraction": 0.517
+        },
+        {
+          "burst": [
+            99.0,
+            101.5
+          ],
+          "seconds": 2.5,
+          "covered_fraction": 0.8
+        },
+        {
+          "burst": [
+            101.6,
+            105.0
+          ],
+          "seconds": 3.4,
+          "covered_fraction": 0.912
+        },
+        {
+          "burst": [
+            106.0,
+            107.5
+          ],
+          "seconds": 1.5,
+          "covered_fraction": 0.4
+        },
+        {
+          "burst": [
+            108.3,
+            109.8
+          ],
+          "seconds": 1.5,
+          "covered_fraction": 0.333
+        }
+      ]
+    }
+  },
+  "units": [
+    {
+      "id": 0,
+      "speaker": "SPEAKER_00",
+      "start": 0.0,
+      "end": 9.36,
+      "text": "также на территории у нас банный комплекс все готово к первым парением через 3-4 дня буквально",
+      "translation": "Also on our premises, we have a bath complex ready for the first steam bath in just 3-4 days literally.",
+      "translation_fitted": null,
+      "parts": 3,
+      "tts_s": 8.28,
+      "slot_s": 9.34,
+      "ratio": 0.8865,
+      "atempo_max": 1.15,
+      "atempos": [
+        1.0,
+        1.15,
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0,
+        0.0,
+        0.054
+      ],
+      "split": "qwen",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0.012
+    },
+    {
+      "id": 1,
+      "speaker": "SPEAKER_00",
+      "start": 9.36,
+      "end": 20.94,
+      "text": "уже тут начнутся парения сейчас покажу бассейн вот такие вот у нас тут разные штуки зона для",
+      "translation": "already there will be floatations now I'll show the pool it's something like this we have different things here zone for",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 5.4,
+      "slot_s": 11.56,
+      "ratio": 0.4671,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.065
+      ],
+      "split": "single_fallback",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 2,
+      "speaker": "SPEAKER_00",
+      "start": 20.94,
+      "end": 29.32,
+      "text": "переодевания бочки шезлонги здесь у нас",
+      "translation": "barrel costumes loungers here we have",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 3.68,
+      "slot_s": 8.36,
+      "ratio": 0.4402,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.047
+      ],
+      "split": "qwen",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 3,
+      "speaker": "SPEAKER_00",
+      "start": 29.32,
+      "end": 43.6,
+      "text": "финская сауна покажу русскую баню русская",
+      "translation": "Finnish sauna, show Russian banya, Russian",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 4.04,
+      "slot_s": 14.26,
+      "ratio": 0.2833,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.214
+      ],
+      "split": "qwen",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 4,
+      "speaker": "SPEAKER_00",
+      "start": 43.6,
+      "end": 50.26,
+      "text": "баня как положено на дровах печка так все выглядит какой запах здесь",
+      "translation": "banya as it should be on wood stove so everything looks how does the smell here",
+      "translation_fitted": null,
+      "parts": 2,
+      "tts_s": 5.36,
+      "slot_s": 6.66,
+      "ratio": 0.8048,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0,
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.133,
+        0.074
+      ],
+      "split": "qwen",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 5,
+      "speaker": "SPEAKER_00",
+      "start": 50.94,
+      "end": 70.66,
+      "text": "хороший есть еще у нас второй этаж это также все входит в инфраструктуру комплекса конечно",
+      "translation": "good there is also another one for us on the second floor this also all includes the infrastructure of the complex of course",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 6.48,
+      "slot_s": 19.7,
+      "ratio": 0.3289,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.015
+      ],
+      "split": "single_fallback",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 6,
+      "speaker": "SPEAKER_00",
+      "start": 70.66,
+      "end": 79.28,
+      "text": "за банный комплекс за эти процедуры все нужно будет платить ну это точно вас не разорит то есть",
+      "translation": "for the bath complex for these procedures you will have to pay, well this definitely won't bankrupt you that is",
+      "translation_fitted": null,
+      "parts": 2,
+      "tts_s": 7.08,
+      "slot_s": 8.62,
+      "ratio": 0.8213,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0,
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.027,
+        0.0
+      ],
+      "split": "qwen",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 7,
+      "speaker": "SPEAKER_00",
+      "start": 79.98,
+      "end": 80.92,
+      "text": "все мы хотим",
+      "translation": "we all want",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 1.4,
+      "slot_s": 0.94,
+      "ratio": 1.4894,
+      "atempo_max": 1.2,
+      "atempos": [
+        1.2
+      ],
+      "retried": 1,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0
+      ],
+      "split": "single",
+      "fit": [
+        "kept"
+      ],
+      "cut_s": 0.252,
+      "overflow_s": 0.252
+    },
+    {
+      "id": 8,
+      "speaker": "SPEAKER_00",
+      "start": 80.94,
+      "end": 89.26,
+      "text": "в бане все мы платим за это деньги и хамам также здесь есть массажная комната",
+      "translation": "In the sauna, we all pay for this money, and the hammam also has a massage room here.",
+      "translation_fitted": null,
+      "parts": 3,
+      "tts_s": 6.36,
+      "slot_s": 8.32,
+      "ratio": 0.7644,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "retried": 1,
+      "bad_final": 0,
+      "qa_scores": [
+        0.152,
+        0.125,
+        0.281
+      ],
+      "split": "qwen",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 9,
+      "speaker": "SPEAKER_00",
+      "start": 94.16,
+      "end": 96.76,
+      "text": "холодильничек и вот здесь такое место для",
+      "translation": "refrigerator and here is a place for",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 5.68,
+      "slot_s": 2.6,
+      "ratio": 2.1846,
+      "atempo_max": 1.15,
+      "atempos": [
+        1.15
+      ],
+      "retried": 1,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0.009,
+      "overflow_s": 0.009
+    },
+    {
+      "id": 10,
+      "speaker": "SPEAKER_00",
+      "start": 98.78,
+      "end": 106.76,
+      "text": "распития чая или минералочки зона отдыха также лежачки вот такая вот у нас интересная баня сауна",
+      "translation": "zone of tea or mineral water drinking, also some lying areas. This is how our interesting bath sauna looks.",
+      "translation_fitted": "zone of tea or mineral water drinking, also some lying areas. This is how our interesting bath sauna looks.",
+      "parts": 1,
+      "tts_s": 6.36,
+      "slot_s": 7.96,
+      "ratio": 0.799,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.134
+      ],
+      "split": "qwen",
+      "fit": [
+        "merge_parts"
+      ],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 11,
+      "speaker": "SPEAKER_00",
+      "start": 106.76,
+      "end": 109.56,
+      "text": "хамам ну и все это пространство",
+      "translation": "hamam and all this space",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 2.28,
+      "slot_s": 2.8,
+      "ratio": 0.8143,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.175
+      ],
+      "split": "qwen",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    }
+  ]
+}

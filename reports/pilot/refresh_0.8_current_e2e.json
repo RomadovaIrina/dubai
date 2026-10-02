@@ -1,0 +1,2410 @@
+{
+  "task": "0.8",
+  "closed": true,
+  "verdict": "CLOSED — 5/5 final E2E outputs valid; SyncNet measured on 4/5, 1 N/A (no face); contract threshold still UNDECIDED",
+  "expected_videos": 5,
+  "found_videos": 5,
+  "pipeline_valid": 5,
+  "scoreable": 4,
+  "not_applicable_no_face": 1,
+  "failed": 0,
+  "confidence": {
+    "mean": 4.2725,
+    "median": 3.92,
+    "min": 2.51,
+    "max": 6.74
+  },
+  "abs_av_offset_frames": {
+    "mean": 0,
+    "median": 0.0,
+    "max": 0
+  },
+  "worst_by_confidence": "05_final.mp4",
+  "worst_by_abs_offset": "01_final.mp4",
+  "rows": [
+    {
+      "name": "01_final.mp4",
+      "key": "01",
+      "meta": {
+        "duration_s": 101.68,
+        "fps": 25.0,
+        "frames": 2542,
+        "width": 480,
+        "height": 848,
+        "codec": "h264"
+      },
+      "pipeline": {
+        "manifest": true,
+        "pipeline_valid": true,
+        "codeformer": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        },
+        "codeformer_desc": "optimized w=1.0 batch 8 fp16 (insightface landmarks)",
+        "alignment_mode": "burst",
+        "dubbed_audio": true,
+        "translation_quant": "q8_0",
+        "frame_classes": {
+          "VALID_FACE": 261,
+          "SMALL_FACE": 177,
+          "NO_FACE": 1996,
+          "NO_SPEECH": 108
+        },
+        "latentsync_segments": 1,
+        "latentsync_seconds": 10.4,
+        "speech_gate": true,
+        "video_backend": "optimized",
+        "has_face": true
+      },
+      "confidence": 6.74,
+      "av_offset_frames": 0,
+      "eval_s": 80.325,
+      "status": "PASS",
+      "measurable": true,
+      "original_confidence": 5.36,
+      "original_av_offset_frames": 1,
+      "confidence_delta": 1.38,
+      "abs_offset_delta_frames": -1
+    },
+    {
+      "name": "02_final.mp4",
+      "key": "02",
+      "meta": {
+        "duration_s": 110.92,
+        "fps": 25.0,
+        "frames": 2773,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "pipeline": {
+        "manifest": true,
+        "pipeline_valid": true,
+        "codeformer": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        },
+        "codeformer_desc": "optimized w=1.0 batch 8 fp16 (insightface landmarks)",
+        "alignment_mode": "burst",
+        "dubbed_audio": true,
+        "translation_quant": "q8_0",
+        "frame_classes": {
+          "VALID_FACE": 0,
+          "SMALL_FACE": 0,
+          "NO_FACE": 2191,
+          "NO_SPEECH": 582
+        },
+        "latentsync_segments": 0,
+        "latentsync_seconds": 0.0,
+        "speech_gate": true,
+        "video_backend": "optimized",
+        "has_face": false
+      },
+      "status": "N/A_NO_FACE",
+      "measurable": false,
+      "reason": "SyncNet/S3FD cannot obtain a face track (no face in content: VALID_FACE=0, LatentSync segments=0)",
+      "error": "RuntimeError: SyncNet evaluation failed for /tmp/pilot_refresh/final/02_final.mp4:\nVideoManager is deprecated and will be removed.\n`base_timecode` argument is deprecated and has no effect.\nTraceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/workspace/dub/dubai/third_party/latentsync/eval/eval_sync_conf.py\", line 77,"
+    },
+    {
+      "name": "03_final.mp4",
+      "key": "03",
+      "meta": {
+        "duration_s": 90.4,
+        "fps": 25.0,
+        "frames": 2260,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "pipeline": {
+        "manifest": true,
+        "pipeline_valid": true,
+        "codeformer": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        },
+        "codeformer_desc": "optimized w=1.0 batch 8 fp16 (insightface landmarks)",
+        "alignment_mode": "burst",
+        "dubbed_audio": true,
+        "translation_quant": "q8_0",
+        "frame_classes": {
+          "VALID_FACE": 1927,
+          "SMALL_FACE": 0,
+          "NO_FACE": 0,
+          "NO_SPEECH": 333
+        },
+        "latentsync_segments": 9,
+        "latentsync_seconds": 77.08,
+        "speech_gate": true,
+        "video_backend": "optimized",
+        "has_face": true
+      },
+      "confidence": 5.02,
+      "av_offset_frames": 0,
+      "eval_s": 96.946,
+      "status": "PASS",
+      "measurable": true,
+      "original_confidence": 4.89,
+      "original_av_offset_frames": 2,
+      "confidence_delta": 0.13,
+      "abs_offset_delta_frames": -2
+    },
+    {
+      "name": "04_final.mp4",
+      "key": "04",
+      "meta": {
+        "duration_s": 53.96,
+        "fps": 25.0,
+        "frames": 1349,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "pipeline": {
+        "manifest": true,
+        "pipeline_valid": true,
+        "codeformer": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        },
+        "codeformer_desc": "optimized w=1.0 batch 8 fp16 (insightface landmarks)",
+        "alignment_mode": "burst",
+        "dubbed_audio": true,
+        "translation_quant": "q8_0",
+        "frame_classes": {
+          "VALID_FACE": 1044,
+          "SMALL_FACE": 0,
+          "NO_FACE": 0,
+          "NO_SPEECH": 305
+        },
+        "latentsync_segments": 9,
+        "latentsync_seconds": 41.76,
+        "speech_gate": true,
+        "video_backend": "optimized",
+        "has_face": true
+      },
+      "confidence": 2.82,
+      "av_offset_frames": 0,
+      "eval_s": 57.989,
+      "status": "PASS",
+      "measurable": true,
+      "original_confidence": 3.24,
+      "original_av_offset_frames": 2,
+      "confidence_delta": -0.42,
+      "abs_offset_delta_frames": -2
+    },
+    {
+      "name": "05_final.mp4",
+      "key": "05",
+      "meta": {
+        "duration_s": 52.44,
+        "fps": 25.0,
+        "frames": 1311,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "pipeline": {
+        "manifest": true,
+        "pipeline_valid": true,
+        "codeformer": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        },
+        "codeformer_desc": "optimized w=1.0 batch 8 fp16 (insightface landmarks)",
+        "alignment_mode": "burst",
+        "dubbed_audio": true,
+        "translation_quant": "q8_0",
+        "frame_classes": {
+          "VALID_FACE": 914,
+          "SMALL_FACE": 94,
+          "NO_FACE": 0,
+          "NO_SPEECH": 303
+        },
+        "latentsync_segments": 8,
+        "latentsync_seconds": 34.72,
+        "speech_gate": true,
+        "video_backend": "optimized",
+        "has_face": true
+      },
+      "confidence": 2.51,
+      "av_offset_frames": 0,
+      "eval_s": 55.935,
+      "status": "PASS",
+      "measurable": true,
+      "original_confidence": 1.71,
+      "original_av_offset_frames": 2,
+      "confidence_delta": 0.8,
+      "abs_offset_delta_frames": -2
+    }
+  ],
+  "originals": [
+    {
+      "name": "01.MP4",
+      "key": "01",
+      "meta": {
+        "duration_s": 101.666667,
+        "fps": 25.003278688524592,
+        "frames": 2542,
+        "width": 480,
+        "height": 848,
+        "codec": "h264"
+      },
+      "pipeline": {
+        "manifest": false
+      },
+      "confidence": 5.36,
+      "av_offset_frames": 1,
+      "eval_s": 75.902,
+      "status": "PASS",
+      "measurable": true
+    },
+    {
+      "name": "02.mp4",
+      "key": "02",
+      "meta": {
+        "duration_s": 110.866667,
+        "fps": 29.981960312687914,
+        "frames": 3324,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "pipeline": {
+        "manifest": false
+      },
+      "status": "FAIL",
+      "measurable": false,
+      "reason": "SyncNet evaluation failed on content that contains faces",
+      "error": "RuntimeError: SyncNet evaluation failed for /workspace/test_videos/02.mp4:\nVideoManager is deprecated and will be removed.\n`base_timecode` argument is deprecated and has no effect.\nTraceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/workspace/dub/dubai/third_party/latentsync/eval/eval_sync_conf.py\", line 77, in <mod"
+    },
+    {
+      "name": "03.mp4",
+      "key": "03",
+      "meta": {
+        "duration_s": 90.333333,
+        "fps": 30.0,
+        "frames": 2710,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "pipeline": {
+        "manifest": false
+      },
+      "confidence": 4.89,
+      "av_offset_frames": 2,
+      "eval_s": 98.162,
+      "status": "PASS",
+      "measurable": true
+    },
+    {
+      "name": "04.mp4",
+      "key": "04",
+      "meta": {
+        "duration_s": 53.9,
+        "fps": 30.0,
+        "frames": 1617,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "pipeline": {
+        "manifest": false
+      },
+      "confidence": 3.24,
+      "av_offset_frames": 2,
+      "eval_s": 66.068,
+      "status": "PASS",
+      "measurable": true
+    },
+    {
+      "name": "05.mp4",
+      "key": "05",
+      "meta": {
+        "duration_s": 52.366667,
+        "fps": 29.92361553150859,
+        "frames": 1567,
+        "width": 464,
+        "height": 848,
+        "codec": "h264"
+      },
+      "pipeline": {
+        "manifest": false
+      },
+      "confidence": 1.71,
+      "av_offset_frames": 2,
+      "eval_s": 59.09,
+      "status": "PASS",
+      "measurable": true
+    }
+  ],
+  "gpu": {
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.126.09",
+    "name": "NVIDIA GeForce RTX 5090",
+    "capability": "sm_120",
+    "total_vram_bytes": 33668857856,
+    "total_vram_gib": 31.36,
+    "free_vram_gib": 30.86,
+    "multi_processor_count": 170,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "syncnet": {
+    "evaluator": "third_party/latentsync/eval/eval_sync_conf.py (upstream, S3FD face tracker)",
+    "model": "/workspace/dub/dubai/third_party/latentsync/checkpoints/auxiliary/syncnet_v2.model"
+  },
+  "semantics": {
+    "dataset": "five real customer/content videos, FINAL dubbed E2E outputs",
+    "lipsync_processing": "optimized face-aware LatentSync (speech gate, RetinaFace routing), CodeFormer optimized w=1.0 batch 8 fp16 (insightface landmarks); audio alignment burst",
+    "audio": "current TTS intelligibility pipeline + burst alignment + optimized CodeFormer",
+    "config": "run_clean_pipeline_05.py --target-lang en --alignment burst --video-backend optimized --codeformer optimized (runner defaults, HEAD afa9b0d5); see reports/pilot/PIPELINE_REFRESH.md",
+    "no_face_rule": "content without any face cannot be scored by SyncNet; recorded as N/A_NO_FACE, not a pipeline failure",
+    "old_blocker": "'LatentSync fails on 01/02/05 with Face not detected' is NO LONGER RELEVANT: face-aware routing passes such frames through"
+  },
+  "contract_threshold": "UNDECIDED — spec does not define aggregation rule",
+  "at": "2026-10-02T18:01:09Z",
+  "informational_from_manifests": {
+    "01": {
+      "source_duration_s": 101.666667,
+      "source_lang": "ru",
+      "units": 29,
+      "speakers": [
+        "SPEAKER_00"
+      ],
+      "translation": {
+        "quant": "q8_0",
+        "tokens": {
+          "prompt_tokens": 1505,
+          "completion_tokens": 323
+        },
+        "burst_split": {
+          "single": 18,
+          "qwen": 11,
+          "single_fallback": 0,
+          "merged_parts": 9,
+          "parts_total": 35
+        },
+        "number_retries": 0,
+        "fitted_units": 3
+      },
+      "tts": {
+        "dtype": "float16",
+        "guard_violations": 0,
+        "parts": 35,
+        "attempts": 42,
+        "retried_parts": 3,
+        "retry_success": 3,
+        "retry_success_rate": 1.0,
+        "final_bad_parts": 0,
+        "fit_parts_rewritten": 0,
+        "fit_parts_merged": 3,
+        "fit_rewrite_rejected": 0,
+        "fit_rounds_used": 4,
+        "gen_seconds": 52.4,
+        "qa_seconds": 7.98,
+        "qa": {
+          "enabled": true,
+          "retries": 2,
+          "low_temp": 0.6
+        }
+      },
+      "alignment": {
+        "mode": "burst",
+        "atempo_cap": 1.15,
+        "hard_cap": 1.2,
+        "units_slot_fallback": 0,
+        "groups": 32,
+        "atempo_max": 1.2,
+        "atempo_min": 1.0,
+        "atempo_mean": 1.0329,
+        "atempo_median": 1.0,
+        "gt_1_15": 1,
+        "gt_1_25": 0,
+        "gt_1_3": 0,
+        "slowed_lt_1": 0,
+        "overflow_groups": 0,
+        "cut_groups": 0,
+        "atempo_histogram": {
+          "<1 (slowed)": 0,
+          "1.0": 23,
+          "(1.0,1.05]": 2,
+          "(1.05,1.10]": 0,
+          "(1.10,1.15]": 6,
+          "(1.15,1.20]": 1,
+          ">1.20": 0
+        }
+      },
+      "video": {
+        "backend": "optimized",
+        "frame_classes": {
+          "VALID_FACE": 261,
+          "SMALL_FACE": 177,
+          "NO_FACE": 1996,
+          "NO_SPEECH": 108
+        },
+        "by_action": {
+          "LATENT_SYNC": {
+            "segments": 1,
+            "frames": 260,
+            "seconds": 10.4
+          },
+          "PASS_THROUGH": {
+            "segments": 5,
+            "frames": 2282,
+            "seconds": 91.28
+          }
+        },
+        "master_frames": 2542,
+        "latentsync_seconds_of_video": 10.4,
+        "ls_fraction": 0.1023,
+        "latentsync_segments": 1,
+        "ls_failed_segments": 0,
+        "verify_splits": 1,
+        "latentsync_stage_s": 76.025,
+        "latentsync_verify_s": 12.421,
+        "latentsync_s_per_video_min": 44.87,
+        "codeformer": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        },
+        "codeformer_stage_s": 7.85,
+        "codeformer_faces": 260,
+        "codeformer_eligible_frames": 260,
+        "codeformer_fallback_detections": 0,
+        "codeformer_s_per_video_min": 4.63,
+        "codeformer_torch_peak_mib": 9715,
+        "speech_gate": {
+          "enabled": true,
+          "margin_s": 0.24,
+          "merge_gap_s": 0.6,
+          "crossfade_frames": 4,
+          "source_speech_seconds": 91.9,
+          "dubbed_speech_seconds": 78.4,
+          "gate_seconds": 97.34,
+          "gate_fraction": 0.9574
+        }
+      },
+      "timing": {
+        "total_wall_s": 382.127,
+        "stage_seconds": {
+          "audio_extract": 0.611,
+          "vad": 5.294,
+          "asr": 14.334,
+          "diarization": 14.015,
+          "translation_load": 1.014,
+          "translation": 57.856,
+          "translation_split": 61.8,
+          "tts_load": 7.608,
+          "qa_load": 1.829,
+          "tts": 67.808,
+          "alignment": 0.668,
+          "dubbed_track": 2.544,
+          "speech_gate": 0.858,
+          "face_router_load": 0.332,
+          "latentsync_load": 10.065,
+          "codeformer_load": 0.696,
+          "ls_master_25fps": 9.351,
+          "ls_master_decode": 0.943,
+          "face_classify": 15.437,
+          "latentsync": 76.025,
+          "latentsync_verify": 12.421,
+          "codeformer": 7.85,
+          "final_assembly": 11.512,
+          "total": 382.127
+        },
+        "wall_s_per_video_min": 225.52
+      },
+      "peak_vram_nvsmi_mib": 25178,
+      "validation": {
+        "pass": true,
+        "checks": {
+          "output_exists_nonempty": true,
+          "output_has_video_audio": true,
+          "duration_within_tolerance": true,
+          "resolution_preserved": true,
+          "all_units_have_tts_and_translation": true,
+          "frame_count_preserved": true,
+          "output_frames_decodable_no_blank": true
+        },
+        "duration_delta_s": 0.0133,
+        "tolerance_s": 0.15,
+        "frames_written": 2542,
+        "output_frame_check": {
+          "decoded_frames": 2542,
+          "expected_frames": 2542,
+          "blank_frames": 0,
+          "undecodable_frames": 0,
+          "pass": true
+        },
+        "output_meta": {
+          "duration_s": 101.68,
+          "size_bytes": 22765705
+        },
+        "output_video": {
+          "codec": "h264",
+          "profile": "High",
+          "width": 480,
+          "height": 848,
+          "r_frame_rate": "25/1",
+          "avg_frame_rate": "25/1",
+          "fps": 25.0,
+          "avg_fps": 25.0,
+          "vfr": false,
+          "pix_fmt": "yuv420p",
+          "nb_frames": "2542",
+          "duration_s": 101.68,
+          "bit_rate": "1700992"
+        }
+      },
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5090",
+        "capability": "sm_120"
+      },
+      "at": "2026-10-02T16:56:04Z",
+      "syncnet": {
+        "status": "PASS",
+        "confidence": 6.74,
+        "av_offset_frames": 0,
+        "original_confidence": 5.36,
+        "original_av_offset_frames": 1,
+        "confidence_delta": 1.38,
+        "reason": null
+      },
+      "coverage": {
+        "orig_speech_s": 91.9,
+        "dub_speech_s": 78.4,
+        "overlap_s": 75.3,
+        "iou": 0.7926,
+        "orig_without_dub_s": 16.6,
+        "dub_outside_orig_s": 3.1,
+        "orig_bursts": 25,
+        "bursts_covered_lt_50pct": 0,
+        "bursts_uncovered": 0,
+        "per_burst": [
+          {
+            "burst": [
+              0.0,
+              1.7
+            ],
+            "seconds": 1.7,
+            "covered_fraction": 0.941
+          },
+          {
+            "burst": [
+              1.9,
+              9.8
+            ],
+            "seconds": 7.9,
+            "covered_fraction": 0.797
+          },
+          {
+            "burst": [
+              9.9,
+              14.3
+            ],
+            "seconds": 4.4,
+            "covered_fraction": 0.773
+          },
+          {
+            "burst": [
+              14.4,
+              16.8
+            ],
+            "seconds": 2.4,
+            "covered_fraction": 0.708
+          },
+          {
+            "burst": [
+              17.2,
+              17.9
+            ],
+            "seconds": 0.7,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              18.1,
+              26.9
+            ],
+            "seconds": 8.8,
+            "covered_fraction": 0.864
+          },
+          {
+            "burst": [
+              27.2,
+              30.2
+            ],
+            "seconds": 3.0,
+            "covered_fraction": 0.667
+          },
+          {
+            "burst": [
+              30.4,
+              33.0
+            ],
+            "seconds": 2.6,
+            "covered_fraction": 0.885
+          },
+          {
+            "burst": [
+              33.3,
+              34.6
+            ],
+            "seconds": 1.3,
+            "covered_fraction": 0.923
+          },
+          {
+            "burst": [
+              34.8,
+              36.0
+            ],
+            "seconds": 1.2,
+            "covered_fraction": 0.917
+          },
+          {
+            "burst": [
+              36.2,
+              37.7
+            ],
+            "seconds": 1.5,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              37.8,
+              40.6
+            ],
+            "seconds": 2.8,
+            "covered_fraction": 0.607
+          },
+          {
+            "burst": [
+              40.7,
+              43.4
+            ],
+            "seconds": 2.7,
+            "covered_fraction": 0.926
+          },
+          {
+            "burst": [
+              43.6,
+              50.4
+            ],
+            "seconds": 6.8,
+            "covered_fraction": 0.75
+          },
+          {
+            "burst": [
+              50.8,
+              51.6
+            ],
+            "seconds": 0.8,
+            "covered_fraction": 0.875
+          },
+          {
+            "burst": [
+              51.8,
+              57.1
+            ],
+            "seconds": 5.3,
+            "covered_fraction": 0.925
+          },
+          {
+            "burst": [
+              57.2,
+              57.5
+            ],
+            "seconds": 0.3,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              57.7,
+              61.5
+            ],
+            "seconds": 3.8,
+            "covered_fraction": 0.605
+          },
+          {
+            "burst": [
+              61.8,
+              63.9
+            ],
+            "seconds": 2.1,
+            "covered_fraction": 0.619
+          },
+          {
+            "burst": [
+              64.2,
+              65.8
+            ],
+            "seconds": 1.6,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              66.0,
+              74.4
+            ],
+            "seconds": 8.4,
+            "covered_fraction": 0.762
+          },
+          {
+            "burst": [
+              74.6,
+              78.6
+            ],
+            "seconds": 4.0,
+            "covered_fraction": 0.825
+          },
+          {
+            "burst": [
+              78.8,
+              81.5
+            ],
+            "seconds": 2.7,
+            "covered_fraction": 0.815
+          },
+          {
+            "burst": [
+              81.8,
+              89.7
+            ],
+            "seconds": 7.9,
+            "covered_fraction": 0.861
+          },
+          {
+            "burst": [
+              89.9,
+              97.1
+            ],
+            "seconds": 7.2,
+            "covered_fraction": 0.944
+          }
+        ]
+      }
+    },
+    "02": {
+      "source_duration_s": 110.866667,
+      "source_lang": "ru",
+      "units": 12,
+      "speakers": [
+        "SPEAKER_00"
+      ],
+      "translation": {
+        "quant": "q8_0",
+        "tokens": {
+          "prompt_tokens": 652,
+          "completion_tokens": 192
+        },
+        "burst_split": {
+          "single": 2,
+          "qwen": 8,
+          "single_fallback": 2,
+          "merged_parts": 7,
+          "parts_total": 19
+        },
+        "number_retries": 0,
+        "fitted_units": 1
+      },
+      "tts": {
+        "dtype": "float16",
+        "guard_violations": 0,
+        "parts": 19,
+        "attempts": 24,
+        "retried_parts": 3,
+        "retry_success": 3,
+        "retry_success_rate": 1.0,
+        "final_bad_parts": 0,
+        "fit_parts_rewritten": 0,
+        "fit_parts_merged": 1,
+        "fit_rewrite_rejected": 0,
+        "fit_rounds_used": 2,
+        "gen_seconds": 32.25,
+        "qa_seconds": 4.56,
+        "qa": {
+          "enabled": true,
+          "retries": 2,
+          "low_temp": 0.6
+        }
+      },
+      "alignment": {
+        "mode": "burst",
+        "atempo_cap": 1.15,
+        "hard_cap": 1.2,
+        "units_slot_fallback": 0,
+        "groups": 18,
+        "atempo_max": 1.2,
+        "atempo_min": 1.0,
+        "atempo_mean": 1.0278,
+        "atempo_median": 1.0,
+        "gt_1_15": 1,
+        "gt_1_25": 0,
+        "gt_1_3": 0,
+        "slowed_lt_1": 0,
+        "overflow_groups": 1,
+        "cut_groups": 1,
+        "atempo_histogram": {
+          "<1 (slowed)": 0,
+          "1.0": 15,
+          "(1.0,1.05]": 0,
+          "(1.05,1.10]": 0,
+          "(1.10,1.15]": 2,
+          "(1.15,1.20]": 1,
+          ">1.20": 0
+        }
+      },
+      "video": {
+        "backend": "optimized",
+        "frame_classes": {
+          "VALID_FACE": 0,
+          "SMALL_FACE": 0,
+          "NO_FACE": 2191,
+          "NO_SPEECH": 582
+        },
+        "by_action": {
+          "PASS_THROUGH": {
+            "segments": 19,
+            "frames": 2773,
+            "seconds": 110.92
+          }
+        },
+        "master_frames": 2773,
+        "latentsync_seconds_of_video": 0.0,
+        "ls_fraction": 0.0,
+        "latentsync_segments": 0,
+        "ls_failed_segments": 0,
+        "verify_splits": 0,
+        "latentsync_stage_s": 0.0,
+        "latentsync_verify_s": 0.0,
+        "latentsync_s_per_video_min": 0.0,
+        "codeformer": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        },
+        "codeformer_stage_s": 0.0,
+        "codeformer_faces": 0,
+        "codeformer_eligible_frames": 0,
+        "codeformer_fallback_detections": 0,
+        "codeformer_s_per_video_min": 0.0,
+        "codeformer_torch_peak_mib": null,
+        "speech_gate": {
+          "enabled": true,
+          "margin_s": 0.24,
+          "merge_gap_s": 0.6,
+          "crossfade_frames": 4,
+          "source_speech_seconds": 56.9,
+          "dubbed_speech_seconds": 49.7,
+          "gate_seconds": 87.52,
+          "gate_fraction": 0.7894
+        }
+      },
+      "timing": {
+        "total_wall_s": 267.237,
+        "stage_seconds": {
+          "audio_extract": 0.474,
+          "vad": 4.442,
+          "asr": 9.488,
+          "diarization": 13.158,
+          "translation_load": 0.574,
+          "translation": 27.901,
+          "translation_split": 85.865,
+          "tts_load": 7.89,
+          "qa_load": 1.414,
+          "tts": 40.953,
+          "alignment": 0.271,
+          "dubbed_track": 2.258,
+          "speech_gate": 1.225,
+          "face_router_load": 0.516,
+          "latentsync_load": 14.236,
+          "codeformer_load": 0.671,
+          "ls_master_25fps": 11.322,
+          "ls_master_decode": 1.033,
+          "face_classify": 15.082,
+          "latentsync": 0.0,
+          "latentsync_verify": 0.0,
+          "codeformer": 0.0,
+          "final_assembly": 13.544,
+          "total": 267.237
+        },
+        "wall_s_per_video_min": 144.63
+      },
+      "peak_vram_nvsmi_mib": 8252,
+      "validation": {
+        "pass": true,
+        "checks": {
+          "output_exists_nonempty": true,
+          "output_has_video_audio": true,
+          "duration_within_tolerance": true,
+          "resolution_preserved": true,
+          "all_units_have_tts_and_translation": true,
+          "frame_count_preserved": true,
+          "output_frames_decodable_no_blank": true
+        },
+        "duration_delta_s": 0.0533,
+        "tolerance_s": 0.15,
+        "frames_written": 2773,
+        "output_frame_check": {
+          "decoded_frames": 2773,
+          "expected_frames": 2773,
+          "blank_frames": 0,
+          "undecodable_frames": 0,
+          "pass": true
+        },
+        "output_meta": {
+          "duration_s": 110.92,
+          "size_bytes": 36689793
+        },
+        "output_video": {
+          "codec": "h264",
+          "profile": "High",
+          "width": 464,
+          "height": 848,
+          "r_frame_rate": "25/1",
+          "avg_frame_rate": "25/1",
+          "fps": 25.0,
+          "avg_fps": 25.0,
+          "vfr": false,
+          "pix_fmt": "yuv420p",
+          "nb_frames": "2773",
+          "duration_s": 110.92,
+          "bit_rate": "2594043"
+        }
+      },
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5090",
+        "capability": "sm_120"
+      },
+      "at": "2026-10-02T17:00:34Z",
+      "syncnet": {
+        "status": "N/A_NO_FACE",
+        "confidence": null,
+        "av_offset_frames": null,
+        "original_confidence": null,
+        "original_av_offset_frames": null,
+        "confidence_delta": null,
+        "reason": "SyncNet/S3FD cannot obtain a face track (no face in content: VALID_FACE=0, LatentSync segments=0)"
+      },
+      "coverage": {
+        "orig_speech_s": 56.9,
+        "dub_speech_s": 49.7,
+        "overlap_s": 33.7,
+        "iou": 0.4623,
+        "orig_without_dub_s": 23.2,
+        "dub_outside_orig_s": 16.0,
+        "orig_bursts": 29,
+        "bursts_covered_lt_50pct": 12,
+        "bursts_uncovered": 8,
+        "per_burst": [
+          {
+            "burst": [
+              1.0,
+              3.5
+            ],
+            "seconds": 2.5,
+            "covered_fraction": 0.88
+          },
+          {
+            "burst": [
+              5.1,
+              6.0
+            ],
+            "seconds": 0.9,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              6.7,
+              10.4
+            ],
+            "seconds": 3.7,
+            "covered_fraction": 0.919
+          },
+          {
+            "burst": [
+              11.5,
+              12.9
+            ],
+            "seconds": 1.4,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              13.1,
+              14.4
+            ],
+            "seconds": 1.3,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              14.6,
+              15.6
+            ],
+            "seconds": 1.0,
+            "covered_fraction": 0.0
+          },
+          {
+            "burst": [
+              16.4,
+              18.0
+            ],
+            "seconds": 1.6,
+            "covered_fraction": 0.0
+          },
+          {
+            "burst": [
+              19.0,
+              22.0
+            ],
+            "seconds": 3.0,
+            "covered_fraction": 0.333
+          },
+          {
+            "burst": [
+              24.0,
+              24.9
+            ],
+            "seconds": 0.9,
+            "covered_fraction": 0.222
+          },
+          {
+            "burst": [
+              25.6,
+              26.8
+            ],
+            "seconds": 1.2,
+            "covered_fraction": 0.0
+          },
+          {
+            "burst": [
+              28.7,
+              30.8
+            ],
+            "seconds": 2.1,
+            "covered_fraction": 0.619
+          },
+          {
+            "burst": [
+              39.0,
+              39.5
+            ],
+            "seconds": 0.5,
+            "covered_fraction": 0.0
+          },
+          {
+            "burst": [
+              40.3,
+              41.8
+            ],
+            "seconds": 1.5,
+            "covered_fraction": 0.0
+          },
+          {
+            "burst": [
+              43.2,
+              46.0
+            ],
+            "seconds": 2.8,
+            "covered_fraction": 0.786
+          },
+          {
+            "burst": [
+              47.3,
+              48.3
+            ],
+            "seconds": 1.0,
+            "covered_fraction": 0.9
+          },
+          {
+            "burst": [
+              49.6,
+              50.6
+            ],
+            "seconds": 1.0,
+            "covered_fraction": 0.0
+          },
+          {
+            "burst": [
+              51.0,
+              51.6
+            ],
+            "seconds": 0.6,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              57.9,
+              59.8
+            ],
+            "seconds": 1.9,
+            "covered_fraction": 0.0
+          },
+          {
+            "burst": [
+              65.5,
+              68.9
+            ],
+            "seconds": 3.4,
+            "covered_fraction": 0.0
+          },
+          {
+            "burst": [
+              69.9,
+              74.7
+            ],
+            "seconds": 4.8,
+            "covered_fraction": 0.729
+          },
+          {
+            "burst": [
+              77.6,
+              79.5
+            ],
+            "seconds": 1.9,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              80.7,
+              83.8
+            ],
+            "seconds": 3.1,
+            "covered_fraction": 0.903
+          },
+          {
+            "burst": [
+              84.3,
+              86.0
+            ],
+            "seconds": 1.7,
+            "covered_fraction": 0.765
+          },
+          {
+            "burst": [
+              88.2,
+              89.5
+            ],
+            "seconds": 1.3,
+            "covered_fraction": 0.846
+          },
+          {
+            "burst": [
+              94.2,
+              97.1
+            ],
+            "seconds": 2.9,
+            "covered_fraction": 0.517
+          },
+          {
+            "burst": [
+              99.0,
+              101.5
+            ],
+            "seconds": 2.5,
+            "covered_fraction": 0.8
+          },
+          {
+            "burst": [
+              101.6,
+              105.0
+            ],
+            "seconds": 3.4,
+            "covered_fraction": 0.912
+          },
+          {
+            "burst": [
+              106.0,
+              107.5
+            ],
+            "seconds": 1.5,
+            "covered_fraction": 0.4
+          },
+          {
+            "burst": [
+              108.3,
+              109.8
+            ],
+            "seconds": 1.5,
+            "covered_fraction": 0.333
+          }
+        ]
+      }
+    },
+    "03": {
+      "source_duration_s": 90.333333,
+      "source_lang": "ru",
+      "units": 10,
+      "speakers": [
+        "SPEAKER_00"
+      ],
+      "translation": {
+        "quant": "q8_0",
+        "tokens": {
+          "prompt_tokens": 576,
+          "completion_tokens": 176
+        },
+        "burst_split": {
+          "single": 2,
+          "qwen": 7,
+          "single_fallback": 1,
+          "merged_parts": 6,
+          "parts_total": 21
+        },
+        "number_retries": 0,
+        "fitted_units": 2
+      },
+      "tts": {
+        "dtype": "float16",
+        "guard_violations": 0,
+        "parts": 21,
+        "attempts": 26,
+        "retried_parts": 2,
+        "retry_success": 1,
+        "retry_success_rate": 0.5,
+        "final_bad_parts": 1,
+        "fit_parts_rewritten": 0,
+        "fit_parts_merged": 2,
+        "fit_rewrite_rejected": 0,
+        "fit_rounds_used": 2,
+        "gen_seconds": 29.89,
+        "qa_seconds": 4.89,
+        "qa": {
+          "enabled": true,
+          "retries": 2,
+          "low_temp": 0.6
+        }
+      },
+      "alignment": {
+        "mode": "burst",
+        "atempo_cap": 1.15,
+        "hard_cap": 1.2,
+        "units_slot_fallback": 0,
+        "groups": 19,
+        "atempo_max": 1.15,
+        "atempo_min": 1.0,
+        "atempo_mean": 1.0152,
+        "atempo_median": 1.0,
+        "gt_1_15": 0,
+        "gt_1_25": 0,
+        "gt_1_3": 0,
+        "slowed_lt_1": 0,
+        "overflow_groups": 0,
+        "cut_groups": 0,
+        "atempo_histogram": {
+          "<1 (slowed)": 0,
+          "1.0": 17,
+          "(1.0,1.05]": 0,
+          "(1.05,1.10]": 0,
+          "(1.10,1.15]": 2,
+          "(1.15,1.20]": 0,
+          ">1.20": 0
+        }
+      },
+      "video": {
+        "backend": "optimized",
+        "frame_classes": {
+          "VALID_FACE": 1927,
+          "SMALL_FACE": 0,
+          "NO_FACE": 0,
+          "NO_SPEECH": 333
+        },
+        "by_action": {
+          "PASS_THROUGH": {
+            "segments": 10,
+            "frames": 333,
+            "seconds": 13.32
+          },
+          "LATENT_SYNC": {
+            "segments": 9,
+            "frames": 1927,
+            "seconds": 77.08
+          }
+        },
+        "master_frames": 2260,
+        "latentsync_seconds_of_video": 77.08,
+        "ls_fraction": 0.8527,
+        "latentsync_segments": 9,
+        "ls_failed_segments": 0,
+        "verify_splits": 0,
+        "latentsync_stage_s": 435.518,
+        "latentsync_verify_s": 22.803,
+        "latentsync_s_per_video_min": 289.27,
+        "codeformer": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        },
+        "codeformer_stage_s": 57.083,
+        "codeformer_faces": 1927,
+        "codeformer_eligible_frames": 1927,
+        "codeformer_fallback_detections": 0,
+        "codeformer_s_per_video_min": 37.91,
+        "codeformer_torch_peak_mib": 13113,
+        "speech_gate": {
+          "enabled": true,
+          "margin_s": 0.24,
+          "merge_gap_s": 0.6,
+          "crossfade_frames": 4,
+          "source_speech_seconds": 60.7,
+          "dubbed_speech_seconds": 48.3,
+          "gate_seconds": 76.813,
+          "gate_fraction": 0.8503
+        }
+      },
+      "timing": {
+        "total_wall_s": 746.174,
+        "stage_seconds": {
+          "audio_extract": 0.473,
+          "vad": 4.457,
+          "asr": 12.836,
+          "diarization": 11.123,
+          "translation_load": 1.11,
+          "translation": 30.953,
+          "translation_split": 81.535,
+          "tts_load": 7.679,
+          "qa_load": 1.819,
+          "tts": 39.313,
+          "alignment": 0.173,
+          "dubbed_track": 1.904,
+          "speech_gate": 0.647,
+          "face_router_load": 0.316,
+          "latentsync_load": 14.384,
+          "codeformer_load": 1.322,
+          "ls_master_25fps": 8.673,
+          "ls_master_decode": 1.319,
+          "face_classify": 11.812,
+          "latentsync": 435.518,
+          "latentsync_verify": 22.803,
+          "codeformer": 57.083,
+          "final_assembly": 9.613,
+          "total": 746.174
+        },
+        "wall_s_per_video_min": 495.61
+      },
+      "peak_vram_nvsmi_mib": 25156,
+      "validation": {
+        "pass": true,
+        "checks": {
+          "output_exists_nonempty": true,
+          "output_has_video_audio": true,
+          "duration_within_tolerance": true,
+          "resolution_preserved": true,
+          "all_units_have_tts_and_translation": true,
+          "frame_count_preserved": true,
+          "output_frames_decodable_no_blank": true
+        },
+        "duration_delta_s": 0.0667,
+        "tolerance_s": 0.15,
+        "frames_written": 2260,
+        "output_frame_check": {
+          "decoded_frames": 2260,
+          "expected_frames": 2260,
+          "blank_frames": 0,
+          "undecodable_frames": 0,
+          "pass": true
+        },
+        "output_meta": {
+          "duration_s": 90.4,
+          "size_bytes": 40121465
+        },
+        "output_video": {
+          "codec": "h264",
+          "profile": "High",
+          "width": 464,
+          "height": 848,
+          "r_frame_rate": "25/1",
+          "avg_frame_rate": "25/1",
+          "fps": 25.0,
+          "avg_fps": 25.0,
+          "vfr": false,
+          "pix_fmt": "yuv420p",
+          "nb_frames": "2260",
+          "duration_s": 90.4,
+          "bit_rate": "3488822"
+        }
+      },
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5090",
+        "capability": "sm_120"
+      },
+      "at": "2026-10-02T17:13:03Z",
+      "syncnet": {
+        "status": "PASS",
+        "confidence": 5.02,
+        "av_offset_frames": 0,
+        "original_confidence": 4.89,
+        "original_av_offset_frames": 2,
+        "confidence_delta": 0.13,
+        "reason": null
+      },
+      "coverage": {
+        "orig_speech_s": 60.7,
+        "dub_speech_s": 48.3,
+        "overlap_s": 41.5,
+        "iou": 0.6148,
+        "orig_without_dub_s": 19.2,
+        "dub_outside_orig_s": 6.8,
+        "orig_bursts": 27,
+        "bursts_covered_lt_50pct": 8,
+        "bursts_uncovered": 2,
+        "per_burst": [
+          {
+            "burst": [
+              3.3,
+              4.1
+            ],
+            "seconds": 0.8,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              4.2,
+              5.5
+            ],
+            "seconds": 1.3,
+            "covered_fraction": 0.923
+          },
+          {
+            "burst": [
+              6.7,
+              8.2
+            ],
+            "seconds": 1.5,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              8.4,
+              9.9
+            ],
+            "seconds": 1.5,
+            "covered_fraction": 0.467
+          },
+          {
+            "burst": [
+              10.3,
+              12.4
+            ],
+            "seconds": 2.1,
+            "covered_fraction": 0.476
+          },
+          {
+            "burst": [
+              14.3,
+              17.2
+            ],
+            "seconds": 2.9,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              17.7,
+              21.4
+            ],
+            "seconds": 3.7,
+            "covered_fraction": 0.541
+          },
+          {
+            "burst": [
+              22.3,
+              23.8
+            ],
+            "seconds": 1.5,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              23.9,
+              25.0
+            ],
+            "seconds": 1.1,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              25.5,
+              26.8
+            ],
+            "seconds": 1.3,
+            "covered_fraction": 0.231
+          },
+          {
+            "burst": [
+              27.8,
+              28.9
+            ],
+            "seconds": 1.1,
+            "covered_fraction": 0.0
+          },
+          {
+            "burst": [
+              30.5,
+              35.5
+            ],
+            "seconds": 5.0,
+            "covered_fraction": 0.84
+          },
+          {
+            "burst": [
+              35.9,
+              38.5
+            ],
+            "seconds": 2.6,
+            "covered_fraction": 0.692
+          },
+          {
+            "burst": [
+              39.3,
+              41.1
+            ],
+            "seconds": 1.8,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              42.4,
+              44.3
+            ],
+            "seconds": 1.9,
+            "covered_fraction": 0.0
+          },
+          {
+            "burst": [
+              46.3,
+              47.6
+            ],
+            "seconds": 1.3,
+            "covered_fraction": 0.692
+          },
+          {
+            "burst": [
+              48.2,
+              50.8
+            ],
+            "seconds": 2.6,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              51.4,
+              55.8
+            ],
+            "seconds": 4.4,
+            "covered_fraction": 0.273
+          },
+          {
+            "burst": [
+              59.2,
+              68.5
+            ],
+            "seconds": 9.3,
+            "covered_fraction": 0.903
+          },
+          {
+            "burst": [
+              70.1,
+              72.5
+            ],
+            "seconds": 2.4,
+            "covered_fraction": 0.708
+          },
+          {
+            "burst": [
+              73.8,
+              76.8
+            ],
+            "seconds": 3.0,
+            "covered_fraction": 0.433
+          },
+          {
+            "burst": [
+              76.9,
+              78.0
+            ],
+            "seconds": 1.1,
+            "covered_fraction": 0.909
+          },
+          {
+            "burst": [
+              78.8,
+              79.3
+            ],
+            "seconds": 0.5,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              79.9,
+              82.2
+            ],
+            "seconds": 2.3,
+            "covered_fraction": 0.565
+          },
+          {
+            "burst": [
+              83.9,
+              84.8
+            ],
+            "seconds": 0.9,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              85.2,
+              87.3
+            ],
+            "seconds": 2.1,
+            "covered_fraction": 0.095
+          },
+          {
+            "burst": [
+              88.5,
+              89.2
+            ],
+            "seconds": 0.7,
+            "covered_fraction": 1.0
+          }
+        ]
+      }
+    },
+    "04": {
+      "source_duration_s": 53.9,
+      "source_lang": "ru",
+      "units": 5,
+      "speakers": [
+        "SPEAKER_00"
+      ],
+      "translation": {
+        "quant": "q8_0",
+        "tokens": {
+          "prompt_tokens": 277,
+          "completion_tokens": 79
+        },
+        "burst_split": {
+          "single": 0,
+          "qwen": 5,
+          "single_fallback": 0,
+          "merged_parts": 5,
+          "parts_total": 14
+        },
+        "number_retries": 0,
+        "fitted_units": 1
+      },
+      "tts": {
+        "dtype": "float16",
+        "guard_violations": 0,
+        "parts": 14,
+        "attempts": 16,
+        "retried_parts": 1,
+        "retry_success": 1,
+        "retry_success_rate": 1.0,
+        "final_bad_parts": 0,
+        "fit_parts_rewritten": 0,
+        "fit_parts_merged": 1,
+        "fit_rewrite_rejected": 0,
+        "fit_rounds_used": 1,
+        "gen_seconds": 18.14,
+        "qa_seconds": 2.34,
+        "qa": {
+          "enabled": true,
+          "retries": 2,
+          "low_temp": 0.6
+        }
+      },
+      "alignment": {
+        "mode": "burst",
+        "atempo_cap": 1.15,
+        "hard_cap": 1.2,
+        "units_slot_fallback": 0,
+        "groups": 13,
+        "atempo_max": 1.15,
+        "atempo_min": 1.0,
+        "atempo_mean": 1.0115,
+        "atempo_median": 1.0,
+        "gt_1_15": 0,
+        "gt_1_25": 0,
+        "gt_1_3": 0,
+        "slowed_lt_1": 0,
+        "overflow_groups": 0,
+        "cut_groups": 0,
+        "atempo_histogram": {
+          "<1 (slowed)": 0,
+          "1.0": 12,
+          "(1.0,1.05]": 0,
+          "(1.05,1.10]": 0,
+          "(1.10,1.15]": 1,
+          "(1.15,1.20]": 0,
+          ">1.20": 0
+        }
+      },
+      "video": {
+        "backend": "optimized",
+        "frame_classes": {
+          "VALID_FACE": 1044,
+          "SMALL_FACE": 0,
+          "NO_FACE": 0,
+          "NO_SPEECH": 305
+        },
+        "by_action": {
+          "PASS_THROUGH": {
+            "segments": 10,
+            "frames": 305,
+            "seconds": 12.2
+          },
+          "LATENT_SYNC": {
+            "segments": 9,
+            "frames": 1044,
+            "seconds": 41.76
+          }
+        },
+        "master_frames": 1349,
+        "latentsync_seconds_of_video": 41.76,
+        "ls_fraction": 0.7739,
+        "latentsync_segments": 9,
+        "ls_failed_segments": 0,
+        "verify_splits": 0,
+        "latentsync_stage_s": 244.97,
+        "latentsync_verify_s": 15.326,
+        "latentsync_s_per_video_min": 272.69,
+        "codeformer": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        },
+        "codeformer_stage_s": 31.868,
+        "codeformer_faces": 1044,
+        "codeformer_eligible_frames": 1044,
+        "codeformer_fallback_detections": 0,
+        "codeformer_s_per_video_min": 35.47,
+        "codeformer_torch_peak_mib": 13117,
+        "speech_gate": {
+          "enabled": true,
+          "margin_s": 0.24,
+          "merge_gap_s": 0.6,
+          "crossfade_frames": 4,
+          "source_speech_seconds": 29.5,
+          "dubbed_speech_seconds": 23.9,
+          "gate_seconds": 41.62,
+          "gate_fraction": 0.7722
+        }
+      },
+      "timing": {
+        "total_wall_s": 436.054,
+        "stage_seconds": {
+          "audio_extract": 0.281,
+          "vad": 3.945,
+          "asr": 7.217,
+          "diarization": 13.985,
+          "translation_load": 1.006,
+          "translation": 13.929,
+          "translation_split": 33.947,
+          "tts_load": 9.886,
+          "qa_load": 1.843,
+          "tts": 23.613,
+          "alignment": 0.094,
+          "dubbed_track": 0.813,
+          "speech_gate": 0.413,
+          "face_router_load": 0.307,
+          "latentsync_load": 10.879,
+          "codeformer_load": 1.125,
+          "ls_master_25fps": 6.36,
+          "ls_master_decode": 0.759,
+          "face_classify": 11.27,
+          "latentsync": 244.97,
+          "latentsync_verify": 15.326,
+          "codeformer": 31.868,
+          "final_assembly": 7.824,
+          "total": 436.054
+        },
+        "wall_s_per_video_min": 485.4
+      },
+      "peak_vram_nvsmi_mib": 24156,
+      "validation": {
+        "pass": true,
+        "checks": {
+          "output_exists_nonempty": true,
+          "output_has_video_audio": true,
+          "duration_within_tolerance": true,
+          "resolution_preserved": true,
+          "all_units_have_tts_and_translation": true,
+          "frame_count_preserved": true,
+          "output_frames_decodable_no_blank": true
+        },
+        "duration_delta_s": 0.06,
+        "tolerance_s": 0.15,
+        "frames_written": 1349,
+        "output_frame_check": {
+          "decoded_frames": 1349,
+          "expected_frames": 1349,
+          "blank_frames": 0,
+          "undecodable_frames": 0,
+          "pass": true
+        },
+        "output_meta": {
+          "duration_s": 53.96,
+          "size_bytes": 39514237
+        },
+        "output_video": {
+          "codec": "h264",
+          "profile": "High",
+          "width": 464,
+          "height": 848,
+          "r_frame_rate": "25/1",
+          "avg_frame_rate": "25/1",
+          "fps": 25.0,
+          "avg_fps": 25.0,
+          "vfr": false,
+          "pix_fmt": "yuv420p",
+          "nb_frames": "1349",
+          "duration_s": 53.96,
+          "bit_rate": "5798757"
+        }
+      },
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5090",
+        "capability": "sm_120"
+      },
+      "at": "2026-10-02T17:20:22Z",
+      "syncnet": {
+        "status": "PASS",
+        "confidence": 2.82,
+        "av_offset_frames": 0,
+        "original_confidence": 3.24,
+        "original_av_offset_frames": 2,
+        "confidence_delta": -0.42,
+        "reason": null
+      },
+      "coverage": {
+        "orig_speech_s": 29.5,
+        "dub_speech_s": 23.9,
+        "overlap_s": 18.7,
+        "iou": 0.5389,
+        "orig_without_dub_s": 10.8,
+        "dub_outside_orig_s": 5.2,
+        "orig_bursts": 15,
+        "bursts_covered_lt_50pct": 5,
+        "bursts_uncovered": 2,
+        "per_burst": [
+          {
+            "burst": [
+              2.3,
+              4.0
+            ],
+            "seconds": 1.7,
+            "covered_fraction": 0.882
+          },
+          {
+            "burst": [
+              4.8,
+              6.1
+            ],
+            "seconds": 1.3,
+            "covered_fraction": 0.846
+          },
+          {
+            "burst": [
+              6.6,
+              7.5
+            ],
+            "seconds": 0.9,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              8.4,
+              11.4
+            ],
+            "seconds": 3.0,
+            "covered_fraction": 0.833
+          },
+          {
+            "burst": [
+              14.6,
+              15.6
+            ],
+            "seconds": 1.0,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              17.5,
+              19.7
+            ],
+            "seconds": 2.2,
+            "covered_fraction": 0.909
+          },
+          {
+            "burst": [
+              22.0,
+              27.6
+            ],
+            "seconds": 5.6,
+            "covered_fraction": 0.375
+          },
+          {
+            "burst": [
+              29.3,
+              31.4
+            ],
+            "seconds": 2.1,
+            "covered_fraction": 0.952
+          },
+          {
+            "burst": [
+              33.1,
+              35.8
+            ],
+            "seconds": 2.7,
+            "covered_fraction": 0.111
+          },
+          {
+            "burst": [
+              36.4,
+              37.6
+            ],
+            "seconds": 1.2,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              38.5,
+              40.1
+            ],
+            "seconds": 1.6,
+            "covered_fraction": 0.812
+          },
+          {
+            "burst": [
+              41.2,
+              42.6
+            ],
+            "seconds": 1.4,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              44.5,
+              45.2
+            ],
+            "seconds": 0.7,
+            "covered_fraction": 0.0
+          },
+          {
+            "burst": [
+              46.6,
+              49.7
+            ],
+            "seconds": 3.1,
+            "covered_fraction": 0.452
+          },
+          {
+            "burst": [
+              51.6,
+              52.6
+            ],
+            "seconds": 1.0,
+            "covered_fraction": 0.0
+          }
+        ]
+      }
+    },
+    "05": {
+      "source_duration_s": 52.366667,
+      "source_lang": "ru",
+      "units": 7,
+      "speakers": [
+        "SPEAKER_00"
+      ],
+      "translation": {
+        "quant": "q8_0",
+        "tokens": {
+          "prompt_tokens": 357,
+          "completion_tokens": 83
+        },
+        "burst_split": {
+          "single": 0,
+          "qwen": 6,
+          "single_fallback": 1,
+          "merged_parts": 8,
+          "parts_total": 11
+        },
+        "number_retries": 0,
+        "fitted_units": 0
+      },
+      "tts": {
+        "dtype": "float16",
+        "guard_violations": 0,
+        "parts": 11,
+        "attempts": 11,
+        "retried_parts": 0,
+        "retry_success": 0,
+        "retry_success_rate": null,
+        "final_bad_parts": 0,
+        "fit_parts_rewritten": 0,
+        "fit_parts_merged": 0,
+        "fit_rewrite_rejected": 0,
+        "fit_rounds_used": 0,
+        "gen_seconds": 11.24,
+        "qa_seconds": 1.69,
+        "qa": {
+          "enabled": true,
+          "retries": 2,
+          "low_temp": 0.6
+        }
+      },
+      "alignment": {
+        "mode": "burst",
+        "atempo_cap": 1.15,
+        "hard_cap": 1.2,
+        "units_slot_fallback": 0,
+        "groups": 11,
+        "atempo_max": 1.025,
+        "atempo_min": 1.0,
+        "atempo_mean": 1.0023,
+        "atempo_median": 1.0,
+        "gt_1_15": 0,
+        "gt_1_25": 0,
+        "gt_1_3": 0,
+        "slowed_lt_1": 0,
+        "overflow_groups": 0,
+        "cut_groups": 0,
+        "atempo_histogram": {
+          "<1 (slowed)": 0,
+          "1.0": 10,
+          "(1.0,1.05]": 1,
+          "(1.05,1.10]": 0,
+          "(1.10,1.15]": 0,
+          "(1.15,1.20]": 0,
+          ">1.20": 0
+        }
+      },
+      "video": {
+        "backend": "optimized",
+        "frame_classes": {
+          "VALID_FACE": 914,
+          "SMALL_FACE": 94,
+          "NO_FACE": 0,
+          "NO_SPEECH": 303
+        },
+        "by_action": {
+          "PASS_THROUGH": {
+            "segments": 17,
+            "frames": 407,
+            "seconds": 16.28
+          },
+          "LATENT_SYNC": {
+            "segments": 8,
+            "frames": 868,
+            "seconds": 34.72
+          },
+          "PASS_THROUGH_SHORT_VALID": {
+            "segments": 4,
+            "frames": 36,
+            "seconds": 1.44
+          }
+        },
+        "master_frames": 1311,
+        "latentsync_seconds_of_video": 34.72,
+        "ls_fraction": 0.6621,
+        "latentsync_segments": 8,
+        "ls_failed_segments": 0,
+        "verify_splits": 2,
+        "latentsync_stage_s": 204.754,
+        "latentsync_verify_s": 14.348,
+        "latentsync_s_per_video_min": 234.6,
+        "codeformer": {
+          "mode": "optimized",
+          "w": 1.0,
+          "batch": 8,
+          "landmarks": "insightface",
+          "precision": "fp16"
+        },
+        "codeformer_stage_s": 26.135,
+        "codeformer_faces": 868,
+        "codeformer_eligible_frames": 868,
+        "codeformer_fallback_detections": 0,
+        "codeformer_s_per_video_min": 29.94,
+        "codeformer_torch_peak_mib": 10765,
+        "speech_gate": {
+          "enabled": true,
+          "margin_s": 0.24,
+          "merge_gap_s": 0.6,
+          "crossfade_frames": 4,
+          "source_speech_seconds": 27.9,
+          "dubbed_speech_seconds": 20.3,
+          "gate_seconds": 40.24,
+          "gate_fraction": 0.7684
+        }
+      },
+      "timing": {
+        "total_wall_s": 392.695,
+        "stage_seconds": {
+          "audio_extract": 0.194,
+          "vad": 3.665,
+          "asr": 8.416,
+          "diarization": 11.462,
+          "translation_load": 0.96,
+          "translation": 15.047,
+          "translation_split": 47.34,
+          "tts_load": 7.708,
+          "qa_load": 1.773,
+          "tts": 15.301,
+          "alignment": 0.096,
+          "dubbed_track": 0.595,
+          "speech_gate": 0.486,
+          "face_router_load": 0.499,
+          "latentsync_load": 11.66,
+          "codeformer_load": 1.1,
+          "ls_master_25fps": 6.596,
+          "ls_master_decode": 0.946,
+          "face_classify": 12.133,
+          "latentsync": 204.754,
+          "latentsync_verify": 14.348,
+          "codeformer": 26.135,
+          "final_assembly": 7.238,
+          "total": 392.695
+        },
+        "wall_s_per_video_min": 449.94
+      },
+      "peak_vram_nvsmi_mib": 24156,
+      "validation": {
+        "pass": true,
+        "checks": {
+          "output_exists_nonempty": true,
+          "output_has_video_audio": true,
+          "duration_within_tolerance": true,
+          "resolution_preserved": true,
+          "all_units_have_tts_and_translation": true,
+          "frame_count_preserved": true,
+          "output_frames_decodable_no_blank": true
+        },
+        "duration_delta_s": 0.0733,
+        "tolerance_s": 0.15,
+        "frames_written": 1311,
+        "output_frame_check": {
+          "decoded_frames": 1311,
+          "expected_frames": 1311,
+          "blank_frames": 0,
+          "undecodable_frames": 0,
+          "pass": true
+        },
+        "output_meta": {
+          "duration_s": 52.44,
+          "size_bytes": 41084943
+        },
+        "output_video": {
+          "codec": "h264",
+          "profile": "High",
+          "width": 464,
+          "height": 848,
+          "r_frame_rate": "25/1",
+          "avg_frame_rate": "25/1",
+          "fps": 25.0,
+          "avg_fps": 25.0,
+          "vfr": false,
+          "pix_fmt": "yuv420p",
+          "nb_frames": "1311",
+          "duration_s": 52.44,
+          "bit_rate": "6223496"
+        }
+      },
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5090",
+        "capability": "sm_120"
+      },
+      "at": "2026-10-02T17:26:57Z",
+      "syncnet": {
+        "status": "PASS",
+        "confidence": 2.51,
+        "av_offset_frames": 0,
+        "original_confidence": 1.71,
+        "original_av_offset_frames": 2,
+        "confidence_delta": 0.8,
+        "reason": null
+      },
+      "coverage": {
+        "orig_speech_s": 27.9,
+        "dub_speech_s": 20.3,
+        "overlap_s": 13.3,
+        "iou": 0.3811,
+        "orig_without_dub_s": 14.6,
+        "dub_outside_orig_s": 7.0,
+        "orig_bursts": 17,
+        "bursts_covered_lt_50pct": 10,
+        "bursts_uncovered": 5,
+        "per_burst": [
+          {
+            "burst": [
+              1.8,
+              4.0
+            ],
+            "seconds": 2.2,
+            "covered_fraction": 0.955
+          },
+          {
+            "burst": [
+              4.8,
+              6.3
+            ],
+            "seconds": 1.5,
+            "covered_fraction": 0.333
+          },
+          {
+            "burst": [
+              7.4,
+              9.5
+            ],
+            "seconds": 2.1,
+            "covered_fraction": 0.19
+          },
+          {
+            "burst": [
+              10.9,
+              12.7
+            ],
+            "seconds": 1.8,
+            "covered_fraction": 0.889
+          },
+          {
+            "burst": [
+              13.7,
+              15.8
+            ],
+            "seconds": 2.1,
+            "covered_fraction": 0.0
+          },
+          {
+            "burst": [
+              17.0,
+              17.6
+            ],
+            "seconds": 0.6,
+            "covered_fraction": 0.0
+          },
+          {
+            "burst": [
+              19.6,
+              21.5
+            ],
+            "seconds": 1.9,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              22.9,
+              24.6
+            ],
+            "seconds": 1.7,
+            "covered_fraction": 0.0
+          },
+          {
+            "burst": [
+              26.2,
+              29.2
+            ],
+            "seconds": 3.0,
+            "covered_fraction": 0.833
+          },
+          {
+            "burst": [
+              30.4,
+              32.3
+            ],
+            "seconds": 1.9,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              32.9,
+              34.0
+            ],
+            "seconds": 1.1,
+            "covered_fraction": 0.0
+          },
+          {
+            "burst": [
+              36.3,
+              37.0
+            ],
+            "seconds": 0.7,
+            "covered_fraction": 0.857
+          },
+          {
+            "burst": [
+              38.4,
+              39.9
+            ],
+            "seconds": 1.5,
+            "covered_fraction": 0.467
+          },
+          {
+            "burst": [
+              40.3,
+              41.9
+            ],
+            "seconds": 1.6,
+            "covered_fraction": 0.187
+          },
+          {
+            "burst": [
+              42.8,
+              44.8
+            ],
+            "seconds": 2.0,
+            "covered_fraction": 0.05
+          },
+          {
+            "burst": [
+              46.0,
+              46.7
+            ],
+            "seconds": 0.7,
+            "covered_fraction": 1.0
+          },
+          {
+            "burst": [
+              47.6,
+              49.1
+            ],
+            "seconds": 1.5,
+            "covered_fraction": 0.0
+          }
+        ]
+      }
+    }
+  }
+}

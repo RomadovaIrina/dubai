@@ -1,0 +1,1195 @@
+{
+  "facts": {
+    "source_duration_s": 101.666667,
+    "source_lang": "ru",
+    "units": 29,
+    "speakers": [
+      "SPEAKER_00"
+    ],
+    "translation": {
+      "quant": "q8_0",
+      "tokens": {
+        "prompt_tokens": 1505,
+        "completion_tokens": 323
+      },
+      "burst_split": {
+        "single": 18,
+        "qwen": 11,
+        "single_fallback": 0,
+        "merged_parts": 9,
+        "parts_total": 35
+      },
+      "number_retries": 0,
+      "fitted_units": 3
+    },
+    "tts": {
+      "dtype": "float16",
+      "guard_violations": 0,
+      "parts": 35,
+      "attempts": 42,
+      "retried_parts": 3,
+      "retry_success": 3,
+      "retry_success_rate": 1.0,
+      "final_bad_parts": 0,
+      "fit_parts_rewritten": 0,
+      "fit_parts_merged": 3,
+      "fit_rewrite_rejected": 0,
+      "fit_rounds_used": 4,
+      "gen_seconds": 52.4,
+      "qa_seconds": 7.98,
+      "qa": {
+        "enabled": true,
+        "retries": 2,
+        "low_temp": 0.6
+      }
+    },
+    "alignment": {
+      "mode": "burst",
+      "atempo_cap": 1.15,
+      "hard_cap": 1.2,
+      "units_slot_fallback": 0,
+      "groups": 32,
+      "atempo_max": 1.2,
+      "atempo_min": 1.0,
+      "atempo_mean": 1.0329,
+      "atempo_median": 1.0,
+      "gt_1_15": 1,
+      "gt_1_25": 0,
+      "gt_1_3": 0,
+      "slowed_lt_1": 0,
+      "overflow_groups": 0,
+      "cut_groups": 0,
+      "atempo_histogram": {
+        "<1 (slowed)": 0,
+        "1.0": 23,
+        "(1.0,1.05]": 2,
+        "(1.05,1.10]": 0,
+        "(1.10,1.15]": 6,
+        "(1.15,1.20]": 1,
+        ">1.20": 0
+      }
+    },
+    "video": {
+      "backend": "optimized",
+      "frame_classes": {
+        "VALID_FACE": 261,
+        "SMALL_FACE": 177,
+        "NO_FACE": 1996,
+        "NO_SPEECH": 108
+      },
+      "by_action": {
+        "LATENT_SYNC": {
+          "segments": 1,
+          "frames": 260,
+          "seconds": 10.4
+        },
+        "PASS_THROUGH": {
+          "segments": 5,
+          "frames": 2282,
+          "seconds": 91.28
+        }
+      },
+      "master_frames": 2542,
+      "latentsync_seconds_of_video": 10.4,
+      "ls_fraction": 0.1023,
+      "latentsync_segments": 1,
+      "ls_failed_segments": 0,
+      "verify_splits": 1,
+      "latentsync_stage_s": 76.025,
+      "latentsync_verify_s": 12.421,
+      "latentsync_s_per_video_min": 44.87,
+      "codeformer": {
+        "mode": "optimized",
+        "w": 1.0,
+        "batch": 8,
+        "landmarks": "insightface",
+        "precision": "fp16"
+      },
+      "codeformer_stage_s": 7.85,
+      "codeformer_faces": 260,
+      "codeformer_eligible_frames": 260,
+      "codeformer_fallback_detections": 0,
+      "codeformer_s_per_video_min": 4.63,
+      "codeformer_torch_peak_mib": 9715,
+      "speech_gate": {
+        "enabled": true,
+        "margin_s": 0.24,
+        "merge_gap_s": 0.6,
+        "crossfade_frames": 4,
+        "source_speech_seconds": 91.9,
+        "dubbed_speech_seconds": 78.4,
+        "gate_seconds": 97.34,
+        "gate_fraction": 0.9574
+      }
+    },
+    "timing": {
+      "total_wall_s": 382.127,
+      "stage_seconds": {
+        "audio_extract": 0.611,
+        "vad": 5.294,
+        "asr": 14.334,
+        "diarization": 14.015,
+        "translation_load": 1.014,
+        "translation": 57.856,
+        "translation_split": 61.8,
+        "tts_load": 7.608,
+        "qa_load": 1.829,
+        "tts": 67.808,
+        "alignment": 0.668,
+        "dubbed_track": 2.544,
+        "speech_gate": 0.858,
+        "face_router_load": 0.332,
+        "latentsync_load": 10.065,
+        "codeformer_load": 0.696,
+        "ls_master_25fps": 9.351,
+        "ls_master_decode": 0.943,
+        "face_classify": 15.437,
+        "latentsync": 76.025,
+        "latentsync_verify": 12.421,
+        "codeformer": 7.85,
+        "final_assembly": 11.512,
+        "total": 382.127
+      },
+      "wall_s_per_video_min": 225.52
+    },
+    "peak_vram_nvsmi_mib": 25178,
+    "validation": {
+      "pass": true,
+      "checks": {
+        "output_exists_nonempty": true,
+        "output_has_video_audio": true,
+        "duration_within_tolerance": true,
+        "resolution_preserved": true,
+        "all_units_have_tts_and_translation": true,
+        "frame_count_preserved": true,
+        "output_frames_decodable_no_blank": true
+      },
+      "duration_delta_s": 0.0133,
+      "tolerance_s": 0.15,
+      "frames_written": 2542,
+      "output_frame_check": {
+        "decoded_frames": 2542,
+        "expected_frames": 2542,
+        "blank_frames": 0,
+        "undecodable_frames": 0,
+        "pass": true
+      },
+      "output_meta": {
+        "duration_s": 101.68,
+        "size_bytes": 22765705
+      },
+      "output_video": {
+        "codec": "h264",
+        "profile": "High",
+        "width": 480,
+        "height": 848,
+        "r_frame_rate": "25/1",
+        "avg_frame_rate": "25/1",
+        "fps": 25.0,
+        "avg_fps": 25.0,
+        "vfr": false,
+        "pix_fmt": "yuv420p",
+        "nb_frames": "2542",
+        "duration_s": 101.68,
+        "bit_rate": "1700992"
+      }
+    },
+    "gpu": {
+      "name": "NVIDIA GeForce RTX 5090",
+      "capability": "sm_120"
+    },
+    "at": "2026-10-02T16:56:04Z",
+    "syncnet": {
+      "status": "PASS",
+      "confidence": 6.74,
+      "av_offset_frames": 0,
+      "original_confidence": 5.36,
+      "original_av_offset_frames": 1,
+      "confidence_delta": 1.38,
+      "reason": null
+    },
+    "coverage": {
+      "orig_speech_s": 91.9,
+      "dub_speech_s": 78.4,
+      "overlap_s": 75.3,
+      "iou": 0.7926,
+      "orig_without_dub_s": 16.6,
+      "dub_outside_orig_s": 3.1,
+      "orig_bursts": 25,
+      "bursts_covered_lt_50pct": 0,
+      "bursts_uncovered": 0,
+      "per_burst": [
+        {
+          "burst": [
+            0.0,
+            1.7
+          ],
+          "seconds": 1.7,
+          "covered_fraction": 0.941
+        },
+        {
+          "burst": [
+            1.9,
+            9.8
+          ],
+          "seconds": 7.9,
+          "covered_fraction": 0.797
+        },
+        {
+          "burst": [
+            9.9,
+            14.3
+          ],
+          "seconds": 4.4,
+          "covered_fraction": 0.773
+        },
+        {
+          "burst": [
+            14.4,
+            16.8
+          ],
+          "seconds": 2.4,
+          "covered_fraction": 0.708
+        },
+        {
+          "burst": [
+            17.2,
+            17.9
+          ],
+          "seconds": 0.7,
+          "covered_fraction": 1.0
+        },
+        {
+          "burst": [
+            18.1,
+            26.9
+          ],
+          "seconds": 8.8,
+          "covered_fraction": 0.864
+        },
+        {
+          "burst": [
+            27.2,
+            30.2
+          ],
+          "seconds": 3.0,
+          "covered_fraction": 0.667
+        },
+        {
+          "burst": [
+            30.4,
+            33.0
+          ],
+          "seconds": 2.6,
+          "covered_fraction": 0.885
+        },
+        {
+          "burst": [
+            33.3,
+            34.6
+          ],
+          "seconds": 1.3,
+          "covered_fraction": 0.923
+        },
+        {
+          "burst": [
+            34.8,
+            36.0
+          ],
+          "seconds": 1.2,
+          "covered_fraction": 0.917
+        },
+        {
+          "burst": [
+            36.2,
+            37.7
+          ],
+          "seconds": 1.5,
+          "covered_fraction": 1.0
+        },
+        {
+          "burst": [
+            37.8,
+            40.6
+          ],
+          "seconds": 2.8,
+          "covered_fraction": 0.607
+        },
+        {
+          "burst": [
+            40.7,
+            43.4
+          ],
+          "seconds": 2.7,
+          "covered_fraction": 0.926
+        },
+        {
+          "burst": [
+            43.6,
+            50.4
+          ],
+          "seconds": 6.8,
+          "covered_fraction": 0.75
+        },
+        {
+          "burst": [
+            50.8,
+            51.6
+          ],
+          "seconds": 0.8,
+          "covered_fraction": 0.875
+        },
+        {
+          "burst": [
+            51.8,
+            57.1
+          ],
+          "seconds": 5.3,
+          "covered_fraction": 0.925
+        },
+        {
+          "burst": [
+            57.2,
+            57.5
+          ],
+          "seconds": 0.3,
+          "covered_fraction": 1.0
+        },
+        {
+          "burst": [
+            57.7,
+            61.5
+          ],
+          "seconds": 3.8,
+          "covered_fraction": 0.605
+        },
+        {
+          "burst": [
+            61.8,
+            63.9
+          ],
+          "seconds": 2.1,
+          "covered_fraction": 0.619
+        },
+        {
+          "burst": [
+            64.2,
+            65.8
+          ],
+          "seconds": 1.6,
+          "covered_fraction": 1.0
+        },
+        {
+          "burst": [
+            66.0,
+            74.4
+          ],
+          "seconds": 8.4,
+          "covered_fraction": 0.762
+        },
+        {
+          "burst": [
+            74.6,
+            78.6
+          ],
+          "seconds": 4.0,
+          "covered_fraction": 0.825
+        },
+        {
+          "burst": [
+            78.8,
+            81.5
+          ],
+          "seconds": 2.7,
+          "covered_fraction": 0.815
+        },
+        {
+          "burst": [
+            81.8,
+            89.7
+          ],
+          "seconds": 7.9,
+          "covered_fraction": 0.861
+        },
+        {
+          "burst": [
+            89.9,
+            97.1
+          ],
+          "seconds": 7.2,
+          "covered_fraction": 0.944
+        }
+      ]
+    }
+  },
+  "units": [
+    {
+      "id": 0,
+      "speaker": "SPEAKER_00",
+      "start": 0.0,
+      "end": 1.42,
+      "text": "Отделка Prime от Neometria.",
+      "translation": "Prime finishing from Neometria.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 1.96,
+      "slot_s": 1.42,
+      "ratio": 1.3803,
+      "atempo_max": 1.2,
+      "atempos": [
+        1.2
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.037
+      ],
+      "split": "single",
+      "fit": [
+        "kept"
+      ],
+      "cut_s": 0.016,
+      "overflow_s": 0.016
+    },
+    {
+      "id": 1,
+      "speaker": "SPEAKER_00",
+      "start": 1.52,
+      "end": 5.24,
+      "text": "Давайте посмотрим, что включает в себя ремонт, предлагаемый застройщиком.",
+      "translation": "Let's see what the developer's repair includes.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 2.6,
+      "slot_s": 3.72,
+      "ratio": 0.6989,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.013
+      ],
+      "split": "qwen",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 2,
+      "speaker": "SPEAKER_00",
+      "start": 5.38,
+      "end": 10.08,
+      "text": "Его вы можете заказать на момент покупки квартиры в нашем жилом комплексе Flora.",
+      "translation": "You can order it at the time of purchasing an apartment in our Flora residential complex.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 5.0,
+      "slot_s": 4.7,
+      "ratio": 1.0638,
+      "atempo_max": 1.013,
+      "atempos": [
+        1.013
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0.003,
+      "overflow_s": 0.003
+    },
+    {
+      "id": 3,
+      "speaker": "SPEAKER_00",
+      "start": 10.24,
+      "end": 13.14,
+      "text": "Потолок натяжной, белый, матовый.",
+      "translation": "The ceiling is a stretched white matte one.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 2.32,
+      "slot_s": 2.9,
+      "ratio": 0.8,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.029
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 4,
+      "speaker": "SPEAKER_00",
+      "start": 13.18,
+      "end": 16.56,
+      "text": "В каждой комнате срок службы более 10 лет.",
+      "translation": "In each room, the service life is more than 10 years.",
+      "translation_fitted": "In each room, the service life is more than 10 years.",
+      "parts": 1,
+      "tts_s": 3.2,
+      "slot_s": 3.38,
+      "ratio": 0.9467,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0
+      ],
+      "split": "qwen",
+      "fit": [
+        "merge_parts"
+      ],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 5,
+      "speaker": "SPEAKER_00",
+      "start": 16.8,
+      "end": 20.5,
+      "text": "Стены. Обои под покраску на флизелиновой основе.",
+      "translation": "Walls. Wallpaper on a textile basis for painting.",
+      "translation_fitted": "Walls. Wallpaper on a textile basis for painting.",
+      "parts": 1,
+      "tts_s": 3.4,
+      "slot_s": 3.7,
+      "ratio": 0.9189,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0
+      ],
+      "split": "qwen",
+      "fit": [
+        "merge_parts"
+      ],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 6,
+      "speaker": "SPEAKER_00",
+      "start": 20.54,
+      "end": 26.66,
+      "text": "Рельефная текстура с рисунком вертикальная струна создает необходимую глубину и объем поверхности.",
+      "translation": "The relief texture with a vertical stripe pattern creates the necessary depth and volume on the surface.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 5.24,
+      "slot_s": 6.1,
+      "ratio": 0.859,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.034
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 7,
+      "speaker": "SPEAKER_00",
+      "start": 26.66,
+      "end": 30.0,
+      "text": "Такие обои выдерживают до 10 окрашиваний.",
+      "translation": "Such wallpaper withstands up to 10 repaintings.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 2.8,
+      "slot_s": 3.34,
+      "ratio": 0.8383,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 1,
+      "bad_final": 0,
+      "qa_scores": [
+        0.037
+      ],
+      "split": "qwen",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 8,
+      "speaker": "SPEAKER_00",
+      "start": 30.12,
+      "end": 32.88,
+      "text": "Пол. Ламинат 33 класса.",
+      "translation": "Floor. Laminate, class 33.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 3.4,
+      "slot_s": 2.74,
+      "ratio": 1.2409,
+      "atempo_max": 1.113,
+      "atempos": [
+        1.113
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.034
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 9,
+      "speaker": "SPEAKER_00",
+      "start": 32.88,
+      "end": 34.38,
+      "text": "Эггер с подложкой.",
+      "translation": "Egger with a substrate.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 1.64,
+      "slot_s": 1.5,
+      "ratio": 1.0933,
+      "atempo_max": 1.15,
+      "atempos": [
+        1.15
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.026
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0.014,
+      "overflow_s": 0.014
+    },
+    {
+      "id": 10,
+      "speaker": "SPEAKER_00",
+      "start": 34.44,
+      "end": 38.68,
+      "text": "Имеет высокую стебель тепла, влага и звукоизоляции.",
+      "translation": "Has a high stem of heat, moisture, and sound insulation.",
+      "translation_fitted": null,
+      "parts": 2,
+      "tts_s": 3.64,
+      "slot_s": 4.24,
+      "ratio": 0.8585,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0,
+        1.0
+      ],
+      "retried": 1,
+      "bad_final": 0,
+      "qa_scores": [
+        0.056,
+        0.019
+      ],
+      "split": "qwen",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 11,
+      "speaker": "SPEAKER_00",
+      "start": 38.72,
+      "end": 43.04,
+      "text": "И рассчитан на 20-25 лет активного использования.",
+      "translation": "And it is designed for 20-25 years of active use.",
+      "translation_fitted": null,
+      "parts": 2,
+      "tts_s": 4.48,
+      "slot_s": 4.32,
+      "ratio": 1.037,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0,
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0,
+        0.031
+      ],
+      "split": "qwen",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 12,
+      "speaker": "SPEAKER_00",
+      "start": 43.38,
+      "end": 44.58,
+      "text": "Межкомнатные двери.",
+      "translation": "Interior doors.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 1.28,
+      "slot_s": 1.2,
+      "ratio": 1.0667,
+      "atempo_max": 1.15,
+      "atempos": [
+        1.15
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0.006,
+      "overflow_s": 0.006
+    },
+    {
+      "id": 13,
+      "speaker": "SPEAKER_00",
+      "start": 44.66,
+      "end": 50.24,
+      "text": "Лаконичное полотно из МДФ высокой плотности с премиальным финишным покрытием.",
+      "translation": "A concise panel made of high-density MDF with premium finish coating.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 4.4,
+      "slot_s": 5.58,
+      "ratio": 0.7885,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.035
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 14,
+      "speaker": "SPEAKER_00",
+      "start": 50.36,
+      "end": 51.34,
+      "text": "Ванная.",
+      "translation": "Bathroom.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 0.92,
+      "slot_s": 0.98,
+      "ratio": 0.9388,
+      "atempo_max": 1.15,
+      "atempos": [
+        1.15
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.25
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0.007,
+      "overflow_s": 0.007
+    },
+    {
+      "id": 15,
+      "speaker": "SPEAKER_00",
+      "start": 51.42,
+      "end": 56.58,
+      "text": "Матовый широкоформатный керамогранит 600х600 толщиной 9 мм.",
+      "translation": "Matte wide-format ceramic tile 600x600 with a thickness of 9 mm.",
+      "translation_fitted": "Matte wide-format ceramic tile 600x600 with a thickness of 9 mm.",
+      "parts": 1,
+      "tts_s": 4.96,
+      "slot_s": 5.16,
+      "ratio": 0.9612,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.115
+      ],
+      "split": "qwen",
+      "fit": [
+        "merge_parts"
+      ],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 16,
+      "speaker": "SPEAKER_00",
+      "start": 56.66,
+      "end": 61.1,
+      "text": "С влагопоглощением менее 0,5%.",
+      "translation": "With moisture absorption less than 0.5%.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 3.36,
+      "slot_s": 4.42,
+      "ratio": 0.7602,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.02
+      ],
+      "split": "qwen",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 17,
+      "speaker": "SPEAKER_00",
+      "start": 61.1,
+      "end": 63.66,
+      "text": "А значит достаточно прочный.",
+      "translation": "Which means sufficiently strong.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 2.04,
+      "slot_s": 2.56,
+      "ratio": 0.7969,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0
+      ],
+      "split": "qwen",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 18,
+      "speaker": "SPEAKER_00",
+      "start": 63.7,
+      "end": 68.74,
+      "text": "Вся необходимая сантехника, включая унитаз, микролифт и сверхпрочную глазурь.",
+      "translation": "All necessary plumbing, including a toilet, microlift, and super-strong glaze.",
+      "translation_fitted": null,
+      "parts": 2,
+      "tts_s": 4.8,
+      "slot_s": 5.04,
+      "ratio": 0.9524,
+      "atempo_max": 1.009,
+      "atempos": [
+        1.009,
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0,
+        0.018
+      ],
+      "split": "qwen",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0.006
+    },
+    {
+      "id": 19,
+      "speaker": "SPEAKER_00",
+      "start": 68.88,
+      "end": 71.88,
+      "text": "Ванная или душевая зона. На ваше усмотрение.",
+      "translation": "Bathroom or shower area. Up to you.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 2.56,
+      "slot_s": 3.0,
+      "ratio": 0.8533,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 20,
+      "speaker": "SPEAKER_00",
+      "start": 71.98,
+      "end": 74.14,
+      "text": "Тумба с высокопрочным латунным смесителем.",
+      "translation": "Sink with high-strength brass faucet.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 2.2,
+      "slot_s": 2.16,
+      "ratio": 1.0185,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.21
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 21,
+      "speaker": "SPEAKER_00",
+      "start": 74.24,
+      "end": 74.9,
+      "text": "Балкон.",
+      "translation": "Balcony.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 1.08,
+      "slot_s": 0.66,
+      "ratio": 1.6364,
+      "atempo_max": 1.15,
+      "atempos": [
+        1.15
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 22,
+      "speaker": "SPEAKER_00",
+      "start": 75.02,
+      "end": 78.22,
+      "text": "Покрытие потолка и стен в зоне остекленного балкона.",
+      "translation": "Coating the ceiling and walls in the area of the glazed balcony.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 2.84,
+      "slot_s": 3.2,
+      "ratio": 0.8875,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.019
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 23,
+      "speaker": "SPEAKER_00",
+      "start": 78.36,
+      "end": 81.18,
+      "text": "Штукатурка с белой матовой влагостойкой покраской.",
+      "translation": "Plaster with white matte water-resistant paint.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 2.84,
+      "slot_s": 2.82,
+      "ratio": 1.0071,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.05
+      ],
+      "split": "qwen",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 24,
+      "speaker": "SPEAKER_00",
+      "start": 81.36,
+      "end": 85.12,
+      "text": "Такое покрытие устойчиво к водяному пару и высокой влажности.",
+      "translation": "Such a coating is resistant to water vapor and high humidity.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 3.28,
+      "slot_s": 3.76,
+      "ratio": 0.8723,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.01
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 25,
+      "speaker": "SPEAKER_00",
+      "start": 85.18,
+      "end": 86.38,
+      "text": "При правильном использовании.",
+      "translation": "With proper use.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 1.4,
+      "slot_s": 1.2,
+      "ratio": 1.1667,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 26,
+      "speaker": "SPEAKER_00",
+      "start": 86.66,
+      "end": 89.42,
+      "text": "Влагостойкие краски могут прослужить до 10 лет.",
+      "translation": "Water-resistant paints can serve up to 10 years.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 2.76,
+      "slot_s": 2.76,
+      "ratio": 1.0,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.05
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 27,
+      "speaker": "SPEAKER_00",
+      "start": 89.6,
+      "end": 93.68,
+      "text": "Еще больше подробностей и деталей о делке Prime узнаете у менеджеров отдела продаж.",
+      "translation": "You can get more details and information about the Prime deal from the sales department managers.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 4.48,
+      "slot_s": 4.08,
+      "ratio": 1.098,
+      "atempo_max": 1.118,
+      "atempos": [
+        1.118
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    },
+    {
+      "id": 28,
+      "speaker": "SPEAKER_00",
+      "start": 93.86,
+      "end": 96.74,
+      "text": "Приезжайте к нам в шоурум и убедитесь в качестве отделки.",
+      "translation": "Come to our showroom and see the quality of the finishing for yourself.",
+      "translation_fitted": null,
+      "parts": 1,
+      "tts_s": 3.16,
+      "slot_s": 2.88,
+      "ratio": 1.0972,
+      "atempo_max": 1.0,
+      "atempos": [
+        1.0
+      ],
+      "retried": 0,
+      "bad_final": 0,
+      "qa_scores": [
+        0.0
+      ],
+      "split": "single",
+      "fit": [],
+      "cut_s": 0,
+      "overflow_s": 0
+    }
+  ]
+}

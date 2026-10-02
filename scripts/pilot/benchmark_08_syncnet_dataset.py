@@ -43,11 +43,17 @@ def _manifest(v:pathlib.Path)->dict|None:
     try: return json.loads(m.read_text())
     except Exception: return None
 
+def _cf_desc(cf)->str:
+    """Human-readable CodeFormer configuration of a run, from the runner manifest (2026-10-02: no longer hard-coded 'OFF')."""
+    if isinstance(cf,dict): return f"optimized w={cf.get('w')} batch {cf.get('batch')} {cf.get('precision')} ({cf.get('landmarks')} landmarks)"
+    return "OFF" if cf is None or str(cf).startswith("DISABLED") else str(cf)
+
 def _pipeline_facts(man:dict|None)->dict:
     if not man: return {"manifest":False}
     ls=man.get("lipsync") or {}; fc=ls.get("frame_classes") or {}
     return {"manifest":True,"pipeline_valid":bool((man.get("validation") or {}).get("pass")),
-            "codeformer":man.get("codeformer"),"dubbed_audio":bool((man.get("dubbed_track") or {}).get("aac")),
+            "codeformer":man.get("codeformer"),"codeformer_desc":_cf_desc(man.get("codeformer")),"alignment_mode":man.get("alignment_mode") or "slot",
+            "dubbed_audio":bool((man.get("dubbed_track") or {}).get("aac")),
             "translation_quant":(man.get("translation") or {}).get("quant") or (man.get("translation") or {}).get("model"),
             "frame_classes":fc,"latentsync_segments":(ls.get("by_action") or {}).get("LATENT_SYNC",{}).get("segments",0),
             "latentsync_seconds":ls.get("latentsync_seconds_of_video"),"speech_gate":(man.get("speech_gate") or {}).get("enabled"),
@@ -75,7 +81,7 @@ def main()->int:
     ap.add_argument("videos",help="directory with the final dubbed outputs (+ <stem>.manifest.json), or one video")
     ap.add_argument("--expect",type=int,default=5)
     ap.add_argument("--originals",default=None,help="directory with the untouched source videos -> reference confidence + deltas")
-    ap.add_argument("--audio-note",default="translated TTS dubbed audio (final clean E2E outputs, CodeFormer OFF)")
+    ap.add_argument("--audio-note",default="translated TTS dubbed audio (final E2E outputs; CodeFormer / alignment configuration is read from the manifests)")
     ap.add_argument("--config-note",default="reports/pilot/FINAL_ML_CONFIG.md")
     ap.add_argument("--json",default=str(PILOT/"0.8_syncnet_real_content.json"))
     ap.add_argument("--md",default=str(PILOT/"0.8_syncnet_real_content.md"))
@@ -98,6 +104,9 @@ def main()->int:
     ok=[r for r in rows if r["status"]=="PASS"]; na=[r for r in rows if r["status"]==NA_NO_FACE]; failed=[r for r in rows if r["status"]=="FAIL"]
     valid=[r for r in rows if r["pipeline"].get("pipeline_valid")]
     conf=[r["confidence"] for r in ok]; offs=[abs(r["av_offset_frames"]) for r in ok]
+    cf_set=sorted({r["pipeline"]["codeformer_desc"] for r in rows if r["pipeline"].get("manifest")}); al_set=sorted({r["pipeline"]["alignment_mode"] for r in rows if r["pipeline"].get("manifest")})
+    lipsync_note=("optimized face-aware LatentSync (speech gate, RetinaFace routing), CodeFormer "+(" / ".join(cf_set) if cf_set else "unknown (no manifests)")
+                  +"; audio alignment "+(" / ".join(al_set) if al_set else "unknown"))
     closed=len(vids)==a.expect and len(valid)==len(vids) and not failed and len(ok)+len(na)==len(vids)
     verdict=(f"CLOSED — {len(valid)}/{len(vids)} final E2E outputs valid; SyncNet measured on {len(ok)}/{len(vids)}, "
              f"{len(na)} N/A (no face); contract threshold still UNDECIDED") if closed else \
@@ -112,7 +121,7 @@ def main()->int:
              "worst_by_abs_offset":max(ok,key=lambda r:abs(r["av_offset_frames"]))["name"] if ok else None,
              "rows":rows,"originals":orig_rows,"gpu":gpu_info(),
              "syncnet":{"evaluator":"third_party/latentsync/eval/eval_sync_conf.py (upstream, S3FD face tracker)","model":str(DEFAULT_MODEL)},
-             "semantics":{"dataset":"five real customer/content videos, FINAL dubbed E2E outputs","lipsync_processing":"optimized face-aware LatentSync (speech gate, RetinaFace routing), CodeFormer OFF",
+             "semantics":{"dataset":"five real customer/content videos, FINAL dubbed E2E outputs","lipsync_processing":lipsync_note,
                           "audio":a.audio_note,"config":a.config_note,
                           "no_face_rule":"content without any face cannot be scored by SyncNet; recorded as N/A_NO_FACE, not a pipeline failure",
                           "old_blocker":"'LatentSync fails on 01/02/05 with Face not detected' is NO LONGER RELEVANT: face-aware routing passes such frames through"},
@@ -125,6 +134,7 @@ def main()->int:
         f"Confidence (scoreable) mean/median/min/max: **{summary['confidence']['mean']} / {summary['confidence']['median']} / {summary['confidence']['min']} / {summary['confidence']['max']}**  ",
         f"Max |AV offset| (scoreable): **{summary['abs_av_offset_frames']['max']} frames**  ",
         f"Audio: {a.audio_note}. Config: `{a.config_note}`.  ",
+        f"Lipsync / restoration (from the runner manifests): {lipsync_note}.  ",
         "**The old blocker \"LatentSync fails on 01/02/05 with Face not detected\" is no longer relevant**: face-aware routing "
         "passes no-face / small-face frames through, all five final E2E videos were produced and validated.  ",
         "**Contract threshold is intentionally not auto-selected:** the source spec does not define whether it should be min/mean/median/etc.","",
@@ -134,10 +144,10 @@ def main()->int:
         pf=r["pipeline"]; oc=f"{r.get('original_confidence','-')} / {r.get('original_av_offset_frames','-')}"
         md.append(f"| {r['name']} | {'yes' if pf.get('pipeline_valid') else 'no'} | {'yes' if pf.get('dubbed_audio') else 'no'} | {'yes' if r.get('measurable') else 'no'} | "
                   f"{r.get('confidence','-')} | {r.get('av_offset_frames','-')} | {oc} | {r.get('confidence_delta','-')} | {r['status']}{(' — '+r['reason']) if r.get('reason') else ''} |")
-    md+=["","Per-video pipeline facts (from the runner manifests):","","| video | backend | speech gate | VALID / SMALL / NO_FACE / NO_SPEECH frames | LatentSync segments | LatentSync s | translation |","|---|---|---|---|---:|---:|---|"]
+    md+=["","Per-video pipeline facts (from the runner manifests):","","| video | backend | speech gate | VALID / SMALL / NO_FACE / NO_SPEECH frames | LatentSync segments | LatentSync s | translation | CodeFormer | alignment |","|---|---|---|---|---:|---:|---|---|---|"]
     for r in rows:
         pf=r["pipeline"]; fc=pf.get("frame_classes") or {}
-        md.append(f"| {r['name']} | {pf.get('video_backend','-')} | {pf.get('speech_gate','-')} | {fc.get('VALID_FACE','-')} / {fc.get('SMALL_FACE','-')} / {fc.get('NO_FACE','-')} / {fc.get('NO_SPEECH','-')} | {pf.get('latentsync_segments','-')} | {pf.get('latentsync_seconds','-')} | {pf.get('translation_quant','-')} |")
+        md.append(f"| {r['name']} | {pf.get('video_backend','-')} | {pf.get('speech_gate','-')} | {fc.get('VALID_FACE','-')} / {fc.get('SMALL_FACE','-')} / {fc.get('NO_FACE','-')} / {fc.get('NO_SPEECH','-')} | {pf.get('latentsync_segments','-')} | {pf.get('latentsync_seconds','-')} | {pf.get('translation_quant','-')} | {pf.get('codeformer_desc','-')} | {pf.get('alignment_mode','-')} |")
     pathlib.Path(a.md).write_text("\n".join(md)+"\n")
     print("\n".join(md)); return 0 if closed else 2
 
