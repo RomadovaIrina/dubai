@@ -25,6 +25,8 @@ echo "== Chatterbox multilingual v3"; snap ResembleAI/chatterbox "$M/chatterbox"
 echo "== LatentSync 1.6 (unet 5 GB + whisper tiny)"; snap ByteDance/LatentSync-1.6 "$M/latentsync" "latentsync_unet.pt" "whisper/tiny.pt" "auxiliary/syncnet_v2.model" "auxiliary/sfd_face.pth"
 echo "== sd-vae-ft-mse (LatentSync VAE)"; snap stabilityai/sd-vae-ft-mse "$M/sd-vae-ft-mse" "*.json" "*.safetensors"
 echo "== wav2vec2-base-960h (independent CTC ASR for the TTS intelligibility QA, 0.4 GB)"; snap facebook/wav2vec2-base-960h "$M/wav2vec2-base-960h" "*.json" "model.safetensors"
+# Hybrid Demucs (torchaudio HDEMUCS_HIGH_MUSDB_PLUS) for the background bed of the final mix (scripts/pilot/background_bed.py, 0.3 GB)
+mkdir -p "$M/demucs"; [ -s "$M/demucs/hdemucs_high_trained.pt" ] || curl -fL --retry 3 -o "$M/demucs/hdemucs_high_trained.pt" https://download.pytorch.org/torchaudio/models/hdemucs_high_trained.pt; echo "ok $M/demucs/hdemucs_high_trained.pt"
 # LatentSync expects ./checkpoints/{latentsync_unet.pt,whisper/tiny.pt} relative to its repo root
 LS="${DUB_ROOT}/third_party/latentsync/checkpoints"; mkdir -p "$LS"
 ln -sfn "$M/latentsync/latentsync_unet.pt" "$LS/latentsync_unet.pt"; ln -sfn "$M/latentsync/whisper" "$LS/whisper"

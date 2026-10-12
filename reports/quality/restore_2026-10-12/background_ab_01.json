@@ -1,0 +1,101 @@
+{
+ "id": "01",
+ "manifest": "/workspace/dub/runs/baseline/final/01_final.manifest.json",
+ "out_mp4": "/workspace/dub/runs/bg_ab3/01_bg.mp4",
+ "separation": {
+  "model": "torchaudio HDEMUCS_HIGH_MUSDB_PLUS (bg = drums+bass+other)",
+  "weights": "/workspace/dub/dubai/models/demucs/hdemucs_high_trained.pt",
+  "bg": "/workspace/dub/runs/bg_ab3/bgwork_01/bg_44k.wav",
+  "vocals": "/workspace/dub/runs/bg_ab3/bgwork_01/vocals_44k.wav",
+  "seconds": 101.679,
+  "load_s": 1.089,
+  "separate_s": 1.115,
+  "total_s": 2.582,
+  "source_db": -14.13,
+  "vocals_db": -15.61,
+  "bg_db": -19.53
+ },
+ "mix": {
+  "wav": "/workspace/dub/runs/bg_ab3/bgwork_01/final_mix_44k.wav",
+  "aac": "/workspace/dub/runs/bg_ab3/bgwork_01/final_mix_aac.m4a",
+  "room_fill": {
+   "enabled": true,
+   "applied": false,
+   "skipped": "floor -27.9 dBFS > -42 (music / loud ambience)"
+  },
+  "bg_gain_db": 2.06,
+  "duck_db": -6.0,
+  "attack_s": 0.08,
+  "release_s": 0.35,
+  "bg_offset_db": 0.0,
+  "dub_voice_db": -13.1,
+  "orig_vocals_db": -15.17,
+  "peak_norm": 0.7627,
+  "bed_db_in_dub_pauses": -18.79,
+  "mix_db_in_dub_pauses": -20.39,
+  "seconds": 101.667,
+  "mix_s": 2.5
+ },
+ "dead_air_s": {
+  "old_dub_only": 16.2,
+  "new_dub_plus_bed": 0.0,
+  "original_source": 0.0,
+  "duration_s": 101.666667
+ },
+ "bed_leakage": {
+  "bed_vad_s": 0,
+  "bed_vad_in_dub_pauses_s": 0,
+  "bed_vad_in_source_speech_s": 0,
+  "source_speech_s": 91.9,
+  "whisper_words_bed": 2,
+  "whisper_text_bed": "Продолжение следует...",
+  "whisper_words_bed_in_dub_pauses": 6,
+  "whisper_text_bed_in_dub_pauses": "Продолжение следует... Продолжение следует... Продолжение следует..."
+ },
+ "intelligibility": {
+  "dub_only": {
+   "label": "run",
+   "units": 26,
+   "wer_whisper_mean": 0.019,
+   "cer_ctc_mean": 0.055,
+   "cer_whisper_mean": 0.01,
+   "units_bad(cer_ctc>=0.3)": 0,
+   "interjection_units": 0,
+   "final_word_missing_units": 0,
+   "tts_parts": 40,
+   "placed_groups": 40,
+   "parts_min_words": 1,
+   "parts_le2_words": 11,
+   "retried_parts": 0,
+   "retry_success": 0,
+   "retry_success_rate": null,
+   "atempo_max": 1.146,
+   "atempo_gt_1.15": 0,
+   "atempo_gt_1.2": 0,
+   "atempo_gt_1.3": 0,
+   "atempo_median": 1.0
+  },
+  "mixed": {
+   "label": "run",
+   "units": 26,
+   "wer_whisper_mean": 0.019,
+   "cer_ctc_mean": 0.065,
+   "cer_whisper_mean": 0.006,
+   "units_bad(cer_ctc>=0.3)": 0,
+   "interjection_units": 0,
+   "final_word_missing_units": 0,
+   "tts_parts": 40,
+   "placed_groups": 40,
+   "parts_min_words": 1,
+   "parts_le2_words": 11,
+   "retried_parts": 0,
+   "retry_success": 0,
+   "retry_success_rate": null,
+   "atempo_max": 1.146,
+   "atempo_gt_1.15": 0,
+   "atempo_gt_1.2": 0,
+   "atempo_gt_1.3": 0,
+   "atempo_median": 1.0
+  }
+ }
+}

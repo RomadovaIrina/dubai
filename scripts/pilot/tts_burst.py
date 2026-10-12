@@ -56,6 +56,18 @@ def speech_span(y: np.ndarray, sr: int, work: pathlib.Path, tag: str, preroll_ma
     return s_, min(len(y) / sr, raw[-1][1] + 0.06)
 
 
+def edge_fade(seg: np.ndarray, sr: int, in_ms: float, out_ms: float) -> np.ndarray:
+    """Linear fade-in / fade-out of a cut part (an inner cut that lands on a still-voiced sound gets a 20 ms fade-out instead of a click / hard stop)."""
+    seg = np.array(seg, dtype=np.float32, copy=True)
+    for ms, head in ((in_ms, True), (out_ms, False)):
+        k = min(len(seg) // 2, int(ms / 1000 * sr))
+        if k > 0:
+            ramp = np.linspace(0.0, 1.0, k, dtype=np.float32)
+            if head: seg[:k] *= ramp
+            else: seg[-k:] *= ramp[::-1]
+    return seg
+
+
 def concise_rewrite(llm, src_name: str, tgt_name: str, source_group: str, text: str, max_words: int, seconds: float) -> str | None:
     """Ask Qwen for a shorter natural spoken version of ONE part. Returns None when the answer is unusable (empty, not shorter, loses a number)."""
     from burst_aware_audio import missing_numbers
@@ -69,8 +81,31 @@ def concise_rewrite(llm, src_name: str, tgt_name: str, source_group: str, text: 
     return new
 
 
+JUDGE_STATS = {"calls": 0, "seconds": 0.0}   # Qwen judge cost of the fit-up path (reset per run_tts_phrase call)
 FILLER = re.compile(r"\b(um+|uh+|er+|erm|you know|basically|actually|literally|i mean|sort of)\b", re.I)
 JUDGE_SYSTEM = "You are a strict bilingual reviewer of dubbing scripts. You answer with JSON only."
+
+
+_APPEND_FUNC = frozenset("a an the and or but so to of for in on at by with from as is are was were be been it its this that these those i we you he she they me us him them my our your their will would can could do does did have has had not no very just also there here".split())
+
+
+def appended_clause(old: str, new: str) -> str | None:
+    """Deterministic fit-up guard (2026-10-12 review, no Qwen call): a fuller rewrite that APPENDS a new clause at the end ("... video shooting
+    to see how it works", "With proper use" -> "When used correctly, it is.") or ends on a dangling auxiliary ("..., it is.") is padding, not a
+    fuller translation. Returns the reason or None. Insertions inside the sentence (spelled-out subjects, full verb forms) are not affected."""
+    import difflib
+    tok = lambda t: re.findall(r"[a-z0-9']+", t.lower().replace("’", "'"))
+    o, n = tok(old), tok(new)
+    if not o or not n:
+        return None
+    tag, i1, i2, j1, j2 = difflib.SequenceMatcher(None, o, n, autojunk=False).get_opcodes()[-1]
+    if tag in ("insert", "replace") and j2 == len(n) and (tag == "insert" or i2 == len(o)):
+        run = n[j1:j2]; novel = [w for w in run if w not in o and w not in _APPEND_FUNC]
+        if len(run) >= 2 and len(novel) >= 2 and (j2 - j1) - (i2 - i1) >= 2:
+            return f"appended clause '{' '.join(run)}'"
+    if re.search(r"\b(it|that|this|there)\s+(is|was|does|did|will|can)[.!…]*\s*$", new.strip().lower()) and not re.search(r"\b(is|was|does|did|will|can)[.!…]*\s*$", old.strip().lower()):
+        return "dangling auxiliary ending"
+    return None
 
 
 def faithful_check(llm, src_name: str, tgt_name: str, source_text: str, old_text: str, new_text: str) -> tuple[bool, list[str]]:
@@ -80,7 +115,9 @@ def faithful_check(llm, src_name: str, tgt_name: str, source_text: str, old_text
               f"Does the proposed translation state any NEW fact, event, outcome, quality or claim that the {src_name} source does not say? "
               f"Synonyms, paraphrases, a more literal rendering of the source words, spelled-out pronouns and natural connectors are NOT additions. "
               f"Answer with JSON only: {{\"added\": [\"...\"]}} quoting each genuinely new element, or {{\"added\": []}} if nothing new is stated.")
+    tj = time.perf_counter()
     r = llm.create_chat_completion([{"role": "system", "content": JUDGE_SYSTEM}, {"role": "user", "content": prompt}], max_tokens=200, temperature=0.0)
+    JUDGE_STATS["calls"] += 1; JUDGE_STATS["seconds"] += time.perf_counter() - tj
     txt = re.sub(r"^```(?:json)?\s*|\s*```$", "", r["choices"][0]["message"]["content"].strip())
     m_ = re.search(r"\{.*\}", txt, re.S)
     try:
@@ -91,7 +128,8 @@ def faithful_check(llm, src_name: str, tgt_name: str, source_text: str, old_text
         return False, [f"judge answer unparsable: {txt[:120]}"]
 
 
-def fuller_rewrite(llm, src_name: str, tgt_name: str, source_text: str, text: str, target_words: int, source_seconds: float, tts_seconds: float, min_words: int | None = None, attempts: int = 3) -> tuple[str | None, str]:
+def fuller_rewrite(llm, src_name: str, tgt_name: str, source_text: str, text: str, target_words: int, source_seconds: float, tts_seconds: float, min_words: int | None = None, attempts: int = 3,
+                   guard: bool = False) -> tuple[str | None, str]:
     """Fit-UP (2026-10-02): ask Qwen for a FULLER natural spoken version of ONE sentence whose synthesized speech is much shorter than the source speech.
     Same meaning, every number / name / fact kept, same style, no added information, no filler words. The word budget is explicit (min..max) and a
     too-short / too-long answer is fed back once. Returns (text | None, reason)."""
@@ -113,6 +151,7 @@ def fuller_rewrite(llm, src_name: str, tgt_name: str, source_text: str, text: st
         elif nw_new > hi + 2: why = f"too long ({nw_new} > {hi + 2} words)"
         elif missing_numbers(text, new) or missing_numbers(source_text, new): why = "number lost"
         elif FILLER.search(new): why = f"filler word '{FILLER.search(new).group(0)}'"
+        elif guard and appended_clause(text, new): why = appended_clause(text, new) + " (translate the source fully instead of adding a clause at the end)"
         else:
             ok, added = faithful_check(llm, src_name, tgt_name, source_text, text, new)
             if ok:
@@ -300,9 +339,77 @@ def distribute_words(spans: list[dict], raw_words: list[str], bursts: list, norm
     return counts if all(c >= 1 for c in counts) else None
 
 
+# English words a spoken phrase must not END on before a pause (articles, prepositions, conjunctions, auxiliaries, pronouns, determiners):
+# "smooth and | will bring us the | result" was the dominant "voice breaks off mid-phrase" defect of the timing split (2026-10-12 review).
+CUT_FUNC_WORDS = frozenset(("a an the and or but nor so to of for in on at by with from as into onto than that which who whom whose this these those my our your his "
+                            "her its their i we you he she it they me us him them will would can could shall should may might must is are was were be been being am "
+                            "have has had do does did not no very just also let's such all each every some any both either neither another other more most less few "
+                            "many much several").split())
+
+
+def distribute_words_syntax(spans: list[dict], raw_words: list[str], bursts: list, norm_fn, tol: float = 0.4, w_punct: float = 0.6, w_gap: float = 1.0,
+                            w_func: float = 0.8, w_tight: float = 0.35, w_merge: float = 0.9, func_words=CUT_FUNC_WORDS, y: np.ndarray | None = None, sr: int = TTS_SR,
+                            w_voiced: float = 0.5, steep: float = 4.0) -> list[int] | None:
+    """Syntax-aware variant of distribute_words (2026-10-12): the cut positions are chosen jointly (dynamic programming) with
+      cost = 0.5 per `tol` s of deviation from the proportional burst point (+ steep per s beyond `tol`: a cut moved by ~1 s for a comma left a 2.1 s
+             source burst of 05 with 0.3 s of dub -> coverage loss, 2026-10-12 A/B)  - w_punct at punctuation  - w_gap x inter-word pause (<= 0.4 s)
+             + w_func after a function word ("the | result", "smooth and | will")  + w_tight for a cut with < 60 ms pause and no punctuation
+             + w_func after a number ("20-25 | years")
+    and a boundary may also be left uncut (cost w_merge + 0.3 x the source pause, <= 2 s): the two bursts then form ONE window and the phrase runs
+    through the short source pause instead of breaking after "and". With the clip `y`, a cut whose quietest 5 ms in the inter-word window is still
+    within 15 dB of the speech level costs up to w_voiced more (CTC word ends are early: "video | as" with a 100 ms CTC pause was still voiced).
+    Returns aligned tokens per burst; 0 = merged into the next burst."""
+    import functools
+    n = len(spans); M = len(bursts)
+    ends = []; acc = 0
+    for w in raw_words:
+        t = len(norm_fn(w)); acc += t
+        if t:
+            ends.append((acc, bool(re.search(r"[,.;:!?…]['\"»)]*$", w)), re.sub(r"[^\w']", "", w.lower().replace("’", "'")), bool(re.search(r"\d", w))))
+    if acc != n or M <= 1:
+        return [n] if M <= 1 else None
+    t0 = spans[0]["start"]; S = max(spans[-1]["end"] - t0, 1e-3)
+    bd = [max(e - s, 0.05) for s, e in bursts]; B = sum(bd); tgt = [sum(bd[: j + 1]) / B * S for j in range(M - 1)]
+
+    voiced = {}
+    if y is not None and w_voiced > 0:
+        h = max(1, int(0.005 * sr)); nf = len(y) // h
+        r = 20 * np.log10(np.sqrt(np.mean(y[: nf * h].reshape(nf, h) ** 2, axis=1) + 1e-12)); ref = float(np.percentile(r, 90))
+        for k, *_ in ends:
+            if k < n:
+                a_, b_ = int((spans[k - 1]["end"] - 0.02) * sr) // h, int((spans[k]["start"] + 0.02) * sr) // h + 1
+                v = float(r[max(0, a_):min(nf, b_)].min()) - ref if b_ > a_ else 0.0
+                voiced[k] = w_voiced * min(1.0, max(0.0, (v + 30.0) / 15.0))
+
+    def cut_cost(j, k, pu, lw, num):
+        gap = spans[k]["start"] - spans[k - 1]["end"] if k < n else 0.0
+        d = abs(spans[k - 1]["end"] - t0 - tgt[j])
+        c = 0.5 * d / max(tol, 1e-3) + steep * max(0.0, d - tol) - (w_punct if pu else 0.0) - w_gap * min(gap, 0.4)
+        if not pu:
+            c += (w_func if lw in func_words or num else 0.0) + (w_tight if gap < 0.06 else 0.0)
+        return c + voiced.get(k, 0.0)
+
+    @functools.lru_cache(maxsize=None)
+    def best(j, prev):
+        if j == M - 1:
+            return 0.0, ()
+        c, rest = best(j + 1, prev); opt = (c + w_merge + 0.3 * min(max(bursts[j + 1][0] - bursts[j][1], 0.0), 2.0), (None,) + rest)
+        for k, pu, lw, num in ends:
+            if prev < k < n:
+                c, rest = best(j + 1, k); c += cut_cost(j, k, pu, lw, num)
+                if c < opt[0]:
+                    opt = (c, (k,) + rest)
+        return opt
+    counts = []; prev = 0
+    for k in best(0, 0)[1]:
+        counts.append(0 if k is None else k - prev); prev = prev if k is None else k
+    counts.append(n - prev)
+    return counts if counts[-1] >= 1 else None
+
+
 def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pathlib.Path, seed: int, times: dict, *, opts, llm=None, src_name: str = "", tgt_name: str = "",
                    fit: dict | None = None, qa_cfg: dict | None = None, fit_up: dict | None = None, split_retries: int = 2, min_part_words: int = 1, soft_part_words: int = 2,
-                   part_max_words: int = 16, phrase_split: str = "timing", log=print) -> dict:
+                   part_max_words: int = 16, phrase_split: str = "timing", phrase_cut: str = "timing", log=print) -> dict:
     """Phrase-first TTS (2026-10-02, priorities 1-3 of the coverage fix). Per unit:
       ONE Chatterbox generation of the whole natural translated sentence (QA retry ladder as in run_tts_burst)
       -> fit-DOWN (concise rewrite when the sentence cannot fit its total window at atempo_cap, rule as before)
@@ -337,7 +444,8 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
     prev_end_of = {u["id"]: plans[i - 1]["slot"][1] for i, u in enumerate(units) if i > 0}
     stats = {"parts": 0, "attempts": 0, "retried_parts": 0, "retry_success": 0, "final_bad": 0, "fit_parts_rewritten": 0, "fit_parts_merged": 0, "fit_rounds_used": 0, "fit_rewrite_rejected": 0,
              "fit_up_units": 0, "fit_up_rounds": 0, "fit_up_accepted": 0, "fit_up_rejected": 0, "fit_up_candidates": 0, "units_single_burst": 0, "units_qwen_split": 0, "units_single_fallback": 0,
-             "spans": 0, "span_merges": 0, "align_ok": 0, "align_fallback": 0, "units_timing_split": 0, "units_proportional_fallback": 0, "gen_seconds": 0.0, "qa_seconds": 0.0, "align_seconds": 0.0}
+             "spans": 0, "span_merges": 0, "align_ok": 0, "align_fallback": 0, "units_timing_split": 0, "units_proportional_fallback": 0, "gen_seconds": 0.0, "qa_seconds": 0.0, "align_seconds": 0.0,
+             "fitup_qwen_seconds": 0.0, "fitdown_qwen_seconds": 0.0, "fitup_gen_qa_seconds": 0.0}
 
     def cast(dtype):
         for mod in (m.t3, m.s3gen, m.ve):
@@ -416,11 +524,13 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                     r = sp_s / total_win
                     if r <= opts.atempo_cap + 1e-3:
                         break
-                    nw = words_of(text); tgt_w = max(int(nw * fit.get("target_ratio", 1.05) / r), 4); stats["fit_rounds_used"] += 1
-                    recf = {"round": rnd + 1, "ratio_before": round(r, 3), "old": text, "action": "concise_rewrite", "max_words": tgt_w}
-                    if llm is None or r <= opts.hard_cap + 0.05 or nw < 6 or tgt_w >= nw:
+                    # short sentences (4-5 words) too: 02 "Relaxation zone: lying areas." overflowed its window by 0.4 s at the hard cap and was cut (2026-10-12)
+                    nw = words_of(text); overflow = sp_s / opts.hard_cap - total_win; short_ok = nw >= fit.get("short_min_words", 4) and overflow > fit.get("short_overflow_s", 0.3)
+                    tgt_w = max(int(nw * fit.get("target_ratio", 1.05) / r), 4 if nw >= 6 else 3); stats["fit_rounds_used"] += 1
+                    recf = {"round": rnd + 1, "ratio_before": round(r, 3), "old": text, "action": "concise_rewrite", "max_words": tgt_w, "overflow_at_hard_cap_s": round(overflow, 3)}
+                    if llm is None or r <= opts.hard_cap + 0.05 or (nw < 6 and not short_ok) or tgt_w >= nw:
                         recf.update(action="kept", result="short phrase or marginal overflow: lead / spill / moderate atempo instead"); u["fit"].append(recf); break
-                    new = concise_rewrite(llm, src_name, tgt_name, src_words, text, tgt_w, sp_s / r)
+                    tq = time.perf_counter(); new = concise_rewrite(llm, src_name, tgt_name, src_words, text, tgt_w, sp_s / r); stats["fitdown_qwen_seconds"] += time.perf_counter() - tq
                     if new is None:
                         recf["result"] = "rewrite_rejected"; stats["fit_rewrite_rejected"] += 1; u["fit"].append(recf); break
                     y2, rec2 = gen_sentence(u, new, dtype, salt=10 + rnd); sp2 = align(y2, new); s2 = speech_seconds(y2, sp2)
@@ -433,13 +543,14 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                         ratio = sp_s / target; rate = words_of(text) / sp_s
                         tgt_w = max(words_of(text) + 1, int(round(rate * target * fit_up.get("aim", 1.0)))); lo_w = max(words_of(text) + 1, int(round(rate * target * fit_up.get("min_ratio", 0.85)))); stats["fit_up_rounds"] += 1
                         recu = {"round": rnd + 1, "ratio_before": round(ratio, 3), "old": text, "target_words": tgt_w, "min_words": lo_w, "source_seconds": round(target, 3), "tts_seconds_before": round(sp_s, 3)}
-                        new, why = fuller_rewrite(llm, src_name, tgt_name, src_words, text, tgt_w, target, sp_s, min_words=lo_w)
+                        tq = time.perf_counter(); new, why = fuller_rewrite(llm, src_name, tgt_name, src_words, text, tgt_w, target, sp_s, min_words=lo_w, guard=fit_up.get("guard", False)); stats["fitup_qwen_seconds"] += time.perf_counter() - tq
                         if new is None:
                             recu["result"] = "rewrite_rejected"; recu["reason"] = why; stats["fit_up_rejected"] += 1; u["fit_up"].append(recu)
                             if rnd + 1 < fit_up.get("rounds", 2) and "too long" in why:   # ask once more with a smaller budget
                                 continue
                             break
-                        y2, rec2 = gen_sentence(u, new, dtype, salt=20 + rnd); sp2 = align(y2, new); s2 = speech_seconds(y2, sp2); r2 = s2 / target
+                        tq = time.perf_counter(); y2, rec2 = gen_sentence(u, new, dtype, salt=20 + rnd); sp2 = align(y2, new); s2 = speech_seconds(y2, sp2); r2 = s2 / target
+                        stats["fitup_gen_qa_seconds"] += time.perf_counter() - tq
                         closer = abs(1 - r2) < abs(1 - ratio) - 0.02
                         not_worse = (qa is None) or ((not rec2["qa_bad_final"]) and (rec2["qa_score"] is None or rec["qa_score"] is None or rec2["qa_score"] <= rec["qa_score"] + 0.05))
                         recu.update(new=new, tts_seconds_after=round(s2, 3), ratio_after=round(r2, 3), qa_before=rec.get("qa_score"), qa_after=rec2.get("qa_score"), closer=closer, intelligible=not_worse)
@@ -468,7 +579,14 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                             if merges:
                                 slog["merges"] = merges; stats["fit_parts_merged"] += len(merges)
                     if parts is None and spans is not None:
-                        counts = distribute_words(spans, raw_words, p["bursts"], norm)
+                        counts = (distribute_words_syntax(spans, raw_words, p["bursts"], norm, y=y, sr=m.sr) if phrase_cut == "syntax" and tgt_lang == "en"
+                                  else distribute_words(spans, raw_words, p["bursts"], norm))
+                        if counts is not None and 0 in counts:     # syntax split left a boundary uncut: merge that burst into the next one (union window)
+                            for j in range(len(counts) - 2, -1, -1):
+                                if counts[j] == 0:
+                                    p["bursts"][j:j + 2] = [(p["bursts"][j][0], p["bursts"][j + 1][1])]; p["groups"][j:j + 2] = [p["groups"][j] + " " + p["groups"][j + 1]]
+                                    p["group_counts"][j:j + 2] = [p["group_counts"][j] + p["group_counts"][j + 1]]; counts[j:j + 2] = [counts[j + 1]]
+                            slog["burst_merges"] = slog.get("burst_merges", 0) + 1; stats["syntax_burst_merges"] = stats.get("syntax_burst_merges", 0) + 1
                         if counts is not None:
                             parts = []; k0 = 0; acc = 0; idx = 0
                             for c in counts:                           # raw words whose aligned tokens fall into this part
@@ -476,7 +594,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                                 while idx < len(raw_words) and acc < k0 + c:
                                     acc += len(norm(raw_words[idx])); words_here.append(raw_words[idx]); idx += 1
                                 parts.append(" ".join(words_here)); k0 += c
-                            slog["method"] = "timing" if phrase_split != "qwen" else "timing_fallback"; stats["units_timing_split"] += 1
+                            slog["method"] = ("timing" if phrase_split != "qwen" else "timing_fallback") + ("+syntax" if phrase_cut == "syntax" and tgt_lang == "en" else ""); stats["units_timing_split"] += 1
                     if parts is None:                                   # lossless proportional cut by source word counts (never a single lump over the pauses)
                         parts = proportional_split(text, p["group_counts"]); slog["method"] = "proportional_fallback"; stats["units_proportional_fallback"] += 1
                         if any(not norm_tokens(x) for x in parts):
@@ -510,6 +628,8 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                 u["parts"] = parts; u["tts_parts"] = []
                 for k, ((a, b), ptxt) in enumerate(zip(pieces, parts)):
                     seg = y[int(a * m.sr):int(b * m.sr)]
+                    if phrase_cut == "syntax":   # the cut parts were saved without any fade (cut_parts' faded copies are not used); part of the syntax candidate
+                        seg = edge_fade(seg, m.sr, 5.0, 20.0 if k + 1 < len(pieces) else 10.0)
                     f = work / f"tts_u{u['id']:02d}_p{k}.wav"; torchaudio.save(str(f), torch.from_numpy(np.ascontiguousarray(seg)).unsqueeze(0), m.sr)
                     u["tts_parts"].append({"file": str(f), "seconds": round(len(seg) / m.sr, 3), "text": ptxt, "clip_span": [round(a, 3), round(b, 3)], "speech_span": [0.0, round(len(seg) / m.sr, 3)],
                                            "attempts": rec["attempts"], "qa_bad_final": rec["qa_bad_final"], "qa_score": rec["qa_score"], "seed_used": rec["seed_used"], "temperature_used": rec["temperature_used"],
@@ -529,6 +649,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
         try:
             for k_ in stats:
                 stats[k_] = 0 if not isinstance(stats[k_], float) else 0.0
+            JUDGE_STATS.update(calls=0, seconds=0.0)
             synth_all(dtype); used = dtype; break
         except Exception as e:
             log(f"  [tts] {dtype} failed: {type(e).__name__}: {str(e)[:200]} -> retrying next dtype")
@@ -538,7 +659,8 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
     if qa_obj is not None:
         qa_obj.close()
     torch.cuda.empty_cache()
-    for k_ in ("gen_seconds", "qa_seconds", "align_seconds"):
+    stats["judge_calls"] = JUDGE_STATS["calls"]; stats["judge_seconds"] = JUDGE_STATS["seconds"]
+    for k_ in ("gen_seconds", "qa_seconds", "align_seconds", "fitup_qwen_seconds", "fitdown_qwen_seconds", "fitup_gen_qa_seconds", "judge_seconds"):
         stats[k_] = round(stats[k_], 2)
     stats["retry_success_rate"] = round(stats["retry_success"] / stats["retried_parts"], 3) if stats["retried_parts"] else None
     return {"model": "ChatterboxMultilingualTTS t3=v3 (models/chatterbox)", "sr": sr, "dtype": str(used).replace("torch.", ""), "language_id": tgt_lang, "mode": "phrase",

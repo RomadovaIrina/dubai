@@ -1,0 +1,101 @@
+{
+ "id": "05",
+ "manifest": "/workspace/dub/runs/baseline/final/05_final.manifest.json",
+ "out_mp4": "/workspace/dub/runs/bg_ab3/05_bg.mp4",
+ "separation": {
+  "model": "torchaudio HDEMUCS_HIGH_MUSDB_PLUS (bg = drums+bass+other)",
+  "weights": "/workspace/dub/dubai/models/demucs/hdemucs_high_trained.pt",
+  "bg": "/workspace/dub/runs/bg_ab3/bgwork_05/bg_44k.wav",
+  "vocals": "/workspace/dub/runs/bg_ab3/bgwork_05/vocals_44k.wav",
+  "seconds": 52.383,
+  "load_s": 0.976,
+  "separate_s": 0.809,
+  "total_s": 2.029,
+  "source_db": -19.14,
+  "vocals_db": -23.1,
+  "bg_db": -21.58
+ },
+ "mix": {
+  "wav": "/workspace/dub/runs/bg_ab3/bgwork_05/final_mix_44k.wav",
+  "aac": "/workspace/dub/runs/bg_ab3/bgwork_05/final_mix_aac.m4a",
+  "room_fill": {
+   "enabled": true,
+   "applied": false,
+   "skipped": "floor -28.5 dBFS > -42 (music / loud ambience)"
+  },
+  "bg_gain_db": 0.95,
+  "duck_db": -6.0,
+  "attack_s": 0.08,
+  "release_s": 0.35,
+  "bg_offset_db": 0.0,
+  "dub_voice_db": -19.43,
+  "orig_vocals_db": -20.39,
+  "peak_norm": 1.0,
+  "bed_db_in_dub_pauses": -21.58,
+  "mix_db_in_dub_pauses": -21.46,
+  "seconds": 52.367,
+  "mix_s": 1.303
+ },
+ "dead_air_s": {
+  "old_dub_only": 27.2,
+  "new_dub_plus_bed": 0.0,
+  "original_source": 0.0,
+  "duration_s": 52.366667
+ },
+ "bed_leakage": {
+  "bed_vad_s": 0,
+  "bed_vad_in_dub_pauses_s": 0,
+  "bed_vad_in_source_speech_s": 0,
+  "source_speech_s": 27.9,
+  "whisper_words_bed": 3,
+  "whisper_text_bed": "Субтитры сделал DimaTorzok",
+  "whisper_words_bed_in_dub_pauses": 2,
+  "whisper_text_bed_in_dub_pauses": "Продолжение следует..."
+ },
+ "intelligibility": {
+  "dub_only": {
+   "label": "run",
+   "units": 7,
+   "wer_whisper_mean": 0.02,
+   "cer_ctc_mean": 0.155,
+   "cer_whisper_mean": 0.008,
+   "units_bad(cer_ctc>=0.3)": 1,
+   "interjection_units": 0,
+   "final_word_missing_units": 0,
+   "tts_parts": 21,
+   "placed_groups": 21,
+   "parts_min_words": 1,
+   "parts_le2_words": 9,
+   "retried_parts": 0,
+   "retry_success": 0,
+   "retry_success_rate": null,
+   "atempo_max": 1.15,
+   "atempo_gt_1.15": 0,
+   "atempo_gt_1.2": 0,
+   "atempo_gt_1.3": 0,
+   "atempo_median": 0.9
+  },
+  "mixed": {
+   "label": "run",
+   "units": 7,
+   "wer_whisper_mean": 0.0,
+   "cer_ctc_mean": 0.115,
+   "cer_whisper_mean": 0.0,
+   "units_bad(cer_ctc>=0.3)": 0,
+   "interjection_units": 0,
+   "final_word_missing_units": 0,
+   "tts_parts": 21,
+   "placed_groups": 21,
+   "parts_min_words": 1,
+   "parts_le2_words": 9,
+   "retried_parts": 0,
+   "retry_success": 0,
+   "retry_success_rate": null,
+   "atempo_max": 1.15,
+   "atempo_gt_1.15": 0,
+   "atempo_gt_1.2": 0,
+   "atempo_gt_1.3": 0,
+   "atempo_median": 0.9
+  }
+ }
+}

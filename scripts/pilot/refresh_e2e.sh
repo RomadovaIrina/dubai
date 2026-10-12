@@ -6,6 +6,7 @@
 # One nvidia-smi sampler (1 s) per run -> <out>.nvsmi.log (device-wide peak VRAM); runs are strictly sequential.
 #   bash scripts/pilot/refresh_e2e.sh            # 01 02 03 04 05
 #   bash scripts/pilot/refresh_e2e.sh 03         # one video
+#   PILOT_REFRESH_ROOT=/workspace/dub/runs/cand DUB_EXTRA_ARGS="--phrase-cut timing" bash scripts/pilot/refresh_e2e.sh 03   # candidate flags (A/B)
 set -uo pipefail
 DUB_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"; . "${DUB_ROOT}/scripts/env.sh"; cd "${DUB_ROOT}"
 R="${PILOT_REFRESH_ROOT:-/tmp/pilot_refresh}"; F="$R/final"; W="$R/work"; L="$R/logs"; mkdir -p "$F" "$W" "$L"
@@ -19,7 +20,7 @@ for id in "${IDS[@]}"; do
   nvidia-smi --query-gpu=timestamp,memory.used --format=csv,noheader,nounits -l 1 > "$F/${id}_final.nvsmi.log" 2>/dev/null & NV=$!
   s=$(date +%s)
   python scripts/pilot/run_clean_pipeline_05.py --input "$in" --output "$out" --target-lang en \
-      --alignment burst --video-backend optimized --codeformer optimized --work-dir "$W" > "$L/${id}_e2e.log" 2>&1; rc=$?
+      --alignment burst --video-backend optimized --codeformer optimized --work-dir "$W" ${DUB_EXTRA_ARGS:-} > "$L/${id}_e2e.log" 2>&1; rc=$?
   kill $NV 2>/dev/null; wait $NV 2>/dev/null
   peak=$(awk -F', ' '{print $2}' "$F/${id}_final.nvsmi.log" | sort -n | tail -1)
   echo "===== $id exit $rc wall $(( $(date +%s) - s ))s peak_nvsmi_MiB=$peak"

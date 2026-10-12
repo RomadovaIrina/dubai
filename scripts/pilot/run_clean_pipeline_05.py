@@ -41,7 +41,7 @@ frozen dabai baseline, wired in pipeline order on the ORIGINAL timeline (pauses 
                                        LatentSync output frames of LATENT_SYNC segments only (optimized backend), before the
                                        crossfade/assembly; geometry, frame count and duration unchanged
   12. final assembly                   lipsynced/pass-through frames (25 fps CFR master, as LatentSync works) + dubbed
-                                       AAC track -> output MP4 on the full original timeline; no subtitles (the 0.5
+                                       AAC track (--background on: dubbed voice + the source background bed, background_bed.py) -> output MP4 on the full original timeline; no subtitles (the 0.5
                                        spec measures the clean pipeline without the 0.11 subtitle stage)
 
 Runtime media goes to --work-dir (default /tmp/dabai_pilot_05/work_<stem>); a compact manifest JSON
@@ -632,7 +632,20 @@ def main() -> int:
     ap.add_argument("--fit-up-ratio", type=float, default=0.8, help="phrase mode: fit-up when synthesized speech / source speech of the unit is below this"); ap.add_argument("--fit-up-rounds", type=int, default=3)
     ap.add_argument("--fit-up-aim", type=float, default=1.0, help="phrase mode: the fuller rewrite targets aim x the source speech duration")
     ap.add_argument("--phrase-split", choices=["timing", "qwen"], default="timing", help="phrase mode: timing = distribute the aligned TTS words over the source bursts by duration (cuts between words, at punctuation / pauses when near); qwen = semantic JSON split with lossless fallbacks")
+    ap.add_argument("--phrase-cut", choices=["syntax", "timing"], default="timing",
+                    help="phrase mode, timing split: timing = distribute_words (cumulative-duration point, small punctuation / pause bonus; default); syntax = cuts chosen "
+                         "jointly by timing (steep beyond 0.4 s) + punctuation / pauses + acoustic silence, not after a function word or inside number+unit, 5/20 ms edge "
+                         "fades (2026-10-12 candidate: hot cut edges 39/43 -> 20/38, function-word cuts 37 -> 4, but coverage / CTC CER not yet at baseline -> off)")
+    ap.add_argument("--fit-up-guard", choices=["on", "off"], default="off", help="phrase mode: reject fit-up rewrites that append a clause / end on a dangling auxiliary before the Qwen judge "
+                                                                                  "(deterministic; 2026-10-12 candidate, fewer judge calls)")
+    ap.add_argument("--fit-down-short-words", type=int, default=4, help="phrase mode: concise rewrite also for 4-5-word sentences when they overflow their window by > --fit-down-short-overflow-s at the hard cap (previous rule: >= 6 words only)")
+    ap.add_argument("--fit-down-short-overflow-s", type=float, default=0.3)
     ap.add_argument("--phrase-min-part-words", type=int, default=1); ap.add_argument("--phrase-soft-part-words", type=int, default=2)
+    ap.add_argument("--background", choices=["on", "off"], default="on",
+                    help="final mix: on = source background bed (Hybrid Demucs accompaniment, original voice/bed balance, ducked under the dub) under the dubbed voice; "
+                         "off = dubbed voice over digital silence (previous behaviour). LatentSync / speech gate always use the clean dubbed voice. Default on since 2026-10-12 (dead air 16-54 s -> 0-6 s, WER unchanged)")
+    ap.add_argument("--bg-duck-db", type=float, default=-6.0, help="--background on: bed attenuation while the dub speaks (dB)")
+    ap.add_argument("--bg-offset-db", type=float, default=0.0, help="--background on: bed level relative to the original voice/background balance (dB)")
     ap.add_argument("--stop-after", choices=["none", "audio"], default="none", help="audio = stop after the dubbed track (audio-only candidate: manifest + dubbed_24k/16k.wav, no LatentSync)")
     ap.add_argument("--min-ls-frames", type=int, default=25, help="VALID_FACE runs shorter than this are passed through")
     ap.add_argument("--max-verify-depth", type=int, default=3)
@@ -760,11 +773,12 @@ def main() -> int:
             if phrase_mode:
                 from tts_burst import run_tts_phrase
                 man["tts"] = run_tts_phrase(units, plans, refs, tgt, work, a.seed, times, opts=burst_opts, llm=llm, src_name=lang_name(src_lang), tgt_name=lang_name(tgt),
-                                            fit={"enabled": llm is not None and a.fit_retranslate == "on", "rounds": a.fit_rounds, "target_ratio": a.fit_target_ratio},
+                                            fit={"enabled": llm is not None and a.fit_retranslate == "on", "rounds": a.fit_rounds, "target_ratio": a.fit_target_ratio,
+                                                 "short_min_words": a.fit_down_short_words, "short_overflow_s": a.fit_down_short_overflow_s},
                                             qa_cfg={"enabled": qa_on, "retries": a.tts_retries, "low_temp": a.qa_temp},
-                                            fit_up={"enabled": a.fit_up == "on" and llm is not None, "ratio": a.fit_up_ratio, "rounds": a.fit_up_rounds, "aim": a.fit_up_aim},
+                                            fit_up={"enabled": a.fit_up == "on" and llm is not None, "ratio": a.fit_up_ratio, "rounds": a.fit_up_rounds, "aim": a.fit_up_aim, "guard": a.fit_up_guard == "on"},
                                             split_retries=a.split_retries, min_part_words=a.phrase_min_part_words, soft_part_words=a.phrase_soft_part_words, part_max_words=a.part_max_words,
-                                            phrase_split=a.phrase_split, log=lambda m_: print(m_, flush=True))
+                                            phrase_split=a.phrase_split, phrase_cut=a.phrase_cut, log=lambda m_: print(m_, flush=True))
             else:
                 man["tts"] = run_tts_burst(units, plans, refs, tgt, work, a.seed, times, opts=burst_opts, llm=llm, src_name=lang_name(src_lang), tgt_name=lang_name(tgt),
                                            fit={"enabled": llm is not None, "rounds": a.fit_rounds, "target_ratio": a.fit_target_ratio},
@@ -782,6 +796,17 @@ def main() -> int:
         with timed(times, "dubbed_track"):
             man["dubbed_track"] = build_dubbed_track(units, duration, work)
         man["units"] = units
+        mux_aac = pathlib.Path(man["dubbed_track"]["aac"]); man["background"] = {"enabled": False}
+        if a.background == "on":   # only the MUXED audio changes; dubbed_16k (LatentSync, speech gate) stays the clean voice
+            from background_bed import mix_background, separate_background
+            with timed(times, "background_sep"):
+                sep = separate_background(src, work)
+            with timed(times, "background_mix"):
+                dub_vad = run_vad(pathlib.Path(man["dubbed_track"]["wav16k"]))
+                mix = mix_background(sep, pathlib.Path(man["dubbed_track"]["wav24k"]), [(v["start"], v["end"]) for v in speech], [(v["start"], v["end"]) for v in dub_vad],
+                                     duration, work, bg_offset_db=a.bg_offset_db, duck_db=a.bg_duck_db)
+            man["background"] = {"enabled": True, "separation": sep, "mix": mix}; mux_aac = pathlib.Path(mix["aac"])
+            print(f"  [background] bed gain {mix['bg_gain_db']:+.1f} dB, duck {mix['duck_db']} dB, separation {sep['separate_s']}s (+load {sep['load_s']}s), bed in dub pauses {mix['bed_db_in_dub_pauses']} dBFS", flush=True)
         print(f"  [align] ratios tts/slot: " + " ".join(f"{u['alignment']['ratio_tts_to_slot']:.2f}" for u in units), flush=True)
         if a.stop_after == "audio":
             times["total"] = round(time.perf_counter() - t_all, 3); man["stage_seconds"] = times; man["gpu"] = gpu_info(); man["at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -812,10 +837,10 @@ def main() -> int:
                 print(f"  [gate] {len(speech_gate)} intervals, {gated:.1f}s of {duration:.1f}s ({gated / duration:.0%}) eligible for LatentSync", flush=True)
             else:
                 man["speech_gate"] = {"enabled": False}
-            man["lipsync"] = run_lipsync_optimized(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), pathlib.Path(man["dubbed_track"]["aac"]), out, a, times,
+            man["lipsync"] = run_lipsync_optimized(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), mux_aac, out, a, times,
                                                    speech_gate=speech_gate)
         else:
-            man["lipsync"] = run_lipsync(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), pathlib.Path(man["dubbed_track"]["aac"]),
+            man["lipsync"] = run_lipsync(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), mux_aac,
                                          out, a.min_ls_frames, a.max_verify_depth, times)
     except Blocker as e:
         man["blocker"] = str(e); man["stage_seconds"] = times
