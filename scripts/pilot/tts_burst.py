@@ -347,9 +347,15 @@ CUT_FUNC_WORDS = frozenset(("a an the and or but nor so to of for in on at by wi
                             "many much several").split())
 
 
+# --phrase-cut acoustic (2026-10-12 offline sweep on the five baseline clips): cuts inside still-voiced sound 14/25 -> 4/8 (> -15 / -20 dB of the
+# speech level), timing deviation 0.132 -> 0.146 s mean, max unchanged 0.55 s; the function-word rule of "syntax" is off (it cost coverage).
+# + w_fill / w_single (cand4): parts < 40 % of their burst 9 -> 6, one-word parts 11 -> 4, timing deviation 0.151 s (cand3: "that" alone on a 0.7 s burst of 05).
+ACOUSTIC_CUT = {"w_func": 0.0, "w_voiced": 1.0, "w_punct": 0.25, "w_tight": 0.0, "w_gap": 0.5, "w_fill": 1.0, "w_single": 0.5}
+
+
 def distribute_words_syntax(spans: list[dict], raw_words: list[str], bursts: list, norm_fn, tol: float = 0.4, w_punct: float = 0.6, w_gap: float = 1.0,
                             w_func: float = 0.8, w_tight: float = 0.35, w_merge: float = 0.9, func_words=CUT_FUNC_WORDS, y: np.ndarray | None = None, sr: int = TTS_SR,
-                            w_voiced: float = 0.5, steep: float = 4.0) -> list[int] | None:
+                            w_voiced: float = 0.5, steep: float = 4.0, w_fill: float = 0.0, w_single: float = 0.0) -> list[int] | None:
     """Syntax-aware variant of distribute_words (2026-10-12): the cut positions are chosen jointly (dynamic programming) with
       cost = 0.5 per `tol` s of deviation from the proportional burst point (+ steep per s beyond `tol`: a cut moved by ~1 s for a comma left a 2.1 s
              source burst of 05 with 0.3 s of dub -> coverage loss, 2026-10-12 A/B)  - w_punct at punctuation  - w_gap x inter-word pause (<= 0.4 s)
@@ -358,6 +364,8 @@ def distribute_words_syntax(spans: list[dict], raw_words: list[str], bursts: lis
     and a boundary may also be left uncut (cost w_merge + 0.3 x the source pause, <= 2 s): the two bursts then form ONE window and the phrase runs
     through the short source pause instead of breaking after "and". With the clip `y`, a cut whose quietest 5 ms in the inter-word window is still
     within 15 dB of the speech level costs up to w_voiced more (CTC word ends are early: "video | as" with a 100 ms CTC pause was still voiced).
+    w_fill / w_single (acoustic mode): a part whose speech covers < 40 % of its source burst costs up to w_fill (05 u06: "that" = 0.14 s on a
+    0.7 s burst), a one-word part (no punctuation) costs w_single.
     Returns aligned tokens per burst; 0 = merged into the next burst."""
     import functools
     n = len(spans); M = len(bursts)
@@ -389,6 +397,19 @@ def distribute_words_syntax(spans: list[dict], raw_words: list[str], bursts: lis
             c += (w_func if lw in func_words or num else 0.0) + (w_tight if gap < 0.06 else 0.0)
         return c + voiced.get(k, 0.0)
 
+    words_end = {k: i for i, (k, *_r) in enumerate(ends)}
+
+    def part_cost(j, prev, k, pu):
+        """Part j = aligned tokens prev..k-1 placed on burst j (only the parts that END at a cut; the merge path is not charged)."""
+        if not (w_fill or w_single):
+            return 0.0
+        dur = spans[k - 1]["end"] - spans[prev]["start"]; fill = dur / max(bursts[j][1] - bursts[j][0], 0.05)
+        c = w_fill * max(0.0, 0.4 - fill) / 0.4
+        raw_words_in_part = words_end[k] - (words_end[prev] if prev in words_end else -1)
+        if raw_words_in_part <= 1 and not pu:
+            c += w_single
+        return c
+
     @functools.lru_cache(maxsize=None)
     def best(j, prev):
         if j == M - 1:
@@ -396,7 +417,7 @@ def distribute_words_syntax(spans: list[dict], raw_words: list[str], bursts: lis
         c, rest = best(j + 1, prev); opt = (c + w_merge + 0.3 * min(max(bursts[j + 1][0] - bursts[j][1], 0.0), 2.0), (None,) + rest)
         for k, pu, lw, num in ends:
             if prev < k < n:
-                c, rest = best(j + 1, k); c += cut_cost(j, k, pu, lw, num)
+                c, rest = best(j + 1, k); c += cut_cost(j, k, pu, lw, num) + part_cost(j, prev, k, pu)
                 if c < opt[0]:
                     opt = (c, (k,) + rest)
         return opt
@@ -579,8 +600,12 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                             if merges:
                                 slog["merges"] = merges; stats["fit_parts_merged"] += len(merges)
                     if parts is None and spans is not None:
-                        counts = (distribute_words_syntax(spans, raw_words, p["bursts"], norm, y=y, sr=m.sr) if phrase_cut == "syntax" and tgt_lang == "en"
-                                  else distribute_words(spans, raw_words, p["bursts"], norm))
+                        if phrase_cut == "syntax" and tgt_lang == "en":
+                            counts = distribute_words_syntax(spans, raw_words, p["bursts"], norm, y=y, sr=m.sr)
+                        elif phrase_cut == "acoustic":   # timing split + quiet cut points only (no function-word rule): swallowed word ends without the coverage cost
+                            counts = distribute_words_syntax(spans, raw_words, p["bursts"], norm, y=y, sr=m.sr, **ACOUSTIC_CUT)
+                        else:
+                            counts = distribute_words(spans, raw_words, p["bursts"], norm)
                         if counts is not None and 0 in counts:     # syntax split left a boundary uncut: merge that burst into the next one (union window)
                             for j in range(len(counts) - 2, -1, -1):
                                 if counts[j] == 0:
@@ -594,7 +619,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                                 while idx < len(raw_words) and acc < k0 + c:
                                     acc += len(norm(raw_words[idx])); words_here.append(raw_words[idx]); idx += 1
                                 parts.append(" ".join(words_here)); k0 += c
-                            slog["method"] = ("timing" if phrase_split != "qwen" else "timing_fallback") + ("+syntax" if phrase_cut == "syntax" and tgt_lang == "en" else ""); stats["units_timing_split"] += 1
+                            slog["method"] = ("timing" if phrase_split != "qwen" else "timing_fallback") + ({"syntax": "+syntax" if tgt_lang == "en" else "", "acoustic": "+acoustic"}.get(phrase_cut, "")); stats["units_timing_split"] += 1
                     if parts is None:                                   # lossless proportional cut by source word counts (never a single lump over the pauses)
                         parts = proportional_split(text, p["group_counts"]); slog["method"] = "proportional_fallback"; stats["units_proportional_fallback"] += 1
                         if any(not norm_tokens(x) for x in parts):
@@ -630,6 +655,8 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                     seg = y[int(a * m.sr):int(b * m.sr)]
                     if phrase_cut == "syntax":   # the cut parts were saved without any fade (cut_parts' faded copies are not used); part of the syntax candidate
                         seg = edge_fade(seg, m.sr, 5.0, 20.0 if k + 1 < len(pieces) else 10.0)
+                    elif phrase_cut == "acoustic":   # the 5 ms declick fades cut_parts was meant to apply
+                        seg = edge_fade(seg, m.sr, 5.0, 5.0)
                     f = work / f"tts_u{u['id']:02d}_p{k}.wav"; torchaudio.save(str(f), torch.from_numpy(np.ascontiguousarray(seg)).unsqueeze(0), m.sr)
                     u["tts_parts"].append({"file": str(f), "seconds": round(len(seg) / m.sr, 3), "text": ptxt, "clip_span": [round(a, 3), round(b, 3)], "speech_span": [0.0, round(len(seg) / m.sr, 3)],
                                            "attempts": rec["attempts"], "qa_bad_final": rec["qa_bad_final"], "qa_score": rec["qa_score"], "seed_used": rec["seed_used"], "temperature_used": rec["temperature_used"],

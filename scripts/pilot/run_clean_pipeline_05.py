@@ -236,6 +236,9 @@ def burst_plan(units: list[dict], segments: list[dict], speech: list[dict], dura
     return plans
 
 
+QWEN_GPU_LAYERS = 0       # --qwen-gpu-layers (A/B 2026-10-12): needs a CUDA build of llama-cpp-python first on PYTHONPATH; 0 = frozen CPU baseline
+
+
 def load_llm(times: dict):
     """Qwen2.5-7B Q8_0 via llama.cpp (CPU), loaded once and shared by sentence segmentation, translation, burst split and the fit rewrites."""
     import glob
@@ -244,7 +247,7 @@ def load_llm(times: dict):
     if not files:
         raise Blocker(f"Qwen2.5-7B {QWEN_QUANT} GGUF not found under models/ (python scripts/pilot/fetch_09_qwen_quant.py {QWEN_QUANT} --yes)")
     with timed(times, "translation_load"):
-        llm = Llama(model_path=files[0], n_ctx=4096, n_threads=THREADS, n_threads_batch=THREADS, n_gpu_layers=0, verbose=False)
+        llm = Llama(model_path=files[0], n_ctx=4096, n_threads=THREADS, n_threads_batch=THREADS, n_gpu_layers=QWEN_GPU_LAYERS, verbose=False)
     return llm, os.path.basename(files[0])
 
 
@@ -307,7 +310,7 @@ def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict
                 assert len(parts) == len(p["bursts"]) == len(p["groups"]), "parts / bursts out of sync"
                 u["parts"] = parts; u["split"] = log; split_stats[log["method"]] = split_stats.get(log["method"], 0) + 1; split_stats["parts_total"] += len(parts)
                 print(f"  [split] u{u['id']:02d} {len(parts)} parts [{log['method']}{'+merged' if log.get('merges') else ''}]: " + " | ".join(f"{g} -> {t}" for g, t in zip(p["groups"], parts))[:300], flush=True)
-    meta = {"model": os.path.basename(files[0]), "quant": QWEN_QUANT, "n_ctx": 4096, "n_threads": THREADS, "n_gpu_layers": 0,
+    meta = {"model": os.path.basename(files[0]), "quant": QWEN_QUANT, "n_ctx": 4096, "n_threads": THREADS, "n_gpu_layers": QWEN_GPU_LAYERS,
             "system_prompt": SYSTEM_PROMPT, "direction": f"{src_name}->{tgt_name}", "usage": usage, "burst_split": split_stats}
     if keep_llm:
         return meta, llm, src_name, tgt_name    # the burst TTS session re-translates over-long parts with the same model (tts_burst.py), caller deletes it
@@ -570,6 +573,10 @@ def run_lipsync_optimized(src: pathlib.Path, work: pathlib.Path, dubbed16k: path
         router = faa.make_router(a.face_router, a.face_min_w, a.face_min_h, a.retina_conf)
     with timed(times, "latentsync_load"):
         runner = faa.AccelRunner(a.window_batch_size, not a.no_deepcache, a.compile_backend, a.sdpa_backend, deepcache_interval=a.deepcache_interval)
+    if a.mouth_only_pasteback == "on":   # E4: LatentSync pixels only inside a feathered lower-face ellipse, the rest of the frame = master (scripts/quality/candidate_video_stage.py)
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
+        from candidate_video_stage import MouthOnlyRunner
+        runner = MouthOnlyRunner(runner, a.mask_top, a.mask_feather)
     cf_runner = None
     if a.codeformer == "optimized":
         from codeformer_accel import CodeFormerAccel
@@ -632,15 +639,18 @@ def main() -> int:
     ap.add_argument("--fit-up-ratio", type=float, default=0.8, help="phrase mode: fit-up when synthesized speech / source speech of the unit is below this"); ap.add_argument("--fit-up-rounds", type=int, default=3)
     ap.add_argument("--fit-up-aim", type=float, default=1.0, help="phrase mode: the fuller rewrite targets aim x the source speech duration")
     ap.add_argument("--phrase-split", choices=["timing", "qwen"], default="timing", help="phrase mode: timing = distribute the aligned TTS words over the source bursts by duration (cuts between words, at punctuation / pauses when near); qwen = semantic JSON split with lossless fallbacks")
-    ap.add_argument("--phrase-cut", choices=["syntax", "timing"], default="timing",
+    ap.add_argument("--phrase-cut", choices=["syntax", "acoustic", "timing"], default="timing",
                     help="phrase mode, timing split: timing = distribute_words (cumulative-duration point, small punctuation / pause bonus; default); syntax = cuts chosen "
                          "jointly by timing (steep beyond 0.4 s) + punctuation / pauses + acoustic silence, not after a function word or inside number+unit, 5/20 ms edge "
-                         "fades (2026-10-12 candidate: hot cut edges 39/43 -> 20/38, function-word cuts 37 -> 4, but coverage / CTC CER not yet at baseline -> off)")
+                         "fades (2026-10-12 candidate: hot cut edges 39/43 -> 20/38, function-word cuts 37 -> 4, but coverage / CTC CER not yet at baseline -> off); "
+                         "acoustic = timing split that prefers acoustically quiet word boundaries (no function-word rule), 5 ms declick fades")
     ap.add_argument("--fit-up-guard", choices=["on", "off"], default="off", help="phrase mode: reject fit-up rewrites that append a clause / end on a dangling auxiliary before the Qwen judge "
                                                                                   "(deterministic; 2026-10-12 candidate, fewer judge calls)")
     ap.add_argument("--fit-down-short-words", type=int, default=4, help="phrase mode: concise rewrite also for 4-5-word sentences when they overflow their window by > --fit-down-short-overflow-s at the hard cap (previous rule: >= 6 words only)")
     ap.add_argument("--fit-down-short-overflow-s", type=float, default=0.3)
     ap.add_argument("--phrase-min-part-words", type=int, default=1); ap.add_argument("--phrase-soft-part-words", type=int, default=2)
+    ap.add_argument("--qwen-gpu-layers", type=int, default=0, help="Qwen layers offloaded to the GPU (-1 = all); 0 = frozen CPU baseline. Needs a CUDA llama-cpp-python build "
+                                                                   "(A/B 2026-10-12: translation 18x faster, outputs not identical to the CPU)")
     ap.add_argument("--background", choices=["on", "off"], default="on",
                     help="final mix: on = source background bed (Hybrid Demucs accompaniment, original voice/bed balance, ducked under the dub) under the dubbed voice; "
                          "off = dubbed voice over digital silence (previous behaviour). LatentSync / speech gate always use the clean dubbed voice. Default on since 2026-10-12 (dead air 16-54 s -> 0-6 s, WER unchanged)")
@@ -666,8 +676,17 @@ def main() -> int:
     ap.add_argument("--gate-merge-gap-s", type=float, default=OPTIMIZED_DEFAULTS["gate_merge_gap_s"])
     ap.add_argument("--crossfade-frames", type=int, default=OPTIMIZED_DEFAULTS["crossfade_frames"], help="LS/original boundary blend length (0 = off)")
     ap.add_argument("--router-stride", type=int, default=OPTIMIZED_DEFAULTS["router_stride"], help="RetinaFace on every N-th gated frame")
+    ap.add_argument("--mouth-only-pasteback", choices=["on", "off"], default="off",
+                    help="optimized backend: keep the master pixels outside a feathered lower-face mask (E4; 03 A/B 2026-10-12: upper-face sharpness 0.818 -> 0.858, SyncNet 5.81 -> 5.84)")
+    ap.add_argument("--mask-top", type=float, default=0.52); ap.add_argument("--mask-feather", type=float, default=0.08)
     ap.add_argument("--segment-files", action="store_true", help="optimized backend: legacy per-segment mp4 path instead of in-memory segments")
     a = ap.parse_args()
+    global QWEN_GPU_LAYERS
+    QWEN_GPU_LAYERS = a.qwen_gpu_layers
+    if a.qwen_gpu_layers:
+        import llama_cpp
+        if not llama_cpp.llama_supports_gpu_offload():
+            print(f"--qwen-gpu-layers {a.qwen_gpu_layers}: the imported llama_cpp ({llama_cpp.__file__}) is a CPU build", file=sys.stderr); return 2
     if a.codeformer is None:
         a.codeformer = "off" if a.no_codeformer else None
     if a.codeformer is None:
@@ -785,6 +804,7 @@ def main() -> int:
                                            qa_cfg={"enabled": qa_on, "retries": a.tts_retries, "low_temp": a.qa_temp}, min_part_words=a.min_part_words,
                                            log=lambda m_: print(m_, flush=True))
             llm = tr = None    # release Qwen (the translation tuple also holds a reference)
+            gc.collect()       # --qwen-gpu-layers: frees the llama.cpp CUDA buffers before LatentSync
         else:
             man["tts"] = run_tts(units, refs, tgt, work, a.seed, times)
 

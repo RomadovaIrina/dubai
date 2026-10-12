@@ -1,0 +1,691 @@
+[
+ {
+  "id": "01",
+  "valid": true,
+  "wall_total_s": 217.895,
+  "audio": {
+   "asr": 9.56,
+   "diarization": 9.094,
+   "segmentation_qwen": 3.259,
+   "translation_qwen": 2.209,
+   "tts_stage": 58.69,
+   "tts_gen": 48.42,
+   "tts_qa_asr": 5.17,
+   "ctc_align": 0.25,
+   "tts_rest_qwen_fit_io": 4.85,
+   "fitup_qwen_s": 4.05,
+   "fitdown_qwen_s": 0.0,
+   "judge_calls": 16,
+   "judge_s": 1.01,
+   "background_sep": 1.559,
+   "background_mix": 3.524,
+   "audio_total": 105.43
+  },
+  "video": {
+   "latentsync": 55.647,
+   "codeformer": 7.309,
+   "face_classify": 15.956,
+   "final_assembly": 6.592,
+   "ls_frames": 260
+  },
+  "coverage": {
+   "orig_speech_s": 91.9,
+   "dub_speech_s": 84.4,
+   "orig_without_dub_s": 9.0,
+   "dub_outside_orig_s": 1.5,
+   "iou": 0.8876,
+   "bursts": 25,
+   "bursts_covered_lt_50pct": 0,
+   "bursts_uncovered": 0,
+   "silent_while_speaking_frames_vad": 214,
+   "cut_groups": 0,
+   "cut_max_s": 0.008,
+   "lost_numbers": [],
+   "repeated_words": {
+    "units": [
+     {
+      "unit": null,
+      "decoder": "ctc",
+      "repeated": [
+       "twenty"
+      ]
+     }
+    ],
+    "count": 1
+   },
+   "ls_frames_dub_silent_while_orig": 22
+  },
+  "intelligibility": {
+   "label": "01",
+   "units": 26,
+   "wer_whisper_mean": 0.026,
+   "cer_ctc_mean": 0.063,
+   "cer_whisper_mean": 0.013,
+   "units_bad(cer_ctc>=0.3)": 1,
+   "interjection_units": 0,
+   "final_word_missing_units": 0,
+   "tts_parts": 40,
+   "placed_groups": 40,
+   "parts_min_words": 1,
+   "parts_le2_words": 10,
+   "retried_parts": 0,
+   "retry_success": 0,
+   "retry_success_rate": null,
+   "atempo_max": 1.15,
+   "atempo_gt_1.15": 0,
+   "atempo_gt_1.2": 0,
+   "atempo_gt_1.3": 0,
+   "atempo_median": 0.994
+  },
+  "tts_stats": {
+   "parts": 26,
+   "attempts": 34,
+   "retried_parts": 0,
+   "retry_success": 0,
+   "final_bad": 0,
+   "fit_up_candidates": 11,
+   "fit_up_accepted": 8,
+   "fit_up_rejected": 5,
+   "fit_parts_rewritten": 0,
+   "spans": 40,
+   "span_merges": 1,
+   "syntax_burst_merges": null
+  },
+  "atempo": {
+   "max": 1.15,
+   "mean": 0.973,
+   "lt_1": 20,
+   "gt_1_15": 0,
+   "gt_1_20": 0,
+   "groups": 40
+  },
+  "edges": {
+   "spans": 40,
+   "hot_db": -15.0,
+   "final_tails_hot": 1,
+   "final_tails": 26,
+   "final_tail_db_median": -29.200000000000003,
+   "initial_heads_hot": 0,
+   "initial_heads": 26,
+   "inner_tails_hot": 7,
+   "inner_heads_hot": 8,
+   "inner_cuts": 14
+  },
+  "background": {
+   "wav": "/workspace/dub/runs/qgpu/work/work_01/final_mix_44k.wav",
+   "aac": "/workspace/dub/runs/qgpu/work/work_01/final_mix_aac.m4a",
+   "room_fill": {
+    "enabled": true,
+    "applied": false,
+    "skipped": "floor -27.9 dBFS > -42 (music / loud ambience)"
+   },
+   "bg_gain_db": 1.88,
+   "duck_db": -6.0,
+   "attack_s": 0.08,
+   "release_s": 0.35,
+   "bg_offset_db": 0.0,
+   "dub_voice_db": -13.29,
+   "orig_vocals_db": -15.17,
+   "peak_norm": 0.8133,
+   "bed_db_in_dub_pauses": -19.0,
+   "mix_db_in_dub_pauses": -20.06,
+   "seconds": 101.667,
+   "mix_s": 2.49
+  },
+  "syncnet": {
+   "confidence": 8.1,
+   "av_offset": 0
+  },
+  "syncnet_dub_only": {
+   "confidence": 7.94,
+   "av_offset": 0
+  },
+  "syncnet_original": {
+   "confidence": 5.36,
+   "av_offset": 1
+  }
+ },
+ {
+  "id": "02",
+  "valid": true,
+  "wall_total_s": 135.369,
+  "audio": {
+   "asr": 7.188,
+   "diarization": 9.072,
+   "segmentation_qwen": 1.812,
+   "translation_qwen": 1.461,
+   "tts_stage": 42.83,
+   "tts_gen": 36.64,
+   "tts_qa_asr": 3.74,
+   "ctc_align": 0.17,
+   "tts_rest_qwen_fit_io": 2.28,
+   "fitup_qwen_s": 1.48,
+   "fitdown_qwen_s": 0.0,
+   "judge_calls": 9,
+   "judge_s": 0.48,
+   "background_sep": 1.723,
+   "background_mix": 4.269,
+   "audio_total": 85.92
+  },
+  "video": {
+   "latentsync": 0.0,
+   "codeformer": 0.0,
+   "face_classify": 12.784,
+   "final_assembly": 7.934,
+   "ls_frames": null
+  },
+  "coverage": {
+   "orig_speech_s": 56.9,
+   "dub_speech_s": 52.9,
+   "orig_without_dub_s": 10.5,
+   "dub_outside_orig_s": 6.5,
+   "iou": 0.7319,
+   "bursts": 29,
+   "bursts_covered_lt_50pct": 2,
+   "bursts_uncovered": 1,
+   "silent_while_speaking_frames_vad": 258,
+   "cut_groups": 0,
+   "cut_max_s": 0.017,
+   "lost_numbers": [],
+   "repeated_words": {
+    "units": [],
+    "count": 0
+   },
+   "ls_frames_dub_silent_while_orig": 0
+  },
+  "intelligibility": {
+   "label": "02",
+   "units": 17,
+   "wer_whisper_mean": 0.091,
+   "cer_ctc_mean": 0.174,
+   "cer_whisper_mean": 0.056,
+   "units_bad(cer_ctc>=0.3)": 3,
+   "interjection_units": 0,
+   "final_word_missing_units": 0,
+   "tts_parts": 38,
+   "placed_groups": 38,
+   "parts_min_words": 1,
+   "parts_le2_words": 13,
+   "retried_parts": 0,
+   "retry_success": 0,
+   "retry_success_rate": null,
+   "atempo_max": 1.15,
+   "atempo_gt_1.15": 0,
+   "atempo_gt_1.2": 0,
+   "atempo_gt_1.3": 0,
+   "atempo_median": 1.0
+  },
+  "tts_stats": {
+   "parts": 17,
+   "attempts": 25,
+   "retried_parts": 0,
+   "retry_success": 0,
+   "final_bad": 0,
+   "fit_up_candidates": 6,
+   "fit_up_accepted": 5,
+   "fit_up_rejected": 2,
+   "fit_parts_rewritten": 0,
+   "spans": 38,
+   "span_merges": 2,
+   "syntax_burst_merges": null
+  },
+  "atempo": {
+   "max": 1.15,
+   "mean": 0.976,
+   "lt_1": 18,
+   "gt_1_15": 0,
+   "gt_1_20": 0,
+   "groups": 38
+  },
+  "edges": {
+   "spans": 38,
+   "hot_db": -15.0,
+   "final_tails_hot": 1,
+   "final_tails": 17,
+   "final_tail_db_median": -25.1,
+   "initial_heads_hot": 4,
+   "initial_heads": 17,
+   "inner_tails_hot": 13,
+   "inner_heads_hot": 15,
+   "inner_cuts": 21
+  },
+  "background": {
+   "wav": "/workspace/dub/runs/qgpu/work/work_02/final_mix_44k.wav",
+   "aac": "/workspace/dub/runs/qgpu/work/work_02/final_mix_aac.m4a",
+   "room_fill": {
+    "enabled": true,
+    "applied": true,
+    "floor_db": -55.01,
+    "mean_fill": 0.773,
+    "seconds_filled_gt_50pct": 92.52
+   },
+   "bg_gain_db": -0.71,
+   "duck_db": -6.0,
+   "attack_s": 0.08,
+   "release_s": 0.35,
+   "bg_offset_db": 0.0,
+   "dub_voice_db": -22.38,
+   "orig_vocals_db": -21.67,
+   "peak_norm": 1.0,
+   "bed_db_in_dub_pauses": -48.51,
+   "mix_db_in_dub_pauses": -43.56,
+   "seconds": 110.867,
+   "mix_s": 3.15
+  },
+  "syncnet": "N/A (no face)"
+ },
+ {
+  "id": "03",
+  "valid": true,
+  "wall_total_s": 568.762,
+  "audio": {
+   "asr": 7.123,
+   "diarization": 9.24,
+   "segmentation_qwen": 1.79,
+   "translation_qwen": 1.255,
+   "tts_stage": 37.588,
+   "tts_gen": 28.38,
+   "tts_qa_asr": 2.94,
+   "ctc_align": 0.12,
+   "tts_rest_qwen_fit_io": 6.15,
+   "fitup_qwen_s": 5.38,
+   "fitdown_qwen_s": 0.0,
+   "judge_calls": 14,
+   "judge_s": 1.23,
+   "background_sep": 1.444,
+   "background_mix": 3.31,
+   "audio_total": 78.78
+  },
+  "video": {
+   "latentsync": 391.972,
+   "codeformer": 53.182,
+   "face_classify": 11.94,
+   "final_assembly": 6.118,
+   "ls_frames": 1870
+  },
+  "coverage": {
+   "orig_speech_s": 60.7,
+   "dub_speech_s": 51.7,
+   "orig_without_dub_s": 10.1,
+   "dub_outside_orig_s": 1.1,
+   "iou": 0.8188,
+   "bursts": 27,
+   "bursts_covered_lt_50pct": 2,
+   "bursts_uncovered": 1,
+   "silent_while_speaking_frames_vad": 247,
+   "cut_groups": 0,
+   "cut_max_s": 0.012,
+   "lost_numbers": [],
+   "repeated_words": {
+    "units": [],
+    "count": 0
+   },
+   "ls_frames_dub_silent_while_orig": 208
+  },
+  "intelligibility": {
+   "label": "03",
+   "units": 10,
+   "wer_whisper_mean": 0.004,
+   "cer_ctc_mean": 0.05,
+   "cer_whisper_mean": 0.001,
+   "units_bad(cer_ctc>=0.3)": 0,
+   "interjection_units": 0,
+   "final_word_missing_units": 0,
+   "tts_parts": 33,
+   "placed_groups": 33,
+   "parts_min_words": 1,
+   "parts_le2_words": 9,
+   "retried_parts": 2,
+   "retry_success": 2,
+   "retry_success_rate": 1.0,
+   "atempo_max": 1.15,
+   "atempo_gt_1.15": 0,
+   "atempo_gt_1.2": 0,
+   "atempo_gt_1.3": 0,
+   "atempo_median": 0.9
+  },
+  "tts_stats": {
+   "parts": 10,
+   "attempts": 15,
+   "retried_parts": 1,
+   "retry_success": 1,
+   "final_bad": 0,
+   "fit_up_candidates": 5,
+   "fit_up_accepted": 4,
+   "fit_up_rejected": 4,
+   "fit_parts_rewritten": 0,
+   "spans": 33,
+   "span_merges": 0,
+   "syntax_burst_merges": null
+  },
+  "atempo": {
+   "max": 1.15,
+   "mean": 0.941,
+   "lt_1": 26,
+   "gt_1_15": 0,
+   "gt_1_20": 0,
+   "groups": 33
+  },
+  "edges": {
+   "spans": 33,
+   "hot_db": -15.0,
+   "final_tails_hot": 0,
+   "final_tails": 10,
+   "final_tail_db_median": -37.75,
+   "initial_heads_hot": 0,
+   "initial_heads": 10,
+   "inner_tails_hot": 7,
+   "inner_heads_hot": 8,
+   "inner_cuts": 23
+  },
+  "background": {
+   "wav": "/workspace/dub/runs/qgpu/work/work_03/final_mix_44k.wav",
+   "aac": "/workspace/dub/runs/qgpu/work/work_03/final_mix_aac.m4a",
+   "room_fill": {
+    "enabled": true,
+    "applied": false,
+    "skipped": "floor -40.5 dBFS > -42 (music / loud ambience)"
+   },
+   "bg_gain_db": 2.97,
+   "duck_db": -6.0,
+   "attack_s": 0.08,
+   "release_s": 0.35,
+   "bg_offset_db": 0.0,
+   "dub_voice_db": -19.03,
+   "orig_vocals_db": -21.99,
+   "peak_norm": 0.9773,
+   "bed_db_in_dub_pauses": -36.68,
+   "mix_db_in_dub_pauses": -36.12,
+   "seconds": 90.333,
+   "mix_s": 2.372
+  },
+  "syncnet": {
+   "confidence": 5.58,
+   "av_offset": 0
+  },
+  "syncnet_dub_only": {
+   "confidence": 5.79,
+   "av_offset": 0
+  },
+  "syncnet_original": {
+   "confidence": 4.89,
+   "av_offset": 2
+  }
+ },
+ {
+  "id": "04",
+  "valid": true,
+  "wall_total_s": 322.519,
+  "audio": {
+   "asr": 6.114,
+   "diarization": 8.769,
+   "segmentation_qwen": 0.816,
+   "translation_qwen": 0.581,
+   "tts_stage": 22.737,
+   "tts_gen": 16.07,
+   "tts_qa_asr": 2.89,
+   "ctc_align": 0.06,
+   "tts_rest_qwen_fit_io": 3.72,
+   "fitup_qwen_s": 2.99,
+   "fitdown_qwen_s": 0.0,
+   "judge_calls": 13,
+   "judge_s": 0.88,
+   "background_sep": 1.065,
+   "background_mix": 1.99,
+   "audio_total": 57.29
+  },
+  "video": {
+   "latentsync": 204.157,
+   "codeformer": 27.898,
+   "face_classify": 6.393,
+   "final_assembly": 4.261,
+   "ls_frames": 967
+  },
+  "coverage": {
+   "orig_speech_s": 29.5,
+   "dub_speech_s": 25.8,
+   "orig_without_dub_s": 4.7,
+   "dub_outside_orig_s": 1.0,
+   "iou": 0.8131,
+   "bursts": 15,
+   "bursts_covered_lt_50pct": 0,
+   "bursts_uncovered": 0,
+   "silent_while_speaking_frames_vad": 116,
+   "cut_groups": 0,
+   "cut_max_s": 0,
+   "lost_numbers": [],
+   "repeated_words": {
+    "units": [],
+    "count": 0
+   },
+   "ls_frames_dub_silent_while_orig": 198
+  },
+  "intelligibility": {
+   "label": "04",
+   "units": 6,
+   "wer_whisper_mean": 0.067,
+   "cer_ctc_mean": 0.075,
+   "cer_whisper_mean": 0.03,
+   "units_bad(cer_ctc>=0.3)": 0,
+   "interjection_units": 0,
+   "final_word_missing_units": 0,
+   "tts_parts": 18,
+   "placed_groups": 18,
+   "parts_min_words": 1,
+   "parts_le2_words": 6,
+   "retried_parts": 2,
+   "retry_success": 2,
+   "retry_success_rate": 1.0,
+   "atempo_max": 1.0,
+   "atempo_gt_1.15": 0,
+   "atempo_gt_1.2": 0,
+   "atempo_gt_1.3": 0,
+   "atempo_median": 0.9
+  },
+  "tts_stats": {
+   "parts": 6,
+   "attempts": 9,
+   "retried_parts": 1,
+   "retry_success": 1,
+   "final_bad": 0,
+   "fit_up_candidates": 4,
+   "fit_up_accepted": 2,
+   "fit_up_rejected": 3,
+   "fit_parts_rewritten": 0,
+   "spans": 18,
+   "span_merges": 0,
+   "syntax_burst_merges": null
+  },
+  "atempo": {
+   "max": 1.0,
+   "mean": 0.924,
+   "lt_1": 14,
+   "gt_1_15": 0,
+   "gt_1_20": 0,
+   "groups": 18
+  },
+  "edges": {
+   "spans": 18,
+   "hot_db": -15.0,
+   "final_tails_hot": 0,
+   "final_tails": 6,
+   "final_tail_db_median": -24.9,
+   "initial_heads_hot": 0,
+   "initial_heads": 6,
+   "inner_tails_hot": 5,
+   "inner_heads_hot": 3,
+   "inner_cuts": 12
+  },
+  "background": {
+   "wav": "/workspace/dub/runs/qgpu/work/work_04/final_mix_44k.wav",
+   "aac": "/workspace/dub/runs/qgpu/work/work_04/final_mix_aac.m4a",
+   "room_fill": {
+    "enabled": true,
+    "applied": false,
+    "skipped": "floor -35.9 dBFS > -42 (music / loud ambience)"
+   },
+   "bg_gain_db": 3.12,
+   "duck_db": -6.0,
+   "attack_s": 0.08,
+   "release_s": 0.35,
+   "bg_offset_db": 0.0,
+   "dub_voice_db": -14.24,
+   "orig_vocals_db": -17.36,
+   "peak_norm": 0.9512,
+   "bed_db_in_dub_pauses": -33.29,
+   "mix_db_in_dub_pauses": -33.65,
+   "seconds": 53.9,
+   "mix_s": 1.401
+  },
+  "syncnet": {
+   "confidence": 3.18,
+   "av_offset": 0
+  },
+  "syncnet_dub_only": {
+   "confidence": 3.33,
+   "av_offset": 0
+  },
+  "syncnet_original": {
+   "confidence": 3.24,
+   "av_offset": 2
+  }
+ },
+ {
+  "id": "05",
+  "valid": true,
+  "wall_total_s": 304.589,
+  "audio": {
+   "asr": 6.268,
+   "diarization": 8.811,
+   "segmentation_qwen": 0.832,
+   "translation_qwen": 0.576,
+   "tts_stage": 29.646,
+   "tts_gen": 23.58,
+   "tts_qa_asr": 2.52,
+   "ctc_align": 0.12,
+   "tts_rest_qwen_fit_io": 3.43,
+   "fitup_qwen_s": 2.7,
+   "fitdown_qwen_s": 0.0,
+   "judge_calls": 14,
+   "judge_s": 0.81,
+   "background_sep": 1.09,
+   "background_mix": 1.847,
+   "audio_total": 63.79
+  },
+  "video": {
+   "latentsync": 181.624,
+   "codeformer": 24.669,
+   "face_classify": 6.548,
+   "final_assembly": 5.158,
+   "ls_frames": 856
+  },
+  "coverage": {
+   "orig_speech_s": 27.9,
+   "dub_speech_s": 25.2,
+   "orig_without_dub_s": 4.7,
+   "dub_outside_orig_s": 2.0,
+   "iou": 0.7759,
+   "bursts": 17,
+   "bursts_covered_lt_50pct": 1,
+   "bursts_uncovered": 0,
+   "silent_while_speaking_frames_vad": 116,
+   "cut_groups": 0,
+   "cut_max_s": 0,
+   "lost_numbers": [],
+   "repeated_words": {
+    "units": [],
+    "count": 0
+   },
+   "ls_frames_dub_silent_while_orig": 333
+  },
+  "intelligibility": {
+   "label": "05",
+   "units": 7,
+   "wer_whisper_mean": 0.02,
+   "cer_ctc_mean": 0.164,
+   "cer_whisper_mean": 0.008,
+   "units_bad(cer_ctc>=0.3)": 1,
+   "interjection_units": 0,
+   "final_word_missing_units": 0,
+   "tts_parts": 21,
+   "placed_groups": 21,
+   "parts_min_words": 1,
+   "parts_le2_words": 7,
+   "retried_parts": 0,
+   "retry_success": 0,
+   "retry_success_rate": null,
+   "atempo_max": 1.15,
+   "atempo_gt_1.15": 0,
+   "atempo_gt_1.2": 0,
+   "atempo_gt_1.3": 0,
+   "atempo_median": 0.979
+  },
+  "tts_stats": {
+   "parts": 7,
+   "attempts": 16,
+   "retried_parts": 0,
+   "retry_success": 0,
+   "final_bad": 0,
+   "fit_up_candidates": 7,
+   "fit_up_accepted": 8,
+   "fit_up_rejected": 1,
+   "fit_parts_rewritten": 0,
+   "spans": 21,
+   "span_merges": 0,
+   "syntax_burst_merges": null
+  },
+  "atempo": {
+   "max": 1.15,
+   "mean": 0.958,
+   "lt_1": 12,
+   "gt_1_15": 0,
+   "gt_1_20": 0,
+   "groups": 21
+  },
+  "edges": {
+   "spans": 21,
+   "hot_db": -15.0,
+   "final_tails_hot": 1,
+   "final_tails": 7,
+   "final_tail_db_median": -24.1,
+   "initial_heads_hot": 2,
+   "initial_heads": 7,
+   "inner_tails_hot": 8,
+   "inner_heads_hot": 9,
+   "inner_cuts": 14
+  },
+  "background": {
+   "wav": "/workspace/dub/runs/qgpu/work/work_05/final_mix_44k.wav",
+   "aac": "/workspace/dub/runs/qgpu/work/work_05/final_mix_aac.m4a",
+   "room_fill": {
+    "enabled": true,
+    "applied": false,
+    "skipped": "floor -28.5 dBFS > -42 (music / loud ambience)"
+   },
+   "bg_gain_db": 0.68,
+   "duck_db": -6.0,
+   "attack_s": 0.08,
+   "release_s": 0.35,
+   "bg_offset_db": 0.0,
+   "dub_voice_db": -19.7,
+   "orig_vocals_db": -20.39,
+   "peak_norm": 1.0,
+   "bed_db_in_dub_pauses": -21.47,
+   "mix_db_in_dub_pauses": -21.3,
+   "seconds": 52.367,
+   "mix_s": 1.262
+  },
+  "syncnet": {
+   "confidence": 3.24,
+   "av_offset": 0
+  },
+  "syncnet_dub_only": {
+   "confidence": 3.59,
+   "av_offset": 0
+  },
+  "syncnet_original": {
+   "confidence": 1.71,
+   "av_offset": 2
+  }
+ }
+]

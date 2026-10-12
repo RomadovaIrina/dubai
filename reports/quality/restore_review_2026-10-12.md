@@ -128,3 +128,71 @@ vs Chatterbox generation 15-52 s, ASR QA 1.6-5.6 s, CTC 0.1-0.3 s. Probe (same l
 separate directory, production env untouched): 03 translation of 10 units **25.9 s CPU -> 1.4 s GPU** (7.5 -> 135 tok/s); 8/10 outputs identical
 to the CPU, 2 differ ("Friends, hey everyone, greetings." vs "Friends, what's up, everyone hello."; one dropped subject). Expected saving
 ≈ 2.5-5 min per video; needs its own quality A/B because the texts change.
+
+## Qwen on the GPU — A/B (`--qwen-gpu-layers -1`, CUDA build of the SAME llama-cpp-python 0.3.35 on PYTHONPATH; production env untouched)
+
+| metric | baseline (CPU Qwen) 01 / 02 / 03 / 04 / 05 | GPU Qwen 01 / 02 / 03 / 04 / 05 |
+|---|---|---|
+| wall s (sum) | 519 / 277 / 841 / 456 / 470 (2563) | **218 / 135 / 569 / 323 / 305 (1550, −40 %)** |
+| audio stages s | 407 / 230 / 346 / 189 / 226 | 105 / 86 / 79 / 57 / 64 |
+| Qwen segmentation + translation + fit-up/judge s | 313 / 158 / 281 / 143 / 170 | 10 / 6 / 9 / 5 / 5 |
+| peak VRAM MiB (nvidia-smi) | 25196 / 8244 / 25184 / 25204 / 24174 | 22460 / 15962 / 22440 / 22466 / 22949 |
+| SyncNet dub-only · mean / median | 7.80 / – / 5.71 / 3.51 / 3.61 · 5.157 / 4.660 | 7.94 / – / 5.79 / 3.33 / 3.59 · 5.163 / 4.690 |
+| original speech without dub s (sum) | 39.5 | 39.0 |
+| Whisper WER | .019 / .063 / .004 / .043 / .020 | .026 / .091 / .004 / .067 / .020 |
+| CTC CER · bad units | .055 / .165 / .042 / .058 / .155 · 0/4/0/0/1 | .063 / .174 / .050 / .075 / .164 · 1/3/0/0/1 |
+
+Most WER differences are ASR/TTS noise on IDENTICAL texts (01 u09/u12/u16, 04 u02 "Sochi" -> "Hockey"); real text differences go both ways:
+worse — 02 u05 "Russian **banya**" (ASR "banyan"), 02 u06 "…as it should be a hearth…", 02 u03 fit-up not accepted ("…zone for changing clothes
+barrel chaise longues"); better — 04 u05 keeps the faithful "Nice weather, here comes." instead of the invented "That's great.". Same quality class,
+−40 % wall time. **Not switched on**: it changes the environment (CUDA build of llama.cpp, setup stage 4) and the frozen "Qwen on CPU" decision —
+needs an explicit decision.
+
+## Human feedback on the first outputs (2026-10-12)
+
+"01 — great, 04 — so-so, 03 — face glitches near the end, still swallowed endings."
+* 03 end (82-90 s): LS / original pass-through alternate in 17-30-frame pieces (PASS 82.44-83.64, LS 83.64-87.56, PASS 87.56-88.24, LS 88.24-89.44,
+  PASS 89.44-90.40); every switch changes stubble sharpness / lip shape within a 4-frame crossfade (88.5 -> 88.6 s: open LS mouth -> sharp closed
+  original lips), and LS frames show a soft pinkish smear under the lower lip (87.2-87.4, 88.1-88.9 s).
+* swallowed endings on 03: every hot tail is an INNER cut of a sentence, followed by a source pause: "record the first video |", "smooth and |",
+  "will bring us the |", "taking with you |" — the word is cut before its natural decay.
+
+Decision (user, 2026-10-12): **Qwen stays on the CPU** — in production the CPU Qwen of the next video overlaps the GPU video stage of the current
+one; the GPU variant is kept only as the documented A/B flag `--qwen-gpu-layers` (default 0). CPU-side Qwen savings (fewer calls) remain the lever.
+
+## Candidate 3 — acoustic phrase cuts (`--phrase-cut acoustic`)
+
+Same timing split, but the DP prefers word boundaries whose quietest 5 ms is ≥ 15 dB below the speech level (no function-word rule, steep
+timing cost beyond 0.4 s), 5 ms declick fades. TTS audio and fit-up outcomes identical to the baseline (same Qwen call sequence) -> clean A/B.
+
+| metric | baseline 01 / 02 / 03 / 04 / 05 | cand3 01 / 02 / 03 / 04 / 05 |
+|---|---|---|
+| hot inner tails / heads (sum) | 8/5 · 10/13 · 8/12 · 5/4 · 8/9 (39 / 43) | 3/1 · 7/10 · 1/7 · 3/3 · 7/7 (21 / 28) |
+| original speech without dub s (sum) | 9.1 / 10.7 / 10.3 / 4.2 / 5.2 (39.5) | 8.3 / 10.7 / 11.0 / 4.5 / 5.0 (39.5) |
+| LS frames dub-silent while original speaks | 24 / 0 / 226 / 177 / 350 | 24 / 0 / 250 / 181 / 337 |
+| Whisper WER | .019 / .063 / .004 / .043 / .020 | .019 / .063 / .004 / .031 / .000 |
+| CTC CER · bad units | .055 / .165 / .042 / .058 / .155 · 5 | .051 / .160 / .045 / .068 / .149 · 4 |
+| SyncNet dub-only · mean / median | 7.80 / – / 5.71 / 3.51 / 3.61 · 5.157 / 4.660 | 7.81 / – / 5.72 / 3.39 / 3.36 · 5.070 / 4.555 |
+| wall s (sum) | 2563 | 2543 |
+
+Regression found: 05 u06 "that" alone (0.14 s) on a 0.7 s burst (and 04/05 SyncNet −0.12 / −0.25) -> cand4 adds a fill penalty (part < 40 % of
+its burst) and a one-word-part penalty (offline: parts < 40 % 9 -> 6, one-word parts 11 -> 4, voiced cuts 4, timing deviation 0.151 s).
+
+## Face glitches at the end of 03 — video-stage A/B (`candidate_video_stage.py`, same dubbed track as the baseline)
+
+| variant | LS <-> original switches | short original gaps < 1.2 s | LS frames | LatentSync s | SyncNet / offset | mouth sharp | upper-face sharp | flicker |
+|---|---:|---:|---:|---:|---|---:|---:|---:|
+| baseline (gate merge 0.6 s) | 22 | 7 | 1870 | 395 | 5.71 / 0 | 0.749 | 0.818 | 0.974 |
+| V1 gate merge 1.2 s | 10 | 1 | 1990 | 459 | 5.81 / 0 | 0.763 | 0.818 | 0.983 |
+| V2 V1 + mouth-only paste-back (E4) | 10 | 1 | 1990 | 489 | **5.84 / 0** | 0.761 | **0.858** | 0.981 |
+
+Visual check 87.2-90 s: V2 keeps 87.5-88.2 s lip-synced continuously (no jump between generated and original lips); the soft pinkish smear under
+the lower lip in LS frames remains (a LatentSync lower-face generation artifact, not a switching problem) -> residual.
+Videos: `result_videos/face_fix_03/` (before / V1 / V2, same audio with the background bed).
+
+## Status at this commit
+
+* Defaults: baseline behaviour + `--background on` + fit-down for 4-5-word sentences. Everything else is opt-in:
+  `--phrase-cut acoustic|syntax`, `--fit-up-guard on`, `--mouth-only-pasteback on`, `--gate-merge-gap-s 1.2`, `--qwen-gpu-layers` (rejected: Qwen stays on CPU).
+* Candidate 4 in progress (all five videos): `--phrase-cut acoustic` (with the fill / one-word penalties) `--gate-merge-gap-s 1.2 --mouth-only-pasteback on`;
+  03 wall 929 s (+88 s vs baseline: more LatentSync frames + paste-back), 05 498 s. Accept / reject after the full table.
