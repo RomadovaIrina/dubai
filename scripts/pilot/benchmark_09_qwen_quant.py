@@ -49,11 +49,11 @@ def timed_completion(llm,msgs:list[dict],max_tokens:int)->dict:
             "gen_tok_per_s":round((n-1)/gen_s,3) if n>1 and gen_s>0 else None}
 
 
-def bench(model_path:str,quant:str,data:list[dict],ctx:int,max_tokens:int,threads:int,warmup:int,repeats:int)->tuple[list[dict],dict]:
+def bench(model_path:str,quant:str,data:list[dict],ctx:int,max_tokens:int,threads:int,warmup:int,repeats:int,gpu_layers:int=0)->tuple[list[dict],dict]:
     from llama_cpp import Llama
     print(f"loading {quant}: {model_path}",flush=True); t0=time.perf_counter()
     llm=Llama(model_path=model_path,n_ctx=ctx,n_threads=threads,n_threads_batch=threads,
-              n_gpu_layers=0,verbose=False)
+              n_gpu_layers=gpu_layers,verbose=False)   # 0 = pilot 0.9 (CPU); -1 = 2026-10-13 GPU addendum (CUDA build)
     load_s=round(time.perf_counter()-t0,2)
     size_gib=round(sum(pathlib.Path(p).stat().st_size for p in glob.glob(model_path.replace("-00001-of-","-*-of-")) or [model_path])/2**30,3)
     print(f"loaded in {load_s}s, {size_gib} GiB, threads={threads}",flush=True)
@@ -74,7 +74,7 @@ def bench(model_path:str,quant:str,data:list[dict],ctx:int,max_tokens:int,thread
         rows.append(row); print(f"[{i}/{len(data)}] {quant} gen {row['gen_tok_per_s_mean']} tok/s ({row['completion_tokens']} tok) -> {row['translation'][:90]}",flush=True)
     del llm
     return rows,{"model_path":model_path,"size_gib":size_gib,"load_s":load_s,"threads":threads,"n_ctx":ctx,"max_tokens":max_tokens,
-                 "n_gpu_layers":0,"warmup":warmup,"repeats":repeats,"temperature":0.0}
+                 "n_gpu_layers":gpu_layers,"warmup":warmup,"repeats":repeats,"temperature":0.0}
 
 
 def add_reference_metrics(rows:list[dict])->tuple[bool,str]:

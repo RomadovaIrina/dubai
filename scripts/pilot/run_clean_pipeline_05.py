@@ -648,6 +648,10 @@ def main() -> int:
                     "source pause there (0 at 0.3 s, full at 0.8 s); 0 = off. 2026-10-13 candidate (03 offline: weak-boundary pauses > 0.3 s 9 -> 2 at 1.2)")
     ap.add_argument("--tts-gap-qa", choices=["on", "off"], default="off", help="phrase mode: re-generate (new seed, <= 2x) a sentence whose CTC alignment shows speech-level sound "
                     "BETWEEN words (inserted syllable / drawl / filler that the Whisper QA normalises away; 04 u03 2026-10-13)")
+    ap.add_argument("--long-pause-grow", type=float, default=0.0, help="--long-pause-func weight grows to (1 + grow)x for source pauses of 0.8 -> 2.8 s (2026-10-13: with --pause-marks qwen, "
+                    "weak-boundary pause seconds 46.8 -> 21.9 on the five videos offline, +1.1 s source without dub)")
+    ap.add_argument("--pause-marks", choices=["off", "qwen"], default="off", help="with --long-pause-func: qwen = Qwen marks the natural pause points of every multi-burst "
+                    "sentence; a long source pause is free only there (function-word list otherwise / on a malformed answer)")
     ap.add_argument("--cut-fade", choices=["fixed", "adaptive"], default="fixed", help="--phrase-cut acoustic: fixed = 5 ms declick fades; adaptive = 25 ms fade-out / 8 ms fade-in on inner cuts that are still voiced")
     ap.add_argument("--fit-up-guard", choices=["on", "off"], default="off", help="phrase mode: reject fit-up rewrites that append a clause / end on a dangling auxiliary before the Qwen judge "
                                                                                   "(deterministic; 2026-10-12 candidate, fewer judge calls)")
@@ -817,7 +821,7 @@ def main() -> int:
                                             qa_cfg={"enabled": qa_on, "retries": a.tts_retries, "low_temp": a.qa_temp},
                                             fit_up={"enabled": a.fit_up == "on" and llm is not None, "ratio": a.fit_up_ratio, "rounds": a.fit_up_rounds, "aim": a.fit_up_aim, "guard": a.fit_up_guard == "on"},
                                             split_retries=a.split_retries, min_part_words=a.phrase_min_part_words, soft_part_words=a.phrase_soft_part_words, part_max_words=a.part_max_words,
-                                            phrase_split=a.phrase_split, phrase_cut=a.phrase_cut, long_pause_func=a.long_pause_func, cut_fade=a.cut_fade, gap_qa=a.tts_gap_qa == "on", log=lambda m_: print(m_, flush=True))
+                                            phrase_split=a.phrase_split, phrase_cut=a.phrase_cut, long_pause_func=a.long_pause_func, long_pause_grow=a.long_pause_grow, cut_fade=a.cut_fade, gap_qa=a.tts_gap_qa == "on", pause_mark_mode=a.pause_marks, log=lambda m_: print(m_, flush=True))
             else:
                 man["tts"] = run_tts_burst(units, plans, refs, tgt, work, a.seed, times, opts=burst_opts, llm=llm, src_name=lang_name(src_lang), tgt_name=lang_name(tgt),
                                            fit={"enabled": llm is not None, "rounds": a.fit_rounds, "target_ratio": a.fit_target_ratio},

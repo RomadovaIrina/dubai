@@ -120,6 +120,46 @@ def concise_rewrite(llm, src_name: str, tgt_name: str, source_group: str, text: 
     return new
 
 
+PAUSE_SYSTEM = "You mark natural pause points in spoken English. You answer with the marked sentence only."
+PAUSE_SHOTS = [   # generic examples, deliberately NOT taken from the five test videos (no leakage into the evaluation)
+    ("After the meeting we can finally discuss the new budget for next year.", "After the meeting | we can finally discuss | the new budget for next year."),
+    ("My older brother bought a red bicycle yesterday.", "My older brother | bought a red bicycle | yesterday."),
+    ("If the weather stays warm, we will go to the lake on Sunday.", "If the weather stays warm, | we will go to the lake | on Sunday."),
+    ("The children quickly put on their winter jackets and ran outside.", "The children quickly put on their winter jackets | and ran outside."),
+    ("This little shop sells fresh bread every morning.", "This little shop | sells fresh bread | every morning.")]
+
+
+def pause_marks(llm, text: str) -> set[int] | None:
+    """--pause-marks qwen (2026-10-13, "логичная расстановка пауз"): ask Qwen where a speaker can naturally pause inside the sentence (between
+    phrases / clauses, never inside a noun phrase, between a verb and its object / particle or inside a fixed expression). Returns the 0-based
+    indices of the words AFTER which a pause is natural, or None when the answer changed the words (then the function-word rule is used).
+    The function-word list missed "has a small | refrigerator", "and possible | opportunities", "here | comes", "already | allow" (q0 run)."""
+    words = text.split()
+    if len(words) < 3:
+        return set()
+    msgs = [{"role": "system", "content": PAUSE_SYSTEM}]
+    for a, b in PAUSE_SHOTS:
+        msgs += [{"role": "user", "content": f"Mark with | where a speaker can naturally pause:\n{a}"}, {"role": "assistant", "content": b}]
+    msgs.append({"role": "user", "content": f"Mark with | where a speaker can naturally pause:\n{text}"})
+    t0 = time.perf_counter()
+    try:
+        out = llm.create_chat_completion(msgs, max_tokens=len(words) * 4 + 32, temperature=0.0)["choices"][0]["message"]["content"]
+    except Exception:
+        return None
+    finally:
+        JUDGE_STATS["pause_marks_s"] = JUDGE_STATS.get("pause_marks_s", 0.0) + time.perf_counter() - t0
+    toks = out.replace("|", " | ").split(); got, marks = [], set()
+    for t in toks:
+        if t == "|":
+            if got: marks.add(len(got) - 1)
+        else:
+            got.append(t)
+    if [w.strip('"«»“”') for w in got] != [w.strip('"«»“”') for w in words]:
+        return None
+    marks.discard(len(words) - 1)
+    return marks
+
+
 JUDGE_STATS = {"calls": 0, "seconds": 0.0}   # Qwen judge cost of the fit-up path (reset per run_tts_phrase call)
 FILLER = re.compile(r"\b(um+|uh+|er+|erm|you know|basically|actually|literally|i mean|sort of)\b", re.I)
 JUDGE_SYSTEM = "You are a strict bilingual reviewer of dubbing scripts. You answer with JSON only."
@@ -405,7 +445,7 @@ ACOUSTIC_CUT = {"w_func": 0.0, "w_voiced": 1.0, "w_punct": 0.25, "w_tight": 0.0,
 def distribute_words_syntax(spans: list[dict], raw_words: list[str], bursts: list, norm_fn, tol: float = 0.4, w_punct: float = 0.6, w_gap: float = 1.0,
                             w_func: float = 0.8, w_tight: float = 0.35, w_merge: float = 0.9, func_words=CUT_FUNC_WORDS, y: np.ndarray | None = None, sr: int = TTS_SR,
                             w_voiced: float = 0.5, steep: float = 4.0, w_fill: float = 0.0, w_single: float = 0.0, w_func_long: float = 0.0, long_lo: float = 0.3,
-                            long_hi: float = 0.8, long_grow: float = 0.0, long_late_tol: float = 0.0) -> list[int] | None:
+                            long_hi: float = 0.8, long_grow: float = 0.0, long_late_tol: float = 0.0, allowed_after: set | None = None) -> list[int] | None:
     """Syntax-aware variant of distribute_words (2026-10-12): the cut positions are chosen jointly (dynamic programming) with
       cost = 0.5 per `tol` s of deviation from the proportional burst point (+ steep per s beyond `tol`: a cut moved by ~1 s for a comma left a 2.1 s
              source burst of 05 with 0.3 s of dub -> coverage loss, 2026-10-12 A/B)  - w_punct at punctuation  - w_gap x inter-word pause (<= 0.4 s)
@@ -423,10 +463,11 @@ def distribute_words_syntax(spans: list[dict], raw_words: list[str], bursts: lis
     Returns aligned tokens per burst; 0 = merged into the next burst."""
     import functools
     n = len(spans); M = len(bursts)
-    ends = []; acc = 0
-    for w in raw_words:
+    ends = []; acc = 0; end_raw = {}   # aligned-token index of a cut -> index of the raw word it follows
+    for wi, w in enumerate(raw_words):
         t = len(norm_fn(w)); acc += t
         if t:
+            end_raw[acc] = wi
             ends.append((acc, bool(re.search(r"[,.;:!?…]['\"»)]*$", w)), re.sub(r"[^\w']", "", w.lower().replace("’", "'")), bool(re.search(r"\d", w))))
     nxt = {}   # aligned-token index of a cut -> the next raw word (lower-case), for the fixed-phrase rule
     wl = [re.sub(r"[^\w']", "", w.lower().replace("’", "'")) for w in raw_words if len(norm_fn(w))]
@@ -450,12 +491,17 @@ def distribute_words_syntax(spans: list[dict], raw_words: list[str], bursts: lis
     def cut_cost(j, k, pu, lw, num):
         gap = spans[k]["start"] - spans[k - 1]["end"] if k < n else 0.0
         ds = spans[k - 1]["end"] - t0 - tgt[j]; d = abs(ds); tj = tol
+        sp_after = max(0.0, bursts[j + 1][0] - bursts[j][1]) if j + 1 < len(bursts) else 0.0
         if long_late_tol and ds > 0:   # a LATER cut runs into the source pause after burst j: tolerated up to +min(long_late_tol, pause/2) s (02 "I will | 9 s | show")
-            tj = tol + min(long_late_tol, 0.5 * max(0.0, bursts[j + 1][0] - bursts[j][1]))
+            tj = tol + min(long_late_tol, 0.5 * sp_after)
+        elif allowed_after is not None and ds > 0 and sp_after >= 1.0 and end_raw.get(k) in allowed_after:
+            # targeted: only a move LATER onto a natural (Qwen-marked) boundary, only before a >= 1 s source pause (the extra words run into the pause)
+            tj = tol + min(0.6, 0.5 * sp_after)
         c = 0.5 * d / max(tj, 1e-3) + steep * max(0.0, d - tj) - (w_punct if pu else 0.0) - w_gap * min(gap, 0.4)
         if not pu:
             c += (w_func if lw in func_words or num else 0.0) + (w_tight if gap < 0.06 else 0.0)
-            if w_func_long and (lw in LONG_PAUSE_FUNC or num or (lw, nxt.get(k, "")) in FIXED_PHRASES):
+            weak = (end_raw.get(k) not in allowed_after) if allowed_after is not None else (lw in LONG_PAUSE_FUNC or num or (lw, nxt.get(k, "")) in FIXED_PHRASES)
+            if w_func_long and weak:
                 sp = bursts[j + 1][0] - bursts[j][1]
                 # full weight at long_hi, growing to 2x at long_hi + 2 s: a 9 s silence after "I will |" is worse than a 0.8 s one (02 u05)
                 c += w_func_long * (min(1.0, max(0.0, (sp - long_lo) / max(long_hi - long_lo, 1e-3))) + long_grow * min(1.0, max(0.0, (sp - long_hi) / 2.0)))
@@ -498,7 +544,7 @@ def distribute_words_syntax(spans: list[dict], raw_words: list[str], bursts: lis
 
 def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pathlib.Path, seed: int, times: dict, *, opts, llm=None, src_name: str = "", tgt_name: str = "",
                    fit: dict | None = None, qa_cfg: dict | None = None, fit_up: dict | None = None, split_retries: int = 2, min_part_words: int = 1, soft_part_words: int = 2,
-                   part_max_words: int = 16, phrase_split: str = "timing", phrase_cut: str = "timing", long_pause_func: float = 0.0, cut_fade: str = "fixed", gap_qa: bool = False, gap_qa_retries: int = 2, log=print) -> dict:
+                   part_max_words: int = 16, phrase_split: str = "timing", phrase_cut: str = "timing", long_pause_func: float = 0.0, long_pause_grow: float = 0.0, cut_fade: str = "fixed", gap_qa: bool = False, gap_qa_retries: int = 2, pause_mark_mode: str = "off", log=print) -> dict:
     """Phrase-first TTS (2026-10-02, priorities 1-3 of the coverage fix). Per unit:
       ONE Chatterbox generation of the whole natural translated sentence (QA retry ladder as in run_tts_burst)
       -> fit-DOWN (concise rewrite when the sentence cannot fit its total window at atempo_cap, rule as before)
@@ -686,7 +732,9 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                         if phrase_cut == "syntax" and tgt_lang == "en":
                             counts = distribute_words_syntax(spans, raw_words, p["bursts"], norm, y=y, sr=m.sr)
                         elif phrase_cut == "acoustic":   # timing split + quiet cut points only (no function-word rule): swallowed word ends without the coverage cost
-                            counts = distribute_words_syntax(spans, raw_words, p["bursts"], norm, y=y, sr=m.sr, **ACOUSTIC_CUT, w_func_long=long_pause_func)
+                            marks = pause_marks(llm, text) if (pause_mark_mode == "qwen" and long_pause_func and llm is not None) else None
+                            if pause_mark_mode == "qwen": u["pause_marks"] = sorted(marks) if marks is not None else None
+                            counts = distribute_words_syntax(spans, raw_words, p["bursts"], norm, y=y, sr=m.sr, **ACOUSTIC_CUT, w_func_long=long_pause_func, long_grow=long_pause_grow, allowed_after=marks)
                         else:
                             counts = distribute_words(spans, raw_words, p["bursts"], norm)
                         if counts is not None and 0 in counts:     # syntax split left a boundary uncut: merge that burst into the next one (union window)
@@ -776,7 +824,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
     if qa_obj is not None:
         qa_obj.close()
     torch.cuda.empty_cache()
-    stats["judge_calls"] = JUDGE_STATS["calls"]; stats["judge_seconds"] = JUDGE_STATS["seconds"]
+    stats["judge_calls"] = JUDGE_STATS["calls"]; stats["judge_seconds"] = JUDGE_STATS["seconds"]; stats["pause_marks_seconds"] = round(JUDGE_STATS.pop("pause_marks_s", 0.0), 2)
     for k_ in ("gen_seconds", "qa_seconds", "align_seconds", "fitup_qwen_seconds", "fitdown_qwen_seconds", "fitup_gen_qa_seconds", "judge_seconds", "gap_qa_seconds"):
         if k_ not in stats: continue
         stats[k_] = round(stats[k_], 2)

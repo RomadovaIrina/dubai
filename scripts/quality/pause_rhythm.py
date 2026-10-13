@@ -69,6 +69,12 @@ def main() -> int:
     slot = {u["id"]: (u["slot"]["start"], u["slot"]["end"]) for u in units}
     by_unit = {}
     for p in parts: by_unit.setdefault(p["unit"], []).append(p)
+    marks_of = {u["id"]: (set(u["pause_marks"]) if u.get("pause_marks") is not None else None) for u in units}
+    word_end_of = {}   # (unit, part k) -> index of the last word of that part in the unit's final text
+    for u in units:
+        acc = -1
+        for k, t in enumerate(u.get("tts_parts", [])):
+            acc += len(t["text"].split()); word_end_of[(u["id"], k)] = acc
     # intra-sentence pauses of the dub (between parts of one unit)
     intra = []
     for uid, ps in by_unit.items():
@@ -78,7 +84,9 @@ def main() -> int:
             if g > 0.15:
                 i0, i1 = int(p["t1"] / R), int(q["t0"] / R); src_sil = float(1 - mo[i0:i1].mean()) if i1 > i0 else 1.0
                 last = re.sub(r"[^\w']", "", (p["text"].split() or [""])[-1].lower()); nxt_w = re.sub(r"[^\w']", "", (q["text"].split() or [""])[0].lower())
-                weak = not re.search(r"[,.;:!?…]['\"»)]*$", p["text"].strip()) and (last in LONG_PAUSE_FUNC or (last, nxt_w) in FIXED_PHRASES or bool(re.search(r"\d", last)))
+                punct = bool(re.search(r"[,.;:!?…]['\"»)]*$", p["text"].strip())); mk = marks_of.get(uid)
+                weak = (not punct and word_end_of.get((uid, p["k"])) not in mk) if mk is not None else \
+                    (not punct and (last in LONG_PAUSE_FUNC or (last, nxt_w) in FIXED_PHRASES or bool(re.search(r"\d", last))))
                 intra.append({"unit": uid, "t": round(p["t1"], 2), "gap_s": round(g, 2), "source_silent_frac": round(src_sil, 2), "kind": "preserved" if src_sil >= 0.5 else "inserted",
                               "weak_boundary": weak, "before": p["text"][-35:], "after": q["text"][:35]})
     # source speaking, dub silent -> classify

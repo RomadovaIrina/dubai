@@ -22,6 +22,8 @@ def main() -> int:
     ap.add_argument("--long-grow", type=float, default=0.0); ap.add_argument("--long-late-tol", type=float, default=0.0)
     ap.add_argument("--long-pause-lo", type=float, default=0.3); ap.add_argument("--long-pause-hi", type=float, default=0.8)
     ap.add_argument("--fill-slowdown", type=float, default=None); ap.add_argument("--background", choices=["on", "off"], default="on")
+    ap.add_argument("--pause-marks", choices=["off", "eval", "qwen"], default="off", help="eval = compute Qwen pause marks (stored for pause_rhythm) but cut by the rule; qwen = cut by them")
+    ap.add_argument("--marks-cache", default=None); ap.add_argument("--qwen-gpu-layers", type=int, default=0)
     ap.add_argument("--bg-src-duck-db", type=float, default=0.0); ap.add_argument("--cut-fade", choices=["fixed", "adaptive"], default="fixed")
     ap.add_argument("--check", action="store_true", help="compare the placements with the run's own (reference policy must reproduce them)")
     a = ap.parse_args()
@@ -39,6 +41,19 @@ def main() -> int:
     prev_end_of = {u["id"]: plans[i - 1]["slot"][1] for i, u in enumerate(units) if i > 0}
     cut_cfg = dict(tb.ACOUSTIC_CUT)
     if a.long_pause_func > 0: cut_cfg.update(w_func_long=a.long_pause_func, long_lo=a.long_pause_lo, long_hi=a.long_pause_hi, long_grow=a.long_grow, long_late_tol=a.long_late_tol)
+    marks_cache = {}; llm = None
+    mc_path = pathlib.Path(a.marks_cache) if a.marks_cache else None
+    if mc_path and mc_path.exists(): marks_cache = json.loads(mc_path.read_text())
+    if a.pause_marks != "off":
+        def get_llm():
+            nonlocal_llm = getattr(get_llm, "llm", None)
+            if nonlocal_llm is None:
+                import glob
+                from llama_cpp import Llama
+                from pilot_common import MODELS, QWEN_THREADS
+                f = sorted(glob.glob(str(MODELS / "qwen2.5-7b-instruct-gguf" / "*q8_0*.gguf")))[0]
+                get_llm.llm = Llama(model_path=f, n_ctx=4096, n_threads=QWEN_THREADS, n_threads_batch=QWEN_THREADS, n_gpu_layers=a.qwen_gpu_layers, verbose=False)
+            return get_llm.llm
     log = []
     for u, p in zip(units, plans):
         y, sr = sf.read(u["tts_raw_file"], dtype="float32"); spans = u["tts"]["word_spans"]
@@ -46,7 +61,11 @@ def main() -> int:
         if n == 1 or not spans:
             parts = [text]
         else:
-            if a.cut == "acoustic": counts = tb.distribute_words_syntax(spans, raw_words, p["bursts"], norm, y=y, sr=sr, **cut_cfg)
+            marks = None
+            if a.pause_marks != "off":
+                if text not in marks_cache: mk = tb.pause_marks(get_llm(), text); marks_cache[text] = sorted(mk) if mk is not None else None
+                marks = set(marks_cache[text]) if marks_cache[text] is not None else None; u["pause_marks"] = marks_cache[text]
+            if a.cut == "acoustic": counts = tb.distribute_words_syntax(spans, raw_words, p["bursts"], norm, y=y, sr=sr, **cut_cfg, allowed_after=marks if a.pause_marks == "qwen" else None)
             else: counts = tb.distribute_words(spans, raw_words, p["bursts"], norm)
             if counts is not None and 0 in counts:
                 for j in range(len(counts) - 2, -1, -1):
@@ -82,6 +101,7 @@ def main() -> int:
             f = out / f"tts_u{u['id']:02d}_p{k}.wav"; sf.write(str(f), seg, sr, subtype="PCM_16")
             u["tts_parts"].append({"file": str(f), "seconds": round(len(seg) / sr, 3), "text": ptxt, "clip_span": [round(s_, 3), round(e_, 3)], "speech_span": [0.0, round(len(seg) / sr, 3)]})
         log.append({"unit": u["id"], "parts": parts})
+    if mc_path: mc_path.write_text(json.dumps(marks_cache, indent=1, ensure_ascii=False))
     man2 = copy.deepcopy(man); man2["alignment"] = rp.align_units_burst(units, plans, out, opts)
     man2["dubbed_track"] = rp.build_dubbed_track(units, dur, out); man2["units"] = units; man2["work_dir"] = str(out)
     for f in ("audio16k.wav", "master_25fps.mp4", "bg_44k.wav", "vocals_44k.wav"):
