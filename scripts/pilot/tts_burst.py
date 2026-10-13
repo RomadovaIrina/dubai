@@ -68,6 +68,45 @@ def edge_fade(seg: np.ndarray, sr: int, in_ms: float, out_ms: float) -> np.ndarr
     return seg
 
 
+def adaptive_fade_ms(y: np.ndarray, sr: int, a: float, b: float, inner_head: bool, inner_tail: bool, ref_db: float) -> tuple[float, float]:
+    """--cut-fade adaptive (2026-10-13): 5 ms declick fades, but an INNER cut that still lands in voiced sound (the 10 ms next to the cut within
+    20 dB of the clip's speech level: CTC word ends are early, "Well, | and" is one breath) gets a 25 ms fade-out / 8 ms fade-in: the word
+    decays instead of stopping dead. Sentence starts / ends keep 5 ms (onsets are protected separately)."""
+    def lvl(t0, t1):
+        i0, i1 = max(0, int(t0 * sr)), min(len(y), int(t1 * sr))
+        return 20 * np.log10(np.sqrt(np.mean(y[i0:i1] ** 2)) + 1e-9) if i1 > i0 else -120.0
+    fin = 8.0 if inner_head and lvl(a, a + 0.01) > ref_db - 20 else 5.0
+    fout = 25.0 if inner_tail and lvl(b - 0.01, b) > ref_db - 20 else 5.0
+    return fin, fout
+
+
+def gap_voice(y: np.ndarray, sr: int, spans: list[dict] | None, min_s: float = 0.10, rel_db: float = -10.0, pre: float = 0.04, post: float = 0.10) -> list[tuple]:
+    """--tts-gap-qa (2026-10-13, "посторонние звуки"): speech-level sound BETWEEN the CTC-aligned words of a generation, i.e. a syllable / drawl /
+    filler Chatterbox inserted that is not in the text (04 u03: "popular with <0.45 s held vowel> bloggers", CTC hears "with the bloggers",
+    Whisper normalises it away so the ASR QA scores it 0.09 = fine). Returns [(start_s, end_s, level_db_rel_speech)] of runs >= min_s that lie
+    outside [word start - pre, word end + post] of every word and inside the first / last word, within rel_db of the clip's speech level."""
+    if not spans or len(spans) < 2:
+        return []
+    h = int(0.01 * sr); nf = len(y) // h
+    if nf < 3:
+        return []
+    fdb = 20 * np.log10(np.sqrt(np.mean(y[: nf * h].reshape(nf, h) ** 2, axis=1)) + 1e-9); voiced = fdb > -60
+    ref = float(np.percentile(fdb[voiced], 90)) if voiced.any() else -20.0
+    cov = np.zeros(nf, bool)
+    for w in spans:
+        cov[max(0, int((w["start"] - pre) / 0.01)):min(nf, int((w["end"] + post) / 0.01) + 1)] = True
+    lo, hi = int(spans[0]["start"] / 0.01), min(nf, int(spans[-1]["end"] / 0.01))
+    loud = (fdb > ref + rel_db) & ~cov; out = []; i = lo
+    while i < hi:
+        if loud[i]:
+            j = i
+            while j < hi and loud[j]: j += 1
+            if (j - i) * 0.01 >= min_s: out.append((round(i * 0.01, 2), round(j * 0.01, 2), round(float(fdb[i:j].max() - ref), 1)))
+            i = j
+        else: i += 1
+    return out
+
+
 def concise_rewrite(llm, src_name: str, tgt_name: str, source_group: str, text: str, max_words: int, seconds: float) -> str | None:
     """Ask Qwen for a shorter natural spoken version of ONE part. Returns None when the answer is unusable (empty, not shorter, loses a number)."""
     from burst_aware_audio import missing_numbers
@@ -452,7 +491,7 @@ def distribute_words_syntax(spans: list[dict], raw_words: list[str], bursts: lis
 
 def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pathlib.Path, seed: int, times: dict, *, opts, llm=None, src_name: str = "", tgt_name: str = "",
                    fit: dict | None = None, qa_cfg: dict | None = None, fit_up: dict | None = None, split_retries: int = 2, min_part_words: int = 1, soft_part_words: int = 2,
-                   part_max_words: int = 16, phrase_split: str = "timing", phrase_cut: str = "timing", long_pause_func: float = 0.0, log=print) -> dict:
+                   part_max_words: int = 16, phrase_split: str = "timing", phrase_cut: str = "timing", long_pause_func: float = 0.0, cut_fade: str = "fixed", gap_qa: bool = False, gap_qa_retries: int = 2, log=print) -> dict:
     """Phrase-first TTS (2026-10-02, priorities 1-3 of the coverage fix). Per unit:
       ONE Chatterbox generation of the whole natural translated sentence (QA retry ladder as in run_tts_burst)
       -> fit-DOWN (concise rewrite when the sentence cannot fit its total window at atempo_cap, rule as before)
@@ -606,6 +645,18 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                             recu["result"] = "rejected (not closer)" if not closer else "rejected (less intelligible)"; stats["fit_up_rejected"] += 1; u["fit_up"].append(recu); break
                     if any(x.get("result") == "accepted" for x in u["fit_up"]):
                         stats["fit_up_units"] += 1
+                # ---- gap QA: an inserted syllable / filler between the aligned words -> new seeds for the FINAL text (keep the cleanest, never a QA-bad one)
+                if gap_qa and spans is not None:
+                    gv = gap_voice(y, m.sr, spans); u["gap_qa"] = {"found": gv, "retries": []}
+                    for rnd in range(gap_qa_retries if gv else 0):
+                        tq = time.perf_counter(); y2, rec2 = gen_sentence(u, text, dtype, salt=40 + rnd); sp2 = align(y2, text)
+                        gv2 = gap_voice(y2, m.sr, sp2) if sp2 is not None else gv; stats["gap_qa_seconds"] = stats.get("gap_qa_seconds", 0.0) + time.perf_counter() - tq
+                        u["gap_qa"]["retries"].append({"found": gv2, "qa_bad": rec2["qa_bad_final"], "seconds": round(speech_seconds(y2, sp2), 3)})
+                        if sp2 is not None and not rec2["qa_bad_final"] and sum(b - a for a, b, _ in gv2) < sum(b - a for a, b, _ in gv):
+                            y, rec, spans, sp_s, gv = y2, rec2, sp2, speech_seconds(y2, sp2), gv2; u["gap_qa"]["accepted"] = rnd + 1
+                        if not gv:
+                            break
+                    stats["gap_qa_units"] = stats.get("gap_qa_units", 0) + (1 if u["gap_qa"]["found"] else 0); stats["gap_qa_left"] = stats.get("gap_qa_left", 0) + (1 if gv else 0)
                 if text != u["translation"]:
                     u["translation_fitted"] = text
                 # ---- split the FINAL text into one part per source burst (lossless): timing distribution of the aligned words (default) or Qwen
@@ -673,6 +724,8 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                     merged_spans += 1; need = burst_fit_ratios(chunks_of(pieces), p["bursts"], p["slot"], p["next_start"], opts, prev_end=prev_end)
                 stats["span_merges"] += merged_spans; u["fit_final_ratios"] = need
                 u["parts"] = parts; u["tts_parts"] = []
+                _fr = 20 * np.log10(np.sqrt(np.mean(y[: len(y) // 240 * 240].reshape(-1, 240) ** 2, axis=1)) + 1e-9) if len(y) >= 240 else np.array([-60.0])
+                ref_db = float(np.percentile(_fr[_fr > -60], 90)) if (_fr > -60).any() else -20.0   # speech level of the clip (10 ms frames)
                 raw_f = work / f"tts_u{u['id']:02d}_raw.wav"   # the final (post QA / fit) whole-sentence generation before any cut: stage-by-stage audio diagnosis
                 torchaudio.save(str(raw_f), torch.from_numpy(np.ascontiguousarray(y)).unsqueeze(0), m.sr); u["tts_raw_file"] = str(raw_f)
                 for k, ((a, b), ptxt) in enumerate(zip(pieces, parts)):
@@ -680,7 +733,10 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                     if phrase_cut == "syntax":   # the cut parts were saved without any fade (cut_parts' faded copies are not used); part of the syntax candidate
                         seg = edge_fade(seg, m.sr, 5.0, 20.0 if k + 1 < len(pieces) else 10.0)
                     elif phrase_cut == "acoustic":   # the 5 ms declick fades cut_parts was meant to apply
-                        seg = edge_fade(seg, m.sr, 5.0, 5.0)
+                        if cut_fade == "adaptive":
+                            seg = edge_fade(seg, m.sr, *adaptive_fade_ms(y, m.sr, a, b, k > 0, k + 1 < len(pieces), ref_db))
+                        else:
+                            seg = edge_fade(seg, m.sr, 5.0, 5.0)
                     f = work / f"tts_u{u['id']:02d}_p{k}.wav"; torchaudio.save(str(f), torch.from_numpy(np.ascontiguousarray(seg)).unsqueeze(0), m.sr)
                     u["tts_parts"].append({"file": str(f), "seconds": round(len(seg) / m.sr, 3), "text": ptxt, "clip_span": [round(a, 3), round(b, 3)], "speech_span": [0.0, round(len(seg) / m.sr, 3)],
                                            "attempts": rec["attempts"], "qa_bad_final": rec["qa_bad_final"], "qa_score": rec["qa_score"], "seed_used": rec["seed_used"], "temperature_used": rec["temperature_used"],
@@ -711,7 +767,8 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
         qa_obj.close()
     torch.cuda.empty_cache()
     stats["judge_calls"] = JUDGE_STATS["calls"]; stats["judge_seconds"] = JUDGE_STATS["seconds"]
-    for k_ in ("gen_seconds", "qa_seconds", "align_seconds", "fitup_qwen_seconds", "fitdown_qwen_seconds", "fitup_gen_qa_seconds", "judge_seconds"):
+    for k_ in ("gen_seconds", "qa_seconds", "align_seconds", "fitup_qwen_seconds", "fitdown_qwen_seconds", "fitup_gen_qa_seconds", "judge_seconds", "gap_qa_seconds"):
+        if k_ not in stats: continue
         stats[k_] = round(stats[k_], 2)
     stats["retry_success_rate"] = round(stats["retry_success"] / stats["retried_parts"], 3) if stats["retried_parts"] else None
     return {"model": "ChatterboxMultilingualTTS t3=v3 (models/chatterbox)", "sr": sr, "dtype": str(used).replace("torch.", ""), "language_id": tgt_lang, "mode": "phrase",

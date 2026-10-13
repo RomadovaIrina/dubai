@@ -77,7 +77,7 @@ def main() -> int:
     dur = man["source"]["duration_s"]
     orig = load(W / "audio16k.wav"); dub = load(W / "dubbed_24k.wav")
     mix = load(W / "final_mix_44k.wav") if (W / "final_mix_44k.wav").exists() else None
-    mp4 = load(vid)
+    mp4 = load(vid) if pathlib.Path(vid).exists() else (mix if mix is not None else dub)   # offline recut: no mp4 yet
     units = man["units"]
     # ---- placed parts on the timeline (part k <-> placement k; slot fallback = one placement for the concatenated parts)
     placed = []
@@ -160,6 +160,9 @@ def main() -> int:
         bgy = load(bg["separation"]["bg"]); n_ = len(bgy)
         env = _envelope(_mask(dvad, n_, SR), SR, mx["attack_s"], mx["release_s"])
         bed = bgy * (10 ** (mx["bg_gain_db"] / 20)) * (10 ** (mx["duck_db"] * env / 20)) * mx.get("peak_norm", 1.0)
+        if mx.get("src_duck_db"):
+            so = _mask([(v["start"], v["end"]) for v in man["speech_intervals"]], n_, SR) & ~_mask(dvad, n_, SR)
+            bed = bed * (10 ** (mx["src_duck_db"] * _envelope(so, SR, mx["attack_s"], mx["release_s"]) * (1.0 - env) / 20))
         b16 = out / f"{stem}_bed16k.wav"; sf.write(str(b16), bed, SR); y16 = load(b16, 16000); sf.write(str(b16), y16, 16000)
         import torch
         from silero_vad import get_speech_timestamps, load_silero_vad

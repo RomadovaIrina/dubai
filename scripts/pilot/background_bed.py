@@ -156,10 +156,13 @@ def room_tone(bed: np.ndarray, source_speech: list, sr: int, n_out: int, frame_s
 
 def mix_background(sep: dict, dubbed24k: pathlib.Path, source_speech: list, dub_speech: list, duration: float, work: pathlib.Path,
                    bg_offset_db: float = 0.0, duck_db: float = -6.0, max_bg_gain_db: float = 12.0, attack_s: float = 0.08, release_s: float = 0.35,
-                   room_fill: bool = True) -> dict:
+                   room_fill: bool = True, src_duck_db: float = 0.0) -> dict:
     """final_mix_44k.wav (stereo) + final_mix_aac.m4a = dub voice (unchanged level, both channels) + background bed.
     Bed gain = (dub voice level in dub speech) - (original vocal level in source speech) + bg_offset_db, clamped to +-max_bg_gain_db, i.e. the
-    original voice/background balance is reproduced; the bed is ducked by duck_db while the dub speaks (soft attack / release)."""
+    original voice/background balance is reproduced; the bed is ducked by duck_db while the dub speaks (soft attack / release).
+    src_duck_db < 0 (2026-10-13, "посторонние звуки"): the bed is ALSO lowered where the SOURCE speaks and the dub is silent: there HDemucs
+    leaves a residue of the original voice in "other" (03 88.6 s: the source's harmonics in a dub pause, -19 dB rel. the dub voice), heard as
+    foreign mumbling between dub phrases. Same soft envelope; elsewhere the bed is unchanged."""
     t0 = time.perf_counter()
     d44 = work / "dubbed_44k.wav"; ff(["-i", str(dubbed24k), "-ar", str(SEP_SR), "-ac", "1", "-c:a", "pcm_f32le", str(d44)])
     dub, _ = sf.read(str(d44), dtype="float32"); d44.unlink()
@@ -182,12 +185,16 @@ def mix_background(sep: dict, dubbed24k: pathlib.Path, source_speech: list, dub_
     gain_db = float(np.clip(voice_db - orig_voice_db, -max_bg_gain_db, max_bg_gain_db)) + bg_offset_db
     env = _envelope(_mask(dub_speech, n, SEP_SR), SEP_SR, attack_s, release_s)
     g = (10 ** (gain_db / 20)) * (10 ** (duck_db * env / 20))
+    if src_duck_db:
+        src_only = _mask(source_speech, n, SEP_SR) & ~_mask(dub_speech, n, SEP_SR)
+        env_s = _envelope(src_only, SEP_SR, attack_s, release_s) * (1.0 - env)          # never on top of the dub duck
+        g = g * (10 ** (src_duck_db * env_s / 20))
     bed = bg * g[:, None]; mix = bed + dub[:, None]
     peak = float(np.abs(mix).max()) if n else 0.0; norm = 0.98 / peak if peak > 0.98 else 1.0; mix *= norm
     out = work / "final_mix_44k.wav"; sf.write(str(out), mix, SEP_SR, subtype="PCM_16")
     aac = work / "final_mix_aac.m4a"; ff(["-i", str(out), "-c:a", "aac", "-b:a", "192k", str(aac)])
     pause = ~_mask(dub_speech, n, SEP_SR)
-    return {"wav": str(out), "aac": str(aac), "room_fill": fill, "bg_gain_db": round(gain_db, 2), "duck_db": duck_db, "attack_s": attack_s, "release_s": release_s, "bg_offset_db": bg_offset_db,
+    return {"wav": str(out), "aac": str(aac), "room_fill": fill, "bg_gain_db": round(gain_db, 2), "duck_db": duck_db, "src_duck_db": src_duck_db, "attack_s": attack_s, "release_s": release_s, "bg_offset_db": bg_offset_db,
             "dub_voice_db": round(voice_db, 2), "orig_vocals_db": round(orig_voice_db, 2), "peak_norm": round(norm, 4),
             "bed_db_in_dub_pauses": round(_db(bed.mean(1)[pause]), 2) if pause.any() else None,
             "mix_db_in_dub_pauses": round(_db(mix.mean(1)[pause]), 2) if pause.any() else None,

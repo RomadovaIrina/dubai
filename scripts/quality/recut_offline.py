@@ -21,6 +21,7 @@ def main() -> int:
     ap.add_argument("--long-pause-func", type=float, default=0.0, help="acoustic: penalty for a cut after a function word / inside a fixed phrase, scaled by the source pause (0 = off)")
     ap.add_argument("--long-pause-lo", type=float, default=0.3); ap.add_argument("--long-pause-hi", type=float, default=0.8)
     ap.add_argument("--fill-slowdown", type=float, default=None); ap.add_argument("--background", choices=["on", "off"], default="on")
+    ap.add_argument("--bg-src-duck-db", type=float, default=0.0); ap.add_argument("--cut-fade", choices=["fixed", "adaptive"], default="fixed")
     ap.add_argument("--check", action="store_true", help="compare the placements with the run's own (reference policy must reproduce them)")
     a = ap.parse_args()
     import run_clean_pipeline_05 as rp, tts_burst as tb
@@ -72,7 +73,11 @@ def main() -> int:
         u["parts"] = parts; u["tts_parts"] = []
         for k, ((s_, e_), ptxt) in enumerate(zip(pieces, parts)):
             seg = y[int(s_ * sr):int(e_ * sr)]
-            if a.cut == "acoustic": seg = tb.edge_fade(seg, sr, 5.0, 5.0)
+            if a.cut == "acoustic":
+                if a.cut_fade == "adaptive":
+                    _fr = 20 * np.log10(np.sqrt(np.mean(y[: len(y) // 240 * 240].reshape(-1, 240) ** 2, axis=1)) + 1e-9); ref = float(np.percentile(_fr[_fr > -60], 90))
+                    seg = tb.edge_fade(seg, sr, *tb.adaptive_fade_ms(y, sr, s_, e_, k > 0, k + 1 < len(pieces), ref))
+                else: seg = tb.edge_fade(seg, sr, 5.0, 5.0)
             f = out / f"tts_u{u['id']:02d}_p{k}.wav"; sf.write(str(f), seg, sr, subtype="PCM_16")
             u["tts_parts"].append({"file": str(f), "seconds": round(len(seg) / sr, 3), "text": ptxt, "clip_span": [round(s_, 3), round(e_, 3)], "speech_span": [0.0, round(len(seg) / sr, 3)]})
         log.append({"unit": u["id"], "parts": parts})
@@ -84,7 +89,7 @@ def main() -> int:
         from background_bed import mix_background
         sp = [(v["start"], v["end"]) for v in man["speech_intervals"]]; dv = [(v["start"], v["end"]) for v in rp.run_vad(out / "dubbed_16k.wav")]
         man2["background"] = {"enabled": True, "separation": {**man["background"]["separation"], "bg": str(W / "bg_44k.wav"), "vocals": str(W / "vocals_44k.wav")},
-                              "mix": mix_background({"bg": str(W / "bg_44k.wav"), "vocals": str(W / "vocals_44k.wav")}, out / "dubbed_24k.wav", sp, dv, dur, out)}
+                              "mix": mix_background({"bg": str(W / "bg_44k.wav"), "vocals": str(W / "vocals_44k.wav")}, out / "dubbed_24k.wav", sp, dv, dur, out, src_duck_db=a.bg_src_duck_db)}
     man2["output"] = str(out / "no_video.mp4"); man2["recut"] = {"cut": a.cut, "cfg": cut_cfg, "source_manifest": a.manifest, "parts": log}
     (out / "recut.manifest.json").write_text(json.dumps(man2, indent=1, ensure_ascii=False))
     if a.check:
