@@ -68,7 +68,7 @@ import time
 
 os.environ.setdefault("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", "1")   # pyannote 3.x checkpoints, as in scripts/check_pyannote.py
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from pilot_common import MODELS, ROOT, THREADS, gpu_info, write_json  # noqa: E402
+from pilot_common import MODELS, QWEN_THREADS, ROOT, THREADS, gpu_info, write_json  # noqa: E402
 from measure_stages import build_timeline, ff, probe                  # noqa: E402
 from benchmark_09_qwen_quant import SYSTEM_PROMPT                     # noqa: E402
 
@@ -247,7 +247,7 @@ def load_llm(times: dict):
     if not files:
         raise Blocker(f"Qwen2.5-7B {QWEN_QUANT} GGUF not found under models/ (python scripts/pilot/fetch_09_qwen_quant.py {QWEN_QUANT} --yes)")
     with timed(times, "translation_load"):
-        llm = Llama(model_path=files[0], n_ctx=4096, n_threads=THREADS, n_threads_batch=THREADS, n_gpu_layers=QWEN_GPU_LAYERS, verbose=False)
+        llm = Llama(model_path=files[0], n_ctx=4096, n_threads=QWEN_THREADS, n_threads_batch=QWEN_THREADS, n_gpu_layers=QWEN_GPU_LAYERS, verbose=False)
     return llm, os.path.basename(files[0])
 
 
@@ -310,7 +310,7 @@ def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict
                 assert len(parts) == len(p["bursts"]) == len(p["groups"]), "parts / bursts out of sync"
                 u["parts"] = parts; u["split"] = log; split_stats[log["method"]] = split_stats.get(log["method"], 0) + 1; split_stats["parts_total"] += len(parts)
                 print(f"  [split] u{u['id']:02d} {len(parts)} parts [{log['method']}{'+merged' if log.get('merges') else ''}]: " + " | ".join(f"{g} -> {t}" for g, t in zip(p["groups"], parts))[:300], flush=True)
-    meta = {"model": os.path.basename(files[0]), "quant": QWEN_QUANT, "n_ctx": 4096, "n_threads": THREADS, "n_gpu_layers": QWEN_GPU_LAYERS,
+    meta = {"model": os.path.basename(files[0]), "quant": QWEN_QUANT, "n_ctx": 4096, "n_threads": QWEN_THREADS, "n_gpu_layers": QWEN_GPU_LAYERS,
             "system_prompt": SYSTEM_PROMPT, "direction": f"{src_name}->{tgt_name}", "usage": usage, "burst_split": split_stats}
     if keep_llm:
         return meta, llm, src_name, tgt_name    # the burst TTS session re-translates over-long parts with the same model (tts_burst.py), caller deletes it
@@ -565,12 +565,12 @@ def run_lipsync(src: pathlib.Path, work: pathlib.Path, dubbed16k: pathlib.Path, 
 
 
 def run_lipsync_optimized(src: pathlib.Path, work: pathlib.Path, dubbed16k: pathlib.Path, dubbed_aac: pathlib.Path, out: pathlib.Path, a, times: dict,
-                          speech_gate: list | None = None) -> dict:
+                          speech_gate: list | None = None, prep=None) -> dict:
     """Optimized video backend: RetinaFace routing + speech gate + batched LatentSync windows (face_aware_latentsync_accel.py).
     Same audio/video semantics as run_lipsync: pass-through keeps master frames, the dubbed track covers the whole timeline."""
     import face_aware_latentsync_accel as faa
     with timed(times, "face_router_load"):
-        router = faa.make_router(a.face_router, a.face_min_w, a.face_min_h, a.retina_conf)
+        router = prep.router if prep is not None else faa.make_router(a.face_router, a.face_min_w, a.face_min_h, a.retina_conf)
     with timed(times, "latentsync_load"):
         runner = faa.AccelRunner(a.window_batch_size, not a.no_deepcache, a.compile_backend, a.sdpa_backend, deepcache_interval=a.deepcache_interval)
     if a.mouth_only_pasteback == "on":   # E4: LatentSync pixels only inside a feathered lower-face ellipse, the rest of the frame = master (scripts/quality/candidate_video_stage.py)
@@ -586,7 +586,7 @@ def run_lipsync_optimized(src: pathlib.Path, work: pathlib.Path, dubbed16k: path
     rep = faa.process_video(src, work, dubbed16k, dubbed_aac, out, router=router, runner=runner, min_ls_frames=a.min_ls_frames,
                             max_verify_depth=a.max_verify_depth, codeformer=a.codeformer, times=times, log=lambda m: print(m, flush=True),
                             speech_gate=speech_gate, crossfade_frames=a.crossfade_frames, router_stride=a.router_stride,
-                            in_memory=not a.segment_files, cf_runner=cf_runner, lm_smooth=a.ls_landmark_smooth)
+                            in_memory=not a.segment_files, cf_runner=cf_runner, lm_smooth=a.ls_landmark_smooth, prep=prep)
     rep["backend"] = "optimized"
     if cf_runner is not None:
         cf_runner.close()
@@ -690,6 +690,9 @@ def main() -> int:
                     help="with --mouth-only-pasteback: face = CodeFormer on the composited frame (re-renders eyes / brows, previous behaviour); mouth = CodeFormer on the raw "
                          "LatentSync frame, then the mouth-only composite (eyes / brows stay the source; 2026-10-13 'мимика дергается')")
     ap.add_argument("--ls-landmark-smooth", type=int, default=0, help="optimized backend: centred moving average (+-N frames) of the landmarks replayed into LatentSync's affine crop")
+    ap.add_argument("--video-prep", choices=["sequential", "parallel"], default="sequential",
+                    help="optimized backend: parallel = master decode + router / LatentSync face detection of every frame in a thread during the audio stage, "
+                         "replayed by the video stage (same calls, same results; 2026-10-13 speed lever)")
     ap.add_argument("--segment-files", action="store_true", help="optimized backend: legacy per-segment mp4 path instead of in-memory segments")
     a = ap.parse_args()
     global QWEN_GPU_LAYERS
@@ -731,6 +734,10 @@ def main() -> int:
         with timed(times, "audio_extract"):
             ff(["-i", str(src), "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", str(wav16)])
 
+        video_prep = None
+        if a.video_prep == "parallel" and a.video_backend == "optimized" and a.face_router == "retinaface" and not a.segment_files and a.stop_after != "audio":
+            import face_aware_latentsync_accel as faa
+            video_prep = faa.VideoPrep(src, work, a.face_router, a.face_min_w, a.face_min_h, a.retina_conf)   # runs while the audio stage runs
         with timed(times, "vad"):
             speech = run_vad(wav16)
         timeline = build_timeline(speech, duration)
@@ -868,8 +875,12 @@ def main() -> int:
                 print(f"  [gate] {len(speech_gate)} intervals, {gated:.1f}s of {duration:.1f}s ({gated / duration:.0%}) eligible for LatentSync", flush=True)
             else:
                 man["speech_gate"] = {"enabled": False}
+            prep = None
+            if video_prep is not None:
+                prep = video_prep.result(); man["video_prep"] = {"mode": "parallel", "times": video_prep.times, "error": video_prep.error}
+                print(f"  [video-prep] parallel {video_prep.times}" + (f" FAILED -> sequential: {video_prep.error}" if video_prep.error else ""), flush=True)
             man["lipsync"] = run_lipsync_optimized(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), mux_aac, out, a, times,
-                                                   speech_gate=speech_gate)
+                                                   speech_gate=speech_gate, prep=prep)
         else:
             man["lipsync"] = run_lipsync(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), mux_aac,
                                          out, a.min_ls_frames, a.max_verify_depth, times)

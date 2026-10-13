@@ -19,6 +19,21 @@ PILOT.mkdir(parents=True, exist_ok=True)
 THREADS = int(os.environ.get("DUB_THREADS", "16"))
 
 
+def _cgroup_cpus() -> float | None:
+    try:
+        q, per = open("/sys/fs/cgroup/cpu.max").read().split()[:2]
+        return None if q == "max" else int(q) / int(per)
+    except Exception:
+        return None
+
+
+# llama.cpp threads (2026-10-13): greedy output is identical for any thread count (03 translations 16 / 13 / 12 / 10 / 8 threads), but more
+# threads than the cgroup CPU quota spin-wait: 13.6 vCPU box, 16 threads 4.9 tok/s vs 12 threads 6.1 tok/s. Default = min(DUB_THREADS, quota - 1)
+# (unchanged on a >= 17 vCPU box); DUB_QWEN_THREADS overrides.
+_q = _cgroup_cpus()
+QWEN_THREADS = int(os.environ.get("DUB_QWEN_THREADS") or (max(1, min(THREADS, int(_q) - 1)) if _q else THREADS))
+
+
 def sh(cmd: str, timeout: int = 60) -> str:
     """Run a shell command, return stripped stdout ('' on any failure)."""
     try:

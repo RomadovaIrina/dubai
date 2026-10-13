@@ -150,16 +150,46 @@ def gate_mask(gate: list[tuple[float, float]], n_frames: int) -> np.ndarray:
     return m
 
 
-def classify_master(master_frames: list, router, gate: np.ndarray | None, stride: int) -> tuple[list[dict], int]:
+class VideoPrep:
+    """--video-prep parallel (2026-10-13): the audio-independent part of the video stage, run in a thread while the audio stage (mostly CPU
+    Qwen) runs: 25 fps master encode + decode, the RetinaFace router decision of EVERY master frame, LatentSync's FaceDetector result of every
+    master frame. process_video() then replays exactly the calls it would have made (same frames, same deterministic detectors) -> the
+    classification, segments, verify splits and LatentSync input are unchanged; only the wall time moves off the critical path."""
+
+    def __init__(self, src: pathlib.Path, work: pathlib.Path, router_kind: str, min_w: int, min_h: int, conf: float):
+        import threading
+        self.args = (src, work, router_kind, min_w, min_h, conf); self.error = None; self.times = {}
+        self.thread = threading.Thread(target=self._run, name="video-prep", daemon=True); self.thread.start()
+
+    def _run(self):
+        import cv2
+        try:
+            src, work, kind, mw, mh, conf = self.args
+            t0 = time.perf_counter(); self.master, _ = fa.make_master(src, work); self.times["ls_master_25fps"] = round(time.perf_counter() - t0, 3)
+            t0 = time.perf_counter(); self.frames = fa.read_frames(self.master); self.times["ls_master_decode"] = round(time.perf_counter() - t0, 3)
+            t0 = time.perf_counter(); self.router = make_router(kind, mw, mh, conf); self.times["face_router_load"] = round(time.perf_counter() - t0, 3)
+            t0 = time.perf_counter(); self.router_rows = [self.router.classify_frame(f) for f in self.frames]; self.times["prep_router_all_frames"] = round(time.perf_counter() - t0, 3)
+            det = fa.face_detector(); t0 = time.perf_counter()
+            self.ls_dets = [det(cv2.cvtColor(f, cv2.COLOR_BGR2RGB)) for f in self.frames]; self.times["prep_ls_detect_all_frames"] = round(time.perf_counter() - t0, 3)
+        except Exception as e:   # the video stage falls back to the sequential path
+            self.error = f"{type(e).__name__}: {str(e)[:300]}"
+
+    def result(self) -> "VideoPrep | None":
+        t0 = time.perf_counter(); self.thread.join(); self.times["prep_join_wait"] = round(time.perf_counter() - t0, 3)
+        return None if self.error else self
+
+
+def classify_master(master_frames: list, router, gate: np.ndarray | None, stride: int, cache: list | None = None) -> tuple[list[dict], int]:
     """Router classification of in-memory BGR master frames. Frames outside the gate -> NO_SPEECH (no detection run).
-    Inside a gated run every `stride`-th frame is detected, the others inherit the last decision."""
+    Inside a gated run every `stride`-th frame is detected, the others inherit the last decision. `cache` = VideoPrep.router_rows (the same
+    router call on every frame, made earlier): replayed instead of detecting."""
     stride = max(1, int(stride)); rows: list[dict] = []; detected = 0; last = None; since = stride
     for i, fr in enumerate(master_frames):
         if gate is not None and not gate[i]:
             rows.append({"frame": i, "cls": "NO_SPEECH", "reason": "outside_speech_gate", "bbox": None}); last = None; since = stride
             continue
         if last is None or since >= stride:
-            r = router.classify_frame(fr); r["frame"] = i; detected += 1; last = r; since = 1
+            r = dict(cache[i]) if cache is not None else router.classify_frame(fr); r["frame"] = i; detected += 1; last = r; since = 1
         else:
             r = dict(last); r["frame"] = i; r["inherited"] = True; since += 1
         rows.append(r)
@@ -254,7 +284,7 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
                   router, runner: AccelRunner | None, min_ls_frames: int = 25, max_verify_depth: int = 3, codeformer: str = "off",
                   times: dict | None = None, log=print, speech_gate: list | None = None,
                   crossfade_frames: int = GATE_DEFAULTS["crossfade_frames"], router_stride: int = 1, in_memory: bool = True,
-                  cf_runner=None, lm_smooth: int = 0) -> dict:
+                  cf_runner=None, lm_smooth: int = 0, prep: "VideoPrep | None" = None) -> dict:
     """Face-aware LatentSync on `src` driven by `audio16k` (the dubbed track); `audio_mux` (AAC of the same track) is muxed.
     `speech_gate`: list of (start_s, end_s) intervals (build_speech_gate); frames outside them are passed through.
     `codeformer`: "off" (frozen baseline) or "optimized" (`cf_runner` = codeformer_accel.CodeFormerAccel, applied to the
@@ -273,14 +303,18 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
         if cf_runner.fallback_detector is None and router is not None:
             cf_runner.fallback_detector = lambda fr_bgr: _router_lm5(router, fr_bgr)
     t_cf = 0.0
-    t0 = time.perf_counter(); master, _own = fa.make_master(src, work); times["ls_master_25fps"] = round(time.perf_counter() - t0, 3)
-    t0 = time.perf_counter(); master_frames = fa.read_frames(master); times["ls_master_decode"] = round(time.perf_counter() - t0, 3)
+    if prep is not None:   # computed in parallel with the audio stage (identical calls); its own timings are reported as prep_*
+        master, master_frames = prep.master, prep.frames; times.update({f"prep_{k}" if not k.startswith("prep_") else k: v for k, v in prep.times.items()})
+        times["ls_master_25fps"] = 0.0; times["ls_master_decode"] = 0.0
+    else:
+        t0 = time.perf_counter(); master, _own = fa.make_master(src, work); times["ls_master_25fps"] = round(time.perf_counter() - t0, 3)
+        t0 = time.perf_counter(); master_frames = fa.read_frames(master); times["ls_master_decode"] = round(time.perf_counter() - t0, 3)
     n = len(master_frames)
     gate = gate_mask(speech_gate, n) if speech_gate is not None else None
 
     t0 = time.perf_counter()
     if router is not None:
-        frames, n_detected = classify_master(master_frames, router, gate, router_stride); router_name = "retinaface"
+        frames, n_detected = classify_master(master_frames, router, gate, router_stride, cache=prep.router_rows if prep is not None else None); router_name = "retinaface"
     else:
         frames = fa.classify_frames(master); router_name = "insightface(latentsync)"; n_detected = len(frames)
         if gate is not None:
@@ -327,7 +361,9 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
                 wav = work / f"seg{s['index']:03d}_in.wav"; sf.write(str(wav), seg_audio, SR, subtype="PCM_16")   # audio = DUBBED track slice
                 dets = None
                 if s.get("verify_depth", 0) < max_verify_depth:
-                    tv = time.perf_counter(); dets = fa.detect_frames(seg_rgb); t_verify += time.perf_counter() - tv
+                    tv = time.perf_counter()
+                    dets = list(prep.ls_dets[s["start_frame"]:s["end_frame"]]) if prep is not None else fa.detect_frames(seg_rgb)
+                    t_verify += time.perf_counter() - tv
                     ok = [d[0] is not None for d in dets]; s["verify_depth"] = s.get("verify_depth", 0) + 1   # LatentSync's own detector = safety check
                     if not all(ok):
                         subs = fa.split_by_mask(s, ok, min_ls_frames, next_index=len(segs))
