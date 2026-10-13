@@ -228,6 +228,19 @@ def check_output_frames(path: pathlib.Path, expected: int) -> dict:
             "pass": n == expected and bad == 0 and blank == 0}
 
 
+def smooth_detections(dets: list, k: int) -> list:
+    """Centred moving average (+-k frames, detected neighbours only) of LatentSync's per-frame insightface results (bbox, 106 landmarks).
+    LatentSync builds its affine face crop from 3 points of these landmarks per frame with almost no smoothing, and the generated mouth
+    lives in crop coordinates: detector noise of the source frames becomes mouth / jaw shake relative to the head. Real head motion
+    (low frequency) is kept; frames without a detection stay None (LatentSync's safety check is unchanged)."""
+    ok = [i for i, d in enumerate(dets) if d[0] is not None]; out = list(dets)
+    for i in ok:
+        nb = [dets[j] for j in range(max(0, i - k), min(len(dets), i + k + 1)) if dets[j][0] is not None]
+        bb = np.mean([np.asarray(d[0], np.float64) for d in nb], axis=0); lm = np.mean([np.asarray(d[1], np.float64) for d in nb], axis=0)
+        out[i] = (tuple(float(v) for v in bb), lm)
+    return out
+
+
 def _router_lm5(router, frame_bgr):
     """One fresh RetinaFace router detection -> 5 landmarks (float32 5x2) or None. Used only when a LATENT_SYNC frame has no
     insightface landmarks (verify depth exhausted); never inherited from a neighbouring frame."""
@@ -241,7 +254,7 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
                   router, runner: AccelRunner | None, min_ls_frames: int = 25, max_verify_depth: int = 3, codeformer: str = "off",
                   times: dict | None = None, log=print, speech_gate: list | None = None,
                   crossfade_frames: int = GATE_DEFAULTS["crossfade_frames"], router_stride: int = 1, in_memory: bool = True,
-                  cf_runner=None) -> dict:
+                  cf_runner=None, lm_smooth: int = 0) -> dict:
     """Face-aware LatentSync on `src` driven by `audio16k` (the dubbed track); `audio_mux` (AAC of the same track) is muxed.
     `speech_gate`: list of (start_s, end_s) intervals (build_speech_gate); frames outside them are passed through.
     `codeformer`: "off" (frozen baseline) or "optimized" (`cf_runner` = codeformer_accel.CodeFormerAccel, applied to the
@@ -329,6 +342,8 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
                             if x["action"] == "LATENT_SYNC":
                                 queue.append(x)
                         wav.unlink(missing_ok=True); continue
+                if lm_smooth > 0 and dets is not None:   # stable LatentSync crop: centred moving average of the replayed landmarks / bbox (2026-10-13)
+                    dets = smooth_detections(dets, lm_smooth)
                 frs_rgb, dt = runner.run_frames(seg_rgb, wav, dets)
                 frs = [cv2.cvtColor(f, cv2.COLOR_RGB2BGR) for f in frs_rgb]
                 wav.unlink(missing_ok=True); del seg_rgb, frs_rgb
@@ -343,6 +358,9 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
                     t_cf += time.perf_counter() - tc
                     log(f"  [codeformer] seg {s['index']} {cf_st['faces_restored']}/{cf_st['frames_in']} faces restored in {cf_st['seconds']['total']}s "
                         f"({cf_st['faces_per_s']} faces/s, fallback det {cf_st['fallback_detections']}, no-landmark {cf_st['frames_without_landmarks']}, peak {cf_st['peak_vram_mib']} MiB)")
+                if getattr(runner, "deferred", False):                                            # mouth-only composite AFTER CodeFormer (MouthOnlyRunner defer)
+                    n_use = min(len(frs), s["frames"])
+                    frs[:n_use] = runner.composite(frs[:n_use], [master_frames[i] for i in range(s["start_frame"], s["start_frame"] + n_use)])
             else:
                 v, au = fa.cut_segment(master, audio16k, s, work, f"ls{s['index']:03d}")          # audio = DUBBED track slice
                 if s.get("verify_depth", 0) < max_verify_depth:

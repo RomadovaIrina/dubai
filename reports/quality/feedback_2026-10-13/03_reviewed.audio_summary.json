@@ -1,0 +1,122 @@
+{
+ "manifest": "/workspace/dub/runs/reviewed/final/03_final.manifest.json",
+ "duration_s": 90.333333,
+ "dub_voice_p90_db": -14.5,
+ "placed_parts": 32,
+ "counts": {
+  "bed_step": 59,
+  "hot_edge": 1,
+  "click": 1,
+  "bed_voice": 2
+ },
+ "clicks": {
+  "dub_voice": 0,
+  "final_mix": 1,
+  "mp4": 1
+ },
+ "bed": {
+  "bed_rms_db": -37.2,
+  "dub_voice_p90_db": -14.5,
+  "bed_speech_intervals": 2,
+  "bed_speech_seconds": 1.3,
+  "bed_file": "/workspace/dub/runs/reviewed/audio_stages/03_reviewed_bed.wav"
+ },
+ "events": [
+  {
+   "type": "hot_edge",
+   "edge": "head",
+   "t": 8.4,
+   "rel_db": -8.1,
+   "unit": 1,
+   "k": 2,
+   "text": "an introductory one to acquaint",
+   "trace": {
+    "original": -40.8,
+    "dub_voice": -25.8,
+    "final_mix": -22.7,
+    "mp4": -22.8,
+    "raw_tts_t": 1.455,
+    "raw_tts": -22.3,
+    "part": -22.8,
+    "unit": 1,
+    "part_k": 2,
+    "atempo": 0.951
+   },
+   "first_stage": "cut (raw TTS still voiced at the cut)"
+  },
+  {
+   "type": "click",
+   "stage": "final_mix_only",
+   "t": 46.311,
+   "x_local": 20.2,
+   "peak": 0.0102,
+   "trace": {
+    "original": -19.8,
+    "dub_voice": -21.9,
+    "final_mix": -18.8,
+    "mp4": -18.9,
+    "raw_tts_t": 0.387,
+    "raw_tts": -20.6,
+    "part": -19.5,
+    "unit": 5,
+    "part_k": 1,
+    "atempo": 0.9
+   },
+   "first_stage": "final_mix only (bed / mix)"
+  },
+  {
+   "type": "bed_voice",
+   "t": 47.1,
+   "seconds": 0.7,
+   "rel_db": -20.6,
+   "frac_in_dub_pause": 0.33,
+   "orig_rel_db": -10.8,
+   "trace": {
+    "original": -20.1,
+    "dub_voice": -23.9,
+    "final_mix": -20.4,
+    "mp4": -20.4,
+    "raw_tts_t": 1.097,
+    "raw_tts": -23.9,
+    "part": -23.7,
+    "unit": 5,
+    "part_k": 1,
+    "atempo": 0.9
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_voice",
+   "t": 88.6,
+   "seconds": 0.6,
+   "rel_db": -19.4,
+   "frac_in_dub_pause": 0.3,
+   "orig_rel_db": -6.1,
+   "trace": {
+    "original": -38.9,
+    "dub_voice": -18.7,
+    "final_mix": -15.5,
+    "mp4": -15.5,
+    "raw_tts_t": 6.415,
+    "raw_tts": -18.7,
+    "part": -18.7,
+    "unit": 9,
+    "part_k": 5,
+    "atempo": 1.0
+   },
+   "first_stage": "final_mix (background bed)"
+  }
+ ],
+ "sheets": [
+  "/workspace/dub/runs/reviewed/audio_stages/03_reviewed_ev_click_0046.31.png",
+  "/workspace/dub/runs/reviewed/audio_stages/03_reviewed_ev_bed_voice_0088.60.png",
+  "/workspace/dub/runs/reviewed/audio_stages/03_reviewed_ev_bed_step_0003.22.png",
+  "/workspace/dub/runs/reviewed/audio_stages/03_reviewed_ev_bed_step_0007.60.png",
+  "/workspace/dub/runs/reviewed/audio_stages/03_reviewed_ev_bed_step_0008.05.png",
+  "/workspace/dub/runs/reviewed/audio_stages/03_reviewed_ev_bed_step_0008.36.png",
+  "/workspace/dub/runs/reviewed/audio_stages/03_reviewed_ev_bed_step_0010.26.png",
+  "/workspace/dub/runs/reviewed/audio_stages/03_reviewed_ev_bed_step_0011.21.png",
+  "/workspace/dub/runs/reviewed/audio_stages/03_reviewed_ev_bed_step_0012.50.png",
+  "/workspace/dub/runs/reviewed/audio_stages/03_reviewed_ev_bed_step_0014.28.png"
+ ]
+}

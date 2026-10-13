@@ -1,0 +1,324 @@
+{
+ "duration_s": 90.333333,
+ "original": {
+  "speech_s": 60.7,
+  "segments": 27,
+  "pauses": 26,
+  "pause_total_s": 25.2,
+  "median": 0.8,
+  "p90": 1.8,
+  "max": 3.4,
+  "gt_0_3": 22,
+  "gt_0_5": 17,
+  "gt_1_0": 10,
+  "hist_s": {
+   "0-0.15": 3,
+   "0.15-0.3": 1,
+   "0.3-0.5": 3,
+   "0.5-0.8": 7,
+   "0.8-1.2": 2,
+   "1.2-2.0": 8,
+   "2.0-99": 2
+  }
+ },
+ "dub": {
+  "speech_s": 53.0,
+  "segments": 27,
+  "pauses": 26,
+  "pause_total_s": 32.8,
+  "median": 1.0,
+  "p90": 1.9,
+  "max": 4.4,
+  "gt_0_3": 23,
+  "gt_0_5": 20,
+  "gt_1_0": 13,
+  "hist_s": {
+   "0-0.15": 0,
+   "0.15-0.3": 3,
+   "0.3-0.5": 2,
+   "0.5-0.8": 5,
+   "0.8-1.2": 4,
+   "1.2-2.0": 10,
+   "2.0-99": 2
+  }
+ },
+ "vad_iou": 0.849,
+ "source_without_dub_s": 8.5,
+ "dub_without_source_s": 0.8,
+ "source_without_dub_events": [
+  {
+   "t": 21.0,
+   "seconds": 0.4,
+   "cause": "inner_gap",
+   "unit": 3
+  },
+  {
+   "t": 24.6,
+   "seconds": 0.4,
+   "cause": "inner_gap",
+   "unit": 3
+  },
+  {
+   "t": 27.8,
+   "seconds": 1.1,
+   "cause": "short_fill",
+   "unit": 3
+  },
+  {
+   "t": 40.5,
+   "seconds": 0.6,
+   "cause": "inner_gap",
+   "unit": 4
+  },
+  {
+   "t": 50.0,
+   "seconds": 0.8,
+   "cause": "inner_gap",
+   "unit": 5
+  },
+  {
+   "t": 54.8,
+   "seconds": 1.0,
+   "cause": "short_fill",
+   "unit": 5
+  },
+  {
+   "t": 66.4,
+   "seconds": 1.7,
+   "cause": "short_fill",
+   "unit": 6
+  },
+  {
+   "t": 75.9,
+   "seconds": 0.6,
+   "cause": "short_fill",
+   "unit": 8
+  },
+  {
+   "t": 84.3,
+   "seconds": 0.5,
+   "cause": "inner_gap",
+   "unit": 9
+  }
+ ],
+ "source_without_dub_by_cause_s": {
+  "inner_gap": 2.7,
+  "short_fill": 4.4
+ },
+ "dub_without_source_events": [],
+ "dub_without_source_by_cause_s": {},
+ "intra_sentence_pauses": [
+  {
+   "unit": 1,
+   "t": 5.45,
+   "gap_s": 1.25,
+   "source_silent_frac": 0.95,
+   "kind": "preserved",
+   "weak_boundary": true,
+   "before": "I will",
+   "after": "record the first video as an"
+  },
+  {
+   "unit": 1,
+   "t": 8.1,
+   "gap_s": 0.3,
+   "source_silent_frac": 0.67,
+   "kind": "preserved",
+   "weak_boundary": true,
+   "before": "record the first video as an",
+   "after": "introductory one to acquaint"
+  },
+  {
+   "unit": 1,
+   "t": 9.84,
+   "gap_s": 0.46,
+   "source_silent_frac": 0.87,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "introductory one to acquaint",
+   "after": "myself with it."
+  },
+  {
+   "unit": 2,
+   "t": 12.37,
+   "gap_s": 1.93,
+   "source_silent_frac": 0.98,
+   "kind": "preserved",
+   "weak_boundary": true,
+   "before": "Probably more in",
+   "after": "general what I want to say is that "
+  },
+  {
+   "unit": 2,
+   "t": 17.29,
+   "gap_s": 0.41,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": true,
+   "before": "y is that I am glad to meet you and",
+   "after": "glad to cooperate."
+  },
+  {
+   "unit": 3,
+   "t": 20.94,
+   "gap_s": 1.36,
+   "source_silent_frac": 0.66,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "Today is Friday, August 28th,",
+   "after": "and we will consider this"
+  },
+  {
+   "unit": 3,
+   "t": 24.61,
+   "gap_s": 0.89,
+   "source_silent_frac": 0.56,
+   "kind": "preserved",
+   "weak_boundary": true,
+   "before": "the start of",
+   "after": "our cooperation."
+  },
+  {
+   "unit": 4,
+   "t": 35.48,
+   "gap_s": 0.42,
+   "source_silent_frac": 0.95,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "s the desired result we wished for,",
+   "after": "ensuring no obstacles arise on our "
+  },
+  {
+   "unit": 4,
+   "t": 38.56,
+   "gap_s": 0.74,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "ing no obstacles arise on our path,",
+   "after": "and may it be smooth,"
+  },
+  {
+   "unit": 4,
+   "t": 40.51,
+   "gap_s": 1.89,
+   "source_silent_frac": 0.68,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "and may it be smooth,",
+   "after": "facilitating our journey."
+  },
+  {
+   "unit": 5,
+   "t": 44.32,
+   "gap_s": 1.98,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "I hope",
+   "after": "everything will be well,"
+  },
+  {
+   "unit": 5,
+   "t": 47.57,
+   "gap_s": 0.63,
+   "source_silent_frac": 0.95,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "everything will be well,",
+   "after": "for the earthly actions with you an"
+  },
+  {
+   "unit": 5,
+   "t": 49.96,
+   "gap_s": 1.44,
+   "source_silent_frac": 0.42,
+   "kind": "inserted",
+   "weak_boundary": true,
+   "before": "or the earthly actions with you and",
+   "after": "in general with the product which w"
+  },
+  {
+   "unit": 7,
+   "t": 68.47,
+   "gap_s": 1.57,
+   "source_silent_frac": 0.98,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "Well,",
+   "after": "and basically that's it."
+  },
+  {
+   "unit": 8,
+   "t": 72.16,
+   "gap_s": 1.64,
+   "source_silent_frac": 0.79,
+   "kind": "preserved",
+   "weak_boundary": true,
+   "before": "I'll send it to our",
+   "after": "chat so let's all have success."
+  },
+  {
+   "unit": 9,
+   "t": 77.99,
+   "gap_s": 0.81,
+   "source_silent_frac": 0.98,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "I wish to express my hope",
+   "after": "that our"
+  },
+  {
+   "unit": 9,
+   "t": 79.27,
+   "gap_s": 0.63,
+   "source_silent_frac": 0.94,
+   "kind": "preserved",
+   "weak_boundary": true,
+   "before": "that our",
+   "after": "interaction will be smooth and easy"
+  },
+  {
+   "unit": 9,
+   "t": 82.23,
+   "gap_s": 1.67,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "nteraction will be smooth and easy,",
+   "after": "bringing"
+  },
+  {
+   "unit": 9,
+   "t": 84.27,
+   "gap_s": 0.93,
+   "source_silent_frac": 0.43,
+   "kind": "inserted",
+   "weak_boundary": false,
+   "before": "bringing",
+   "after": "us the result that we desire, movin"
+  },
+  {
+   "unit": 9,
+   "t": 87.25,
+   "gap_s": 1.25,
+   "source_silent_frac": 0.96,
+   "kind": "preserved",
+   "weak_boundary": true,
+   "before": "s the result that we desire, moving",
+   "after": "forward."
+  }
+ ],
+ "intra_inserted": 2,
+ "intra_preserved": 18,
+ "intra_inserted_gt_0_3": 2,
+ "weak_boundary_pauses_gt_0_3": 8,
+ "weak_boundary_pauses_gt_0_8": 6,
+ "weak_boundary_pause_s": 9.44,
+ "atempo": {
+  "max": 1.15,
+  "gt_1_15": 0,
+  "lt_1": 24
+ },
+ "timeline_png": "/workspace/dub/runs/defaults/pauses/03_defaults_timeline.png"
+}

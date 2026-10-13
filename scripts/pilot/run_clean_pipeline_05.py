@@ -576,7 +576,7 @@ def run_lipsync_optimized(src: pathlib.Path, work: pathlib.Path, dubbed16k: path
     if a.mouth_only_pasteback == "on":   # E4: LatentSync pixels only inside a feathered lower-face ellipse, the rest of the frame = master (scripts/quality/candidate_video_stage.py)
         sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
         from candidate_video_stage import MouthOnlyRunner
-        runner = MouthOnlyRunner(runner, a.mask_top, a.mask_feather)
+        runner = MouthOnlyRunner(runner, a.mask_top, a.mask_feather, a.mask_smooth, defer=a.codeformer_scope == "mouth")
     cf_runner = None
     if a.codeformer == "optimized":
         from codeformer_accel import CodeFormerAccel
@@ -586,7 +586,7 @@ def run_lipsync_optimized(src: pathlib.Path, work: pathlib.Path, dubbed16k: path
     rep = faa.process_video(src, work, dubbed16k, dubbed_aac, out, router=router, runner=runner, min_ls_frames=a.min_ls_frames,
                             max_verify_depth=a.max_verify_depth, codeformer=a.codeformer, times=times, log=lambda m: print(m, flush=True),
                             speech_gate=speech_gate, crossfade_frames=a.crossfade_frames, router_stride=a.router_stride,
-                            in_memory=not a.segment_files, cf_runner=cf_runner)
+                            in_memory=not a.segment_files, cf_runner=cf_runner, lm_smooth=a.ls_landmark_smooth)
     rep["backend"] = "optimized"
     if cf_runner is not None:
         cf_runner.close()
@@ -644,6 +644,8 @@ def main() -> int:
                          "jointly by timing (steep beyond 0.4 s) + punctuation / pauses + acoustic silence, not after a function word or inside number+unit, 5/20 ms edge "
                          "fades (2026-10-12 candidate: hot cut edges 39/43 -> 20/38, function-word cuts 37 -> 4, but coverage / CTC CER not yet at baseline -> off); "
                          "acoustic = timing split that prefers acoustically quiet word boundaries (no function-word rule), 5 ms declick fades")
+    ap.add_argument("--long-pause-func", type=float, default=0.0, help="--phrase-cut acoustic: extra cost of a cut after a function word / inside a fixed phrase, scaled by the "
+                    "source pause there (0 at 0.3 s, full at 0.8 s); 0 = off. 2026-10-13 candidate (03 offline: weak-boundary pauses > 0.3 s 9 -> 2 at 1.2)")
     ap.add_argument("--fit-up-guard", choices=["on", "off"], default="off", help="phrase mode: reject fit-up rewrites that append a clause / end on a dangling auxiliary before the Qwen judge "
                                                                                   "(deterministic; 2026-10-12 candidate, fewer judge calls)")
     ap.add_argument("--fit-down-short-words", type=int, default=4, help="phrase mode: concise rewrite also for 4-5-word sentences when they overflow their window by > --fit-down-short-overflow-s at the hard cap (previous rule: >= 6 words only)")
@@ -679,6 +681,11 @@ def main() -> int:
     ap.add_argument("--mouth-only-pasteback", choices=["on", "off"], default="off",
                     help="optimized backend: keep the master pixels outside a feathered lower-face mask (E4; 03 A/B 2026-10-12: upper-face sharpness 0.818 -> 0.858, SyncNet 5.81 -> 5.84)")
     ap.add_argument("--mask-top", type=float, default=0.52); ap.add_argument("--mask-feather", type=float, default=0.08)
+    ap.add_argument("--mask-smooth", type=int, default=0, help="--mouth-only-pasteback: mask bbox = centred moving average over +-N frames (0 = raw per-frame detection)")
+    ap.add_argument("--codeformer-scope", choices=["face", "mouth"], default="face",
+                    help="with --mouth-only-pasteback: face = CodeFormer on the composited frame (re-renders eyes / brows, previous behaviour); mouth = CodeFormer on the raw "
+                         "LatentSync frame, then the mouth-only composite (eyes / brows stay the source; 2026-10-13 'мимика дергается')")
+    ap.add_argument("--ls-landmark-smooth", type=int, default=0, help="optimized backend: centred moving average (+-N frames) of the landmarks replayed into LatentSync's affine crop")
     ap.add_argument("--segment-files", action="store_true", help="optimized backend: legacy per-segment mp4 path instead of in-memory segments")
     a = ap.parse_args()
     global QWEN_GPU_LAYERS
@@ -797,7 +804,7 @@ def main() -> int:
                                             qa_cfg={"enabled": qa_on, "retries": a.tts_retries, "low_temp": a.qa_temp},
                                             fit_up={"enabled": a.fit_up == "on" and llm is not None, "ratio": a.fit_up_ratio, "rounds": a.fit_up_rounds, "aim": a.fit_up_aim, "guard": a.fit_up_guard == "on"},
                                             split_retries=a.split_retries, min_part_words=a.phrase_min_part_words, soft_part_words=a.phrase_soft_part_words, part_max_words=a.part_max_words,
-                                            phrase_split=a.phrase_split, phrase_cut=a.phrase_cut, log=lambda m_: print(m_, flush=True))
+                                            phrase_split=a.phrase_split, phrase_cut=a.phrase_cut, long_pause_func=a.long_pause_func, log=lambda m_: print(m_, flush=True))
             else:
                 man["tts"] = run_tts_burst(units, plans, refs, tgt, work, a.seed, times, opts=burst_opts, llm=llm, src_name=lang_name(src_lang), tgt_name=lang_name(tgt),
                                            fit={"enabled": llm is not None, "rounds": a.fit_rounds, "target_ratio": a.fit_target_ratio},
