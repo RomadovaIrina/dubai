@@ -19,7 +19,7 @@ def main() -> int:
     ap.add_argument("--manifest", required=True); ap.add_argument("--out", required=True)
     ap.add_argument("--cut", choices=["timing", "acoustic"], default="acoustic")
     ap.add_argument("--long-pause-func", type=float, default=0.0, help="acoustic: penalty for a cut after a function word / inside a fixed phrase, scaled by the source pause (0 = off)")
-    ap.add_argument("--long-grow", type=float, default=0.0); ap.add_argument("--long-late-tol", type=float, default=0.0)
+    ap.add_argument("--flow-gap", type=float, default=0.0); ap.add_argument("--long-grow", type=float, default=0.0); ap.add_argument("--long-late-tol", type=float, default=0.0)
     ap.add_argument("--long-pause-lo", type=float, default=0.3); ap.add_argument("--long-pause-hi", type=float, default=0.8)
     ap.add_argument("--fill-slowdown", type=float, default=None); ap.add_argument("--background", choices=["on", "off"], default="on")
     ap.add_argument("--pause-marks", choices=["off", "eval", "qwen"], default="off", help="eval = compute Qwen pause marks (stored for pause_rhythm) but cut by the rule; qwen = cut by them")
@@ -57,7 +57,8 @@ def main() -> int:
     log = []
     for u, p in zip(units, plans):
         y, sr = sf.read(u["tts_raw_file"], dtype="float32"); spans = u["tts"]["word_spans"]
-        text = u.get("translation_fitted") or u["translation"]; raw_words = text.split(); n = len(p["bursts"])
+        text = u.get("translation_fitted") or u["translation"]; raw_words = text.split()
+        tb.flow_merge_bursts(p, a.flow_gap); n = len(p["bursts"])
         if n == 1 or not spans:
             parts = [text]
         else:
@@ -107,7 +108,9 @@ def main() -> int:
     for f in ("audio16k.wav", "master_25fps.mp4", "bg_44k.wav", "vocals_44k.wav"):
         if (W / f).exists() and not (out / f).exists(): (out / f).symlink_to(W / f)
     if a.background == "on" and man.get("background", {}).get("enabled"):
-        from background_bed import mix_background
+        from background_bed import mix_background, separate_background
+        if not (W / "bg_44k.wav").exists():   # stems deleted to save disk: separate again (Demucs, deterministic, ~3 s)
+            sep = separate_background(pathlib.Path(man["input"]), out); W = out
         sp = [(v["start"], v["end"]) for v in man["speech_intervals"]]; dv = [(v["start"], v["end"]) for v in rp.run_vad(out / "dubbed_16k.wav")]
         man2["background"] = {"enabled": True, "separation": {**man["background"]["separation"], "bg": str(W / "bg_44k.wav"), "vocals": str(W / "vocals_44k.wav")},
                               "mix": mix_background({"bg": str(W / "bg_44k.wav"), "vocals": str(W / "vocals_44k.wav")}, out / "dubbed_24k.wav", sp, dv, dur, out, src_duck_db=a.bg_src_duck_db)}

@@ -167,7 +167,8 @@ class VideoPrep:
             src, work, kind, mw, mh, conf = self.args
             t0 = time.perf_counter(); self.master, _ = fa.make_master(src, work); self.times["ls_master_25fps"] = round(time.perf_counter() - t0, 3)
             t0 = time.perf_counter(); self.frames = fa.read_frames(self.master); self.times["ls_master_decode"] = round(time.perf_counter() - t0, 3)
-            t0 = time.perf_counter(); self.router = make_router(kind, mw, mh, conf); self.times["face_router_load"] = round(time.perf_counter() - t0, 3)
+            import model_cache
+            t0 = time.perf_counter(); self.router = model_cache.get(("router", kind, mw, mh, conf), lambda: make_router(kind, mw, mh, conf)); self.times["face_router_load"] = round(time.perf_counter() - t0, 3)
             t0 = time.perf_counter(); self.router_rows = [self.router.classify_frame(f) for f in self.frames]; self.times["prep_router_all_frames"] = round(time.perf_counter() - t0, 3)
             det = fa.face_detector(); t0 = time.perf_counter()
             self.ls_dets = [det(cv2.cvtColor(f, cv2.COLOR_BGR2RGB)) for f in self.frames]; self.times["prep_ls_detect_all_frames"] = round(time.perf_counter() - t0, 3)

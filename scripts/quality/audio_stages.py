@@ -34,7 +34,8 @@ def load(p, sr=SR) -> np.ndarray:
     except Exception: pass
     if info is None or info.samplerate != sr or info.channels != 1:
         t = pathlib.Path(tempfile.mkdtemp()) / "a.wav"
-        subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", p, "-vn", "-ac", "1", "-ar", str(sr), "-c:a", "pcm_f32le", str(t)], check=True); p = str(t)
+        subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", p, "-vn", "-ac", "1", "-ar", str(sr), "-c:a", "pcm_f32le", str(t)], check=True)
+        y, _ = sf.read(str(t), dtype="float32"); t.unlink(); t.parent.rmdir(); return y if y.ndim == 1 else y.mean(1)
     y, _ = sf.read(p, dtype="float32"); return y if y.ndim == 1 else y.mean(1)
 
 

@@ -16,7 +16,9 @@ SR = 24000
 def load_audio(p: str) -> np.ndarray:
     if p.lower().endswith((".mp4", ".mov", ".m4a")) or sf.info(p).samplerate != SR or sf.info(p).channels != 1:
         t = pathlib.Path(tempfile.mkdtemp()) / "a.wav"
-        subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", p, "-vn", "-ac", "1", "-ar", str(SR), "-c:a", "pcm_s16le", str(t)], check=True); p = str(t)
+        subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", p, "-vn", "-ac", "1", "-ar", str(SR), "-c:a", "pcm_s16le", str(t)], check=True)
+        y, sr = sf.read(str(t), dtype="float32"); t.unlink(); t.parent.rmdir(); assert sr == SR, sr
+        return y if y.ndim == 1 else y.mean(1)
     y, sr = sf.read(p, dtype="float32"); assert sr == SR, sr
     return y if y.ndim == 1 else y.mean(1)
 

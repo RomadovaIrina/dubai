@@ -128,7 +128,8 @@ def run_vad(wav16: pathlib.Path) -> list[dict]:
     import torch
     from silero_vad import get_speech_timestamps, load_silero_vad, read_audio
     torch.set_num_threads(THREADS)
-    model = load_silero_vad()
+    import model_cache
+    model = model_cache.get("silero_vad", load_silero_vad)
     audio = read_audio(str(wav16), sampling_rate=16000)
     ts = get_speech_timestamps(audio, model, sampling_rate=16000, return_seconds=True)
     return [{"start": round(float(t["start"]), 3), "end": round(float(t["end"]), 3)} for t in ts]
@@ -137,7 +138,8 @@ def run_vad(wav16: pathlib.Path) -> list[dict]:
 def run_asr(wav16: pathlib.Path, language: str | None) -> tuple[list[dict], dict]:
     import torch  # noqa: F401  maps libcublas before ctranslate2 loads (scripts/check_whisper.py)
     from faster_whisper import WhisperModel
-    m = WhisperModel(str(MODELS / "whisper-large-v3"), device="cuda", compute_type="int8_float16")
+    import model_cache
+    m = model_cache.get("whisper_asr", lambda: WhisperModel(str(MODELS / "whisper-large-v3"), device="cuda", compute_type="int8_float16"))
     segs, info = m.transcribe(str(wav16), word_timestamps=True, beam_size=5, vad_filter=False, language=language)
     out = []
     for s in segs:
@@ -186,10 +188,15 @@ def run_diarization(wav16: pathlib.Path) -> list[dict]:
     if not tok:
         raise Blocker("HF_TOKEN is not set (gated pyannote/speaker-diarization-3.1)")
     from pyannote.audio import Pipeline
-    pipe = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1", use_auth_token=tok)
+    import model_cache
+    def _load():
+        p_ = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1", use_auth_token=tok)
+        if p_ is not None:
+            p_.to(torch.device("cuda"))
+        return p_
+    pipe = model_cache.get("pyannote", _load)
     if pipe is None:
         raise Blocker("pyannote pipeline is None: model licenses not accepted for this token")
-    pipe.to(torch.device("cuda"))
     dia = pipe(str(wav16))
     turns = [{"start": round(float(seg.start), 3), "end": round(float(seg.end), 3), "speaker": spk}
              for seg, _, spk in dia.itertracks(yield_label=True)]
@@ -570,9 +577,12 @@ def run_lipsync_optimized(src: pathlib.Path, work: pathlib.Path, dubbed16k: path
     Same audio/video semantics as run_lipsync: pass-through keeps master frames, the dubbed track covers the whole timeline."""
     import face_aware_latentsync_accel as faa
     with timed(times, "face_router_load"):
-        router = prep.router if prep is not None else faa.make_router(a.face_router, a.face_min_w, a.face_min_h, a.retina_conf)
+        import model_cache
+        router = prep.router if prep is not None else model_cache.get(("router", a.face_router, a.face_min_w, a.face_min_h, a.retina_conf),
+                                                                      lambda: faa.make_router(a.face_router, a.face_min_w, a.face_min_h, a.retina_conf))
     with timed(times, "latentsync_load"):
-        runner = faa.AccelRunner(a.window_batch_size, not a.no_deepcache, a.compile_backend, a.sdpa_backend, deepcache_interval=a.deepcache_interval)
+        runner = model_cache.get(("latentsync", a.window_batch_size, not a.no_deepcache, a.compile_backend, a.sdpa_backend, a.deepcache_interval),
+                                 lambda: faa.AccelRunner(a.window_batch_size, not a.no_deepcache, a.compile_backend, a.sdpa_backend, deepcache_interval=a.deepcache_interval))
     if a.mouth_only_pasteback == "on":   # E4: LatentSync pixels only inside a feathered lower-face ellipse, the rest of the frame = master (scripts/quality/candidate_video_stage.py)
         sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
         from candidate_video_stage import MouthOnlyRunner
@@ -581,14 +591,15 @@ def run_lipsync_optimized(src: pathlib.Path, work: pathlib.Path, dubbed16k: path
     if a.codeformer == "optimized":
         from codeformer_accel import CodeFormerAccel
         with timed(times, "codeformer_load"):
-            cf_runner = CodeFormerAccel(fidelity_weight=a.codeformer_w, batch_size=a.codeformer_batch, landmark_source=a.codeformer_landmarks,
-                                        autocast=a.codeformer_precision == "fp16", parse_autocast=a.codeformer_precision != "fp32")
+            cf_runner = model_cache.get(("codeformer", a.codeformer_w, a.codeformer_batch, a.codeformer_landmarks, a.codeformer_precision),
+                                        lambda: CodeFormerAccel(fidelity_weight=a.codeformer_w, batch_size=a.codeformer_batch, landmark_source=a.codeformer_landmarks,
+                                                                autocast=a.codeformer_precision == "fp16", parse_autocast=a.codeformer_precision != "fp32"))
     rep = faa.process_video(src, work, dubbed16k, dubbed_aac, out, router=router, runner=runner, min_ls_frames=a.min_ls_frames,
                             max_verify_depth=a.max_verify_depth, codeformer=a.codeformer, times=times, log=lambda m: print(m, flush=True),
                             speech_gate=speech_gate, crossfade_frames=a.crossfade_frames, router_stride=a.router_stride,
                             in_memory=not a.segment_files, cf_runner=cf_runner, lm_smooth=a.ls_landmark_smooth, prep=prep)
     rep["backend"] = "optimized"
-    if cf_runner is not None:
+    if cf_runner is not None and not model_cache.cached("codeformer"):
         cf_runner.close()
     free_cuda(runner, cf_runner)
     return rep
@@ -650,6 +661,8 @@ def main() -> int:
                     "BETWEEN words (inserted syllable / drawl / filler that the Whisper QA normalises away; 04 u03 2026-10-13)")
     ap.add_argument("--long-pause-grow", type=float, default=0.0, help="--long-pause-func weight grows to (1 + grow)x for source pauses of 0.8 -> 2.8 s (2026-10-13: with --pause-marks qwen, "
                     "weak-boundary pause seconds 46.8 -> 21.9 on the five videos offline, +1.1 s source without dub)")
+    ap.add_argument("--sentence-flow-gap", type=float, default=0.0, help="phrase mode: inside one sentence, source pauses shorter than this (s) are not reproduced: "
+                    "the sentence is spoken as one connected phrase (0 = off: one part per source burst, previous behaviour)")
     ap.add_argument("--pause-marks", choices=["off", "qwen"], default="off", help="with --long-pause-func: qwen = Qwen marks the natural pause points of every multi-burst "
                     "sentence; a long source pause is free only there (function-word list otherwise / on a malformed answer)")
     ap.add_argument("--cut-fade", choices=["fixed", "adaptive"], default="fixed", help="--phrase-cut acoustic: fixed = 5 ms declick fades; adaptive = 25 ms fade-out / 8 ms fade-in on inner cuts that are still voiced")
@@ -821,7 +834,7 @@ def main() -> int:
                                             qa_cfg={"enabled": qa_on, "retries": a.tts_retries, "low_temp": a.qa_temp},
                                             fit_up={"enabled": a.fit_up == "on" and llm is not None, "ratio": a.fit_up_ratio, "rounds": a.fit_up_rounds, "aim": a.fit_up_aim, "guard": a.fit_up_guard == "on"},
                                             split_retries=a.split_retries, min_part_words=a.phrase_min_part_words, soft_part_words=a.phrase_soft_part_words, part_max_words=a.part_max_words,
-                                            phrase_split=a.phrase_split, phrase_cut=a.phrase_cut, long_pause_func=a.long_pause_func, long_pause_grow=a.long_pause_grow, cut_fade=a.cut_fade, gap_qa=a.tts_gap_qa == "on", pause_mark_mode=a.pause_marks, log=lambda m_: print(m_, flush=True))
+                                            phrase_split=a.phrase_split, phrase_cut=a.phrase_cut, long_pause_func=a.long_pause_func, long_pause_grow=a.long_pause_grow, cut_fade=a.cut_fade, gap_qa=a.tts_gap_qa == "on", pause_mark_mode=a.pause_marks, sentence_flow_gap=a.sentence_flow_gap, log=lambda m_: print(m_, flush=True))
             else:
                 man["tts"] = run_tts_burst(units, plans, refs, tgt, work, a.seed, times, opts=burst_opts, llm=llm, src_name=lang_name(src_lang), tgt_name=lang_name(tgt),
                                            fit={"enabled": llm is not None, "rounds": a.fit_rounds, "target_ratio": a.fit_target_ratio},

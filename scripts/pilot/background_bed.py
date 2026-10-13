@@ -87,7 +87,8 @@ def separate_background(src: pathlib.Path, work: pathlib.Path, device: str = "cu
     t0 = time.perf_counter()
     wav = work / "source_44k.wav"; ff(["-i", str(src), "-vn", "-ac", "2", "-ar", str(SEP_SR), "-c:a", "pcm_f32le", str(wav)])
     y, sr = sf.read(str(wav), dtype="float32"); assert sr == SEP_SR
-    t1 = time.perf_counter(); model = load_demucs(device); t_load = time.perf_counter() - t1
+    import model_cache
+    t1 = time.perf_counter(); model = model_cache.get(("demucs", device), lambda: load_demucs(device)); t_load = time.perf_counter() - t1
     t2 = time.perf_counter(); s = _separate(model, torch.from_numpy(np.ascontiguousarray(y.T)), device)
     if device.startswith("cuda"):
         torch.cuda.synchronize()

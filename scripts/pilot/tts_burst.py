@@ -68,6 +68,23 @@ def edge_fade(seg: np.ndarray, sr: int, in_ms: float, out_ms: float) -> np.ndarr
     return seg
 
 
+def flow_merge_bursts(p: dict, flow_gap: float) -> int:
+    """--sentence-flow-gap (2026-10-13, "предложения не связаны, размазаны по времени"): inside ONE sentence, source bursts separated by a
+    pause shorter than flow_gap s become one burst (union window), so the translated sentence is spoken as one connected phrase instead of
+    being cut at every hesitation of the source (04 "test how our | 1.1 s | application"). Longer pauses stay cut points (still placed by the
+    cut DP, at natural boundaries with --pause-marks). Returns the number of merges; p["bursts"/"groups"/"group_counts"] are updated."""
+    if flow_gap <= 0 or len(p["bursts"]) < 2:
+        return 0
+    b, g, c = [list(p["bursts"][0])], [p["groups"][0]], [p["group_counts"][0]]; merged = 0
+    for bs, gs, cs in zip(p["bursts"][1:], p["groups"][1:], p["group_counts"][1:]):
+        if bs[0] - b[-1][1] < flow_gap:
+            b[-1][1] = bs[1]; g[-1] = g[-1] + " " + gs; c[-1] += cs; merged += 1
+        else:
+            b.append(list(bs)); g.append(gs); c.append(cs)
+    p["bursts"] = [tuple(x) for x in b]; p["groups"] = g; p["group_counts"] = c
+    return merged
+
+
 def adaptive_fade_ms(y: np.ndarray, sr: int, a: float, b: float, inner_head: bool, inner_tail: bool, ref_db: float) -> tuple[float, float]:
     """--cut-fade adaptive (2026-10-13): 5 ms declick fades, but an INNER cut that still lands in voiced sound (the 10 ms next to the cut within
     20 dB of the clip's speech level: CTC word ends are early, "Well, | and" is one breath) gets a 25 ms fade-out / 8 ms fade-in: the word
@@ -544,7 +561,7 @@ def distribute_words_syntax(spans: list[dict], raw_words: list[str], bursts: lis
 
 def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pathlib.Path, seed: int, times: dict, *, opts, llm=None, src_name: str = "", tgt_name: str = "",
                    fit: dict | None = None, qa_cfg: dict | None = None, fit_up: dict | None = None, split_retries: int = 2, min_part_words: int = 1, soft_part_words: int = 2,
-                   part_max_words: int = 16, phrase_split: str = "timing", phrase_cut: str = "timing", long_pause_func: float = 0.0, long_pause_grow: float = 0.0, cut_fade: str = "fixed", gap_qa: bool = False, gap_qa_retries: int = 2, pause_mark_mode: str = "off", log=print) -> dict:
+                   part_max_words: int = 16, phrase_split: str = "timing", phrase_cut: str = "timing", long_pause_func: float = 0.0, long_pause_grow: float = 0.0, cut_fade: str = "fixed", gap_qa: bool = False, gap_qa_retries: int = 2, pause_mark_mode: str = "off", sentence_flow_gap: float = 0.0, log=print) -> dict:
     """Phrase-first TTS (2026-10-02, priorities 1-3 of the coverage fix). Per unit:
       ONE Chatterbox generation of the whole natural translated sentence (QA retry ladder as in run_tts_burst)
       -> fit-DOWN (concise rewrite when the sentence cannot fit its total window at atempo_cap, rule as before)
@@ -567,12 +584,16 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
     if tgt_lang not in SUPPORTED_LANGUAGES:
         raise RuntimeError(f"target language {tgt_lang!r} not supported by Chatterbox")
     fit = fit or {"enabled": False}; qa_cfg = qa_cfg or {"enabled": False}; fit_up = fit_up or {"enabled": False}
-    t0 = time.perf_counter(); m = ChatterboxMultilingualTTS.from_local(pathlib.Path(__file__).resolve().parents[2] / "models" / "chatterbox", "cuda", t3_model="v3")
-    builtin = m.conds; guard = install_speech_token_guard(m); times["tts_load"] = round(time.perf_counter() - t0, 3)
+    import model_cache
+    def _load_tts():
+        m_ = ChatterboxMultilingualTTS.from_local(pathlib.Path(__file__).resolve().parents[2] / "models" / "chatterbox", "cuda", t3_model="v3")
+        return m_, m_.conds
+    t0 = time.perf_counter(); m, builtin = model_cache.get("chatterbox_v3", _load_tts)
+    guard = install_speech_token_guard(m); times["tts_load"] = round(time.perf_counter() - t0, 3)
     qa = None; aligner = None; qa_obj = None
     if qa_cfg.get("enabled") or tgt_lang == "en":
         from tts_qa import TtsQA
-        t0 = time.perf_counter(); qa_obj = TtsQA(); times["qa_load"] = round(time.perf_counter() - t0, 3)
+        t0 = time.perf_counter(); qa_obj = model_cache.get("tts_qa", TtsQA); times["qa_load"] = round(time.perf_counter() - t0, 3)
         qa = qa_obj if qa_cfg.get("enabled") else None
         if tgt_lang == "en":
             aligner = CtcAligner.from_qa(qa_obj)
@@ -715,6 +736,9 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                     stats["gap_qa_units"] = stats.get("gap_qa_units", 0) + (1 if u["gap_qa"]["found"] else 0); stats["gap_qa_left"] = stats.get("gap_qa_left", 0) + (1 if gv else 0)
                 if text != u["translation"]:
                     u["translation_fitted"] = text
+                # ---- sentence flow: short source pauses inside the sentence are not reproduced (one connected phrase over the union window)
+                fm = flow_merge_bursts(p, sentence_flow_gap)
+                if fm: u["flow_merges"] = fm; stats["flow_merges"] = stats.get("flow_merges", 0) + fm
                 # ---- split the FINAL text into one part per source burst (lossless): timing distribution of the aligned words (default) or Qwen
                 n = len(p["bursts"]); raw_words = text.split(); counts = None; parts = None
                 if n == 1:
@@ -821,7 +845,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
     if used is None:
         raise RuntimeError("Chatterbox generation failed in every dtype")
     times["tts"] = round(time.perf_counter() - t0, 3); sr = m.sr; del m
-    if qa_obj is not None:
+    if qa_obj is not None and not model_cache.cached("tts_qa"):
         qa_obj.close()
     torch.cuda.empty_cache()
     stats["judge_calls"] = JUDGE_STATS["calls"]; stats["judge_seconds"] = JUDGE_STATS["seconds"]; stats["pause_marks_seconds"] = round(JUDGE_STATS.pop("pause_marks_s", 0.0), 2)
