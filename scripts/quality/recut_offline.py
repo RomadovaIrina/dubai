@@ -19,6 +19,7 @@ def main() -> int:
     ap.add_argument("--manifest", required=True); ap.add_argument("--out", required=True)
     ap.add_argument("--cut", choices=["timing", "acoustic"], default="acoustic")
     ap.add_argument("--long-pause-func", type=float, default=0.0, help="acoustic: penalty for a cut after a function word / inside a fixed phrase, scaled by the source pause (0 = off)")
+    ap.add_argument("--long-grow", type=float, default=0.0); ap.add_argument("--long-late-tol", type=float, default=0.0)
     ap.add_argument("--long-pause-lo", type=float, default=0.3); ap.add_argument("--long-pause-hi", type=float, default=0.8)
     ap.add_argument("--fill-slowdown", type=float, default=None); ap.add_argument("--background", choices=["on", "off"], default="on")
     ap.add_argument("--bg-src-duck-db", type=float, default=0.0); ap.add_argument("--cut-fade", choices=["fixed", "adaptive"], default="fixed")
@@ -37,7 +38,7 @@ def main() -> int:
                      max_lead=0.4)   # runner default --burst-max-lead; opts.min_burst_s = al.get("min_burst_s", 0.0); opts.fallback_frac = al.get("fallback_frac", 1.01)
     prev_end_of = {u["id"]: plans[i - 1]["slot"][1] for i, u in enumerate(units) if i > 0}
     cut_cfg = dict(tb.ACOUSTIC_CUT)
-    if a.long_pause_func > 0: cut_cfg.update(w_func_long=a.long_pause_func, long_lo=a.long_pause_lo, long_hi=a.long_pause_hi)
+    if a.long_pause_func > 0: cut_cfg.update(w_func_long=a.long_pause_func, long_lo=a.long_pause_lo, long_hi=a.long_pause_hi, long_grow=a.long_grow, long_late_tol=a.long_late_tol)
     log = []
     for u, p in zip(units, plans):
         y, sr = sf.read(u["tts_raw_file"], dtype="float32"); spans = u["tts"]["word_spans"]

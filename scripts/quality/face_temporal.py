@@ -172,6 +172,8 @@ def main() -> int:
         b4, af = sharp_o[max(0, f - W):f], sharp_o[f:min(n, f + W)]
         s["upper_sharp_before_after"] = [round(float(np.mean(b4)), 1), round(float(np.mean(af)), 1)] if len(b4) and len(af) else None
         s["upper_sharp_step_pct"] = round(100 * abs(np.mean(af) - np.mean(b4)) / max(np.mean(b4), 1e-6), 1) if len(b4) and len(af) else None
+        mb4, maf = sharp_m[max(0, f - W):f], sharp_m[f:min(n, f + W)]   # same step on the master: natural motion / focus changes at that moment
+        s["upper_sharp_step_master_pct"] = round(100 * abs(np.mean(maf) - np.mean(mb4)) / max(np.mean(mb4), 1e-6), 1) if len(mb4) and len(maf) else None
         s["mouth_lm_accel_win_ratio"] = round(float(np.nanmean(acc["mouth_lm_out"][lo:hi]) / max(np.nanmean(acc["mouth_lm_master"][lo:hi]), 1e-9)), 2)
         s["severity"] = round((s["mouth_jump_out"] / max(s["mouth_jump_master"], 1.0)) + (s["upper_jump_out"] / max(s["upper_jump_master"], 1.0)) + s["upper_sharp_step_pct"] / 10, 2)
     ls_lens = [round((x["end"] - x["start"]) / FPS, 2) for x in segs if x["ls"]]
@@ -181,6 +183,7 @@ def main() -> int:
                            "short_ls_lt_1s": sum(x < 1.0 for x in ls_lens), "short_ls_lt_2s": sum(x < 2.0 for x in ls_lens),
                            "orig_gaps_between_ls": len(gaps), "short_orig_gaps_lt_1_2s": sum(x < 1.2 for x in gaps), "short_orig_gaps_lt_2s": sum(x < 2.0 for x in gaps),
                            "mean_upper_sharp_step_pct": round(float(np.mean([s["upper_sharp_step_pct"] for s in sw if s["upper_sharp_step_pct"] is not None])), 1) if sw else None,
+                           "mean_upper_sharp_step_master_pct": round(float(np.mean([s["upper_sharp_step_master_pct"] for s in sw if s.get("upper_sharp_step_master_pct") is not None])), 1) if sw else None,
                            "mean_mouth_jump_ratio": round(float(np.mean([s["mouth_jump_out"] / max(s["mouth_jump_master"], 1.0) for s in sw])), 2) if sw else None}
     # ---- worst 1 s windows of mouth jitter INSIDE LS (switch frames excluded)
     j_ratio = np.where(region["ls_core"], acc["mouth_lm_out"] / np.maximum(np.nanmedian(acc["mouth_lm_master"][ls]) if ls.any() else 1e-3, 1e-6), np.nan)
@@ -239,7 +242,7 @@ def main() -> int:
     print(f"   out/master ratios [ls_core | switch]: mouth-lm jitter {r(s['mouth_landmark_jitter'])} | {r(s['mouth_landmark_jitter'], 'switch')}; open jitter {r(s['mouth_open_jitter'])}; "
           f"upper-lm jitter {r(s['upper_landmark_jitter'])} | {r(s['upper_landmark_jitter'], 'switch')}; mouth flicker {r(s['mouth_pixel_flicker'])} | {r(s['mouth_pixel_flicker'], 'switch')}; "
           f"upper flicker {r(s['upper_pixel_flicker'])} | {r(s['upper_pixel_flicker'], 'switch')}; upper sharp {r(s['upper_sharpness'])}")
-    print(f"   switch: mean upper-sharp step {s['switches']['mean_upper_sharp_step_pct']} %, mean mouth jump ratio {s['switches']['mean_mouth_jump_ratio']}; crop inputs {s['latentsync_crop_inputs_master']}")
+    print(f"   switch: mean upper-sharp step {s['switches']['mean_upper_sharp_step_pct']} % (master {s['switches']['mean_upper_sharp_step_master_pct']} %), mean mouth jump ratio {s['switches']['mean_mouth_jump_ratio']}; crop inputs {s['latentsync_crop_inputs_master']}")
     return 0
 
 

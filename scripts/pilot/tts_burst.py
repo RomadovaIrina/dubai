@@ -80,7 +80,7 @@ def adaptive_fade_ms(y: np.ndarray, sr: int, a: float, b: float, inner_head: boo
     return fin, fout
 
 
-def gap_voice(y: np.ndarray, sr: int, spans: list[dict] | None, min_s: float = 0.10, rel_db: float = -10.0, pre: float = 0.04, post: float = 0.10) -> list[tuple]:
+def gap_voice(y: np.ndarray, sr: int, spans: list[dict] | None, min_s: float = 0.10, rel_db: float = -15.0, pre: float = 0.04, post: float = 0.10) -> list[tuple]:
     """--tts-gap-qa (2026-10-13, "посторонние звуки"): speech-level sound BETWEEN the CTC-aligned words of a generation, i.e. a syllable / drawl /
     filler Chatterbox inserted that is not in the text (04 u03: "popular with <0.45 s held vowel> bloggers", CTC hears "with the bloggers",
     Whisper normalises it away so the ASR QA scores it 0.09 = fine). Returns [(start_s, end_s, level_db_rel_speech)] of runs >= min_s that lie
@@ -405,7 +405,7 @@ ACOUSTIC_CUT = {"w_func": 0.0, "w_voiced": 1.0, "w_punct": 0.25, "w_tight": 0.0,
 def distribute_words_syntax(spans: list[dict], raw_words: list[str], bursts: list, norm_fn, tol: float = 0.4, w_punct: float = 0.6, w_gap: float = 1.0,
                             w_func: float = 0.8, w_tight: float = 0.35, w_merge: float = 0.9, func_words=CUT_FUNC_WORDS, y: np.ndarray | None = None, sr: int = TTS_SR,
                             w_voiced: float = 0.5, steep: float = 4.0, w_fill: float = 0.0, w_single: float = 0.0, w_func_long: float = 0.0, long_lo: float = 0.3,
-                            long_hi: float = 0.8) -> list[int] | None:
+                            long_hi: float = 0.8, long_grow: float = 0.0, long_late_tol: float = 0.0) -> list[int] | None:
     """Syntax-aware variant of distribute_words (2026-10-12): the cut positions are chosen jointly (dynamic programming) with
       cost = 0.5 per `tol` s of deviation from the proportional burst point (+ steep per s beyond `tol`: a cut moved by ~1 s for a comma left a 2.1 s
              source burst of 05 with 0.3 s of dub -> coverage loss, 2026-10-12 A/B)  - w_punct at punctuation  - w_gap x inter-word pause (<= 0.4 s)
@@ -449,13 +449,16 @@ def distribute_words_syntax(spans: list[dict], raw_words: list[str], bursts: lis
 
     def cut_cost(j, k, pu, lw, num):
         gap = spans[k]["start"] - spans[k - 1]["end"] if k < n else 0.0
-        d = abs(spans[k - 1]["end"] - t0 - tgt[j])
-        c = 0.5 * d / max(tol, 1e-3) + steep * max(0.0, d - tol) - (w_punct if pu else 0.0) - w_gap * min(gap, 0.4)
+        ds = spans[k - 1]["end"] - t0 - tgt[j]; d = abs(ds); tj = tol
+        if long_late_tol and ds > 0:   # a LATER cut runs into the source pause after burst j: tolerated up to +min(long_late_tol, pause/2) s (02 "I will | 9 s | show")
+            tj = tol + min(long_late_tol, 0.5 * max(0.0, bursts[j + 1][0] - bursts[j][1]))
+        c = 0.5 * d / max(tj, 1e-3) + steep * max(0.0, d - tj) - (w_punct if pu else 0.0) - w_gap * min(gap, 0.4)
         if not pu:
             c += (w_func if lw in func_words or num else 0.0) + (w_tight if gap < 0.06 else 0.0)
             if w_func_long and (lw in LONG_PAUSE_FUNC or num or (lw, nxt.get(k, "")) in FIXED_PHRASES):
                 sp = bursts[j + 1][0] - bursts[j][1]
-                c += w_func_long * min(1.0, max(0.0, (sp - long_lo) / max(long_hi - long_lo, 1e-3)))
+                # full weight at long_hi, growing to 2x at long_hi + 2 s: a 9 s silence after "I will |" is worse than a 0.8 s one (02 u05)
+                c += w_func_long * (min(1.0, max(0.0, (sp - long_lo) / max(long_hi - long_lo, 1e-3))) + long_grow * min(1.0, max(0.0, (sp - long_hi) / 2.0)))
         return c + voiced.get(k, 0.0)
 
     words_end = {k: i for i, (k, *_r) in enumerate(ends)}
@@ -475,7 +478,11 @@ def distribute_words_syntax(spans: list[dict], raw_words: list[str], bursts: lis
     def best(j, prev):
         if j == M - 1:
             return 0.0, ()
-        c, rest = best(j + 1, prev); opt = (c + w_merge + 0.3 * min(max(bursts[j + 1][0] - bursts[j][1], 0.0), 2.0), (None,) + rest)
+        sp_j = max(bursts[j + 1][0] - bursts[j][1], 0.0); c, rest = best(j + 1, prev)
+        # with the long-pause rule a merge over a long source pause costs at least a weak cut there: otherwise the DP dodges "how our |" by
+        # running the phrase through the pause, and the source keeps talking after the dub has finished (05 u03: +1.7 s source without dub)
+        mg = w_func_long * min(1.0, max(0.0, (sp_j - long_lo) / max(long_hi - long_lo, 1e-3))) if w_func_long else 0.0
+        opt = (c + w_merge + 0.3 * min(sp_j, 2.0) + mg, (None,) + rest)
         for k, pu, lw, num in ends:
             if prev < k < n:
                 c, rest = best(j + 1, k); c += cut_cost(j, k, pu, lw, num) + part_cost(j, prev, k, pu)
