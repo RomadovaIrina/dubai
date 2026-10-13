@@ -897,6 +897,10 @@ def main() -> int:
     }
     if man["lipsync"].get("output_frame_check"):
         checks["output_frames_decodable_no_blank"] = bool(man["lipsync"]["output_frame_check"]["pass"])
+        # 2026-10-13: a LatentSync segment that failed (OOM, ...) is passed through with the ORIGINAL mouth: the output is valid video but not lip-synced
+        # ("Face not detected" pass-through stays a valid design outcome; a resource failure is not)
+        checks["no_latentsync_oom"] = not any(sg.get("action") == "PASS_THROUGH_LS_FAILED" and str(sg.get("error", "")).startswith("OutOfMemoryError")
+                                              for sg in man["lipsync"].get("segments", []))
     man["output_meta"] = op
     man["validation"] = {"tolerance_s": round(tol, 4), "tolerance_rule": "max(0.15 s, 2 source frames)", "duration_delta_s": delta,
                          "checks": checks, "pass": all(checks.values())}

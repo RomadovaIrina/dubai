@@ -1,0 +1,393 @@
+{
+ "video": "/workspace/dub/runs/before_face/04_merge20.mp4",
+ "frames": 1349,
+ "summary": {
+  "mouth_landmark_jitter": {
+   "ls_core": {
+    "out": 0.02125,
+    "master": 0.02141,
+    "ratio": 0.992,
+    "p95_ratio": 1.018
+   },
+   "switch": {
+    "out": 0.01934,
+    "master": 0.01893,
+    "ratio": 1.022,
+    "p95_ratio": 1.106
+   },
+   "orig": {
+    "out": 0.02022,
+    "master": 0.01959,
+    "ratio": 1.032,
+    "p95_ratio": 0.979
+   }
+  },
+  "mouth_open_jitter": {
+   "ls_core": {
+    "out": 0.0169,
+    "master": 0.0206,
+    "ratio": 0.82,
+    "p95_ratio": 0.748
+   },
+   "switch": {
+    "out": 0.01296,
+    "master": 0.01112,
+    "ratio": 1.165,
+    "p95_ratio": 1.389
+   },
+   "orig": {
+    "out": 0.013,
+    "master": 0.01153,
+    "ratio": 1.128,
+    "p95_ratio": 1.095
+   }
+  },
+  "upper_landmark_jitter": {
+   "ls_core": {
+    "out": 0.01767,
+    "master": 0.01267,
+    "ratio": 1.395,
+    "p95_ratio": 1.409
+   },
+   "switch": {
+    "out": 0.01505,
+    "master": 0.01255,
+    "ratio": 1.199,
+    "p95_ratio": 1.513
+   },
+   "orig": {
+    "out": 0.0157,
+    "master": 0.01269,
+    "ratio": 1.237,
+    "p95_ratio": 1.17
+   }
+  },
+  "mouth_pixel_flicker": {
+   "ls_core": {
+    "out": 14.33441,
+    "master": 14.85763,
+    "ratio": 0.965,
+    "p95_ratio": 0.934
+   },
+   "switch": {
+    "out": 15.33654,
+    "master": 15.74552,
+    "ratio": 0.974,
+    "p95_ratio": 0.946
+   },
+   "orig": {
+    "out": 13.07668,
+    "master": 13.02901,
+    "ratio": 1.004,
+    "p95_ratio": 1.001
+   }
+  },
+  "upper_pixel_flicker": {
+   "ls_core": {
+    "out": 28.46134,
+    "master": 28.46196,
+    "ratio": 1.0,
+    "p95_ratio": 0.999
+   },
+   "switch": {
+    "out": 30.15951,
+    "master": 30.14449,
+    "ratio": 1.0,
+    "p95_ratio": 0.998
+   },
+   "orig": {
+    "out": 27.3816,
+    "master": 27.37512,
+    "ratio": 1.0,
+    "p95_ratio": 0.999
+   }
+  },
+  "mouth_pixel_motion": {
+   "ls_core": {
+    "out": 9.94322,
+    "master": 10.20741,
+    "ratio": 0.974,
+    "p95_ratio": 0.943
+   },
+   "switch": {
+    "out": 10.50273,
+    "master": 10.74349,
+    "ratio": 0.978,
+    "p95_ratio": 0.919
+   },
+   "orig": {
+    "out": 9.0524,
+    "master": 9.03556,
+    "ratio": 1.002,
+    "p95_ratio": 1.001
+   }
+  },
+  "upper_pixel_motion": {
+   "ls_core": {
+    "out": 18.10582,
+    "master": 18.11217,
+    "ratio": 1.0,
+    "p95_ratio": 0.999
+   },
+   "switch": {
+    "out": 18.87662,
+    "master": 18.87573,
+    "ratio": 1.0,
+    "p95_ratio": 1.0
+   },
+   "orig": {
+    "out": 17.58036,
+    "master": 17.58697,
+    "ratio": 1.0,
+    "p95_ratio": 0.999
+   }
+  },
+  "upper_sharpness": {
+   "ls_core": {
+    "out": 564.20746,
+    "master": 562.63742,
+    "ratio": 1.003,
+    "p95_ratio": 0.998
+   },
+   "switch": {
+    "out": 497.71865,
+    "master": 488.49866,
+    "ratio": 1.019,
+    "p95_ratio": 1.011
+   },
+   "orig": {
+    "out": 614.4451,
+    "master": 609.72912,
+    "ratio": 1.008,
+    "p95_ratio": 0.985
+   }
+  },
+  "latentsync_crop_inputs_master": {
+   "bbox_accel_px_ls_mean": 4.165,
+   "affine_pts_accel_px_ls_mean": 3.806,
+   "bbox_accel_px_ls_p95": 8.5
+  },
+  "switches": {
+   "count": 4,
+   "per_min": 4.45,
+   "ls_segments": 2,
+   "ls_seconds": 48.48,
+   "ls_len_s": {
+    "min": 10.0,
+    "median": 24.24
+   },
+   "short_ls_lt_1s": 0,
+   "short_ls_lt_2s": 0,
+   "orig_gaps_between_ls": 1,
+   "short_orig_gaps_lt_1_2s": 0,
+   "short_orig_gaps_lt_2s": 0,
+   "mean_upper_sharp_step_pct": 7.4,
+   "mean_upper_sharp_step_master_pct": 7.2,
+   "mean_mouth_jump_ratio": 0.99
+  },
+  "worst_ls_jitter_windows": [
+   {
+    "frame": 816,
+    "t": 32.64,
+    "mouth_lm_jitter_vs_master_median": 1.57
+   },
+   {
+    "frame": 1104,
+    "t": 44.16,
+    "mouth_lm_jitter_vs_master_median": 1.39
+   },
+   {
+    "frame": 1248,
+    "t": 49.92,
+    "mouth_lm_jitter_vs_master_median": 1.38
+   },
+   {
+    "frame": 180,
+    "t": 7.2,
+    "mouth_lm_jitter_vs_master_median": 1.37
+   },
+   {
+    "frame": 708,
+    "t": 28.32,
+    "mouth_lm_jitter_vs_master_median": 1.35
+   },
+   {
+    "frame": 960,
+    "t": 38.4,
+    "mouth_lm_jitter_vs_master_median": 1.34
+   }
+  ],
+  "worst_switches": [
+   {
+    "frame": 51,
+    "t": 2.04,
+    "dir": "orig->LS",
+    "prev_len_s": 2.04,
+    "next_len_s": 10.0,
+    "mouth_jump_out": 10.75,
+    "mouth_jump_master": 11.0,
+    "upper_jump_out": 28.34,
+    "upper_jump_master": 28.35,
+    "mouth_flicker_win_ratio": 0.98,
+    "upper_flicker_win_ratio": 1.0,
+    "upper_sharp_before_after": [
+     807.9,
+     898.4
+    ],
+    "upper_sharp_step_pct": 11.2,
+    "upper_sharp_step_master_pct": 11.4,
+    "mouth_lm_accel_win_ratio": 1.04,
+    "severity": 3.1
+   },
+   {
+    "frame": 1321,
+    "t": 52.84,
+    "dir": "LS->orig",
+    "prev_len_s": 38.48,
+    "next_len_s": 1.12,
+    "mouth_jump_out": 12.45,
+    "mouth_jump_master": 12.33,
+    "upper_jump_out": 20.06,
+    "upper_jump_master": 20.09,
+    "mouth_flicker_win_ratio": 0.98,
+    "upper_flicker_win_ratio": 1.0,
+    "upper_sharp_before_after": [
+     321.0,
+     349.7
+    ],
+    "upper_sharp_step_pct": 8.9,
+    "upper_sharp_step_master_pct": 8.5,
+    "mouth_lm_accel_win_ratio": 0.98,
+    "severity": 2.9
+   },
+   {
+    "frame": 359,
+    "t": 14.36,
+    "dir": "orig->LS",
+    "prev_len_s": 2.32,
+    "next_len_s": 38.48,
+    "mouth_jump_out": 11.59,
+    "mouth_jump_master": 11.53,
+    "upper_jump_out": 15.33,
+    "upper_jump_master": 15.35,
+    "mouth_flicker_win_ratio": 0.97,
+    "upper_flicker_win_ratio": 1.0,
+    "upper_sharp_before_after": [
+     382.3,
+     351.2
+    ],
+    "upper_sharp_step_pct": 8.1,
+    "upper_sharp_step_master_pct": 7.0,
+    "mouth_lm_accel_win_ratio": 1.11,
+    "severity": 2.81
+   },
+   {
+    "frame": 301,
+    "t": 12.04,
+    "dir": "LS->orig",
+    "prev_len_s": 10.0,
+    "next_len_s": 2.32,
+    "mouth_jump_out": 5.77,
+    "mouth_jump_master": 5.88,
+    "upper_jump_out": 15.06,
+    "upper_jump_master": 15.04,
+    "mouth_flicker_win_ratio": 0.96,
+    "upper_flicker_win_ratio": 1.0,
+    "upper_sharp_before_after": [
+     432.5,
+     438.9
+    ],
+    "upper_sharp_step_pct": 1.5,
+    "upper_sharp_step_master_pct": 2.0,
+    "mouth_lm_accel_win_ratio": 0.98,
+    "severity": 2.13
+   }
+  ]
+ },
+ "switch_list": [
+  {
+   "frame": 51,
+   "t": 2.04,
+   "dir": "orig->LS",
+   "prev_len_s": 2.04,
+   "next_len_s": 10.0,
+   "mouth_jump_out": 10.75,
+   "mouth_jump_master": 11.0,
+   "upper_jump_out": 28.34,
+   "upper_jump_master": 28.35,
+   "mouth_flicker_win_ratio": 0.98,
+   "upper_flicker_win_ratio": 1.0,
+   "upper_sharp_before_after": [
+    807.9,
+    898.4
+   ],
+   "upper_sharp_step_pct": 11.2,
+   "upper_sharp_step_master_pct": 11.4,
+   "mouth_lm_accel_win_ratio": 1.04,
+   "severity": 3.1
+  },
+  {
+   "frame": 301,
+   "t": 12.04,
+   "dir": "LS->orig",
+   "prev_len_s": 10.0,
+   "next_len_s": 2.32,
+   "mouth_jump_out": 5.77,
+   "mouth_jump_master": 5.88,
+   "upper_jump_out": 15.06,
+   "upper_jump_master": 15.04,
+   "mouth_flicker_win_ratio": 0.96,
+   "upper_flicker_win_ratio": 1.0,
+   "upper_sharp_before_after": [
+    432.5,
+    438.9
+   ],
+   "upper_sharp_step_pct": 1.5,
+   "upper_sharp_step_master_pct": 2.0,
+   "mouth_lm_accel_win_ratio": 0.98,
+   "severity": 2.13
+  },
+  {
+   "frame": 359,
+   "t": 14.36,
+   "dir": "orig->LS",
+   "prev_len_s": 2.32,
+   "next_len_s": 38.48,
+   "mouth_jump_out": 11.59,
+   "mouth_jump_master": 11.53,
+   "upper_jump_out": 15.33,
+   "upper_jump_master": 15.35,
+   "mouth_flicker_win_ratio": 0.97,
+   "upper_flicker_win_ratio": 1.0,
+   "upper_sharp_before_after": [
+    382.3,
+    351.2
+   ],
+   "upper_sharp_step_pct": 8.1,
+   "upper_sharp_step_master_pct": 7.0,
+   "mouth_lm_accel_win_ratio": 1.11,
+   "severity": 2.81
+  },
+  {
+   "frame": 1321,
+   "t": 52.84,
+   "dir": "LS->orig",
+   "prev_len_s": 38.48,
+   "next_len_s": 1.12,
+   "mouth_jump_out": 12.45,
+   "mouth_jump_master": 12.33,
+   "upper_jump_out": 20.06,
+   "upper_jump_master": 20.09,
+   "mouth_flicker_win_ratio": 0.98,
+   "upper_flicker_win_ratio": 1.0,
+   "upper_sharp_before_after": [
+    321.0,
+    349.7
+   ],
+   "upper_sharp_step_pct": 8.9,
+   "upper_sharp_step_master_pct": 8.5,
+   "mouth_lm_accel_win_ratio": 0.98,
+   "severity": 2.9
+  }
+ ]
+}

@@ -386,6 +386,16 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
             s["latentsync"] = {"seconds": dt, "frames_in": s["frames"], "frames_out": len(frs)}
             ls_runs.append(dt); log(f"  [lipsync] seg {s['index']} {s['start_s']}-{s['end_s']}s LatentSync {dt}s -> {len(frs)} frames")
         except Exception as e:                                                                    # "Face not detected" etc. -> pass-through
+            import torch
+            if isinstance(e, torch.cuda.OutOfMemoryError) and s.get("oom_retries", 0) < 2 and runner is not None:
+                # 2026-10-13: an OOM (another process on the GPU) used to pass the segment through silently (05: 31 s of 38 s without lip sync,
+                # validation PASS). Free the cache and retry; the second retry runs the temporal windows one at a time (same result, less memory).
+                s["oom_retries"] = s.get("oom_retries", 0) + 1; import gc; gc.collect(); torch.cuda.empty_cache()
+                acc = getattr(getattr(runner, "inner", runner), "acc", None)
+                if s["oom_retries"] == 2 and acc is not None and getattr(acc, "B", 1) > 1:
+                    s["oom_window_batch"] = 1; acc.B = 1
+                log(f"  [lipsync] seg {s['index']} CUDA OOM -> retry {s['oom_retries']}" + (" with window batch 1" if s.get("oom_window_batch") else ""))
+                queue.insert(0, s); continue
             s["action"] = "PASS_THROUGH_LS_FAILED"; s["error"] = f"{type(e).__name__}: {str(e)[:300]}"
             log(f"  [lipsync] seg {s['index']} LatentSync FAILED -> pass-through: {s['error']}")
     times["latentsync"] = round(time.perf_counter() - t0 - t_cf, 3)      # LatentSync-only; CodeFormer is reported separately

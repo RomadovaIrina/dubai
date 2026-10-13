@@ -1,0 +1,158 @@
+{
+ "duration_s": 101.666667,
+ "original": {
+  "speech_s": 91.9,
+  "segments": 25,
+  "pauses": 24,
+  "pause_total_s": 5.2,
+  "median": 0.2,
+  "p90": 0.3,
+  "max": 0.4,
+  "gt_0_3": 4,
+  "gt_0_5": 0,
+  "gt_1_0": 0,
+  "hist_s": {
+   "0-0.15": 5,
+   "0.15-0.3": 15,
+   "0.3-0.5": 4,
+   "0.5-0.8": 0,
+   "0.8-1.2": 0,
+   "1.2-2.0": 0,
+   "2.0-99": 0
+  }
+ },
+ "dub": {
+  "speech_s": 87.5,
+  "segments": 21,
+  "pauses": 20,
+  "pause_total_s": 9.3,
+  "median": 0.3,
+  "p90": 0.71,
+  "max": 2.1,
+  "gt_0_3": 11,
+  "gt_0_5": 7,
+  "gt_1_0": 1,
+  "hist_s": {
+   "0-0.15": 4,
+   "0.15-0.3": 5,
+   "0.3-0.5": 2,
+   "0.5-0.8": 8,
+   "0.8-1.2": 0,
+   "1.2-2.0": 0,
+   "2.0-99": 1
+  }
+ },
+ "vad_iou": 0.894,
+ "source_without_dub_s": 7.2,
+ "dub_without_source_s": 2.8,
+ "source_without_dub_events": [
+  {
+   "t": 4.8,
+   "seconds": 0.6,
+   "cause": "short_fill",
+   "unit": 1
+  },
+  {
+   "t": 16.5,
+   "seconds": 0.3,
+   "cause": "between_units",
+   "unit": null
+  },
+  {
+   "t": 32.6,
+   "seconds": 0.4,
+   "cause": "short_fill",
+   "unit": 8
+  },
+  {
+   "t": 37.0,
+   "seconds": 0.7,
+   "cause": "inner_gap",
+   "unit": 10
+  },
+  {
+   "t": 42.9,
+   "seconds": 0.5,
+   "cause": "between_units",
+   "unit": null
+  },
+  {
+   "t": 48.7,
+   "seconds": 1.7,
+   "cause": "short_fill",
+   "unit": 12
+  },
+  {
+   "t": 60.4,
+   "seconds": 0.7,
+   "cause": "short_fill",
+   "unit": 14
+  }
+ ],
+ "source_without_dub_by_cause_s": {
+  "short_fill": 3.4,
+  "between_units": 0.8,
+  "inner_gap": 0.7
+ },
+ "dub_without_source_events": [
+  {
+   "t": 61.5,
+   "seconds": 0.3,
+   "cause": "inside_slot_pause",
+   "unit": 15
+  },
+  {
+   "t": 63.9,
+   "seconds": 0.3,
+   "cause": "inside_slot_pause",
+   "unit": 16
+  }
+ ],
+ "dub_without_source_by_cause_s": {
+  "inside_slot_pause": 0.6
+ },
+ "intra_sentence_pauses": [
+  {
+   "unit": 7,
+   "t": 26.94,
+   "gap_s": 0.26,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": true,
+   "before": "Such",
+   "after": "wallpapers withstand up to 10 repai"
+  },
+  {
+   "unit": 10,
+   "t": 37.3,
+   "gap_s": 0.5,
+   "source_silent_frac": 0.18,
+   "kind": "inserted",
+   "weak_boundary": true,
+   "before": "moisture, and",
+   "after": "sound insulation."
+  },
+  {
+   "unit": 16,
+   "t": 65.79,
+   "gap_s": 0.21,
+   "source_silent_frac": 0.91,
+   "kind": "preserved",
+   "weak_boundary": true,
+   "before": "All necessary plumbing, including a",
+   "after": "toilet, microlift, and super-strong"
+  }
+ ],
+ "intra_inserted": 1,
+ "intra_preserved": 2,
+ "intra_inserted_gt_0_3": 1,
+ "weak_boundary_pauses_gt_0_3": 1,
+ "weak_boundary_pauses_gt_0_8": 0,
+ "weak_boundary_pause_s": 0.5,
+ "atempo": {
+  "max": 1.15,
+  "gt_1_15": 0,
+  "lt_1": 14
+ },
+ "timeline_png": "/workspace/dub/runs/cand5/pauses/01_cand5_timeline.png"
+}

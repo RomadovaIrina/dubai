@@ -1,0 +1,252 @@
+{
+ "video": "/workspace/dub/runs/before_face/01_reviewedvideo.mp4",
+ "frames": 2542,
+ "summary": {
+  "mouth_landmark_jitter": {
+   "ls_core": {
+    "out": 0.02001,
+    "master": 0.01957,
+    "ratio": 1.023,
+    "p95_ratio": 1.019
+   },
+   "switch": {
+    "out": 0.01803,
+    "master": 0.01688,
+    "ratio": 1.068,
+    "p95_ratio": 0.887
+   },
+   "orig": null
+  },
+  "mouth_open_jitter": {
+   "ls_core": {
+    "out": 0.02686,
+    "master": 0.02667,
+    "ratio": 1.007,
+    "p95_ratio": 1.001
+   },
+   "switch": {
+    "out": 0.00014,
+    "master": 0.01825,
+    "ratio": 0.008,
+    "p95_ratio": 0.005
+   },
+   "orig": null
+  },
+  "upper_landmark_jitter": {
+   "ls_core": {
+    "out": 0.01654,
+    "master": 0.01483,
+    "ratio": 1.116,
+    "p95_ratio": 1.087
+   },
+   "switch": {
+    "out": 0.01254,
+    "master": 0.0122,
+    "ratio": 1.028,
+    "p95_ratio": 1.044
+   },
+   "orig": null
+  },
+  "mouth_pixel_flicker": {
+   "ls_core": {
+    "out": 5.50725,
+    "master": 4.93665,
+    "ratio": 1.116,
+    "p95_ratio": 1.171
+   },
+   "switch": {
+    "out": 15.37305,
+    "master": 15.03577,
+    "ratio": 1.022,
+    "p95_ratio": 1.016
+   },
+   "orig": {
+    "out": 2.65219,
+    "master": 2.55695,
+    "ratio": 1.037,
+    "p95_ratio": 1.01
+   }
+  },
+  "upper_pixel_flicker": {
+   "ls_core": {
+    "out": 8.31383,
+    "master": 5.69675,
+    "ratio": 1.459,
+    "p95_ratio": 1.268
+   },
+   "switch": {
+    "out": 18.33188,
+    "master": 17.47251,
+    "ratio": 1.049,
+    "p95_ratio": 1.011
+   },
+   "orig": {
+    "out": 2.10397,
+    "master": 2.01006,
+    "ratio": 1.047,
+    "p95_ratio": 1.005
+   }
+  },
+  "mouth_pixel_motion": {
+   "ls_core": {
+    "out": 3.9438,
+    "master": 3.65902,
+    "ratio": 1.078,
+    "p95_ratio": 1.172
+   },
+   "switch": {
+    "out": 8.29182,
+    "master": 8.25601,
+    "ratio": 1.004,
+    "p95_ratio": 1.023
+   },
+   "orig": {
+    "out": 2.12734,
+    "master": 2.10357,
+    "ratio": 1.011,
+    "p95_ratio": 1.016
+   }
+  },
+  "upper_pixel_motion": {
+   "ls_core": {
+    "out": 6.11379,
+    "master": 4.69596,
+    "ratio": 1.302,
+    "p95_ratio": 1.188
+   },
+   "switch": {
+    "out": 9.78889,
+    "master": 9.30691,
+    "ratio": 1.052,
+    "p95_ratio": 1.016
+   },
+   "orig": {
+    "out": 1.63825,
+    "master": 1.615,
+    "ratio": 1.014,
+    "p95_ratio": 1.012
+   }
+  },
+  "upper_sharpness": {
+   "ls_core": {
+    "out": 864.5584,
+    "master": 194.44144,
+    "ratio": 4.446,
+    "p95_ratio": 4.096
+   },
+   "switch": {
+    "out": 269.93616,
+    "master": 89.54804,
+    "ratio": 3.014,
+    "p95_ratio": 4.123
+   },
+   "orig": {
+    "out": 80.98824,
+    "master": 81.06226,
+    "ratio": 0.999,
+    "p95_ratio": 0.987
+   }
+  },
+  "latentsync_crop_inputs_master": {
+   "bbox_accel_px_ls_mean": 0.853,
+   "affine_pts_accel_px_ls_mean": 0.614,
+   "bbox_accel_px_ls_p95": 1.75
+  },
+  "switches": {
+   "count": 1,
+   "per_min": 0.59,
+   "ls_segments": 1,
+   "ls_seconds": 10.4,
+   "ls_len_s": {
+    "min": 10.4,
+    "median": 10.4
+   },
+   "short_ls_lt_1s": 0,
+   "short_ls_lt_2s": 0,
+   "orig_gaps_between_ls": 0,
+   "short_orig_gaps_lt_1_2s": 0,
+   "short_orig_gaps_lt_2s": 0,
+   "mean_upper_sharp_step_pct": 99.6,
+   "mean_upper_sharp_step_master_pct": 99.0,
+   "mean_mouth_jump_ratio": 1.02
+  },
+  "worst_ls_jitter_windows": [
+   {
+    "frame": 144,
+    "t": 5.76,
+    "mouth_lm_jitter_vs_master_median": 1.31
+   },
+   {
+    "frame": 240,
+    "t": 9.6,
+    "mouth_lm_jitter_vs_master_median": 1.26
+   },
+   {
+    "frame": 0,
+    "t": 0.0,
+    "mouth_lm_jitter_vs_master_median": 1.11
+   },
+   {
+    "frame": 180,
+    "t": 7.2,
+    "mouth_lm_jitter_vs_master_median": 1.09
+   },
+   {
+    "frame": 60,
+    "t": 2.4,
+    "mouth_lm_jitter_vs_master_median": 1.06
+   },
+   {
+    "frame": 96,
+    "t": 3.84,
+    "mouth_lm_jitter_vs_master_median": 1.03
+   }
+  ],
+  "worst_switches": [
+   {
+    "frame": 260,
+    "t": 10.4,
+    "dir": "LS->orig",
+    "prev_len_s": 10.4,
+    "next_len_s": 0.04,
+    "mouth_jump_out": 68.67,
+    "mouth_jump_master": 67.51,
+    "upper_jump_out": 83.05,
+    "upper_jump_master": 82.21,
+    "mouth_flicker_win_ratio": 1.02,
+    "upper_flicker_win_ratio": 1.05,
+    "upper_sharp_before_after": [
+     537.8,
+     2.1
+    ],
+    "upper_sharp_step_pct": 99.6,
+    "upper_sharp_step_master_pct": 99.0,
+    "mouth_lm_accel_win_ratio": 1.07,
+    "severity": 11.99
+   }
+  ]
+ },
+ "switch_list": [
+  {
+   "frame": 260,
+   "t": 10.4,
+   "dir": "LS->orig",
+   "prev_len_s": 10.4,
+   "next_len_s": 0.04,
+   "mouth_jump_out": 68.67,
+   "mouth_jump_master": 67.51,
+   "upper_jump_out": 83.05,
+   "upper_jump_master": 82.21,
+   "mouth_flicker_win_ratio": 1.02,
+   "upper_flicker_win_ratio": 1.05,
+   "upper_sharp_before_after": [
+    537.8,
+    2.1
+   ],
+   "upper_sharp_step_pct": 99.6,
+   "upper_sharp_step_master_pct": 99.0,
+   "mouth_lm_accel_win_ratio": 1.07,
+   "severity": 11.99
+  }
+ ]
+}
