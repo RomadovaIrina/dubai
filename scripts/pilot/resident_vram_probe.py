@@ -142,7 +142,19 @@ def load_codeformer():
     return {"net": net, "helper": helper}
 
 
+def load_qwen():
+    """Qwen2.5-7B Q8_0 fully on the GPU (2026-10-13 residency question): needs the CUDA llama-cpp-python build (scripts/setup_llama_cuda.sh)
+    first on PYTHONPATH; n_ctx 4096 = the runner's context (KV cache + compute buffers are allocated at load)."""
+    import glob
+    import llama_cpp
+    if not llama_cpp.llama_supports_gpu_offload():
+        raise RuntimeError(f"{llama_cpp.__file__} is a CPU build: run scripts/setup_llama_cuda.sh and put third_party/llama_cuda first on PYTHONPATH")
+    f = sorted(glob.glob(str(MODELS / "qwen2.5-7b-instruct-gguf" / "*q8_0*.gguf")))[0]
+    return llama_cpp.Llama(model_path=f, n_ctx=4096, n_gpu_layers=-1, verbose=False)
+
+
 LOADERS = {
+    "qwen": load_qwen,
     "whisper": load_whisper,
     "retinaface": load_retinaface,
     "pyannote": load_pyannote,
@@ -154,6 +166,7 @@ PROFILES = {
     "audio": ["whisper", "retinaface", "pyannote", "chatterbox"],
     "video": ["latentsync", "codeformer"],
     "all": ["whisper", "retinaface", "pyannote", "chatterbox", "latentsync", "codeformer"],
+    "all_qwen_gpu": ["whisper", "retinaface", "pyannote", "chatterbox", "latentsync", "codeformer", "qwen"],
 }
 
 

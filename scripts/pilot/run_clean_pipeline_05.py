@@ -654,6 +654,8 @@ def main() -> int:
     ap.add_argument("--fit-down-short-words", type=int, default=4, help="phrase mode: concise rewrite also for 4-5-word sentences when they overflow their window by > --fit-down-short-overflow-s at the hard cap (previous rule: >= 6 words only)")
     ap.add_argument("--fit-down-short-overflow-s", type=float, default=0.3)
     ap.add_argument("--phrase-min-part-words", type=int, default=1); ap.add_argument("--phrase-soft-part-words", type=int, default=2)
+    ap.add_argument("--qwen-resident", choices=["on", "off"], default="off", help="keep Qwen loaded until the end of the run (with --qwen-gpu-layers -1: "
+                    "all models + Qwen resident on the GPU at the LatentSync peak = the pilot 0.4 question); off = released before LatentSync")
     ap.add_argument("--qwen-gpu-layers", type=int, default=0, help="Qwen layers offloaded to the GPU (-1 = all); 0 = frozen CPU baseline. Needs a CUDA llama-cpp-python build "
                                                                    "(A/B 2026-10-12: translation 18x faster, outputs not identical to the CPU)")
     ap.add_argument("--background", choices=["on", "off"], default="on",
@@ -821,6 +823,8 @@ def main() -> int:
                                            fit={"enabled": llm is not None, "rounds": a.fit_rounds, "target_ratio": a.fit_target_ratio},
                                            qa_cfg={"enabled": qa_on, "retries": a.tts_retries, "low_temp": a.qa_temp}, min_part_words=a.min_part_words,
                                            log=lambda m_: print(m_, flush=True))
+            if a.qwen_resident == "on":   # residency measurement (pilot 0.4 with Qwen on the GPU): keep Qwen loaded through the video stage
+                resident_qwen = llm
             llm = tr = None    # release Qwen (the translation tuple also holds a reference)
             gc.collect()       # --qwen-gpu-layers: frees the llama.cpp CUDA buffers before LatentSync
         else:
