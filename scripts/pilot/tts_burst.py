@@ -615,6 +615,9 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                         break
                     # short sentences (4-5 words) too: 02 "Relaxation zone: lying areas." overflowed its window by 0.4 s at the hard cap and was cut (2026-10-12)
                     nw = words_of(text); overflow = sp_s / opts.hard_cap - total_win; short_ok = nw >= fit.get("short_min_words", 4) and overflow > fit.get("short_overflow_s", 0.3)
+                    # a short sentence is rewritten at most ONCE: 02 u16 (2026-10-13) went "The relaxation zone also includes lying down areas." -> "Relaxation zone:
+                    # lying areas." -> "Lying areas." (meaning lost, 2-word TTS unintelligible: QA bad x3, Whisper hears "Thank you, Iris")
+                    short_ok = short_ok and not any(x.get("result") == "rewritten" for x in u["fit"])
                     tgt_w = max(int(nw * fit.get("target_ratio", 1.05) / r), 4 if nw >= 6 else 3); stats["fit_rounds_used"] += 1
                     recf = {"round": rnd + 1, "ratio_before": round(r, 3), "old": text, "action": "concise_rewrite", "max_words": tgt_w, "overflow_at_hard_cap_s": round(overflow, 3)}
                     if llm is None or r <= opts.hard_cap + 0.05 or (nw < 6 and not short_ok) or tgt_w >= nw:
