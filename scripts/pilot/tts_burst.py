@@ -625,7 +625,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
             rec = {"attempt": ai + 1, "seed": s, "temperature": temp, "seconds": round(wav.shape[-1] / m.sr, 3)}
             if qa is not None:
                 tq = time.perf_counter(); r = qa.assess(text, wav[0].numpy(), m.sr, tgt_lang); stats["qa_seconds"] += time.perf_counter() - tq
-                rec.update({"score": r["score"], "bad": r["bad"], "reasons": r["reasons"], "ctc": r["ctc"][:160], "whisper": r["whisper"][:160]})
+                rec.update({"score": r["score"], "bad": r["bad"], "reasons": r["reasons"], "ctc": r["ctc"][:160], "whisper": r["whisper"][:160], "lost_words": r.get("lost_words", [])})
             attempts.append(rec)
             if best is None or (qa is not None and (rec["bad"], rec["score"]) < (best[1]["bad"], best[1]["score"])):
                 best = (wav, rec)
@@ -696,7 +696,9 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                     recf.update(new=new, result="rewritten", seconds_before=round(sp_s, 3), seconds_after=round(s2, 3)); u["fit"].append(recf); stats["fit_parts_rewritten"] += 1
                     text, y, rec, spans, sp_s = new, y2, rec2, sp2, s2
                 # ---- fit-UP: synthesized speech much shorter than the source speech of the unit -> fuller rewrite; accepted only if closer AND not less intelligible
-                if fit_up.get("enabled") and llm is not None and target > 0.5 and words_of(text) >= 3 and sp_s / target < fit_up.get("ratio", 0.65):
+                # not for an --ordered-translation sentence: its pieces are already mapped to the source bursts, a fuller rewrite loses that mapping
+                # (6 of 14 ordered sentences, 2026-10-13) and turned 04 "Nice weather, | onward." into "The weather is really nice | what in front."
+                if fit_up.get("enabled") and llm is not None and target > 0.5 and words_of(text) >= 3 and sp_s / target < fit_up.get("ratio", 0.65) and not u.get("ordered_pieces"):
                     stats["fit_up_candidates"] += 1
                     for rnd in range(fit_up.get("rounds", 2)):
                         ratio = sp_s / target; rate = words_of(text) / sp_s
@@ -736,12 +738,16 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                     stats["gap_qa_units"] = stats.get("gap_qa_units", 0) + (1 if u["gap_qa"]["found"] else 0); stats["gap_qa_left"] = stats.get("gap_qa_left", 0) + (1 if gv else 0)
                 if text != u["translation"]:
                     u["translation_fitted"] = text
+                    if u.get("ordered_pieces"): stats["ordered_dropped_by_fit"] = stats.get("ordered_dropped_by_fit", 0) + 1
                 # ---- sentence flow: short source pauses inside the sentence are not reproduced (one connected phrase over the union window)
                 fm = flow_merge_bursts(p, sentence_flow_gap)
                 if fm: u["flow_merges"] = fm; stats["flow_merges"] = stats.get("flow_merges", 0) + fm
                 # ---- split the FINAL text into one part per source burst (lossless): timing distribution of the aligned words (default) or Qwen
                 n = len(p["bursts"]); raw_words = text.split(); counts = None; parts = None
-                if n == 1:
+                op = u.get("ordered_pieces")   # --ordered-translation: Qwen translated the sentence piece by piece in source order -> those pieces are the parts
+                if n > 1 and op and text == u["translation"] and len(op) == n:
+                    parts = list(op); u["split"] = {"method": "ordered_pieces"}; stats["units_ordered"] = stats.get("units_ordered", 0) + 1
+                elif n == 1:
                     parts = [text]; u["split"] = {"method": "single"}; stats["units_single_burst"] += 1
                 else:
                     slog = {"method": None, "attempts": []}

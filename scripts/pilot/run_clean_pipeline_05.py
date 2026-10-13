@@ -258,8 +258,58 @@ def load_llm(times: dict):
     return llm, os.path.basename(files[0])
 
 
+ORDER_SHOTS = [   # generic examples, deliberately NOT taken from the five test videos (no leakage into the evaluation)
+    ("в прошлом году | мы с братом поехали | на море.", "Last year | my brother and I went | to the sea."),
+    ("книгу эту | я прочитал | за два дня.", "This book | I read | in just two days."),
+    ("ну что | погнали | дальше.", "Well then, | let's move | on."),
+    ("мы приедем 5 | июня в пятницу.", "We will arrive on the 5th | of June, on Friday."),
+    ("короче | всё прошло | нормально.", "Anyway, | everything went | fine."),
+    ("большая | светлая | комната и балкончик.", "A big, | bright | room and a small balcony.")]
+
+
+def _order_instr(src_name: str, tgt_name: str, k: int) -> str:
+    return (f"Translate from {src_name} to {tgt_name} for dubbing. The speaker pauses at every \" | \". Write a natural, fluent {tgt_name} translation "
+            f"of the whole sentence with exactly {k - 1} \" | \" mark{'s' if k > 2 else ''}, placed so that each {tgt_name} piece says what the "
+            f"{src_name} piece at the same position says (keep the order of the pieces). Translate the meaning, not word for word; keep the punctuation. "
+            f"Answer with the marked translation only.")
+
+
+def ordered_translation(llm, src_name: str, tgt_name: str, pieces: list[str]) -> tuple[list[str] | None, dict]:
+    """--ordered-translation (2026-10-13, 04 11-12 s "какой-то бред"): the source sentence is sent with " | " at its long pauses and Qwen keeps
+    the pieces in order, so the dub says at every source burst what the speaker says there. Plain translation of 04 u2 "город | сочи 28 |
+    августа сегодня и | мы начинаем ..." was "Sochi city today, August 28, and we start ...": the cut DP then put "today" on "сочи 28" and
+    "August 28" on "августа сегодня". One repair turn when the answer has another number of pieces. Returns (pieces | None, usage + raw)."""
+    k = len(pieces); msgs = [{"role": "system", "content": SYSTEM_PROMPT}]
+    for a_, b_ in ORDER_SHOTS:
+        msgs += [{"role": "user", "content": f"{_order_instr(src_name, tgt_name, a_.count('|') + 1)}\n{a_}"}, {"role": "assistant", "content": b_}]
+    msgs.append({"role": "user", "content": f"{_order_instr(src_name, tgt_name, k)}\n{' | '.join(pieces)}"})
+    usage = {"prompt_tokens": 0, "completion_tokens": 0, "raw": []}
+    for attempt in range(2):
+        r = llm.create_chat_completion(msgs, max_tokens=512, temperature=0.0)
+        out = " ".join(r["choices"][0]["message"]["content"].split()).strip().strip('"«»“”')
+        for key in ("prompt_tokens", "completion_tokens"):
+            usage[key] += int(r["usage"].get(key, 0))
+        usage["raw"].append(out); got = [x.strip() for x in out.split("|")]
+        if len(got) == k and all(re.findall(r"[\w']+", x) for x in got):
+            return got, usage
+        msgs += [{"role": "assistant", "content": out},
+                 {"role": "user", "content": f"That has {len(got)} pieces; it must have exactly {k} pieces ({k - 1} \" | \" marks), one per source piece. Answer again."}]
+    return None, usage
+
+
+def source_pieces(u: dict, p: dict, gap: float) -> list[str]:
+    """Source words of unit u grouped by burst, bursts closer than `gap` s joined (the same rule as tts_burst.flow_merge_bursts)."""
+    toks = u["text"].split(); counts = list(p["group_counts"])
+    groups = [" ".join(toks[sum(counts[:i]):sum(counts[:i + 1])]) for i in range(len(counts))] if len(toks) == sum(counts) else list(p["groups"])
+    out = [groups[0]]
+    for prev, cur, g in zip(p["bursts"], p["bursts"][1:], groups[1:]):
+        if cur[0] - prev[1] < gap: out[-1] += " " + g
+        else: out.append(g)
+    return out
+
+
 def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict, plans: list | None = None, split_retries: int = 2,
-                    min_part_words: int = 3, soft_part_words: int = 4, part_max_words: int = 16, keep_llm: bool = False, llm=None, split: bool = True):
+                    min_part_words: int = 3, soft_part_words: int = 4, part_max_words: int = 16, keep_llm: bool = False, llm=None, split: bool = True, ordered_gap: float = 0.0):
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
     from burst_aware_audio import missing_numbers
     if llm is None:
@@ -295,6 +345,18 @@ def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict
             u["translation"] = txt
             for k in usage:
                 usage[k] += int(r["usage"].get(k, 0))
+            if ordered_gap > 0 and plans is not None:
+                pcs = source_pieces(u, plans[units.index(u)], ordered_gap)
+                if len(pcs) >= 2:
+                    got, us = ordered_translation(llm, src_name, tgt_name, pcs); joined = " ".join(got) if got else ""
+                    for k in usage:
+                        usage[k] += int(us.get(k, 0))
+                    why = ("malformed" if got is None else "lost a number" if len(missing_numbers(u["text"], joined)) > len(missing_numbers(u["text"], txt))
+                           else "length" if not 0.6 <= len(joined.split()) / max(len(txt.split()), 1) <= 1.6 else None)
+                    u["ordered_translation"] = {"source": pcs, "pieces": got, "plain": txt, "used": why is None, "reject": why, "raw": us.get("raw")}
+                    if why is None:
+                        u["translation"] = txt = joined; u["ordered_pieces"] = got
+                    print(f"  [ordered] u{u['id']:02d} {' | '.join(pcs)[:70]} -> {' | '.join(got or [])[:70]} ({why or 'used'})", flush=True)
             print(f"  [translate] u{u['id']:02d} {u['speaker']} {u['start']:.2f}-{u['end']:.2f}s | {u['text'][:60]} -> {txt[:60]}", flush=True)
     split_stats = None
     if plans is not None and split:   # --alignment burst, step 2: cut every unit translation into one part per source burst (Qwen still loaded)
@@ -581,8 +643,8 @@ def run_lipsync_optimized(src: pathlib.Path, work: pathlib.Path, dubbed16k: path
         router = prep.router if prep is not None else model_cache.get(("router", a.face_router, a.face_min_w, a.face_min_h, a.retina_conf),
                                                                       lambda: faa.make_router(a.face_router, a.face_min_w, a.face_min_h, a.retina_conf))
     with timed(times, "latentsync_load"):
-        runner = model_cache.get(("latentsync", a.window_batch_size, not a.no_deepcache, a.compile_backend, a.sdpa_backend, a.deepcache_interval),
-                                 lambda: faa.AccelRunner(a.window_batch_size, not a.no_deepcache, a.compile_backend, a.sdpa_backend, deepcache_interval=a.deepcache_interval))
+        runner = model_cache.get(("latentsync", a.window_batch_size, not a.no_deepcache, a.compile_backend, a.sdpa_backend, a.deepcache_interval, a.ls_steps),
+                                 lambda: faa.AccelRunner(a.window_batch_size, not a.no_deepcache, a.compile_backend, a.sdpa_backend, steps=a.ls_steps, deepcache_interval=a.deepcache_interval))
     if a.mouth_only_pasteback == "on":   # E4: LatentSync pixels only inside a feathered lower-face ellipse, the rest of the frame = master (scripts/quality/candidate_video_stage.py)
         sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
         from candidate_video_stage import MouthOnlyRunner
@@ -663,6 +725,11 @@ def main() -> int:
                     "weak-boundary pause seconds 46.8 -> 21.9 on the five videos offline, +1.1 s source without dub)")
     ap.add_argument("--sentence-flow-gap", type=float, default=0.0, help="phrase mode: inside one sentence, source pauses shorter than this (s) are not reproduced: "
                     "the sentence is spoken as one connected phrase (0 = off: one part per source burst, previous behaviour)")
+    ap.add_argument("--ordered-translation", choices=["off", "on"], default="off", help="phrase mode + --sentence-flow-gap: a sentence with source pauses >= the flow gap is "
+                    "translated piece by piece in source order (\" | \" at the pauses) and those pieces become the parts (04 u2 2026-10-13: \"Sochi city | today | August 28\" on "
+                    "\"город | сочи 28 | августа сегодня\"); plain translation on a malformed answer / a fit rewrite")
+    ap.add_argument("--tts-word-qa", choices=["off", "on"], default="off", help="phrase mode: an attempt where Whisper AND CTC both miss a content word of the text (>= 4 letters) "
+                    "is QA-bad -> retry ladder (04 \"Sochi\" -> \"Salkis\", 05 \"Just here\" -> \"This year\"; the sentence CER hid them)")
     ap.add_argument("--pause-marks", choices=["off", "qwen"], default="off", help="with --long-pause-func: qwen = Qwen marks the natural pause points of every multi-burst "
                     "sentence; a long source pause is free only there (function-word list otherwise / on a malformed answer)")
     ap.add_argument("--cut-fade", choices=["fixed", "adaptive"], default="fixed", help="--phrase-cut acoustic: fixed = 5 ms declick fades; adaptive = 25 ms fade-out / 8 ms fade-in on inner cuts that are still voiced")
@@ -695,6 +762,8 @@ def main() -> int:
     ap.add_argument("--sdpa-backend", choices=["auto", "flash", "efficient", "math"], default=OPTIMIZED_DEFAULTS["sdpa_backend"], help="optimized backend only")
     ap.add_argument("--no-deepcache", action="store_true", help="optimized backend only (A/B); baseline always uses DeepCache")
     ap.add_argument("--deepcache-interval", type=int, default=OPTIMIZED_DEFAULTS["deepcache_interval"], help="optimized backend only; 5 = A/B-validated default, 3 = previous setting")
+    ap.add_argument("--ls-steps", type=int, default=20, help="optimized backend only: LatentSync DDIM steps (A/B 2026-10-13 on 04/05: 16 with --deepcache-interval 7 = -13 %% "
+                                                              "LatentSync, SyncNet / lip jitter unchanged; 12 = -26 %%, a human sees occasional lip twitches)")
     ap.add_argument("--speech-gate", choices=["on", "off"], default=OPTIMIZED_DEFAULTS["speech_gate"],
                     help="optimized backend only: LatentSync only inside VAD(original) U VAD(dubbed) (+margin); elsewhere the original mouth is kept")
     ap.add_argument("--gate-margin-s", type=float, default=OPTIMIZED_DEFAULTS["gate_margin_s"])
@@ -813,7 +882,8 @@ def main() -> int:
         phrase_mode = a.alignment == "burst" and a.tts_mode == "phrase"
         tr = run_translation(units, src_lang, tgt, times, plans=plans, split_retries=a.split_retries,
                              min_part_words=a.min_part_words, soft_part_words=a.soft_part_words, part_max_words=a.part_max_words,
-                             keep_llm=burst_opts is not None and (a.fit_retranslate == "on" or phrase_mode), llm=llm, split=not phrase_mode)
+                             keep_llm=burst_opts is not None and (a.fit_retranslate == "on" or phrase_mode), llm=llm, split=not phrase_mode,
+                             ordered_gap=a.sentence_flow_gap if (a.ordered_translation == "on" and phrase_mode) else 0.0)
         llm = None
         if isinstance(tr, tuple):
             man["translation"], llm, src_name, tgt_name = tr
@@ -828,6 +898,7 @@ def main() -> int:
                 print(f"  [warn] --tts-qa uses English ASR models; disabled for target language {tgt}", flush=True); qa_on = False
             if phrase_mode:
                 from tts_burst import run_tts_phrase
+                import tts_qa; tts_qa.WORD_QA = a.tts_word_qa == "on"
                 man["tts"] = run_tts_phrase(units, plans, refs, tgt, work, a.seed, times, opts=burst_opts, llm=llm, src_name=lang_name(src_lang), tgt_name=lang_name(tgt),
                                             fit={"enabled": llm is not None and a.fit_retranslate == "on", "rounds": a.fit_rounds, "target_ratio": a.fit_target_ratio,
                                                  "short_min_words": a.fit_down_short_words, "short_overflow_s": a.fit_down_short_overflow_s},
