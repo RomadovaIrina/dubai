@@ -167,6 +167,47 @@ def fuller_rewrite(llm, src_name: str, tgt_name: str, source_text: str, text: st
     return None, why
 
 
+SPOKEN_SHOTS = [   # generic Russian spoken lines (NOT from the test videos): compressed dubbing -> how the speaker really says it
+    ("Ну вот, собственно, и всё на сегодня.", "That's all for today.", "Well, so, that's basically all for today."),
+    ("Опять же, посмотрим, как оно будет работать.", "Let's see how it works.", "Once again, let's see how it is going to work."),
+    ("Вот такая вот у нас кухня, светлая.", "Here is our bright kitchen.", "So here it is, this is our kitchen, nice and bright."),
+    ("Отличный день, да, поехали!", "Great day, let's go!", "What a great day, right? Let's go!"),
+    ("Короче, завтра я тебе всё это пришлю.", "I'll send it tomorrow.", "Anyway, tomorrow I will send you all of this.")]
+
+
+def spoken_rewrite(llm, src_name: str, tgt_name: str, source_text: str, text: str, target_words: int, attempts: int = 2) -> tuple[str | None, str]:
+    """--thought-fill spoken (2026-10-14): the English line ends while the speaker still talks (04 "Nice weather, here comes." on "Классная погода,
+    что, вперёд"; "Therefore, here is such wonderful video." on "Поэтому вот такое вот прекрасное видео"): the translation compressed his spoken
+    wording. A fresh translation of HIS words as he says them (discourse words, repetitions, full forms; generic few-shots: Qwen 7B returned the
+    same line without them), no new facts. Guards: longer, within the budget, numbers kept, no appended clause, Qwen faithfulness judge.
+    Returns (text | None, reason). Not the old fit-up: no padding."""
+    from burst_aware_audio import missing_numbers
+    nw = words_of(text); lo = nw + 1; hi = max(lo + 1, target_words + 3)
+    def instr(ru, en, a_, b_):
+        return (f"{src_name} speaker: \"{ru}\"\nCompressed {tgt_name} dubbing: \"{en}\"\nWrite the {tgt_name} line the way he really says it: translate every word and "
+                f"phrase he says, including his discourse words and repetitions (as natural spoken {tgt_name}), full verb forms, {a_} to {b_} words. Add nothing "
+                f"he does not say. Answer with the line only.")
+    msgs = [{"role": "system", "content": REWRITE_SYSTEM}]
+    for ru, en, full in SPOKEN_SHOTS:
+        msgs += [{"role": "user", "content": instr(ru, en, words_of(en) + 1, words_of(full) + 2)}, {"role": "assistant", "content": full}]
+    msgs.append({"role": "user", "content": instr(source_text, text, lo, hi)}); why = "no answer"
+    for _ in range(attempts):
+        raw = llm.create_chat_completion(msgs, max_tokens=200, temperature=0.0)["choices"][0]["message"]["content"]
+        new = " ".join(raw.split()).strip().strip('"«»“”'); nn = words_of(new)
+        if not new or new.lower() == text.lower(): why = "empty / identical"
+        elif nn <= nw: why = f"not longer ({nn} <= {nw})"
+        elif nn > hi + 2: why = f"too long ({nn} > {hi + 2})"
+        elif missing_numbers(text, new) or missing_numbers(source_text, new): why = "number lost"
+        elif appended_clause(text, new): why = appended_clause(text, new)
+        else:
+            ok, added = faithful_check(llm, src_name, tgt_name, source_text, text, new)
+            if ok:
+                return new, "ok"
+            why = "added: " + "; ".join(added)[:160]
+        msgs = msgs + [{"role": "assistant", "content": raw}, {"role": "user", "content": f"That is not usable ({why}). Translate only what he says, {lo} to {hi} words, nothing added. Answer with the line only."}]
+    return None, why
+
+
 def run_tts_burst(units: list, plans: list, refs: dict, tgt_lang: str, work: pathlib.Path, seed: int, times: dict, *, opts, llm=None, src_name: str = "", tgt_name: str = "",
                   fit: dict | None = None, qa_cfg: dict | None = None, min_part_words: int = 3, log=print) -> dict:
     """Synthesise every part of every unit (speaker-grouped like the slot path), fit / retry per part, write tts_u<id>_p<k>.wav and u['tts_parts'] / u['tts'].
@@ -481,7 +522,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
         if m.conds is not None:
             m.conds = m.conds.to(device="cuda")
 
-    def gen_sentence(u, text: str, dtype, salt: int = 0) -> tuple:
+    def gen_sentence(u, text: str, dtype, salt: int = 0, cfg: float = 0.5) -> tuple:
         """One whole-sentence generation with the QA retry ladder of run_tts_burst (same seed rule, part index 0). Returns (wav float32 1-D, record)."""
         base = seed + 100 * u["id"] + 100003 * salt
         ladder = [(0, 0.8)] + ([(1, 0.8), (2, qa_cfg.get("low_temp", 0.6))][: qa_cfg.get("retries", 2)] if qa is not None else [])
@@ -489,7 +530,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
         for ai, (soff, temp) in enumerate(ladder):
             s = base + 7919 * soff; torch.manual_seed(s); tg = time.perf_counter()
             with torch.autocast("cuda", dtype=dtype, enabled=dtype != torch.float32):
-                wav = m.generate(text, language_id=tgt_lang, temperature=temp)
+                wav = m.generate(text, language_id=tgt_lang, temperature=temp, cfg_weight=cfg)
             wav = wav.detach().float().cpu()
             if not torch.isfinite(wav).all() or wav.abs().max() < 1e-4:
                 raise RuntimeError(f"non-finite or silent TTS for unit {u['id']}")
@@ -595,6 +636,44 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                             recu["result"] = "rejected (not closer)" if not closer else "rejected (less intelligible)"; stats["fit_up_rejected"] += 1; u["fit_up"].append(recu); break
                     if any(x.get("result") == "accepted" for x in u["fit_up"]):
                         stats["fit_up_units"] += 1
+                # ---- thought fill (2026-10-14): the line ends >= fill_min_s before the speaker does -> his fuller spoken wording, re-synthesised
+                if thought_mode and getattr(thought, "fill", "off") == "spoken" and llm is not None and spans is not None and sp_s <= total_win * (1 + thought.tol):
+                    mk, _ans = tp_.chunk_marks(llm, text); pl = tp_.plan_chunks(spans, text.split(), mk or set(), p["bursts"], p["next_start"], norm, thought)
+                    u["fill"] = {"short_before": pl["short"]}
+                    if pl["short"] >= thought.fill_min_s:
+                        dl = max(spans[-1]["end"] - spans[0]["start"], 0.3); tw = int(round(words_of(text) * (dl + 0.8 * pl["short"]) / dl))
+                        tq = time.perf_counter(); new, why = spoken_rewrite(llm, src_name, tgt_name, u["text"], text, tw); stats["fill_qwen_seconds"] = stats.get("fill_qwen_seconds", 0.0) + time.perf_counter() - tq
+                        u["fill"].update(old=text, new=new, why=why, target_words=tw)
+                        if new:
+                            y2, rec2 = gen_sentence(u, new, dtype, salt=30); sp2 = align(y2, new); s2 = speech_seconds(y2, sp2)
+                            if sp2 is not None and not rec2["qa_bad_final"] and s2 <= total_win * (1 + thought.tol):
+                                mk2, _a2 = tp_.chunk_marks(llm, new); pl2 = tp_.plan_chunks(sp2, new.split(), mk2 or set(), p["bursts"], p["next_start"], norm, thought)
+                                u["fill"]["short_after"] = pl2["short"]
+                                if pl2["short"] < pl["short"] - 0.3:
+                                    text, y, rec, spans, sp_s = new, y2, rec2, sp2, s2; u["fill"]["result"] = "accepted"; stats["fill_accepted"] = stats.get("fill_accepted", 0) + 1
+                                else:
+                                    u["fill"]["result"] = "rejected (not closer)"
+                            else:
+                                u["fill"]["result"] = "rejected (QA bad / no alignment / overflow)"
+                        # pace fill (2026-10-14 GPU A/B on 04): the same text at Chatterbox cfg_weight 0.3 = the model's own slower, more deliberate
+                        # delivery (+10-30 % word durations, intelligibility unchanged / better); 0.2 drew the last word out to 2 s -> drawl guard
+                        cur_short = u["fill"].get("short_after", pl["short"]) if u["fill"].get("result") == "accepted" else pl["short"]
+                        if cur_short >= thought.fill_min_s:
+                            y3, rec3 = gen_sentence(u, text, dtype, salt=50, cfg=0.3); sp3 = align(y3, text); s3 = speech_seconds(y3, sp3)
+                            drawl = None
+                            if sp3:
+                                wd = [w["end"] - w["start"] for w in sp3]; med = float(np.median(wd)) if wd else 0.2
+                                if max(wd) > max(0.8, 2.2 * med): drawl = f"word {max(wd):.2f}s"
+                                tw_ = text.split()
+                                for wi, (a_, b_) in enumerate(zip(sp3, sp3[1:])):
+                                    if b_["start"] - a_["end"] > 0.7 and not (wi < len(tw_) and tp_.PUNCT_END.search(tw_[wi])): drawl = f"pause {b_['start'] - a_['end']:.2f}s inside a phrase"
+                            u["fill"]["pace"] = {"seconds_before": round(sp_s, 3), "seconds_after": round(s3, 3), "qa_bad": rec3["qa_bad_final"], "drawl": drawl}
+                            if sp3 is not None and not rec3["qa_bad_final"] and not drawl and s3 <= total_win * (1 + thought.tol):
+                                mk3, _a3 = tp_.chunk_marks(llm, text); pl3 = tp_.plan_chunks(sp3, text.split(), mk3 or set(), p["bursts"], p["next_start"], norm, thought)
+                                u["fill"]["pace"]["short_after"] = pl3["short"]
+                                if pl3["short"] < cur_short - 0.3:
+                                    y, rec, spans, sp_s = y3, rec3, sp3, s3; u["fill"]["pace"]["result"] = "accepted"; stats["pace_accepted"] = stats.get("pace_accepted", 0) + 1
+                        stats["fill_candidates"] = stats.get("fill_candidates", 0) + 1
                 if text != u["translation"]:
                     u["translation_fitted"] = text
                 # ---- split the FINAL text into one part per source burst (lossless): timing distribution of the aligned words (default) or Qwen
@@ -603,6 +682,11 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                     res = None
                     if "split" in thought.overflow and spans is not None and n >= 2 and sp_s > total_win * (1 + thought.tol):
                         res = tp_.split_thought(spans, raw_words, p["bursts"], p["next_start"], norm, thought.gap, thought.inner_gap, thought.tol)
+                    if res is None and thought.underfill == "semantic" and spans is not None and n >= 2 and sp_s <= total_win * (1 + thought.tol):
+                        mk, ans = tp_.chunk_marks(llm, text); pl = tp_.plan_chunks(spans, raw_words, mk or set(), p["bursts"], p["next_start"], norm, thought)
+                        u["chunks"] = {"marks": sorted(mk) if mk is not None else None, "qwen": ans[:300], "plan_short": pl["short"]}
+                        if pl["split"]:
+                            res = (pl["counts"], pl["groups"]); stats["thought_semantic"] = stats.get("thought_semantic", 0) + 1
                     if res is None and thought.underfill == "clause" and spans is not None and n >= 2 and sp_s <= total_win * (1 + thought.tol):
                         res = tp_.cover_split(spans, raw_words, p["bursts"], p["next_start"], norm, thought.gap, thought.inner_gap, thought.tol)
                         if res is not None: stats["thought_clause_splits"] = stats.get("thought_clause_splits", 0) + 1

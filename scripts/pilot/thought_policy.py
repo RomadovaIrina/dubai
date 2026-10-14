@@ -151,7 +151,7 @@ def split_thought(spans: list[dict], raw_words: list[str], bursts: list, next_an
 
 def cover_split(spans: list[dict], raw_words: list[str], bursts: list, next_anchor: float, norm_fn, gap: float, inner_gap: float = 0.12,
                 tol: float = 0.03, tail_s: float = 0.12, max_parts: int = 3, min_gain: float = 1.0, min_pause: float = 0.5, min_words: int = 2,
-                split_cost: float = 0.3) -> tuple[list[int], list[list[int]]] | None:
+                split_cost: float = 0.3, free_start: bool = False, late_cost: float = 0.15, outside_w: float = 0.0) -> tuple[list[int], list[list[int]]] | None:
     """--underfill clause (A/B variant): the English sentence is much shorter than the source speaker's, who keeps talking after it (04 u2: 6.4 s
     of dub on a 16 s sentence = 9.5 s of closed mouth while the speaker talks). Cut it ONLY at punctuation (a clause end) onto a source pause
     >= min_pause, every piece at natural speed inside its window, when that covers >= min_gain s more of the source speech. The pause then
@@ -170,7 +170,10 @@ def cover_split(spans: list[dict], raw_words: list[str], bursts: list, next_anch
         return spans[k1 - 1]["end"] - spans[k0]["start"] + tail_s
 
     def cover(a, d, b0, b1):
-        return sum(max(0.0, min(a + d, be) - max(a, bs)) for bs, be in bursts[b0:b1 + 1])
+        # source speech covered by the dub piece [a, a + d]; outside_w > 0 (2026-10-14 semantic re-placement): minus outside_w x the dub time
+        # over source SILENCE, otherwise one long sentence running through the speaker's pauses scores as well as chunks on his bursts (03 u4)
+        ov = sum(max(0.0, min(a + d, be) - max(a, bs)) for bs, be in bursts[b0:b1 + 1])
+        return ov - outside_w * max(0.0, d - ov)
 
     def solve(k0, b0, parts_left):
         d = dur(k0, n); a = bursts[b0][0]
@@ -196,20 +199,93 @@ def cover_split(spans: list[dict], raw_words: list[str], bursts: list, next_anch
 
     whole = cover(bursts[0][0], dur(0, n), 0, M - 1)
     c, counts, groups = solve(0, 0, max_parts)
-    if counts is None or len(counts) < 2 or c - whole < min_gain:
+    if free_start:   # the first chunk may start on a later source burst (04 u3: "which will make life easier for people" on "которое" (0.3 s) left
+        for b0 in range(1, M):   # "облегчит жизнь людям" silent; started on it, it covers it): a late start costs late_cost per skipped burst
+            c2, cn2, g2 = solve(0, b0, max_parts)
+            if cn2 is not None and c2 - late_cost * b0 > c:
+                c, counts, groups = c2 - late_cost * b0, cn2, g2
+    if counts is None or (len(counts) < 2 and groups[0][0] == 0) or c - whole < min_gain:
         return None
     return counts, groups
+
+
+# ------------------------------------------------------------------------------------------------------------------- semantic chunks
+CHUNK_SYSTEM = "You split spoken English sentences into meaning chunks for dubbing. You answer with the sentence only, chunks separated by ' | '."
+CHUNK_INSTR = ("Split the sentence into the LARGEST self-contained meaning chunks: after a chunk the speaker may pause for a long time and the listener must "
+               "not feel that anything is left hanging. A split is allowed after a complete clause, after an introductory phrase (time, place, 'Well,', "
+               "'Therefore,', an address like 'Friends,'), between the items of a list, and before 'and / but / which / so that' starting a new clause. Never "
+               "split inside a noun phrase, between a verb and its object or complement, between a preposition and its object, inside a number with its "
+               "unit, or after 'the / a / to / of / for / with / our / my / how / what'. Keep every word exactly unchanged. If the sentence is one chunk, "
+               "return it unchanged.")
+CHUNK_SHOTS = [   # generic examples, NOT from the five test videos
+    ("After the meeting we can finally discuss the new budget for next year.", "After the meeting | we can finally discuss the new budget for next year."),
+    ("Yesterday, in the old town, my brother bought a red bicycle and rode it home.", "Yesterday, | in the old town, | my brother bought a red bicycle | and rode it home."),
+    ("This little shop sells fresh bread every morning.", "This little shop sells fresh bread every morning."),
+    ("Next week I will send you the report, which explains all the results in detail.", "Next week | I will send you the report, | which explains all the results in detail."),
+    ("Friends, hello everyone, welcome to my channel.", "Friends, | hello everyone, | welcome to my channel."),
+    ("We will test how our new camera works in the rain.", "We will test how our new camera works in the rain.")]
+WEAK_END = {"the", "a", "an", "to", "of", "for", "with", "our", "my", "your", "his", "her", "their", "its", "how", "what", "that", "which", "who", "whom",
+            "is", "are", "was", "were", "will", "would", "can", "be", "and", "or", "but", "in", "on", "at", "by", "from", "into", "about", "as", "than", "very"}
+
+
+_MARK_CACHE: dict = {}
+
+
+def chunk_marks(llm, text: str) -> tuple[set | None, str]:
+    """--underfill semantic (2026-10-14, reviewer: "смысловой кусок закончился — паузу можно хоть 15 минут; внутри куска нельзя"): Qwen marks
+    the largest self-contained meaning chunks of the English sentence. Returns (indices of the raw words AFTER which a chunk ends | None when the
+    words came back changed, raw answer). A mark after a function word without punctuation is dropped ("what I want to say is that |")."""
+    words = text.split()
+    if len(words) < 4 or llm is None:
+        return set(), text
+    if text in _MARK_CACHE:   # deterministic (temperature 0): the fill step and the split step ask for the same sentence
+        return _MARK_CACHE[text]
+    msgs = [{"role": "system", "content": CHUNK_SYSTEM}]
+    for a_, b_ in CHUNK_SHOTS:
+        msgs += [{"role": "user", "content": f"{CHUNK_INSTR}\n{a_}"}, {"role": "assistant", "content": b_}]
+    msgs.append({"role": "user", "content": f"{CHUNK_INSTR}\n{text}"})
+    out = llm.create_chat_completion(msgs, max_tokens=len(words) * 4 + 40, temperature=0.0)["choices"][0]["message"]["content"].strip()
+    toks = out.replace("|", " | ").split(); got, marks = [], set()
+    for t in toks:
+        if t == "|":
+            if got: marks.add(len(got) - 1)
+        else:
+            got.append(t)
+    key = lambda w: re.sub(r"[^\w']", "", w.lower())
+    if [key(w) for w in got] != [key(w) for w in words]:
+        _MARK_CACHE[text] = (None, out); return None, out
+    marks.discard(len(words) - 1)
+    _MARK_CACHE[text] = ({i for i in marks if key(words[i]) not in WEAK_END or PUNCT_END.search(words[i])}, out)
+    return _MARK_CACHE[text]
+
+
+def plan_chunks(spans: list[dict], raw_words: list[str], marks: set, bursts: list, next_anchor: float, norm_fn, o: "ThoughtOpts",
+                min_pause: float = 0.3, min_gain: float = 0.5, max_parts: int = 6) -> dict:
+    """Meaning chunks onto the speaker's bursts (cover_split restricted to `marks`, free start, the dub over source silence costs little: the
+    reviewer only minds the source talking while the dub is silent). Returns {"counts", "groups", "end", "src_end", "short"}: the predicted end
+    of the dub (natural speed, last chunk from its anchor; slow floor applied) and how much earlier than the speaker it ends."""
+    flagged = [(w if PUNCT_END.search(w) else w + ",") if i in marks else re.sub(r"[,;:—–.!?…]+(['\"»)]*)$", r"\1", w) for i, w in enumerate(raw_words)]
+    res = cover_split(spans, flagged, bursts, next_anchor, norm_fn, o.gap, o.inner_gap, o.tol, max_parts=max_parts, min_gain=min_gain, min_pause=min_pause,
+                      min_words=1, free_start=True, outside_w=0.15, split_cost=0.1, late_cost=0.1)
+    n = len(spans)
+    counts, groups = res if res is not None else ([n], [list(range(len(bursts)))])
+    k0 = n - counts[-1]; d_last = spans[-1]["end"] - spans[k0]["start"] + 0.12
+    start_last = bursts[groups[-1][0]][0]; src_end = min(bursts[-1][1], next_anchor - o.gap)
+    end = start_last + d_last / max(o.slow_floor, 1e-3) if src_end - start_last > d_last else start_last + d_last
+    end = min(end, max(src_end, start_last + d_last))
+    return {"counts": counts, "groups": groups, "end": round(end, 3), "src_end": round(src_end, 3), "short": round(src_end - end, 3), "split": res is not None}
 
 
 # -------------------------------------------------------------------------------------------------------------------------------- placement
 class ThoughtOpts:
     def __init__(self, overflow: set, gap: float = 0.2, inner_gap: float = 0.12, tempo_cap: float = 1.1, hard_cap: float = 1.2, max_shift: float = 1.0,
-                 safety_shift: float = 0.5, tol: float = 0.03, underfill: str = "none", slow_floor: float = 1.0):
+                 safety_shift: float = 0.5, tol: float = 0.03, underfill: str = "none", slow_floor: float = 1.0, fill: str = "off", fill_min_s: float = 0.8):
         self.overflow, self.gap, self.inner_gap, self.tempo_cap, self.hard_cap = set(overflow), gap, inner_gap, tempo_cap, hard_cap
         self.max_shift, self.safety_shift, self.tol, self.underfill, self.slow_floor = max_shift, safety_shift, tol, underfill, slow_floor
+        self.fill, self.fill_min_s = fill, fill_min_s
 
     def as_dict(self) -> dict:
-        return {"overflow": sorted(self.overflow), "underfill": self.underfill, "slow_floor": self.slow_floor, "gap": self.gap, "inner_gap": self.inner_gap, "tempo_cap": self.tempo_cap, "hard_cap": self.hard_cap,
+        return {"overflow": sorted(self.overflow), "underfill": self.underfill, "slow_floor": self.slow_floor, "fill": self.fill, "fill_min_s": self.fill_min_s, "gap": self.gap, "inner_gap": self.inner_gap, "tempo_cap": self.tempo_cap, "hard_cap": self.hard_cap,
                 "max_shift": self.max_shift, "safety_shift": self.safety_shift, "tol": self.tol}
 
 

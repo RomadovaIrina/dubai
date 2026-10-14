@@ -657,7 +657,10 @@ def main() -> int:
                          "thought = the whole sentence first at natural speed from its first source burst, the pause after it (2026-10-14 human feedback, thought_policy.py)")
     ap.add_argument("--overflow", default="tempo", help="--pause-policy thought: comma list of the tools for a sentence longer than its window: rewrite (Qwen concise rewrite "
                     "at +3 %%), split (punctuation cut onto a source pause), shift (the next sentence starts later), tempo (atempo <= --thought-tempo-cap)")
-    ap.add_argument("--underfill", choices=["none", "clause"], default="none", help="--pause-policy thought: clause = a sentence much shorter than the source speech is cut "
+    ap.add_argument("--thought-fill", choices=["off", "spoken"], default="off", help="--pause-policy thought: spoken = a sentence that ends >= --thought-fill-min-s before the "
+                    "speaker does is re-translated in his fuller spoken wording (no new facts, Qwen judge) and re-synthesised; accepted when it ends >= 0.3 s closer")
+    ap.add_argument("--thought-fill-min-s", type=float, default=0.8)
+    ap.add_argument("--underfill", choices=["none", "clause", "semantic"], default="none", help="--pause-policy thought: clause = a sentence much shorter than the source speech is cut "
                     "at punctuation onto source pauses (pause only after a clause) when that covers >= 1 s more source speech; none = the pure rule")
     ap.add_argument("--thought-gap", type=float, default=0.2, help="--pause-policy thought: minimum pause before the next sentence (s)")
     ap.add_argument("--thought-tempo-cap", type=float, default=1.1); ap.add_argument("--thought-max-shift", type=float, default=1.0)
@@ -810,7 +813,7 @@ def main() -> int:
             tools = {x.strip() for x in a.overflow.split(",") if x.strip()}
             if not tools <= {"rewrite", "split", "shift", "tempo"}:
                 raise Blocker(f"--overflow: unknown tool(s) {sorted(tools - {'rewrite', 'split', 'shift', 'tempo'})}")
-            thought_opts = ThoughtOpts(tools, gap=a.thought_gap, tempo_cap=a.thought_tempo_cap, max_shift=a.thought_max_shift, underfill=a.underfill, slow_floor=a.thought_slow_floor)
+            thought_opts = ThoughtOpts(tools, gap=a.thought_gap, tempo_cap=a.thought_tempo_cap, max_shift=a.thought_max_shift, underfill=a.underfill, slow_floor=a.thought_slow_floor, fill=a.thought_fill, fill_min_s=a.thought_fill_min_s)
         man["pause_policy"] = {"policy": a.pause_policy, **(thought_opts.as_dict() if thought_opts else {})}
         tr = run_translation(units, src_lang, tgt, times, plans=plans, split_retries=a.split_retries,
                              min_part_words=a.min_part_words, soft_part_words=a.soft_part_words, part_max_words=a.part_max_words,
