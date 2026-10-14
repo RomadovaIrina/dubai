@@ -694,9 +694,11 @@ def main() -> int:
                     help="with --mouth-only-pasteback: face = CodeFormer on the composited frame (re-renders eyes / brows, previous behaviour); mouth = CodeFormer on the raw "
                          "LatentSync frame, then the mouth-only composite (eyes / brows stay the source; 2026-10-13 'мимика дергается')")
     ap.add_argument("--ls-landmark-smooth", type=int, default=0, help="optimized backend: centred moving average (+-N frames) of the landmarks replayed into LatentSync's affine crop")
-    ap.add_argument("--silent-mouth", choices=["self", "closed"], default="self",
+    ap.add_argument("--silent-mouth", choices=["self", "closed", "freeze"], default="self",
                     help="optimized backend: LatentSync reference image where the DUB is silent: self = the frame itself (upstream; the original articulation leaks into a "
-                         "silent mouth), closed = the nearest closed-mouth frame of the segment (2026-10-14 'рот должен быть закрыт, когда английская речь закончилась')")
+                         "silent mouth), closed = the nearest closed-mouth frame of the segment (2026-10-14 'рот должен быть закрыт, когда английская речь закончилась'); "
+                         "freeze = LatentSync only where the dub speaks (gate = dub VAD), where the source talks and the dub is silent the lower face incl. the jaw "
+                         "contour comes from a nearby closed-mouth source frame (mouth_freeze.py: no smeared jaw contour), elsewhere the source frame")
     ap.add_argument("--silent-mouth-pad", type=float, default=0.12, help="--silent-mouth closed: dub speech is extended by this (s) on both sides before a frame counts as silent")
     ap.add_argument("--segment-files", action="store_true", help="optimized backend: legacy per-segment mp4 path instead of in-memory segments")
     a = ap.parse_args()
@@ -881,7 +883,7 @@ def main() -> int:
                 import face_aware_latentsync_accel as faa
                 with timed(times, "speech_gate"):
                     dub_speech = run_vad(pathlib.Path(man["dubbed_track"]["wav16k"]))
-                    speech_gate = faa.build_speech_gate([speech, dub_speech], duration, a.gate_margin_s, a.gate_merge_gap_s)
+                    speech_gate = faa.build_speech_gate([dub_speech] if a.silent_mouth == "freeze" else [speech, dub_speech], duration, a.gate_margin_s, a.gate_merge_gap_s)
                 gated = sum(e - s for s, e in speech_gate)
                 man["speech_gate"] = {"enabled": True, "margin_s": a.gate_margin_s, "merge_gap_s": a.gate_merge_gap_s, "crossfade_frames": a.crossfade_frames,
                                       "source_speech_seconds": round(sum(i["end"] - i["start"] for i in speech), 3),
@@ -891,9 +893,9 @@ def main() -> int:
             else:
                 man["speech_gate"] = {"enabled": False}
             silent_mouth = None
-            if a.silent_mouth == "closed":
+            if a.silent_mouth in ("closed", "freeze"):   # freeze: LS-internal silent frames (gate margins / merged gaps) keep the closed-mouth reference
                 dsp = dub_speech if a.speech_gate == "on" else run_vad(pathlib.Path(man["dubbed_track"]["wav16k"]))
-                silent_mouth = {"dub_speech": [(v["start"], v["end"]) for v in dsp], "src_speech": [(v["start"], v["end"]) for v in speech], "pad_s": a.silent_mouth_pad}
+                silent_mouth = {"mode": a.silent_mouth, "dub_speech": [(v["start"], v["end"]) for v in dsp], "src_speech": [(v["start"], v["end"]) for v in speech], "pad_s": a.silent_mouth_pad}
             man["silent_mouth"] = {"mode": a.silent_mouth, "pad_s": a.silent_mouth_pad}
             man["lipsync"] = run_lipsync_optimized(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), mux_aac, out, a, times,
                                                    speech_gate=speech_gate, silent_mouth=silent_mouth)

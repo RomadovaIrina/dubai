@@ -503,6 +503,15 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
         k = min(xf, s["frames"] // 3)
         s["crossfade"] = {"in": k if j > 0 and segs[j - 1]["action"] != "LATENT_SYNC" else 0,
                           "out": k if j + 1 < len(segs) and segs[j + 1]["action"] != "LATENT_SYNC" else 0}
+    freeze_info = None
+    if silent_mouth is not None and silent_mouth.get("mode") == "freeze":   # source talks, dub silent, no LatentSync there: frozen closed-mouth lower face
+        from mouth_freeze import apply_freeze
+        lsm = np.zeros(n, bool)
+        for s in segs:
+            if s["action"] == "LATENT_SYNC" and replacements.get(s["index"]) is not None: lsm[s["start_frame"]:s["end_frame"]] = True
+        t0 = time.perf_counter()
+        freeze_info = apply_freeze(master_frames, lsm, silent_mouth["src_speech"], silent_mouth["dub_speech"], fa.face_detector(), pad=silent_mouth.get("pad_s", 0.12), log=log)
+        times["mouth_freeze"] = round(time.perf_counter() - t0, 3)
     t0 = time.perf_counter(); asm = assemble_frames(master_frames, audio_mux, segs, replacements, out, work); times["final_assembly"] = round(time.perf_counter() - t0, 3)
     del master_frames, replacements
     frame_check = check_output_frames(out, n)
@@ -517,7 +526,7 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
             "crossfade_frames": xf, "master_fps": FPS, "master_frames": n, "frame_classes": counts, "skip_reasons": reasons, "by_action": by_action,
             "latentsync_seconds_of_video": round(lipsynced / FPS, 3), "pass_through_seconds_of_video": round((n - lipsynced) / FPS, 3),
             "ls_fraction": round(lipsynced / max(n, 1), 4), "latentsync_inference_total_s": round(sum(ls_runs), 2), "verify_seconds": round(t_verify, 2),
-            "latentsync_calls": len(ls_runs), "verify_splits": verify_info, "assembly": asm, "output_frame_check": frame_check,
+            "latentsync_calls": len(ls_runs), "verify_splits": verify_info, "assembly": asm, "output_frame_check": frame_check, "mouth_freeze": freeze_info,
             "codeformer": ("OFF (gate metadata only: codeformer_eligible on LATENT_SYNC segments)" if codeformer == "off" else
                            {"mode": "optimized", "config": cf_runner.config, "load_s": cf_runner.load_s, "totals": dict(cf_runner.totals),
                             "eligible_frames": sum(s["frames"] for s in segs if s["action"] == "LATENT_SYNC"), "master_frames": n,
