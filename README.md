@@ -1,3 +1,5 @@
+> **Quality work in progress (2026-10-14): branch `quality-oct12` — start with [reports/quality/feedback_2026-10-14/README.md](reports/quality/feedback_2026-10-14/README.md)** (restore steps, human feedback, current candidate R10, open issues).
+
 # dub — pilot ML environment (`dabai`)
 
 Immutable baseline: **PyTorch 2.7.1 + cu128 + sm_120** (RTX 5090). One conda env `/venv/dabai` (Python 3.11) hosts the whole stack:
