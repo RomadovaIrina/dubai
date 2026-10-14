@@ -565,7 +565,7 @@ def run_lipsync(src: pathlib.Path, work: pathlib.Path, dubbed16k: pathlib.Path, 
 
 
 def run_lipsync_optimized(src: pathlib.Path, work: pathlib.Path, dubbed16k: pathlib.Path, dubbed_aac: pathlib.Path, out: pathlib.Path, a, times: dict,
-                          speech_gate: list | None = None) -> dict:
+                          speech_gate: list | None = None, silent_mouth: dict | None = None) -> dict:
     """Optimized video backend: RetinaFace routing + speech gate + batched LatentSync windows (face_aware_latentsync_accel.py).
     Same audio/video semantics as run_lipsync: pass-through keeps master frames, the dubbed track covers the whole timeline."""
     import face_aware_latentsync_accel as faa
@@ -576,7 +576,7 @@ def run_lipsync_optimized(src: pathlib.Path, work: pathlib.Path, dubbed16k: path
     if a.mouth_only_pasteback == "on":   # E4: LatentSync pixels only inside a feathered lower-face ellipse, the rest of the frame = master (scripts/quality/candidate_video_stage.py)
         sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
         from candidate_video_stage import MouthOnlyRunner
-        runner = MouthOnlyRunner(runner, a.mask_top, a.mask_feather)
+        runner = MouthOnlyRunner(runner, a.mask_top, a.mask_feather, a.mask_smooth, defer=a.codeformer_scope == "mouth")
     cf_runner = None
     if a.codeformer == "optimized":
         from codeformer_accel import CodeFormerAccel
@@ -586,7 +586,7 @@ def run_lipsync_optimized(src: pathlib.Path, work: pathlib.Path, dubbed16k: path
     rep = faa.process_video(src, work, dubbed16k, dubbed_aac, out, router=router, runner=runner, min_ls_frames=a.min_ls_frames,
                             max_verify_depth=a.max_verify_depth, codeformer=a.codeformer, times=times, log=lambda m: print(m, flush=True),
                             speech_gate=speech_gate, crossfade_frames=a.crossfade_frames, router_stride=a.router_stride,
-                            in_memory=not a.segment_files, cf_runner=cf_runner)
+                            in_memory=not a.segment_files, cf_runner=cf_runner, lm_smooth=a.ls_landmark_smooth, silent_mouth=silent_mouth)
     rep["backend"] = "optimized"
     if cf_runner is not None:
         cf_runner.close()
@@ -649,12 +649,22 @@ def main() -> int:
     ap.add_argument("--fit-down-short-words", type=int, default=4, help="phrase mode: concise rewrite also for 4-5-word sentences when they overflow their window by > --fit-down-short-overflow-s at the hard cap (previous rule: >= 6 words only)")
     ap.add_argument("--fit-down-short-overflow-s", type=float, default=0.3)
     ap.add_argument("--phrase-min-part-words", type=int, default=1); ap.add_argument("--phrase-soft-part-words", type=int, default=2)
+    ap.add_argument("--pause-policy", choices=["bursts", "thought"], default="bursts",
+                    help="phrase mode: bursts = one part per source burst (the source's pauses are reproduced inside the sentence, previous behaviour); "
+                         "thought = the whole sentence first at natural speed from its first source burst, the pause after it (2026-10-14 human feedback, thought_policy.py)")
+    ap.add_argument("--overflow", default="tempo", help="--pause-policy thought: comma list of the tools for a sentence longer than its window: rewrite (Qwen concise rewrite "
+                    "at +3 %%), split (punctuation cut onto a source pause), shift (the next sentence starts later), tempo (atempo <= --thought-tempo-cap)")
+    ap.add_argument("--underfill", choices=["none", "clause"], default="none", help="--pause-policy thought: clause = a sentence much shorter than the source speech is cut "
+                    "at punctuation onto source pauses (pause only after a clause) when that covers >= 1 s more source speech; none = the pure rule")
+    ap.add_argument("--thought-gap", type=float, default=0.2, help="--pause-policy thought: minimum pause before the next sentence (s)")
+    ap.add_argument("--thought-tempo-cap", type=float, default=1.1); ap.add_argument("--thought-max-shift", type=float, default=1.0)
     ap.add_argument("--qwen-gpu-layers", type=int, default=0, help="Qwen layers offloaded to the GPU (-1 = all); 0 = frozen CPU baseline. Needs a CUDA llama-cpp-python build "
                                                                    "(A/B 2026-10-12: translation 18x faster, outputs not identical to the CPU)")
     ap.add_argument("--background", choices=["on", "off"], default="on",
                     help="final mix: on = source background bed (Hybrid Demucs accompaniment, original voice/bed balance, ducked under the dub) under the dubbed voice; "
                          "off = dubbed voice over digital silence (previous behaviour). LatentSync / speech gate always use the clean dubbed voice. Default on since 2026-10-12 (dead air 16-54 s -> 0-6 s, WER unchanged)")
     ap.add_argument("--bg-duck-db", type=float, default=-6.0, help="--background on: bed attenuation while the dub speaks (dB)")
+    ap.add_argument("--bg-room-floor-db", type=float, default=-42.0, help="--background on: room-tone fill of the HDemucs hole under the source speech for noise floors up to this level (dBFS)")
     ap.add_argument("--bg-offset-db", type=float, default=0.0, help="--background on: bed level relative to the original voice/background balance (dB)")
     ap.add_argument("--stop-after", choices=["none", "audio"], default="none", help="audio = stop after the dubbed track (audio-only candidate: manifest + dubbed_24k/16k.wav, no LatentSync)")
     ap.add_argument("--min-ls-frames", type=int, default=25, help="VALID_FACE runs shorter than this are passed through")
@@ -679,6 +689,15 @@ def main() -> int:
     ap.add_argument("--mouth-only-pasteback", choices=["on", "off"], default="off",
                     help="optimized backend: keep the master pixels outside a feathered lower-face mask (E4; 03 A/B 2026-10-12: upper-face sharpness 0.818 -> 0.858, SyncNet 5.81 -> 5.84)")
     ap.add_argument("--mask-top", type=float, default=0.52); ap.add_argument("--mask-feather", type=float, default=0.08)
+    ap.add_argument("--mask-smooth", type=int, default=0, help="--mouth-only-pasteback: mask bbox = centred moving average over +-N frames (0 = raw per-frame detection)")
+    ap.add_argument("--codeformer-scope", choices=["face", "mouth"], default="face",
+                    help="with --mouth-only-pasteback: face = CodeFormer on the composited frame (re-renders eyes / brows, previous behaviour); mouth = CodeFormer on the raw "
+                         "LatentSync frame, then the mouth-only composite (eyes / brows stay the source; 2026-10-13 'мимика дергается')")
+    ap.add_argument("--ls-landmark-smooth", type=int, default=0, help="optimized backend: centred moving average (+-N frames) of the landmarks replayed into LatentSync's affine crop")
+    ap.add_argument("--silent-mouth", choices=["self", "closed"], default="self",
+                    help="optimized backend: LatentSync reference image where the DUB is silent: self = the frame itself (upstream; the original articulation leaks into a "
+                         "silent mouth), closed = the nearest closed-mouth frame of the segment (2026-10-14 'рот должен быть закрыт, когда английская речь закончилась')")
+    ap.add_argument("--silent-mouth-pad", type=float, default=0.12, help="--silent-mouth closed: dub speech is extended by this (s) on both sides before a frame counts as silent")
     ap.add_argument("--segment-files", action="store_true", help="optimized backend: legacy per-segment mp4 path instead of in-memory segments")
     a = ap.parse_args()
     global QWEN_GPU_LAYERS
@@ -774,6 +793,16 @@ def main() -> int:
             from e1_burst_align import PlaceOpts
             burst_opts = PlaceOpts(a.atempo_cap, a.hard_cap, True, 0.06, a.fill_slowdown, spill=a.burst_spill == "on", max_lead=a.burst_max_lead); burst_opts.min_burst_s = a.burst_min_s; burst_opts.fallback_frac = a.burst_fallback_frac
         phrase_mode = a.alignment == "burst" and a.tts_mode == "phrase"
+        thought_opts = None
+        if a.pause_policy == "thought":
+            if not phrase_mode or a.burst_spill != "on":
+                raise Blocker("--pause-policy thought needs --alignment burst --tts-mode phrase --burst-spill on")
+            from thought_policy import ThoughtOpts
+            tools = {x.strip() for x in a.overflow.split(",") if x.strip()}
+            if not tools <= {"rewrite", "split", "shift", "tempo"}:
+                raise Blocker(f"--overflow: unknown tool(s) {sorted(tools - {'rewrite', 'split', 'shift', 'tempo'})}")
+            thought_opts = ThoughtOpts(tools, gap=a.thought_gap, tempo_cap=a.thought_tempo_cap, max_shift=a.thought_max_shift, underfill=a.underfill)
+        man["pause_policy"] = {"policy": a.pause_policy, **(thought_opts.as_dict() if thought_opts else {})}
         tr = run_translation(units, src_lang, tgt, times, plans=plans, split_retries=a.split_retries,
                              min_part_words=a.min_part_words, soft_part_words=a.soft_part_words, part_max_words=a.part_max_words,
                              keep_llm=burst_opts is not None and (a.fit_retranslate == "on" or phrase_mode), llm=llm, split=not phrase_mode)
@@ -797,7 +826,7 @@ def main() -> int:
                                             qa_cfg={"enabled": qa_on, "retries": a.tts_retries, "low_temp": a.qa_temp},
                                             fit_up={"enabled": a.fit_up == "on" and llm is not None, "ratio": a.fit_up_ratio, "rounds": a.fit_up_rounds, "aim": a.fit_up_aim, "guard": a.fit_up_guard == "on"},
                                             split_retries=a.split_retries, min_part_words=a.phrase_min_part_words, soft_part_words=a.phrase_soft_part_words, part_max_words=a.part_max_words,
-                                            phrase_split=a.phrase_split, phrase_cut=a.phrase_cut, log=lambda m_: print(m_, flush=True))
+                                            phrase_split=a.phrase_split, phrase_cut=a.phrase_cut, pause_policy=a.pause_policy, thought=thought_opts, log=lambda m_: print(m_, flush=True))
             else:
                 man["tts"] = run_tts_burst(units, plans, refs, tgt, work, a.seed, times, opts=burst_opts, llm=llm, src_name=lang_name(src_lang), tgt_name=lang_name(tgt),
                                            fit={"enabled": llm is not None, "rounds": a.fit_rounds, "target_ratio": a.fit_target_ratio},
@@ -809,7 +838,11 @@ def main() -> int:
             man["tts"] = run_tts(units, refs, tgt, work, a.seed, times)
 
         with timed(times, "alignment"):
-            if a.alignment == "burst":
+            if a.alignment == "burst" and thought_opts is not None:
+                from thought_policy import align_units_thought
+                man["alignment"] = align_units_thought(units, plans, work, thought_opts, duration)
+                print(f"  [align/thought] {man['alignment']['used']} shift max {man['alignment']['shift_max_s']}s atempo max {man['alignment']['atempo_max']}", flush=True)
+            elif a.alignment == "burst":
                 man["alignment"] = align_units_burst(units, plans, work, burst_opts)
             else:
                 align_units(units, duration, work); man["alignment"] = {"mode": "slot"}
@@ -824,7 +857,7 @@ def main() -> int:
             with timed(times, "background_mix"):
                 dub_vad = run_vad(pathlib.Path(man["dubbed_track"]["wav16k"]))
                 mix = mix_background(sep, pathlib.Path(man["dubbed_track"]["wav24k"]), [(v["start"], v["end"]) for v in speech], [(v["start"], v["end"]) for v in dub_vad],
-                                     duration, work, bg_offset_db=a.bg_offset_db, duck_db=a.bg_duck_db)
+                                     duration, work, bg_offset_db=a.bg_offset_db, duck_db=a.bg_duck_db, room_floor_db=a.bg_room_floor_db)
             man["background"] = {"enabled": True, "separation": sep, "mix": mix}; mux_aac = pathlib.Path(mix["aac"])
             print(f"  [background] bed gain {mix['bg_gain_db']:+.1f} dB, duck {mix['duck_db']} dB, separation {sep['separate_s']}s (+load {sep['load_s']}s), bed in dub pauses {mix['bed_db_in_dub_pauses']} dBFS", flush=True)
         print(f"  [align] ratios tts/slot: " + " ".join(f"{u['alignment']['ratio_tts_to_slot']:.2f}" for u in units), flush=True)
@@ -857,8 +890,13 @@ def main() -> int:
                 print(f"  [gate] {len(speech_gate)} intervals, {gated:.1f}s of {duration:.1f}s ({gated / duration:.0%}) eligible for LatentSync", flush=True)
             else:
                 man["speech_gate"] = {"enabled": False}
+            silent_mouth = None
+            if a.silent_mouth == "closed":
+                dsp = dub_speech if a.speech_gate == "on" else run_vad(pathlib.Path(man["dubbed_track"]["wav16k"]))
+                silent_mouth = {"dub_speech": [(v["start"], v["end"]) for v in dsp], "src_speech": [(v["start"], v["end"]) for v in speech], "pad_s": a.silent_mouth_pad}
+            man["silent_mouth"] = {"mode": a.silent_mouth, "pad_s": a.silent_mouth_pad}
             man["lipsync"] = run_lipsync_optimized(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), mux_aac, out, a, times,
-                                                   speech_gate=speech_gate)
+                                                   speech_gate=speech_gate, silent_mouth=silent_mouth)
         else:
             man["lipsync"] = run_lipsync(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), mux_aac,
                                          out, a.min_ls_frames, a.max_verify_depth, times)
@@ -886,6 +924,9 @@ def main() -> int:
     }
     if man["lipsync"].get("output_frame_check"):
         checks["output_frames_decodable_no_blank"] = bool(man["lipsync"]["output_frame_check"]["pass"])
+        # 2026-10-13: a LatentSync segment that failed on a resource error (OOM) is passed through with the ORIGINAL mouth: not a valid result
+        checks["no_latentsync_oom"] = not any(sg.get("action") == "PASS_THROUGH_LS_FAILED" and str(sg.get("error", "")).startswith("OutOfMemoryError")
+                                              for sg in man["lipsync"].get("segments", []))
     man["output_meta"] = op
     man["validation"] = {"tolerance_s": round(tol, 4), "tolerance_rule": "max(0.15 s, 2 source frames)", "duration_delta_s": delta,
                          "checks": checks, "pass": all(checks.values())}

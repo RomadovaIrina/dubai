@@ -15,28 +15,65 @@ Q = pathlib.Path("/tmp/dabai_quality")
 
 class MouthOnlyRunner:
     """E4 wrapper around AccelRunner: LatentSync output is composited back into the ORIGINAL frames only inside a feathered lower-face
-    mask built from LatentSync's own per-frame detection bbox (replayed detections), so eyes/nose/skin keep the source texture."""
+    mask built from LatentSync's own per-frame detection bbox (replayed detections), so eyes/nose/skin keep the source texture.
+    smooth > 0 (2026-10-13): the mask follows a centred moving average (+-smooth frames) of the bbox instead of the raw per-frame detection
+    (the raw insightface bbox shakes by ~1.4 px/frame^2 on 03, and the mask edge with it).
+    defer = True (2026-10-13, --codeformer-scope mouth): run_frames returns the RAW LatentSync frames and keeps the masks; the caller restores
+    them with CodeFormer first and then calls composite(), so CodeFormer's re-synthesised eyes / brows never reach the output (it used to run on
+    the composited frame and re-rendered the whole face: eyes / lids differ from the source in every LS frame and jump back at each switch)."""
 
-    def __init__(self, inner, top: float, feather: float):
-        self.inner, self.top, self.feather = inner, top, feather
-        self.config = {**inner.config, "mouth_only_pasteback": True, "mask_top": top, "mask_feather": feather}; self.calls = inner.calls
-        self.steps, self.guidance, self.seed, self.load_s = inner.steps, inner.guidance, inner.seed, inner.load_s; self.masked_frames = 0
+    def __init__(self, inner, top: float, feather: float, smooth: int = 0, defer: bool = False):
+        self.inner, self.top, self.feather, self.smooth, self.deferred = inner, top, feather, int(smooth), bool(defer)
+        self.config = {**inner.config, "mouth_only_pasteback": True, "mask_top": top, "mask_feather": feather, "mask_smooth_frames": self.smooth, "composite_after_codeformer": self.deferred}
+        self.calls = inner.calls
+        self.steps, self.guidance, self.seed, self.load_s = inner.steps, inner.guidance, inner.seed, inner.load_s; self.masked_frames = 0; self._boxes = None
 
-    def run_frames(self, frames_rgb, audio_wav, detections=None):
+    def boxes(self, detections, n):
+        import numpy as np
+        bb = [np.asarray(detections[i][0], np.float64) if i < len(detections) and detections[i][0] is not None else None for i in range(n)]
+        if self.smooth <= 0: return bb
+        ok = [i for i, b in enumerate(bb) if b is not None]; out = list(bb)
+        for i in ok:
+            nb = [bb[j] for j in range(max(0, i - self.smooth), min(n, i + self.smooth + 1)) if bb[j] is not None]
+            out[i] = np.mean(nb, axis=0)
+        return out
+
+    def mask(self, bbox, H, W):
+        """Feathered lower-face ellipse as (alpha HxW-crop float32 [..., None], (ya, yb, xa, xb)): only the ROI that can be non-zero is built
+        (ellipse bounding box + 2x the blur kernel), the result equals the full-frame mask inside it (it is 0 outside)."""
         import cv2, numpy as np
-        outs, dt = self.inner.run_frames(frames_rgb, audio_wav, detections)
-        if detections is None: return outs, dt
-        res = np.empty_like(outs); H, W = frames_rgb.shape[1:3]
-        for i in range(min(len(outs), len(frames_rgb))):
-            bbox = detections[i][0] if i < len(detections) else None
-            if bbox is None: res[i] = outs[i]; continue
-            x1, y1, x2, y2 = [int(v) for v in bbox]; w, h = max(x2 - x1, 1), max(y2 - y1, 1)
-            m = np.zeros((H, W), np.float32); cy = y1 + int(self.top * h); cx = (x1 + x2) // 2
-            # lower face: ellipse spanning the bbox width (+10 %) from mask_top to slightly below the chin
-            axes = (int(w * 0.55), int((y2 + int(0.06 * h) - cy) * 0.5 + 1)); centre = (cx, (cy + y2 + int(0.06 * h)) // 2)
-            cv2.ellipse(m, centre, axes, 0, 0, 360, 1.0, -1)
-            k = max(3, int(self.feather * w) | 1); m = cv2.GaussianBlur(m, (k, k), 0)[..., None]
-            res[i] = (outs[i].astype(np.float32) * m + frames_rgb[i].astype(np.float32) * (1 - m)).round().clip(0, 255).astype(np.uint8); self.masked_frames += 1
+        x1, y1, x2, y2 = [int(round(v)) for v in bbox]; w, h = max(x2 - x1, 1), max(y2 - y1, 1)
+        cy = y1 + int(self.top * h); cx = (x1 + x2) // 2
+        # lower face: ellipse spanning the bbox width (+10 %) from mask_top to slightly below the chin
+        axes = (int(w * 0.55), int((y2 + int(0.06 * h) - cy) * 0.5 + 1)); centre = (cx, (cy + y2 + int(0.06 * h)) // 2)
+        k = max(3, int(self.feather * w) | 1); pad = k + 2
+        xa, xb = max(0, centre[0] - axes[0] - pad), min(W, centre[0] + axes[0] + pad + 1); ya, yb = max(0, centre[1] - axes[1] - pad), min(H, centre[1] + axes[1] + pad + 1)
+        if xb <= xa or yb <= ya: return None, None
+        m = np.zeros((yb - ya, xb - xa), np.float32)
+        cv2.ellipse(m, (centre[0] - xa, centre[1] - ya), axes, 0, 0, 360, 1.0, -1)
+        return cv2.GaussianBlur(m, (k, k), 0, borderType=cv2.BORDER_CONSTANT)[..., None], (ya, yb, xa, xb)
+
+    def composite(self, outs, originals, boxes=None):
+        """outs / originals: same-length sequences of HxWx3 frames (same channel order); returns outs composited into originals."""
+        import numpy as np
+        boxes = boxes if boxes is not None else self._boxes; res = []
+        for i, o in enumerate(outs):
+            bb = boxes[i] if boxes is not None and i < len(boxes) else None
+            if bb is None or i >= len(originals): res.append(o); continue
+            m, roi = self.mask(bb, *o.shape[:2])
+            if m is None: res.append(o); continue
+            ya, yb, xa, xb = roi; r = np.array(originals[i], copy=True)
+            r[ya:yb, xa:xb] = (o[ya:yb, xa:xb].astype(np.float32) * m + r[ya:yb, xa:xb].astype(np.float32) * (1 - m)).round().clip(0, 255).astype(np.uint8)
+            res.append(r); self.masked_frames += 1
+        return res
+
+    def run_frames(self, frames_rgb, audio_wav, detections=None, **kw):
+        import numpy as np
+        outs, dt = self.inner.run_frames(frames_rgb, audio_wav, detections, **kw)
+        if detections is None: self._boxes = None; return outs, dt
+        self._boxes = self.boxes(detections, len(frames_rgb))
+        if self.deferred: return outs, dt
+        res = np.stack(self.composite(outs[:len(frames_rgb)], frames_rgb))
         if len(outs) > len(frames_rgb): res = np.concatenate([res, outs[len(frames_rgb):]])
         return res, dt
 
@@ -46,6 +83,8 @@ def main() -> int:
     ap.add_argument("--id", required=True); ap.add_argument("--tag", required=True); ap.add_argument("--run-dir", default=str(Q / "baseline")); ap.add_argument("--work-dir", default=str(Q / "work"))
     ap.add_argument("--dubbed-dir", default=None, help="dir with dubbed_16k.wav + dubbed_aac.m4a (+ aligned_u*.wav); default = baseline work dir")
     ap.add_argument("--out", default=str(Q / "candidates")); ap.add_argument("--work-out", default=None)
+    ap.add_argument("--manifest", default=None, help="manifest of a finished E2E run (overrides --run-dir / --work-dir)")
+    ap.add_argument("--mux", choices=["dub", "final_mix"], default="final_mix", help="audio muxed into the candidate mp4: final_mix (dub + background bed, when present) or the dub voice only")
     ap.add_argument("--speech-gate", choices=["on", "off"], default="on"); ap.add_argument("--gate-margin-s", type=float, default=0.24); ap.add_argument("--gate-merge-gap-s", type=float, default=0.6)
     ap.add_argument("--crossfade-frames", type=int, default=4); ap.add_argument("--router-stride", type=int, default=3); ap.add_argument("--window-batch-size", type=int, default=2)
     ap.add_argument("--deepcache-interval", type=int, default=5); ap.add_argument("--no-deepcache", action="store_true"); ap.add_argument("--steps", type=int, default=20); ap.add_argument("--guidance", type=float, default=1.5)
@@ -54,6 +93,10 @@ def main() -> int:
     ap.add_argument("--mouth-only-pasteback", choices=["on", "off"], default="off", help="E4: outside a feathered lower-face mask keep the master pixels (LatentSync upstream untouched)")
     ap.add_argument("--mask-top", type=float, default=0.52, help="E4: mask starts at this fraction of the detected face height (0 = top of bbox)")
     ap.add_argument("--mask-feather", type=float, default=0.08, help="E4: gaussian feather as a fraction of the face width")
+    ap.add_argument("--ls-landmark-smooth", type=int, default=0, help="centred moving average (+-N frames) of the landmarks replayed into LatentSync's affine crop (0 = raw)")
+    ap.add_argument("--mask-smooth", type=int, default=0, help="E4: mask bbox = centred moving average over +-N frames (0 = raw per-frame detection)")
+    ap.add_argument("--codeformer-scope", choices=["face", "mouth"], default="face", help="with --mouth-only-pasteback: face = CodeFormer on the composited frame (whole face re-rendered, "
+                    "previous behaviour); mouth = CodeFormer on the raw LatentSync frame, THEN the mouth-only composite (eyes / brows stay the source)")
     ap.add_argument("--codeformer", choices=["off", "optimized"], default="off", help="week 2: in-memory CodeFormer on LATENT_SYNC frames (codeformer_accel)")
     ap.add_argument("--codeformer-w", type=float, default=1.0); ap.add_argument("--codeformer-batch", type=int, default=8)
     ap.add_argument("--codeformer-empty-cache", action="store_true", help="A/B: upstream per-face torch.cuda.empty_cache()")
@@ -63,11 +106,16 @@ def main() -> int:
     import run_clean_pipeline_05 as rp
     import face_aware_latentsync_accel as faa
     from measure_stages import probe
-    base_work = pathlib.Path(a.work_dir) / f"work_{a.id}"; man = json.loads((pathlib.Path(a.run_dir) / f"{a.id}_baseline.manifest.json").read_text())
+    if a.manifest:   # any finished E2E run (e.g. refresh_e2e.sh final/<id>_final.manifest.json): its own work dir holds the audio stages
+        man = json.loads(pathlib.Path(a.manifest).read_text()); base_work = pathlib.Path(man["work_dir"])
+    else:
+        base_work = pathlib.Path(a.work_dir) / f"work_{a.id}"; man = json.loads((pathlib.Path(a.run_dir) / f"{a.id}_baseline.manifest.json").read_text())
     src = pathlib.Path(man["input"]); duration = man["source"]["duration_s"]; out_dir = pathlib.Path(a.out); out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"{a.id}_{a.tag}.mp4"; work = pathlib.Path(a.work_out or (out_dir / f"work_{a.id}_{a.tag}")); work.mkdir(parents=True, exist_ok=True)
     dd = pathlib.Path(a.dubbed_dir) if a.dubbed_dir else base_work
     dub16, dub_aac = dd / "dubbed_16k.wav", dd / "dubbed_aac.m4a"
+    if a.mux == "final_mix" and (dd / "final_mix_aac.m4a").exists():
+        dub_aac = dd / "final_mix_aac.m4a"   # what the viewer hears (dub voice + background bed); LatentSync / gate still use the clean voice
     master = base_work / "master_25fps.mp4"
     if master.exists() and not (work / "master_25fps.mp4").exists(): os.symlink(master, work / "master_25fps.mp4")   # make_master() reuses it (identical ffmpeg call otherwise)
     times = {}; t_all = time.perf_counter()
@@ -93,13 +141,13 @@ def main() -> int:
     with rp.timed(times, "face_router_load"): router = faa.make_router("retinaface", a.face_min_w, a.face_min_h, a.retina_conf)
     with rp.timed(times, "latentsync_load"): runner = faa.AccelRunner(a.window_batch_size, not a.no_deepcache, "none", "auto", steps=a.steps, guidance=a.guidance, deepcache_interval=a.deepcache_interval)
     if a.mouth_only_pasteback == "on":
-        runner = MouthOnlyRunner(runner, a.mask_top, a.mask_feather)
+        runner = MouthOnlyRunner(runner, a.mask_top, a.mask_feather, a.mask_smooth, defer=a.codeformer_scope == "mouth")
     cf_runner = None
     if a.codeformer == "optimized":
         from codeformer_accel import CodeFormerAccel
         with rp.timed(times, "codeformer_load"): cf_runner = CodeFormerAccel(fidelity_weight=a.codeformer_w, batch_size=a.codeformer_batch, empty_cache_per_face=a.codeformer_empty_cache, landmark_source=a.codeformer_landmarks, autocast=a.codeformer_precision == "fp16", parse_autocast=a.codeformer_precision != "fp32")
     rep = faa.process_video(src, work, dub16, dub_aac, out, router=router, runner=runner, min_ls_frames=a.min_ls_frames, max_verify_depth=a.max_verify_depth, codeformer=a.codeformer, times=times,
-                            log=lambda m: print(m, flush=True), speech_gate=gate, crossfade_frames=a.crossfade_frames, router_stride=a.router_stride, in_memory=True, cf_runner=cf_runner)
+                            log=lambda m: print(m, flush=True), speech_gate=gate, crossfade_frames=a.crossfade_frames, router_stride=a.router_stride, in_memory=True, cf_runner=cf_runner, lm_smooth=a.ls_landmark_smooth)
     rep["backend"] = "optimized"; man["lipsync"] = rep; man["codeformer"] = "DISABLED (not invoked)" if a.codeformer == "off" else {"mode": a.codeformer, "w": a.codeformer_w, "batch": a.codeformer_batch, "landmarks": a.codeformer_landmarks, "precision": a.codeformer_precision}
     if cf_runner is not None: cf_runner.close()
     rp.free_cuda(runner, cf_runner)

@@ -92,9 +92,9 @@ class AccelRunner:
         dt = round(time.perf_counter() - t0, 2); self._record(st, dt)
         return dt
 
-    def run_frames(self, frames_rgb: np.ndarray, audio_wav: pathlib.Path, detections: list | None = None) -> tuple[np.ndarray, float]:
+    def run_frames(self, frames_rgb: np.ndarray, audio_wav: pathlib.Path, detections: list | None = None, ref_index: list | None = None) -> tuple[np.ndarray, float]:
         t0 = time.perf_counter()
-        frames = self.acc.run_frames(frames_rgb, str(audio_wav), detections)
+        frames = self.acc.run_frames(frames_rgb, str(audio_wav), detections, ref_index=ref_index)
         dt = round(time.perf_counter() - t0, 2); self._record(self.acc.last_stats, dt)
         return frames, dt
 
@@ -150,16 +150,47 @@ def gate_mask(gate: list[tuple[float, float]], n_frames: int) -> np.ndarray:
     return m
 
 
-def classify_master(master_frames: list, router, gate: np.ndarray | None, stride: int) -> tuple[list[dict], int]:
+class VideoPrep:
+    """--video-prep parallel (2026-10-13): the audio-independent part of the video stage, run in a thread while the audio stage (mostly CPU
+    Qwen) runs: 25 fps master encode + decode, the RetinaFace router decision of EVERY master frame, LatentSync's FaceDetector result of every
+    master frame. process_video() then replays exactly the calls it would have made (same frames, same deterministic detectors) -> the
+    classification, segments, verify splits and LatentSync input are unchanged; only the wall time moves off the critical path."""
+
+    def __init__(self, src: pathlib.Path, work: pathlib.Path, router_kind: str, min_w: int, min_h: int, conf: float):
+        import threading
+        self.args = (src, work, router_kind, min_w, min_h, conf); self.error = None; self.times = {}
+        self.thread = threading.Thread(target=self._run, name="video-prep", daemon=True); self.thread.start()
+
+    def _run(self):
+        import cv2
+        try:
+            src, work, kind, mw, mh, conf = self.args
+            t0 = time.perf_counter(); self.master, _ = fa.make_master(src, work); self.times["ls_master_25fps"] = round(time.perf_counter() - t0, 3)
+            t0 = time.perf_counter(); self.frames = fa.read_frames(self.master); self.times["ls_master_decode"] = round(time.perf_counter() - t0, 3)
+            import model_cache
+            t0 = time.perf_counter(); self.router = model_cache.get(("router", kind, mw, mh, conf), lambda: make_router(kind, mw, mh, conf)); self.times["face_router_load"] = round(time.perf_counter() - t0, 3)
+            t0 = time.perf_counter(); self.router_rows = [self.router.classify_frame(f) for f in self.frames]; self.times["prep_router_all_frames"] = round(time.perf_counter() - t0, 3)
+            det = fa.face_detector(); t0 = time.perf_counter()
+            self.ls_dets = [det(cv2.cvtColor(f, cv2.COLOR_BGR2RGB)) for f in self.frames]; self.times["prep_ls_detect_all_frames"] = round(time.perf_counter() - t0, 3)
+        except Exception as e:   # the video stage falls back to the sequential path
+            self.error = f"{type(e).__name__}: {str(e)[:300]}"
+
+    def result(self) -> "VideoPrep | None":
+        t0 = time.perf_counter(); self.thread.join(); self.times["prep_join_wait"] = round(time.perf_counter() - t0, 3)
+        return None if self.error else self
+
+
+def classify_master(master_frames: list, router, gate: np.ndarray | None, stride: int, cache: list | None = None) -> tuple[list[dict], int]:
     """Router classification of in-memory BGR master frames. Frames outside the gate -> NO_SPEECH (no detection run).
-    Inside a gated run every `stride`-th frame is detected, the others inherit the last decision."""
+    Inside a gated run every `stride`-th frame is detected, the others inherit the last decision. `cache` = VideoPrep.router_rows (the same
+    router call on every frame, made earlier): replayed instead of detecting."""
     stride = max(1, int(stride)); rows: list[dict] = []; detected = 0; last = None; since = stride
     for i, fr in enumerate(master_frames):
         if gate is not None and not gate[i]:
             rows.append({"frame": i, "cls": "NO_SPEECH", "reason": "outside_speech_gate", "bbox": None}); last = None; since = stride
             continue
         if last is None or since >= stride:
-            r = router.classify_frame(fr); r["frame"] = i; detected += 1; last = r; since = 1
+            r = dict(cache[i]) if cache is not None else router.classify_frame(fr); r["frame"] = i; detected += 1; last = r; since = 1
         else:
             r = dict(last); r["frame"] = i; r["inherited"] = True; since += 1
         rows.append(r)
@@ -228,6 +259,71 @@ def check_output_frames(path: pathlib.Path, expected: int) -> dict:
             "pass": n == expected and bad == 0 and blank == 0}
 
 
+def smooth_detections(dets: list, k: int) -> list:
+    """Centred moving average (+-k frames, detected neighbours only) of LatentSync's per-frame insightface results (bbox, 106 landmarks).
+    LatentSync builds its affine face crop from 3 points of these landmarks per frame with almost no smoothing, and the generated mouth
+    lives in crop coordinates: detector noise of the source frames becomes mouth / jaw shake relative to the head. Real head motion
+    (low frequency) is kept; frames without a detection stay None (LatentSync's safety check is unchanged)."""
+    ok = [i for i, d in enumerate(dets) if d[0] is not None]; out = list(dets)
+    for i in ok:
+        nb = [dets[j] for j in range(max(0, i - k), min(len(dets), i + k + 1)) if dets[j][0] is not None]
+        bb = np.mean([np.asarray(d[0], np.float64) for d in nb], axis=0); lm = np.mean([np.asarray(d[1], np.float64) for d in nb], axis=0)
+        out[i] = (tuple(float(v) for v in bb), lm)
+    return out
+
+
+# insightface 2d106 inner-lip pairs (upper, lower): centre / left / right — checked on a 03 frame (2026-10-14); brow centres as in LatentSync's affine
+MOUTH_INNER_PAIRS = [(62, 60), (66, 54), (70, 57)]
+BROW_L_IDX, BROW_R_IDX = [43, 48, 49, 51, 50], list(range(101, 106))
+
+
+def mouth_open(lm) -> float | None:
+    """Inner-lip gap / inter-brow distance (scale-free; ~0.1-0.2 closed, larger when the mouth opens). None without landmarks."""
+    if lm is None:
+        return None
+    lm = np.asarray(lm, np.float64); unit = np.linalg.norm(lm[BROW_R_IDX].mean(0) - lm[BROW_L_IDX].mean(0))
+    return float(np.mean([lm[b, 1] - lm[a, 1] for a, b in MOUTH_INNER_PAIRS]) / max(unit, 1e-6))
+
+
+def _mask_of(intervals, n: int, f0: int, pad_s: float) -> np.ndarray:
+    m = np.zeros(n, bool)
+    for s_, e_ in intervals:
+        a = max(0, int(np.floor((s_ - pad_s) * FPS)) - f0); b = min(n, int(np.ceil((e_ + pad_s) * FPS)) - f0)
+        if b > a: m[a:b] = True
+    return m
+
+
+def closed_mouth_refs(dets: list, start_frame: int, dub_speech: list, src_speech: list, pad_s: float = 0.12) -> tuple[list | None, dict]:
+    """--silent-mouth closed (2026-10-14, human feedback "the mouth moves / opens although the English has finished: he must shut his mouth"):
+    frames of an LS segment where the DUB is silent (no dub speech within +-pad_s) get a closed-mouth reference: the nearest frame of the same
+    segment whose original mouth is closed (smallest inner-lip gap; preferably where the source is silent too). LatentSync then draws the
+    closed mouth of that reference with the silent audio instead of copying the original speaker's articulation from the frame itself.
+    Returns (ref_index per segment frame | None, stats)."""
+    n = len(dets); op = np.array([mouth_open(d[1]) if d is not None and d[0] is not None else np.nan for d in dets], np.float64)
+    silent = ~_mask_of(dub_speech, n, start_frame, pad_s) & np.isfinite(op)
+    st = {"frames": n, "dub_silent_frames": int(silent.sum())}
+    if not silent.any() or not np.isfinite(op).any():
+        return None, st
+    src_quiet = ~_mask_of(src_speech, n, start_frame, 0.1)
+    fin = np.isfinite(op); lo = float(np.nanmin(op)); thr = lo + 0.25 * (float(np.nanpercentile(op, 50)) - lo)
+    pool = np.where(fin & src_quiet & (op <= thr))[0]
+    if len(pool) == 0:
+        pool = np.where(fin & (op <= thr))[0]
+    ref = [None] * n; runs = []; i = 0
+    while i < n:
+        if silent[i]:
+            j = i
+            while j < n and silent[j]: j += 1
+            c = (i + j - 1) / 2; k = int(pool[np.argmin(np.abs(pool - c))]); runs.append((i, j, k))
+            for t in range(i, j): ref[t] = k
+            i = j
+        else:
+            i += 1
+    st.update({"runs": len(runs), "ref_frames": sorted({k for _, _, k in runs}), "open_min": round(lo, 3), "open_thr": round(thr, 3),
+               "ref_open": [round(float(op[k]), 3) for _, _, k in runs], "pool": int(len(pool))})
+    return ref, st
+
+
 def _router_lm5(router, frame_bgr):
     """One fresh RetinaFace router detection -> 5 landmarks (float32 5x2) or None. Used only when a LATENT_SYNC frame has no
     insightface landmarks (verify depth exhausted); never inherited from a neighbouring frame."""
@@ -241,7 +337,7 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
                   router, runner: AccelRunner | None, min_ls_frames: int = 25, max_verify_depth: int = 3, codeformer: str = "off",
                   times: dict | None = None, log=print, speech_gate: list | None = None,
                   crossfade_frames: int = GATE_DEFAULTS["crossfade_frames"], router_stride: int = 1, in_memory: bool = True,
-                  cf_runner=None) -> dict:
+                  cf_runner=None, lm_smooth: int = 0, prep: "VideoPrep | None" = None, silent_mouth: dict | None = None) -> dict:
     """Face-aware LatentSync on `src` driven by `audio16k` (the dubbed track); `audio_mux` (AAC of the same track) is muxed.
     `speech_gate`: list of (start_s, end_s) intervals (build_speech_gate); frames outside them are passed through.
     `codeformer`: "off" (frozen baseline) or "optimized" (`cf_runner` = codeformer_accel.CodeFormerAccel, applied to the
@@ -260,14 +356,18 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
         if cf_runner.fallback_detector is None and router is not None:
             cf_runner.fallback_detector = lambda fr_bgr: _router_lm5(router, fr_bgr)
     t_cf = 0.0
-    t0 = time.perf_counter(); master, _own = fa.make_master(src, work); times["ls_master_25fps"] = round(time.perf_counter() - t0, 3)
-    t0 = time.perf_counter(); master_frames = fa.read_frames(master); times["ls_master_decode"] = round(time.perf_counter() - t0, 3)
+    if prep is not None:   # computed in parallel with the audio stage (identical calls); its own timings are reported as prep_*
+        master, master_frames = prep.master, prep.frames; times.update({f"prep_{k}" if not k.startswith("prep_") else k: v for k, v in prep.times.items()})
+        times["ls_master_25fps"] = 0.0; times["ls_master_decode"] = 0.0
+    else:
+        t0 = time.perf_counter(); master, _own = fa.make_master(src, work); times["ls_master_25fps"] = round(time.perf_counter() - t0, 3)
+        t0 = time.perf_counter(); master_frames = fa.read_frames(master); times["ls_master_decode"] = round(time.perf_counter() - t0, 3)
     n = len(master_frames)
     gate = gate_mask(speech_gate, n) if speech_gate is not None else None
 
     t0 = time.perf_counter()
     if router is not None:
-        frames, n_detected = classify_master(master_frames, router, gate, router_stride); router_name = "retinaface"
+        frames, n_detected = classify_master(master_frames, router, gate, router_stride, cache=prep.router_rows if prep is not None else None); router_name = "retinaface"
     else:
         frames = fa.classify_frames(master); router_name = "insightface(latentsync)"; n_detected = len(frames)
         if gate is not None:
@@ -314,7 +414,9 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
                 wav = work / f"seg{s['index']:03d}_in.wav"; sf.write(str(wav), seg_audio, SR, subtype="PCM_16")   # audio = DUBBED track slice
                 dets = None
                 if s.get("verify_depth", 0) < max_verify_depth:
-                    tv = time.perf_counter(); dets = fa.detect_frames(seg_rgb); t_verify += time.perf_counter() - tv
+                    tv = time.perf_counter()
+                    dets = list(prep.ls_dets[s["start_frame"]:s["end_frame"]]) if prep is not None else fa.detect_frames(seg_rgb)
+                    t_verify += time.perf_counter() - tv
                     ok = [d[0] is not None for d in dets]; s["verify_depth"] = s.get("verify_depth", 0) + 1   # LatentSync's own detector = safety check
                     if not all(ok):
                         subs = fa.split_by_mask(s, ok, min_ls_frames, next_index=len(segs))
@@ -329,7 +431,12 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
                             if x["action"] == "LATENT_SYNC":
                                 queue.append(x)
                         wav.unlink(missing_ok=True); continue
-                frs_rgb, dt = runner.run_frames(seg_rgb, wav, dets)
+                if lm_smooth > 0 and dets is not None:   # stable LatentSync crop: centred moving average of the replayed landmarks / bbox (2026-10-13)
+                    dets = smooth_detections(dets, lm_smooth)
+                ref_index = None
+                if silent_mouth is not None and dets is not None:   # closed-mouth reference where the dub is silent (2026-10-14)
+                    ref_index, s["silent_mouth"] = closed_mouth_refs(dets, s["start_frame"], silent_mouth["dub_speech"], silent_mouth["src_speech"], silent_mouth.get("pad_s", 0.12))
+                frs_rgb, dt = runner.run_frames(seg_rgb, wav, dets, ref_index=ref_index) if ref_index is not None else runner.run_frames(seg_rgb, wav, dets)
                 frs = [cv2.cvtColor(f, cv2.COLOR_RGB2BGR) for f in frs_rgb]
                 wav.unlink(missing_ok=True); del seg_rgb, frs_rgb
                 if codeformer == "optimized":                                                     # week 2: restore LatentSync output faces only
@@ -343,6 +450,9 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
                     t_cf += time.perf_counter() - tc
                     log(f"  [codeformer] seg {s['index']} {cf_st['faces_restored']}/{cf_st['frames_in']} faces restored in {cf_st['seconds']['total']}s "
                         f"({cf_st['faces_per_s']} faces/s, fallback det {cf_st['fallback_detections']}, no-landmark {cf_st['frames_without_landmarks']}, peak {cf_st['peak_vram_mib']} MiB)")
+                if getattr(runner, "deferred", False):                                            # mouth-only composite AFTER CodeFormer (MouthOnlyRunner defer)
+                    n_use = min(len(frs), s["frames"])
+                    frs[:n_use] = runner.composite(frs[:n_use], [master_frames[i] for i in range(s["start_frame"], s["start_frame"] + n_use)])
             else:
                 v, au = fa.cut_segment(master, audio16k, s, work, f"ls{s['index']:03d}")          # audio = DUBBED track slice
                 if s.get("verify_depth", 0) < max_verify_depth:
@@ -368,6 +478,16 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
             s["latentsync"] = {"seconds": dt, "frames_in": s["frames"], "frames_out": len(frs)}
             ls_runs.append(dt); log(f"  [lipsync] seg {s['index']} {s['start_s']}-{s['end_s']}s LatentSync {dt}s -> {len(frs)} frames")
         except Exception as e:                                                                    # "Face not detected" etc. -> pass-through
+            import torch
+            if isinstance(e, torch.cuda.OutOfMemoryError) and s.get("oom_retries", 0) < 2 and runner is not None:
+                # 2026-10-13: an OOM (another process on the GPU) used to pass the segment through silently (05: 31 s of 38 s without lip sync,
+                # validation PASS). Free the cache and retry; the second retry runs the temporal windows one at a time (same result, less memory).
+                s["oom_retries"] = s.get("oom_retries", 0) + 1; import gc; gc.collect(); torch.cuda.empty_cache()
+                acc = getattr(getattr(runner, "inner", runner), "acc", None)
+                if s["oom_retries"] == 2 and acc is not None and getattr(acc, "B", 1) > 1:
+                    s["oom_window_batch"] = 1; acc.B = 1
+                log(f"  [lipsync] seg {s['index']} CUDA OOM -> retry {s['oom_retries']}" + (" with window batch 1" if s.get("oom_window_batch") else ""))
+                queue.insert(0, s); continue
             s["action"] = "PASS_THROUGH_LS_FAILED"; s["error"] = f"{type(e).__name__}: {str(e)[:300]}"
             log(f"  [lipsync] seg {s['index']} LatentSync FAILED -> pass-through: {s['error']}")
     times["latentsync"] = round(time.perf_counter() - t0 - t_cf, 3)      # LatentSync-only; CodeFormer is reported separately

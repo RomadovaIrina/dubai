@@ -43,27 +43,30 @@ def _chunks(words: list[dict], max_words: int) -> list[list[dict]]:
     return out
 
 
-def _tokens_with_punct(text: str) -> list[tuple[str, bool]]:
-    """(normalized token, ends_a_sentence) for every word of a punctuated text."""
+CLAUSE_RE = r"[.!?…,;:—–]"   # clause boundaries for splitting an over-long sentence (2026-10-13)
+
+
+def _tokens_with_punct(text: str, end_re: str = r"[.!?…]") -> list[tuple[str, bool]]:
+    """(normalized token, ends_a_sentence) for every word of a punctuated text (end_re = the marks that count as an end)."""
     out = []
     for raw in text.split():
         toks = norm_tokens(raw)
         if not toks:
             if out:
-                out[-1] = (out[-1][0], out[-1][1] or bool(re.search(r"[.!?…]", raw)))
+                out[-1] = (out[-1][0], out[-1][1] or bool(re.search(end_re, raw)))
             continue
-        end = bool(re.search(r"[.!?…]['\"»)]*$", raw))
+        end = bool(re.search(end_re + r"['\"»)]*$", raw))
         for k, t in enumerate(toks):
             out.append((t, end and k == len(toks) - 1))
     return out
 
 
-def map_sentence_ends(orig_tokens: list[str], punct_text: str, max_change_frac: float = 0.05, max_changes: int = 4) -> tuple[list[int] | None, dict]:
+def map_sentence_ends(orig_tokens: list[str], punct_text: str, max_change_frac: float = 0.05, max_changes: int = 4, end_re: str = r"[.!?…]") -> tuple[list[int] | None, dict]:
     """Sentence-end positions (index of the LAST word of each sentence in the ORIGINAL word sequence) taken from Qwen's punctuated text, mapped back
     through a token alignment. The original words are never replaced: a synonym 'correction' by the model ("дальше" -> "далее") only has to be
     small enough (<= max_changes changed tokens and <= max_change_frac) to trust the boundaries; otherwise None."""
     import difflib
-    out = _tokens_with_punct(punct_text); hyp = [t for t, _ in out]
+    out = _tokens_with_punct(punct_text, end_re); hyp = [t for t, _ in out]
     sm = difflib.SequenceMatcher(None, orig_tokens, hyp, autojunk=False); changed = 0; ends = set(); info = {"replaced": [], "inserted": [], "deleted": []}
     for tag, i1, i2, j1, j2 in sm.get_opcodes():
         if tag == "equal":
@@ -99,6 +102,7 @@ def punctuate_chunk(llm, text: str, lang_name: str, retries: int = 1) -> tuple[l
         ends, info = map_sentence_ends(toks, out)
         log.append({"attempt": attempt, "ok": ends is not None, "changed_tokens": info.get("changed_tokens"), "ratio": info.get("ratio"), "diff": {k: v for k, v in info.items() if k in ("replaced", "inserted", "deleted") and v}, "out": out[:400]})
         if ends is not None:
+            clause, _ = map_sentence_ends(toks, out, end_re=CLAUSE_RE); log[-1]["clause_ends"] = clause or []
             return ends, log
         msgs = msgs + [{"role": "assistant", "content": out}, {"role": "user", "content": "That changed too many words. Keep every word exactly as given, only add punctuation and capitalization. Return the text only."}]
     return None, log
@@ -121,6 +125,8 @@ def sentence_units(segments: list[dict], llm, lang_name: str, duration: float, m
             for sid, ws in by_seg.items():
                 units.append({"asr_segment": sid, "words_list": ws, "sentence": " ".join(w["word"] for w in ws), "source": "whisper_fallback"})
             continue
+        for ci in (log[-1].get("clause_ends") or []):   # word after which Qwen put a comma / colon / dash: preferred split point of an over-long sentence
+            if 0 <= ci < len(ch): ch[ci] = {**ch[ci], "clause_end": True}
         pos = 0
         for e in ends:
             ws = ch[pos:e + 1]; pos = e + 1
@@ -128,11 +134,16 @@ def sentence_units(segments: list[dict], llm, lang_name: str, duration: float, m
                 continue
             sent = " ".join(w["word"] for w in ws); sent = sent[0].upper() + sent[1:] + "."     # original words, sentence-final punctuation only
             units.append({"asr_segment": ws[0]["segment"], "words_list": ws, "sentence": sent, "source": "sentence"}); rep["sentences"] += 1
-    # long sentences -> split at the widest inter-word gap (same rule as build_units)
+    # long sentences -> split at a clause boundary (comma / colon / dash of the punctuation pass) when there is one, else at the widest inter-word
+    # gap (build_units rule). 2026-10-13: 04 was split after "которое" (widest gap) -> "...magical application which | will make life easier"
     def _split(ws: list[dict]) -> list[list[dict]]:
         if ws[-1]["end"] - ws[0]["start"] <= max_unit_s or len(ws) < 4:
             return [ws]
-        n = len(ws); i = max(range(2, n - 1), key=lambda k: (ws[k]["start"] - ws[k - 1]["end"]) - 0.01 * abs(k - n / 2))
+        n = len(ws); cand = list(range(2, n - 1)); clause = [k for k in cand if ws[k - 1].get("clause_end")]
+        if clause:   # the most balanced clause cut (both halves as short as possible), the pause only breaks ties
+            i = min(clause, key=lambda k: max(ws[k - 1]["end"] - ws[0]["start"], ws[-1]["end"] - ws[k]["start"]) - 0.1 * (ws[k]["start"] - ws[k - 1]["end"]))
+        else:
+            i = max(cand, key=lambda k: (ws[k]["start"] - ws[k - 1]["end"]) - 0.01 * abs(k - n / 2))
         return _split(ws[:i]) + _split(ws[i:])
     out = []
     for u in units:

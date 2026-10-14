@@ -156,10 +156,14 @@ def room_tone(bed: np.ndarray, source_speech: list, sr: int, n_out: int, frame_s
 
 def mix_background(sep: dict, dubbed24k: pathlib.Path, source_speech: list, dub_speech: list, duration: float, work: pathlib.Path,
                    bg_offset_db: float = 0.0, duck_db: float = -6.0, max_bg_gain_db: float = 12.0, attack_s: float = 0.08, release_s: float = 0.35,
-                   room_fill: bool = True) -> dict:
+                   room_fill: bool = True, room_floor_db: float = -42.0) -> dict:
     """final_mix_44k.wav (stereo) + final_mix_aac.m4a = dub voice (unchanged level, both channels) + background bed.
     Bed gain = (dub voice level in dub speech) - (original vocal level in source speech) + bg_offset_db, clamped to +-max_bg_gain_db, i.e. the
-    original voice/background balance is reproduced; the bed is ducked by duck_db while the dub speaks (soft attack / release)."""
+    original voice/background balance is reproduced; the bed is ducked by duck_db while the dub speaks (soft attack / release).
+    room_floor_db (2026-10-14): the room-tone fill is used for noise floors up to this level. -42 (previous) skipped 03 (-40 dBFS room) and 04
+    (-36 dBFS outdoor ambience) although HDemucs takes 5-6 dB of that ambience out under the source speech; with the thought pause policy the
+    dub is silent there, and with duck_db = 0 nothing masks it: "улица задыхается, пока он говорит". Only the missing energy is added, so a bed
+    already at the floor (05 street, 01 music) gets ~nothing."""
     t0 = time.perf_counter()
     d44 = work / "dubbed_44k.wav"; ff(["-i", str(dubbed24k), "-ar", str(SEP_SR), "-ac", "1", "-c:a", "pcm_f32le", str(d44)])
     dub, _ = sf.read(str(d44), dtype="float32"); d44.unlink()
@@ -168,9 +172,9 @@ def mix_background(sep: dict, dubbed24k: pathlib.Path, source_speech: list, dub_
     bg = np.pad(bg, ((0, max(0, n - len(bg))), (0, 0)))[:n]; voc = np.pad(voc, ((0, max(0, n - len(voc))), (0, 0)))[:n]
     fill = {"enabled": room_fill, "applied": False}
     if room_fill:   # under the source speech HDemucs removes the room noise with the voice: top the bed up to the video's own noise floor there
-        tone, floor = room_tone(bg + voc, source_speech, SEP_SR, n)   # the full source: HDemucs files the steady noise floor under "vocals" too
+        tone, floor = room_tone(bg + voc, source_speech, SEP_SR, n, max_floor_db=room_floor_db)   # the full source: HDemucs files the steady noise floor under "vocals" too
         if tone is None:
-            fill["skipped"] = "no steady non-speech material" if floor is None else f"floor {20 * np.log10(floor + 1e-12):.1f} dBFS > -42 (music / loud ambience)"
+            fill["skipped"] = "no steady non-speech material" if floor is None else f"floor {20 * np.log10(floor + 1e-12):.1f} dBFS > {room_floor_db} (music / loud ambience)"
         else:
             h = int(0.05 * SEP_SR); r = _frame_rms(bg.mean(1), h); r = np.convolve(r, np.ones(4) / 4, mode="same")   # 200 ms smoothed bed level
             w = np.sqrt(np.clip(floor ** 2 - r ** 2, 0.0, None)) / floor                                            # missing energy, 0..1

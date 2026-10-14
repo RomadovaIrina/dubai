@@ -129,10 +129,15 @@ class AccelLatentSync:
 
     @torch.no_grad()
     def _core(self, video_frames: np.ndarray, audio_path, detections: list | None = None, weight_dtype=torch.float16,
-              video_fps: int = 25, generator=None) -> tuple[np.ndarray, dict]:
+              video_fps: int = 25, generator=None, ref_index: list | None = None) -> tuple[np.ndarray, dict]:
         """Shared execution core. `video_frames`: (N, H, W, 3) uint8 RGB at `video_fps` (25 fps CFR, as LatentSync's
         read_video would produce). `detections`: optional per-frame (bbox, landmark_2d_106) results of LatentSync's own
-        FaceDetector on exactly these frames (replayed instead of detecting a second time). Returns (synced RGB frames, stats)."""
+        FaceDetector on exactly these frames (replayed instead of detecting a second time). Returns (synced RGB frames, stats).
+        `ref_index` (2026-10-14, "the dubbed speaker must close his mouth when the dub is silent"): per frame, the index of the frame whose
+        aligned face is the REFERENCE image (upstream: the frame itself). LatentSync 1.6 copies mouth appearance from the reference, so while
+        the source speaker keeps talking and the dub is silent the generated mouth followed the ORIGINAL articulation (mouth moving without
+        sound). A closed-mouth reference there + the silent audio gives a closed, still mouth. The pixels outside the mask are always pasted
+        back from the CURRENT frame (upstream pastes them from the reference, which is the same image only when ref_index[i] == i)."""
         from accelerate.utils import set_seed
 
         pipe = self.pipe
@@ -183,11 +188,17 @@ class AccelLatentSync:
                     sl = slice(i * nf, (i + 1) * nf)
                     inference_faces = faces[sl]
                     ref_px, masked_px, masks = ip.prepare_masks_and_masked_images(inference_faces, affine_transform=False)
+                    cur_px = ref_px
+                    if ref_index is not None:
+                        js = range(sl.start, min(sl.stop, len(faces)))   # a partial last window holds fewer frames
+                        idx = [ref_index[j] if j < len(ref_index) and ref_index[j] is not None else j for j in js]
+                        if any(x != j for x, j in zip(idx, js)):
+                            ref_px, _m, _k = ip.prepare_masks_and_masked_images(faces[idx], affine_transform=False)
                     m_lat, mi_lat = pipe.prepare_mask_latents(masks, masked_px, height, width, weight_dtype, device, generator, False)
                     r_lat = pipe.prepare_image_latents(ref_px, device, weight_dtype, generator, False)
                     lat_l.append(all_latents[:, :, sl]); mask_l.append(m_lat); masked_l.append(mi_lat); ref_l.append(r_lat)
                     audio_l.append(torch.stack(whisper_chunks[sl]))
-                    ref_px_l.append(ref_px); masks_l.append(masks)
+                    ref_px_l.append(cur_px); masks_l.append(masks)
                 latents = torch.cat(lat_l, dim=0)                       # (B, 4, F, h, w)
                 mask_latents = torch.cat(mask_l, dim=0)
                 masked_image_latents = torch.cat(masked_l, dim=0)
@@ -239,10 +250,10 @@ class AccelLatentSync:
 
     @torch.no_grad()
     def run_frames(self, video_frames: np.ndarray, audio_path, detections: list | None = None, weight_dtype=torch.float16,
-                   video_fps: int = 25) -> np.ndarray:
+                   video_fps: int = 25, ref_index: list | None = None) -> np.ndarray:
         """In-memory entry point: frames in (RGB uint8, 25 fps CFR), lip-synced frames out (RGB uint8). No video files are
         read or written; the caller owns assembly. Stats in self.last_stats."""
-        frames, stats = self._core(np.ascontiguousarray(video_frames), audio_path, detections, weight_dtype, video_fps)
+        frames, stats = self._core(np.ascontiguousarray(video_frames), audio_path, detections, weight_dtype, video_fps, ref_index=ref_index)
         self.last_stats = stats
         return frames
 

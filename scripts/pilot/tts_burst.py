@@ -430,7 +430,7 @@ def distribute_words_syntax(spans: list[dict], raw_words: list[str], bursts: lis
 
 def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pathlib.Path, seed: int, times: dict, *, opts, llm=None, src_name: str = "", tgt_name: str = "",
                    fit: dict | None = None, qa_cfg: dict | None = None, fit_up: dict | None = None, split_retries: int = 2, min_part_words: int = 1, soft_part_words: int = 2,
-                   part_max_words: int = 16, phrase_split: str = "timing", phrase_cut: str = "timing", log=print) -> dict:
+                   part_max_words: int = 16, phrase_split: str = "timing", phrase_cut: str = "timing", pause_policy: str = "bursts", thought=None, log=print) -> dict:
     """Phrase-first TTS (2026-10-02, priorities 1-3 of the coverage fix). Per unit:
       ONE Chatterbox generation of the whole natural translated sentence (QA retry ladder as in run_tts_burst)
       -> fit-DOWN (concise rewrite when the sentence cannot fit its total window at atempo_cap, rule as before)
@@ -441,7 +441,10 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
       -> a span that would still need more than atempo_cap takes the neighbouring burst too (union window, no re-synthesis)
       -> u["tts_parts"] = the spans (tts_u<id>_p<k>.wav), so align_units_burst / place_groups / build_dubbed_track work unchanged.
     No separate Chatterbox call per burst, no 1-2-word prompts, no cut inside a word. Alignment fallback (non-English target / alignment failure):
-    Silero speech span + energy-valley cuts proportional to the part word counts, recorded per unit (`cut`)."""
+    Silero speech span + energy-valley cuts proportional to the part word counts, recorded per unit (`cut`).
+    pause_policy="thought" (2026-10-14, thought_policy.py): the sentence is NOT distributed over the source bursts; it stays one part spoken from
+    its first burst (all pauses after it); an overflow of its window is handled by thought.overflow (rewrite = fit-down already at +3 %,
+    split = punctuation cut onto a source pause, shift / tempo = placement); part edges by energy decay (thought_policy.cut_thought)."""
     import torch
     import torchaudio
     from chatterbox.mtl_tts import ChatterboxMultilingualTTS, SUPPORTED_LANGUAGES
@@ -450,6 +453,10 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
     from e1_burst_align import valley_split
     from tts_align import CtcAligner, cut_parts
     from tts_qa import norm
+    import thought_policy as tp_
+    thought_mode = pause_policy == "thought"
+    if thought_mode and thought is None:
+        thought = tp_.ThoughtOpts({"tempo"})
     if tgt_lang not in SUPPORTED_LANGUAGES:
         raise RuntimeError(f"target language {tgt_lang!r} not supported by Chatterbox")
     fit = fit or {"enabled": False}; qa_cfg = qa_cfg or {"enabled": False}; fit_up = fit_up or {"enabled": False}
@@ -539,17 +546,21 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                 text = u["translation"]; u["parts_original"] = [text]; u["fit"] = []; u["fit_up"] = []
                 y, rec = gen_sentence(u, text, dtype); spans = align(y, text); sp_s = speech_seconds(y, spans)
                 src_words = " ".join(p["groups"]); target = sum(e - s for s, e in p["bursts"]); prev_end = prev_end_of.get(u["id"])
-                total_win = max(0.2, p["next_start"] - opts.gap - p["bursts"][0][0])
+                total_win = max(0.2, p["next_start"] - (thought.gap if thought_mode else opts.gap) - p["bursts"][0][0])
+                if thought_mode:   # fit-down trigger by overflow tool: rewrite at +3 %, tempo above its cap, split / shift only for extreme overflows
+                    fd_trig = 1 + thought.tol if "rewrite" in thought.overflow else (thought.tempo_cap if "tempo" in thought.overflow else 1.3)
                 # ---- fit-DOWN: the whole sentence does not fit its total window at the cap -> concise rewrite (rules as in run_tts_burst)
                 for rnd in range(fit.get("rounds", 4) if fit.get("enabled") else 0):
                     r = sp_s / total_win
-                    if r <= opts.atempo_cap + 1e-3:
+                    if r <= (fd_trig if thought_mode else opts.atempo_cap) + 1e-3:
                         break
                     # short sentences (4-5 words) too: 02 "Relaxation zone: lying areas." overflowed its window by 0.4 s at the hard cap and was cut (2026-10-12)
-                    nw = words_of(text); overflow = sp_s / opts.hard_cap - total_win; short_ok = nw >= fit.get("short_min_words", 4) and overflow > fit.get("short_overflow_s", 0.3)
+                    nw = words_of(text); overflow = (sp_s - total_win) if thought_mode else (sp_s / opts.hard_cap - total_win); short_ok = nw >= fit.get("short_min_words", 4) and overflow > fit.get("short_overflow_s", 0.3)
+                    # a short sentence is rewritten at most ONCE (2026-10-13, 02 u16 "...lying down areas." -> "Relaxation zone: lying areas." -> "Lying areas.")
+                    short_ok = short_ok and not any(x.get("result") == "rewritten" for x in u["fit"])
                     tgt_w = max(int(nw * fit.get("target_ratio", 1.05) / r), 4 if nw >= 6 else 3); stats["fit_rounds_used"] += 1
                     recf = {"round": rnd + 1, "ratio_before": round(r, 3), "old": text, "action": "concise_rewrite", "max_words": tgt_w, "overflow_at_hard_cap_s": round(overflow, 3)}
-                    if llm is None or r <= opts.hard_cap + 0.05 or (nw < 6 and not short_ok) or tgt_w >= nw:
+                    if llm is None or r <= ((fd_trig + 1e-3) if thought_mode else opts.hard_cap + 0.05) or (nw < 6 and not short_ok) or tgt_w >= nw:
                         recf.update(action="kept", result="short phrase or marginal overflow: lead / spill / moderate atempo instead"); u["fit"].append(recf); break
                     tq = time.perf_counter(); new = concise_rewrite(llm, src_name, tgt_name, src_words, text, tgt_w, sp_s / r); stats["fitdown_qwen_seconds"] += time.perf_counter() - tq
                     if new is None:
@@ -588,7 +599,27 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                     u["translation_fitted"] = text
                 # ---- split the FINAL text into one part per source burst (lossless): timing distribution of the aligned words (default) or Qwen
                 n = len(p["bursts"]); raw_words = text.split(); counts = None; parts = None
-                if n == 1:
+                if thought_mode:   # one complete thought; split only at punctuation onto a source pause when it overflows and "split" is allowed
+                    res = None
+                    if "split" in thought.overflow and spans is not None and n >= 2 and sp_s > total_win * (1 + thought.tol):
+                        res = tp_.split_thought(spans, raw_words, p["bursts"], p["next_start"], norm, thought.gap, thought.inner_gap, thought.tol)
+                    if res is None and thought.underfill == "clause" and spans is not None and n >= 2 and sp_s <= total_win * (1 + thought.tol):
+                        res = tp_.cover_split(spans, raw_words, p["bursts"], p["next_start"], norm, thought.gap, thought.inner_gap, thought.tol)
+                        if res is not None: stats["thought_clause_splits"] = stats.get("thought_clause_splits", 0) + 1
+                    if res is None:
+                        bgroups = [list(range(n))]; parts = [text]; u["split"] = {"method": "thought_single"}
+                    else:
+                        cnts, bgroups = res; parts = []; idx = 0; acc = 0; k0 = 0
+                        for c in cnts:
+                            words_here = []
+                            while idx < len(raw_words) and acc < k0 + c:
+                                acc += len(norm(raw_words[idx])); words_here.append(raw_words[idx]); idx += 1
+                            parts.append(" ".join(words_here)); k0 += c
+                        u["split"] = {"method": "thought_punct_split", "parts": len(parts)}; stats["thought_splits"] = stats.get("thought_splits", 0) + 1
+                    p["bursts"] = [(p["bursts"][g[0]][0], p["bursts"][g[-1]][1]) for g in bgroups]
+                    p["groups"] = [" ".join(p["groups"][j] for j in g) for g in bgroups]; p["group_counts"] = [sum(p["group_counts"][j] for j in g) for g in bgroups]
+                    u["thought_window_s"] = round(total_win, 3); u["thought_ratio"] = round(sp_s / total_win, 3)
+                elif n == 1:
                     parts = [text]; u["split"] = {"method": "single"}; stats["units_single_burst"] += 1
                 else:
                     slog = {"method": None, "attempts": []}
@@ -629,7 +660,12 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                 assert norm_tokens(" ".join(parts)) == norm_tokens(text), "split lost words"
                 # ---- cut the ONE clip between words
                 counts = [len(norm(x)) for x in parts]; pieces = None; method = None
-                if spans is not None and sum(counts) == len(spans):
+                if spans is not None and sum(counts) == len(spans) and thought_mode:
+                    try:
+                        pieces, u["edges"] = tp_.cut_thought(y, m.sr, spans, counts, onset_s=energy_onset(y, m.sr)); method = "ctc_forced_align+energy_tail"; stats["align_ok"] += 1
+                    except Exception as e:
+                        pieces = None; method = f"align_cut_failed: {type(e).__name__}"
+                elif spans is not None and sum(counts) == len(spans):
                     try:
                         cp = cut_parts(y, m.sr, spans, counts, onset_s=energy_onset(y, m.sr)); pieces = [(a, b) for _, a, b, _ in cp]; method = "ctc_forced_align"; stats["align_ok"] += 1
                     except Exception as e:
@@ -640,7 +676,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                 def chunks_of(pcs):
                     return [y[int(a * m.sr):int(b * m.sr)] for a, b in pcs]
                 need = burst_fit_ratios(chunks_of(pieces), p["bursts"], p["slot"], p["next_start"], opts, prev_end=prev_end); merged_spans = 0
-                while len(pieces) > 1:
+                while len(pieces) > 1 and not thought_mode:
                     over = [(k, r) for k, r in enumerate(need) if r is not None and r > opts.atempo_cap + 1e-3]
                     if not over:
                         break
@@ -653,7 +689,9 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                 u["parts"] = parts; u["tts_parts"] = []
                 for k, ((a, b), ptxt) in enumerate(zip(pieces, parts)):
                     seg = y[int(a * m.sr):int(b * m.sr)]
-                    if phrase_cut == "syntax":   # the cut parts were saved without any fade (cut_parts' faded copies are not used); part of the syntax candidate
+                    if thought_mode:             # edges in silence / decay: short cosine fades (no click), 20 ms on the sentence end
+                        seg = tp_.cosine_fade(seg, m.sr, 5.0 if k == 0 else 8.0, 20.0 if k + 1 == len(pieces) else 8.0)
+                    elif phrase_cut == "syntax":   # the cut parts were saved without any fade (cut_parts' faded copies are not used); part of the syntax candidate
                         seg = edge_fade(seg, m.sr, 5.0, 20.0 if k + 1 < len(pieces) else 10.0)
                     elif phrase_cut == "acoustic":   # the 5 ms declick fades cut_parts was meant to apply
                         seg = edge_fade(seg, m.sr, 5.0, 5.0)
@@ -693,4 +731,5 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
     return {"model": "ChatterboxMultilingualTTS t3=v3 (models/chatterbox)", "sr": sr, "dtype": str(used).replace("torch.", ""), "language_id": tgt_lang, "mode": "phrase",
             "voice_reference": "speaker's own diarized speech via audio_prompt_path/prepare_conditionals", "speech_token_guard": {"enabled": True, "flow_calls": guard.calls, "violations": guard.violations},
             "qa": {"enabled": qa is not None, **qa_cfg}, "fit": {**fit}, "fit_up": {**fit_up}, "alignment": {"method": "ctc_forced_align (wav2vec2-base-960h, torchaudio.forced_align)" if aligner else "silero_valley_fallback", "cuts": "between words only"},
-            "split": {"min_part_words": min_part_words, "soft_part_words": soft_part_words, "part_max_words": part_max_words, "retries": split_retries}, "stats": stats, "references": refs}
+            "split": {"min_part_words": min_part_words, "soft_part_words": soft_part_words, "part_max_words": part_max_words, "retries": split_retries}, "stats": stats, "references": refs,
+            "pause_policy": pause_policy, "thought": thought.as_dict() if thought_mode else None}

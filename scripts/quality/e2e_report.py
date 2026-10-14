@@ -59,6 +59,8 @@ def one(root: pathlib.Path, vid: str, qa, syncnet: bool) -> dict:
                     o = eval_syncnet(t); r["syncnet_dub_only"] = {"confidence": o["confidence"], "av_offset": o["av_offset_frames"]}
                 except Exception as e:
                     r["syncnet_dub_only"] = {"error": f"{type(e).__name__}: {str(e)[:120]}"}
+                finally:   # the temp mp4 used to stay in /tmp (with eval_run's temp wavs it filled the 50 GB disk, 2026-10-14)
+                    t.unlink(missing_ok=True); t.parent.rmdir()
             if vid not in cache:
                 try:
                     o = eval_syncnet(pathlib.Path(man["input"])); cache[vid] = {"confidence": o["confidence"], "av_offset": o["av_offset_frames"]}; SYNC_CACHE.write_text(json.dumps(cache, indent=1))
