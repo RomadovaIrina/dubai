@@ -725,7 +725,7 @@ def main() -> int:
                     help="with --mouth-only-pasteback: face = CodeFormer on the composited frame (re-renders eyes / brows, previous behaviour); mouth = CodeFormer on the raw "
                          "LatentSync frame, then the mouth-only composite (eyes / brows stay the source; 2026-10-13 'мимика дергается')")
     ap.add_argument("--ls-landmark-smooth", type=int, default=0, help="optimized backend: centred moving average (+-N frames) of the landmarks replayed into LatentSync's affine crop")
-    ap.add_argument("--silent-mouth", choices=["self", "closed", "freeze", "source"], default="self",
+    ap.add_argument("--silent-mouth", choices=["self", "closed", "freeze", "source", "close"], default="self",
                     help="optimized backend: LatentSync reference image where the DUB is silent: self = the frame itself (upstream; the original articulation leaks into a "
                          "silent mouth), closed = the nearest closed-mouth frame of the segment (2026-10-14 'рот должен быть закрыт, когда английская речь закончилась'); "
                          "freeze = LatentSync only where the dub speaks (gate = dub VAD), where the source talks and the dub is silent the lower face incl. the jaw "
@@ -931,7 +931,7 @@ def main() -> int:
             else:
                 man["speech_gate"] = {"enabled": False}
             silent_mouth = None
-            if a.silent_mouth in ("closed", "freeze"):   # freeze: LS-internal silent frames (gate margins / merged gaps) keep the closed-mouth reference
+            if a.silent_mouth in ("closed", "freeze", "close"):   # freeze: LS-internal silent frames (gate margins / merged gaps) keep the closed-mouth reference
                 dsp = dub_speech if a.speech_gate == "on" else run_vad(pathlib.Path(man["dubbed_track"]["wav16k"]))
                 silent_mouth = {"mode": a.silent_mouth, "dub_speech": [(v["start"], v["end"]) for v in dsp], "src_speech": [(v["start"], v["end"]) for v in speech], "pad_s": a.silent_mouth_pad,
                                 "gate_margin_s": a.gate_margin_s, "gate_merge_gap_s": a.gate_merge_gap_s, "min_face_w": a.freeze_min_face_w}

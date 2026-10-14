@@ -382,6 +382,25 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
             speech_gate = build_speech_gate([silent_mouth["src_speech"], silent_mouth["dub_speech"]], n / FPS, silent_mouth.get("gate_margin_s", GATE_DEFAULTS["margin_s"]),
                                             silent_mouth.get("gate_merge_gap_s", GATE_DEFAULTS["merge_gap_s"]))
             log(f"  [freeze] median face width {silent_mouth['face_w_median']} px < {silent_mouth.get('min_face_w', 140)}: closed-mouth LatentSync instead (gate = source U dub speech)")
+    close_info = None
+    if silent_mouth is not None and silent_mouth.get("mode") == "close":
+        # 2026-10-14 ("дубляж молчит, а рот шевелится — такого быть не должно"): where the SOURCE speaks and the dub is silent, the master frame
+        # itself gets its jaw closed geometrically (jaw_close.py: its own pixels, no second contour); LatentSync then renders closed lips on that
+        # closed jaw from a naturally closed reference (closed_mouth_refs) with the silent audio, and the mouth-only composite uses the closed
+        # frame as the background. Strength ramps over `ramp` frames at the run edges.
+        from jaw_close import close_jaw
+        t0 = time.perf_counter(); det = fa.face_detector(); pad = silent_mouth.get("pad_s", 0.12); ramp = 3
+        want = _mask_of(silent_mouth["src_speech"], n, 0, 0.0) & ~_mask_of(silent_mouth["dub_speech"], n, 0, pad)
+        sm = np.convolve(want.astype(np.float32), np.ones(2 * ramp + 1) / (2 * ramp + 1), mode="same")   # 0..1 with soft edges
+        closed = 0; drops = []
+        for i in np.flatnonzero(sm > 0.01):
+            bb, lm = det(cv2.cvtColor(master_frames[i], cv2.COLOR_BGR2RGB))
+            if bb is None: continue
+            master_frames[i], inf = close_jaw(master_frames[i], np.asarray(lm), strength=float(min(1.0, sm[i] * 1.5)))
+            if inf.get("drop_px", 0) >= 0.5: closed += 1; drops.append(inf["drop_px"])
+        close_info = {"frames_considered": int((sm > 0.01).sum()), "frames_closed": closed, "drop_px_mean": round(float(np.mean(drops)), 2) if drops else 0.0,
+                      "drop_px_max": round(float(np.max(drops)), 2) if drops else 0.0, "seconds": round(time.perf_counter() - t0, 2)}
+        times["jaw_close"] = close_info["seconds"]; log(f"  [jaw-close] {close_info}")
     gate = gate_mask(speech_gate, n) if speech_gate is not None else None
 
     t0 = time.perf_counter()
@@ -545,7 +564,7 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
             "crossfade_frames": xf, "master_fps": FPS, "master_frames": n, "frame_classes": counts, "skip_reasons": reasons, "by_action": by_action,
             "latentsync_seconds_of_video": round(lipsynced / FPS, 3), "pass_through_seconds_of_video": round((n - lipsynced) / FPS, 3),
             "ls_fraction": round(lipsynced / max(n, 1), 4), "latentsync_inference_total_s": round(sum(ls_runs), 2), "verify_seconds": round(t_verify, 2),
-            "latentsync_calls": len(ls_runs), "verify_splits": verify_info, "assembly": asm, "output_frame_check": frame_check, "mouth_freeze": freeze_info,
+            "latentsync_calls": len(ls_runs), "verify_splits": verify_info, "assembly": asm, "output_frame_check": frame_check, "mouth_freeze": freeze_info, "jaw_close": close_info,
             "silent_mouth": {k: v for k, v in (silent_mouth or {}).items() if k not in ("src_speech", "dub_speech")},
             "speech_gate_used": [list(g) for g in speech_gate] if speech_gate is not None else None,
             "codeformer": ("OFF (gate metadata only: codeformer_eligible on LATENT_SYNC segments)" if codeformer == "off" else
