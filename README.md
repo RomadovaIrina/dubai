@@ -1,4 +1,4 @@
-> **Quality work in progress (2026-10-14): branch `quality-oct12` — start with [reports/quality/feedback_2026-10-14/README.md](reports/quality/feedback_2026-10-14/README.md)** (restore steps, human feedback, current candidate R10, open issues).
+> **Quality work in progress (2026-10-14): branch `quality-oct12` — current candidate R11: [reports/quality/feedback_2026-10-14/R11.md](reports/quality/feedback_2026-10-14/R11.md); handoff / restore / history: [reports/quality/feedback_2026-10-14/README.md](reports/quality/feedback_2026-10-14/README.md).**
 
 # dub — pilot ML environment (`dabai`)
 
