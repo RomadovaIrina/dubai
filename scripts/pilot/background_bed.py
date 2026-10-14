@@ -154,9 +154,39 @@ def room_tone(bed: np.ndarray, source_speech: list, sr: int, n_out: int, frame_s
     return out[:n_out], floor
 
 
+def noise_tone(bed: np.ndarray, source_speech: list, sr: int, n_out: int, margin_s: float = 0.3, nfft: int = 2048, seed: int = 0, max_floor_db: float = -42.0):
+    """--bg-room-mode noise (2026-10-14, "фоновые искажения" on 03 R11): a STATIONARY room tone with the average spectrum of this video's steady
+    non-speech frames (random phase, overlap-add), instead of shuffled 200 ms source frames (whose seams / content made the fill audible).
+    Returns (tone[n_out, C], floor_rms) like room_tone()."""
+    h = int(0.2 * sr); mono = bed.mean(1); r = _frame_rms(mono, h); nf = len(r)
+    speech = np.zeros(nf, dtype=bool)
+    for s, e in source_speech:
+        speech[max(0, int((s - margin_s) / 0.2)):min(nf, int(np.ceil((e + margin_s) / 0.2)))] = True
+    cand = np.flatnonzero(~speech & (r > 1e-6))
+    if len(cand) * 0.2 < 1.0:
+        return None, None
+    floor = float(np.percentile(r[cand], 30)); keep = cand[r[cand] <= floor * 10 ** (3 / 20)]
+    if 20 * np.log10(floor) > max_floor_db or len(keep) * 0.2 < 1.0:
+        return None, floor
+    win = np.hanning(nfft).astype(np.float32); hop = nfft // 4; C = bed.shape[1]; mags = np.zeros((nfft // 2 + 1, C)); cnt = 0
+    for k in keep:
+        seg = bed[k * h:(k + 1) * h]
+        for o in range(0, len(seg) - nfft, hop):
+            mags += np.abs(np.fft.rfft(seg[o:o + nfft] * win[:, None], axis=0)); cnt += 1
+    if cnt == 0:
+        return None, floor
+    mags /= cnt; rng = np.random.default_rng(seed); out = np.zeros((n_out + nfft, C), np.float32); wsum = np.zeros(n_out + nfft, np.float32)
+    for o in range(0, n_out, hop):
+        ph = np.exp(1j * rng.uniform(0, 2 * np.pi, mags.shape)); fr = np.fft.irfft(mags * ph, n=nfft, axis=0).astype(np.float32) * win[:, None]
+        out[o:o + nfft] += fr; wsum[o:o + nfft] += win ** 2
+    out = out[:n_out] / np.maximum(wsum[:n_out, None], 1e-3)
+    out *= floor / max(float(np.sqrt(np.mean(out.mean(1) ** 2))), 1e-9)
+    return out, floor
+
+
 def mix_background(sep: dict, dubbed24k: pathlib.Path, source_speech: list, dub_speech: list, duration: float, work: pathlib.Path,
                    bg_offset_db: float = 0.0, duck_db: float = -6.0, max_bg_gain_db: float = 12.0, attack_s: float = 0.08, release_s: float = 0.35,
-                   room_fill: bool = True, room_floor_db: float = -42.0) -> dict:
+                   room_fill: bool = True, room_floor_db: float = -42.0, room_mode: str = "shuffle", src_only_duck_db: float = 0.0) -> dict:
     """final_mix_44k.wav (stereo) + final_mix_aac.m4a = dub voice (unchanged level, both channels) + background bed.
     Bed gain = (dub voice level in dub speech) - (original vocal level in source speech) + bg_offset_db, clamped to +-max_bg_gain_db, i.e. the
     original voice/background balance is reproduced; the bed is ducked by duck_db while the dub speaks (soft attack / release).
@@ -171,8 +201,20 @@ def mix_background(sep: dict, dubbed24k: pathlib.Path, source_speech: list, dub_
     n = int(round(duration * SEP_SR)); dub = np.pad(dub, (0, max(0, n - len(dub))))[:n]
     bg = np.pad(bg, ((0, max(0, n - len(bg))), (0, 0)))[:n]; voc = np.pad(voc, ((0, max(0, n - len(voc))), (0, 0)))[:n]
     fill = {"enabled": room_fill, "applied": False}
+    tone, floor = (None, None)
     if room_fill:   # under the source speech HDemucs removes the room noise with the voice: top the bed up to the video's own noise floor there
-        tone, floor = room_tone(bg + voc, source_speech, SEP_SR, n, max_floor_db=room_floor_db)   # the full source: HDemucs files the steady noise floor under "vocals" too
+        if room_mode == "noise":
+            tone, floor = noise_tone(bg + voc, source_speech, SEP_SR, n, max_floor_db=room_floor_db)
+        else:
+            tone, floor = room_tone(bg + voc, source_speech, SEP_SR, n, max_floor_db=room_floor_db)   # the full source: HDemucs files the steady noise floor under "vocals" too
+    src_only_applied = False
+    if src_only_duck_db and tone is not None:
+        # 2026-10-14 (03 R11 46.9 s: the source's "хорошо" audible from the bed while the dub is silent; Whisper on the mix hears Russian): where the
+        # SOURCE speaks and the dub is silent the HDemucs bed carries a residue of the source voice and nothing masks it -> duck the bed there and let
+        # the room-tone fill below bring the ambience back to the video's floor (only when a room tone exists: a loud street / music bed is not ducked)
+        src_only = _mask(source_speech, n, SEP_SR) & ~_mask(dub_speech, n, SEP_SR)
+        env_s = _envelope(src_only, SEP_SR, 0.08, 0.25); bg = bg * (10 ** (src_only_duck_db * env_s / 20))[:, None]; src_only_applied = True
+    if room_fill:
         if tone is None:
             fill["skipped"] = "no steady non-speech material" if floor is None else f"floor {20 * np.log10(floor + 1e-12):.1f} dBFS > {room_floor_db} (music / loud ambience)"
         else:
@@ -191,6 +233,7 @@ def mix_background(sep: dict, dubbed24k: pathlib.Path, source_speech: list, dub_
     out = work / "final_mix_44k.wav"; sf.write(str(out), mix, SEP_SR, subtype="PCM_16")
     aac = work / "final_mix_aac.m4a"; ff(["-i", str(out), "-c:a", "aac", "-b:a", "192k", str(aac)])
     pause = ~_mask(dub_speech, n, SEP_SR)
+    fill["mode"] = room_mode; fill["src_only_duck_db"] = src_only_duck_db if src_only_applied else 0.0
     return {"wav": str(out), "aac": str(aac), "room_fill": fill, "bg_gain_db": round(gain_db, 2), "duck_db": duck_db, "attack_s": attack_s, "release_s": release_s, "bg_offset_db": bg_offset_db,
             "dub_voice_db": round(voice_db, 2), "orig_vocals_db": round(orig_voice_db, 2), "peak_norm": round(norm, 4),
             "bed_db_in_dub_pauses": round(_db(bed.mean(1)[pause]), 2) if pause.any() else None,

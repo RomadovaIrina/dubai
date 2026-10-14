@@ -564,6 +564,28 @@ def run_lipsync(src: pathlib.Path, work: pathlib.Path, dubbed16k: pathlib.Path, 
             "segments": [{k: v for k, v in s.items() if k != "face_bbox_stats"} for s in segs]}
 
 
+def source_drive(dub16k: pathlib.Path, vocals44k: pathlib.Path, src_speech: list, dub_speech: list, duration: float, work: pathlib.Path,
+                 dub_pad: float = 0.12, ramp_s: float = 0.04) -> tuple[pathlib.Path, dict]:
+    """--silent-mouth source (2026-10-14, 03 R11 40-50 s "он как будто что-то жует"): LatentSync is driven by the DUB everywhere except where the
+    source speaks and the dub is silent; there it gets the source's own voice (HDemucs vocals, level-matched to the dub), so the generated mouth
+    keeps his real articulation instead of a silence-driven half-closed "chewing" mouth, and no switch to the original frames is needed.
+    Only the LatentSync input changes; the muxed audio is the dub mix."""
+    import numpy as np
+    import soundfile as sf
+    v16 = work / "vocals_16k_drive.wav"; ff(["-i", str(vocals44k), "-ac", "1", "-ar", "16000", "-c:a", "pcm_f32le", str(v16)])
+    d, sr = sf.read(str(dub16k), dtype="float32"); v, _ = sf.read(str(v16), dtype="float32"); n = len(d); v = np.pad(v, (0, max(0, n - len(v))))[:n]
+    def mask(iv, pad):
+        m = np.zeros(n, bool)
+        for a_, b_ in iv: m[max(0, int((a_ - pad) * sr)):min(n, int((b_ + pad) * sr))] = True
+        return m
+    dm, sm = mask(dub_speech, dub_pad), mask(src_speech, 0.05)
+    w = (sm & ~dm).astype(np.float32); k = max(1, int(ramp_s * sr)); w = np.convolve(w, np.ones(k) / k, mode="same")
+    rms = lambda x, m_: float(np.sqrt(np.mean(x[m_] ** 2))) if m_.any() else 0.0
+    g = rms(d, dm) / max(rms(v, sm), 1e-6)
+    out = d * (1 - w) + v * g * w; p_ = work / "drive_16k.wav"; sf.write(str(p_), out, sr, subtype="PCM_16"); v16.unlink()
+    return p_, {"source_voice_seconds": round(float((w > 0.5).sum() / sr), 2), "gain": round(g, 3)}
+
+
 def run_lipsync_optimized(src: pathlib.Path, work: pathlib.Path, dubbed16k: pathlib.Path, dubbed_aac: pathlib.Path, out: pathlib.Path, a, times: dict,
                           speech_gate: list | None = None, silent_mouth: dict | None = None) -> dict:
     """Optimized video backend: RetinaFace routing + speech gate + batched LatentSync windows (face_aware_latentsync_accel.py).
@@ -657,7 +679,7 @@ def main() -> int:
                          "thought = the whole sentence first at natural speed from its first source burst, the pause after it (2026-10-14 human feedback, thought_policy.py)")
     ap.add_argument("--overflow", default="tempo", help="--pause-policy thought: comma list of the tools for a sentence longer than its window: rewrite (Qwen concise rewrite "
                     "at +3 %%), split (punctuation cut onto a source pause), shift (the next sentence starts later), tempo (atempo <= --thought-tempo-cap)")
-    ap.add_argument("--thought-fill", choices=["off", "spoken"], default="off", help="--pause-policy thought: spoken = a sentence that ends >= --thought-fill-min-s before the "
+    ap.add_argument("--thought-fill", choices=["off", "spoken", "pace"], default="off", help="--pause-policy thought: spoken = a sentence that ends >= --thought-fill-min-s before the "
                     "speaker does is re-translated in his fuller spoken wording (no new facts, Qwen judge) and re-synthesised; accepted when it ends >= 0.3 s closer")
     ap.add_argument("--thought-fill-min-s", type=float, default=0.8)
     ap.add_argument("--underfill", choices=["none", "clause", "semantic"], default="none", help="--pause-policy thought: clause = a sentence much shorter than the source speech is cut "
@@ -671,6 +693,8 @@ def main() -> int:
                     help="final mix: on = source background bed (Hybrid Demucs accompaniment, original voice/bed balance, ducked under the dub) under the dubbed voice; "
                          "off = dubbed voice over digital silence (previous behaviour). LatentSync / speech gate always use the clean dubbed voice. Default on since 2026-10-12 (dead air 16-54 s -> 0-6 s, WER unchanged)")
     ap.add_argument("--bg-duck-db", type=float, default=-6.0, help="--background on: bed attenuation while the dub speaks (dB)")
+    ap.add_argument("--bg-room-mode", choices=["shuffle", "noise"], default="shuffle", help="--background on: room-tone fill from shuffled 200 ms source frames (previous) or stationary noise with the video's average non-speech spectrum")
+    ap.add_argument("--bg-src-only-duck-db", type=float, default=0.0, help="--background on: duck the bed where the source speaks and the dub is silent (HDemucs voice residue: 03 'хорошо'); the room-tone fill restores the ambience; only when a room tone exists")
     ap.add_argument("--bg-room-floor-db", type=float, default=-42.0, help="--background on: room-tone fill of the HDemucs hole under the source speech for noise floors up to this level (dBFS)")
     ap.add_argument("--bg-offset-db", type=float, default=0.0, help="--background on: bed level relative to the original voice/background balance (dB)")
     ap.add_argument("--stop-after", choices=["none", "audio"], default="none", help="audio = stop after the dubbed track (audio-only candidate: manifest + dubbed_24k/16k.wav, no LatentSync)")
@@ -701,11 +725,13 @@ def main() -> int:
                     help="with --mouth-only-pasteback: face = CodeFormer on the composited frame (re-renders eyes / brows, previous behaviour); mouth = CodeFormer on the raw "
                          "LatentSync frame, then the mouth-only composite (eyes / brows stay the source; 2026-10-13 'мимика дергается')")
     ap.add_argument("--ls-landmark-smooth", type=int, default=0, help="optimized backend: centred moving average (+-N frames) of the landmarks replayed into LatentSync's affine crop")
-    ap.add_argument("--silent-mouth", choices=["self", "closed", "freeze"], default="self",
+    ap.add_argument("--silent-mouth", choices=["self", "closed", "freeze", "source"], default="self",
                     help="optimized backend: LatentSync reference image where the DUB is silent: self = the frame itself (upstream; the original articulation leaks into a "
                          "silent mouth), closed = the nearest closed-mouth frame of the segment (2026-10-14 'рот должен быть закрыт, когда английская речь закончилась'); "
                          "freeze = LatentSync only where the dub speaks (gate = dub VAD), where the source talks and the dub is silent the lower face incl. the jaw "
-                         "contour comes from a nearby closed-mouth source frame (mouth_freeze.py: no smeared jaw contour), elsewhere the source frame")
+                         "contour comes from a nearby closed-mouth source frame (mouth_freeze.py: no smeared jaw contour), elsewhere the source frame; source = where the "
+                         "dub is silent and the source speaks, LatentSync is DRIVEN by the source's own voice (HDemucs vocals): his real articulation, no 'chewing' of a "
+                         "silence-driven mouth, no switch to the original frames (2026-10-14 03 40-50 s)")
     ap.add_argument("--silent-mask", choices=["standard", "big"], default="standard", help="--mouth-only-pasteback with --silent-mouth closed: big = where the dub is silent "
                     "the paste-back covers the whole lower face incl. the jaw contour + upper neck (one image provides the contour: no smeared jaw step, 2026-10-14)")
     ap.add_argument("--freeze-min-face-w", type=float, default=140.0, help="--silent-mouth freeze: below this median face width (px, 25 fps master) the video uses closed-mouth LatentSync")
@@ -870,7 +896,8 @@ def main() -> int:
             with timed(times, "background_mix"):
                 dub_vad = run_vad(pathlib.Path(man["dubbed_track"]["wav16k"]))
                 mix = mix_background(sep, pathlib.Path(man["dubbed_track"]["wav24k"]), [(v["start"], v["end"]) for v in speech], [(v["start"], v["end"]) for v in dub_vad],
-                                     duration, work, bg_offset_db=a.bg_offset_db, duck_db=a.bg_duck_db, room_floor_db=a.bg_room_floor_db)
+                                     duration, work, bg_offset_db=a.bg_offset_db, duck_db=a.bg_duck_db, room_floor_db=a.bg_room_floor_db,
+                                     room_mode=a.bg_room_mode, src_only_duck_db=a.bg_src_only_duck_db)
             man["background"] = {"enabled": True, "separation": sep, "mix": mix}; mux_aac = pathlib.Path(mix["aac"])
             print(f"  [background] bed gain {mix['bg_gain_db']:+.1f} dB, duck {mix['duck_db']} dB, separation {sep['separate_s']}s (+load {sep['load_s']}s), bed in dub pauses {mix['bed_db_in_dub_pauses']} dBFS", flush=True)
         print(f"  [align] ratios tts/slot: " + " ".join(f"{u['alignment']['ratio_tts_to_slot']:.2f}" for u in units), flush=True)
@@ -909,7 +936,11 @@ def main() -> int:
                 silent_mouth = {"mode": a.silent_mouth, "dub_speech": [(v["start"], v["end"]) for v in dsp], "src_speech": [(v["start"], v["end"]) for v in speech], "pad_s": a.silent_mouth_pad,
                                 "gate_margin_s": a.gate_margin_s, "gate_merge_gap_s": a.gate_merge_gap_s, "min_face_w": a.freeze_min_face_w}
             man["silent_mouth"] = {"mode": a.silent_mouth, "pad_s": a.silent_mouth_pad}
-            man["lipsync"] = run_lipsync_optimized(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), mux_aac, out, a, times,
+            drive16k = pathlib.Path(man["dubbed_track"]["wav16k"])
+            if a.silent_mouth == "source" and man["background"].get("enabled"):
+                drive16k, man["silent_mouth"]["drive"] = source_drive(drive16k, pathlib.Path(man["background"]["separation"]["vocals"]),
+                                                                      [(v["start"], v["end"]) for v in speech], [(v["start"], v["end"]) for v in dub_speech], duration, work)
+            man["lipsync"] = run_lipsync_optimized(src, work, drive16k, mux_aac, out, a, times,
                                                    speech_gate=speech_gate, silent_mouth=silent_mouth)
         else:
             man["lipsync"] = run_lipsync(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), mux_aac,

@@ -637,10 +637,10 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                     if any(x.get("result") == "accepted" for x in u["fit_up"]):
                         stats["fit_up_units"] += 1
                 # ---- thought fill (2026-10-14): the line ends >= fill_min_s before the speaker does -> his fuller spoken wording, re-synthesised
-                if thought_mode and getattr(thought, "fill", "off") == "spoken" and llm is not None and spans is not None and sp_s <= total_win * (1 + thought.tol):
+                if thought_mode and getattr(thought, "fill", "off") in ("spoken", "pace") and llm is not None and spans is not None and sp_s <= total_win * (1 + thought.tol):
                     mk, _ans = tp_.chunk_marks(llm, text); pl = tp_.plan_chunks(spans, text.split(), mk or set(), p["bursts"], p["next_start"], norm, thought)
                     u["fill"] = {"short_before": pl["short"]}
-                    if pl["short"] >= thought.fill_min_s:
+                    if pl["short"] >= thought.fill_min_s and thought.fill == "spoken":   # pace mode: no re-translation (03 R11: "What we want to say is that let ...")
                         dl = max(spans[-1]["end"] - spans[0]["start"], 0.3); tw = int(round(words_of(text) * (dl + 0.8 * pl["short"]) / dl))
                         tq = time.perf_counter(); new, why = spoken_rewrite(llm, src_name, tgt_name, u["text"], text, tw); stats["fill_qwen_seconds"] = stats.get("fill_qwen_seconds", 0.0) + time.perf_counter() - tq
                         u["fill"].update(old=text, new=new, why=why, target_words=tw)
@@ -655,25 +655,25 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                                     u["fill"]["result"] = "rejected (not closer)"
                             else:
                                 u["fill"]["result"] = "rejected (QA bad / no alignment / overflow)"
-                        # pace fill (2026-10-14 GPU A/B on 04): the same text at Chatterbox cfg_weight 0.3 = the model's own slower, more deliberate
-                        # delivery (+10-30 % word durations, intelligibility unchanged / better); 0.2 drew the last word out to 2 s -> drawl guard
-                        cur_short = u["fill"].get("short_after", pl["short"]) if u["fill"].get("result") == "accepted" else pl["short"]
-                        if cur_short >= thought.fill_min_s:
-                            y3, rec3 = gen_sentence(u, text, dtype, salt=50, cfg=0.3); sp3 = align(y3, text); s3 = speech_seconds(y3, sp3)
-                            drawl = None
-                            if sp3:
-                                wd = [w["end"] - w["start"] for w in sp3]; med = float(np.median(wd)) if wd else 0.2
-                                if max(wd) > max(0.8, 2.2 * med): drawl = f"word {max(wd):.2f}s"
-                                tw_ = text.split()
-                                for wi, (a_, b_) in enumerate(zip(sp3, sp3[1:])):
-                                    if b_["start"] - a_["end"] > 0.7 and not (wi < len(tw_) and tp_.PUNCT_END.search(tw_[wi])): drawl = f"pause {b_['start'] - a_['end']:.2f}s inside a phrase"
-                            u["fill"]["pace"] = {"seconds_before": round(sp_s, 3), "seconds_after": round(s3, 3), "qa_bad": rec3["qa_bad_final"], "drawl": drawl}
-                            if sp3 is not None and not rec3["qa_bad_final"] and not drawl and s3 <= total_win * (1 + thought.tol):
-                                mk3, _a3 = tp_.chunk_marks(llm, text); pl3 = tp_.plan_chunks(sp3, text.split(), mk3 or set(), p["bursts"], p["next_start"], norm, thought)
-                                u["fill"]["pace"]["short_after"] = pl3["short"]
-                                if pl3["short"] < cur_short - 0.3:
-                                    y, rec, spans, sp_s = y3, rec3, sp3, s3; u["fill"]["pace"]["result"] = "accepted"; stats["pace_accepted"] = stats.get("pace_accepted", 0) + 1
-                        stats["fill_candidates"] = stats.get("fill_candidates", 0) + 1
+                    # pace fill (2026-10-14 GPU A/B on 04): the same text at Chatterbox cfg_weight 0.3 = the model's own slower, more deliberate
+                    # delivery (+10-30 % word durations, intelligibility unchanged / better); 0.2 drew the last word out to 2 s -> drawl guard
+                    cur_short = u["fill"].get("short_after", pl["short"]) if u["fill"].get("result") == "accepted" else pl["short"]
+                    if cur_short >= thought.fill_min_s:
+                        y3, rec3 = gen_sentence(u, text, dtype, salt=50, cfg=0.3); sp3 = align(y3, text); s3 = speech_seconds(y3, sp3)
+                        drawl = None
+                        if sp3:
+                            wd = [w["end"] - w["start"] for w in sp3]; med = float(np.median(wd)) if wd else 0.2
+                            if max(wd) > max(0.8, 2.2 * med): drawl = f"word {max(wd):.2f}s"
+                            tw_ = text.split()
+                            for wi, (a_, b_) in enumerate(zip(sp3, sp3[1:])):
+                                if b_["start"] - a_["end"] > 0.7 and not (wi < len(tw_) and tp_.PUNCT_END.search(tw_[wi])): drawl = f"pause {b_['start'] - a_['end']:.2f}s inside a phrase"
+                        u["fill"]["pace"] = {"seconds_before": round(sp_s, 3), "seconds_after": round(s3, 3), "qa_bad": rec3["qa_bad_final"], "drawl": drawl}
+                        if sp3 is not None and not rec3["qa_bad_final"] and not drawl and s3 <= total_win * (1 + thought.tol):
+                            mk3, _a3 = tp_.chunk_marks(llm, text); pl3 = tp_.plan_chunks(sp3, text.split(), mk3 or set(), p["bursts"], p["next_start"], norm, thought)
+                            u["fill"]["pace"]["short_after"] = pl3["short"]
+                            if pl3["short"] < cur_short - 0.3:
+                                y, rec, spans, sp_s = y3, rec3, sp3, s3; u["fill"]["pace"]["result"] = "accepted"; stats["pace_accepted"] = stats.get("pace_accepted", 0) + 1
+                    stats["fill_candidates"] = stats.get("fill_candidates", 0) + 1
                 if text != u["translation"]:
                     u["translation_fitted"] = text
                 # ---- split the FINAL text into one part per source burst (lossless): timing distribution of the aligned words (default) or Qwen
