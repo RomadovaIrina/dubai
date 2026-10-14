@@ -1,6 +1,6 @@
 # 2026-10-14 — rollback to the 2026-10-12 pipeline, "thought" pause policy, closed mouth in dub silence (handoff)
 
-> **Current candidate: R11 — see [R11.md](R11.md)** (command, commits, how it works, numbers). R10 below is superseded: its face
+> **Current candidate: R12 (R11 + source-driven mouth, bed fixes) — see [R11.md](R11.md) §6; R13 (geometric jaw closing) rejected** (command, commits, how it works, numbers). R10 below is superseded: its face
 > (closed-mouth freeze) was rejected after a frame-by-frame analysis (`scripts/quality/face_defects.py`), its audio was kept and improved in R11.
 
 **Start here on a new server.** Branch `quality-oct12` (from `73a3027`, the pipeline reviewed on 2026-10-12). Everything below is opt-in
@@ -56,7 +56,9 @@ Shared flags since R1 (`COMMON`): `--pause-policy thought --fit-up off --gate-me
 | R7 | R1 | closed + `--silent-mask big` | the contour step is inside LatentSync's own output, the mask does not help: deleted |
 | R8 | R1 | freeze v2: ECC on the rigid upper head, blur match, illumination transfer | 04 / 03 not reviewed; 01 strained |
 | R9 | — | — | stopped, deleted |
-| **R11** | R10 audio + `--underfill semantic` (meaning chunks on the speaker's bursts) + `--thought-fill spoken` | `--silent-mouth self` (the source articulation, no seam) | **current candidate**, [R11.md](R11.md) |
+| R11 | R10 audio + `--underfill semantic` (meaning chunks on the speaker's bursts) + `--thought-fill spoken` | `--silent-mouth self` (the source articulation, no seam) | 04 good at first look; 03: 'chewing' mouth, Russian 'хорошо' from the bed, [R11.md](R11.md) |
+| **R12** | R11 with `--thought-fill pace`, bed ducked + stationary room tone where only the source speaks | `--silent-mouth source` (LatentSync driven by the source voice there) | **current best**; mouth still moves while the dub is silent, [R11.md](R11.md) §6 |
+| R13 | R12 | `--silent-mouth close` (geometric jaw closing of the source frame) | **rejected**: chin squeezing, floating background / neck, vibration |
 | R10 | R1 + `--thought-slow-floor 0.9` + `--tts-word-qa on` | freeze v3 (keyframes from the speaker's pauses of the same shot, no pressed lips) on close-ups, closed-mouth LatentSync on small faces (< 140 px, 01) | audio liked, face rejected (04 22 s: ghost jaw / foreign background from far keyframes) -> R11 |
 
 R10 command: `DUB_EXTRA_ARGS="$COMMON --silent-mouth freeze --tts-word-qa on --thought-slow-floor 0.9 --overflow tempo --underfill none"`.
