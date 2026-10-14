@@ -38,15 +38,19 @@ class MouthOnlyRunner:
             out[i] = np.mean(nb, axis=0)
         return out
 
-    def mask(self, bbox, H, W):
+    def mask(self, bbox, H, W, big: float = 0.0):
         """Feathered lower-face ellipse as (alpha HxW-crop float32 [..., None], (ya, yb, xa, xb)): only the ROI that can be non-zero is built
-        (ellipse bounding box + 2x the blur kernel), the result equals the full-frame mask inside it (it is 0 outside)."""
+        (ellipse bounding box + 2x the blur kernel), the result equals the full-frame mask inside it (it is 0 outside).
+        big in [0, 1] (2026-10-14, frames where the DUB is silent and LatentSync draws a closed mouth over a talking source): the ellipse grows to
+        the whole lower face incl. the jaw / cheek contour and the upper neck (0.85 x bbox width, down to 0.3 x height below the bbox), so the
+        contour comes from ONE image; the standard ellipse crossed the cheek contour and the closed generated jaw met the open source jaw there
+        ("размазывание", R1 04 22-35 s). Interpolated (0..1) over a few frames around speech <-> silence to avoid a pop."""
         import cv2, numpy as np
         x1, y1, x2, y2 = [int(round(v)) for v in bbox]; w, h = max(x2 - x1, 1), max(y2 - y1, 1)
-        cy = y1 + int(self.top * h); cx = (x1 + x2) // 2
-        # lower face: ellipse spanning the bbox width (+10 %) from mask_top to slightly below the chin
-        axes = (int(w * 0.55), int((y2 + int(0.06 * h) - cy) * 0.5 + 1)); centre = (cx, (cy + y2 + int(0.06 * h)) // 2)
-        k = max(3, int(self.feather * w) | 1); pad = k + 2
+        top = y1 + (self.top + (0.50 - self.top) * big) * h; bot = y2 + (0.06 + 0.24 * big) * h; cx = (x1 + x2) // 2
+        # lower face: ellipse spanning the bbox width (+10 %; up to +70 % when big) from mask_top to slightly below the chin
+        axes = (int(w * (0.55 + 0.30 * big)), int((bot - top) * 0.5 + 1)); centre = (cx, int((top + bot) // 2))
+        k = max(3, int((self.feather + 0.06 * big) * w) | 1); pad = k + 2
         xa, xb = max(0, centre[0] - axes[0] - pad), min(W, centre[0] + axes[0] + pad + 1); ya, yb = max(0, centre[1] - axes[1] - pad), min(H, centre[1] + axes[1] + pad + 1)
         if xb <= xa or yb <= ya: return None, None
         m = np.zeros((yb - ya, xb - xa), np.float32)
@@ -56,11 +60,11 @@ class MouthOnlyRunner:
     def composite(self, outs, originals, boxes=None):
         """outs / originals: same-length sequences of HxWx3 frames (same channel order); returns outs composited into originals."""
         import numpy as np
-        boxes = boxes if boxes is not None else self._boxes; res = []
+        boxes = boxes if boxes is not None else self._boxes; res = []; big = getattr(self, "_big", None)
         for i, o in enumerate(outs):
             bb = boxes[i] if boxes is not None and i < len(boxes) else None
             if bb is None or i >= len(originals): res.append(o); continue
-            m, roi = self.mask(bb, *o.shape[:2])
+            m, roi = self.mask(bb, *o.shape[:2], big=float(big[i]) if big is not None and i < len(big) else 0.0)
             if m is None: res.append(o); continue
             ya, yb, xa, xb = roi; r = np.array(originals[i], copy=True)
             r[ya:yb, xa:xb] = (o[ya:yb, xa:xb].astype(np.float32) * m + r[ya:yb, xa:xb].astype(np.float32) * (1 - m)).round().clip(0, 255).astype(np.uint8)
@@ -70,6 +74,10 @@ class MouthOnlyRunner:
     def run_frames(self, frames_rgb, audio_wav, detections=None, **kw):
         import numpy as np
         outs, dt = self.inner.run_frames(frames_rgb, audio_wav, detections, **kw)
+        ri = kw.get("ref_index"); self._big = None
+        if ri is not None and getattr(self, "silent_big", False):   # dub-silent frames (closed-mouth reference) get the big mask, ramped over +-4 frames
+            sil = np.array([1.0 if (i < len(ri) and ri[i] is not None) else 0.0 for i in range(len(frames_rgb))], np.float32)
+            self._big = np.convolve(np.pad(sil, 4, mode="edge"), np.ones(9, np.float32) / 9, mode="valid")
         if detections is None: self._boxes = None; return outs, dt
         self._boxes = self.boxes(detections, len(frames_rgb))
         if self.deferred: return outs, dt

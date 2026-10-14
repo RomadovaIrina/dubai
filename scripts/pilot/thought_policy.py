@@ -204,12 +204,12 @@ def cover_split(spans: list[dict], raw_words: list[str], bursts: list, next_anch
 # -------------------------------------------------------------------------------------------------------------------------------- placement
 class ThoughtOpts:
     def __init__(self, overflow: set, gap: float = 0.2, inner_gap: float = 0.12, tempo_cap: float = 1.1, hard_cap: float = 1.2, max_shift: float = 1.0,
-                 safety_shift: float = 0.5, tol: float = 0.03, underfill: str = "none"):
+                 safety_shift: float = 0.5, tol: float = 0.03, underfill: str = "none", slow_floor: float = 1.0):
         self.overflow, self.gap, self.inner_gap, self.tempo_cap, self.hard_cap = set(overflow), gap, inner_gap, tempo_cap, hard_cap
-        self.max_shift, self.safety_shift, self.tol, self.underfill = max_shift, safety_shift, tol, underfill
+        self.max_shift, self.safety_shift, self.tol, self.underfill, self.slow_floor = max_shift, safety_shift, tol, underfill, slow_floor
 
     def as_dict(self) -> dict:
-        return {"overflow": sorted(self.overflow), "underfill": self.underfill, "gap": self.gap, "inner_gap": self.inner_gap, "tempo_cap": self.tempo_cap, "hard_cap": self.hard_cap,
+        return {"overflow": sorted(self.overflow), "underfill": self.underfill, "slow_floor": self.slow_floor, "gap": self.gap, "inner_gap": self.inner_gap, "tempo_cap": self.tempo_cap, "hard_cap": self.hard_cap,
                 "max_shift": self.max_shift, "safety_shift": self.safety_shift, "tol": self.tol}
 
 
@@ -252,7 +252,14 @@ def align_units_thought(units: list[dict], plans: list[dict], work: pathlib.Path
                 eff += o.safety_shift; flags.append("safety_shift")
             if dur / tempo > eff + 1e-3:                                      # safety 3: hard tempo (words are never cut)
                 tempo = max(tempo, min(dur / eff, o.hard_cap)); flags.append("safety_hard")
+        if dur <= room + 1e-3 and o.slow_floor < 1.0:
+            # 2026-10-14 (reviewer: "давай попробуем замедление"): the whole sentence a little slower (>= slow_floor) when the speaker on screen keeps
+            # talking after it would end (01 3.8-5.2 s: a 1.3 s closed mouth on a talking face looked strained); never past its window
+            src_end = min(limit, p["bursts"][k][1])
+            if src_end - start > dur + 0.05:
+                tempo = max(o.slow_floor, dur / (src_end - start))
         how = "natural" if dur <= room + 1e-3 else ("tempo" if "tempo" in o.overflow and tempo > 1.001 else "")
+        if tempo < 0.999: how = "slowed"
         seg2 = _atempo(seg, sr, tempo, work / f"thought_u{u['id']:02d}_p{k}")
         end = start + len(seg2) / sr
         if end > limit + 1e-3 and how != "natural":

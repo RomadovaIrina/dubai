@@ -92,6 +92,33 @@ def final_word_missing(expected: str, recognized: str) -> bool:
     return max((difflib.SequenceMatcher(None, r[-1], c).ratio() for c in h[-2:]), default=0.0) < 0.6
 
 
+WORD_QA = False   # --tts-word-qa on (2026-10-13): a lost content word makes the attempt QA-bad (retry ladder); off = recorded only
+
+
+def lost_words(expected: str, *recognized: str, min_len: int = 4, thr: float = 0.6) -> list[str]:
+    """Content words (>= min_len letters, no digits) of the TTS text that NO transcript contains (best fuzzy ratio < thr against every recognised
+    token and token pair): a mispronounced name / word the sentence-level CER hides (04 "Sochi city" -> Whisper "Salkis City", CTC "salcu", CER
+    0.046 = fine; 05 "Just here" -> "This year"; 02 "Hamam" -> "Our mum"). 117 archived sentences of 2026-10-13: 5 flagged, all real."""
+    hyps = [norm(r) for r in recognized]; out = []
+    for w in expected.split():
+        lw = re.sub(r"[^\w']", "", w.lower().replace("’", "'"))
+        if len(re.sub(r"[^a-z]", "", lw)) < min_len or re.search(r"\d", lw):
+            continue
+        if all(max((difflib.SequenceMatcher(None, lw, c).ratio() for c in h + [a + b for a, b in zip(h, h[1:])]), default=0.0) < thr for h in hyps):
+            out.append(w)
+    return out
+
+
+def first_word_lost(expected: str, whisper: str, min_len: int = 4, thr: float = 0.6) -> str | None:
+    """The FIRST content word of the sentence (>= min_len letters) is not among Whisper's first 3 tokens (2026-10-14, 01: Chatterbox swallows
+    the first sound of a sentence, 'Bathroom' -> 'Athrun', 'Plaster' -> 'Colossal'; CTC still matched the letters, so lost_words missed it)."""
+    words = [re.sub(r"[^\w']", "", w.lower()) for w in expected.split()]; words = [w for w in words if w]
+    if not words or len(re.sub(r"[^a-z]", "", words[0])) < min_len or re.search(r"\d", words[0]):
+        return None
+    h = norm(whisper)[:3]
+    return None if any(difflib.SequenceMatcher(None, words[0], c).ratio() >= thr for c in h) else words[0]
+
+
 class TtsQA:
     def __init__(self, device: str = "cuda", whisper_dir: str | pathlib.Path | None = None, w2v_dir: str | pathlib.Path | None = None):
         import torch
@@ -135,7 +162,11 @@ class TtsQA:
         if score > BAD_SCORE: reasons.append(f"cer {score:.2f}")
         if ints: reasons.append("interjection " + ",".join(sorted(set(ints))))
         if words <= 2 and dur / max(words, 1) > 1.2: reasons.append(f"stretched {dur:.1f}s for {words} words")
-        return {"bad": bool(reasons), "score": round(float(score), 3), "reasons": reasons, "ctc": c_txt, "whisper": w_txt, "ctc_cer": round(c_cer, 3), "w_cer": round(w_cer, 3),
+        lost = lost_words(expected, c_txt, w_txt) if language == "en" else []
+        if WORD_QA and lost: reasons.append("lost word " + ",".join(lost))
+        fw = first_word_lost(expected, w_txt) if language == "en" else None
+        if WORD_QA and fw and not lost: reasons.append(f"first word lost {fw}")
+        return {"bad": bool(reasons), "lost_words": lost, "score": round(float(score), 3), "reasons": reasons, "ctc": c_txt, "whisper": w_txt, "ctc_cer": round(c_cer, 3), "w_cer": round(w_cer, 3),
                 "interjections": ints, "words": words, "final_word_missing": final_word_missing(expected, c_txt) and final_word_missing(expected, w_txt)}
 
     def close(self):

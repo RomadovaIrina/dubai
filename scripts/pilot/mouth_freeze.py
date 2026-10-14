@@ -35,6 +35,45 @@ def _mask_of(intervals, n: int, pad: float) -> np.ndarray:
     return m
 
 
+def _lip_thickness(lm: np.ndarray) -> float:
+    """Outer lip height / inter-brow distance: pressed lips ("m / p / b", rolled in) are thin -> a strained face as a frozen mouth (01 R6)."""
+    unit = np.linalg.norm(lm[97:106].mean(0) - lm[43:52].mean(0))
+    return float((lm[52:72, 1].max() - lm[52:72, 1].min()) / max(unit, 1e-6))
+
+
+def _droop(lm: np.ndarray) -> float:
+    """Mouth corners below the lip centre line / inter-brow distance (> 0 = corners turned down: pressed / frowning mouth, the "strained" face of
+    01 R6/R8 3.9-5.0 s, keyframe taken mid-speech on a pressed "m")."""
+    unit = np.linalg.norm(lm[97:106].mean(0) - lm[43:52].mean(0))
+    return float((lm[[52, 61], 1].mean() - 0.5 * (lm[71, 1] + lm[53, 1])) / max(unit, 1e-6))
+
+
+def shots(frames: list, thr: float = 0.55) -> np.ndarray:
+    """Shot id per frame: a cut where the HSV histogram correlation of consecutive frames drops below thr (01 cuts from the speaker to the
+    interior b-roll and back to another room: a keyframe must come from the SAME shot)."""
+    import cv2
+    ids = np.zeros(len(frames), np.int32); prev = None; k = 0
+    for i, f in enumerate(frames):
+        h = cv2.calcHist([cv2.cvtColor(cv2.resize(f, (96, 96)), cv2.COLOR_BGR2HSV)], [0, 1], None, [16, 16], [0, 180, 0, 256]); cv2.normalize(h, h)
+        if prev is not None and cv2.compareHist(prev, h, cv2.HISTCMP_CORREL) < thr: k += 1
+        ids[i] = k; prev = h
+    return ids
+
+
+def _upper_mask(shape, lm: np.ndarray) -> np.ndarray:
+    """uint8 mask of the rigid upper head (brows, eyes / glasses, nose, upper cheeks) for the ECC alignment: no mouth / jaw."""
+    import cv2
+    pts = np.concatenate([lm[STABLE], lm[CONTOUR][lm[CONTOUR][:, 1] < lm[NOSE_BASE, 1].mean()]])
+    m = np.zeros(shape[:2], np.uint8); cv2.fillConvexPoly(m, cv2.convexHull(pts.astype(np.int32)), 255)
+    return m
+
+
+def _sharpness(gray: np.ndarray, m: np.ndarray) -> float:
+    import cv2
+    v = cv2.Laplacian(gray, cv2.CV_32F)[m > 0]
+    return float(v.var()) if v.size else 0.0
+
+
 def _cavity(frame, lm: np.ndarray) -> float:
     """Dark mouth cavity / teeth line between the lips: mean grey of the inner-lip polygon relative to the lip ring (1.0 = no gap; lower =
     a visible gap). The landmark gap alone missed slightly parted lips of 04 (R6 2026-10-14)."""
@@ -85,6 +124,7 @@ def apply_freeze(master_frames: list, ls_frames: np.ndarray, src_speech: list, d
     samp = [lm(int(i)) for i in range(0, n, max(1, n // 200))]
     ops = [_open(l) for l in samp if l is not None]
     thr = float(np.percentile(ops, 10)) if ops else None
+    thick = [_lip_thickness(l) for l in samp if l is not None]; thick_med = float(np.median(thick)) if thick else None
     runs = []; i = 0
     while i < n:
         if want[i]:
@@ -95,6 +135,8 @@ def apply_freeze(master_frames: list, ls_frames: np.ndarray, src_speech: list, d
             i += 1
     st["runs"] = len(runs); st["closed_thr"] = round(thr, 3) if thr is not None else None
     src_quiet = ~_mask_of(src_speech, n, 0.15)   # the speaker is silent there (+150 ms): his mouth is at rest, the most reliable "closed" frames
+    src_quiet_tight = ~_mask_of(src_speech, n, 0.04)   # short breaths between sentences (01 has one 0.2 s pause in its first shot)
+    shot = shots(master_frames); droops = [_droop(l) for l in samp if l is not None]; droop_med = float(np.median(droops)) if droops else 0.0
     for a, b in runs:
         chunks = []; c0 = a; L = int(chunk_s * FPS)
         while c0 < b:
@@ -106,10 +148,12 @@ def apply_freeze(master_frames: list, ls_frames: np.ndarray, src_speech: list, d
             mid = (c0 + c1) // 2; ref = lm(mid) if lm(mid) is not None else next((lm(t) for t in range(c0, c1) if lm(t) is not None), None)
             if ref is None:
                 keys.append(None); continue
-            best = None
-            for w_ in (window_s, 2 * window_s, 4 * window_s, n / FPS):   # widen the search when no closed frame is near (last: the whole video)
+            best = None; same = shot == shot[mid]
+            # pass 1: only frames where the speaker is silent (mouth at rest), widening up to the whole shot; pass 2: any frame of the shot
+            for quiet, w_ in [(src_quiet, window_s), (src_quiet, 2 * window_s), (src_quiet_tight, 2 * window_s), (None, window_s), (None, 2 * window_s), (None, n / FPS)]:
               lo, hi = max(0, c0 - int(w_ * FPS)), min(n, c1 + int(w_ * FPS))
-              for t in range(lo, hi, 2):
+              for t in range(lo, hi, 1 if quiet is not None else 2):
+                if not same[t] or (quiet is not None and not quiet[t]): continue
                 lt = lm(t)
                 if lt is None: continue
                 o = _open(lt)
@@ -120,7 +164,11 @@ def apply_freeze(master_frames: list, ls_frames: np.ndarray, src_speech: list, d
                 fw = float(ref[CONTOUR, 0].max() - ref[CONTOUR, 0].min())
                 if res > 0.05 * fw and w_ < n / FPS: continue          # another head pose (out-of-plane): the warp cannot match it (04 25.4 s ghost of the nose shadow)
                 # closedness first (landmark gap, then a dark gap between the lips), then pose match (relative to face width), nearness, source silent
-                score = 100 * o + 4.0 * (1.0 - min(1.0, _cavity(master_frames[t], lt))) + 40 * res / fw + 0.3 * abs(t - mid) / FPS + (0.0 if src_quiet[t] else 3.0)
+                # pressed lips are THINNER than usual (01: every "closed" frame of a speaker without pauses is a pressed "m" -> strained face);
+                # a slight gap of relaxed lips is natural, so the dark-gap term is weak
+                pressed = max(0.0, 0.95 - _lip_thickness(lt) / thick_med) if thick_med else 0.0
+                droop = max(0.0, _droop(lt) - droop_med)                                             # corners lower than usual = frowning / strained
+                score = 100 * o + 1.5 * (1.0 - min(1.0, _cavity(master_frames[t], lt))) + 40 * res / fw + 0.3 * abs(t - mid) / FPS + (0.0 if src_quiet[t] else 3.0) + 60 * pressed + 60 * droop
                 if best is None or score < best[0]: best = (score, t)
               if best is not None: break
             keys.append(best[1] if best else None)
@@ -135,7 +183,23 @@ def apply_freeze(master_frames: list, ls_frames: np.ndarray, src_speech: list, d
             M, _ = cv2.estimateAffinePartial2D(kl[STABLE], lt[STABLE])
             if M is None:
                 return None
-            H, W = kf.shape[:2]; wk = cv2.warpAffine(kf, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+            H, W = kf.shape[:2]
+            # landmark similarity -> ECC refinement on the rigid upper head (R6 04 8-12 s: landmark noise behind sunglasses shook the frozen jaw)
+            cg = cv2.cvtColor(master_frames[t], cv2.COLOR_BGR2GRAY).astype(np.float32); kg = cv2.cvtColor(kf, cv2.COLOR_BGR2GRAY).astype(np.float32)
+            Winv = cv2.invertAffineTransform(M).astype(np.float32); um = _upper_mask(cg.shape, lt)
+            try:
+                _, Winv = cv2.findTransformECC(cg, kg, Winv, cv2.MOTION_AFFINE, (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 60, 1e-5), um, 5)
+                M = cv2.invertAffineTransform(Winv)
+            except cv2.error:
+                pass
+            wk = cv2.warpAffine(kf, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+            # motion blur of the handheld frame: blur the sharp keyframe until its upper-head sharpness matches the current frame's
+            sc = _sharpness(cg, um); wg = cv2.cvtColor(wk, cv2.COLOR_BGR2GRAY).astype(np.float32)
+            if sc > 0 and _sharpness(wg, um) > 1.3 * sc:
+                for sg in (0.6, 0.9, 1.3, 1.8, 2.5):
+                    wb = cv2.GaussianBlur(wk, (0, 0), sg)
+                    if _sharpness(cv2.cvtColor(wb, cv2.COLOR_BGR2GRAY).astype(np.float32), um) <= 1.15 * sc: break
+                wk = wb
             kc = kl[CONTOUR] @ M[:, :2].T + M[:, 2]; cc = lt[CONTOUR]
             top = 0.5 * (float(lt[NOSE_BASE, 1].mean()) + float(lt[[63, 71, 67], 1].mean()))   # mid upper lip: nose / nostril shading stay the current frame
             fw = float(cc[:, 0].max() - cc[:, 0].min())

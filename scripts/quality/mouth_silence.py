@@ -48,6 +48,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--manifest", required=True); ap.add_argument("--video", default=None); ap.add_argument("--pad", type=float, default=0.12)
     ap.add_argument("--sheet", default=None); ap.add_argument("--json", default=None)
+    ap.add_argument("--scope", choices=["ls", "all"], default="ls", help="ls = LatentSync frames only; all = every frame (frames without a face are skipped): "
+                    "needed for --silent-mouth freeze, whose frozen frames are outside LatentSync")
     a = ap.parse_args()
     import face_aware_latentsync as fa
     from face_aware_latentsync_accel import mouth_open
@@ -57,6 +59,8 @@ def main() -> int:
     for s in man["lipsync"]["segments"]:
         if s["action"] == "LATENT_SYNC": ls[s["start_frame"]:min(n, s["end_frame"])] = True
     dub = mask(vad(man["dubbed_track"]["wav16k"]), n, a.pad); src = mask([(v["start"], v["end"]) for v in man["speech_intervals"]], n, 0.0)
+    if a.scope == "all":
+        ls = np.ones(n, bool)
     idx = [int(i) for i in np.flatnonzero(ls)]
     det = fa.face_detector()
     O = frames_at(vid, idx); Mst = frames_at(master, idx)

@@ -309,6 +309,12 @@ def closed_mouth_refs(dets: list, start_frame: int, dub_speech: list, src_speech
     pool = np.where(fin & src_quiet & (op <= thr))[0]
     if len(pool) == 0:
         pool = np.where(fin & (op <= thr))[0]
+    # lip thickness: a pressed "m" (thin lips) as the reference gave the "strained" face of 01 (2026-10-14) -> drop pool frames clearly thinner than usual
+    th = np.array([(np.ptp(np.asarray(d[1])[52:72, 1]) / max(np.linalg.norm(np.asarray(d[1])[97:106].mean(0) - np.asarray(d[1])[43:52].mean(0)), 1e-6))
+                   if d is not None and d[0] is not None else np.nan for d in dets])
+    if np.isfinite(th).any() and len(pool):
+        good = pool[th[pool] >= 0.95 * np.nanmedian(th)]
+        if len(good): pool = good
     ref = [None] * n; runs = []; i = 0
     while i < n:
         if silent[i]:
@@ -363,6 +369,19 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
         t0 = time.perf_counter(); master, _own = fa.make_master(src, work); times["ls_master_25fps"] = round(time.perf_counter() - t0, 3)
         t0 = time.perf_counter(); master_frames = fa.read_frames(master); times["ls_master_decode"] = round(time.perf_counter() - t0, 3)
     n = len(master_frames)
+    if silent_mouth is not None and silent_mouth.get("mode") == "freeze":
+        # freeze needs a close-up: on a small face (01: ~90 px wide in the 25 fps master) the alignment is unreliable and a gesture can be
+        # pasted with the keyframe -> that video uses LatentSync with the closed-mouth reference instead (gate = source U dub speech, as R1)
+        fw = []
+        for t in np.linspace(0, n - 1, 40).astype(int):
+            bb, _l = fa.face_detector()(cv2.cvtColor(master_frames[t], cv2.COLOR_BGR2RGB))
+            if bb is not None: fw.append(bb[2] - bb[0])
+        silent_mouth = dict(silent_mouth); silent_mouth["face_w_median"] = round(float(np.median(fw)), 1) if fw else None
+        if not fw or np.median(fw) < silent_mouth.get("min_face_w", 140):
+            silent_mouth["mode"] = "closed"; silent_mouth["freeze_skipped"] = "small face"
+            speech_gate = build_speech_gate([silent_mouth["src_speech"], silent_mouth["dub_speech"]], n / FPS, silent_mouth.get("gate_margin_s", GATE_DEFAULTS["margin_s"]),
+                                            silent_mouth.get("gate_merge_gap_s", GATE_DEFAULTS["merge_gap_s"]))
+            log(f"  [freeze] median face width {silent_mouth['face_w_median']} px < {silent_mouth.get('min_face_w', 140)}: closed-mouth LatentSync instead (gate = source U dub speech)")
     gate = gate_mask(speech_gate, n) if speech_gate is not None else None
 
     t0 = time.perf_counter()
@@ -527,6 +546,8 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
             "latentsync_seconds_of_video": round(lipsynced / FPS, 3), "pass_through_seconds_of_video": round((n - lipsynced) / FPS, 3),
             "ls_fraction": round(lipsynced / max(n, 1), 4), "latentsync_inference_total_s": round(sum(ls_runs), 2), "verify_seconds": round(t_verify, 2),
             "latentsync_calls": len(ls_runs), "verify_splits": verify_info, "assembly": asm, "output_frame_check": frame_check, "mouth_freeze": freeze_info,
+            "silent_mouth": {k: v for k, v in (silent_mouth or {}).items() if k not in ("src_speech", "dub_speech")},
+            "speech_gate_used": [list(g) for g in speech_gate] if speech_gate is not None else None,
             "codeformer": ("OFF (gate metadata only: codeformer_eligible on LATENT_SYNC segments)" if codeformer == "off" else
                            {"mode": "optimized", "config": cf_runner.config, "load_s": cf_runner.load_s, "totals": dict(cf_runner.totals),
                             "eligible_frames": sum(s["frames"] for s in segs if s["action"] == "LATENT_SYNC"), "master_frames": n,

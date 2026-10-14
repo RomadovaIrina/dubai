@@ -577,6 +577,7 @@ def run_lipsync_optimized(src: pathlib.Path, work: pathlib.Path, dubbed16k: path
         sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
         from candidate_video_stage import MouthOnlyRunner
         runner = MouthOnlyRunner(runner, a.mask_top, a.mask_feather, a.mask_smooth, defer=a.codeformer_scope == "mouth")
+        runner.silent_big = a.silent_mask == "big"
     cf_runner = None
     if a.codeformer == "optimized":
         from codeformer_accel import CodeFormerAccel
@@ -627,6 +628,8 @@ def main() -> int:
     ap.add_argument("--fit-rounds", type=int, default=4); ap.add_argument("--fit-target-ratio", type=float, default=1.05)
     ap.add_argument("--burst-max-lead", type=float, default=0.4, help="burst mode: a part that would need more than --atempo-cap may start up to this many seconds before its burst, into free silence, instead of being sped up")
     ap.add_argument("--tts-qa", choices=["on", "off"], default="on", help="burst mode: independent-ASR QA of every TTS part with per-part retry (English targets only)")
+    ap.add_argument("--tts-word-qa", choices=["off", "on"], default="off", help="phrase mode: an attempt where Whisper AND CTC both miss a content word of the text (>= 4 letters) "
+                    "is QA-bad -> retry ladder (2026-10-13 tts_qa.lost_words; 2026-10-14 01: Chatterbox swallowed the first sound, 'Bathroom' -> 'Athrun', 'Plaster' -> 'Colossal')")
     ap.add_argument("--tts-retries", type=int, default=2, help="QA retry ladder length after the first attempt: new seed, then new seed + --qa-temp")
     ap.add_argument("--qa-temp", type=float, default=0.6)
     ap.add_argument("--segmentation", choices=["whisper", "sentence"], default="sentence",
@@ -658,6 +661,7 @@ def main() -> int:
                     "at punctuation onto source pauses (pause only after a clause) when that covers >= 1 s more source speech; none = the pure rule")
     ap.add_argument("--thought-gap", type=float, default=0.2, help="--pause-policy thought: minimum pause before the next sentence (s)")
     ap.add_argument("--thought-tempo-cap", type=float, default=1.1); ap.add_argument("--thought-max-shift", type=float, default=1.0)
+    ap.add_argument("--thought-slow-floor", type=float, default=1.0, help="--pause-policy thought: a sentence that ends before the speaker's own speech may be slowed down to this tempo (1.0 = never)")
     ap.add_argument("--qwen-gpu-layers", type=int, default=0, help="Qwen layers offloaded to the GPU (-1 = all); 0 = frozen CPU baseline. Needs a CUDA llama-cpp-python build "
                                                                    "(A/B 2026-10-12: translation 18x faster, outputs not identical to the CPU)")
     ap.add_argument("--background", choices=["on", "off"], default="on",
@@ -699,6 +703,9 @@ def main() -> int:
                          "silent mouth), closed = the nearest closed-mouth frame of the segment (2026-10-14 'рот должен быть закрыт, когда английская речь закончилась'); "
                          "freeze = LatentSync only where the dub speaks (gate = dub VAD), where the source talks and the dub is silent the lower face incl. the jaw "
                          "contour comes from a nearby closed-mouth source frame (mouth_freeze.py: no smeared jaw contour), elsewhere the source frame")
+    ap.add_argument("--silent-mask", choices=["standard", "big"], default="standard", help="--mouth-only-pasteback with --silent-mouth closed: big = where the dub is silent "
+                    "the paste-back covers the whole lower face incl. the jaw contour + upper neck (one image provides the contour: no smeared jaw step, 2026-10-14)")
+    ap.add_argument("--freeze-min-face-w", type=float, default=140.0, help="--silent-mouth freeze: below this median face width (px, 25 fps master) the video uses closed-mouth LatentSync")
     ap.add_argument("--silent-mouth-pad", type=float, default=0.12, help="--silent-mouth closed: dub speech is extended by this (s) on both sides before a frame counts as silent")
     ap.add_argument("--segment-files", action="store_true", help="optimized backend: legacy per-segment mp4 path instead of in-memory segments")
     a = ap.parse_args()
@@ -803,7 +810,7 @@ def main() -> int:
             tools = {x.strip() for x in a.overflow.split(",") if x.strip()}
             if not tools <= {"rewrite", "split", "shift", "tempo"}:
                 raise Blocker(f"--overflow: unknown tool(s) {sorted(tools - {'rewrite', 'split', 'shift', 'tempo'})}")
-            thought_opts = ThoughtOpts(tools, gap=a.thought_gap, tempo_cap=a.thought_tempo_cap, max_shift=a.thought_max_shift, underfill=a.underfill)
+            thought_opts = ThoughtOpts(tools, gap=a.thought_gap, tempo_cap=a.thought_tempo_cap, max_shift=a.thought_max_shift, underfill=a.underfill, slow_floor=a.thought_slow_floor)
         man["pause_policy"] = {"policy": a.pause_policy, **(thought_opts.as_dict() if thought_opts else {})}
         tr = run_translation(units, src_lang, tgt, times, plans=plans, split_retries=a.split_retries,
                              min_part_words=a.min_part_words, soft_part_words=a.soft_part_words, part_max_words=a.part_max_words,
@@ -822,6 +829,7 @@ def main() -> int:
                 print(f"  [warn] --tts-qa uses English ASR models; disabled for target language {tgt}", flush=True); qa_on = False
             if phrase_mode:
                 from tts_burst import run_tts_phrase
+                import tts_qa; tts_qa.WORD_QA = a.tts_word_qa == "on"
                 man["tts"] = run_tts_phrase(units, plans, refs, tgt, work, a.seed, times, opts=burst_opts, llm=llm, src_name=lang_name(src_lang), tgt_name=lang_name(tgt),
                                             fit={"enabled": llm is not None and a.fit_retranslate == "on", "rounds": a.fit_rounds, "target_ratio": a.fit_target_ratio,
                                                  "short_min_words": a.fit_down_short_words, "short_overflow_s": a.fit_down_short_overflow_s},
@@ -895,7 +903,8 @@ def main() -> int:
             silent_mouth = None
             if a.silent_mouth in ("closed", "freeze"):   # freeze: LS-internal silent frames (gate margins / merged gaps) keep the closed-mouth reference
                 dsp = dub_speech if a.speech_gate == "on" else run_vad(pathlib.Path(man["dubbed_track"]["wav16k"]))
-                silent_mouth = {"mode": a.silent_mouth, "dub_speech": [(v["start"], v["end"]) for v in dsp], "src_speech": [(v["start"], v["end"]) for v in speech], "pad_s": a.silent_mouth_pad}
+                silent_mouth = {"mode": a.silent_mouth, "dub_speech": [(v["start"], v["end"]) for v in dsp], "src_speech": [(v["start"], v["end"]) for v in speech], "pad_s": a.silent_mouth_pad,
+                                "gate_margin_s": a.gate_margin_s, "gate_merge_gap_s": a.gate_merge_gap_s, "min_face_w": a.freeze_min_face_w}
             man["silent_mouth"] = {"mode": a.silent_mouth, "pad_s": a.silent_mouth_pad}
             man["lipsync"] = run_lipsync_optimized(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), mux_aac, out, a, times,
                                                    speech_gate=speech_gate, silent_mouth=silent_mouth)
