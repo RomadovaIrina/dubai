@@ -147,7 +147,27 @@ class StableLatentSync(AccelLatentSync):
                             final[:, :, a_:b_] = x; done = b_
                     latents = final
                     timesteps_done = True
+                elif self.stride is None:   # plain (longer) windows: group by group with all steps inside, like upstream -> ONE DeepCache cache alive
+                    with _sdpa_context(self.sdpa):
+                        for gi, grp in enumerate(groups):
+                            x = torch.cat([latents[:, :, a:b] for a, b in grp]); mk = torch.cat([mask_lat[:, :, a:b] for a, b in grp])
+                            mi = torch.cat([masked_lat[:, :, a:b] for a, b in grp]); rl = torch.cat([ref_lat[:, :, a:b] for a, b in grp]); au = torch.cat([audio_all[a:b] for a, b in grp])
+                            if do_cfg:
+                                mk, mi, rl, au = torch.cat([mk] * 2), torch.cat([mi] * 2), torch.cat([rl] * 2), torch.cat([torch.zeros_like(au), au])
+                            if dc is not None:
+                                dc.cached_output = {}
+                            for t in timesteps:
+                                x2 = torch.cat([x] * 2) if do_cfg else x
+                                npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1
+                                if do_cfg:
+                                    nu, na = npred.chunk(2); npred = nu + self.guidance * (na - nu)
+                                x = pipe.scheduler.step(npred, t, x, **extra).prev_sample
+                            for k, (a, b) in enumerate(grp):
+                                latents[:, :, a:b] = x[k:k + 1]
+                    timesteps_done = True
                 else:
+                    if dc is not None:   # per-step fusion keeps every window group's DeepCache feature cache alive at once -> OOM on long segments
+                        raise ValueError("overlap 'fuse' with a stride needs --no-deepcache (or use --overlap continue)")
                     timesteps_done = False
                 with _sdpa_context(self.sdpa):
                     for t in ([] if timesteps_done else timesteps):

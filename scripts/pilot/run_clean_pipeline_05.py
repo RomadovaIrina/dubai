@@ -742,9 +742,9 @@ def main() -> int:
                     "all models + Qwen resident on the GPU at the LatentSync peak = the pilot 0.4 question); off = released before LatentSync")
     ap.add_argument("--qwen-gpu-layers", type=int, default=0, help="Qwen layers offloaded to the GPU (-1 = all); 0 = frozen CPU baseline. Needs a CUDA llama-cpp-python build "
                                                                    "(A/B 2026-10-12: translation 18x faster, outputs not identical to the CPU)")
-    ap.add_argument("--background", choices=["on", "off"], default="on",
+    ap.add_argument("--background", choices=["on", "off"], default="off",
                     help="final mix: on = source background bed (Hybrid Demucs accompaniment, original voice/bed balance, ducked under the dub) under the dubbed voice; "
-                         "off = dubbed voice over digital silence (previous behaviour). LatentSync / speech gate always use the clean dubbed voice. Default on since 2026-10-12 (dead air 16-54 s -> 0-6 s, WER unchanged)")
+                         "off = dubbed voice over digital silence (previous behaviour). LatentSync / speech gate always use the clean dubbed voice. Was default on 2026-10-12..16 (dead air 16-54 s -> 0-6 s); default OFF since 2026-10-16: the HDemucs MUSDB18-HQ weights are non-commercial (needs DUB_ALLOW_NC=1) until a clean bed exists")
     ap.add_argument("--bg-duck-db", type=float, default=-6.0, help="--background on: bed attenuation while the dub speaks (dB)")
     ap.add_argument("--bg-src-duck-db", type=float, default=0.0, help="--background on: extra bed attenuation where the source speaks and the dub is silent (Demucs voice residue); 0 = off")
     ap.add_argument("--bg-offset-db", type=float, default=0.0, help="--background on: bed level relative to the original voice/background balance (dB)")
@@ -797,7 +797,7 @@ def main() -> int:
     if a.codeformer is None:
         a.codeformer = "off"          # CLEAN-ONLY default (2026-10-16): CodeFormer is S-Lab non-commercial
     import clean_face_stack as cfs   # refuses NC settings unless DUB_ALLOW_NC=1, then blocks every NC loader in this process
-    cfs.enforce_clean(a.face_stack, a.codeformer, a.video_backend, what="run_clean_pipeline_05")
+    cfs.enforce_clean(a.face_stack, a.codeformer, a.video_backend, what="run_clean_pipeline_05", background=a.background)
     if a.no_codeformer and a.codeformer != "off":
         print("--no-codeformer contradicts --codeformer optimized", file=sys.stderr); return 2
     if a.codeformer != "off" and a.video_backend != "optimized":

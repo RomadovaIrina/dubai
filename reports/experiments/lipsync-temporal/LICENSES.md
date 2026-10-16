@@ -22,6 +22,16 @@ Rule: only components with verdict YES (code + weights + every pretrained sub-mo
 | the 106-point index table + anchor correction in `scripts/pilot/clean_face_stack.py` (`MAP106`, `clean_face_stack_calib.json`) | our code; derived offline from cached evaluation landmarks of the baseline masters (no InsightFace model runs in the product path) | YES |
 | CodeFormer / ParseNet / RetinaFace R50 / InsightFace buffalo_l | NC | **quarantined** in `/workspace/dub/quarantine_nc/` (README with sha256 + reason); `guard_nc()` makes their loaders raise in clean runs; `download_models.sh` fetches them only with `DUB_ALLOW_NC=1` |
 
+**Training data of the generators (coordinator request 2026-10-16, for the generator decision):**
+* **LatentSync 1.5 / 1.6 was TRAINED on VoxCeleb2 + HDTF** (paper arXiv 2412.09262: "a mixture of VoxCeleb2 and HDTF"), plus undisclosed
+  "Chinese data" (1.5 changelog) and undisclosed 512² video (1.6 card). VoxCeleb2 / HDTF are research datasets of YouTube videos -> LatentSync
+  is in the **YES\* (permissive weights, NC / research-only training data)** class, like pyannote. The weights licence itself (Open RAIL++-M) allows commercial use.
+* **TBDub**: proprietary studio green-screen + livestream footage (3:1, per its paper via the desk sub-survey, not re-verified), and its DiT
+  starts from X-Dub (Kling: "600 h" of unnamed internet video) on a Wan2.2 base -> **YES\*** (permissive weights, undisclosed / unnamed data provenance; no
+  dataset is named as non-commercial).
+* MediaPipe Face Landmarker: consented, Google-collected images (model cards) -> YES.
+* Background bed: HDemucs MUSDB18-HQ -> **NO**, quarantined 2026-10-16 (`--background` now defaults to off, loader blocked by `guard_nc()`).
+
 EVAL_ONLY (never imported by the product path): SyncNet `syncnet_v2.model` + S3FD `sfd_face.pth` (SyncNet scoring),
 YuNet `face_detection_yunet_2023mar.onnx` (common metric `mouth_jitter_hr.py`; MIT file, WIDER FACE data), MediaPipe in IMAGE mode for
 `lipsync_jitter.py` v3 (metric landmarks). `face_temporal.py` (InsightFace landmarks) is retired by this track.

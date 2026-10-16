@@ -239,7 +239,9 @@ def main() -> int:
                "peak_vram_mib_torch": peak, "gpu": gpu_info(), "mux_audio": str(mux_src), "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
     write_json(out / f"{vid}_{a.tag}.manifest.json", wm)
     for p in work.glob("seg*_in.wav"): p.unlink(missing_ok=True)
-    ok = rep["output_frame_check"]["pass"]
+    failed = [sg["index"] for sg in rep["segments"] if sg["action"] == "PASS_THROUGH_LS_FAILED"]
+    ok = rep["output_frame_check"]["pass"] and not failed           # a LatentSync failure (e.g. OOM) silently passed through = FAIL
+    if failed: print(f"  [check] LatentSync FAILED on segments {failed} (passed through) -> FAIL", flush=True)
     print(f"== {vid} {a.tag}: frames {rep['assembly']['frames_written']} check {'PASS' if ok else 'FAIL'} LS {rep['latentsync_inference_total_s']}s total {times['total']}s peak {peak} MiB -> {clip}")
     return 0 if ok else 4
 

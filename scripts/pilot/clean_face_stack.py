@@ -190,6 +190,16 @@ def guard_nc():
         pass
     import face_aware_latentsync as fa
     fa.face_detector = blocked("LatentSync FaceDetector (face_aware_latentsync.face_detector)")
+    try:   # background bed separator: torchaudio HDEMUCS_HIGH_MUSDB_PLUS (no weights licence, MUSDB18-HQ NC); it would auto-download to the torch hub cache
+        import torchaudio
+        torchaudio.pipelines.HDEMUCS_HIGH_MUSDB_PLUS.get_model = blocked("torchaudio HDEMUCS_HIGH_MUSDB_PLUS (background bed)")
+    except Exception:
+        pass
+    try:
+        import background_bed
+        background_bed.load_demucs = blocked("background_bed.load_demucs (HDemucs MUSDB18-HQ)")
+    except Exception:
+        pass
     return True
 
 
@@ -216,7 +226,8 @@ def install_tripwires() -> list:
     return made
 
 
-def enforce_clean(face_stack: str | None = "mediapipe", codeformer: str | None = "off", video_backend: str | None = "optimized", what: str = "run"):
+def enforce_clean(face_stack: str | None = "mediapipe", codeformer: str | None = "off", video_backend: str | None = "optimized", what: str = "run",
+                  background: str | None = "off"):
     """Refuse non-commercial settings unless DUB_ALLOW_NC=1, then block every NC loader in this process (guard_nc) and arm the tripwires."""
     if nc_allowed():
         print(f"[clean] DUB_ALLOW_NC=1: non-commercial components allowed for this {what} (NOT a product-path run)", flush=True)
@@ -225,6 +236,7 @@ def enforce_clean(face_stack: str | None = "mediapipe", codeformer: str | None =
     if face_stack not in (None, "mediapipe"): bad.append(f"--face-stack {face_stack} (InsightFace buffalo_l / RetinaFace R50)")
     if codeformer not in (None, "off"): bad.append(f"--codeformer {codeformer} (CodeFormer S-Lab NC)")
     if video_backend not in (None, "optimized"): bad.append(f"--video-backend {video_backend} (InsightFace classification)")
+    if background not in (None, "off"): bad.append(f"--background {background} (HDemucs MUSDB18-HQ separator, non-commercial)")
     if bad:
         raise SystemExit("CLEAN-ONLY: non-commercial component requested: " + "; ".join(bad) + ". Use the clean defaults, or set DUB_ALLOW_NC=1 "
                          "for a research-only run.")
