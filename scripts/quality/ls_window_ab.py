@@ -124,6 +124,8 @@ def main() -> int:
     ap.add_argument("--stride", type=int, default=None); ap.add_argument("--ref-mode", choices=["same", "fixed"], default="same")
     ap.add_argument("--overlap", choices=["fuse", "continue"], default="fuse", help="with --stride: fuse = per-step latent fusion (needs DeepCache off for long segments); continue = sequential windows pinned to the previous result")
     ap.add_argument("--window-len", type=int, default=None, help="LatentSync temporal window (16 trained, <= 24)")
+    ap.add_argument("--bridge-len", type=int, default=0, help="budget seam fix: bridge window length over every seam (0 = off)")
+    ap.add_argument("--bridge-steps", type=int, default=0, help="budget seam fix: re-denoise the bridge for the last k DDIM steps")
     ap.add_argument("--ref-select", choices=["calm_any", "calm_closed"], default="calm_any"); ap.add_argument("--ref-lm", default=None, help="master landmark npz (lipsync_jitter cache) for the reference choice")
     # cand5 video settings (defaults = the baseline)
     ap.add_argument("--window-batch-size", type=int, default=2); ap.add_argument("--deepcache-interval", type=int, default=5); ap.add_argument("--no-deepcache", action="store_true")
@@ -177,7 +179,7 @@ def main() -> int:
         runner = PrecomputedRunner(pathlib.Path(a.precomputed), frames, a.precomputed_label, a.precomputed_seconds)
     else:
         runner = StableRunner(a.window_batch_size, not a.no_deepcache, a.steps, a.guidance, 1247, a.deepcache_interval, stride=a.stride, ref_mode=a.ref_mode, mode=a.mode,
-                              overlap=a.overlap, window_len=a.window_len)
+                              overlap=a.overlap, window_len=a.window_len, bridge_len=a.bridge_len, bridge_steps=a.bridge_steps)
     times["latentsync_load"] = round(time.perf_counter() - t, 3)
     ref_info = None
     if a.ref_mode == "fixed" and not a.precomputed:
