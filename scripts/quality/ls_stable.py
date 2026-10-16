@@ -203,6 +203,8 @@ class StableLatentSync(AccelLatentSync):
                 if self.bridge_len and self.bridge_steps and self.stride is None:   # budget seam fix: low-noise bridge windows over every seam
                     t0 = time.perf_counter(); eps0 = eps_init
                     k0 = max(0, len(timesteps) - self.bridge_steps); half = self.bridge_len // 2
+                    dc_start = getattr(dc, "start_timestep", None) if dc is not None else None
+                    if dc is not None: dc.start_timestep = k0   # DeepCache counts its skip schedule from start_timestep: each bridge must open with a full step
                     with _sdpa_context(self.sdpa):
                         for seam in [w[0] for w in windows[1:]]:
                             a_, b_ = max(0, seam - half), min(n, seam + (self.bridge_len - half))
@@ -222,6 +224,7 @@ class StableLatentSync(AccelLatentSync):
                             L_ = b_ - a_; w = torch.tensor([min(i + 1, L_ - i) for i in range(L_)], device=device, dtype=torch.float32)
                             w = (w / w.max()).clamp(max=1.0).to(weight_dtype).view(1, 1, -1, 1, 1)
                             latents[:, :, a_:b_] = w * x + (1 - w) * latents[:, :, a_:b_]; bridges += 1
+                    if dc is not None: dc.start_timestep = dc_start
                     torch.cuda.synchronize(); t_bridge = time.perf_counter() - t0
                 if dc is not None:
                     dc.cached_output = {}
