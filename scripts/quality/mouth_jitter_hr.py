@@ -20,6 +20,10 @@ face-stabilised, full-resolution crops and separates motion from appearance:
                   acc   = mean |I(t+1) - 2 I(t) + I(t-1)|          full-resolution pixel acceleration (the old flicker, without 64x64)
                   d1    = mean |I(t) - I(t-1)|                     full-resolution pixel change
                   sharp = mean |Laplacian(I(t))|                   detail / sharpness (a restorer trade-off: calm but blurry is not a win)
+                  shear = |spatial gradient| of the head-relative flow (mean, p95): a seam where pasted and source skin move differently
+  per second      resid / d1 / shear ratios, frozen_mouth = (lower-face motion / mouth motion) of the video over the same of the reference
+                  (> 1: the mouth is stiller than the face around it, e.g. a closed dubbed mouth while the source jaw / cheeks talk), and
+                  max_d1_jump (the largest single-frame mouth change of that second / the median): ranks 1 = worst
   regions         mouth (lips / teeth, from the reference's mouth corners), lowerface (jaw / chin / cheeks band around the mouth,
                   where the mouth-only paste-back mask edge lives), upper (brows / eyes: a mouth-only composite must stay at 1.0)
   indices         twitch  = sum(jerk) / sum(vel): jerky vs smooth motion, independent of how much the speaker articulates
@@ -232,7 +236,7 @@ def measure(video: str, reference: str, ranges: list, iod: float, lm_sigma: floa
         for k in ("v", "r"):
             for i, M in corr.items():
                 if i in crops[k]: crops[k][i] = cv2.warpAffine(crops[k][i], M, (W, H), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
-    keys = ("vel", "jerk", "resid", "acc", "d1", "sharp")
+    keys = ("vel", "jerk", "resid", "acc", "d1", "sharp", "shear", "shear95")
     sig = {k: {r: {s: np.full(T, np.nan) for s in ("v", "r")} for r in masks} for k in keys}
     for s in ("v", "r"):
         C = crops[s]; Fw = {}
@@ -245,9 +249,13 @@ def measure(video: str, reference: str, ranges: list, iod: float, lm_sigma: floa
                 ok = np.hypot(Fb[..., 0] + fx, Fb[..., 1] + fy) < 0.5 + 0.05 * np.hypot(Fb[..., 0], Fb[..., 1])
                 warped = cv2.remap(a.astype(np.float32), gx + Fb[..., 0], gy + Fb[..., 1], cv2.INTER_LINEAR)
                 res = np.abs(b.astype(np.float32) - warped); mag = np.hypot(Frel[..., 0], Frel[..., 1])
+                # flow shear: spatial gradient of the head-relative flow (a seam where pasted and source skin move differently)
+                Fs = cv2.GaussianBlur(Frel, (0, 0), 1.5)
+                shr = sum(np.abs(cv2.Sobel(Fs[..., c], cv2.CV_32F, dx, dy, ksize=3)) for c in (0, 1) for dx, dy in ((1, 0), (0, 1))) / 8.0
                 for r, m in masks.items():
                     mm = m & ok
                     sig["vel"][r][s][i - T0] = float(mag[m].mean())
+                    sig["shear"][r][s][i - T0] = float(shr[m].mean()); sig["shear95"][r][s][i - T0] = float(np.percentile(shr[m], 95))
                     sig["resid"][r][s][i - T0] = float(res[mm].mean()) if mm.sum() > 20 else np.nan
                 if i - 1 in Fw:                                                 # jerk centred on frame i-1: F(i-1->i) - F(i-2->i-1)
                     d = np.hypot(Frel[..., 0] - Fw[i - 1][..., 0], Frel[..., 1] - Fw[i - 1][..., 1])
@@ -371,6 +379,26 @@ def main() -> int:
         if all(abs(f - w["frame"]) > 25 for w in worst): worst.append({"frame": f, "t": round(f / fv, 2), "mouth_jerk_vs_reference_median": round(v, 2)})
         if len(worst) >= 8: break
     report["worst_windows"] = worst
+    # per second: the numbers a reviewer's "twitch at t s" can be checked against, plus a rank per column (1 = worst)
+    sg = res["sig"]; secs = []
+    for t_ in range(int(frames[0] // fv), int(frames[-1] // fv) + 1):
+        m = in_range & (frames >= t_ * fv) & (frames < (t_ + 1) * fv)
+        if m.sum() < 10: continue
+        def mr(k, reg, f=np.nanmean):
+            v, r_ = sg[k][reg]["v"][m], sg[k][reg]["r"][m]
+            return float(f(v) / max(f(r_), 1e-6)) if np.isfinite(v).any() and np.isfinite(r_).any() else None
+        vv, vr = np.nanmean(sg["vel"]["mouth"]["v"][m]), np.nanmean(sg["vel"]["mouth"]["r"][m])
+        lv = np.nanmean(sg["vel"]["lowerface"]["v"][m])
+        secs.append({"t": t_, "resid_mouth": mr("resid", "mouth"), "d1_mouth": mr("d1", "mouth"), "impulse_mouth": None,
+                     "shear95_lowerface": mr("shear95", "lowerface"), "shear_lowerface": mr("shear", "lowerface"),
+                     # frozen mouth on a talking face: the surrounding face moves (lower-face ring of the OUTPUT) while the output mouth does not,
+                     # relative to the same proportion in the reference: > 1 = the mouth is stiller than the face around it, compared with the source
+                     "frozen_mouth": float((lv / max(vv, 1e-3)) / max(np.nanmean(sg["vel"]["lowerface"]["r"][m]) / max(vr, 1e-3), 1e-6)) if np.isfinite(vv) and np.isfinite(lv) else None,
+                     "max_d1_jump": float(np.nanmax(sg["d1"]["mouth"]["v"][m]) / max(np.nanmedian(sg["d1"]["mouth"]["v"][in_range]), 1e-6)) if np.isfinite(sg["d1"]["mouth"]["v"][m]).any() else None})
+    for k in ("resid_mouth", "shear95_lowerface", "frozen_mouth", "max_d1_jump", "d1_mouth"):
+        order = sorted([x for x in secs if x[k] is not None], key=lambda x: -x[k])
+        for rank, x in enumerate(order, 1): x[f"rank_{k}"] = rank
+    report["per_second"] = secs
     if a.series:
         report["series"] = {"frames": frames.tolist(), **{f"{k}_{r}_{s}": [None if not np.isfinite(x) else round(float(x), 4) for x in res["sig"][k][r][s]]
                                                          for k in res["sig"] for r in res["sig"][k] for s in ("v", "r")}}

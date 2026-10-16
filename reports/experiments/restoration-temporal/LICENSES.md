@@ -1,5 +1,11 @@
 # License audit — track B (restoration / temporal stabilization)
 
+> **CLEAN-ONLY rule (user decision, 2026-10-16 ~21:00 UTC, via the coordinator):** only verdict **YES** (code + weights + every pretrained
+> sub-model permissive) may run in any product-path run. YES\* (permissive files, NC training data such as FFHQ / WIDER FACE) is NOT
+> enough. Quarantined on Server B (moved, not deleted, sha256 + reason in `/workspace/dub/quarantine_nc/README.md`): InsightFace buffalo_l,
+> CodeFormer + ParseNet + RetinaFace R50 (facexlib copy too), GFPGAN v1.4, RestoreFormer. **EVAL_ONLY** (never imported by the product
+> path): SyncNet + S3FD (SyncNet scoring), YuNet (`mouth_jitter_hr.py` stabilisation). Product-path landmarks: MediaPipe Face Landmarker.
+
 Full evidence with a primary-source link for every claim: `LICENSES_desk_research.md` (desk research 2026-10-16, nothing installed).
 Verdicts: **YES** = code + weights permissive, no NC component in the inference path; **YES\*** = code + weights permissive but the
 training data is NC / unclear (FFHQ, WIDER FACE, FlyingChairs) — needs legal sign-off; **UNCLEAR**; **NO** = NC / research-only code or
@@ -19,21 +25,24 @@ weights. Not legal advice.
 
 | component | use | code | weights | commercial | note |
 |---|---|---|---|---|---|
-| YuNet `face_detection_yunet_2023mar.onnx` (sha256 8f2383e4…52fa4) | `mouth_jitter_hr.py` stabilisation landmarks | MIT ([opencv_zoo](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet)) | MIT | **YES\*** | WIDER FACE training data (CC BY-NC-ND) |
+| YuNet `face_detection_yunet_2023mar.onnx` (sha256 8f2383e4…52fa4) | `mouth_jitter_hr.py` stabilisation landmarks — **EVAL_ONLY** | MIT ([opencv_zoo](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet)) | MIT | **YES\*** | WIDER FACE training data (CC BY-NC-ND); not in the product path |
 | OpenCV DIS optical flow | `mouth_jitter_hr.py` motion / residual | Apache-2.0 (opencv 4.9) | none | **YES** | no learned weights |
 | InsightFace 2d106 (via LatentSync FaceDetector) | `face_temporal.py` (legacy metric) | MIT | NC | **NO** | diagnostic only; superseded by `mouth_jitter_hr.py` for this track |
 
 ## Candidates (Phase 2+)
 
+Installed so far (2026-10-16): GFPGAN v1.4 + RestoreFormer — code only from the pinned clone `third_party/GFPGAN` (arch files imported
+directly, no pip install, `/venv/dabai` untouched), weights in `models/gfpgan/`; facexlib RetinaFace / ParseNet NOT used by this path.
+
 | model | repository | code license | weights license | commercial | problematic dependencies | replacement risk / plan |
 |---|---|---|---|---|---|---|
 | **no restorer** (LatentSync raw in the mouth composite) | – | – | – | **YES** | – | softer mouth (sharpness 0.61 of the source) |
 | **own temporal stabilisation** (DIS-flow motion-compensated filtering of the mouth ROI, window-boundary smoothing) | this repo | repo | none | **YES** | none (OpenCV DIS) | – |
-| **GFPGAN v1.4** (clean arch) | [TencentARC/GFPGAN](https://github.com/TencentARC/GFPGAN/blob/master/LICENSE) | Apache-2.0 (+ listed third-party; NVIDIA-NC only for the v1 paper model's CUDA ops, not the clean v1.3/1.4) | release v1.3.0 `GFPGANv1.4.pth`, repo license | **YES\*** | FFHQ (NC-SA); `GFPGANer` would load facexlib RetinaFace + ParseNet (NO) -> bypassed: own aligned crops (`has_aligned`), own paste mask | install allowed (code + weights YES); FFHQ needs legal sign-off |
-| **RestoreFormer++** | [wzhouxiff/RestoreFormerPlusPlus](https://github.com/wzhouxiff/RestoreFormerPlusPlus) | Apache-2.0 | repo license (inferred) | **YES\*** | FFHQ; facexlib helper (bypassed) | same |
-| **RestoreFormer** | [wzhouxiff/RestoreFormer](https://github.com/wzhouxiff/RestoreFormer); weights also in GFPGAN release v1.3.4 | Apache-2.0 | repo license (inferred) | **YES\*** | FFHQ | same |
-| **VQFR** | [TencentARC/VQFR](https://github.com/TencentARC/VQFR) | Apache-2.0 (+ opencv / ffmpeg / numpy notices) | Google Drive, repo license (inferred) | **YES\*** | FFHQ; facexlib detection / parsing (bypass) | same |
-| MediaPipe Face Landmarker (478 pts) | [google-ai-edge/mediapipe](https://github.com/google-ai-edge/mediapipe) | Apache-2.0 | model card: Apache-2.0 | **YES** | trained on Google's consented data | candidate for the paste-back mask / alignment landmarks (own venv: its opencv-contrib dependency would shadow the pinned cv2) |
+| ~~**GFPGAN v1.4** (clean arch)~~ quarantined (YES\*) | [TencentARC/GFPGAN](https://github.com/TencentARC/GFPGAN/blob/master/LICENSE) | Apache-2.0 (+ listed third-party; NVIDIA-NC only for the v1 paper model's CUDA ops, not the clean v1.3/1.4) | release v1.3.0 `GFPGANv1.4.pth` (sha256 e2cd4703…be5ad; code pinned at tag v1.3.8 = 2eac203), repo license | **YES\*** | FFHQ (NC-SA); `GFPGANer` would load facexlib RetinaFace + ParseNet (NO) -> bypassed: own aligned crops (`has_aligned`), own paste mask | install allowed (code + weights YES); FFHQ needs legal sign-off |
+| ~~**RestoreFormer++**~~ (YES\*, not allowed) | [wzhouxiff/RestoreFormerPlusPlus](https://github.com/wzhouxiff/RestoreFormerPlusPlus) | Apache-2.0 | repo license (inferred) | **YES\*** | FFHQ; facexlib helper (bypassed) | same |
+| ~~**RestoreFormer**~~ quarantined (YES\*) | [wzhouxiff/RestoreFormer](https://github.com/wzhouxiff/RestoreFormer); weights also in GFPGAN release v1.3.4 | Apache-2.0 | `RestoreFormer.pth` from GFPGAN release v1.3.4 (sha256 07404d44…24ace0), repo license (inferred) | **YES\*** | FFHQ | same |
+| ~~**VQFR**~~ (YES\*, not allowed) | [TencentARC/VQFR](https://github.com/TencentARC/VQFR) | Apache-2.0 (+ opencv / ffmpeg / numpy notices) | Google Drive, repo license (inferred) | **YES\*** | FFHQ; facexlib detection / parsing (bypass) | same |
+| **MediaPipe Face Landmarker** (478 pts) — **product-path landmarks of this track** | [google-ai-edge/mediapipe](https://github.com/google-ai-edge/mediapipe) | Apache-2.0 | `face_landmarker.task` float16/1 (sha256 64184e22…bc9ff), model card: Apache-2.0 | **YES** | trained on Google's consented data | installed in `/venv/mediapipe` (mediapipe 0.10.21; its opencv-contrib would shadow the pinned cv2 of /venv/dabai), called as a subprocess -> `.npz` |
 | BasicVSR++ / RealBasicVSR | [ckkelvinchan/BasicVSR_PlusPlus](https://github.com/ckkelvinchan/BasicVSR_PlusPlus), [RealBasicVSR](https://github.com/ckkelvinchan/RealBasicVSR) | Apache-2.0 | Apache (inferred), REDS CC BY 4.0 | **YES** (SPyNet flow inside: Chairs/Things data risk) | mmcv | fallback temporal restorer on the lower-face crop |
 | SEA-RAFT / NeuFlow v2 | [princeton-vl/SEA-RAFT](https://github.com/princeton-vl/SEA-RAFT), [NeuFlow_v2](https://github.com/neufieldrobotics/NeuFlow_v2) | BSD-3 / Apache-2.0 | BSD-3 / Apache | **YES\*** | FlyingChairs/Things ("any commercial use is prohibited") | only if DIS is too noisy |
 | TAPIR / BootsTAPIR / TAPNext, LocoTrack | [google-deepmind/tapnet](https://github.com/google-deepmind/tapnet), [cvlab-kaist/locotrack](https://github.com/cvlab-kaist/locotrack) | Apache-2.0 | Apache-2.0 | **YES** | Kubric synthetic data | point tracking if needed |

@@ -38,16 +38,19 @@ def write_video(path: pathlib.Path, frames_bgr: list) -> None:
 
 
 def clip_segments(man: dict, a: int, b: int) -> list:
-    """LATENT_SYNC segments of the run clipped to [a, b), start moved forward onto the run's own 16-frame window grid."""
-    out = []
-    for s in sorted(man["lipsync"]["segments"], key=lambda s: s["start_frame"]):
+    """LATENT_SYNC segments of the run clipped to [a, b), start moved forward onto the run's own 16-frame window grid. Crossfade in / out =
+    min(4, frames // 3) only where the run's neighbouring segment is not LATENT_SYNC (process_video's rule)."""
+    out = []; allseg = sorted([s for s in man["lipsync"]["segments"] if s["action"] != "SPLIT"], key=lambda s: s["start_frame"])
+    for j, s in enumerate(allseg):
         if s["action"] != "LATENT_SYNC" or s["end_frame"] <= a or s["start_frame"] >= b: continue
+        k = min(4, (s["end_frame"] - s["start_frame"]) // 3)
+        prev_ls = j > 0 and allseg[j - 1]["action"] == "LATENT_SYNC"; next_ls = j + 1 < len(allseg) and allseg[j + 1]["action"] == "LATENT_SYNC"
         st = s["start_frame"]
         if st < a: st = s["start_frame"] + P * int(np.ceil((a - s["start_frame"]) / P))
         en = min(s["end_frame"], b)
         if en - st < P: continue
         out.append({"run_index": s["index"], "start": st, "end": en, "full": st == s["start_frame"] and en == s["end_frame"],
-                    "xf_in": 4 if st == s["start_frame"] else 0, "xf_out": 4 if en == s["end_frame"] else 0})
+                    "xf_in": k if st == s["start_frame"] and j > 0 and not prev_ls else 0, "xf_out": k if en == s["end_frame"] and j + 1 < len(allseg) and not next_ls else 0})
     return out
 
 
@@ -66,13 +69,14 @@ def crossfade(rep: list, master: list, k_in: int, k_out: int) -> list:
 def main() -> int:
     import cv2, soundfile as sf
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--manifest", required=True); ap.add_argument("--frames", required=True, help="a:b master frame window (end exclusive)")
+    ap.add_argument("--manifest", required=True); ap.add_argument("--frames", required=True, help="a:b master frame window (end exclusive) or 'all'")
+    ap.add_argument("--stages-out", nargs="*", default=None, help="stages to keep / write (default: all); master is always written")
     ap.add_argument("--out", required=True); ap.add_argument("--ls-landmark-smooth", type=int, default=2); ap.add_argument("--mask-smooth", type=int, default=3)
     ap.add_argument("--mask-top", type=float, default=0.52); ap.add_argument("--mask-feather", type=float, default=0.08)
     ap.add_argument("--codeformer-w", type=float, default=1.0); ap.add_argument("--sbs", action="store_true")
     a = ap.parse_args()
     man = json.loads(pathlib.Path(a.manifest).read_text()); work = pathlib.Path(man["work_dir"])
-    A, B = [int(x) for x in a.frames.split(":")]; out = pathlib.Path(a.out); out.mkdir(parents=True, exist_ok=True)
+    A, B = (0, 10 ** 9) if a.frames == "all" else [int(x) for x in a.frames.split(":")]; out = pathlib.Path(a.out); out.mkdir(parents=True, exist_ok=True)
     import face_aware_latentsync as fa, face_aware_latentsync_accel as faa
     from candidate_video_stage import MouthOnlyRunner
     from codeformer_accel import CodeFormerAccel, lm5_from_insightface106
@@ -84,7 +88,8 @@ def main() -> int:
     t0 = time.perf_counter(); inner = faa.AccelRunner(2, True, "none", "auto", steps=20, guidance=1.5, deepcache_interval=5); times["ls_load"] = round(time.perf_counter() - t0, 2)
     runner = MouthOnlyRunner(inner, a.mask_top, a.mask_feather, a.mask_smooth, defer=True)
     cf = CodeFormerAccel(fidelity_weight=a.codeformer_w, batch_size=8, landmark_source="insightface", autocast=True, parse_autocast=True)
-    stages = {k: [f.copy() for f in master] for k in ("S0_ls_raw", "S1_ls_cf", "S2_composite", "S3_final", "S2nc_composite_nocf", "S3nc_final_nocf")}
+    keep = a.stages_out or ["S0_ls_raw", "S1_ls_cf", "S2_composite", "S3_final", "S2nc_composite_nocf", "S3nc_final_nocf"]
+    stages = {k: [f.copy() for f in master] for k in keep}
     t_ls = t_cf = 0.0
     for s in segs:
         st, en = s["start"], s["end"]; rgb = np.stack([cv2.cvtColor(master[i - A], cv2.COLOR_BGR2RGB) for i in range(st, en)])
@@ -100,7 +105,8 @@ def main() -> int:
         comp = runner.composite(cfo, mst, boxes); comp_nc = runner.composite(raw, mst, boxes)
         fin = crossfade(comp, mst, s["xf_in"], s["xf_out"]); fin_nc = crossfade(comp_nc, mst, s["xf_in"], s["xf_out"])
         for k, lst in (("S0_ls_raw", raw), ("S1_ls_cf", cfo), ("S2_composite", comp), ("S3_final", fin), ("S2nc_composite_nocf", comp_nc), ("S3nc_final_nocf", fin_nc)):
-            for j in range(n): stages[k][st - A + j] = lst[j]
+            if k in stages:
+                for j in range(n): stages[k][st - A + j] = lst[j]
         print(f"  piece {st}:{en} done: LS {n} frames, CodeFormer {st_cf['faces_restored']} faces", flush=True)
     times["latentsync"] = round(t_ls, 2); times["codeformer"] = round(t_cf, 2)
     t0 = time.perf_counter()
@@ -112,7 +118,7 @@ def main() -> int:
     for i in range(A, B):
         ok, f = cap.read()
         if not ok: break
-        if any(s["full"] and s["start"] <= i < s["end"] for s in segs): diffs.append(float(np.abs(f.astype(np.float32) - stages["S3_final"][i - A].astype(np.float32)).mean()))
+        if "S3_final" in stages and any(s["full"] and s["start"] <= i < s["end"] for s in segs): diffs.append(float(np.abs(f.astype(np.float32) - stages["S3_final"][i - A].astype(np.float32)).mean()))
     cap.release()
     wman = {"source_manifest": a.manifest, "window": [A, B], "fps": FPS, "pieces": segs, "times": times,
             "settings": {"ls_landmark_smooth": a.ls_landmark_smooth, "mask_smooth": a.mask_smooth, "mask_top": a.mask_top, "mask_feather": a.mask_feather,
@@ -128,7 +134,7 @@ def main() -> int:
     if prev < B - A: wman["lipsync"]["segments"].append({"index": len(wman["lipsync"]["segments"]), "action": "PASS_THROUGH", "start_frame": prev, "end_frame": B - A})
     times["total"] = round(time.perf_counter() - t_all, 2)
     (out / "window_manifest.json").write_text(json.dumps(wman, indent=1))
-    if a.sbs:
+    if a.sbs and all(k in stages for k in ("S0_ls_raw", "S1_ls_cf", "S3_final")):
         aud = man["dubbed_track"].get("aac") or str(work / "final_mix_aac.m4a")
         flt = ("[0:v]drawtext=text='ORIGINAL':x=8:y=8:fontsize=26:fontcolor=yellow:box=1:boxcolor=black@0.5[a];"
                "[1:v]drawtext=text='LS raw':x=8:y=8:fontsize=26:fontcolor=yellow:box=1:boxcolor=black@0.5[b];"

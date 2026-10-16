@@ -12,6 +12,10 @@
                               inconsistent or the base changes after warping (new content: mouth opens, teeth appear), --alpha elsewhere.
                               Output = base + D'. The mouth shape / timing stays exactly LatentSync's; only the added detail is smoothed.
 
+  skin texture (--skin-texture source)  outside a lip / open-mouth mask (YuNet mouth corners of the LatentSync and the source frame), the
+                              high frequencies of the lower face are taken from the SOURCE frame, flow-aligned to the LatentSync geometry,
+                              so chin / stubble / skin keep the source's sharp and steady texture; lips and teeth stay LatentSync (+ C1 detail).
+
 Then the same mouth-only composite (smoothed LatentSync detector boxes, ellipse top 0.52, feather 0.08) and the same 4-frame crossfade
 as cand5. Writes <dir>/<tag>.mp4 (lossless) for mouth_jitter_hr.py / window_syncnet.py.
 
@@ -119,6 +123,47 @@ def detail_filter(fl: Flow, base: list, rest: list, alpha: float, change_thr: fl
     return out
 
 
+def lip_masks(frames_full: list, masters_full: list, roi, lip_scale: float, sigma_t: float = 1.0) -> list:
+    """Soft lip / open-mouth mask per frame in ROI coordinates: union of ellipses around the YuNet mouth corners of the LatentSync frame and of
+    the master frame (corners smoothed over time). YuNet = MIT code + weights (commercial-safe, see LICENSES.md)."""
+    import cv2
+    from mouth_jitter_hr import YuNet, YUNET, gauss_smooth
+    yn = YuNet(YUNET); ya, yb, xa, xb = roi; h, w = yb - ya, xb - xa
+    C = {}
+    for key, fr in (("ls", frames_full), ("src", masters_full)):
+        L = np.full((len(fr), 2, 2), np.nan)
+        for k, f in enumerate(fr):
+            p = yn(f)
+            if p is not None: L[k] = p[3:5]
+        C[key] = gauss_smooth(L, sigma_t)
+    out = []
+    for k in range(len(frames_full)):
+        m = np.zeros((h, w), np.float32)
+        for key in ("ls", "src"):
+            c = C[key][k]
+            if not np.isfinite(c).all(): continue
+            ctr = c.mean(0) - [xa, ya]; dvec = c[1] - c[0]; d = float(np.hypot(*dvec)); ang = float(np.degrees(np.arctan2(dvec[1], dvec[0])))
+            cv2.ellipse(m, (int(round(ctr[0])), int(round(ctr[1] + 0.08 * d))), (int(lip_scale * 0.62 * d), int(lip_scale * 0.42 * d)), ang, 0, 360, 1.0, -1)
+        k_ = max(3, int(0.12 * (np.nanmean([np.hypot(*(C["src"][k][1] - C["src"][k][0]))]) if np.isfinite(C["src"][k]).all() else 40)) | 1)
+        out.append(cv2.GaussianBlur(m, (k_, k_), 0))
+    return out
+
+
+def skin_texture_transfer(fl: "Flow", base: list, master: list, lipm: list, sigma: float, tau: float) -> list:
+    """Replace the high frequencies of the LatentSync lower face by the SOURCE's (flow-aligned to the LatentSync geometry) outside the lips:
+    Y = base + (1 - lip) * conf * (HP(warp(master)) - HP(base)), HP(x) = x - Gauss_sigma(x); conf drops where the aligned low frequencies disagree."""
+    import cv2
+    out = []
+    for k in range(len(base)):
+        b, m = base[k], master[k]
+        F = fl.calc(gray(b), gray(m)); mw = fl.warp(m, F)
+        lb, lm = cv2.GaussianBlur(b, (0, 0), sigma), cv2.GaussianBlur(mw, (0, 0), sigma)
+        conf = np.exp(-np.abs(cv2.GaussianBlur(lm - lb, (0, 0), 2.0)).mean(-1) / tau)[..., None]
+        wgt = (1.0 - lipm[k])[..., None] * conf
+        out.append(b + wgt * ((mw - lm) - (b - lb)))
+    return out
+
+
 def crossfade(rep, master, k_in, k_out):
     import cv2
     n = len(rep); res = []
@@ -139,6 +184,8 @@ def main() -> int:
     ap.add_argument("--boundary", choices=["on", "off"], default="on"); ap.add_argument("--detail-filter", choices=["on", "off"], default="on")
     ap.add_argument("--alpha", type=float, default=0.35); ap.add_argument("--change-thr", type=float, default=10.0)
     ap.add_argument("--gain", type=float, default=1.0, help="gain on the filtered detail (averaging misaligned texture lowers its amplitude)")
+    ap.add_argument("--skin-texture", choices=["off", "source"], default="off", help="source = take the skin / stubble high frequencies from the flow-aligned source outside the lips")
+    ap.add_argument("--tex-sigma", type=float, default=1.5); ap.add_argument("--tex-tau", type=float, default=12.0); ap.add_argument("--lip-scale", type=float, default=1.0)
     ap.add_argument("--lm-smooth", type=int, default=2); ap.add_argument("--mask-smooth", type=int, default=3); ap.add_argument("--margin", type=int, default=12)
     a = ap.parse_args(); d = pathlib.Path(a.dir); wm = json.loads((d / "window_manifest.json").read_text()); A = wm["window"][0]
     t0 = time.perf_counter()
@@ -163,6 +210,13 @@ def main() -> int:
             y = detail_filter(fl, base, rest, a.alpha, a.change_thr, a.gain) if a.detail_filter == "on" else rest
         else:
             y = base
+        if a.skin_texture == "source":
+            mcrop = [master[i][ya:yb, xa:xb].astype(np.float32) for i in range(s, e)]
+            full_ls = []
+            for j, i in enumerate(range(s, e)):
+                f = base_all[i].copy(); f[ya:yb, xa:xb] = np.clip(base[j], 0, 255).astype(np.uint8); full_ls.append(f)
+            lipm = lip_masks(full_ls, [master[i] for i in range(s, e)], (ya, yb, xa, xb), a.lip_scale)
+            y = skin_texture_transfer(fl, y, mcrop, lipm, a.tex_sigma, a.tex_tau)
         full = []
         for j, i in enumerate(range(s, e)):
             f = base_all[i].copy(); f[ya:yb, xa:xb] = np.clip(y[j], 0, 255).round().astype(np.uint8); full.append(f)
