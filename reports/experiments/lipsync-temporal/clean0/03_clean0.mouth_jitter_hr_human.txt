@@ -1,0 +1,5 @@
+== clean0: frames 50  det 1.000  (11.4 s)
+   ratio video/reference  mouth: jerk 0.80 vel 0.70 resid 0.96 acc 0.74 twitch 1.143 | lowerface: jerk 1.00 resid 0.95 | upper: jerk 1.02 resid 1.02 acc 1.01
+   impulse ratio mouth 0.977 lowerface 1.003 upper 1.001 | pops (ref = 1) mouth d1 0.0 acc 0.0
+   LS window boundary (phase 0 / inner), mouth d1: video 1.664 ref 0.715; resid: video 1.635 ref 0.856; boundaries with a d1 jump > 1.5x: video 1.0 ref 0.0 (n=3)
+   LS core mouth: resid 0.959 vel 0.702 d1 0.761 impulse 0.977

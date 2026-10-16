@@ -1,0 +1,26 @@
+{
+ "insightface (cand5) smooth0": {
+  "affine_pts_accel_px_mean": 0.867,
+  "p95": 1.667,
+  "bbox_accel_px_mean": 1.324,
+  "bbox_p95": 2.75
+ },
+ "insightface (cand5) smooth2": {
+  "affine_pts_accel_px_mean": 0.474,
+  "p95": 0.833,
+  "bbox_accel_px_mean": 0.268,
+  "bbox_p95": 0.6
+ },
+ "mediapipe (clean0) smooth0": {
+  "affine_pts_accel_px_mean": 0.376,
+  "p95": 0.833,
+  "bbox_accel_px_mean": 0.602,
+  "bbox_p95": 1.5
+ },
+ "mediapipe (clean0) smooth2": {
+  "affine_pts_accel_px_mean": 0.352,
+  "p95": 0.833,
+  "bbox_accel_px_mean": 0.144,
+  "bbox_p95": 0.35
+ }
+}

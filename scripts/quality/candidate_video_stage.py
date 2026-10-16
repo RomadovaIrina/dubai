@@ -101,6 +101,8 @@ def main() -> int:
     ap.add_argument("--codeformer-w", type=float, default=1.0); ap.add_argument("--codeformer-batch", type=int, default=8)
     ap.add_argument("--codeformer-empty-cache", action="store_true", help="A/B: upstream per-face torch.cuda.empty_cache()")
     ap.add_argument("--codeformer-landmarks", choices=["insightface", "retinaface"], default="insightface")
+    ap.add_argument("--face-stack", choices=["insightface", "mediapipe"], default="insightface", help="mediapipe = clean face stack (scripts/pilot/clean_face_stack.py)")
+    ap.add_argument("--mp-anchor-calib", choices=["on", "off"], default="on")
     ap.add_argument("--codeformer-precision", choices=["fp32", "parse16", "fp16"], default="fp16", help="fp32 = upstream numerics; parse16 = ParseNet under fp16 autocast; fp16 = CodeFormer net + ParseNet under autocast")
     a = ap.parse_args()
     import run_clean_pipeline_05 as rp
@@ -138,7 +140,14 @@ def main() -> int:
                               "dubbed_speech_seconds": round(sum(i["end"] - i["start"] for i in dub_speech), 3), "gate_seconds": round(gated, 3), "gate_fraction": round(gated / duration, 4), "intervals": gate}
         print(f"  [gate] {len(gate)} intervals, {gated:.1f}s of {duration:.1f}s", flush=True)
     else: man["speech_gate"] = {"enabled": False}
-    with rp.timed(times, "face_router_load"): router = faa.make_router("retinaface", a.face_min_w, a.face_min_h, a.retina_conf)
+    prep = None
+    if a.face_stack == "mediapipe":   # CLEAN-ONLY: MediaPipe router + LatentSync detections, NC loaders blocked
+        import clean_face_stack as cfs
+        cfs.guard_nc()
+        with rp.timed(times, "face_stack_mediapipe"): prep = cfs.CleanPrep(src, work, a.face_min_w, a.face_min_h, calib=a.mp_anchor_calib == "on")
+        router = prep.router; man["face_stack"] = {**prep.info, "times": prep.times}
+    else:
+        with rp.timed(times, "face_router_load"): router = faa.make_router("retinaface", a.face_min_w, a.face_min_h, a.retina_conf)
     with rp.timed(times, "latentsync_load"): runner = faa.AccelRunner(a.window_batch_size, not a.no_deepcache, "none", "auto", steps=a.steps, guidance=a.guidance, deepcache_interval=a.deepcache_interval)
     if a.mouth_only_pasteback == "on":
         runner = MouthOnlyRunner(runner, a.mask_top, a.mask_feather, a.mask_smooth, defer=a.codeformer_scope == "mouth")
@@ -147,7 +156,7 @@ def main() -> int:
         from codeformer_accel import CodeFormerAccel
         with rp.timed(times, "codeformer_load"): cf_runner = CodeFormerAccel(fidelity_weight=a.codeformer_w, batch_size=a.codeformer_batch, empty_cache_per_face=a.codeformer_empty_cache, landmark_source=a.codeformer_landmarks, autocast=a.codeformer_precision == "fp16", parse_autocast=a.codeformer_precision != "fp32")
     rep = faa.process_video(src, work, dub16, dub_aac, out, router=router, runner=runner, min_ls_frames=a.min_ls_frames, max_verify_depth=a.max_verify_depth, codeformer=a.codeformer, times=times,
-                            log=lambda m: print(m, flush=True), speech_gate=gate, crossfade_frames=a.crossfade_frames, router_stride=a.router_stride, in_memory=True, cf_runner=cf_runner, lm_smooth=a.ls_landmark_smooth)
+                            log=lambda m: print(m, flush=True), speech_gate=gate, crossfade_frames=a.crossfade_frames, router_stride=a.router_stride, in_memory=True, cf_runner=cf_runner, lm_smooth=a.ls_landmark_smooth, prep=prep)
     rep["backend"] = "optimized"; man["lipsync"] = rep; man["codeformer"] = "DISABLED (not invoked)" if a.codeformer == "off" else {"mode": a.codeformer, "w": a.codeformer_w, "batch": a.codeformer_batch, "landmarks": a.codeformer_landmarks, "precision": a.codeformer_precision}
     if cf_runner is not None: cf_runner.close()
     rp.free_cuda(runner, cf_runner)
