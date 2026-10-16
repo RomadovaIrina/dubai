@@ -53,6 +53,16 @@ def read16(p):
     return y if y.ndim == 1 else y.mean(axis=1)
 
 
+def dub_vad(wav16, min_speech_ms):
+    """Silero on the dub track, the pipeline's model; min_speech_ms 60 (not Silero's 250 default) so a short isolated word ("with" after a
+    TTS pause, 04 34.8 s) is not dropped when a policy shifts it by a few frames (P1: that alone flipped a 0.9 s gap to 1.2 s)."""
+    import torch, model_cache
+    from silero_vad import get_speech_timestamps, load_silero_vad, read_audio
+    torch.set_num_threads(int(__import__("os").environ.get("DUB_THREADS", "6")))
+    m = model_cache.get("silero_vad", load_silero_vad); au = read_audio(str(wav16), sampling_rate=SR16)
+    return [(round(float(t["start"]), 3), round(float(t["end"]), 3)) for t in get_speech_timestamps(au, m, sampling_rate=SR16, return_seconds=True, min_speech_duration_ms=min_speech_ms)]
+
+
 def ls_mask_of(segs, n):
     m = np.zeros(n, bool)
     for s in segs:
@@ -91,13 +101,14 @@ def main() -> int:
     ap.add_argument("--out", required=True); ap.add_argument("--tag", required=True)
     ap.add_argument("--min-gap-s", type=float, default=0.1, help="gaps shorter than this are not listed (still counted in the seconds)")
     ap.add_argument("--natural-s", type=float, default=0.35, help="gaps shorter than this are labelled natural (rule of thumb 0.3-0.4 s)")
+    ap.add_argument("--dub-min-speech-ms", type=int, default=60, help="Silero min speech duration on the dub track (250 = pipeline / pause_rhythm default, used in P0)")
     a = ap.parse_args()
     man = json.loads(pathlib.Path(a.manifest).read_text()); ref = json.loads(pathlib.Path(a.ref_manifest).read_text()) if a.ref_manifest else man
     import run_clean_pipeline_05 as rp
     dur = man["source"]["duration_s"]; W = pathlib.Path(man["work_dir"]); RW = pathlib.Path(ref["work_dir"])
     dub16 = pathlib.Path((man.get("dubbed_track") or {}).get("wav16k") or (W / "dubbed_16k.wav"))
     if not dub16.exists(): dub16 = W / "dubbed_16k.wav"
-    orig = [(v["start"], v["end"]) for v in man["speech_intervals"]]; dubv = [(v["start"], v["end"]) for v in rp.run_vad(dub16)]
+    orig = [(v["start"], v["end"]) for v in man["speech_intervals"]]; dubv = dub_vad(dub16, a.dub_min_speech_ms)
     n = int(dur / R) + 1; mo, md = mask(orig, n), mask(dubv, n); gapm = mo & ~md
     nf = ref["lipsync"]["master_frames"]; ls_fixed = ls_mask_of(ref["lipsync"]["segments"], nf); ls_regated, gate = regate_mask(ref, orig, dubv, dur, nf)
     # per-frame: majority of the 40 ms frame is gap (VAD definition), RMS definition (pilot metric)
@@ -152,7 +163,7 @@ def main() -> int:
         gaps.append(g)
     big = lambda th: [g for g in gaps if g["seconds"] > th]
     at = np.array([p["atempo"] for p in parts]) if parts else np.array([1.0])
-    rep = {"tag": a.tag, "manifest": a.manifest, "ref_manifest": a.ref_manifest or a.manifest, "dub_track": str(dub16), "duration_s": dur,
+    rep = {"tag": a.tag, "dub_min_speech_ms": a.dub_min_speech_ms, "manifest": a.manifest, "ref_manifest": a.ref_manifest or a.manifest, "dub_track": str(dub16), "duration_s": dur,
            "source_speech_s": round(float(mo.sum() * R), 2), "dub_speech_s": round(float(md.sum() * R), 2),
            "source_without_dub_s": round(float(gapm.sum() * R), 2), "dub_without_source_s": round(float((md & ~mo).sum() * R), 2),
            "vad_iou": round(float((mo & md).sum() / max(1, (mo | md).sum())), 3),

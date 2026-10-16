@@ -26,6 +26,13 @@ def main() -> int:
     ap.add_argument("--marks-cache", default=None); ap.add_argument("--qwen-gpu-layers", type=int, default=0)
     ap.add_argument("--bg-src-duck-db", type=float, default=0.0); ap.add_argument("--cut-fade", choices=["fixed", "adaptive"], default="fixed")
     ap.add_argument("--check", action="store_true", help="compare the placements with the run's own (reference policy must reproduce them)")
+    ap.add_argument("--max-lead", type=float, default=0.4, help="--burst-max-lead of the placement (runner default 0.4)")
+    ap.add_argument("--spread", choices=["off", "centre", "pauses"], default="off", help="timing_spread.py: where the leftover silence of a part shorter than its "
+                    "source burst goes (off = one tail gap, the run's behaviour; centre = short late start + tail; pauses = + pauses at natural boundaries inside the part)")
+    ap.add_argument("--spread-ok", type=float, default=0.3, help="a tail gap up to this many s is left alone / the target of the spread")
+    ap.add_argument("--spread-head-max", type=float, default=0.2); ap.add_argument("--spread-pause-max", type=float, default=0.25)
+    ap.add_argument("--spread-pause-total-max", type=float, default=0.35, help="max silence at one boundary = the TTS's own pause there + the inserted one")
+    ap.add_argument("--spread-min-seg", type=float, default=0.5, help="min s of speech between two inserted pauses / a pause and the part edge")
     a = ap.parse_args()
     import run_clean_pipeline_05 as rp, tts_burst as tb
     from e1_burst_align import PlaceOpts, burst_fit_ratios
@@ -37,7 +44,7 @@ def main() -> int:
     base_units = [{k: u[k] for k in ("asr_segment", "start", "end", "text", "words", "id", "speaker")} for u in units]
     plans = rp.burst_plan(base_units, man["asr"]["segments"], man["speech_intervals"], dur, al.get("min_burst_s", 0.0), al.get("spill", True))
     opts = PlaceOpts(al["atempo_cap"], al["hard_cap"], True, 0.06, a.fill_slowdown if a.fill_slowdown is not None else al["fill_slowdown"], spill=al.get("spill", True),
-                     max_lead=0.4)   # runner default --burst-max-lead; opts.min_burst_s = al.get("min_burst_s", 0.0); opts.fallback_frac = al.get("fallback_frac", 1.01)
+                     max_lead=a.max_lead)   # runner default --burst-max-lead 0.4; opts.min_burst_s = al.get("min_burst_s", 0.0); opts.fallback_frac = al.get("fallback_frac", 1.01)
     prev_end_of = {u["id"]: plans[i - 1]["slot"][1] for i, u in enumerate(units) if i > 0}
     cut_cfg = dict(tb.ACOUSTIC_CUT)
     if a.long_pause_func > 0: cut_cfg.update(w_func_long=a.long_pause_func, long_lo=a.long_pause_lo, long_hi=a.long_pause_hi, long_grow=a.long_grow, long_late_tol=a.long_late_tol)
@@ -104,6 +111,17 @@ def main() -> int:
         log.append({"unit": u["id"], "parts": parts})
     if mc_path: mc_path.write_text(json.dumps(marks_cache, indent=1, ensure_ascii=False))
     man2 = copy.deepcopy(man); man2["alignment"] = rp.align_units_burst(units, plans, out, opts)
+    if a.spread != "off":
+        import timing_spread as tsp
+        cfg = {"mode": a.spread, "ok": a.spread_ok, "head_max": a.spread_head_max, "pause_max": a.spread_pause_max, "pause_total_max": a.spread_pause_total_max, "min_seg": a.spread_min_seg,
+               "src_ivs": [(v["start"], v["end"]) for v in man["speech_intervals"]]}; slog = []
+        for u in units:
+            tr, sr_ = sf.read(u["alignment"]["file"], dtype="float32"); yr, _ = sf.read(u["tts_raw_file"], dtype="float32")
+            tr2, lg = tsp.spread_unit(u, tr, sr_, yr, cfg, norm, tb.CUT_FUNC_WORDS, tb.FIXED_PHRASES)
+            if lg: sf.write(u["alignment"]["file"], tr2, sr_, subtype="PCM_16"); slog += lg
+        man2["alignment"]["spread"] = {"cfg": {k: v for k, v in cfg.items() if k != "src_ivs"}, "parts_spread": len(slog), "pauses": sum(len(x["pauses"]) for x in slog),
+                                       "pause_s": round(sum(p["s"] for x in slog for p in x["pauses"]), 2), "head_s": round(sum(x["head_s"] for x in slog), 2), "log": slog}
+        print(f"spread {a.spread}: {len(slog)} parts, {man2['alignment']['spread']['pauses']} inner pauses ({man2['alignment']['spread']['pause_s']} s), head {man2['alignment']['spread']['head_s']} s")
     man2["dubbed_track"] = rp.build_dubbed_track(units, dur, out); man2["units"] = units; man2["work_dir"] = str(out)
     for f in ("audio16k.wav", "master_25fps.mp4", "bg_44k.wav", "vocals_44k.wav"):
         if (W / f).exists() and not (out / f).exists(): (out / f).symlink_to(W / f)
