@@ -14,6 +14,8 @@ as cand5) on a frame window and keeps every intermediate, all on the same frames
 LatentSync segments = the run's LATENT_SYNC segments clipped to the window; a clipped segment starts on the run's own 16-frame window
 grid (segment start + 16 k), so window boundaries fall on the same frames as in the run. A segment that lies completely inside the
 window is bit-for-bit the run's input (frames, dub slice, detections) -> also a reproducibility check against the run's output.
+Face stack (2026-10-16 CLEAN-ONLY): by default the detections come from the clean MediaPipe stack (clean_face_stack.CleanPrep, NC loaders
+blocked) and no CodeFormer stage is made; give the manifest of a clean0 run so the pieces are clean0's segments (S3nc_final_nocf = clean0).
 Every stage is written losslessly (libx264rgb crf 0) as <out>/<stage>.mp4 plus <out>/window_manifest.json (segments in window frame
 indices, for mouth_jitter_hr.py --manifest). Optional --sbs: labelled side-by-side review clip (with the run's muxed audio).
 
@@ -74,38 +76,55 @@ def main() -> int:
     ap.add_argument("--out", required=True); ap.add_argument("--ls-landmark-smooth", type=int, default=2); ap.add_argument("--mask-smooth", type=int, default=3)
     ap.add_argument("--mask-top", type=float, default=0.52); ap.add_argument("--mask-feather", type=float, default=0.08)
     ap.add_argument("--codeformer-w", type=float, default=1.0); ap.add_argument("--sbs", action="store_true")
+    ap.add_argument("--face-stack", choices=["mediapipe", "insightface"], default="mediapipe",
+                    help="mediapipe (default, CLEAN-ONLY) = detections replayed from the clean face stack (scripts/pilot/clean_face_stack.py), NC loaders blocked; "
+                         "insightface = LatentSync's own FaceDetector (non-commercial buffalo_l; research only)")
+    ap.add_argument("--codeformer", choices=["off", "on"], default="off", help="on = also the CodeFormer stages (non-commercial; research only, needs the quarantined weights)")
     a = ap.parse_args()
     man = json.loads(pathlib.Path(a.manifest).read_text()); work = pathlib.Path(man["work_dir"])
     A, B = (0, 10 ** 9) if a.frames == "all" else [int(x) for x in a.frames.split(":")]; out = pathlib.Path(a.out); out.mkdir(parents=True, exist_ok=True)
     import face_aware_latentsync as fa, face_aware_latentsync_accel as faa
     from candidate_video_stage import MouthOnlyRunner
-    from codeformer_accel import CodeFormerAccel, lm5_from_insightface106
     times = {}; t_all = time.perf_counter()
-    master_all = fa.read_frames(work / "master_25fps.mp4"); B = min(B, len(master_all)); master = master_all[A:B]; del master_all
-    audio, sr = sf.read(str(work / "dubbed_16k.wav"), dtype="float32"); audio = audio.mean(1) if audio.ndim > 1 else audio; assert sr == SR
+    master_all = fa.read_frames(work / "master_25fps.mp4"); B = min(B, len(master_all))
+    clean_dets = None
+    if a.face_stack == "mediapipe":
+        import clean_face_stack as cfs
+        cfs.guard_nc()
+        prep = cfs.CleanPrep(pathlib.Path(man["input"]), work, frames=master_all, master=work / "master_25fps.mp4"); clean_dets = prep.ls_dets
+    master = master_all[A:B]; del master_all
+    dub16 = pathlib.Path(man["dubbed_track"]["wav16k"]) if man.get("dubbed_track", {}).get("wav16k") else work / "dubbed_16k.wav"
+    audio, sr = sf.read(str(dub16), dtype="float32"); audio = audio.mean(1) if audio.ndim > 1 else audio; assert sr == SR
     segs = clip_segments(man, A, B)
     print(f"window {A}:{B} ({(B - A) / FPS:.2f} s), LS pieces: {[(s['start'], s['end'], s['full']) for s in segs]}", flush=True)
     t0 = time.perf_counter(); inner = faa.AccelRunner(2, True, "none", "auto", steps=20, guidance=1.5, deepcache_interval=5); times["ls_load"] = round(time.perf_counter() - t0, 2)
     runner = MouthOnlyRunner(inner, a.mask_top, a.mask_feather, a.mask_smooth, defer=True)
-    cf = CodeFormerAccel(fidelity_weight=a.codeformer_w, batch_size=8, landmark_source="insightface", autocast=True, parse_autocast=True)
-    keep = a.stages_out or ["S0_ls_raw", "S1_ls_cf", "S2_composite", "S3_final", "S2nc_composite_nocf", "S3nc_final_nocf"]
+    cf = None
+    if a.codeformer == "on":
+        from codeformer_accel import CodeFormerAccel, lm5_from_insightface106
+        cf = CodeFormerAccel(fidelity_weight=a.codeformer_w, batch_size=8, landmark_source="insightface", autocast=True, parse_autocast=True)
+    keep = a.stages_out or (["S0_ls_raw", "S1_ls_cf", "S2_composite", "S3_final", "S2nc_composite_nocf", "S3nc_final_nocf"] if cf is not None
+                            else ["S0_ls_raw", "S2nc_composite_nocf", "S3nc_final_nocf"])
     stages = {k: [f.copy() for f in master] for k in keep}
     t_ls = t_cf = 0.0
     for s in segs:
         st, en = s["start"], s["end"]; rgb = np.stack([cv2.cvtColor(master[i - A], cv2.COLOR_BGR2RGB) for i in range(st, en)])
         a0 = int(round(st / FPS * SR)); seg_audio = audio[a0:a0 + int(round((en - st) / FPS * SR))]
         wav = out / f"seg_{st}_in.wav"; sf.write(str(wav), seg_audio, SR, subtype="PCM_16")
-        dets = fa.detect_frames(rgb)
+        dets = list(clean_dets[st:en]) if clean_dets is not None else fa.detect_frames(rgb)
         if not all(d[0] is not None for d in dets): print(f"  piece {st}:{en}: LatentSync detector rejects {sum(d[0] is None for d in dets)} frames -> skipped"); continue
         if a.ls_landmark_smooth > 0: dets = faa.smooth_detections(dets, a.ls_landmark_smooth)
         t0 = time.perf_counter(); frs_rgb, _ = runner.run_frames(rgb, wav, dets); t_ls += time.perf_counter() - t0; wav.unlink(missing_ok=True)
         n = min(len(frs_rgb), en - st); raw = [cv2.cvtColor(f, cv2.COLOR_RGB2BGR) for f in frs_rgb[:n]]; boxes = runner._boxes
-        t0 = time.perf_counter(); lms = [lm5_from_insightface106(dets[k][1]) for k in range(n)]; cfo, st_cf = cf.restore_frames([f.copy() for f in raw], lms); t_cf += time.perf_counter() - t0
         mst = [master[i - A] for i in range(st, st + n)]
-        comp = runner.composite(cfo, mst, boxes); comp_nc = runner.composite(raw, mst, boxes)
-        fin = crossfade(comp, mst, s["xf_in"], s["xf_out"]); fin_nc = crossfade(comp_nc, mst, s["xf_in"], s["xf_out"])
+        if cf is not None:
+            t0 = time.perf_counter(); lms = [lm5_from_insightface106(dets[k][1]) for k in range(n)]; cfo, st_cf = cf.restore_frames([f.copy() for f in raw], lms); t_cf += time.perf_counter() - t0
+            comp = runner.composite(cfo, mst, boxes); fin = crossfade(comp, mst, s["xf_in"], s["xf_out"])
+        else:
+            cfo = comp = fin = None; st_cf = {"faces_restored": 0}
+        comp_nc = runner.composite(raw, mst, boxes); fin_nc = crossfade(comp_nc, mst, s["xf_in"], s["xf_out"])
         for k, lst in (("S0_ls_raw", raw), ("S1_ls_cf", cfo), ("S2_composite", comp), ("S3_final", fin), ("S2nc_composite_nocf", comp_nc), ("S3nc_final_nocf", fin_nc)):
-            if k in stages:
+            if k in stages and lst is not None:
                 for j in range(n): stages[k][st - A + j] = lst[j]
         print(f"  piece {st}:{en} done: LS {n} frames, CodeFormer {st_cf['faces_restored']} faces", flush=True)
     times["latentsync"] = round(t_ls, 2); times["codeformer"] = round(t_cf, 2)
@@ -118,9 +137,10 @@ def main() -> int:
     for i in range(A, B):
         ok, f = cap.read()
         if not ok: break
-        if "S3_final" in stages and any(s["full"] and s["start"] <= i < s["end"] for s in segs): diffs.append(float(np.abs(f.astype(np.float32) - stages["S3_final"][i - A].astype(np.float32)).mean()))
+        ref_stage = "S3_final" if "S3_final" in stages else ("S3nc_final_nocf" if "S3nc_final_nocf" in stages else None)
+        if ref_stage and any(s["full"] and s["start"] <= i < s["end"] for s in segs): diffs.append(float(np.abs(f.astype(np.float32) - stages[ref_stage][i - A].astype(np.float32)).mean()))
     cap.release()
-    wman = {"source_manifest": a.manifest, "window": [A, B], "fps": FPS, "pieces": segs, "times": times,
+    wman = {"source_manifest": a.manifest, "window": [A, B], "fps": FPS, "pieces": segs, "times": times, "face_stack": a.face_stack,
             "settings": {"ls_landmark_smooth": a.ls_landmark_smooth, "mask_smooth": a.mask_smooth, "mask_top": a.mask_top, "mask_feather": a.mask_feather,
                          "codeformer_w": a.codeformer_w, "latentsync": inner.config},
             "repro_vs_run_output_full_segments": {"frames": len(diffs), "mean_abs_diff": round(float(np.mean(diffs)), 3) if diffs else None,

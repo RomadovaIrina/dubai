@@ -111,19 +111,41 @@ def similarity(src3: np.ndarray, iod: float) -> np.ndarray:
 
 
 # ------------------------------------------------------------------------------------------------ manifest helpers
-def ls_layout(man: dict, n: int, win: int, ls_window: int = 16):
+def frame_times(video: str) -> np.ndarray:
+    """Presentation time (s) of every decoded frame (works for CFR and VFR)."""
+    out = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "frame=pts_time", "-of", "csv=p=0", video],
+                         capture_output=True, text=True, check=True).stdout.split()
+    return np.array([float(x.strip(",")) for x in out if x.strip(",") not in ("", "N/A")])
+
+
+def master_to_video(n: int, tvid, master_fps: float = 25.0):
+    """Video frame k -> continuous master (25 fps) position; identity when tvid is None (the video IS on the master grid)."""
+    if tvid is None: return np.arange(n, dtype=np.float64)
+    t = np.asarray(tvid[:n], np.float64)
+    if len(t) < n: t = np.concatenate([t, t[-1] + (np.arange(1, n - len(t) + 1) / master_fps)])
+    return t * master_fps
+
+
+def ls_layout(man: dict, n: int, win: int, ls_window: int = 16, tvid=None):
+    """Classes / LatentSync window phase / switch frames per VIDEO frame. Segments are master (25 fps) frame ranges; with tvid (frame times
+    of a video at another fps, e.g. a source-fps composite) they are mapped through time."""
     segs = sorted([s for s in man["lipsync"]["segments"] if s["action"] != "SPLIT"], key=lambda s: s["start_frame"])
-    ls = np.zeros(n, bool); phase = np.full(n, -1)
+    mpos = master_to_video(n, tvid); ls = np.zeros(n, bool); phase = np.full(n, -1)
     for s in segs:
         if s["action"] == "LATENT_SYNC":
-            a, b = s["start_frame"], min(n, s["end_frame"]); ls[a:b] = True; phase[a:b] = (np.arange(a, b) - a) % ls_window
-    sw = [b["start_frame"] for a, b in zip(segs, segs[1:]) if (a["action"] == "LATENT_SYNC") != (b["action"] == "LATENT_SYNC")]
+            sel = (mpos >= s["start_frame"]) & (mpos < s["end_frame"]); ls |= sel
+            phase[sel] = np.floor(mpos[sel] - s["start_frame"]).astype(int) % ls_window
+    sw = []
+    for a_, b_ in zip(segs, segs[1:]):
+        if (a_["action"] == "LATENT_SYNC") != (b_["action"] == "LATENT_SYNC"):
+            k = int(np.searchsorted(mpos, b_["start_frame"]));
+            if k < n: sw.append(k)
     near = np.zeros(n, bool)
     for f in sw: near[max(0, f - win):min(n, f + win)] = True
     return {"ls_core": ls & ~near, "switch": near, "orig": ~ls & ~near}, phase, sw
 
 
-def window_boundaries(sig: dict, frames: np.ndarray, in_range: np.ndarray, cls: dict, phase: np.ndarray, man: dict, P: int) -> dict:
+def window_boundaries(sig: dict, frames: np.ndarray, in_range: np.ndarray, cls: dict, phase: np.ndarray, man: dict, P: int, tvid=None) -> dict:
     """LatentSync denoises independent P-frame windows from each LS segment start: is there a jump at every window boundary?
     For the mouth: per-phase means (LS core frames) of d1 / resid / vel / jerk, phase-0 over inner-phase ratio for the video and for the
     reference on the same frames, and per boundary the d1 at the first frame of a window / median d1 of the previous window's inner frames."""
@@ -138,7 +160,7 @@ def window_boundaries(sig: dict, frames: np.ndarray, in_range: np.ndarray, cls: 
     for sgm in man["lipsync"]["segments"]:
         if sgm["action"] != "LATENT_SYNC": continue
         for w in range(sgm["start_frame"] + P, sgm["end_frame"], P):
-            j = pos.get(w)
+            j = pos.get(w) if tvid is None else pos.get(int(np.searchsorted(master_to_video(int(frames[-1]) + 2, tvid), w)))
             if j is None or j < P or not in_range[j]: continue
             for s_, lst in (("v", jv), ("r", jr)):
                 x = sig["d1"]["mouth"][s_]; base = np.nanmedian(x[j - P + 2:j - 1])
@@ -364,9 +386,11 @@ def main() -> int:
         report["per_range"][f"{x}:{y}"] = aggregate(res["sig"], (frames >= x) & (frames < y))
     if a.manifest:
         man = json.loads(pathlib.Path(a.manifest).read_text())
-        cls, phase, sw = ls_layout(man, int(frames[-1]) + 2, a.win, a.ls_window)
+        tvid = None if abs(fv - 25.0) < 0.01 else frame_times(a.video)
+        cls, phase, sw = ls_layout(man, int(frames[-1]) + 2, a.win, a.ls_window, tvid)
         report["classes"] = {c: aggregate(res["sig"], in_range & cls[c][frames]) for c in REGION_CLASSES}
-        report["latentsync_window_boundaries"] = window_boundaries(res["sig"], frames, in_range, cls, phase, man, a.ls_window)
+        report["latentsync_window_boundaries"] = window_boundaries(res["sig"], frames, in_range, cls, phase, man, a.ls_window, tvid)
+        report["video_timing"] = "master grid (25 fps)" if tvid is None else f"source timestamps ({len(tvid)} frames, segments mapped through time)"
         report["switch_frames"] = sw
     # worst 1 s windows (mouth jerk ratio), for review clips
     jv, jr = res["sig"]["jerk"]["mouth"]["v"], res["sig"]["jerk"]["mouth"]["r"]; win = []
