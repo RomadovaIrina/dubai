@@ -782,6 +782,8 @@ def main() -> int:
                     help="optimized backend: mediapipe = clean face stack (scripts/pilot/clean_face_stack.py, Apache-2.0 MediaPipe Face Landmarker in /venv/mediapipe) "
                          "for the router, LatentSync's crop / verify detections and the mouth-mask landmarks; InsightFace / RetinaFace loaders are blocked. "
                          "insightface = previous stack (non-commercial weights, needs DUB_ALLOW_NC=1). Default since 2026-10-16 (CLEAN-ONLY)")
+    ap.add_argument("--pose-precheck", choices=["on", "off"], default="on", help="spec 5.4: > 30 %% of face frames with |yaw| > 30 deg -> voice-only result (no lip-sync), flagged")
+    ap.add_argument("--pose-gate-deg", type=float, default=0.0, help="spec 5.5 test: frames with |yaw| above this go to pass-through (held +-3 frames, eased by the crossfade); 0 = off")
     ap.add_argument("--mp-anchor-calib", choices=["on", "off"], default="on", help="--face-stack mediapipe: constant anchor correction to LatentSync's training alignment")
     ap.add_argument("--video-prep", choices=["sequential", "parallel"], default="sequential",
                     help="optimized backend: parallel = master decode + router / LatentSync face detection of every frame in a thread during the audio stage, "
@@ -980,11 +982,24 @@ def main() -> int:
                 import clean_face_stack as cfs
                 cfs.guard_nc()
                 with timed(times, "face_stack_mediapipe"):
-                    prep = cfs.CleanPrep(src, work, a.face_min_w, a.face_min_h, calib=a.mp_anchor_calib == "on")
+                    prep = cfs.CleanPrep(src, work, a.face_min_w, a.face_min_h, calib=a.mp_anchor_calib == "on", pose_precheck=a.pose_precheck == "on", pose_gate_deg=a.pose_gate_deg)
                 man["face_stack"] = {**prep.info, "times": prep.times}; man["frame_map"] = prep.frame_map
+                if prep.voice_only:
+                    flag = "voice_only_face_stack_failed" if prep.face_stack_failed else "voice_only_pose_precheck"
+                    man["result_flags"] = sorted(set(man.get("result_flags", [])) | {flag})
+                    print(f"  [face-stack] VOICE-ONLY ({flag}): " + (prep.failure or f"{prep.pose_info['precheck']['fraction_over']:.0%} of face frames |yaw| > 30 deg (spec 5.4)") + " -> no lip-sync", flush=True)
                 print(f"  [face-stack] mediapipe {prep.info['face_frames']}/{prep.info['frames']} face frames, {prep.info['ls_detections']} LatentSync detections {prep.times}", flush=True)
             man["lipsync"] = run_lipsync_optimized(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), mux_aac, out, a, times,
                                                    speech_gate=speech_gate, prep=prep)
+            if a.face_stack == "mediapipe":   # spec 11: degraded frames (held landmarks, LatentSync failures) vs the 2 % SUCCESS / PARTIAL_SUCCESS rule
+                lsr = man["lipsync"]; elig = int(lsr["frame_classes"].get("VALID_FACE", 0))
+                failed = int((lsr["by_action"].get("PASS_THROUGH_LS_FAILED") or {}).get("frames", 0)); held = int(man["face_stack"].get("held_landmark_frames", 0))
+                ratio = (held + failed) / max(elig, 1)
+                status = "PARTIAL_SUCCESS" if (prep.voice_only or ratio > 0.02) else "SUCCESS"
+                man["video_status"] = {"status": status, "eligible_lipsync_frames": elig, "held_landmark_frames": held, "latentsync_failed_frames": failed,
+                                       "degraded_ratio": round(ratio, 4), "rule": "SUCCESS if degraded <= 2 % of eligible frames; voice-only fallback = PARTIAL_SUCCESS",
+                                       "flags": man.get("result_flags", [])}
+                print(f"  [status] {status}: degraded {held + failed}/{elig} ({ratio:.2%}) flags {man.get('result_flags', [])}", flush=True)
         else:
             man["lipsync"] = run_lipsync(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), mux_aac,
                                          out, a.min_ls_frames, a.max_verify_depth, times)

@@ -7,7 +7,8 @@ Runs in its own env (/venv/mediapipe: mediapipe 0.10.21 needs protobuf 4.25 / op
 the project env only reads the npz.  VIDEO running mode = MediaPipe's own frame-to-frame tracking (default); --mode image = per frame.
 
     /venv/mediapipe/bin/python scripts/pilot/mp_landmarks.py VIDEO OUT.npz [--model models/mediapipe/face_landmarker.task]
-npz: lm (T, 478, 2) pixel x, y (NaN = no face), z (T, 478) relative depth (pixel units), presence (T,) bool, wh (2,) frame size.
+npz: lm (T, 478, 2) pixel x, y (NaN = no face), z (T, 478) relative depth (pixel units), presence (T,) bool, wh (2,) frame size,
+     matrix (T, 4, 4) facial transformation matrix (canonical face -> camera; head pose for spec 5.4 / 5.5).
 """
 from __future__ import annotations
 import argparse, pathlib, time
@@ -28,9 +29,10 @@ def main() -> int:
     a = ap.parse_args()
     mode = vision.RunningMode.VIDEO if a.mode == "video" else vision.RunningMode.IMAGE
     opts = vision.FaceLandmarkerOptions(base_options=mpt.BaseOptions(model_asset_path=a.model), running_mode=mode, num_faces=1,
-                                        min_face_detection_confidence=a.min_conf, min_face_presence_confidence=a.min_conf, min_tracking_confidence=a.min_conf)
+                                        min_face_detection_confidence=a.min_conf, min_face_presence_confidence=a.min_conf, min_tracking_confidence=a.min_conf,
+                                        output_facial_transformation_matrixes=True)
     cap = cv2.VideoCapture(a.video); fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
-    lms, zs, pres = [], [], []; t0 = time.perf_counter(); i = 0; H = W = 0
+    lms, zs, pres, mats = [], [], [], []; t0 = time.perf_counter(); i = 0; H = W = 0
     with vision.FaceLandmarker.create_from_options(opts) as det:
         while True:
             ok, f = cap.read()
@@ -41,11 +43,14 @@ def main() -> int:
             if r.face_landmarks:
                 p = r.face_landmarks[0]
                 lms.append(np.array([[q.x * W, q.y * H] for q in p], np.float32)); zs.append(np.array([q.z * W for q in p], np.float32)); pres.append(True)
+                m = r.facial_transformation_matrixes[0] if r.facial_transformation_matrixes else None
+                mats.append(np.asarray(m, np.float32).reshape(4, 4) if m is not None else np.full((4, 4), np.nan, np.float32))
             else:
                 lms.append(np.full((478, 2), np.nan, np.float32)); zs.append(np.full(478, np.nan, np.float32)); pres.append(False)
+                mats.append(np.full((4, 4), np.nan, np.float32))
             i += 1
     out = pathlib.Path(a.out); out.parent.mkdir(parents=True, exist_ok=True); tmp = out.with_name(out.stem + ".tmp.npz")
-    np.savez_compressed(tmp, lm=np.stack(lms), z=np.stack(zs), presence=np.array(pres), wh=np.array([W, H]), mode=a.mode, video=a.video,
+    np.savez_compressed(tmp, lm=np.stack(lms), z=np.stack(zs), presence=np.array(pres), wh=np.array([W, H]), mode=a.mode, video=a.video, matrix=np.stack(mats),
                         model="face_landmarker.task float16 v1 (MediaPipe, Apache-2.0)")
     tmp.replace(out)
     print(f"{a.video}: {i} frames, face in {int(np.sum(pres))}, {time.perf_counter() - t0:.1f}s -> {out}")

@@ -41,7 +41,10 @@ LMK_ADAPT_ORIGIN_ORDER = [1, 10, 12, 14, 16, 3, 5, 7, 0, 23, 21, 19, 32, 30, 28,
 def run_mediapipe(video: pathlib.Path, out: pathlib.Path, mode: str = "video") -> pathlib.Path:
     """MediaPipe Face Landmarker over every frame of `video` in its own env -> npz (cached next to the master)."""
     if out.exists():
-        return out
+        try:
+            if "matrix" in np.load(out).files: return out   # older caches lack the head-pose matrices -> recompute
+        except Exception:
+            pass
     import hashlib
     h = hashlib.sha256(MP_MODEL.read_bytes()).hexdigest()
     if h != MP_MODEL_SHA256:
@@ -52,6 +55,23 @@ def run_mediapipe(video: pathlib.Path, out: pathlib.Path, mode: str = "video") -
     if p.returncode != 0 or not out.exists():
         raise RuntimeError(f"mediapipe landmarks failed ({p.returncode}): {p.stdout[-1500:]}")
     return out
+
+
+def pose_from_matrix(M: np.ndarray) -> np.ndarray:
+    """MediaPipe facial transformation matrices (T, 4, 4) -> (T, 3) yaw, pitch, roll in degrees (NaN where no face). Validated on 03:
+    yaw follows the nose-vs-eye-midpoint offset (r 0.69), roll the eye-line angle (r -0.99, opposite sign convention)."""
+    out = np.full((len(M), 3), np.nan)
+    ok = np.isfinite(M[:, 0, 0])
+    if ok.any():
+        R = M[ok, :3, :3] / np.linalg.norm(M[ok, :3, 0], axis=1)[:, None, None]
+        out[ok, 0] = np.degrees(np.arctan2(R[:, 0, 2], R[:, 2, 2]))
+        out[ok, 1] = np.degrees(np.arctan2(-R[:, 1, 2], np.sqrt(R[:, 0, 2] ** 2 + R[:, 2, 2] ** 2)))
+        out[ok, 2] = np.degrees(np.arctan2(R[:, 1, 0], R[:, 1, 1]))
+    return out
+
+
+POSE_PRECHECK = {"yaw_deg": 30.0, "max_fraction": 0.30}
+HOLD_GAP_FRAMES = 5   # spec 11: missing landmarks for <= 5 frames (0.2 s) inside a face run -> previous valid frame   # spec 5.4: > 30 % of face frames with |yaw| > 30 deg -> voice-only result, flagged
 
 
 def face_frame(mp478: np.ndarray):
@@ -125,7 +145,8 @@ def ls_detections(mp_lm: np.ndarray, W: int, H: int, calib: bool = True) -> list
 class CleanPrep:
     """Stands in for face_aware_latentsync_accel.VideoPrep: the master frames + MediaPipe-derived router rows and LatentSync detections."""
 
-    def __init__(self, src: pathlib.Path, work: pathlib.Path, min_w: int = 50, min_h: int = 80, calib: bool = True, frames=None, master=None):
+    def __init__(self, src: pathlib.Path, work: pathlib.Path, min_w: int = 50, min_h: int = 80, calib: bool = True, frames=None, master=None,
+                 pose_precheck: bool = True, pose_gate_deg: float = 0.0, pose_gate_hold: int = 3):
         import face_aware_latentsync as fa
         self.times = {}; self.error = None
         t0 = time.perf_counter()
@@ -140,18 +161,66 @@ class CleanPrep:
         except Exception as e:   # never fail the video stage for a bookkeeping table
             self.frame_map = {"error": f"{type(e).__name__}: {str(e)[:200]}"}
         self.times["prep_frame_map"] = round(time.perf_counter() - t0, 3); t0 = time.perf_counter()
-        npz = run_mediapipe(pathlib.Path(self.master), pathlib.Path(work) / "master_mediapipe.npz")
-        z = np.load(npz); lm = z["lm"]
-        if len(lm) != len(self.frames):
-            raise RuntimeError(f"mediapipe frames {len(lm)} != master frames {len(self.frames)}")
+        # spec 11.1-11.3: a MediaPipe failure never crashes the worker: one retry, then a voice-only result (no lip-sync), flagged
+        self.failure = None; npz = pathlib.Path(work) / "master_mediapipe.npz"; lm = None; z = None
+        for attempt in (1, 2):
+            try:
+                run_mediapipe(pathlib.Path(self.master), npz); z = np.load(npz); lm = z["lm"]
+                if len(lm) != len(self.frames):
+                    raise RuntimeError(f"mediapipe frames {len(lm)} != master frames {len(self.frames)}")
+                break
+            except Exception as e:
+                self.failure = f"attempt {attempt}: {type(e).__name__}: {str(e)[:300]}"; lm = None
+                try: npz.unlink(missing_ok=True)
+                except Exception: pass
+        self.face_stack_failed = lm is None
+        if lm is None:
+            lm = np.full((len(self.frames), 478, 2), np.nan, np.float32)
+        matrix = z["matrix"] if (z is not None and "matrix" in z.files) else np.full((len(self.frames), 4, 4), np.nan, np.float32)
+        # short landmark gaps inside a face run: hold the previous valid frame (a split would add two LS <-> original switches)
+        lm = lm.copy(); held = 0; ok = np.isfinite(lm[:, 0, 0]); i = 0; n_ = len(lm)
+        while i < n_:
+            if not ok[i]:
+                j = i
+                while j < n_ and not ok[j]: j += 1
+                if 0 < i and j < n_ and (j - i) <= HOLD_GAP_FRAMES:
+                    lm[i:j] = lm[i - 1]; held += j - i
+                i = j
+            else:
+                i += 1
+        self.held_frames = held
         self.times["prep_mediapipe"] = round(time.perf_counter() - t0, 3)
         H, W = self.frames[0].shape[:2]
         self.router = MediaPipeRouter(min_w, min_h)
         self.router_rows = [self.router.row(f if np.isfinite(f[0, 0]) else None) for f in lm]
         self.ls_dets = ls_detections(lm, W, H, calib)
+        # ---- head pose (spec 5.4 / 5.5): pre-check -> voice-only; optional per-frame gate -> pass-through (eased by the LS<->original crossfade)
+        pose = pose_from_matrix(matrix)
+        face = np.isfinite(pose[:, 0]); big = face & (np.abs(pose[:, 0]) > POSE_PRECHECK["yaw_deg"])
+        frac = float(big.sum() / max(face.sum(), 1)); self.voice_only = bool(pose_precheck and face.any() and frac > POSE_PRECHECK["max_fraction"])
+        gated = 0
+        if self.face_stack_failed:   # router rows are already NO_FACE everywhere -> the whole video passes through with the dub (voice-only)
+            self.voice_only = True
+            for r in self.router_rows: r.update({"cls": "NO_FACE", "reason": "face_stack_failed"})
+        elif self.voice_only:
+            for r in self.router_rows: r.update({"cls": "NO_FACE", "reason": "pose_precheck_voice_only"})
+        elif pose_gate_deg and pose_gate_deg > 0:
+            out_of = face & (np.abs(pose[:, 0]) > pose_gate_deg)
+            if pose_gate_hold > 0 and out_of.any():   # hold the decision +-hold frames: no 1-frame flicker between LatentSync and the original
+                k = np.ones(2 * pose_gate_hold + 1); out_of = np.convolve(out_of.astype(float), k, "same") > 0
+            for i in np.where(out_of)[0]:
+                if self.router_rows[i]["cls"] == "VALID_FACE":
+                    self.router_rows[i] = {**self.router_rows[i], "cls": "SMALL_FACE", "reason": "pose_out_of_range"}; gated += 1
+        self.pose = pose
+        self.pose_info = {"available": bool(face.any()), "yaw_p1_p50_p99": np.round(np.nanpercentile(pose[:, 0], [1, 50, 99]), 1).tolist() if face.any() else None,
+                          "abs_yaw_max": round(float(np.nanmax(np.abs(pose[:, 0]))), 1) if face.any() else None,
+                          "precheck": {**POSE_PRECHECK, "fraction_over": round(frac, 4), "enabled": bool(pose_precheck), "voice_only": self.voice_only},
+                          "gate": {"yaw_deg": pose_gate_deg, "hold_frames": pose_gate_hold, "gated_frames": int(gated)}}
         self.info = {"face_stack": "mediapipe", "frames": len(lm), "face_frames": int(np.isfinite(lm[:, 0, 0]).sum()),
                      "ls_detections": int(sum(d[0] is not None for d in self.ls_dets)), "anchor_calib": ANCHOR_CALIB if calib else None, "npz": str(npz),
-                     "frame_map_summary": self.frame_map.get("summary", self.frame_map)}
+                     "frame_map_summary": self.frame_map.get("summary", self.frame_map), "pose": self.pose_info,
+                     "voice_only": self.voice_only, "face_stack_failed": self.face_stack_failed,
+                     "held_landmark_frames": int(self.held_frames), "failure": self.failure}
 
     def result(self):
         return self

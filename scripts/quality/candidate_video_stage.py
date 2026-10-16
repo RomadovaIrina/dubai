@@ -102,6 +102,8 @@ def main() -> int:
     ap.add_argument("--codeformer-empty-cache", action="store_true", help="A/B: upstream per-face torch.cuda.empty_cache()")
     ap.add_argument("--codeformer-landmarks", choices=["insightface", "retinaface"], default="insightface")
     ap.add_argument("--face-stack", choices=["insightface", "mediapipe"], default="mediapipe", help="mediapipe = clean face stack (default); insightface needs DUB_ALLOW_NC=1")
+    ap.add_argument("--pose-precheck", choices=["on", "off"], default="on", help="spec 5.4: > 30 %% of face frames with |yaw| > 30 deg -> voice-only result (no lip-sync), flagged")
+    ap.add_argument("--pose-gate-deg", type=float, default=0.0, help="spec 5.5 test: frames with |yaw| above this go to pass-through (held +-3 frames, eased by the crossfade); 0 = off")
     ap.add_argument("--mp-anchor-calib", choices=["on", "off"], default="on")
     ap.add_argument("--codeformer-precision", choices=["fp32", "parse16", "fp16"], default="fp16", help="fp32 = upstream numerics; parse16 = ParseNet under fp16 autocast; fp16 = CodeFormer net + ParseNet under autocast")
     a = ap.parse_args()
@@ -146,7 +148,7 @@ def main() -> int:
     if a.face_stack == "mediapipe":   # CLEAN-ONLY: MediaPipe router + LatentSync detections, NC loaders blocked
         import clean_face_stack as cfs
         cfs.guard_nc()
-        with rp.timed(times, "face_stack_mediapipe"): prep = cfs.CleanPrep(src, work, a.face_min_w, a.face_min_h, calib=a.mp_anchor_calib == "on")
+        with rp.timed(times, "face_stack_mediapipe"): prep = cfs.CleanPrep(src, work, a.face_min_w, a.face_min_h, calib=a.mp_anchor_calib == "on", pose_precheck=a.pose_precheck == "on", pose_gate_deg=a.pose_gate_deg)
         router = prep.router; man["face_stack"] = {**prep.info, "times": prep.times}; man["frame_map"] = prep.frame_map
     else:
         with rp.timed(times, "face_router_load"): router = faa.make_router("retinaface", a.face_min_w, a.face_min_h, a.retina_conf)
