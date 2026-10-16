@@ -1,0 +1,83 @@
+{
+ "01": {
+  "peak": 22456,
+  "face_temporal": {
+   "sw": 1,
+   "swpm": 0.59,
+   "short2": 0,
+   "gap2": 0,
+   "mlm": 1.033,
+   "mop": 1.045,
+   "mfl": 1.092,
+   "mfl_sw": 1.021,
+   "ufl": 1.007,
+   "ush": 1.005,
+   "step": 98.8,
+   "stepm": 99.0,
+   "mj": 1.02
+  },
+  "md5": "MD5=f9c87d778b1beeeabb8aabd058a7622d"
+ },
+ "02": {
+  "peak": 8316,
+  "face_temporal": null,
+  "md5": "MD5=d0789251154f8722a3a6ea8b59303567"
+ },
+ "03": {
+  "peak": 23484,
+  "face_temporal": {
+   "sw": 8,
+   "swpm": 5.31,
+   "short2": 0,
+   "gap2": 2,
+   "mlm": 0.884,
+   "mop": 0.704,
+   "mfl": 0.89,
+   "mfl_sw": 0.973,
+   "ufl": 1.004,
+   "ush": 0.984,
+   "step": 4.0,
+   "stepm": 4.3,
+   "mj": 0.99
+  },
+  "md5": "MD5=6cf53a89cf7377dce0ce2a71ebe4dcd4"
+ },
+ "04": {
+  "peak": 22436,
+  "face_temporal": {
+   "sw": 12,
+   "swpm": 13.34,
+   "short2": 2,
+   "gap2": 4,
+   "mlm": 0.982,
+   "mop": 0.766,
+   "mfl": 0.964,
+   "mfl_sw": 0.979,
+   "ufl": 1.0,
+   "ush": 1.004,
+   "step": 12.6,
+   "stepm": 12.5,
+   "mj": 1.01
+  },
+  "md5": "MD5=cb31a8f48de529812aa61a71c9480e12"
+ },
+ "05": {
+  "peak": 22458,
+  "face_temporal": {
+   "sw": 10,
+   "swpm": 11.44,
+   "short2": 0,
+   "gap2": 2,
+   "mlm": 1.029,
+   "mop": 0.91,
+   "mfl": 0.997,
+   "mfl_sw": 0.992,
+   "ufl": 1.002,
+   "ush": 1.007,
+   "step": 17.4,
+   "stepm": 17.2,
+   "mj": 1.02
+  },
+  "md5": "MD5=b1447c1ea8cba58a7dbc822da8ca00a6"
+ }
+}

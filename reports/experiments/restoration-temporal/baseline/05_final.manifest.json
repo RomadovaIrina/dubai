@@ -1,0 +1,4481 @@
+{
+  "task": "0.5-runner",
+  "input": "/workspace/dub/inputs/test_videos_raw/05.mp4",
+  "output": "/workspace/dub/artifacts/baseline/05/final/05_final.mp4",
+  "target_lang": "en",
+  "alignment_mode": "burst",
+  "tts_mode": "phrase",
+  "segmentation_mode": "sentence",
+  "codeformer": {
+    "mode": "optimized",
+    "w": 1.0,
+    "batch": 8,
+    "landmarks": "insightface",
+    "precision": "fp16"
+  },
+  "work_dir": "/workspace/dub/artifacts/baseline/05/work/work_05",
+  "config": {
+    "seed": 1247,
+    "max_unit_s": 20.0,
+    "threads": 16
+  },
+  "source": {
+    "duration_s": 52.366667,
+    "size_bytes": 11034329,
+    "container": "mov,mp4,m4a,3gp,3g2,mj2",
+    "video": {
+      "codec": "h264",
+      "profile": "High",
+      "width": 464,
+      "height": 848,
+      "r_frame_rate": "30/1",
+      "avg_frame_rate": "47010/1571",
+      "fps": 30.0,
+      "avg_fps": 29.9236,
+      "vfr": true,
+      "pix_fmt": "yuv420p",
+      "nb_frames": "1567",
+      "duration_s": 52.366667,
+      "bit_rate": "1618092"
+    },
+    "audio": {
+      "codec": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "channel_layout": "stereo",
+      "bit_rate": "62616",
+      "duration_s": 52.365011
+    },
+    "has_video": true,
+    "has_audio": true
+  },
+  "speech_intervals": [
+    {
+      "start": 1.8,
+      "end": 4.0
+    },
+    {
+      "start": 4.8,
+      "end": 6.3
+    },
+    {
+      "start": 7.4,
+      "end": 9.5
+    },
+    {
+      "start": 10.9,
+      "end": 12.7
+    },
+    {
+      "start": 13.7,
+      "end": 15.8
+    },
+    {
+      "start": 17.0,
+      "end": 17.6
+    },
+    {
+      "start": 19.6,
+      "end": 21.5
+    },
+    {
+      "start": 22.9,
+      "end": 24.6
+    },
+    {
+      "start": 26.2,
+      "end": 29.2
+    },
+    {
+      "start": 30.4,
+      "end": 32.3
+    },
+    {
+      "start": 32.9,
+      "end": 34.0
+    },
+    {
+      "start": 36.3,
+      "end": 37.0
+    },
+    {
+      "start": 38.4,
+      "end": 39.9
+    },
+    {
+      "start": 40.3,
+      "end": 41.9
+    },
+    {
+      "start": 42.8,
+      "end": 44.8
+    },
+    {
+      "start": 46.0,
+      "end": 46.7
+    },
+    {
+      "start": 47.6,
+      "end": 49.1
+    }
+  ],
+  "timeline": {
+    "chunks": [
+      {
+        "start_s": 0.0,
+        "end_s": 1.8,
+        "type": "PASS_THROUGH",
+        "index": 0,
+        "duration_s": 1.8
+      },
+      {
+        "start_s": 1.8,
+        "end_s": 4.0,
+        "type": "SPEECH",
+        "index": 1,
+        "duration_s": 2.2
+      },
+      {
+        "start_s": 4.0,
+        "end_s": 4.8,
+        "type": "PASS_THROUGH",
+        "index": 2,
+        "duration_s": 0.8
+      },
+      {
+        "start_s": 4.8,
+        "end_s": 6.3,
+        "type": "SPEECH",
+        "index": 3,
+        "duration_s": 1.5
+      },
+      {
+        "start_s": 6.3,
+        "end_s": 7.4,
+        "type": "PASS_THROUGH",
+        "index": 4,
+        "duration_s": 1.1
+      },
+      {
+        "start_s": 7.4,
+        "end_s": 9.5,
+        "type": "SPEECH",
+        "index": 5,
+        "duration_s": 2.1
+      },
+      {
+        "start_s": 9.5,
+        "end_s": 10.9,
+        "type": "PASS_THROUGH",
+        "index": 6,
+        "duration_s": 1.4
+      },
+      {
+        "start_s": 10.9,
+        "end_s": 12.7,
+        "type": "SPEECH",
+        "index": 7,
+        "duration_s": 1.8
+      },
+      {
+        "start_s": 12.7,
+        "end_s": 13.7,
+        "type": "PASS_THROUGH",
+        "index": 8,
+        "duration_s": 1.0
+      },
+      {
+        "start_s": 13.7,
+        "end_s": 15.8,
+        "type": "SPEECH",
+        "index": 9,
+        "duration_s": 2.1
+      },
+      {
+        "start_s": 15.8,
+        "end_s": 17.0,
+        "type": "PASS_THROUGH",
+        "index": 10,
+        "duration_s": 1.2
+      },
+      {
+        "start_s": 17.0,
+        "end_s": 17.6,
+        "type": "SPEECH",
+        "index": 11,
+        "duration_s": 0.6
+      },
+      {
+        "start_s": 17.6,
+        "end_s": 19.6,
+        "type": "PASS_THROUGH",
+        "index": 12,
+        "duration_s": 2.0
+      },
+      {
+        "start_s": 19.6,
+        "end_s": 21.5,
+        "type": "SPEECH",
+        "index": 13,
+        "duration_s": 1.9
+      },
+      {
+        "start_s": 21.5,
+        "end_s": 22.9,
+        "type": "PASS_THROUGH",
+        "index": 14,
+        "duration_s": 1.4
+      },
+      {
+        "start_s": 22.9,
+        "end_s": 24.6,
+        "type": "SPEECH",
+        "index": 15,
+        "duration_s": 1.7
+      },
+      {
+        "start_s": 24.6,
+        "end_s": 26.2,
+        "type": "PASS_THROUGH",
+        "index": 16,
+        "duration_s": 1.6
+      },
+      {
+        "start_s": 26.2,
+        "end_s": 29.2,
+        "type": "SPEECH",
+        "index": 17,
+        "duration_s": 3.0
+      },
+      {
+        "start_s": 29.2,
+        "end_s": 30.4,
+        "type": "PASS_THROUGH",
+        "index": 18,
+        "duration_s": 1.2
+      },
+      {
+        "start_s": 30.4,
+        "end_s": 32.3,
+        "type": "SPEECH",
+        "index": 19,
+        "duration_s": 1.9
+      },
+      {
+        "start_s": 32.3,
+        "end_s": 32.9,
+        "type": "PASS_THROUGH",
+        "index": 20,
+        "duration_s": 0.6
+      },
+      {
+        "start_s": 32.9,
+        "end_s": 34.0,
+        "type": "SPEECH",
+        "index": 21,
+        "duration_s": 1.1
+      },
+      {
+        "start_s": 34.0,
+        "end_s": 36.3,
+        "type": "PASS_THROUGH",
+        "index": 22,
+        "duration_s": 2.3
+      },
+      {
+        "start_s": 36.3,
+        "end_s": 37.0,
+        "type": "SPEECH",
+        "index": 23,
+        "duration_s": 0.7
+      },
+      {
+        "start_s": 37.0,
+        "end_s": 38.4,
+        "type": "PASS_THROUGH",
+        "index": 24,
+        "duration_s": 1.4
+      },
+      {
+        "start_s": 38.4,
+        "end_s": 39.9,
+        "type": "SPEECH",
+        "index": 25,
+        "duration_s": 1.5
+      },
+      {
+        "start_s": 39.9,
+        "end_s": 40.3,
+        "type": "PASS_THROUGH",
+        "index": 26,
+        "duration_s": 0.4
+      },
+      {
+        "start_s": 40.3,
+        "end_s": 41.9,
+        "type": "SPEECH",
+        "index": 27,
+        "duration_s": 1.6
+      },
+      {
+        "start_s": 41.9,
+        "end_s": 42.8,
+        "type": "PASS_THROUGH",
+        "index": 28,
+        "duration_s": 0.9
+      },
+      {
+        "start_s": 42.8,
+        "end_s": 44.8,
+        "type": "SPEECH",
+        "index": 29,
+        "duration_s": 2.0
+      },
+      {
+        "start_s": 44.8,
+        "end_s": 46.0,
+        "type": "PASS_THROUGH",
+        "index": 30,
+        "duration_s": 1.2
+      },
+      {
+        "start_s": 46.0,
+        "end_s": 46.7,
+        "type": "SPEECH",
+        "index": 31,
+        "duration_s": 0.7
+      },
+      {
+        "start_s": 46.7,
+        "end_s": 47.6,
+        "type": "PASS_THROUGH",
+        "index": 32,
+        "duration_s": 0.9
+      },
+      {
+        "start_s": 47.6,
+        "end_s": 49.1,
+        "type": "SPEECH",
+        "index": 33,
+        "duration_s": 1.5
+      },
+      {
+        "start_s": 49.1,
+        "end_s": 52.3667,
+        "type": "PASS_THROUGH",
+        "index": 34,
+        "duration_s": 3.2667
+      }
+    ],
+    "speech_seconds": 27.9,
+    "pass_through_seconds": 24.467
+  },
+  "segmentation": {
+    "mode": "sentence",
+    "method": "sentence",
+    "chunks": [
+      {
+        "words": 64,
+        "ok": true,
+        "attempts": [
+          {
+            "attempt": 0,
+            "ok": true,
+            "changed_tokens": 1,
+            "ratio": 0.9844,
+            "diff": {
+              "replaced": [
+                [
+                  [
+                    "все"
+                  ],
+                  [
+                    "всё"
+                  ]
+                ]
+              ]
+            },
+            "out": "Давайте протестируем еще вот такой формат съемки видео. Всё-таки современные телефоны уже позволяют это делать. И такая функция добавляет, конечно же, у нас популярности и возможностей. Вот, хочется просто посмотреть, как справится наше приложение в таком формате. Просто вот иду, снимаю и что-то говорю. Так что пускай будет такое видео, лишним оно точно не будет. Тестим полностью все варианты, кот",
+            "clause_ends": [
+              7,
+              15,
+              19,
+              21,
+              26,
+              27,
+              30,
+              37,
+              40,
+              45,
+              51,
+              56,
+              60,
+              63
+            ]
+          }
+        ]
+      }
+    ],
+    "fallback_chunks": 0,
+    "sentences": 7,
+    "split_long": 0,
+    "units": 7
+  },
+  "asr": {
+    "language": "ru",
+    "language_probability": 0.999,
+    "audio_duration_s": 52.383,
+    "compute_type": "int8_float16",
+    "model": "faster-whisper large-v3",
+    "segments": [
+      {
+        "id": 1,
+        "start": 0.98,
+        "end": 5.84,
+        "text": "Давайте протестируем еще вот такой формат съемки видео",
+        "words": [
+          {
+            "word": " Давайте",
+            "start": 0.98,
+            "end": 1.92,
+            "p": 0.653
+          },
+          {
+            "word": " протестируем",
+            "start": 1.92,
+            "end": 2.86,
+            "p": 0.999
+          },
+          {
+            "word": " еще",
+            "start": 2.86,
+            "end": 3.04,
+            "p": 0.924
+          },
+          {
+            "word": " вот",
+            "start": 3.04,
+            "end": 3.26,
+            "p": 0.952
+          },
+          {
+            "word": " такой",
+            "start": 3.26,
+            "end": 3.5,
+            "p": 1.0
+          },
+          {
+            "word": " формат",
+            "start": 3.5,
+            "end": 5.1,
+            "p": 0.972
+          },
+          {
+            "word": " съемки",
+            "start": 5.1,
+            "end": 5.62,
+            "p": 0.997
+          },
+          {
+            "word": " видео",
+            "start": 5.62,
+            "end": 5.84,
+            "p": 0.998
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "start": 5.84,
+        "end": 12.0,
+        "text": "Все-таки современные телефоны уже позволяют это делать",
+        "words": [
+          {
+            "word": " Все",
+            "start": 5.84,
+            "end": 7.36,
+            "p": 0.05
+          },
+          {
+            "word": "-таки",
+            "start": 7.36,
+            "end": 7.6,
+            "p": 0.889
+          },
+          {
+            "word": " современные",
+            "start": 7.6,
+            "end": 8.28,
+            "p": 0.99
+          },
+          {
+            "word": " телефоны",
+            "start": 8.28,
+            "end": 8.9,
+            "p": 1.0
+          },
+          {
+            "word": " уже",
+            "start": 8.9,
+            "end": 9.18,
+            "p": 0.974
+          },
+          {
+            "word": " позволяют",
+            "start": 9.18,
+            "end": 11.36,
+            "p": 0.982
+          },
+          {
+            "word": " это",
+            "start": 11.36,
+            "end": 11.58,
+            "p": 0.998
+          },
+          {
+            "word": " делать",
+            "start": 11.58,
+            "end": 12.0,
+            "p": 0.999
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "start": 12.0,
+        "end": 21.24,
+        "text": "И такая функция добавляет, конечно же, у нас популярности и возможностей",
+        "words": [
+          {
+            "word": " И",
+            "start": 12.0,
+            "end": 12.3,
+            "p": 0.821
+          },
+          {
+            "word": " такая",
+            "start": 12.3,
+            "end": 13.76,
+            "p": 0.997
+          },
+          {
+            "word": " функция",
+            "start": 13.76,
+            "end": 14.32,
+            "p": 1.0
+          },
+          {
+            "word": " добавляет,",
+            "start": 14.32,
+            "end": 14.98,
+            "p": 0.999
+          },
+          {
+            "word": " конечно",
+            "start": 14.98,
+            "end": 15.24,
+            "p": 1.0
+          },
+          {
+            "word": " же,",
+            "start": 15.24,
+            "end": 15.62,
+            "p": 1.0
+          },
+          {
+            "word": " у",
+            "start": 15.64,
+            "end": 17.02,
+            "p": 0.999
+          },
+          {
+            "word": " нас",
+            "start": 17.02,
+            "end": 17.32,
+            "p": 1.0
+          },
+          {
+            "word": " популярности",
+            "start": 17.32,
+            "end": 20.4,
+            "p": 0.983
+          },
+          {
+            "word": " и",
+            "start": 20.4,
+            "end": 20.48,
+            "p": 0.999
+          },
+          {
+            "word": " возможностей",
+            "start": 20.48,
+            "end": 21.24,
+            "p": 0.998
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "start": 21.24,
+        "end": 28.86,
+        "text": "Вот, хочется просто посмотреть, как справится наше приложение в таком формате",
+        "words": [
+          {
+            "word": " Вот,",
+            "start": 21.24,
+            "end": 23.0,
+            "p": 0.596
+          },
+          {
+            "word": " хочется",
+            "start": 23.0,
+            "end": 23.32,
+            "p": 1.0
+          },
+          {
+            "word": " просто",
+            "start": 23.32,
+            "end": 23.66,
+            "p": 1.0
+          },
+          {
+            "word": " посмотреть,",
+            "start": 23.66,
+            "end": 24.18,
+            "p": 1.0
+          },
+          {
+            "word": " как",
+            "start": 24.4,
+            "end": 26.22,
+            "p": 1.0
+          },
+          {
+            "word": " справится",
+            "start": 26.22,
+            "end": 26.94,
+            "p": 0.976
+          },
+          {
+            "word": " наше",
+            "start": 26.94,
+            "end": 27.24,
+            "p": 1.0
+          },
+          {
+            "word": " приложение",
+            "start": 27.24,
+            "end": 27.88,
+            "p": 1.0
+          },
+          {
+            "word": " в",
+            "start": 27.88,
+            "end": 28.06,
+            "p": 0.999
+          },
+          {
+            "word": " таком",
+            "start": 28.06,
+            "end": 28.34,
+            "p": 1.0
+          },
+          {
+            "word": " формате",
+            "start": 28.34,
+            "end": 28.86,
+            "p": 1.0
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "start": 29.76,
+        "end": 33.52,
+        "text": "Просто вот иду, снимаю и что-то говорю",
+        "words": [
+          {
+            "word": " Просто",
+            "start": 29.76,
+            "end": 30.6,
+            "p": 0.07
+          },
+          {
+            "word": " вот",
+            "start": 30.6,
+            "end": 30.88,
+            "p": 0.838
+          },
+          {
+            "word": " иду,",
+            "start": 30.88,
+            "end": 31.44,
+            "p": 0.935
+          },
+          {
+            "word": " снимаю",
+            "start": 31.48,
+            "end": 31.94,
+            "p": 0.993
+          },
+          {
+            "word": " и",
+            "start": 31.94,
+            "end": 32.56,
+            "p": 0.822
+          },
+          {
+            "word": " что",
+            "start": 32.56,
+            "end": 33.08,
+            "p": 0.993
+          },
+          {
+            "word": "-то",
+            "start": 33.08,
+            "end": 33.26,
+            "p": 0.988
+          },
+          {
+            "word": " говорю",
+            "start": 33.26,
+            "end": 33.52,
+            "p": 0.995
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "start": 35.48,
+        "end": 41.58,
+        "text": "Так что пускай будет такое видео, лишним оно точно не будет",
+        "words": [
+          {
+            "word": " Так",
+            "start": 35.48,
+            "end": 36.32,
+            "p": 0.059
+          },
+          {
+            "word": " что",
+            "start": 36.32,
+            "end": 36.6,
+            "p": 0.994
+          },
+          {
+            "word": " пускай",
+            "start": 36.6,
+            "end": 38.68,
+            "p": 0.799
+          },
+          {
+            "word": " будет",
+            "start": 38.68,
+            "end": 38.88,
+            "p": 0.989
+          },
+          {
+            "word": " такое",
+            "start": 38.88,
+            "end": 39.16,
+            "p": 0.993
+          },
+          {
+            "word": " видео,",
+            "start": 39.16,
+            "end": 39.6,
+            "p": 0.997
+          },
+          {
+            "word": " лишним",
+            "start": 39.64,
+            "end": 40.64,
+            "p": 0.995
+          },
+          {
+            "word": " оно",
+            "start": 40.64,
+            "end": 40.8,
+            "p": 0.982
+          },
+          {
+            "word": " точно",
+            "start": 40.8,
+            "end": 41.08,
+            "p": 0.995
+          },
+          {
+            "word": " не",
+            "start": 41.08,
+            "end": 41.34,
+            "p": 0.998
+          },
+          {
+            "word": " будет",
+            "start": 41.34,
+            "end": 41.58,
+            "p": 0.999
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "start": 41.58,
+        "end": 48.78,
+        "text": "Тестим полностью все варианты, которые возможно придумать",
+        "words": [
+          {
+            "word": " Тестим",
+            "start": 41.58,
+            "end": 43.12,
+            "p": 0.849
+          },
+          {
+            "word": " полностью",
+            "start": 43.12,
+            "end": 43.46,
+            "p": 0.998
+          },
+          {
+            "word": " все",
+            "start": 43.46,
+            "end": 43.86,
+            "p": 0.997
+          },
+          {
+            "word": " варианты,",
+            "start": 43.86,
+            "end": 44.54,
+            "p": 0.999
+          },
+          {
+            "word": " которые",
+            "start": 44.54,
+            "end": 46.2,
+            "p": 0.997
+          },
+          {
+            "word": " возможно",
+            "start": 46.2,
+            "end": 47.94,
+            "p": 0.973
+          },
+          {
+            "word": " придумать",
+            "start": 47.94,
+            "end": 48.78,
+            "p": 0.999
+          }
+        ]
+      }
+    ]
+  },
+  "source_lang": "ru",
+  "diarization": {
+    "model": "pyannote/speaker-diarization-3.1",
+    "turns": [
+      {
+        "start": 1.786,
+        "end": 3.845,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 4.756,
+        "end": 6.14,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 7.321,
+        "end": 9.447,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 10.882,
+        "end": 12.586,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 13.649,
+        "end": 15.792,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 16.99,
+        "end": 17.547,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 19.201,
+        "end": 21.412,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 22.846,
+        "end": 24.533,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 26.17,
+        "end": 29.056,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 30.389,
+        "end": 32.482,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 32.802,
+        "end": 33.815,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 36.228,
+        "end": 37.055,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 38.388,
+        "end": 40.042,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 40.21,
+        "end": 41.813,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 42.742,
+        "end": 44.632,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 45.897,
+        "end": 47.382,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 47.467,
+        "end": 48.952,
+        "speaker": "SPEAKER_00"
+      }
+    ],
+    "speakers": [
+      "SPEAKER_00"
+    ]
+  },
+  "tiny_unit_merge": {
+    "enabled": true,
+    "min_words": 3,
+    "min_s": 1.0,
+    "max_gap_s": 2.0,
+    "units_before": 7,
+    "units_after": 7,
+    "merges": [],
+    "unmerged_tiny": []
+  },
+  "translation": {
+    "model": "qwen2.5-7b-instruct-q8_0-00001-of-00003.gguf",
+    "quant": "q8_0",
+    "n_ctx": 4096,
+    "n_threads": 14,
+    "n_gpu_layers": 0,
+    "system_prompt": "You are a professional translator. Return only the translation, with no explanation.",
+    "direction": "Russian->English",
+    "usage": {
+      "prompt_tokens": 364,
+      "completion_tokens": 83
+    },
+    "burst_split": null
+  },
+  "tts": {
+    "model": "ChatterboxMultilingualTTS t3=v3 (models/chatterbox)",
+    "sr": 24000,
+    "dtype": "float16",
+    "language_id": "en",
+    "mode": "phrase",
+    "voice_reference": "speaker's own diarized speech via audio_prompt_path/prepare_conditionals",
+    "speech_token_guard": {
+      "enabled": true,
+      "flow_calls": 20,
+      "violations": 0
+    },
+    "qa": {
+      "enabled": true,
+      "retries": 2,
+      "low_temp": 0.6
+    },
+    "fit": {
+      "enabled": true,
+      "rounds": 4,
+      "target_ratio": 1.05,
+      "short_min_words": 4,
+      "short_overflow_s": 0.3
+    },
+    "fit_up": {
+      "enabled": true,
+      "ratio": 0.8,
+      "rounds": 3,
+      "aim": 1.0,
+      "guard": false
+    },
+    "alignment": {
+      "method": "ctc_forced_align (wav2vec2-base-960h, torchaudio.forced_align)",
+      "cuts": "between words only"
+    },
+    "split": {
+      "min_part_words": 1,
+      "soft_part_words": 2,
+      "part_max_words": 16,
+      "retries": 2
+    },
+    "stats": {
+      "parts": 7,
+      "attempts": 20,
+      "retried_parts": 0,
+      "retry_success": 0,
+      "final_bad": 0,
+      "fit_parts_rewritten": 0,
+      "fit_parts_merged": 0,
+      "fit_rounds_used": 0,
+      "fit_rewrite_rejected": 0,
+      "fit_up_units": 6,
+      "fit_up_rounds": 9,
+      "fit_up_accepted": 7,
+      "fit_up_rejected": 2,
+      "fit_up_candidates": 7,
+      "units_single_burst": 0,
+      "units_qwen_split": 0,
+      "units_single_fallback": 0,
+      "spans": 21,
+      "span_merges": 0,
+      "align_ok": 7,
+      "align_fallback": 0,
+      "units_timing_split": 7,
+      "units_proportional_fallback": 0,
+      "gen_seconds": 17.27,
+      "qa_seconds": 3.02,
+      "align_seconds": 0.14,
+      "fitup_qwen_seconds": 159.31,
+      "fitdown_qwen_seconds": 0.0,
+      "fitup_gen_qa_seconds": 8.8,
+      "gap_qa_units": 5,
+      "gap_qa_left": 0,
+      "gap_qa_seconds": 4.91,
+      "judge_calls": 16,
+      "judge_seconds": 52.6,
+      "pause_marks_seconds": 0.0,
+      "retry_success_rate": null
+    },
+    "references": {
+      "SPEAKER_00": {
+        "file": "/workspace/dub/artifacts/baseline/05/work/work_05/ref_SPEAKER_00.wav",
+        "seconds": 10.0,
+        "turns_used": 5,
+        "source": "diarized_speech"
+      }
+    }
+  },
+  "alignment": {
+    "mode": "burst",
+    "min_burst_s": 0.0,
+    "spill": true,
+    "atempo_cap": 1.15,
+    "hard_cap": 1.2,
+    "fill_slowdown": 0.9,
+    "fallback_frac": 1.01,
+    "units_slot_fallback": 0,
+    "summary": {
+      "groups": 21,
+      "atempo_max": 1.0,
+      "atempo_min": 0.9,
+      "slowed_lt_1": 14,
+      "atempo_gt_1_15": 0,
+      "atempo_gt_1_25": 0,
+      "atempo_gt_1_3": 0,
+      "overflow_groups": 0,
+      "cut_groups": 0
+    }
+  },
+  "dubbed_track": {
+    "wav24k": "/workspace/dub/artifacts/baseline/05/work/work_05/dubbed_24k.wav",
+    "wav16k": "/workspace/dub/artifacts/baseline/05/work/work_05/dubbed_16k.wav",
+    "aac": "/workspace/dub/artifacts/baseline/05/work/work_05/dubbed_aac.m4a",
+    "seconds": 52.367,
+    "sr": 24000,
+    "peak_before_norm": 0.6797,
+    "speech_seconds": 44.86,
+    "non_speech": "silence (original timing preserved)"
+  },
+  "units": [
+    {
+      "asr_segment": 1,
+      "start": 0.98,
+      "end": 5.84,
+      "text": "Давайте протестируем еще вот такой формат съемки видео.",
+      "words": 8,
+      "sentence": "Давайте протестируем еще вот такой формат съемки видео.",
+      "source": "sentence",
+      "id": 0,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 3.143,
+      "translation": "Let's test another such format for video shooting.",
+      "parts_original": [
+        "Let's test another such format for video shooting."
+      ],
+      "fit": [],
+      "fit_up": [
+        {
+          "round": 1,
+          "ratio_before": 0.713,
+          "old": "Let's test another such format for video shooting.",
+          "target_words": 11,
+          "min_words": 10,
+          "source_seconds": 3.22,
+          "tts_seconds_before": 2.296,
+          "new": "Let's test another format of video shooting to see how it works.",
+          "tts_seconds_after": 2.677,
+          "ratio_after": 0.831,
+          "qa_before": 0.083,
+          "qa_after": 0.096,
+          "closer": true,
+          "intelligible": true,
+          "result": "accepted"
+        }
+      ],
+      "gap_qa": {
+        "found": [],
+        "retries": []
+      },
+      "translation_fitted": "Let's test another format of video shooting to see how it works.",
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.673,
+        0.862
+      ],
+      "parts": [
+        "Let's test another format of video shooting",
+        "to see how it works."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u00_p0.wav",
+          "seconds": 1.979,
+          "text": "Let's test another format of video shooting",
+          "clip_span": [
+            0.0,
+            1.979
+          ],
+          "speech_span": [
+            0.0,
+            1.979
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001307,
+              "temperature": 0.8,
+              "seconds": 3.16,
+              "score": 0.096,
+              "bad": false,
+              "reasons": [],
+              "ctc": "lest there's another formato ridio shooting to see how it works",
+              "whisper": "Let's test another format of video shooting to see how it works.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.096,
+          "seed_used": 2001307,
+          "temperature_used": 0.8,
+          "words": 7,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u00_p1.wav",
+          "seconds": 0.879,
+          "text": "to see how it works.",
+          "clip_span": [
+            1.979,
+            2.858
+          ],
+          "speech_span": [
+            0.0,
+            0.879
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001307,
+              "temperature": 0.8,
+              "seconds": 3.16,
+              "score": 0.096,
+              "bad": false,
+              "reasons": [],
+              "ctc": "lest there's another formato ridio shooting to see how it works",
+              "whisper": "Let's test another format of video shooting to see how it works.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.096,
+          "seed_used": 2001307,
+          "temperature_used": 0.8,
+          "words": 5,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u00_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 2,
+        "seconds": 3.16,
+        "speech_seconds": 2.677,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 3.22,
+        "ratio_tts_to_source_speech": 0.831,
+        "word_spans": [
+          {
+            "word": "let's",
+            "start": 0.101,
+            "end": 0.242,
+            "score": 0.51
+          },
+          {
+            "word": "test",
+            "start": 0.282,
+            "end": 0.463,
+            "score": 0.665
+          },
+          {
+            "word": "another",
+            "start": 0.503,
+            "end": 0.745,
+            "score": 0.994
+          },
+          {
+            "word": "format",
+            "start": 0.805,
+            "end": 1.167,
+            "score": 0.984
+          },
+          {
+            "word": "of",
+            "start": 1.248,
+            "end": 1.288,
+            "score": 0.457
+          },
+          {
+            "word": "video",
+            "start": 1.369,
+            "end": 1.57,
+            "score": 0.496
+          },
+          {
+            "word": "shooting",
+            "start": 1.65,
+            "end": 1.932,
+            "score": 0.99
+          },
+          {
+            "word": "to",
+            "start": 1.993,
+            "end": 2.073,
+            "score": 0.998
+          },
+          {
+            "word": "see",
+            "start": 2.134,
+            "end": 2.234,
+            "score": 1.0
+          },
+          {
+            "word": "how",
+            "start": 2.274,
+            "end": 2.355,
+            "score": 1.0
+          },
+          {
+            "word": "it",
+            "start": 2.435,
+            "end": 2.496,
+            "score": 0.883
+          },
+          {
+            "word": "works",
+            "start": 2.556,
+            "end": 2.778,
+            "score": 0.973
+          }
+        ]
+      },
+      "slot": {
+        "start": 0.98,
+        "end": 5.82,
+        "seconds": 4.84
+      },
+      "alignment": {
+        "tts_seconds": 3.16,
+        "ratio_tts_to_slot": 0.6529,
+        "mode": "burst",
+        "atempo": 0.9,
+        "bursts": 2,
+        "bursts_without_words": 0,
+        "placements": [
+          {
+            "burst": [
+              1.8,
+              4.0
+            ],
+            "window": [
+              1.8,
+              4.74
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 1.979,
+            "ratio": 0.673,
+            "atempo": 0.9,
+            "placed": [
+              1.8,
+              3.984
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 0.98,
+            "text": "Let's test another format of video shooting",
+            "source_words": "Давайте протестируем еще вот такой формат"
+          },
+          {
+            "burst": [
+              4.8,
+              5.82
+            ],
+            "window": [
+              4.8,
+              5.82
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 0.879,
+            "ratio": 0.862,
+            "atempo": 0.9,
+            "placed": [
+              4.8,
+              5.759
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 0.98,
+            "text": "to see how it works.",
+            "source_words": "съемки видео"
+          }
+        ],
+        "aligned_seconds": 4.84,
+        "file": "/workspace/dub/artifacts/baseline/05/work/work_05/aligned_u00.wav",
+        "track_start": 0.98
+      }
+    },
+    {
+      "asr_segment": 2,
+      "start": 5.84,
+      "end": 12.0,
+      "text": "Все -таки современные телефоны уже позволяют это делать.",
+      "words": 8,
+      "sentence": "Все -таки современные телефоны уже позволяют это делать.",
+      "source": "sentence",
+      "id": 1,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 3.544,
+      "translation": "After all, modern phones already allow this.",
+      "parts_original": [
+        "After all, modern phones already allow this."
+      ],
+      "fit": [],
+      "fit_up": [
+        {
+          "round": 1,
+          "ratio_before": 0.636,
+          "old": "After all, modern phones already allow this.",
+          "target_words": 11,
+          "min_words": 9,
+          "source_seconds": 3.64,
+          "tts_seconds_before": 2.316,
+          "new": "Indeed, after all, modern phones already allow this.",
+          "tts_seconds_after": 2.056,
+          "ratio_after": 0.565,
+          "qa_before": 0.083,
+          "qa_after": 0.06,
+          "closer": false,
+          "intelligible": true,
+          "result": "rejected (not closer)"
+        }
+      ],
+      "gap_qa": {
+        "found": [
+          [
+            0.82,
+            0.97,
+            -8.1
+          ]
+        ],
+        "retries": [
+          {
+            "found": [],
+            "qa_bad": false,
+            "seconds": 2.116
+          }
+        ],
+        "accepted": 1
+      },
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.511,
+        0.183,
+        0.815
+      ],
+      "parts": [
+        "After all,",
+        "modern phones",
+        "already allow this."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u01_p0.wav",
+          "seconds": 0.767,
+          "text": "After all,",
+          "clip_span": [
+            0.0,
+            0.767
+          ],
+          "speech_span": [
+            0.0,
+            0.767
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 4001467,
+              "temperature": 0.8,
+              "seconds": 2.64,
+              "score": 0.111,
+              "bad": false,
+              "reasons": [],
+              "ctc": "after all mothern founs already allowed this",
+              "whisper": "After all, modern phones already allow this.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.111,
+          "seed_used": 4001467,
+          "temperature_used": 0.8,
+          "words": 2,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u01_p1.wav",
+          "seconds": 0.63,
+          "text": "modern phones",
+          "clip_span": [
+            0.767,
+            1.397
+          ],
+          "speech_span": [
+            0.0,
+            0.63
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 4001467,
+              "temperature": 0.8,
+              "seconds": 2.64,
+              "score": 0.111,
+              "bad": false,
+              "reasons": [],
+              "ctc": "after all mothern founs already allowed this",
+              "whisper": "After all, modern phones already allow this.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.111,
+          "seed_used": 4001467,
+          "temperature_used": 0.8,
+          "words": 2,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u01_p2.wav",
+          "seconds": 0.88,
+          "text": "already allow this.",
+          "clip_span": [
+            1.397,
+            2.277
+          ],
+          "speech_span": [
+            0.0,
+            0.88
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 4001467,
+              "temperature": 0.8,
+              "seconds": 2.64,
+              "score": 0.111,
+              "bad": false,
+              "reasons": [],
+              "ctc": "after all mothern founs already allowed this",
+              "whisper": "After all, modern phones already allow this.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.111,
+          "seed_used": 4001467,
+          "temperature_used": 0.8,
+          "words": 3,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u01_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 3,
+        "seconds": 2.64,
+        "speech_seconds": 2.116,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 3.64,
+        "ratio_tts_to_source_speech": 0.581,
+        "word_spans": [
+          {
+            "word": "after",
+            "start": 0.081,
+            "end": 0.282,
+            "score": 0.941
+          },
+          {
+            "word": "all",
+            "start": 0.383,
+            "end": 0.484,
+            "score": 0.997
+          },
+          {
+            "word": "modern",
+            "start": 0.806,
+            "end": 1.068,
+            "score": 0.824
+          },
+          {
+            "word": "phones",
+            "start": 1.129,
+            "end": 1.37,
+            "score": 0.436
+          },
+          {
+            "word": "already",
+            "start": 1.451,
+            "end": 1.753,
+            "score": 1.0
+          },
+          {
+            "word": "allow",
+            "start": 1.794,
+            "end": 1.975,
+            "score": 1.0
+          },
+          {
+            "word": "this",
+            "start": 2.076,
+            "end": 2.197,
+            "score": 0.994
+          }
+        ]
+      },
+      "slot": {
+        "start": 5.84,
+        "end": 11.98,
+        "seconds": 6.14
+      },
+      "alignment": {
+        "tts_seconds": 2.64,
+        "ratio_tts_to_slot": 0.43,
+        "mode": "burst",
+        "atempo": 1.0,
+        "bursts": 3,
+        "bursts_without_words": 0,
+        "placements": [
+          {
+            "burst": [
+              5.84,
+              6.3
+            ],
+            "window": [
+              5.84,
+              7.34
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 0.767,
+            "ratio": 0.511,
+            "atempo": 1.0,
+            "placed": [
+              5.84,
+              6.607
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 5.44,
+            "text": "After all,",
+            "source_words": "Все"
+          },
+          {
+            "burst": [
+              7.4,
+              9.5
+            ],
+            "window": [
+              7.4,
+              10.84
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 0.63,
+            "ratio": 0.183,
+            "atempo": 0.9,
+            "placed": [
+              7.4,
+              8.082
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 5.44,
+            "text": "modern phones",
+            "source_words": "-таки современные телефоны уже позволяют"
+          },
+          {
+            "burst": [
+              10.9,
+              11.98
+            ],
+            "window": [
+              10.9,
+              11.98
+            ],
+            "phrases": [
+              2
+            ],
+            "group_s": 0.88,
+            "ratio": 0.815,
+            "atempo": 0.9,
+            "placed": [
+              10.9,
+              11.862
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 5.44,
+            "text": "already allow this.",
+            "source_words": "это делать"
+          }
+        ],
+        "aligned_seconds": 6.54,
+        "file": "/workspace/dub/artifacts/baseline/05/work/work_05/aligned_u01.wav",
+        "track_start": 5.44
+      }
+    },
+    {
+      "asr_segment": 3,
+      "start": 12.0,
+      "end": 21.24,
+      "text": "И такая функция добавляет, конечно же, у нас популярности и возможностей.",
+      "words": 11,
+      "sentence": "И такая функция добавляет, конечно же, у нас популярности и возможностей.",
+      "source": "sentence",
+      "id": 2,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 5.325,
+      "translation": "And such a function, of course, adds us popularity and opportunities.",
+      "parts_original": [
+        "And such a function, of course, adds us popularity and opportunities."
+      ],
+      "fit": [],
+      "fit_up": [
+        {
+          "round": 1,
+          "ratio_before": 0.573,
+          "old": "And such a function, of course, adds us popularity and opportunities.",
+          "target_words": 19,
+          "min_words": 16,
+          "source_seconds": 5.02,
+          "tts_seconds_before": 2.877,
+          "new": "And such a function, of course, adds our popularity and possible opportunities.",
+          "tts_seconds_after": 3.498,
+          "ratio_after": 0.697,
+          "qa_before": 0.045,
+          "qa_after": 0.015,
+          "closer": true,
+          "intelligible": true,
+          "result": "accepted"
+        },
+        {
+          "round": 2,
+          "ratio_before": 0.697,
+          "old": "And such a function, of course, adds our popularity and possible opportunities.",
+          "target_words": 17,
+          "min_words": 15,
+          "source_seconds": 5.02,
+          "tts_seconds_before": 3.498,
+          "new": "And such a function, of course, adds to our popularity and possible opportunities.",
+          "tts_seconds_after": 4.237,
+          "ratio_after": 0.844,
+          "qa_before": 0.015,
+          "qa_after": 0.0,
+          "closer": true,
+          "intelligible": true,
+          "result": "accepted"
+        }
+      ],
+      "gap_qa": {
+        "found": [
+          [
+            0.35,
+            0.48,
+            -7.3
+          ]
+        ],
+        "retries": [
+          {
+            "found": [],
+            "qa_bad": false,
+            "seconds": 3.258
+          }
+        ],
+        "accepted": 1
+      },
+      "translation_fitted": "And such a function, of course, adds to our popularity and possible opportunities.",
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.471,
+        0.46,
+        0.193,
+        0.398
+      ],
+      "parts": [
+        "And such a function,",
+        "of course, adds to our popularity",
+        "and possible",
+        "opportunities."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u02_p0.wav",
+          "seconds": 0.772,
+          "text": "And such a function,",
+          "clip_span": [
+            0.0,
+            0.772
+          ],
+          "speech_span": [
+            0.0,
+            0.772
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 4001567,
+              "temperature": 0.8,
+              "seconds": 3.64,
+              "score": 0.007,
+              "bad": false,
+              "reasons": [],
+              "ctc": "and such a function of course adds to our poplarity and possible opportunities",
+              "whisper": "And such a function, of course, adds to our popularity and possible opportunities.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.007,
+          "seed_used": 4001567,
+          "temperature_used": 0.8,
+          "words": 4,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u02_p1.wav",
+          "seconds": 1.491,
+          "text": "of course, adds to our popularity",
+          "clip_span": [
+            0.772,
+            2.263
+          ],
+          "speech_span": [
+            0.0,
+            1.491
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 4001567,
+              "temperature": 0.8,
+              "seconds": 3.64,
+              "score": 0.007,
+              "bad": false,
+              "reasons": [],
+              "ctc": "and such a function of course adds to our poplarity and possible opportunities",
+              "whisper": "And such a function, of course, adds to our popularity and possible opportunities.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.007,
+          "seed_used": 4001567,
+          "temperature_used": 0.8,
+          "words": 6,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u02_p2.wav",
+          "seconds": 0.49,
+          "text": "and possible",
+          "clip_span": [
+            2.263,
+            2.753
+          ],
+          "speech_span": [
+            0.0,
+            0.49
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 4001567,
+              "temperature": 0.8,
+              "seconds": 3.64,
+              "score": 0.007,
+              "bad": false,
+              "reasons": [],
+              "ctc": "and such a function of course adds to our poplarity and possible opportunities",
+              "whisper": "And such a function, of course, adds to our popularity and possible opportunities.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.007,
+          "seed_used": 4001567,
+          "temperature_used": 0.8,
+          "words": 2,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u02_p3.wav",
+          "seconds": 0.645,
+          "text": "opportunities.",
+          "clip_span": [
+            2.753,
+            3.398
+          ],
+          "speech_span": [
+            0.0,
+            0.645
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 4001567,
+              "temperature": 0.8,
+              "seconds": 3.64,
+              "score": 0.007,
+              "bad": false,
+              "reasons": [],
+              "ctc": "and such a function of course adds to our poplarity and possible opportunities",
+              "whisper": "And such a function, of course, adds to our popularity and possible opportunities.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.007,
+          "seed_used": 4001567,
+          "temperature_used": 0.8,
+          "words": 1,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u02_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 4,
+        "seconds": 3.64,
+        "speech_seconds": 3.258,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 5.02,
+        "ratio_tts_to_source_speech": 0.649,
+        "word_spans": [
+          {
+            "word": "and",
+            "start": 0.06,
+            "end": 0.121,
+            "score": 0.988
+          },
+          {
+            "word": "such",
+            "start": 0.201,
+            "end": 0.362,
+            "score": 0.998
+          },
+          {
+            "word": "a",
+            "start": 0.402,
+            "end": 0.422,
+            "score": 0.993
+          },
+          {
+            "word": "function",
+            "start": 0.483,
+            "end": 0.744,
+            "score": 0.979
+          },
+          {
+            "word": "of",
+            "start": 0.804,
+            "end": 0.845,
+            "score": 1.0
+          },
+          {
+            "word": "course",
+            "start": 0.925,
+            "end": 1.106,
+            "score": 0.973
+          },
+          {
+            "word": "adds",
+            "start": 1.207,
+            "end": 1.368,
+            "score": 0.987
+          },
+          {
+            "word": "to",
+            "start": 1.408,
+            "end": 1.468,
+            "score": 1.0
+          },
+          {
+            "word": "our",
+            "start": 1.549,
+            "end": 1.609,
+            "score": 0.627
+          },
+          {
+            "word": "popularity",
+            "start": 1.649,
+            "end": 2.212,
+            "score": 0.818
+          },
+          {
+            "word": "and",
+            "start": 2.272,
+            "end": 2.333,
+            "score": 0.99
+          },
+          {
+            "word": "possible",
+            "start": 2.393,
+            "end": 2.715,
+            "score": 0.777
+          },
+          {
+            "word": "opportunities",
+            "start": 2.755,
+            "end": 3.318,
+            "score": 0.963
+          }
+        ]
+      },
+      "slot": {
+        "start": 12.0,
+        "end": 21.22,
+        "seconds": 9.22
+      },
+      "alignment": {
+        "tts_seconds": 3.64,
+        "ratio_tts_to_slot": 0.3948,
+        "mode": "burst",
+        "atempo": 1.0,
+        "bursts": 4,
+        "bursts_without_words": 0,
+        "placements": [
+          {
+            "burst": [
+              12.0,
+              12.7
+            ],
+            "window": [
+              12.0,
+              13.64
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 0.772,
+            "ratio": 0.471,
+            "atempo": 1.0,
+            "placed": [
+              12.0,
+              12.772
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 11.6,
+            "text": "And such a function,",
+            "source_words": "И такая"
+          },
+          {
+            "burst": [
+              13.7,
+              15.8
+            ],
+            "window": [
+              13.7,
+              16.94
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 1.491,
+            "ratio": 0.46,
+            "atempo": 0.9,
+            "placed": [
+              13.7,
+              15.346
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 11.6,
+            "text": "of course, adds to our popularity",
+            "source_words": "функция добавляет, конечно же, у"
+          },
+          {
+            "burst": [
+              17.0,
+              17.6
+            ],
+            "window": [
+              17.0,
+              19.54
+            ],
+            "phrases": [
+              2
+            ],
+            "group_s": 0.49,
+            "ratio": 0.193,
+            "atempo": 0.9,
+            "placed": [
+              17.0,
+              17.535
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 11.6,
+            "text": "and possible",
+            "source_words": "нас популярности"
+          },
+          {
+            "burst": [
+              19.6,
+              21.22
+            ],
+            "window": [
+              19.6,
+              21.22
+            ],
+            "phrases": [
+              3
+            ],
+            "group_s": 0.645,
+            "ratio": 0.398,
+            "atempo": 0.9,
+            "placed": [
+              19.6,
+              20.297
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 11.6,
+            "text": "opportunities.",
+            "source_words": "и возможностей"
+          }
+        ],
+        "aligned_seconds": 9.62,
+        "file": "/workspace/dub/artifacts/baseline/05/work/work_05/aligned_u02.wav",
+        "track_start": 11.6
+      }
+    },
+    {
+      "asr_segment": 4,
+      "start": 21.24,
+      "end": 28.86,
+      "text": "Вот, хочется просто посмотреть, как справится наше приложение в таком формате.",
+      "words": 11,
+      "sentence": "Вот, хочется просто посмотреть, как справится наше приложение в таком формате.",
+      "source": "sentence",
+      "id": 3,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 4.549,
+      "translation": "Here, just want to see how our application will handle this format.",
+      "parts_original": [
+        "Here, just want to see how our application will handle this format."
+      ],
+      "fit": [],
+      "fit_up": [
+        {
+          "round": 1,
+          "ratio_before": 0.618,
+          "old": "Here, just want to see how our application will handle this format.",
+          "target_words": 19,
+          "min_words": 17,
+          "source_seconds": 4.62,
+          "tts_seconds_before": 2.856,
+          "new": "Here, we just want to see how our application will manage in this format.",
+          "tts_seconds_after": 4.058,
+          "ratio_after": 0.878,
+          "qa_before": 0.019,
+          "qa_after": 0.009,
+          "closer": true,
+          "intelligible": true,
+          "result": "accepted"
+        }
+      ],
+      "gap_qa": {
+        "found": [
+          [
+            3.08,
+            3.37,
+            -9.1
+          ]
+        ],
+        "retries": [
+          {
+            "found": [],
+            "qa_bad": false,
+            "seconds": 2.937
+          }
+        ],
+        "accepted": 1
+      },
+      "translation_fitted": "Here, we just want to see how our application will manage in this format.",
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.237,
+        0.209,
+        0.503
+      ],
+      "parts": [
+        "Here,",
+        "we just want to see",
+        "how our application will manage in this format."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u03_p0.wav",
+          "seconds": 0.38,
+          "text": "Here,",
+          "clip_span": [
+            0.0,
+            0.38
+          ],
+          "speech_span": [
+            0.0,
+            0.38
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 4001667,
+              "temperature": 0.8,
+              "seconds": 3.44,
+              "score": 0.06,
+              "bad": false,
+              "reasons": [],
+              "ctc": "hegh we just want to see how our application will manage in dis forement",
+              "whisper": "Here we just want to see how our application will manage in this format.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.06,
+          "seed_used": 4001667,
+          "temperature_used": 0.8,
+          "words": 1,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u03_p1.wav",
+          "seconds": 0.677,
+          "text": "we just want to see",
+          "clip_span": [
+            0.38,
+            1.057
+          ],
+          "speech_span": [
+            0.0,
+            0.677
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 4001667,
+              "temperature": 0.8,
+              "seconds": 3.44,
+              "score": 0.06,
+              "bad": false,
+              "reasons": [],
+              "ctc": "hegh we just want to see how our application will manage in dis forement",
+              "whisper": "Here we just want to see how our application will manage in this format.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.06,
+          "seed_used": 4001667,
+          "temperature_used": 0.8,
+          "words": 5,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u03_p2.wav",
+          "seconds": 2.081,
+          "text": "how our application will manage in this format.",
+          "clip_span": [
+            1.057,
+            3.138
+          ],
+          "speech_span": [
+            0.0,
+            2.081
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 4001667,
+              "temperature": 0.8,
+              "seconds": 3.44,
+              "score": 0.06,
+              "bad": false,
+              "reasons": [],
+              "ctc": "hegh we just want to see how our application will manage in dis forement",
+              "whisper": "Here we just want to see how our application will manage in this format.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.06,
+          "seed_used": 4001667,
+          "temperature_used": 0.8,
+          "words": 8,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u03_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 3,
+        "seconds": 3.44,
+        "speech_seconds": 2.937,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 4.62,
+        "ratio_tts_to_source_speech": 0.636,
+        "word_spans": [
+          {
+            "word": "here",
+            "start": 0.121,
+            "end": 0.322,
+            "score": 0.337
+          },
+          {
+            "word": "we",
+            "start": 0.382,
+            "end": 0.422,
+            "score": 0.526
+          },
+          {
+            "word": "just",
+            "start": 0.483,
+            "end": 0.604,
+            "score": 0.998
+          },
+          {
+            "word": "want",
+            "start": 0.644,
+            "end": 0.764,
+            "score": 1.0
+          },
+          {
+            "word": "to",
+            "start": 0.825,
+            "end": 0.865,
+            "score": 1.0
+          },
+          {
+            "word": "see",
+            "start": 0.925,
+            "end": 1.046,
+            "score": 0.91
+          },
+          {
+            "word": "how",
+            "start": 1.086,
+            "end": 1.187,
+            "score": 0.99
+          },
+          {
+            "word": "our",
+            "start": 1.287,
+            "end": 1.388,
+            "score": 0.975
+          },
+          {
+            "word": "application",
+            "start": 1.428,
+            "end": 1.951,
+            "score": 0.99
+          },
+          {
+            "word": "will",
+            "start": 2.012,
+            "end": 2.153,
+            "score": 0.884
+          },
+          {
+            "word": "manage",
+            "start": 2.213,
+            "end": 2.434,
+            "score": 1.0
+          },
+          {
+            "word": "in",
+            "start": 2.495,
+            "end": 2.535,
+            "score": 0.992
+          },
+          {
+            "word": "this",
+            "start": 2.575,
+            "end": 2.696,
+            "score": 0.517
+          },
+          {
+            "word": "format",
+            "start": 2.716,
+            "end": 3.058,
+            "score": 0.882
+          }
+        ]
+      },
+      "slot": {
+        "start": 21.24,
+        "end": 28.86,
+        "seconds": 7.62
+      },
+      "alignment": {
+        "tts_seconds": 3.44,
+        "ratio_tts_to_slot": 0.4514,
+        "mode": "burst",
+        "atempo": 1.0,
+        "bursts": 3,
+        "bursts_without_words": 0,
+        "placements": [
+          {
+            "burst": [
+              21.24,
+              21.5
+            ],
+            "window": [
+              21.24,
+              22.84
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 0.38,
+            "ratio": 0.237,
+            "atempo": 1.0,
+            "placed": [
+              21.24,
+              21.62
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 20.84,
+            "text": "Here,",
+            "source_words": "Вот,"
+          },
+          {
+            "burst": [
+              22.9,
+              24.6
+            ],
+            "window": [
+              22.9,
+              26.14
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 0.677,
+            "ratio": 0.209,
+            "atempo": 0.9,
+            "placed": [
+              22.9,
+              23.642
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 20.84,
+            "text": "we just want to see",
+            "source_words": "хочется просто посмотреть, как"
+          },
+          {
+            "burst": [
+              26.2,
+              28.86
+            ],
+            "window": [
+              26.2,
+              30.34
+            ],
+            "phrases": [
+              2
+            ],
+            "group_s": 2.081,
+            "ratio": 0.503,
+            "atempo": 0.9,
+            "placed": [
+              26.2,
+              28.5
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 20.84,
+            "text": "how our application will manage in this format.",
+            "source_words": "справится наше приложение в таком формате"
+          }
+        ],
+        "aligned_seconds": 9.5,
+        "file": "/workspace/dub/artifacts/baseline/05/work/work_05/aligned_u03.wav",
+        "track_start": 20.84
+      }
+    },
+    {
+      "asr_segment": 5,
+      "start": 29.76,
+      "end": 33.52,
+      "text": "Просто вот иду, снимаю и что -то говорю.",
+      "words": 8,
+      "sentence": "Просто вот иду, снимаю и что -то говорю.",
+      "source": "sentence",
+      "id": 4,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 2.811,
+      "translation": "Just here I go, take off and say something.",
+      "parts_original": [
+        "Just here I go, take off and say something."
+      ],
+      "fit": [],
+      "fit_up": [
+        {
+          "round": 1,
+          "ratio_before": 0.673,
+          "old": "Just here I go, take off and say something.",
+          "target_words": 13,
+          "min_words": 11,
+          "source_seconds": 2.52,
+          "tts_seconds_before": 1.696,
+          "new": "I just come here, go, take off and start saying something.",
+          "tts_seconds_after": 2.776,
+          "ratio_after": 1.102,
+          "qa_before": 0.091,
+          "qa_after": 0.011,
+          "closer": true,
+          "intelligible": true,
+          "result": "accepted"
+        }
+      ],
+      "gap_qa": {
+        "found": [
+          [
+            1.15,
+            1.29,
+            -1.5
+          ]
+        ],
+        "retries": [
+          {
+            "found": [],
+            "qa_bad": false,
+            "seconds": 2.356
+          }
+        ],
+        "accepted": 1
+      },
+      "translation_fitted": "I just come here, go, take off and start saying something.",
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.874,
+        0.127
+      ],
+      "parts": [
+        "I just come here, go, take off and start saying",
+        "something."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u04_p0.wav",
+          "seconds": 2.132,
+          "text": "I just come here, go, take off and start saying",
+          "clip_span": [
+            0.0,
+            2.132
+          ],
+          "speech_span": [
+            0.0,
+            2.132
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 4001767,
+              "temperature": 0.8,
+              "seconds": 2.88,
+              "score": 0.078,
+              "bad": false,
+              "reasons": [],
+              "ctc": "i just come here go te goff anstat sing something",
+              "whisper": "I just come here go take off and start saying something",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.078,
+          "seed_used": 4001767,
+          "temperature_used": 0.8,
+          "words": 10,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u04_p1.wav",
+          "seconds": 0.425,
+          "text": "something.",
+          "clip_span": [
+            2.132,
+            2.557
+          ],
+          "speech_span": [
+            0.0,
+            0.425
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 4001767,
+              "temperature": 0.8,
+              "seconds": 2.88,
+              "score": 0.078,
+              "bad": false,
+              "reasons": [],
+              "ctc": "i just come here go te goff anstat sing something",
+              "whisper": "I just come here go take off and start saying something",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.078,
+          "seed_used": 4001767,
+          "temperature_used": 0.8,
+          "words": 1,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u04_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 2,
+        "seconds": 2.88,
+        "speech_seconds": 2.356,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 2.52,
+        "ratio_tts_to_source_speech": 0.935,
+        "word_spans": [
+          {
+            "word": "i",
+            "start": 0.121,
+            "end": 0.141,
+            "score": 0.994
+          },
+          {
+            "word": "just",
+            "start": 0.242,
+            "end": 0.363,
+            "score": 0.983
+          },
+          {
+            "word": "come",
+            "start": 0.423,
+            "end": 0.544,
+            "score": 0.994
+          },
+          {
+            "word": "here",
+            "start": 0.604,
+            "end": 0.725,
+            "score": 0.94
+          },
+          {
+            "word": "go",
+            "start": 0.785,
+            "end": 0.886,
+            "score": 0.987
+          },
+          {
+            "word": "take",
+            "start": 1.168,
+            "end": 1.329,
+            "score": 0.332
+          },
+          {
+            "word": "off",
+            "start": 1.39,
+            "end": 1.51,
+            "score": 0.828
+          },
+          {
+            "word": "and",
+            "start": 1.571,
+            "end": 1.631,
+            "score": 0.664
+          },
+          {
+            "word": "start",
+            "start": 1.672,
+            "end": 1.853,
+            "score": 0.647
+          },
+          {
+            "word": "saying",
+            "start": 1.933,
+            "end": 2.095,
+            "score": 0.591
+          },
+          {
+            "word": "something",
+            "start": 2.175,
+            "end": 2.477,
+            "score": 0.974
+          }
+        ]
+      },
+      "slot": {
+        "start": 29.76,
+        "end": 33.52,
+        "seconds": 3.76
+      },
+      "alignment": {
+        "tts_seconds": 2.88,
+        "ratio_tts_to_slot": 0.766,
+        "mode": "burst",
+        "atempo": 1.0,
+        "bursts": 2,
+        "bursts_without_words": 0,
+        "placements": [
+          {
+            "burst": [
+              30.4,
+              32.3
+            ],
+            "window": [
+              30.4,
+              32.84
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 2.132,
+            "ratio": 0.874,
+            "atempo": 1.0,
+            "placed": [
+              30.4,
+              32.532
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 29.36,
+            "text": "I just come here, go, take off and start saying",
+            "source_words": "Просто вот иду, снимаю и"
+          },
+          {
+            "burst": [
+              32.9,
+              33.52
+            ],
+            "window": [
+              32.9,
+              36.24
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 0.425,
+            "ratio": 0.127,
+            "atempo": 0.9,
+            "placed": [
+              32.9,
+              33.359
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 29.36,
+            "text": "something.",
+            "source_words": "что -то говорю"
+          }
+        ],
+        "aligned_seconds": 6.88,
+        "file": "/workspace/dub/artifacts/baseline/05/work/work_05/aligned_u04.wav",
+        "track_start": 29.36
+      }
+    },
+    {
+      "asr_segment": 6,
+      "start": 35.48,
+      "end": 41.58,
+      "text": "Так что пускай будет такое видео, лишним оно точно не будет.",
+      "words": 11,
+      "sentence": "Так что пускай будет такое видео, лишним оно точно не будет.",
+      "source": "sentence",
+      "id": 5,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 3.851,
+      "translation": "So let there be such a video; it won't be superfluous.",
+      "parts_original": [
+        "So let there be such a video; it won't be superfluous."
+      ],
+      "fit": [],
+      "fit_up": [
+        {
+          "round": 1,
+          "ratio_before": 0.756,
+          "old": "So let there be such a video; it won't be superfluous.",
+          "target_words": 15,
+          "min_words": 12,
+          "source_seconds": 3.46,
+          "tts_seconds_before": 2.616,
+          "new": "So let such a video be made; it certainly won't be unnecessary.",
+          "tts_seconds_after": 3.358,
+          "ratio_after": 0.971,
+          "qa_before": 0.095,
+          "qa_after": 0.05,
+          "closer": true,
+          "intelligible": true,
+          "result": "accepted"
+        }
+      ],
+      "gap_qa": {
+        "found": [
+          [
+            0.45,
+            0.76,
+            -1.6
+          ]
+        ],
+        "retries": [
+          {
+            "found": [],
+            "qa_bad": false,
+            "seconds": 2.758
+          }
+        ],
+        "accepted": 1
+      },
+      "translation_fitted": "So let such a video be made; it certainly won't be unnecessary.",
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.398,
+        0.682,
+        0.644
+      ],
+      "parts": [
+        "So let such a video",
+        "be made; it certainly won't",
+        "be unnecessary."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u05_p0.wav",
+          "seconds": 0.812,
+          "text": "So let such a video",
+          "clip_span": [
+            0.0,
+            0.812
+          ],
+          "speech_span": [
+            0.0,
+            0.812
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 4001867,
+              "temperature": 0.8,
+              "seconds": 3.12,
+              "score": 0.02,
+              "bad": false,
+              "reasons": [],
+              "ctc": "so let such aviter be made it certainly won't be unnecessary",
+              "whisper": "So let such a video be made, it certainly won't be unnecessary.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.02,
+          "seed_used": 4001867,
+          "temperature_used": 0.8,
+          "words": 5,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u05_p1.wav",
+          "seconds": 1.255,
+          "text": "be made; it certainly won't",
+          "clip_span": [
+            0.812,
+            2.067
+          ],
+          "speech_span": [
+            0.0,
+            1.255
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 4001867,
+              "temperature": 0.8,
+              "seconds": 3.12,
+              "score": 0.02,
+              "bad": false,
+              "reasons": [],
+              "ctc": "so let such aviter be made it certainly won't be unnecessary",
+              "whisper": "So let such a video be made, it certainly won't be unnecessary.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.02,
+          "seed_used": 4001867,
+          "temperature_used": 0.8,
+          "words": 5,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u05_p2.wav",
+          "seconds": 0.811,
+          "text": "be unnecessary.",
+          "clip_span": [
+            2.067,
+            2.878
+          ],
+          "speech_span": [
+            0.0,
+            0.811
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 4001867,
+              "temperature": 0.8,
+              "seconds": 3.12,
+              "score": 0.02,
+              "bad": false,
+              "reasons": [],
+              "ctc": "so let such aviter be made it certainly won't be unnecessary",
+              "whisper": "So let such a video be made, it certainly won't be unnecessary.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.02,
+          "seed_used": 4001867,
+          "temperature_used": 0.8,
+          "words": 2,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u05_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 3,
+        "seconds": 3.12,
+        "speech_seconds": 2.758,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 3.46,
+        "ratio_tts_to_source_speech": 0.797,
+        "word_spans": [
+          {
+            "word": "so",
+            "start": 0.04,
+            "end": 0.101,
+            "score": 0.992
+          },
+          {
+            "word": "let",
+            "start": 0.181,
+            "end": 0.302,
+            "score": 0.972
+          },
+          {
+            "word": "such",
+            "start": 0.342,
+            "end": 0.483,
+            "score": 0.713
+          },
+          {
+            "word": "a",
+            "start": 0.523,
+            "end": 0.543,
+            "score": 0.36
+          },
+          {
+            "word": "video",
+            "start": 0.604,
+            "end": 0.805,
+            "score": 0.465
+          },
+          {
+            "word": "be",
+            "start": 0.845,
+            "end": 0.906,
+            "score": 0.985
+          },
+          {
+            "word": "made",
+            "start": 0.966,
+            "end": 1.167,
+            "score": 0.999
+          },
+          {
+            "word": "it",
+            "start": 1.329,
+            "end": 1.369,
+            "score": 0.999
+          },
+          {
+            "word": "certainly",
+            "start": 1.429,
+            "end": 1.812,
+            "score": 0.97
+          },
+          {
+            "word": "won't",
+            "start": 1.852,
+            "end": 2.013,
+            "score": 0.994
+          },
+          {
+            "word": "be",
+            "start": 2.093,
+            "end": 2.154,
+            "score": 0.945
+          },
+          {
+            "word": "unnecessary",
+            "start": 2.194,
+            "end": 2.798,
+            "score": 0.947
+          }
+        ]
+      },
+      "slot": {
+        "start": 35.48,
+        "end": 41.56,
+        "seconds": 6.08
+      },
+      "alignment": {
+        "tts_seconds": 3.12,
+        "ratio_tts_to_slot": 0.5132,
+        "mode": "burst",
+        "atempo": 1.0,
+        "bursts": 3,
+        "bursts_without_words": 0,
+        "placements": [
+          {
+            "burst": [
+              36.3,
+              37.0
+            ],
+            "window": [
+              36.3,
+              38.34
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 0.812,
+            "ratio": 0.398,
+            "atempo": 1.0,
+            "placed": [
+              36.3,
+              37.112
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 35.08,
+            "text": "So let such a video",
+            "source_words": "Так что пускай"
+          },
+          {
+            "burst": [
+              38.4,
+              39.9
+            ],
+            "window": [
+              38.4,
+              40.24
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 1.255,
+            "ratio": 0.682,
+            "atempo": 0.9,
+            "placed": [
+              38.4,
+              39.782
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 35.08,
+            "text": "be made; it certainly won't",
+            "source_words": "будет такое видео, лишним"
+          },
+          {
+            "burst": [
+              40.3,
+              41.56
+            ],
+            "window": [
+              40.3,
+              41.56
+            ],
+            "phrases": [
+              2
+            ],
+            "group_s": 0.811,
+            "ratio": 0.644,
+            "atempo": 0.9,
+            "placed": [
+              40.3,
+              41.19
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 35.08,
+            "text": "be unnecessary.",
+            "source_words": "оно точно не будет"
+          }
+        ],
+        "aligned_seconds": 6.48,
+        "file": "/workspace/dub/artifacts/baseline/05/work/work_05/aligned_u05.wav",
+        "track_start": 35.08
+      }
+    },
+    {
+      "asr_segment": 7,
+      "start": 41.58,
+      "end": 48.78,
+      "text": "Тестим полностью все варианты, которые возможно придумать.",
+      "words": 7,
+      "sentence": "Тестим полностью все варианты, которые возможно придумать.",
+      "source": "sentence",
+      "id": 6,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 4.921,
+      "translation": "Test all possible variants that can be imagined.",
+      "parts_original": [
+        "Test all possible variants that can be imagined."
+      ],
+      "fit": [],
+      "fit_up": [
+        {
+          "round": 1,
+          "ratio_before": 0.49,
+          "old": "Test all possible variants that can be imagined.",
+          "target_words": 16,
+          "min_words": 14,
+          "source_seconds": 4.2,
+          "tts_seconds_before": 2.056,
+          "new": "We will thoroughly test all variants that can possibly be imagined.",
+          "tts_seconds_after": 2.857,
+          "ratio_after": 0.68,
+          "qa_before": 0.113,
+          "qa_after": 0.018,
+          "closer": true,
+          "intelligible": true,
+          "result": "accepted"
+        },
+        {
+          "round": 2,
+          "ratio_before": 0.68,
+          "old": "We will thoroughly test all variants that can possibly be imagined.",
+          "target_words": 16,
+          "min_words": 14,
+          "source_seconds": 4.2,
+          "tts_seconds_before": 2.857,
+          "result": "rewrite_rejected",
+          "reason": "added information: including every possible one"
+        }
+      ],
+      "gap_qa": {
+        "found": [],
+        "retries": []
+      },
+      "translation_fitted": "We will thoroughly test all variants that can possibly be imagined.",
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.707,
+        0.251,
+        0.496,
+        0.133
+      ],
+      "parts": [
+        "We will thoroughly",
+        "test all variants",
+        "that can possibly",
+        "be imagined."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u06_p0.wav",
+          "seconds": 0.82,
+          "text": "We will thoroughly",
+          "clip_span": [
+            0.0,
+            0.82
+          ],
+          "speech_span": [
+            0.0,
+            0.82
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001907,
+              "temperature": 0.8,
+              "seconds": 3.4,
+              "score": 0.018,
+              "bad": false,
+              "reasons": [],
+              "ctc": "we will thoroughly testall variance that can possibly be imagined",
+              "whisper": "We will thoroughly test all variants that can possibly be imagined.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.018,
+          "seed_used": 2001907,
+          "temperature_used": 0.8,
+          "words": 3,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u06_p1.wav",
+          "seconds": 0.787,
+          "text": "test all variants",
+          "clip_span": [
+            0.82,
+            1.607
+          ],
+          "speech_span": [
+            0.0,
+            0.787
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001907,
+              "temperature": 0.8,
+              "seconds": 3.4,
+              "score": 0.018,
+              "bad": false,
+              "reasons": [],
+              "ctc": "we will thoroughly testall variance that can possibly be imagined",
+              "whisper": "We will thoroughly test all variants that can possibly be imagined.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.018,
+          "seed_used": 2001907,
+          "temperature_used": 0.8,
+          "words": 3,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u06_p2.wav",
+          "seconds": 0.764,
+          "text": "that can possibly",
+          "clip_span": [
+            1.607,
+            2.371
+          ],
+          "speech_span": [
+            0.0,
+            0.764
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001907,
+              "temperature": 0.8,
+              "seconds": 3.4,
+              "score": 0.018,
+              "bad": false,
+              "reasons": [],
+              "ctc": "we will thoroughly testall variance that can possibly be imagined",
+              "whisper": "We will thoroughly test all variants that can possibly be imagined.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.018,
+          "seed_used": 2001907,
+          "temperature_used": 0.8,
+          "words": 3,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u06_p3.wav",
+          "seconds": 0.626,
+          "text": "be imagined.",
+          "clip_span": [
+            2.371,
+            2.997
+          ],
+          "speech_span": [
+            0.0,
+            0.626
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001907,
+              "temperature": 0.8,
+              "seconds": 3.4,
+              "score": 0.018,
+              "bad": false,
+              "reasons": [],
+              "ctc": "we will thoroughly testall variance that can possibly be imagined",
+              "whisper": "We will thoroughly test all variants that can possibly be imagined.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.018,
+          "seed_used": 2001907,
+          "temperature_used": 0.8,
+          "words": 2,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/05/work/work_05/tts_u06_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 4,
+        "seconds": 3.4,
+        "speech_seconds": 2.857,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 4.2,
+        "ratio_tts_to_source_speech": 0.68,
+        "word_spans": [
+          {
+            "word": "we",
+            "start": 0.06,
+            "end": 0.121,
+            "score": 0.993
+          },
+          {
+            "word": "will",
+            "start": 0.201,
+            "end": 0.362,
+            "score": 0.998
+          },
+          {
+            "word": "thoroughly",
+            "start": 0.443,
+            "end": 0.785,
+            "score": 0.984
+          },
+          {
+            "word": "test",
+            "start": 0.865,
+            "end": 1.066,
+            "score": 0.975
+          },
+          {
+            "word": "all",
+            "start": 1.147,
+            "end": 1.227,
+            "score": 0.833
+          },
+          {
+            "word": "variants",
+            "start": 1.288,
+            "end": 1.589,
+            "score": 0.767
+          },
+          {
+            "word": "that",
+            "start": 1.63,
+            "end": 1.73,
+            "score": 0.992
+          },
+          {
+            "word": "can",
+            "start": 1.77,
+            "end": 1.871,
+            "score": 1.0
+          },
+          {
+            "word": "possibly",
+            "start": 1.951,
+            "end": 2.334,
+            "score": 0.996
+          },
+          {
+            "word": "be",
+            "start": 2.374,
+            "end": 2.434,
+            "score": 1.0
+          },
+          {
+            "word": "imagined",
+            "start": 2.515,
+            "end": 2.917,
+            "score": 0.93
+          }
+        ]
+      },
+      "slot": {
+        "start": 41.58,
+        "end": 48.78,
+        "seconds": 7.2
+      },
+      "alignment": {
+        "tts_seconds": 3.4,
+        "ratio_tts_to_slot": 0.4722,
+        "mode": "burst",
+        "atempo": 1.0,
+        "bursts": 4,
+        "bursts_without_words": 0,
+        "placements": [
+          {
+            "burst": [
+              41.58,
+              41.9
+            ],
+            "window": [
+              41.58,
+              42.74
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 0.82,
+            "ratio": 0.707,
+            "atempo": 1.0,
+            "placed": [
+              41.58,
+              42.4
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 41.18,
+            "text": "We will thoroughly",
+            "source_words": "Тестим"
+          },
+          {
+            "burst": [
+              42.8,
+              44.8
+            ],
+            "window": [
+              42.8,
+              45.94
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 0.787,
+            "ratio": 0.251,
+            "atempo": 0.9,
+            "placed": [
+              42.8,
+              43.661
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 41.18,
+            "text": "test all variants",
+            "source_words": "полностью все варианты, которые"
+          },
+          {
+            "burst": [
+              46.0,
+              46.7
+            ],
+            "window": [
+              46.0,
+              47.54
+            ],
+            "phrases": [
+              2
+            ],
+            "group_s": 0.764,
+            "ratio": 0.496,
+            "atempo": 1.0,
+            "placed": [
+              46.0,
+              46.764
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 41.18,
+            "text": "that can possibly",
+            "source_words": "возможно"
+          },
+          {
+            "burst": [
+              47.6,
+              48.78
+            ],
+            "window": [
+              47.6,
+              52.307
+            ],
+            "phrases": [
+              3
+            ],
+            "group_s": 0.626,
+            "ratio": 0.133,
+            "atempo": 0.9,
+            "placed": [
+              47.6,
+              48.283
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 41.18,
+            "text": "be imagined.",
+            "source_words": "придумать"
+          }
+        ],
+        "aligned_seconds": 11.127,
+        "file": "/workspace/dub/artifacts/baseline/05/work/work_05/aligned_u06.wav",
+        "track_start": 41.18
+      }
+    }
+  ],
+  "background": {
+    "enabled": true,
+    "separation": {
+      "model": "torchaudio HDEMUCS_HIGH_MUSDB_PLUS (bg = drums+bass+other)",
+      "weights": "/workspace/dub/dubai/models/demucs/hdemucs_high_trained.pt",
+      "bg": "/workspace/dub/artifacts/baseline/05/work/work_05/bg_44k.wav",
+      "vocals": "/workspace/dub/artifacts/baseline/05/work/work_05/vocals_44k.wav",
+      "seconds": 52.383,
+      "load_s": 0.51,
+      "separate_s": 0.294,
+      "total_s": 0.945,
+      "source_db": -19.14,
+      "vocals_db": -23.1,
+      "bg_db": -21.58
+    },
+    "mix": {
+      "wav": "/workspace/dub/artifacts/baseline/05/work/work_05/final_mix_44k.wav",
+      "aac": "/workspace/dub/artifacts/baseline/05/work/work_05/final_mix_aac.m4a",
+      "room_fill": {
+        "enabled": true,
+        "applied": false,
+        "skipped": "floor -28.5 dBFS > -42 (music / loud ambience)"
+      },
+      "bg_gain_db": 0.14,
+      "duck_db": -6.0,
+      "src_duck_db": 0.0,
+      "attack_s": 0.08,
+      "release_s": 0.35,
+      "bg_offset_db": 0.0,
+      "dub_voice_db": -20.25,
+      "orig_vocals_db": -20.39,
+      "peak_norm": 1.0,
+      "bed_db_in_dub_pauses": -22.01,
+      "mix_db_in_dub_pauses": -21.84,
+      "seconds": 52.367,
+      "mix_s": 0.727
+    }
+  },
+  "video_backend": "optimized",
+  "speech_gate": {
+    "enabled": true,
+    "margin_s": 0.24,
+    "merge_gap_s": 1.2,
+    "crossfade_frames": 4,
+    "source_speech_seconds": 27.9,
+    "dubbed_speech_seconds": 22.5,
+    "gate_seconds": 44.44,
+    "gate_fraction": 0.8486,
+    "intervals": [
+      [
+        1.56,
+        17.84
+      ],
+      [
+        19.36,
+        34.24
+      ],
+      [
+        36.06,
+        49.34
+      ]
+    ]
+  },
+  "lipsync": {
+    "router": "retinaface",
+    "router_params": {
+      "detector": "facexlib retinaface_resnet50 fp16",
+      "weights": "/workspace/dub/dubai/models/facexlib",
+      "face_min_w": 50,
+      "face_min_h": 80,
+      "retina_conf": 0.8,
+      "aspect_range": [
+        0.2,
+        1.5
+      ]
+    },
+    "router_stride": 3,
+    "router_detections": 371,
+    "speech_gate": {
+      "enabled": true,
+      "intervals": [
+        [
+          1.56,
+          17.84
+        ],
+        [
+          19.36,
+          34.24
+        ],
+        [
+          36.06,
+          49.34
+        ]
+      ],
+      "gated_in_frames": 1112,
+      "gated_out_frames": 199,
+      "gated_in_seconds": 44.48,
+      "gated_out_seconds": 7.96
+    },
+    "execution": "in_memory_segments (detector shared with LatentSync)",
+    "crossfade_frames": 4,
+    "master_fps": 25,
+    "master_frames": 1311,
+    "frame_classes": {
+      "VALID_FACE": 998,
+      "SMALL_FACE": 114,
+      "NO_FACE": 0,
+      "NO_SPEECH": 199
+    },
+    "skip_reasons": {
+      "outside_speech_gate": 199,
+      "height_below_threshold": 111,
+      "width_below_threshold": 3
+    },
+    "by_action": {
+      "PASS_THROUGH": {
+        "segments": 12,
+        "frames": 326,
+        "seconds": 13.04
+      },
+      "LATENT_SYNC": {
+        "segments": 5,
+        "frames": 949,
+        "seconds": 37.96
+      },
+      "PASS_THROUGH_SHORT_VALID": {
+        "segments": 4,
+        "frames": 36,
+        "seconds": 1.44
+      }
+    },
+    "latentsync_seconds_of_video": 37.96,
+    "pass_through_seconds_of_video": 14.48,
+    "ls_fraction": 0.7239,
+    "latentsync_inference_total_s": 182.67,
+    "verify_seconds": 7.43,
+    "latentsync_calls": 5,
+    "verify_splits": [
+      {
+        "segment": 3,
+        "rejected_frames": 8,
+        "split_into": [
+          13,
+          14,
+          15,
+          16,
+          17,
+          18
+        ]
+      },
+      {
+        "segment": 5,
+        "rejected_frames": 1,
+        "split_into": [
+          19,
+          20
+        ]
+      },
+      {
+        "segment": 9,
+        "rejected_frames": 4,
+        "split_into": [
+          21,
+          22,
+          23
+        ]
+      }
+    ],
+    "assembly": {
+      "frames_written": 1311,
+      "master_frames": 1311,
+      "padded_with_original": {},
+      "crossfaded_frames": 40
+    },
+    "output_frame_check": {
+      "decoded_frames": 1311,
+      "expected_frames": 1311,
+      "blank_frames": 0,
+      "undecodable_frames": 0,
+      "pass": true
+    },
+    "codeformer": {
+      "mode": "optimized",
+      "config": {
+        "fidelity_weight": 1.0,
+        "batch_size": 8,
+        "use_parse": true,
+        "empty_cache_per_face": false,
+        "autocast": true,
+        "parse_autocast": true,
+        "pinned": true,
+        "workers": 4,
+        "mask_blur": "gpu",
+        "roi_paste": true,
+        "overlap": true,
+        "template": "FFHQ 512 (facelib)",
+        "geometry": "preserved (no read_image upscale)",
+        "landmark_source": "insightface"
+      },
+      "load_s": 0.699,
+      "totals": {
+        "frames_in": 949,
+        "faces_restored": 949,
+        "frames_without_landmarks": 0,
+        "fallback_detections": 0,
+        "gray_faces": 0,
+        "seconds": 25.628
+      },
+      "eligible_frames": 949,
+      "master_frames": 1311,
+      "restored_segments": [
+        1,
+        18,
+        19,
+        23,
+        11
+      ],
+      "seconds": 25.643
+    },
+    "codeformer_eligible_segments": [
+      1,
+      18,
+      19,
+      23,
+      11
+    ],
+    "runner": {
+      "window_batch_size": 2,
+      "deepcache": true,
+      "deepcache_interval": 5,
+      "compile_backend": "none",
+      "sdpa_backend": "auto",
+      "steps": 20,
+      "guidance": 1.5,
+      "seed": 1247,
+      "fp16": true,
+      "stage2_512": true,
+      "mouth_only_pasteback": true,
+      "mask_top": 0.52,
+      "mask_feather": 0.08,
+      "mask_smooth_frames": 3,
+      "composite_after_codeformer": true
+    },
+    "runner_calls": [
+      {
+        "frames": 206,
+        "windows": 13,
+        "groups": 7,
+        "unet_calls": 140,
+        "seconds": 39.41,
+        "stages": {
+          "preprocess_audio_video": 0.049,
+          "affine": 1.133,
+          "vae_and_cond": 10.142,
+          "unet_denoise": 27.087,
+          "restore": 0.639,
+          "write": 0.0,
+          "total": 39.406
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      },
+      {
+        "frames": 335,
+        "windows": 21,
+        "groups": 11,
+        "unet_calls": 220,
+        "seconds": 63.79,
+        "stages": {
+          "preprocess_audio_video": 0.048,
+          "affine": 2.255,
+          "vae_and_cond": 16.472,
+          "unet_denoise": 44.008,
+          "restore": 1.003,
+          "write": 0.0,
+          "total": 63.79
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      },
+      {
+        "frames": 82,
+        "windows": 6,
+        "groups": 4,
+        "unet_calls": 80,
+        "seconds": 15.9,
+        "stages": {
+          "preprocess_audio_video": 0.036,
+          "affine": 0.49,
+          "vae_and_cond": 4.065,
+          "unet_denoise": 11.054,
+          "restore": 0.252,
+          "write": 0.0,
+          "total": 15.9
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      },
+      {
+        "frames": 166,
+        "windows": 11,
+        "groups": 6,
+        "unet_calls": 120,
+        "seconds": 31.42,
+        "stages": {
+          "preprocess_audio_video": 0.046,
+          "affine": 0.781,
+          "vae_and_cond": 8.171,
+          "unet_denoise": 21.926,
+          "restore": 0.49,
+          "write": 0.0,
+          "total": 31.417
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      },
+      {
+        "frames": 170,
+        "windows": 11,
+        "groups": 6,
+        "unet_calls": 120,
+        "seconds": 32.15,
+        "stages": {
+          "preprocess_audio_video": 0.07,
+          "affine": 0.739,
+          "vae_and_cond": 8.368,
+          "unet_denoise": 22.416,
+          "restore": 0.554,
+          "write": 0.0,
+          "total": 32.149
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      }
+    ],
+    "segments": [
+      {
+        "index": 0,
+        "start_frame": 0,
+        "end_frame": 39,
+        "frames": 39,
+        "start_s": 0.0,
+        "end_s": 1.56,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 1,
+        "start_frame": 39,
+        "end_frame": 243,
+        "frames": 204,
+        "start_s": 1.56,
+        "end_s": 9.72,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "verify_depth": 1,
+        "codeformer": {
+          "frames_in": 204,
+          "faces_restored": 204,
+          "frames_without_landmarks": 0,
+          "fallback_detections": 0,
+          "gray_faces": 0,
+          "seconds": {
+            "landmarks": 0.0,
+            "align": 0.057,
+            "net": 3.802,
+            "parse": 1.739,
+            "paste": 0.3,
+            "gpu_wait": 5.194,
+            "total": 5.552
+          },
+          "locality": {
+            "frames": 204,
+            "changed_px_sum": 2790429,
+            "soft_mask_px_sum": 2182152,
+            "roi_px_sum": 7153097,
+            "frame_px": 393472,
+            "change_outside_square_max_px": 0,
+            "changed_fraction_of_frame_mean": 0.0348,
+            "roi_fraction_of_frame_mean": 0.0891,
+            "changed_px_per_soft_mask_px": 1.279
+          },
+          "peak_vram_mib": 9050,
+          "faces_per_s": 36.74,
+          "landmarks": "insightface106->5 (verify pass)"
+        },
+        "latentsync": {
+          "seconds": 39.41,
+          "frames_in": 204,
+          "frames_out": 206
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 2,
+        "start_frame": 243,
+        "end_frame": 342,
+        "frames": 99,
+        "start_s": 9.72,
+        "end_s": 13.68,
+        "classification": "SMALL_FACE",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 13,
+        "start_frame": 342,
+        "end_frame": 345,
+        "frames": 3,
+        "start_s": 13.68,
+        "end_s": 13.8,
+        "classification": "SMALL_FACE",
+        "action": "PASS_THROUGH",
+        "split_from": 3,
+        "note": "rejected by LatentSync FaceDetector on the master frames",
+        "verify_depth": 1,
+        "codeformer_eligible": false
+      },
+      {
+        "index": 14,
+        "start_frame": 345,
+        "end_frame": 357,
+        "frames": 12,
+        "start_s": 13.8,
+        "end_s": 14.28,
+        "classification": "VALID_FACE",
+        "action": "PASS_THROUGH_SHORT_VALID",
+        "split_from": 3,
+        "note": null,
+        "verify_depth": 1,
+        "codeformer_eligible": false
+      },
+      {
+        "index": 15,
+        "start_frame": 357,
+        "end_frame": 359,
+        "frames": 2,
+        "start_s": 14.28,
+        "end_s": 14.36,
+        "classification": "SMALL_FACE",
+        "action": "PASS_THROUGH",
+        "split_from": 3,
+        "note": "rejected by LatentSync FaceDetector on the master frames",
+        "verify_depth": 1,
+        "codeformer_eligible": false
+      },
+      {
+        "index": 16,
+        "start_frame": 359,
+        "end_frame": 363,
+        "frames": 4,
+        "start_s": 14.36,
+        "end_s": 14.52,
+        "classification": "VALID_FACE",
+        "action": "PASS_THROUGH_SHORT_VALID",
+        "split_from": 3,
+        "note": null,
+        "verify_depth": 1,
+        "codeformer_eligible": false
+      },
+      {
+        "index": 17,
+        "start_frame": 363,
+        "end_frame": 366,
+        "frames": 3,
+        "start_s": 14.52,
+        "end_s": 14.64,
+        "classification": "SMALL_FACE",
+        "action": "PASS_THROUGH",
+        "split_from": 3,
+        "note": "rejected by LatentSync FaceDetector on the master frames",
+        "verify_depth": 1,
+        "codeformer_eligible": false
+      },
+      {
+        "index": 18,
+        "start_frame": 366,
+        "end_frame": 446,
+        "frames": 80,
+        "start_s": 14.64,
+        "end_s": 17.84,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "split_from": 3,
+        "note": null,
+        "verify_depth": 2,
+        "codeformer": {
+          "frames_in": 80,
+          "faces_restored": 80,
+          "frames_without_landmarks": 0,
+          "fallback_detections": 0,
+          "gray_faces": 0,
+          "seconds": {
+            "landmarks": 0.0,
+            "align": 0.021,
+            "net": 1.47,
+            "parse": 0.678,
+            "paste": 0.125,
+            "gpu_wait": 2.015,
+            "total": 2.162
+          },
+          "locality": {
+            "frames": 80,
+            "changed_px_sum": 1041690,
+            "soft_mask_px_sum": 802011,
+            "roi_px_sum": 3128899,
+            "frame_px": 393472,
+            "change_outside_square_max_px": 0,
+            "changed_fraction_of_frame_mean": 0.0331,
+            "roi_fraction_of_frame_mean": 0.0994,
+            "changed_px_per_soft_mask_px": 1.299
+          },
+          "peak_vram_mib": 7483,
+          "faces_per_s": 37.0,
+          "landmarks": "insightface106->5 (verify pass)"
+        },
+        "latentsync": {
+          "seconds": 15.9,
+          "frames_in": 80,
+          "frames_out": 82
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 4,
+        "start_frame": 446,
+        "end_frame": 484,
+        "frames": 38,
+        "start_s": 17.84,
+        "end_s": 19.36,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 19,
+        "start_frame": 484,
+        "end_frame": 648,
+        "frames": 164,
+        "start_s": 19.36,
+        "end_s": 25.92,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "split_from": 5,
+        "note": null,
+        "verify_depth": 2,
+        "codeformer": {
+          "frames_in": 164,
+          "faces_restored": 164,
+          "frames_without_landmarks": 0,
+          "fallback_detections": 0,
+          "gray_faces": 0,
+          "seconds": {
+            "landmarks": 0.0,
+            "align": 0.042,
+            "net": 3.02,
+            "parse": 1.389,
+            "paste": 0.197,
+            "gpu_wait": 4.177,
+            "total": 4.416
+          },
+          "locality": {
+            "frames": 164,
+            "changed_px_sum": 1950604,
+            "soft_mask_px_sum": 1422052,
+            "roi_px_sum": 5245623,
+            "frame_px": 393472,
+            "change_outside_square_max_px": 0,
+            "changed_fraction_of_frame_mean": 0.0302,
+            "roi_fraction_of_frame_mean": 0.0813,
+            "changed_px_per_soft_mask_px": 1.372
+          },
+          "peak_vram_mib": 8005,
+          "faces_per_s": 37.14,
+          "landmarks": "insightface106->5 (verify pass)"
+        },
+        "latentsync": {
+          "seconds": 31.42,
+          "frames_in": 164,
+          "frames_out": 166
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 20,
+        "start_frame": 648,
+        "end_frame": 649,
+        "frames": 1,
+        "start_s": 25.92,
+        "end_s": 25.96,
+        "classification": "SMALL_FACE",
+        "action": "PASS_THROUGH",
+        "split_from": 5,
+        "note": "rejected by LatentSync FaceDetector on the master frames",
+        "verify_depth": 1,
+        "codeformer_eligible": false
+      },
+      {
+        "index": 6,
+        "start_frame": 649,
+        "end_frame": 658,
+        "frames": 9,
+        "start_s": 25.96,
+        "end_s": 26.32,
+        "classification": "SMALL_FACE",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 7,
+        "start_frame": 658,
+        "end_frame": 667,
+        "frames": 9,
+        "start_s": 26.32,
+        "end_s": 26.68,
+        "classification": "VALID_FACE",
+        "action": "PASS_THROUGH_SHORT_VALID",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 8,
+        "start_frame": 667,
+        "end_frame": 673,
+        "frames": 6,
+        "start_s": 26.68,
+        "end_s": 26.92,
+        "classification": "SMALL_FACE",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 21,
+        "start_frame": 673,
+        "end_frame": 684,
+        "frames": 11,
+        "start_s": 26.92,
+        "end_s": 27.36,
+        "classification": "VALID_FACE",
+        "action": "PASS_THROUGH_SHORT_VALID",
+        "split_from": 9,
+        "note": null,
+        "verify_depth": 1,
+        "codeformer_eligible": false
+      },
+      {
+        "index": 22,
+        "start_frame": 684,
+        "end_frame": 688,
+        "frames": 4,
+        "start_s": 27.36,
+        "end_s": 27.52,
+        "classification": "SMALL_FACE",
+        "action": "PASS_THROUGH",
+        "split_from": 9,
+        "note": "rejected by LatentSync FaceDetector on the master frames",
+        "verify_depth": 1,
+        "codeformer_eligible": false
+      },
+      {
+        "index": 23,
+        "start_frame": 688,
+        "end_frame": 856,
+        "frames": 168,
+        "start_s": 27.52,
+        "end_s": 34.24,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "split_from": 9,
+        "note": null,
+        "verify_depth": 2,
+        "codeformer": {
+          "frames_in": 168,
+          "faces_restored": 168,
+          "frames_without_landmarks": 0,
+          "fallback_detections": 0,
+          "gray_faces": 0,
+          "seconds": {
+            "landmarks": 0.0,
+            "align": 0.055,
+            "net": 3.091,
+            "parse": 1.42,
+            "paste": 0.254,
+            "gpu_wait": 4.215,
+            "total": 4.524
+          },
+          "locality": {
+            "frames": 168,
+            "changed_px_sum": 2642297,
+            "soft_mask_px_sum": 2128726,
+            "roi_px_sum": 6046917,
+            "frame_px": 393472,
+            "change_outside_square_max_px": 0,
+            "changed_fraction_of_frame_mean": 0.04,
+            "roi_fraction_of_frame_mean": 0.0915,
+            "changed_px_per_soft_mask_px": 1.241
+          },
+          "peak_vram_mib": 8527,
+          "faces_per_s": 37.14,
+          "landmarks": "insightface106->5 (verify pass)"
+        },
+        "latentsync": {
+          "seconds": 32.15,
+          "frames_in": 168,
+          "frames_out": 170
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 10,
+        "start_frame": 856,
+        "end_frame": 901,
+        "frames": 45,
+        "start_s": 34.24,
+        "end_s": 36.04,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 11,
+        "start_frame": 901,
+        "end_frame": 1234,
+        "frames": 333,
+        "start_s": 36.04,
+        "end_s": 49.36,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "verify_depth": 1,
+        "codeformer": {
+          "frames_in": 333,
+          "faces_restored": 333,
+          "frames_without_landmarks": 0,
+          "fallback_detections": 0,
+          "gray_faces": 0,
+          "seconds": {
+            "landmarks": 0.0,
+            "align": 0.083,
+            "net": 6.14,
+            "parse": 2.822,
+            "paste": 0.442,
+            "gpu_wait": 8.449,
+            "total": 8.974
+          },
+          "locality": {
+            "frames": 333,
+            "changed_px_sum": 5233454,
+            "soft_mask_px_sum": 3700622,
+            "roi_px_sum": 13012055,
+            "frame_px": 393472,
+            "change_outside_square_max_px": 0,
+            "changed_fraction_of_frame_mean": 0.0399,
+            "roi_fraction_of_frame_mean": 0.0993,
+            "changed_px_per_soft_mask_px": 1.414
+          },
+          "peak_vram_mib": 9182,
+          "faces_per_s": 37.11,
+          "landmarks": "insightface106->5 (verify pass)"
+        },
+        "latentsync": {
+          "seconds": 63.79,
+          "frames_in": 333,
+          "frames_out": 335
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 12,
+        "start_frame": 1234,
+        "end_frame": 1311,
+        "frames": 77,
+        "start_s": 49.36,
+        "end_s": 52.44,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      }
+    ],
+    "backend": "optimized"
+  },
+  "output_meta": {
+    "duration_s": 52.44,
+    "size_bytes": 41562354,
+    "container": "mov,mp4,m4a,3gp,3g2,mj2",
+    "video": {
+      "codec": "h264",
+      "profile": "High",
+      "width": 464,
+      "height": 848,
+      "r_frame_rate": "25/1",
+      "avg_frame_rate": "25/1",
+      "fps": 25.0,
+      "avg_fps": 25.0,
+      "vfr": false,
+      "pix_fmt": "yuv420p",
+      "nb_frames": "1311",
+      "duration_s": 52.44,
+      "bit_rate": "6139533"
+    },
+    "audio": {
+      "codec": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "channel_layout": "stereo",
+      "bit_rate": "194586",
+      "duration_s": 52.366009
+    },
+    "has_video": true,
+    "has_audio": true
+  },
+  "validation": {
+    "tolerance_s": 0.15,
+    "tolerance_rule": "max(0.15 s, 2 source frames)",
+    "duration_delta_s": 0.0733,
+    "checks": {
+      "output_exists_nonempty": true,
+      "output_has_video_audio": true,
+      "duration_within_tolerance": true,
+      "resolution_preserved": true,
+      "all_units_have_tts_and_translation": true,
+      "frame_count_preserved": true,
+      "output_frames_decodable_no_blank": true,
+      "no_latentsync_oom": true
+    },
+    "pass": true
+  },
+  "stage_seconds": {
+    "audio_extract": 0.078,
+    "vad": 1.853,
+    "asr": 5.075,
+    "translation_load": 3.568,
+    "segmentation": 23.207,
+    "diarization": 8.022,
+    "translation": 16.427,
+    "tts_load": 6.133,
+    "qa_load": 1.932,
+    "tts": 180.342,
+    "alignment": 0.427,
+    "dubbed_track": 0.299,
+    "background_sep": 0.972,
+    "background_mix": 1.022,
+    "speech_gate": 0.318,
+    "face_router_load": 0.262,
+    "latentsync_load": 16.535,
+    "codeformer_load": 0.747,
+    "ls_master_25fps": 2.345,
+    "ls_master_decode": 0.358,
+    "face_classify": 5.012,
+    "latentsync": 190.71,
+    "latentsync_verify": 7.431,
+    "codeformer": 25.643,
+    "final_assembly": 2.812,
+    "total": 499.557
+  },
+  "gpu": {
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.178.04",
+    "name": "NVIDIA GeForce RTX 5090",
+    "capability": "sm_120",
+    "total_vram_bytes": 33668726784,
+    "total_vram_gib": 31.36,
+    "free_vram_gib": 23.05,
+    "multi_processor_count": 170,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "at": "2026-10-16T19:35:17Z"
+}

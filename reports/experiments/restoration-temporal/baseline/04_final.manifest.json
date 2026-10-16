@@ -1,0 +1,3994 @@
+{
+  "task": "0.5-runner",
+  "input": "/workspace/dub/inputs/test_videos_raw/04.mp4",
+  "output": "/workspace/dub/artifacts/baseline/04/final/04_final.mp4",
+  "target_lang": "en",
+  "alignment_mode": "burst",
+  "tts_mode": "phrase",
+  "segmentation_mode": "sentence",
+  "codeformer": {
+    "mode": "optimized",
+    "w": 1.0,
+    "batch": 8,
+    "landmarks": "insightface",
+    "precision": "fp16"
+  },
+  "work_dir": "/workspace/dub/artifacts/baseline/04/work/work_04",
+  "config": {
+    "seed": 1247,
+    "max_unit_s": 20.0,
+    "threads": 16
+  },
+  "source": {
+    "duration_s": 53.9,
+    "size_bytes": 11309223,
+    "container": "mov,mp4,m4a,3gp,3g2,mj2",
+    "video": {
+      "codec": "h264",
+      "profile": "High",
+      "width": 464,
+      "height": 848,
+      "r_frame_rate": "30/1",
+      "avg_frame_rate": "30/1",
+      "fps": 30.0,
+      "avg_fps": 30.0,
+      "vfr": false,
+      "pix_fmt": "yuv420p",
+      "nb_frames": "1617",
+      "duration_s": 53.9,
+      "bit_rate": "1610898"
+    },
+    "audio": {
+      "codec": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "channel_layout": "stereo",
+      "bit_rate": "62695",
+      "duration_s": 53.878345
+    },
+    "has_video": true,
+    "has_audio": true
+  },
+  "speech_intervals": [
+    {
+      "start": 2.3,
+      "end": 4.0
+    },
+    {
+      "start": 4.8,
+      "end": 6.1
+    },
+    {
+      "start": 6.6,
+      "end": 7.5
+    },
+    {
+      "start": 8.4,
+      "end": 11.4
+    },
+    {
+      "start": 14.6,
+      "end": 15.6
+    },
+    {
+      "start": 17.5,
+      "end": 19.7
+    },
+    {
+      "start": 22.0,
+      "end": 27.6
+    },
+    {
+      "start": 29.3,
+      "end": 31.4
+    },
+    {
+      "start": 33.1,
+      "end": 35.8
+    },
+    {
+      "start": 36.4,
+      "end": 37.6
+    },
+    {
+      "start": 38.5,
+      "end": 40.1
+    },
+    {
+      "start": 41.2,
+      "end": 42.6
+    },
+    {
+      "start": 44.5,
+      "end": 45.2
+    },
+    {
+      "start": 46.6,
+      "end": 49.7
+    },
+    {
+      "start": 51.6,
+      "end": 52.6
+    }
+  ],
+  "timeline": {
+    "chunks": [
+      {
+        "start_s": 0.0,
+        "end_s": 2.3,
+        "type": "PASS_THROUGH",
+        "index": 0,
+        "duration_s": 2.3
+      },
+      {
+        "start_s": 2.3,
+        "end_s": 4.0,
+        "type": "SPEECH",
+        "index": 1,
+        "duration_s": 1.7
+      },
+      {
+        "start_s": 4.0,
+        "end_s": 4.8,
+        "type": "PASS_THROUGH",
+        "index": 2,
+        "duration_s": 0.8
+      },
+      {
+        "start_s": 4.8,
+        "end_s": 6.1,
+        "type": "SPEECH",
+        "index": 3,
+        "duration_s": 1.3
+      },
+      {
+        "start_s": 6.1,
+        "end_s": 6.6,
+        "type": "PASS_THROUGH",
+        "index": 4,
+        "duration_s": 0.5
+      },
+      {
+        "start_s": 6.6,
+        "end_s": 7.5,
+        "type": "SPEECH",
+        "index": 5,
+        "duration_s": 0.9
+      },
+      {
+        "start_s": 7.5,
+        "end_s": 8.4,
+        "type": "PASS_THROUGH",
+        "index": 6,
+        "duration_s": 0.9
+      },
+      {
+        "start_s": 8.4,
+        "end_s": 11.4,
+        "type": "SPEECH",
+        "index": 7,
+        "duration_s": 3.0
+      },
+      {
+        "start_s": 11.4,
+        "end_s": 14.6,
+        "type": "PASS_THROUGH",
+        "index": 8,
+        "duration_s": 3.2
+      },
+      {
+        "start_s": 14.6,
+        "end_s": 15.6,
+        "type": "SPEECH",
+        "index": 9,
+        "duration_s": 1.0
+      },
+      {
+        "start_s": 15.6,
+        "end_s": 17.5,
+        "type": "PASS_THROUGH",
+        "index": 10,
+        "duration_s": 1.9
+      },
+      {
+        "start_s": 17.5,
+        "end_s": 19.7,
+        "type": "SPEECH",
+        "index": 11,
+        "duration_s": 2.2
+      },
+      {
+        "start_s": 19.7,
+        "end_s": 22.0,
+        "type": "PASS_THROUGH",
+        "index": 12,
+        "duration_s": 2.3
+      },
+      {
+        "start_s": 22.0,
+        "end_s": 27.6,
+        "type": "SPEECH",
+        "index": 13,
+        "duration_s": 5.6
+      },
+      {
+        "start_s": 27.6,
+        "end_s": 29.3,
+        "type": "PASS_THROUGH",
+        "index": 14,
+        "duration_s": 1.7
+      },
+      {
+        "start_s": 29.3,
+        "end_s": 31.4,
+        "type": "SPEECH",
+        "index": 15,
+        "duration_s": 2.1
+      },
+      {
+        "start_s": 31.4,
+        "end_s": 33.1,
+        "type": "PASS_THROUGH",
+        "index": 16,
+        "duration_s": 1.7
+      },
+      {
+        "start_s": 33.1,
+        "end_s": 35.8,
+        "type": "SPEECH",
+        "index": 17,
+        "duration_s": 2.7
+      },
+      {
+        "start_s": 35.8,
+        "end_s": 36.4,
+        "type": "PASS_THROUGH",
+        "index": 18,
+        "duration_s": 0.6
+      },
+      {
+        "start_s": 36.4,
+        "end_s": 37.6,
+        "type": "SPEECH",
+        "index": 19,
+        "duration_s": 1.2
+      },
+      {
+        "start_s": 37.6,
+        "end_s": 38.5,
+        "type": "PASS_THROUGH",
+        "index": 20,
+        "duration_s": 0.9
+      },
+      {
+        "start_s": 38.5,
+        "end_s": 40.1,
+        "type": "SPEECH",
+        "index": 21,
+        "duration_s": 1.6
+      },
+      {
+        "start_s": 40.1,
+        "end_s": 41.2,
+        "type": "PASS_THROUGH",
+        "index": 22,
+        "duration_s": 1.1
+      },
+      {
+        "start_s": 41.2,
+        "end_s": 42.6,
+        "type": "SPEECH",
+        "index": 23,
+        "duration_s": 1.4
+      },
+      {
+        "start_s": 42.6,
+        "end_s": 44.5,
+        "type": "PASS_THROUGH",
+        "index": 24,
+        "duration_s": 1.9
+      },
+      {
+        "start_s": 44.5,
+        "end_s": 45.2,
+        "type": "SPEECH",
+        "index": 25,
+        "duration_s": 0.7
+      },
+      {
+        "start_s": 45.2,
+        "end_s": 46.6,
+        "type": "PASS_THROUGH",
+        "index": 26,
+        "duration_s": 1.4
+      },
+      {
+        "start_s": 46.6,
+        "end_s": 49.7,
+        "type": "SPEECH",
+        "index": 27,
+        "duration_s": 3.1
+      },
+      {
+        "start_s": 49.7,
+        "end_s": 51.6,
+        "type": "PASS_THROUGH",
+        "index": 28,
+        "duration_s": 1.9
+      },
+      {
+        "start_s": 51.6,
+        "end_s": 52.6,
+        "type": "SPEECH",
+        "index": 29,
+        "duration_s": 1.0
+      },
+      {
+        "start_s": 52.6,
+        "end_s": 53.9,
+        "type": "PASS_THROUGH",
+        "index": 30,
+        "duration_s": 1.3
+      }
+    ],
+    "speech_seconds": 29.5,
+    "pass_through_seconds": 24.4
+  },
+  "segmentation": {
+    "mode": "sentence",
+    "method": "sentence",
+    "chunks": [
+      {
+        "words": 58,
+        "ok": true,
+        "attempts": [
+          {
+            "attempt": 0,
+            "ok": true,
+            "changed_tokens": 0,
+            "ratio": 1.0,
+            "diff": {},
+            "out": "Сделаем видео с очками, посмотрим. Опять же, потестируем, как наше приложение будет на это все реагировать. Город Сочи, 28 августа, сегодня, и мы начинаем рабочие процессы по созданию нашего магического приложения, которое облегчит жизнь людям, которая я надеюсь будет пользоваться популярностью блогеров всего мира и не только блогеров. Поэтому вот такое вот прекрасное видео. Классная погода, что в",
+            "clause_ends": [
+              3,
+              4,
+              6,
+              7,
+              15,
+              17,
+              19,
+              20,
+              30,
+              34,
+              47,
+              53,
+              55,
+              57
+            ]
+          }
+        ]
+      }
+    ],
+    "fallback_chunks": 0,
+    "sentences": 5,
+    "split_long": 1,
+    "units": 6
+  },
+  "asr": {
+    "language": "ru",
+    "language_probability": 0.999,
+    "audio_duration_s": 53.892,
+    "compute_type": "int8_float16",
+    "model": "faster-whisper large-v3",
+    "segments": [
+      {
+        "id": 1,
+        "start": 1.64,
+        "end": 10.24,
+        "text": "сделаем видео с очками посмотрим опять же потестируем как наше приложение будет на это",
+        "words": [
+          {
+            "word": " сделаем",
+            "start": 1.64,
+            "end": 2.76,
+            "p": 0.635
+          },
+          {
+            "word": " видео",
+            "start": 2.76,
+            "end": 3.02,
+            "p": 0.995
+          },
+          {
+            "word": " с",
+            "start": 3.02,
+            "end": 3.22,
+            "p": 0.995
+          },
+          {
+            "word": " очками",
+            "start": 3.22,
+            "end": 3.68,
+            "p": 0.994
+          },
+          {
+            "word": " посмотрим",
+            "start": 3.68,
+            "end": 4.98,
+            "p": 0.867
+          },
+          {
+            "word": " опять",
+            "start": 4.98,
+            "end": 5.54,
+            "p": 0.957
+          },
+          {
+            "word": " же",
+            "start": 5.54,
+            "end": 5.86,
+            "p": 0.999
+          },
+          {
+            "word": " потестируем",
+            "start": 5.86,
+            "end": 7.24,
+            "p": 0.826
+          },
+          {
+            "word": " как",
+            "start": 7.24,
+            "end": 8.48,
+            "p": 0.986
+          },
+          {
+            "word": " наше",
+            "start": 8.48,
+            "end": 8.8,
+            "p": 0.979
+          },
+          {
+            "word": " приложение",
+            "start": 8.8,
+            "end": 9.52,
+            "p": 0.998
+          },
+          {
+            "word": " будет",
+            "start": 9.52,
+            "end": 9.82,
+            "p": 0.984
+          },
+          {
+            "word": " на",
+            "start": 9.82,
+            "end": 10.04,
+            "p": 0.994
+          },
+          {
+            "word": " это",
+            "start": 10.04,
+            "end": 10.24,
+            "p": 0.982
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "start": 10.24,
+        "end": 25.4,
+        "text": "все реагировать город сочи 28 августа сегодня и мы начинаем рабочие процессы по созданию нашего",
+        "words": [
+          {
+            "word": " все",
+            "start": 10.24,
+            "end": 10.44,
+            "p": 0.914
+          },
+          {
+            "word": " реагировать",
+            "start": 10.44,
+            "end": 11.08,
+            "p": 0.998
+          },
+          {
+            "word": " город",
+            "start": 11.08,
+            "end": 14.72,
+            "p": 0.974
+          },
+          {
+            "word": " сочи",
+            "start": 14.72,
+            "end": 15.34,
+            "p": 0.986
+          },
+          {
+            "word": " 28",
+            "start": 15.34,
+            "end": 17.76,
+            "p": 0.964
+          },
+          {
+            "word": " августа",
+            "start": 17.76,
+            "end": 18.8,
+            "p": 0.997
+          },
+          {
+            "word": " сегодня",
+            "start": 18.8,
+            "end": 19.2,
+            "p": 0.994
+          },
+          {
+            "word": " и",
+            "start": 19.2,
+            "end": 21.94,
+            "p": 0.98
+          },
+          {
+            "word": " мы",
+            "start": 21.94,
+            "end": 22.46,
+            "p": 0.998
+          },
+          {
+            "word": " начинаем",
+            "start": 22.46,
+            "end": 23.06,
+            "p": 1.0
+          },
+          {
+            "word": " рабочие",
+            "start": 23.06,
+            "end": 23.52,
+            "p": 0.994
+          },
+          {
+            "word": " процессы",
+            "start": 23.52,
+            "end": 24.2,
+            "p": 0.997
+          },
+          {
+            "word": " по",
+            "start": 24.2,
+            "end": 24.34,
+            "p": 0.999
+          },
+          {
+            "word": " созданию",
+            "start": 24.34,
+            "end": 25.06,
+            "p": 0.999
+          },
+          {
+            "word": " нашего",
+            "start": 25.06,
+            "end": 25.4,
+            "p": 0.993
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "start": 25.4,
+        "end": 35.38,
+        "text": "магического приложения которое облегчит жизнь людям которая я надеюсь будет пользоваться",
+        "words": [
+          {
+            "word": " магического",
+            "start": 25.4,
+            "end": 26.18,
+            "p": 0.507
+          },
+          {
+            "word": " приложения",
+            "start": 26.18,
+            "end": 27.26,
+            "p": 0.958
+          },
+          {
+            "word": " которое",
+            "start": 27.26,
+            "end": 29.48,
+            "p": 0.53
+          },
+          {
+            "word": " облегчит",
+            "start": 29.48,
+            "end": 30.18,
+            "p": 0.979
+          },
+          {
+            "word": " жизнь",
+            "start": 30.18,
+            "end": 30.46,
+            "p": 0.99
+          },
+          {
+            "word": " людям",
+            "start": 30.46,
+            "end": 30.92,
+            "p": 0.997
+          },
+          {
+            "word": " которая",
+            "start": 30.92,
+            "end": 33.3,
+            "p": 0.47
+          },
+          {
+            "word": " я",
+            "start": 33.3,
+            "end": 33.68,
+            "p": 0.854
+          },
+          {
+            "word": " надеюсь",
+            "start": 33.68,
+            "end": 34.1,
+            "p": 1.0
+          },
+          {
+            "word": " будет",
+            "start": 34.1,
+            "end": 34.64,
+            "p": 0.988
+          },
+          {
+            "word": " пользоваться",
+            "start": 34.64,
+            "end": 35.38,
+            "p": 0.998
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "start": 35.38,
+        "end": 48.2,
+        "text": "популярностью блогеров всего мира и не только блогеров поэтому вот такое вот прекрасное видео",
+        "words": [
+          {
+            "word": " популярностью",
+            "start": 35.38,
+            "end": 37.16,
+            "p": 0.996
+          },
+          {
+            "word": " блогеров",
+            "start": 37.16,
+            "end": 39.06,
+            "p": 0.895
+          },
+          {
+            "word": " всего",
+            "start": 39.06,
+            "end": 39.28,
+            "p": 0.997
+          },
+          {
+            "word": " мира",
+            "start": 39.28,
+            "end": 39.64,
+            "p": 0.999
+          },
+          {
+            "word": " и",
+            "start": 39.64,
+            "end": 41.1,
+            "p": 0.981
+          },
+          {
+            "word": " не",
+            "start": 41.1,
+            "end": 41.34,
+            "p": 0.998
+          },
+          {
+            "word": " только",
+            "start": 41.34,
+            "end": 41.6,
+            "p": 1.0
+          },
+          {
+            "word": " блогеров",
+            "start": 41.6,
+            "end": 42.28,
+            "p": 0.988
+          },
+          {
+            "word": " поэтому",
+            "start": 42.28,
+            "end": 44.7,
+            "p": 0.978
+          },
+          {
+            "word": " вот",
+            "start": 44.7,
+            "end": 46.7,
+            "p": 0.996
+          },
+          {
+            "word": " такое",
+            "start": 46.7,
+            "end": 47.0,
+            "p": 0.751
+          },
+          {
+            "word": " вот",
+            "start": 47.0,
+            "end": 47.22,
+            "p": 0.918
+          },
+          {
+            "word": " прекрасное",
+            "start": 47.22,
+            "end": 47.86,
+            "p": 0.993
+          },
+          {
+            "word": " видео",
+            "start": 47.86,
+            "end": 48.2,
+            "p": 0.995
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "start": 48.2,
+        "end": 52.34,
+        "text": "классная погода что вперед",
+        "words": [
+          {
+            "word": " классная",
+            "start": 48.2,
+            "end": 48.92,
+            "p": 0.974
+          },
+          {
+            "word": " погода",
+            "start": 48.92,
+            "end": 49.42,
+            "p": 1.0
+          },
+          {
+            "word": " что",
+            "start": 49.42,
+            "end": 51.78,
+            "p": 0.724
+          },
+          {
+            "word": " вперед",
+            "start": 51.78,
+            "end": 52.34,
+            "p": 0.975
+          }
+        ]
+      }
+    ]
+  },
+  "source_lang": "ru",
+  "diarization": {
+    "model": "pyannote/speaker-diarization-3.1",
+    "turns": [
+      {
+        "start": 2.36,
+        "end": 3.912,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 4.773,
+        "end": 5.988,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 6.038,
+        "end": 6.19,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 6.443,
+        "end": 7.422,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 8.401,
+        "end": 11.337,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 14.543,
+        "end": 15.539,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 17.446,
+        "end": 19.589,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 22.019,
+        "end": 27.52,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 29.326,
+        "end": 31.317,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 33.072,
+        "end": 39.957,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 41.172,
+        "end": 42.505,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 44.412,
+        "end": 45.155,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 46.572,
+        "end": 49.576,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 51.567,
+        "end": 52.445,
+        "speaker": "SPEAKER_00"
+      }
+    ],
+    "speakers": [
+      "SPEAKER_00"
+    ]
+  },
+  "tiny_unit_merge": {
+    "enabled": true,
+    "min_words": 3,
+    "min_s": 1.0,
+    "max_gap_s": 2.0,
+    "units_before": 6,
+    "units_after": 6,
+    "merges": [],
+    "unmerged_tiny": []
+  },
+  "translation": {
+    "model": "qwen2.5-7b-instruct-q8_0-00001-of-00003.gguf",
+    "quant": "q8_0",
+    "n_ctx": 4096,
+    "n_threads": 14,
+    "n_gpu_layers": 0,
+    "system_prompt": "You are a professional translator. Return only the translation, with no explanation.",
+    "direction": "Russian->English",
+    "usage": {
+      "prompt_tokens": 318,
+      "completion_tokens": 87
+    },
+    "burst_split": null
+  },
+  "tts": {
+    "model": "ChatterboxMultilingualTTS t3=v3 (models/chatterbox)",
+    "sr": 24000,
+    "dtype": "float16",
+    "language_id": "en",
+    "mode": "phrase",
+    "voice_reference": "speaker's own diarized speech via audio_prompt_path/prepare_conditionals",
+    "speech_token_guard": {
+      "enabled": true,
+      "flow_calls": 10,
+      "violations": 0
+    },
+    "qa": {
+      "enabled": true,
+      "retries": 2,
+      "low_temp": 0.6
+    },
+    "fit": {
+      "enabled": true,
+      "rounds": 4,
+      "target_ratio": 1.05,
+      "short_min_words": 4,
+      "short_overflow_s": 0.3
+    },
+    "fit_up": {
+      "enabled": true,
+      "ratio": 0.8,
+      "rounds": 3,
+      "aim": 1.0,
+      "guard": false
+    },
+    "alignment": {
+      "method": "ctc_forced_align (wav2vec2-base-960h, torchaudio.forced_align)",
+      "cuts": "between words only"
+    },
+    "split": {
+      "min_part_words": 1,
+      "soft_part_words": 2,
+      "part_max_words": 16,
+      "retries": 2
+    },
+    "stats": {
+      "parts": 6,
+      "attempts": 10,
+      "retried_parts": 0,
+      "retry_success": 0,
+      "final_bad": 0,
+      "fit_parts_rewritten": 0,
+      "fit_parts_merged": 0,
+      "fit_rounds_used": 0,
+      "fit_rewrite_rejected": 0,
+      "fit_up_units": 3,
+      "fit_up_rounds": 6,
+      "fit_up_accepted": 3,
+      "fit_up_rejected": 3,
+      "fit_up_candidates": 5,
+      "units_single_burst": 1,
+      "units_qwen_split": 0,
+      "units_single_fallback": 0,
+      "spans": 19,
+      "span_merges": 0,
+      "align_ok": 6,
+      "align_fallback": 0,
+      "units_timing_split": 5,
+      "units_proportional_fallback": 0,
+      "gen_seconds": 8.32,
+      "qa_seconds": 1.64,
+      "align_seconds": 0.07,
+      "fitup_qwen_seconds": 91.24,
+      "fitdown_qwen_seconds": 0.0,
+      "fitup_gen_qa_seconds": 4.04,
+      "gap_qa_units": 0,
+      "gap_qa_left": 0,
+      "judge_calls": 9,
+      "judge_seconds": 23.36,
+      "pause_marks_seconds": 0.0,
+      "retry_success_rate": null
+    },
+    "references": {
+      "SPEAKER_00": {
+        "file": "/workspace/dub/artifacts/baseline/04/work/work_04/ref_SPEAKER_00.wav",
+        "seconds": 10.0,
+        "turns_used": 2,
+        "source": "diarized_speech"
+      }
+    }
+  },
+  "alignment": {
+    "mode": "burst",
+    "min_burst_s": 0.0,
+    "spill": true,
+    "atempo_cap": 1.15,
+    "hard_cap": 1.2,
+    "fill_slowdown": 0.9,
+    "fallback_frac": 1.01,
+    "units_slot_fallback": 0,
+    "summary": {
+      "groups": 19,
+      "atempo_max": 1.025,
+      "atempo_min": 0.9,
+      "slowed_lt_1": 11,
+      "atempo_gt_1_15": 0,
+      "atempo_gt_1_25": 0,
+      "atempo_gt_1_3": 0,
+      "overflow_groups": 0,
+      "cut_groups": 0
+    }
+  },
+  "dubbed_track": {
+    "wav24k": "/workspace/dub/artifacts/baseline/04/work/work_04/dubbed_24k.wav",
+    "wav16k": "/workspace/dub/artifacts/baseline/04/work/work_04/dubbed_16k.wav",
+    "aac": "/workspace/dub/artifacts/baseline/04/work/work_04/dubbed_aac.m4a",
+    "seconds": 53.9,
+    "sr": 24000,
+    "peak_before_norm": 1.0,
+    "speech_seconds": 50.6,
+    "non_speech": "silence (original timing preserved)"
+  },
+  "units": [
+    {
+      "asr_segment": 1,
+      "start": 1.64,
+      "end": 4.98,
+      "text": "Сделаем видео с очками посмотрим.",
+      "words": 5,
+      "sentence": "Сделаем видео с очками посмотрим.",
+      "source": "sentence",
+      "id": 0,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 1.759,
+      "translation": "Let's make a video with glasses and watch it.",
+      "parts_original": [
+        "Let's make a video with glasses and watch it."
+      ],
+      "fit": [],
+      "fit_up": [],
+      "gap_qa": {
+        "found": [],
+        "retries": []
+      },
+      "split": {
+        "method": "single"
+      },
+      "fit_final_ratios": [
+        0.75
+      ],
+      "parts": [
+        "Let's make a video with glasses and watch it."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u00_p0.wav",
+          "seconds": 1.996,
+          "text": "Let's make a video with glasses and watch it.",
+          "clip_span": [
+            0.0,
+            1.996
+          ],
+          "speech_span": [
+            0.0,
+            1.996
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1247,
+              "temperature": 0.8,
+              "seconds": 2.36,
+              "score": 0.028,
+              "bad": false,
+              "reasons": [],
+              "ctc": "let's make avidia with glasses and watch it",
+              "whisper": "let's make a video with glasses and watch it",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.028,
+          "seed_used": 1247,
+          "temperature_used": 0.8,
+          "words": 9,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u00_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 1,
+        "seconds": 2.36,
+        "speech_seconds": 1.795,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 1.7,
+        "ratio_tts_to_source_speech": 1.056,
+        "word_spans": [
+          {
+            "word": "let's",
+            "start": 0.121,
+            "end": 0.282,
+            "score": 0.951
+          },
+          {
+            "word": "make",
+            "start": 0.343,
+            "end": 0.484,
+            "score": 0.948
+          },
+          {
+            "word": "a",
+            "start": 0.524,
+            "end": 0.545,
+            "score": 0.808
+          },
+          {
+            "word": "video",
+            "start": 0.585,
+            "end": 0.787,
+            "score": 0.47
+          },
+          {
+            "word": "with",
+            "start": 0.847,
+            "end": 0.948,
+            "score": 0.986
+          },
+          {
+            "word": "glasses",
+            "start": 1.009,
+            "end": 1.412,
+            "score": 0.957
+          },
+          {
+            "word": "and",
+            "start": 1.472,
+            "end": 1.553,
+            "score": 0.986
+          },
+          {
+            "word": "watch",
+            "start": 1.594,
+            "end": 1.775,
+            "score": 0.999
+          },
+          {
+            "word": "it",
+            "start": 1.876,
+            "end": 1.916,
+            "score": 0.995
+          }
+        ]
+      },
+      "slot": {
+        "start": 1.64,
+        "end": 4.96,
+        "seconds": 3.32
+      },
+      "alignment": {
+        "tts_seconds": 2.36,
+        "ratio_tts_to_slot": 0.7108,
+        "mode": "burst",
+        "atempo": 1.0,
+        "bursts": 1,
+        "bursts_without_words": 1,
+        "placements": [
+          {
+            "burst": [
+              2.3,
+              4.0
+            ],
+            "window": [
+              2.3,
+              4.96
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 1.996,
+            "ratio": 0.75,
+            "atempo": 1.0,
+            "placed": [
+              2.3,
+              4.296
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 1.64,
+            "text": "Let's make a video with glasses and watch it.",
+            "source_words": "сделаем видео с очками посмотрим"
+          }
+        ],
+        "aligned_seconds": 3.32,
+        "file": "/workspace/dub/artifacts/baseline/04/work/work_04/aligned_u00.wav",
+        "track_start": 1.64
+      }
+    },
+    {
+      "asr_segment": 1,
+      "start": 4.98,
+      "end": 11.08,
+      "text": "Опять же потестируем как наше приложение будет на это все реагировать.",
+      "words": 11,
+      "sentence": "Опять же потестируем как наше приложение будет на это все реагировать.",
+      "source": "sentence",
+      "id": 1,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 4.818,
+      "translation": "Again, let's test how our application will react to all of this.",
+      "parts_original": [
+        "Again, let's test how our application will react to all of this."
+      ],
+      "fit": [],
+      "fit_up": [
+        {
+          "round": 1,
+          "ratio_before": 0.632,
+          "old": "Again, let's test how our application will react to all of this.",
+          "target_words": 19,
+          "min_words": 16,
+          "source_seconds": 4.68,
+          "tts_seconds_before": 2.957,
+          "new": "Once more, we will test how our application will react to all of this.",
+          "tts_seconds_after": 3.117,
+          "ratio_after": 0.666,
+          "qa_before": 0.059,
+          "qa_after": 0.009,
+          "closer": true,
+          "intelligible": true,
+          "result": "accepted"
+        },
+        {
+          "round": 2,
+          "ratio_before": 0.666,
+          "old": "Once more, we will test how our application will react to all of this.",
+          "target_words": 21,
+          "min_words": 18,
+          "source_seconds": 4.68,
+          "tts_seconds_before": 3.117,
+          "result": "rewrite_rejected",
+          "reason": "identical"
+        }
+      ],
+      "gap_qa": {
+        "found": [],
+        "retries": []
+      },
+      "translation_fitted": "Once more, we will test how our application will react to all of this.",
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.407,
+        0.347,
+        0.782
+      ],
+      "parts": [
+        "Once more,",
+        "we will test",
+        "how our application will react to all of this."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u01_p0.wav",
+          "seconds": 0.635,
+          "text": "Once more,",
+          "clip_span": [
+            0.0,
+            0.635
+          ],
+          "speech_span": [
+            0.0,
+            0.635
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001407,
+              "temperature": 0.8,
+              "seconds": 3.64,
+              "score": 0.009,
+              "bad": false,
+              "reasons": [],
+              "ctc": "once more we will test how our aplication will react to all of this",
+              "whisper": "Once more we will test how our application will react to all of this.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.009,
+          "seed_used": 2001407,
+          "temperature_used": 0.8,
+          "words": 2,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u01_p1.wav",
+          "seconds": 0.604,
+          "text": "we will test",
+          "clip_span": [
+            0.635,
+            1.239
+          ],
+          "speech_span": [
+            0.0,
+            0.604
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001407,
+              "temperature": 0.8,
+              "seconds": 3.64,
+              "score": 0.009,
+              "bad": false,
+              "reasons": [],
+              "ctc": "once more we will test how our aplication will react to all of this",
+              "whisper": "Once more we will test how our application will react to all of this.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.009,
+          "seed_used": 2001407,
+          "temperature_used": 0.8,
+          "words": 3,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u01_p2.wav",
+          "seconds": 2.079,
+          "text": "how our application will react to all of this.",
+          "clip_span": [
+            1.239,
+            3.318
+          ],
+          "speech_span": [
+            0.0,
+            2.079
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001407,
+              "temperature": 0.8,
+              "seconds": 3.64,
+              "score": 0.009,
+              "bad": false,
+              "reasons": [],
+              "ctc": "once more we will test how our aplication will react to all of this",
+              "whisper": "Once more we will test how our application will react to all of this.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.009,
+          "seed_used": 2001407,
+          "temperature_used": 0.8,
+          "words": 9,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u01_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 3,
+        "seconds": 3.64,
+        "speech_seconds": 3.117,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 4.68,
+        "ratio_tts_to_source_speech": 0.666,
+        "word_spans": [
+          {
+            "word": "once",
+            "start": 0.121,
+            "end": 0.261,
+            "score": 0.994
+          },
+          {
+            "word": "more",
+            "start": 0.362,
+            "end": 0.543,
+            "score": 0.908
+          },
+          {
+            "word": "we",
+            "start": 0.644,
+            "end": 0.704,
+            "score": 1.0
+          },
+          {
+            "word": "will",
+            "start": 0.744,
+            "end": 0.925,
+            "score": 0.987
+          },
+          {
+            "word": "test",
+            "start": 0.985,
+            "end": 1.187,
+            "score": 0.989
+          },
+          {
+            "word": "how",
+            "start": 1.247,
+            "end": 1.368,
+            "score": 0.994
+          },
+          {
+            "word": "our",
+            "start": 1.428,
+            "end": 1.508,
+            "score": 0.987
+          },
+          {
+            "word": "application",
+            "start": 1.569,
+            "end": 2.091,
+            "score": 0.82
+          },
+          {
+            "word": "will",
+            "start": 2.152,
+            "end": 2.313,
+            "score": 0.999
+          },
+          {
+            "word": "react",
+            "start": 2.353,
+            "end": 2.594,
+            "score": 0.942
+          },
+          {
+            "word": "to",
+            "start": 2.614,
+            "end": 2.695,
+            "score": 0.883
+          },
+          {
+            "word": "all",
+            "start": 2.775,
+            "end": 2.896,
+            "score": 0.99
+          },
+          {
+            "word": "of",
+            "start": 2.956,
+            "end": 2.996,
+            "score": 0.661
+          },
+          {
+            "word": "this",
+            "start": 3.037,
+            "end": 3.238,
+            "score": 0.894
+          }
+        ]
+      },
+      "slot": {
+        "start": 4.98,
+        "end": 11.06,
+        "seconds": 6.08
+      },
+      "alignment": {
+        "tts_seconds": 3.64,
+        "ratio_tts_to_slot": 0.5987,
+        "mode": "burst",
+        "atempo": 0.9,
+        "bursts": 3,
+        "bursts_without_words": 0,
+        "placements": [
+          {
+            "burst": [
+              4.98,
+              6.1
+            ],
+            "window": [
+              4.98,
+              6.54
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 0.635,
+            "ratio": 0.407,
+            "atempo": 0.9,
+            "placed": [
+              4.98,
+              5.68
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 4.58,
+            "text": "Once more,",
+            "source_words": "опять же потестируем"
+          },
+          {
+            "burst": [
+              6.6,
+              7.5
+            ],
+            "window": [
+              6.6,
+              8.34
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 0.604,
+            "ratio": 0.347,
+            "atempo": 0.9,
+            "placed": [
+              6.6,
+              7.256
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 4.58,
+            "text": "we will test",
+            "source_words": "как"
+          },
+          {
+            "burst": [
+              8.4,
+              11.06
+            ],
+            "window": [
+              8.4,
+              11.06
+            ],
+            "phrases": [
+              2
+            ],
+            "group_s": 2.079,
+            "ratio": 0.782,
+            "atempo": 0.9,
+            "placed": [
+              8.4,
+              10.69
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 4.58,
+            "text": "how our application will react to all of this.",
+            "source_words": "наше приложение будет на это все реагировать"
+          }
+        ],
+        "aligned_seconds": 6.48,
+        "file": "/workspace/dub/artifacts/baseline/04/work/work_04/aligned_u01.wav",
+        "track_start": 4.58
+      }
+    },
+    {
+      "asr_segment": 2,
+      "start": 11.08,
+      "end": 27.26,
+      "text": "город сочи 28 августа сегодня и мы начинаем рабочие процессы по созданию нашего магического приложения",
+      "words": 15,
+      "sentence": "Город сочи 28 августа сегодня и мы начинаем рабочие процессы по созданию нашего магического приложения которое облегчит жизнь людям которая я надеюсь будет пользоваться популярностью блогеров всего мира и не только блогеров.",
+      "source": "sentence_split0",
+      "id": 2,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 8.637,
+      "translation": "Sochi city today, August 28, and we are starting the working processes for creating our magical application.",
+      "parts_original": [
+        "Sochi city today, August 28, and we are starting the working processes for creating our magical application."
+      ],
+      "fit": [],
+      "fit_up": [
+        {
+          "round": 1,
+          "ratio_before": 0.733,
+          "old": "Sochi city today, August 28, and we are starting the working processes for creating our magical application.",
+          "target_words": 23,
+          "min_words": 20,
+          "source_seconds": 8.76,
+          "tts_seconds_before": 6.419,
+          "result": "rewrite_rejected",
+          "reason": "identical"
+        }
+      ],
+      "gap_qa": {
+        "found": [],
+        "retries": []
+      },
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.251,
+        0.187,
+        0.288,
+        0.74
+      ],
+      "parts": [
+        "Sochi city",
+        "today,",
+        "August 28,",
+        "and we are starting the working processes for creating our magical application."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u02_p0.wav",
+          "seconds": 0.87,
+          "text": "Sochi city",
+          "clip_span": [
+            0.0,
+            0.87
+          ],
+          "speech_span": [
+            0.0,
+            0.87
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1447,
+              "temperature": 0.8,
+              "seconds": 6.88,
+              "score": 0.031,
+              "bad": false,
+              "reasons": [],
+              "ctc": "solki city to day august twenty eight and we are starting the working processes for creating our megical application",
+              "whisper": "Saki city today August 28 and we are starting the working processes for creating our magical application",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.031,
+          "seed_used": 1447,
+          "temperature_used": 0.8,
+          "words": 2,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u02_p1.wav",
+          "seconds": 0.531,
+          "text": "today,",
+          "clip_span": [
+            0.87,
+            1.401
+          ],
+          "speech_span": [
+            0.0,
+            0.531
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1447,
+              "temperature": 0.8,
+              "seconds": 6.88,
+              "score": 0.031,
+              "bad": false,
+              "reasons": [],
+              "ctc": "solki city to day august twenty eight and we are starting the working processes for creating our megical application",
+              "whisper": "Saki city today August 28 and we are starting the working processes for creating our magical application",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.031,
+          "seed_used": 1447,
+          "temperature_used": 0.8,
+          "words": 1,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u02_p2.wav",
+          "seconds": 1.279,
+          "text": "August 28,",
+          "clip_span": [
+            1.401,
+            2.68
+          ],
+          "speech_span": [
+            0.0,
+            1.279
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1447,
+              "temperature": 0.8,
+              "seconds": 6.88,
+              "score": 0.031,
+              "bad": false,
+              "reasons": [],
+              "ctc": "solki city to day august twenty eight and we are starting the working processes for creating our megical application",
+              "whisper": "Saki city today August 28 and we are starting the working processes for creating our magical application",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.031,
+          "seed_used": 1447,
+          "temperature_used": 0.8,
+          "words": 3,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u02_p3.wav",
+          "seconds": 3.879,
+          "text": "and we are starting the working processes for creating our magical application.",
+          "clip_span": [
+            2.68,
+            6.559
+          ],
+          "speech_span": [
+            0.0,
+            3.879
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1447,
+              "temperature": 0.8,
+              "seconds": 6.88,
+              "score": 0.031,
+              "bad": false,
+              "reasons": [],
+              "ctc": "solki city to day august twenty eight and we are starting the working processes for creating our megical application",
+              "whisper": "Saki city today August 28 and we are starting the working processes for creating our magical application",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.031,
+          "seed_used": 1447,
+          "temperature_used": 0.8,
+          "words": 12,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u02_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 4,
+        "seconds": 6.88,
+        "speech_seconds": 6.419,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 8.76,
+        "ratio_tts_to_source_speech": 0.733,
+        "word_spans": [
+          {
+            "word": "sochi",
+            "start": 0.06,
+            "end": 0.421,
+            "score": 0.338
+          },
+          {
+            "word": "city",
+            "start": 0.522,
+            "end": 0.822,
+            "score": 0.998
+          },
+          {
+            "word": "today",
+            "start": 0.883,
+            "end": 1.244,
+            "score": 0.97
+          },
+          {
+            "word": "august",
+            "start": 1.464,
+            "end": 1.705,
+            "score": 0.911
+          },
+          {
+            "word": "twenty",
+            "start": 1.745,
+            "end": 2.106,
+            "score": 0.948
+          },
+          {
+            "word": "eight",
+            "start": 2.186,
+            "end": 2.367,
+            "score": 0.948
+          },
+          {
+            "word": "and",
+            "start": 2.728,
+            "end": 2.808,
+            "score": 0.943
+          },
+          {
+            "word": "we",
+            "start": 2.848,
+            "end": 2.929,
+            "score": 0.995
+          },
+          {
+            "word": "are",
+            "start": 2.989,
+            "end": 3.069,
+            "score": 0.967
+          },
+          {
+            "word": "starting",
+            "start": 3.109,
+            "end": 3.53,
+            "score": 0.966
+          },
+          {
+            "word": "the",
+            "start": 3.59,
+            "end": 3.651,
+            "score": 0.995
+          },
+          {
+            "word": "working",
+            "start": 3.711,
+            "end": 3.992,
+            "score": 0.993
+          },
+          {
+            "word": "processes",
+            "start": 4.052,
+            "end": 4.593,
+            "score": 0.982
+          },
+          {
+            "word": "for",
+            "start": 4.674,
+            "end": 4.794,
+            "score": 1.0
+          },
+          {
+            "word": "creating",
+            "start": 4.874,
+            "end": 5.255,
+            "score": 0.955
+          },
+          {
+            "word": "our",
+            "start": 5.336,
+            "end": 5.416,
+            "score": 0.95
+          },
+          {
+            "word": "magical",
+            "start": 5.476,
+            "end": 5.817,
+            "score": 0.915
+          },
+          {
+            "word": "application",
+            "start": 5.877,
+            "end": 6.479,
+            "score": 0.999
+          }
+        ]
+      },
+      "slot": {
+        "start": 11.08,
+        "end": 27.24,
+        "seconds": 16.16
+      },
+      "alignment": {
+        "tts_seconds": 6.88,
+        "ratio_tts_to_slot": 0.4257,
+        "mode": "burst",
+        "atempo": 1.0,
+        "bursts": 4,
+        "bursts_without_words": 0,
+        "placements": [
+          {
+            "burst": [
+              11.08,
+              11.4
+            ],
+            "window": [
+              11.08,
+              14.54
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 0.87,
+            "ratio": 0.251,
+            "atempo": 1.0,
+            "placed": [
+              11.08,
+              11.95
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 10.68,
+            "text": "Sochi city",
+            "source_words": "город"
+          },
+          {
+            "burst": [
+              14.6,
+              15.6
+            ],
+            "window": [
+              14.6,
+              17.44
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 0.531,
+            "ratio": 0.187,
+            "atempo": 0.9,
+            "placed": [
+              14.6,
+              15.178
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 10.68,
+            "text": "today,",
+            "source_words": "сочи 28"
+          },
+          {
+            "burst": [
+              17.5,
+              19.7
+            ],
+            "window": [
+              17.5,
+              21.94
+            ],
+            "phrases": [
+              2
+            ],
+            "group_s": 1.279,
+            "ratio": 0.288,
+            "atempo": 0.9,
+            "placed": [
+              17.5,
+              18.902
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 10.68,
+            "text": "August 28,",
+            "source_words": "августа сегодня и"
+          },
+          {
+            "burst": [
+              22.0,
+              27.24
+            ],
+            "window": [
+              22.0,
+              27.24
+            ],
+            "phrases": [
+              3
+            ],
+            "group_s": 3.879,
+            "ratio": 0.74,
+            "atempo": 0.9,
+            "placed": [
+              22.0,
+              26.305
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 10.68,
+            "text": "and we are starting the working processes for creating our magical application.",
+            "source_words": "мы начинаем рабочие процессы по созданию нашего магического приложения"
+          }
+        ],
+        "aligned_seconds": 16.56,
+        "file": "/workspace/dub/artifacts/baseline/04/work/work_04/aligned_u02.wav",
+        "track_start": 10.68
+      }
+    },
+    {
+      "asr_segment": 2,
+      "start": 27.26,
+      "end": 42.28,
+      "text": "которое облегчит жизнь людям которая я надеюсь будет пользоваться популярностью блогеров всего мира и не только блогеров",
+      "words": 17,
+      "sentence": "Город сочи 28 августа сегодня и мы начинаем рабочие процессы по созданию нашего магического приложения которое облегчит жизнь людям которая я надеюсь будет пользоваться популярностью блогеров всего мира и не только блогеров.",
+      "source": "sentence_split1",
+      "id": 3,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 10.244,
+      "translation": "which will make life easier for people whom I hope will be popular with bloggers from all over the world and not just bloggers",
+      "parts_original": [
+        "which will make life easier for people whom I hope will be popular with bloggers from all over the world and not just bloggers"
+      ],
+      "fit": [],
+      "fit_up": [
+        {
+          "round": 1,
+          "ratio_before": 0.698,
+          "old": "which will make life easier for people whom I hope will be popular with bloggers from all over the world and not just bloggers",
+          "target_words": 34,
+          "min_words": 29,
+          "source_seconds": 9.0,
+          "tts_seconds_before": 6.279,
+          "new": "which will make life easier for the people whom I hope will be popular among bloggers from all over the world and not just among bloggers",
+          "tts_seconds_after": 6.399,
+          "ratio_after": 0.711,
+          "qa_before": 0.005,
+          "qa_after": 0.0,
+          "closer": false,
+          "intelligible": true,
+          "result": "rejected (not closer)"
+        }
+      ],
+      "gap_qa": {
+        "found": [],
+        "retries": []
+      },
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.351,
+        0.42,
+        0.489,
+        0.219,
+        0.412,
+        1.025
+      ],
+      "parts": [
+        "which will make",
+        "life easier for people whom I hope",
+        "will be popular with",
+        "bloggers",
+        "from all over the world",
+        "and not just bloggers"
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u03_p0.wav",
+          "seconds": 0.695,
+          "text": "which will make",
+          "clip_span": [
+            0.01,
+            0.705
+          ],
+          "speech_span": [
+            0.0,
+            0.695
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1547,
+              "temperature": 0.8,
+              "seconds": 6.84,
+              "score": 0.005,
+              "bad": false,
+              "reasons": [],
+              "ctc": "which will make life easier for people whom i hope will be popular with bloggers from all over the world and not just loggers",
+              "whisper": "Which will make life easier for people whom I hope will be popular with bloggers from all over the world and not just bloggers",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.005,
+          "seed_used": 1547,
+          "temperature_used": 0.8,
+          "words": 3,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u03_p1.wav",
+          "seconds": 1.57,
+          "text": "life easier for people whom I hope",
+          "clip_span": [
+            0.705,
+            2.275
+          ],
+          "speech_span": [
+            0.0,
+            1.57
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1547,
+              "temperature": 0.8,
+              "seconds": 6.84,
+              "score": 0.005,
+              "bad": false,
+              "reasons": [],
+              "ctc": "which will make life easier for people whom i hope will be popular with bloggers from all over the world and not just loggers",
+              "whisper": "Which will make life easier for people whom I hope will be popular with bloggers from all over the world and not just bloggers",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.005,
+          "seed_used": 1547,
+          "temperature_used": 0.8,
+          "words": 7,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u03_p2.wav",
+          "seconds": 1.583,
+          "text": "will be popular with",
+          "clip_span": [
+            2.275,
+            3.858
+          ],
+          "speech_span": [
+            0.0,
+            1.583
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1547,
+              "temperature": 0.8,
+              "seconds": 6.84,
+              "score": 0.005,
+              "bad": false,
+              "reasons": [],
+              "ctc": "which will make life easier for people whom i hope will be popular with bloggers from all over the world and not just loggers",
+              "whisper": "Which will make life easier for people whom I hope will be popular with bloggers from all over the world and not just bloggers",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.005,
+          "seed_used": 1547,
+          "temperature_used": 0.8,
+          "words": 4,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u03_p3.wav",
+          "seconds": 0.447,
+          "text": "bloggers",
+          "clip_span": [
+            3.858,
+            4.305
+          ],
+          "speech_span": [
+            0.0,
+            0.447
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1547,
+              "temperature": 0.8,
+              "seconds": 6.84,
+              "score": 0.005,
+              "bad": false,
+              "reasons": [],
+              "ctc": "which will make life easier for people whom i hope will be popular with bloggers from all over the world and not just loggers",
+              "whisper": "Which will make life easier for people whom I hope will be popular with bloggers from all over the world and not just bloggers",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.005,
+          "seed_used": 1547,
+          "temperature_used": 0.8,
+          "words": 1,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u03_p4.wav",
+          "seconds": 1.087,
+          "text": "from all over the world",
+          "clip_span": [
+            4.305,
+            5.392
+          ],
+          "speech_span": [
+            0.0,
+            1.087
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1547,
+              "temperature": 0.8,
+              "seconds": 6.84,
+              "score": 0.005,
+              "bad": false,
+              "reasons": [],
+              "ctc": "which will make life easier for people whom i hope will be popular with bloggers from all over the world and not just loggers",
+              "whisper": "Which will make life easier for people whom I hope will be popular with bloggers from all over the world and not just bloggers",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.005,
+          "seed_used": 1547,
+          "temperature_used": 0.8,
+          "words": 5,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u03_p5.wav",
+          "seconds": 1.087,
+          "text": "and not just bloggers",
+          "clip_span": [
+            5.392,
+            6.479
+          ],
+          "speech_span": [
+            0.0,
+            1.087
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1547,
+              "temperature": 0.8,
+              "seconds": 6.84,
+              "score": 0.005,
+              "bad": false,
+              "reasons": [],
+              "ctc": "which will make life easier for people whom i hope will be popular with bloggers from all over the world and not just loggers",
+              "whisper": "Which will make life easier for people whom I hope will be popular with bloggers from all over the world and not just bloggers",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.005,
+          "seed_used": 1547,
+          "temperature_used": 0.8,
+          "words": 4,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u03_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 6,
+        "seconds": 6.84,
+        "speech_seconds": 6.279,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 9.0,
+        "ratio_tts_to_source_speech": 0.698,
+        "word_spans": [
+          {
+            "word": "which",
+            "start": 0.12,
+            "end": 0.261,
+            "score": 1.0
+          },
+          {
+            "word": "will",
+            "start": 0.321,
+            "end": 0.481,
+            "score": 0.83
+          },
+          {
+            "word": "make",
+            "start": 0.522,
+            "end": 0.682,
+            "score": 0.996
+          },
+          {
+            "word": "life",
+            "start": 0.762,
+            "end": 0.963,
+            "score": 1.0
+          },
+          {
+            "word": "easier",
+            "start": 1.063,
+            "end": 1.304,
+            "score": 0.97
+          },
+          {
+            "word": "for",
+            "start": 1.344,
+            "end": 1.424,
+            "score": 1.0
+          },
+          {
+            "word": "people",
+            "start": 1.484,
+            "end": 1.725,
+            "score": 0.995
+          },
+          {
+            "word": "whom",
+            "start": 1.785,
+            "end": 1.906,
+            "score": 0.974
+          },
+          {
+            "word": "i",
+            "start": 2.006,
+            "end": 2.026,
+            "score": 1.0
+          },
+          {
+            "word": "hope",
+            "start": 2.106,
+            "end": 2.247,
+            "score": 0.996
+          },
+          {
+            "word": "will",
+            "start": 2.307,
+            "end": 2.487,
+            "score": 0.996
+          },
+          {
+            "word": "be",
+            "start": 2.507,
+            "end": 2.568,
+            "score": 0.957
+          },
+          {
+            "word": "popular",
+            "start": 2.648,
+            "end": 3.109,
+            "score": 0.967
+          },
+          {
+            "word": "with",
+            "start": 3.651,
+            "end": 3.791,
+            "score": 0.999
+          },
+          {
+            "word": "bloggers",
+            "start": 3.891,
+            "end": 4.272,
+            "score": 0.882
+          },
+          {
+            "word": "from",
+            "start": 4.313,
+            "end": 4.433,
+            "score": 0.978
+          },
+          {
+            "word": "all",
+            "start": 4.573,
+            "end": 4.694,
+            "score": 0.988
+          },
+          {
+            "word": "over",
+            "start": 4.774,
+            "end": 4.894,
+            "score": 0.981
+          },
+          {
+            "word": "the",
+            "start": 4.954,
+            "end": 5.035,
+            "score": 0.905
+          },
+          {
+            "word": "world",
+            "start": 5.075,
+            "end": 5.295,
+            "score": 0.981
+          },
+          {
+            "word": "and",
+            "start": 5.456,
+            "end": 5.536,
+            "score": 0.987
+          },
+          {
+            "word": "not",
+            "start": 5.596,
+            "end": 5.717,
+            "score": 0.999
+          },
+          {
+            "word": "just",
+            "start": 5.777,
+            "end": 5.957,
+            "score": 0.992
+          },
+          {
+            "word": "bloggers",
+            "start": 6.018,
+            "end": 6.399,
+            "score": 0.823
+          }
+        ]
+      },
+      "slot": {
+        "start": 27.26,
+        "end": 42.26,
+        "seconds": 15.0
+      },
+      "alignment": {
+        "tts_seconds": 6.84,
+        "ratio_tts_to_slot": 0.456,
+        "mode": "burst",
+        "atempo": 1.025,
+        "bursts": 6,
+        "bursts_without_words": 0,
+        "placements": [
+          {
+            "burst": [
+              27.26,
+              27.6
+            ],
+            "window": [
+              27.26,
+              29.24
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 0.695,
+            "ratio": 0.351,
+            "atempo": 1.0,
+            "placed": [
+              27.26,
+              27.955
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 26.86,
+            "text": "which will make",
+            "source_words": "которое"
+          },
+          {
+            "burst": [
+              29.3,
+              31.4
+            ],
+            "window": [
+              29.3,
+              33.04
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 1.57,
+            "ratio": 0.42,
+            "atempo": 0.9,
+            "placed": [
+              29.3,
+              31.033
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 26.86,
+            "text": "life easier for people whom I hope",
+            "source_words": "облегчит жизнь людям которая"
+          },
+          {
+            "burst": [
+              33.1,
+              35.8
+            ],
+            "window": [
+              33.1,
+              36.34
+            ],
+            "phrases": [
+              2
+            ],
+            "group_s": 1.583,
+            "ratio": 0.489,
+            "atempo": 0.9,
+            "placed": [
+              33.1,
+              34.844
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 26.86,
+            "text": "will be popular with",
+            "source_words": "я надеюсь будет пользоваться популярностью"
+          },
+          {
+            "burst": [
+              36.4,
+              37.6
+            ],
+            "window": [
+              36.4,
+              38.44
+            ],
+            "phrases": [
+              3
+            ],
+            "group_s": 0.447,
+            "ratio": 0.219,
+            "atempo": 0.9,
+            "placed": [
+              36.4,
+              36.881
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 26.86,
+            "text": "bloggers",
+            "source_words": "блогеров"
+          },
+          {
+            "burst": [
+              38.5,
+              40.1
+            ],
+            "window": [
+              38.5,
+              41.14
+            ],
+            "phrases": [
+              4
+            ],
+            "group_s": 1.087,
+            "ratio": 0.412,
+            "atempo": 0.9,
+            "placed": [
+              38.5,
+              39.693
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 26.86,
+            "text": "from all over the world",
+            "source_words": "всего мира и"
+          },
+          {
+            "burst": [
+              41.2,
+              42.26
+            ],
+            "window": [
+              41.2,
+              42.26
+            ],
+            "phrases": [
+              5
+            ],
+            "group_s": 1.087,
+            "ratio": 1.025,
+            "atempo": 1.025,
+            "placed": [
+              41.2,
+              42.26
+            ],
+            "overflow_into_next_burst_s": 0.008,
+            "cut_at_slot_end_s": 0.008,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 26.86,
+            "text": "and not just bloggers",
+            "source_words": "не только блогеров"
+          }
+        ],
+        "aligned_seconds": 15.4,
+        "file": "/workspace/dub/artifacts/baseline/04/work/work_04/aligned_u03.wav",
+        "track_start": 26.86
+      }
+    },
+    {
+      "asr_segment": 4,
+      "start": 42.28,
+      "end": 48.2,
+      "text": "Поэтому вот такое вот прекрасное видео.",
+      "words": 6,
+      "sentence": "Поэтому вот такое вот прекрасное видео.",
+      "source": "sentence",
+      "id": 4,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 2.596,
+      "translation": "Therefore, here is such wonderful video.",
+      "parts_original": [
+        "Therefore, here is such wonderful video."
+      ],
+      "fit": [],
+      "fit_up": [
+        {
+          "round": 1,
+          "ratio_before": 0.744,
+          "old": "Therefore, here is such wonderful video.",
+          "target_words": 8,
+          "min_words": 7,
+          "source_seconds": 2.6,
+          "tts_seconds_before": 1.935,
+          "new": "Therefore, here is a video that is quite wonderful.",
+          "tts_seconds_after": 2.316,
+          "ratio_after": 0.891,
+          "qa_before": 0.03,
+          "qa_after": 0.012,
+          "closer": true,
+          "intelligible": true,
+          "result": "accepted"
+        }
+      ],
+      "gap_qa": {
+        "found": [],
+        "retries": []
+      },
+      "translation_fitted": "Therefore, here is a video that is quite wonderful.",
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.267,
+        0.353,
+        0.747
+      ],
+      "parts": [
+        "Therefore,",
+        "here is a video",
+        "that is quite wonderful."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u04_p0.wav",
+          "seconds": 0.576,
+          "text": "Therefore,",
+          "clip_span": [
+            0.02,
+            0.596
+          ],
+          "speech_span": [
+            0.0,
+            0.576
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001707,
+              "temperature": 0.8,
+              "seconds": 2.88,
+              "score": 0.012,
+              "bad": false,
+              "reasons": [],
+              "ctc": "therefore here is a vidio that is quite wonderful",
+              "whisper": "Therefore, here is a video that is quite wonderful.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.012,
+          "seed_used": 2001707,
+          "temperature_used": 0.8,
+          "words": 1,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u04_p1.wav",
+          "seconds": 0.72,
+          "text": "here is a video",
+          "clip_span": [
+            0.596,
+            1.316
+          ],
+          "speech_span": [
+            0.0,
+            0.72
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001707,
+              "temperature": 0.8,
+              "seconds": 2.88,
+              "score": 0.012,
+              "bad": false,
+              "reasons": [],
+              "ctc": "therefore here is a vidio that is quite wonderful",
+              "whisper": "Therefore, here is a video that is quite wonderful.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.012,
+          "seed_used": 2001707,
+          "temperature_used": 0.8,
+          "words": 4,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u04_p2.wav",
+          "seconds": 1.181,
+          "text": "that is quite wonderful.",
+          "clip_span": [
+            1.316,
+            2.497
+          ],
+          "speech_span": [
+            0.0,
+            1.181
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001707,
+              "temperature": 0.8,
+              "seconds": 2.88,
+              "score": 0.012,
+              "bad": false,
+              "reasons": [],
+              "ctc": "therefore here is a vidio that is quite wonderful",
+              "whisper": "Therefore, here is a video that is quite wonderful.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.012,
+          "seed_used": 2001707,
+          "temperature_used": 0.8,
+          "words": 4,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u04_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 3,
+        "seconds": 2.88,
+        "speech_seconds": 2.316,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 2.6,
+        "ratio_tts_to_source_speech": 0.891,
+        "word_spans": [
+          {
+            "word": "therefore",
+            "start": 0.101,
+            "end": 0.503,
+            "score": 0.977
+          },
+          {
+            "word": "here",
+            "start": 0.604,
+            "end": 0.785,
+            "score": 0.949
+          },
+          {
+            "word": "is",
+            "start": 0.866,
+            "end": 0.906,
+            "score": 1.0
+          },
+          {
+            "word": "a",
+            "start": 0.987,
+            "end": 1.007,
+            "score": 0.588
+          },
+          {
+            "word": "video",
+            "start": 1.047,
+            "end": 1.269,
+            "score": 0.684
+          },
+          {
+            "word": "that",
+            "start": 1.329,
+            "end": 1.43,
+            "score": 0.951
+          },
+          {
+            "word": "is",
+            "start": 1.49,
+            "end": 1.551,
+            "score": 1.0
+          },
+          {
+            "word": "quite",
+            "start": 1.672,
+            "end": 1.913,
+            "score": 0.993
+          },
+          {
+            "word": "wonderful",
+            "start": 1.994,
+            "end": 2.417,
+            "score": 0.988
+          }
+        ]
+      },
+      "slot": {
+        "start": 42.28,
+        "end": 48.18,
+        "seconds": 5.9
+      },
+      "alignment": {
+        "tts_seconds": 2.88,
+        "ratio_tts_to_slot": 0.4881,
+        "mode": "burst",
+        "atempo": 1.0,
+        "bursts": 3,
+        "bursts_without_words": 0,
+        "placements": [
+          {
+            "burst": [
+              42.28,
+              42.6
+            ],
+            "window": [
+              42.28,
+              44.44
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 0.576,
+            "ratio": 0.267,
+            "atempo": 1.0,
+            "placed": [
+              42.28,
+              42.856
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 41.88,
+            "text": "Therefore,",
+            "source_words": "поэтому"
+          },
+          {
+            "burst": [
+              44.5,
+              45.2
+            ],
+            "window": [
+              44.5,
+              46.54
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 0.72,
+            "ratio": 0.353,
+            "atempo": 1.0,
+            "placed": [
+              44.5,
+              45.22
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 41.88,
+            "text": "here is a video",
+            "source_words": "вот"
+          },
+          {
+            "burst": [
+              46.6,
+              48.18
+            ],
+            "window": [
+              46.6,
+              48.18
+            ],
+            "phrases": [
+              2
+            ],
+            "group_s": 1.181,
+            "ratio": 0.747,
+            "atempo": 0.9,
+            "placed": [
+              46.6,
+              47.896
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 41.88,
+            "text": "that is quite wonderful.",
+            "source_words": "такое вот прекрасное видео"
+          }
+        ],
+        "aligned_seconds": 6.3,
+        "file": "/workspace/dub/artifacts/baseline/04/work/work_04/aligned_u04.wav",
+        "track_start": 41.88
+      }
+    },
+    {
+      "asr_segment": 5,
+      "start": 48.2,
+      "end": 52.34,
+      "text": "Классная погода что вперед.",
+      "words": 4,
+      "sentence": "Классная погода что вперед.",
+      "source": "sentence",
+      "id": 5,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 2.149,
+      "translation": "Nice weather, here comes.",
+      "parts_original": [
+        "Nice weather, here comes."
+      ],
+      "fit": [],
+      "fit_up": [
+        {
+          "round": 1,
+          "ratio_before": 0.524,
+          "old": "Nice weather, here comes.",
+          "target_words": 8,
+          "min_words": 6,
+          "source_seconds": 2.24,
+          "tts_seconds_before": 1.174,
+          "new": "The weather is really nice, isn't it? That's great.",
+          "tts_seconds_after": 2.315,
+          "ratio_after": 1.033,
+          "qa_before": 0.0,
+          "qa_after": 0.0,
+          "closer": true,
+          "intelligible": true,
+          "result": "accepted"
+        }
+      ],
+      "gap_qa": {
+        "found": [],
+        "retries": []
+      },
+      "translation_fitted": "The weather is really nice, isn't it? That's great.",
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.45,
+        0.434
+      ],
+      "parts": [
+        "The weather is really nice, isn't it?",
+        "That's great."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u05_p0.wav",
+          "seconds": 1.503,
+          "text": "The weather is really nice, isn't it?",
+          "clip_span": [
+            0.0,
+            1.503
+          ],
+          "speech_span": [
+            0.0,
+            1.503
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001807,
+              "temperature": 0.8,
+              "seconds": 2.92,
+              "score": 0.0,
+              "bad": false,
+              "reasons": [],
+              "ctc": "the weather is really nice isn't it that's great",
+              "whisper": "The weather is really nice isn't it? That's great!",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.0,
+          "seed_used": 2001807,
+          "temperature_used": 0.8,
+          "words": 7,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u05_p1.wav",
+          "seconds": 0.973,
+          "text": "That's great.",
+          "clip_span": [
+            1.503,
+            2.476
+          ],
+          "speech_span": [
+            0.0,
+            0.973
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001807,
+              "temperature": 0.8,
+              "seconds": 2.92,
+              "score": 0.0,
+              "bad": false,
+              "reasons": [],
+              "ctc": "the weather is really nice isn't it that's great",
+              "whisper": "The weather is really nice isn't it? That's great!",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.0,
+          "seed_used": 2001807,
+          "temperature_used": 0.8,
+          "words": 2,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/04/work/work_04/tts_u05_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 2,
+        "seconds": 2.92,
+        "speech_seconds": 2.315,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 2.24,
+        "ratio_tts_to_source_speech": 1.033,
+        "word_spans": [
+          {
+            "word": "the",
+            "start": 0.081,
+            "end": 0.161,
+            "score": 0.992
+          },
+          {
+            "word": "weather",
+            "start": 0.201,
+            "end": 0.463,
+            "score": 0.993
+          },
+          {
+            "word": "is",
+            "start": 0.544,
+            "end": 0.604,
+            "score": 0.979
+          },
+          {
+            "word": "really",
+            "start": 0.665,
+            "end": 0.866,
+            "score": 0.984
+          },
+          {
+            "word": "nice",
+            "start": 0.926,
+            "end": 1.128,
+            "score": 1.0
+          },
+          {
+            "word": "isn't",
+            "start": 1.228,
+            "end": 1.39,
+            "score": 0.955
+          },
+          {
+            "word": "it",
+            "start": 1.43,
+            "end": 1.49,
+            "score": 0.996
+          },
+          {
+            "word": "that's",
+            "start": 1.933,
+            "end": 2.114,
+            "score": 0.965
+          },
+          {
+            "word": "great",
+            "start": 2.175,
+            "end": 2.396,
+            "score": 0.925
+          }
+        ]
+      },
+      "slot": {
+        "start": 48.2,
+        "end": 52.34,
+        "seconds": 4.14
+      },
+      "alignment": {
+        "tts_seconds": 2.92,
+        "ratio_tts_to_slot": 0.7053,
+        "mode": "burst",
+        "atempo": 1.0,
+        "bursts": 2,
+        "bursts_without_words": 0,
+        "placements": [
+          {
+            "burst": [
+              48.2,
+              49.7
+            ],
+            "window": [
+              48.2,
+              51.54
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 1.503,
+            "ratio": 0.45,
+            "atempo": 1.0,
+            "placed": [
+              48.2,
+              49.703
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 47.8,
+            "text": "The weather is really nice, isn't it?",
+            "source_words": "классная погода что"
+          },
+          {
+            "burst": [
+              51.6,
+              52.34
+            ],
+            "window": [
+              51.6,
+              53.84
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 0.973,
+            "ratio": 0.434,
+            "atempo": 1.0,
+            "placed": [
+              51.6,
+              52.573
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.233,
+            "lead_s": 0.0,
+            "track_start": 47.8,
+            "text": "That's great.",
+            "source_words": "вперед"
+          }
+        ],
+        "aligned_seconds": 6.04,
+        "file": "/workspace/dub/artifacts/baseline/04/work/work_04/aligned_u05.wav",
+        "track_start": 47.8
+      }
+    }
+  ],
+  "background": {
+    "enabled": true,
+    "separation": {
+      "model": "torchaudio HDEMUCS_HIGH_MUSDB_PLUS (bg = drums+bass+other)",
+      "weights": "/workspace/dub/dubai/models/demucs/hdemucs_high_trained.pt",
+      "bg": "/workspace/dub/artifacts/baseline/04/work/work_04/bg_44k.wav",
+      "vocals": "/workspace/dub/artifacts/baseline/04/work/work_04/vocals_44k.wav",
+      "seconds": 53.892,
+      "load_s": 0.317,
+      "separate_s": 0.293,
+      "total_s": 0.714,
+      "source_db": -19.85,
+      "vocals_db": -19.97,
+      "bg_db": -37.53
+    },
+    "mix": {
+      "wav": "/workspace/dub/artifacts/baseline/04/work/work_04/final_mix_44k.wav",
+      "aac": "/workspace/dub/artifacts/baseline/04/work/work_04/final_mix_aac.m4a",
+      "room_fill": {
+        "enabled": true,
+        "applied": false,
+        "skipped": "floor -35.9 dBFS > -42 (music / loud ambience)"
+      },
+      "bg_gain_db": 2.42,
+      "duck_db": -6.0,
+      "src_duck_db": 0.0,
+      "attack_s": 0.08,
+      "release_s": 0.35,
+      "bg_offset_db": 0.0,
+      "dub_voice_db": -14.94,
+      "orig_vocals_db": -17.36,
+      "peak_norm": 0.944,
+      "bed_db_in_dub_pauses": -34.14,
+      "mix_db_in_dub_pauses": -34.59,
+      "seconds": 53.9,
+      "mix_s": 0.781
+    }
+  },
+  "video_backend": "optimized",
+  "speech_gate": {
+    "enabled": true,
+    "margin_s": 0.24,
+    "merge_gap_s": 1.2,
+    "crossfade_frames": 4,
+    "source_speech_seconds": 29.5,
+    "dubbed_speech_seconds": 25.1,
+    "gate_seconds": 42.88,
+    "gate_fraction": 0.7955,
+    "intervals": [
+      [
+        2.06,
+        12.24
+      ],
+      [
+        14.36,
+        15.84
+      ],
+      [
+        17.26,
+        19.94
+      ],
+      [
+        21.76,
+        31.64
+      ],
+      [
+        32.86,
+        50.04
+      ],
+      [
+        51.36,
+        52.84
+      ]
+    ]
+  },
+  "lipsync": {
+    "router": "retinaface",
+    "router_params": {
+      "detector": "facexlib retinaface_resnet50 fp16",
+      "weights": "/workspace/dub/dubai/models/facexlib",
+      "face_min_w": 50,
+      "face_min_h": 80,
+      "retina_conf": 0.8,
+      "aspect_range": [
+        0.2,
+        1.5
+      ]
+    },
+    "router_stride": 3,
+    "router_detections": 361,
+    "speech_gate": {
+      "enabled": true,
+      "intervals": [
+        [
+          2.06,
+          12.24
+        ],
+        [
+          14.36,
+          15.84
+        ],
+        [
+          17.26,
+          19.94
+        ],
+        [
+          21.76,
+          31.64
+        ],
+        [
+          32.86,
+          50.04
+        ],
+        [
+          51.36,
+          52.84
+        ]
+      ],
+      "gated_in_frames": 1074,
+      "gated_out_frames": 275,
+      "gated_in_seconds": 42.96,
+      "gated_out_seconds": 11.0
+    },
+    "execution": "in_memory_segments (detector shared with LatentSync)",
+    "crossfade_frames": 4,
+    "master_fps": 25,
+    "master_frames": 1349,
+    "frame_classes": {
+      "VALID_FACE": 1074,
+      "SMALL_FACE": 0,
+      "NO_FACE": 0,
+      "NO_SPEECH": 275
+    },
+    "skip_reasons": {
+      "outside_speech_gate": 275
+    },
+    "by_action": {
+      "PASS_THROUGH": {
+        "segments": 7,
+        "frames": 275,
+        "seconds": 11.0
+      },
+      "LATENT_SYNC": {
+        "segments": 6,
+        "frames": 1074,
+        "seconds": 42.96
+      }
+    },
+    "latentsync_seconds_of_video": 42.96,
+    "pass_through_seconds_of_video": 11.0,
+    "ls_fraction": 0.7961,
+    "latentsync_inference_total_s": 211.88,
+    "verify_seconds": 5.75,
+    "latentsync_calls": 6,
+    "verify_splits": [],
+    "assembly": {
+      "frames_written": 1349,
+      "master_frames": 1349,
+      "padded_with_original": {},
+      "crossfaded_frames": 48
+    },
+    "output_frame_check": {
+      "decoded_frames": 1349,
+      "expected_frames": 1349,
+      "blank_frames": 0,
+      "undecodable_frames": 0,
+      "pass": true
+    },
+    "codeformer": {
+      "mode": "optimized",
+      "config": {
+        "fidelity_weight": 1.0,
+        "batch_size": 8,
+        "use_parse": true,
+        "empty_cache_per_face": false,
+        "autocast": true,
+        "parse_autocast": true,
+        "pinned": true,
+        "workers": 4,
+        "mask_blur": "gpu",
+        "roi_paste": true,
+        "overlap": true,
+        "template": "FFHQ 512 (facelib)",
+        "geometry": "preserved (no read_image upscale)",
+        "landmark_source": "insightface"
+      },
+      "load_s": 0.364,
+      "totals": {
+        "frames_in": 1074,
+        "faces_restored": 1074,
+        "frames_without_landmarks": 0,
+        "fallback_detections": 0,
+        "gray_faces": 0,
+        "seconds": 29.384
+      },
+      "eligible_frames": 1074,
+      "master_frames": 1349,
+      "restored_segments": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11
+      ],
+      "seconds": 29.403
+    },
+    "codeformer_eligible_segments": [
+      1,
+      3,
+      5,
+      7,
+      9,
+      11
+    ],
+    "runner": {
+      "window_batch_size": 2,
+      "deepcache": true,
+      "deepcache_interval": 5,
+      "compile_backend": "none",
+      "sdpa_backend": "auto",
+      "steps": 20,
+      "guidance": 1.5,
+      "seed": 1247,
+      "fp16": true,
+      "stage2_512": true,
+      "mouth_only_pasteback": true,
+      "mask_top": 0.52,
+      "mask_feather": 0.08,
+      "mask_smooth_frames": 3,
+      "composite_after_codeformer": true
+    },
+    "runner_calls": [
+      {
+        "frames": 257,
+        "windows": 17,
+        "groups": 9,
+        "unet_calls": 180,
+        "seconds": 49.37,
+        "stages": {
+          "preprocess_audio_video": 0.055,
+          "affine": 1.346,
+          "vae_and_cond": 12.655,
+          "unet_denoise": 33.914,
+          "restore": 0.984,
+          "write": 0.0,
+          "total": 49.368
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      },
+      {
+        "frames": 39,
+        "windows": 3,
+        "groups": 2,
+        "unet_calls": 40,
+        "seconds": 7.5,
+        "stages": {
+          "preprocess_audio_video": 0.034,
+          "affine": 0.201,
+          "vae_and_cond": 1.927,
+          "unet_denoise": 5.23,
+          "restore": 0.107,
+          "write": 0.0,
+          "total": 7.502
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      },
+      {
+        "frames": 70,
+        "windows": 5,
+        "groups": 3,
+        "unet_calls": 60,
+        "seconds": 13.6,
+        "stages": {
+          "preprocess_audio_video": 0.041,
+          "affine": 0.567,
+          "vae_and_cond": 3.452,
+          "unet_denoise": 9.319,
+          "restore": 0.216,
+          "write": 0.0,
+          "total": 13.597
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      },
+      {
+        "frames": 249,
+        "windows": 16,
+        "groups": 9,
+        "unet_calls": 180,
+        "seconds": 47.47,
+        "stages": {
+          "preprocess_audio_video": 0.052,
+          "affine": 1.599,
+          "vae_and_cond": 12.248,
+          "unet_denoise": 32.796,
+          "restore": 0.77,
+          "write": 0.0,
+          "total": 47.468
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      },
+      {
+        "frames": 432,
+        "windows": 27,
+        "groups": 14,
+        "unet_calls": 280,
+        "seconds": 86.36,
+        "stages": {
+          "preprocess_audio_video": 0.05,
+          "affine": 6.871,
+          "vae_and_cond": 21.238,
+          "unet_denoise": 56.683,
+          "restore": 1.463,
+          "write": 0.0,
+          "total": 86.307
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      },
+      {
+        "frames": 39,
+        "windows": 3,
+        "groups": 2,
+        "unet_calls": 40,
+        "seconds": 7.58,
+        "stages": {
+          "preprocess_audio_video": 0.051,
+          "affine": 0.204,
+          "vae_and_cond": 1.924,
+          "unet_denoise": 5.241,
+          "restore": 0.155,
+          "write": 0.0,
+          "total": 7.576
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      }
+    ],
+    "segments": [
+      {
+        "index": 0,
+        "start_frame": 0,
+        "end_frame": 51,
+        "frames": 51,
+        "start_s": 0.0,
+        "end_s": 2.04,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 1,
+        "start_frame": 51,
+        "end_frame": 306,
+        "frames": 255,
+        "start_s": 2.04,
+        "end_s": 12.24,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "verify_depth": 1,
+        "codeformer": {
+          "frames_in": 255,
+          "faces_restored": 255,
+          "frames_without_landmarks": 0,
+          "fallback_detections": 0,
+          "gray_faces": 0,
+          "seconds": {
+            "landmarks": 0.0,
+            "align": 0.081,
+            "net": 4.803,
+            "parse": 2.206,
+            "paste": 1.502,
+            "gpu_wait": 5.463,
+            "total": 7.048
+          },
+          "locality": {
+            "frames": 255,
+            "changed_px_sum": 41323919,
+            "soft_mask_px_sum": 35442844,
+            "roi_px_sum": 74551411,
+            "frame_px": 393472,
+            "change_outside_square_max_px": 0,
+            "changed_fraction_of_frame_mean": 0.4119,
+            "roi_fraction_of_frame_mean": 0.743,
+            "changed_px_per_soft_mask_px": 1.166
+          },
+          "peak_vram_mib": 7350,
+          "faces_per_s": 36.18,
+          "landmarks": "insightface106->5 (verify pass)"
+        },
+        "latentsync": {
+          "seconds": 49.37,
+          "frames_in": 255,
+          "frames_out": 257
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 2,
+        "start_frame": 306,
+        "end_frame": 359,
+        "frames": 53,
+        "start_s": 12.24,
+        "end_s": 14.36,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 3,
+        "start_frame": 359,
+        "end_frame": 396,
+        "frames": 37,
+        "start_s": 14.36,
+        "end_s": 15.84,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "verify_depth": 1,
+        "codeformer": {
+          "frames_in": 37,
+          "faces_restored": 37,
+          "frames_without_landmarks": 0,
+          "fallback_detections": 0,
+          "gray_faces": 0,
+          "seconds": {
+            "landmarks": 0.0,
+            "align": 0.01,
+            "net": 0.696,
+            "parse": 0.313,
+            "paste": 0.21,
+            "gpu_wait": 0.83,
+            "total": 1.05
+          },
+          "locality": {
+            "frames": 37,
+            "changed_px_sum": 5361998,
+            "soft_mask_px_sum": 4287712,
+            "roi_px_sum": 10532514,
+            "frame_px": 393472,
+            "change_outside_square_max_px": 0,
+            "changed_fraction_of_frame_mean": 0.3683,
+            "roi_fraction_of_frame_mean": 0.7235,
+            "changed_px_per_soft_mask_px": 1.251
+          },
+          "peak_vram_mib": 8125,
+          "faces_per_s": 35.24,
+          "landmarks": "insightface106->5 (verify pass)"
+        },
+        "latentsync": {
+          "seconds": 7.5,
+          "frames_in": 37,
+          "frames_out": 39
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 4,
+        "start_frame": 396,
+        "end_frame": 431,
+        "frames": 35,
+        "start_s": 15.84,
+        "end_s": 17.24,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 5,
+        "start_frame": 431,
+        "end_frame": 499,
+        "frames": 68,
+        "start_s": 17.24,
+        "end_s": 19.96,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "verify_depth": 1,
+        "codeformer": {
+          "frames_in": 68,
+          "faces_restored": 68,
+          "frames_without_landmarks": 0,
+          "fallback_detections": 0,
+          "gray_faces": 0,
+          "seconds": {
+            "landmarks": 0.0,
+            "align": 0.022,
+            "net": 1.293,
+            "parse": 0.577,
+            "paste": 0.445,
+            "gpu_wait": 1.435,
+            "total": 1.902
+          },
+          "locality": {
+            "frames": 68,
+            "changed_px_sum": 10901095,
+            "soft_mask_px_sum": 8549013,
+            "roi_px_sum": 19450435,
+            "frame_px": 393472,
+            "change_outside_square_max_px": 0,
+            "changed_fraction_of_frame_mean": 0.4074,
+            "roi_fraction_of_frame_mean": 0.727,
+            "changed_px_per_soft_mask_px": 1.275
+          },
+          "peak_vram_mib": 7993,
+          "faces_per_s": 35.75,
+          "landmarks": "insightface106->5 (verify pass)"
+        },
+        "latentsync": {
+          "seconds": 13.6,
+          "frames_in": 68,
+          "frames_out": 70
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 6,
+        "start_frame": 499,
+        "end_frame": 544,
+        "frames": 45,
+        "start_s": 19.96,
+        "end_s": 21.76,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 7,
+        "start_frame": 544,
+        "end_frame": 791,
+        "frames": 247,
+        "start_s": 21.76,
+        "end_s": 31.64,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "verify_depth": 1,
+        "codeformer": {
+          "frames_in": 247,
+          "faces_restored": 247,
+          "frames_without_landmarks": 0,
+          "fallback_detections": 0,
+          "gray_faces": 0,
+          "seconds": {
+            "landmarks": 0.0,
+            "align": 0.079,
+            "net": 4.587,
+            "parse": 2.096,
+            "paste": 1.614,
+            "gpu_wait": 5.038,
+            "total": 6.731
+          },
+          "locality": {
+            "frames": 247,
+            "changed_px_sum": 40030489,
+            "soft_mask_px_sum": 31168941,
+            "roi_px_sum": 70471963,
+            "frame_px": 393472,
+            "change_outside_square_max_px": 0,
+            "changed_fraction_of_frame_mean": 0.4119,
+            "roi_fraction_of_frame_mean": 0.7251,
+            "changed_px_per_soft_mask_px": 1.284
+          },
+          "peak_vram_mib": 8391,
+          "faces_per_s": 36.7,
+          "landmarks": "insightface106->5 (verify pass)"
+        },
+        "latentsync": {
+          "seconds": 47.47,
+          "frames_in": 247,
+          "frames_out": 249
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 8,
+        "start_frame": 791,
+        "end_frame": 821,
+        "frames": 30,
+        "start_s": 31.64,
+        "end_s": 32.84,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 9,
+        "start_frame": 821,
+        "end_frame": 1251,
+        "frames": 430,
+        "start_s": 32.84,
+        "end_s": 50.04,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "verify_depth": 1,
+        "codeformer": {
+          "frames_in": 430,
+          "faces_restored": 430,
+          "frames_without_landmarks": 0,
+          "fallback_detections": 0,
+          "gray_faces": 0,
+          "seconds": {
+            "landmarks": 0.0,
+            "align": 0.124,
+            "net": 7.933,
+            "parse": 3.648,
+            "paste": 2.406,
+            "gpu_wait": 9.086,
+            "total": 11.618
+          },
+          "locality": {
+            "frames": 430,
+            "changed_px_sum": 67742935,
+            "soft_mask_px_sum": 54906540,
+            "roi_px_sum": 122224283,
+            "frame_px": 393472,
+            "change_outside_square_max_px": 0,
+            "changed_fraction_of_frame_mean": 0.4004,
+            "roi_fraction_of_frame_mean": 0.7224,
+            "changed_px_per_soft_mask_px": 1.234
+          },
+          "peak_vram_mib": 9305,
+          "faces_per_s": 37.01,
+          "landmarks": "insightface106->5 (verify pass)"
+        },
+        "latentsync": {
+          "seconds": 86.36,
+          "frames_in": 430,
+          "frames_out": 432
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 10,
+        "start_frame": 1251,
+        "end_frame": 1284,
+        "frames": 33,
+        "start_s": 50.04,
+        "end_s": 51.36,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 11,
+        "start_frame": 1284,
+        "end_frame": 1321,
+        "frames": 37,
+        "start_s": 51.36,
+        "end_s": 52.84,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "verify_depth": 1,
+        "codeformer": {
+          "frames_in": 37,
+          "faces_restored": 37,
+          "frames_without_landmarks": 0,
+          "fallback_detections": 0,
+          "gray_faces": 0,
+          "seconds": {
+            "landmarks": 0.0,
+            "align": 0.01,
+            "net": 0.688,
+            "parse": 0.314,
+            "paste": 0.197,
+            "gpu_wait": 0.828,
+            "total": 1.035
+          },
+          "locality": {
+            "frames": 37,
+            "changed_px_sum": 5721504,
+            "soft_mask_px_sum": 4336802,
+            "roi_px_sum": 10948849,
+            "frame_px": 393472,
+            "change_outside_square_max_px": 0,
+            "changed_fraction_of_frame_mean": 0.393,
+            "roi_fraction_of_frame_mean": 0.7521,
+            "changed_px_per_soft_mask_px": 1.319
+          },
+          "peak_vram_mib": 8129,
+          "faces_per_s": 35.75,
+          "landmarks": "insightface106->5 (verify pass)"
+        },
+        "latentsync": {
+          "seconds": 7.58,
+          "frames_in": 37,
+          "frames_out": 39
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 12,
+        "start_frame": 1321,
+        "end_frame": 1349,
+        "frames": 28,
+        "start_s": 52.84,
+        "end_s": 53.96,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      }
+    ],
+    "backend": "optimized"
+  },
+  "output_meta": {
+    "duration_s": 53.96,
+    "size_bytes": 36132663,
+    "container": "mov,mp4,m4a,3gp,3g2,mj2",
+    "video": {
+      "codec": "h264",
+      "profile": "High",
+      "width": 464,
+      "height": 848,
+      "r_frame_rate": "25/1",
+      "avg_frame_rate": "25/1",
+      "fps": 25.0,
+      "avg_fps": 25.0,
+      "vfr": false,
+      "pix_fmt": "yuv420p",
+      "nb_frames": "1349",
+      "duration_s": 53.96,
+      "bit_rate": "5155209"
+    },
+    "audio": {
+      "codec": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "channel_layout": "stereo",
+      "bit_rate": "195041",
+      "duration_s": 53.9
+    },
+    "has_video": true,
+    "has_audio": true
+  },
+  "validation": {
+    "tolerance_s": 0.15,
+    "tolerance_rule": "max(0.15 s, 2 source frames)",
+    "duration_delta_s": 0.06,
+    "checks": {
+      "output_exists_nonempty": true,
+      "output_has_video_audio": true,
+      "duration_within_tolerance": true,
+      "resolution_preserved": true,
+      "all_units_have_tts_and_translation": true,
+      "frame_count_preserved": true,
+      "output_frames_decodable_no_blank": true,
+      "no_latentsync_oom": true
+    },
+    "pass": true
+  },
+  "stage_seconds": {
+    "audio_extract": 0.081,
+    "vad": 1.542,
+    "asr": 3.819,
+    "translation_load": 0.352,
+    "segmentation": 18.994,
+    "diarization": 6.692,
+    "translation": 14.166,
+    "tts_load": 5.647,
+    "qa_load": 1.357,
+    "tts": 101.704,
+    "alignment": 0.287,
+    "dubbed_track": 0.243,
+    "background_sep": 0.742,
+    "background_mix": 1.047,
+    "speech_gate": 0.263,
+    "face_router_load": 0.216,
+    "latentsync_load": 6.327,
+    "codeformer_load": 0.401,
+    "ls_master_25fps": 2.129,
+    "ls_master_decode": 0.267,
+    "face_classify": 3.66,
+    "latentsync": 218.963,
+    "latentsync_verify": 5.745,
+    "codeformer": 29.403,
+    "final_assembly": 2.939,
+    "total": 425.939
+  },
+  "gpu": {
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.178.04",
+    "name": "NVIDIA GeForce RTX 5090",
+    "capability": "sm_120",
+    "total_vram_bytes": 33668726784,
+    "total_vram_gib": 31.36,
+    "free_vram_gib": 25.25,
+    "multi_processor_count": 170,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "at": "2026-10-16T19:26:54Z"
+}

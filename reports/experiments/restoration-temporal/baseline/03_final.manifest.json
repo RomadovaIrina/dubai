@@ -1,0 +1,6408 @@
+{
+  "task": "0.5-runner",
+  "input": "/workspace/dub/inputs/test_videos_raw/03.mp4",
+  "output": "/workspace/dub/artifacts/baseline/03/final/03_final.mp4",
+  "target_lang": "en",
+  "alignment_mode": "burst",
+  "tts_mode": "phrase",
+  "segmentation_mode": "sentence",
+  "codeformer": {
+    "mode": "optimized",
+    "w": 1.0,
+    "batch": 8,
+    "landmarks": "insightface",
+    "precision": "fp16"
+  },
+  "work_dir": "/workspace/dub/artifacts/baseline/03/work/work_03",
+  "config": {
+    "seed": 1247,
+    "max_unit_s": 20.0,
+    "threads": 16
+  },
+  "source": {
+    "duration_s": 90.333333,
+    "size_bytes": 18898111,
+    "container": "mov,mp4,m4a,3gp,3g2,mj2",
+    "video": {
+      "codec": "h264",
+      "profile": "High",
+      "width": 464,
+      "height": 848,
+      "r_frame_rate": "30/1",
+      "avg_frame_rate": "30/1",
+      "fps": 30.0,
+      "avg_fps": 30.0,
+      "vfr": false,
+      "pix_fmt": "yuv420p",
+      "nb_frames": "2710",
+      "duration_s": 90.333333,
+      "bit_rate": "1605991"
+    },
+    "audio": {
+      "codec": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "channel_layout": "stereo",
+      "bit_rate": "62788",
+      "duration_s": 90.32
+    },
+    "has_video": true,
+    "has_audio": true
+  },
+  "speech_intervals": [
+    {
+      "start": 3.3,
+      "end": 4.1
+    },
+    {
+      "start": 4.2,
+      "end": 5.5
+    },
+    {
+      "start": 6.7,
+      "end": 8.2
+    },
+    {
+      "start": 8.4,
+      "end": 9.9
+    },
+    {
+      "start": 10.3,
+      "end": 12.4
+    },
+    {
+      "start": 14.3,
+      "end": 17.2
+    },
+    {
+      "start": 17.7,
+      "end": 21.4
+    },
+    {
+      "start": 22.3,
+      "end": 23.8
+    },
+    {
+      "start": 23.9,
+      "end": 25.0
+    },
+    {
+      "start": 25.5,
+      "end": 26.8
+    },
+    {
+      "start": 27.8,
+      "end": 28.9
+    },
+    {
+      "start": 30.5,
+      "end": 35.5
+    },
+    {
+      "start": 35.9,
+      "end": 38.5
+    },
+    {
+      "start": 39.3,
+      "end": 41.1
+    },
+    {
+      "start": 42.4,
+      "end": 44.3
+    },
+    {
+      "start": 46.3,
+      "end": 47.6
+    },
+    {
+      "start": 48.2,
+      "end": 50.8
+    },
+    {
+      "start": 51.4,
+      "end": 55.8
+    },
+    {
+      "start": 59.2,
+      "end": 68.5
+    },
+    {
+      "start": 70.1,
+      "end": 72.5
+    },
+    {
+      "start": 73.8,
+      "end": 76.8
+    },
+    {
+      "start": 76.9,
+      "end": 78.0
+    },
+    {
+      "start": 78.8,
+      "end": 79.3
+    },
+    {
+      "start": 79.9,
+      "end": 82.2
+    },
+    {
+      "start": 83.9,
+      "end": 84.8
+    },
+    {
+      "start": 85.2,
+      "end": 87.3
+    },
+    {
+      "start": 88.5,
+      "end": 89.2
+    }
+  ],
+  "timeline": {
+    "chunks": [
+      {
+        "start_s": 0.0,
+        "end_s": 3.3,
+        "type": "PASS_THROUGH",
+        "index": 0,
+        "duration_s": 3.3
+      },
+      {
+        "start_s": 3.3,
+        "end_s": 4.1,
+        "type": "SPEECH",
+        "index": 1,
+        "duration_s": 0.8
+      },
+      {
+        "start_s": 4.1,
+        "end_s": 4.2,
+        "type": "PASS_THROUGH",
+        "index": 2,
+        "duration_s": 0.1
+      },
+      {
+        "start_s": 4.2,
+        "end_s": 5.5,
+        "type": "SPEECH",
+        "index": 3,
+        "duration_s": 1.3
+      },
+      {
+        "start_s": 5.5,
+        "end_s": 6.7,
+        "type": "PASS_THROUGH",
+        "index": 4,
+        "duration_s": 1.2
+      },
+      {
+        "start_s": 6.7,
+        "end_s": 8.2,
+        "type": "SPEECH",
+        "index": 5,
+        "duration_s": 1.5
+      },
+      {
+        "start_s": 8.2,
+        "end_s": 8.4,
+        "type": "PASS_THROUGH",
+        "index": 6,
+        "duration_s": 0.2
+      },
+      {
+        "start_s": 8.4,
+        "end_s": 9.9,
+        "type": "SPEECH",
+        "index": 7,
+        "duration_s": 1.5
+      },
+      {
+        "start_s": 9.9,
+        "end_s": 10.3,
+        "type": "PASS_THROUGH",
+        "index": 8,
+        "duration_s": 0.4
+      },
+      {
+        "start_s": 10.3,
+        "end_s": 12.4,
+        "type": "SPEECH",
+        "index": 9,
+        "duration_s": 2.1
+      },
+      {
+        "start_s": 12.4,
+        "end_s": 14.3,
+        "type": "PASS_THROUGH",
+        "index": 10,
+        "duration_s": 1.9
+      },
+      {
+        "start_s": 14.3,
+        "end_s": 17.2,
+        "type": "SPEECH",
+        "index": 11,
+        "duration_s": 2.9
+      },
+      {
+        "start_s": 17.2,
+        "end_s": 17.7,
+        "type": "PASS_THROUGH",
+        "index": 12,
+        "duration_s": 0.5
+      },
+      {
+        "start_s": 17.7,
+        "end_s": 21.4,
+        "type": "SPEECH",
+        "index": 13,
+        "duration_s": 3.7
+      },
+      {
+        "start_s": 21.4,
+        "end_s": 22.3,
+        "type": "PASS_THROUGH",
+        "index": 14,
+        "duration_s": 0.9
+      },
+      {
+        "start_s": 22.3,
+        "end_s": 23.8,
+        "type": "SPEECH",
+        "index": 15,
+        "duration_s": 1.5
+      },
+      {
+        "start_s": 23.8,
+        "end_s": 23.9,
+        "type": "PASS_THROUGH",
+        "index": 16,
+        "duration_s": 0.1
+      },
+      {
+        "start_s": 23.9,
+        "end_s": 25.0,
+        "type": "SPEECH",
+        "index": 17,
+        "duration_s": 1.1
+      },
+      {
+        "start_s": 25.0,
+        "end_s": 25.5,
+        "type": "PASS_THROUGH",
+        "index": 18,
+        "duration_s": 0.5
+      },
+      {
+        "start_s": 25.5,
+        "end_s": 26.8,
+        "type": "SPEECH",
+        "index": 19,
+        "duration_s": 1.3
+      },
+      {
+        "start_s": 26.8,
+        "end_s": 27.8,
+        "type": "PASS_THROUGH",
+        "index": 20,
+        "duration_s": 1.0
+      },
+      {
+        "start_s": 27.8,
+        "end_s": 28.9,
+        "type": "SPEECH",
+        "index": 21,
+        "duration_s": 1.1
+      },
+      {
+        "start_s": 28.9,
+        "end_s": 30.5,
+        "type": "PASS_THROUGH",
+        "index": 22,
+        "duration_s": 1.6
+      },
+      {
+        "start_s": 30.5,
+        "end_s": 35.5,
+        "type": "SPEECH",
+        "index": 23,
+        "duration_s": 5.0
+      },
+      {
+        "start_s": 35.5,
+        "end_s": 35.9,
+        "type": "PASS_THROUGH",
+        "index": 24,
+        "duration_s": 0.4
+      },
+      {
+        "start_s": 35.9,
+        "end_s": 38.5,
+        "type": "SPEECH",
+        "index": 25,
+        "duration_s": 2.6
+      },
+      {
+        "start_s": 38.5,
+        "end_s": 39.3,
+        "type": "PASS_THROUGH",
+        "index": 26,
+        "duration_s": 0.8
+      },
+      {
+        "start_s": 39.3,
+        "end_s": 41.1,
+        "type": "SPEECH",
+        "index": 27,
+        "duration_s": 1.8
+      },
+      {
+        "start_s": 41.1,
+        "end_s": 42.4,
+        "type": "PASS_THROUGH",
+        "index": 28,
+        "duration_s": 1.3
+      },
+      {
+        "start_s": 42.4,
+        "end_s": 44.3,
+        "type": "SPEECH",
+        "index": 29,
+        "duration_s": 1.9
+      },
+      {
+        "start_s": 44.3,
+        "end_s": 46.3,
+        "type": "PASS_THROUGH",
+        "index": 30,
+        "duration_s": 2.0
+      },
+      {
+        "start_s": 46.3,
+        "end_s": 47.6,
+        "type": "SPEECH",
+        "index": 31,
+        "duration_s": 1.3
+      },
+      {
+        "start_s": 47.6,
+        "end_s": 48.2,
+        "type": "PASS_THROUGH",
+        "index": 32,
+        "duration_s": 0.6
+      },
+      {
+        "start_s": 48.2,
+        "end_s": 50.8,
+        "type": "SPEECH",
+        "index": 33,
+        "duration_s": 2.6
+      },
+      {
+        "start_s": 50.8,
+        "end_s": 51.4,
+        "type": "PASS_THROUGH",
+        "index": 34,
+        "duration_s": 0.6
+      },
+      {
+        "start_s": 51.4,
+        "end_s": 55.8,
+        "type": "SPEECH",
+        "index": 35,
+        "duration_s": 4.4
+      },
+      {
+        "start_s": 55.8,
+        "end_s": 59.2,
+        "type": "PASS_THROUGH",
+        "index": 36,
+        "duration_s": 3.4
+      },
+      {
+        "start_s": 59.2,
+        "end_s": 68.5,
+        "type": "SPEECH",
+        "index": 37,
+        "duration_s": 9.3
+      },
+      {
+        "start_s": 68.5,
+        "end_s": 70.1,
+        "type": "PASS_THROUGH",
+        "index": 38,
+        "duration_s": 1.6
+      },
+      {
+        "start_s": 70.1,
+        "end_s": 72.5,
+        "type": "SPEECH",
+        "index": 39,
+        "duration_s": 2.4
+      },
+      {
+        "start_s": 72.5,
+        "end_s": 73.8,
+        "type": "PASS_THROUGH",
+        "index": 40,
+        "duration_s": 1.3
+      },
+      {
+        "start_s": 73.8,
+        "end_s": 76.8,
+        "type": "SPEECH",
+        "index": 41,
+        "duration_s": 3.0
+      },
+      {
+        "start_s": 76.8,
+        "end_s": 76.9,
+        "type": "PASS_THROUGH",
+        "index": 42,
+        "duration_s": 0.1
+      },
+      {
+        "start_s": 76.9,
+        "end_s": 78.0,
+        "type": "SPEECH",
+        "index": 43,
+        "duration_s": 1.1
+      },
+      {
+        "start_s": 78.0,
+        "end_s": 78.8,
+        "type": "PASS_THROUGH",
+        "index": 44,
+        "duration_s": 0.8
+      },
+      {
+        "start_s": 78.8,
+        "end_s": 79.3,
+        "type": "SPEECH",
+        "index": 45,
+        "duration_s": 0.5
+      },
+      {
+        "start_s": 79.3,
+        "end_s": 79.9,
+        "type": "PASS_THROUGH",
+        "index": 46,
+        "duration_s": 0.6
+      },
+      {
+        "start_s": 79.9,
+        "end_s": 82.2,
+        "type": "SPEECH",
+        "index": 47,
+        "duration_s": 2.3
+      },
+      {
+        "start_s": 82.2,
+        "end_s": 83.9,
+        "type": "PASS_THROUGH",
+        "index": 48,
+        "duration_s": 1.7
+      },
+      {
+        "start_s": 83.9,
+        "end_s": 84.8,
+        "type": "SPEECH",
+        "index": 49,
+        "duration_s": 0.9
+      },
+      {
+        "start_s": 84.8,
+        "end_s": 85.2,
+        "type": "PASS_THROUGH",
+        "index": 50,
+        "duration_s": 0.4
+      },
+      {
+        "start_s": 85.2,
+        "end_s": 87.3,
+        "type": "SPEECH",
+        "index": 51,
+        "duration_s": 2.1
+      },
+      {
+        "start_s": 87.3,
+        "end_s": 88.5,
+        "type": "PASS_THROUGH",
+        "index": 52,
+        "duration_s": 1.2
+      },
+      {
+        "start_s": 88.5,
+        "end_s": 89.2,
+        "type": "SPEECH",
+        "index": 53,
+        "duration_s": 0.7
+      },
+      {
+        "start_s": 89.2,
+        "end_s": 90.3333,
+        "type": "PASS_THROUGH",
+        "index": 54,
+        "duration_s": 1.1333
+      }
+    ],
+    "speech_seconds": 60.7,
+    "pass_through_seconds": 29.633
+  },
+  "segmentation": {
+    "mode": "sentence",
+    "method": "sentence",
+    "chunks": [
+      {
+        "words": 121,
+        "ok": true,
+        "attempts": [
+          {
+            "attempt": 0,
+            "ok": true,
+            "changed_tokens": 0,
+            "ratio": 1.0,
+            "diff": {},
+            "out": "Друзья, ну что, всем привет. Запишу первое видео, такое ознакомительно, целью познакомиться. Наверно, больше в общем, что хочу сказать, рад знакомству с вами, рад сотрудничеству. Сегодня пятница, 28 августа, будем считать, что это начало нашего сотрудничества. Что хочется сказать, пусть это сотрудничество будет легким, принесет нам всем тот желаемый результат, который мы загадали, чтобы на пути у ",
+            "clause_ends": [
+              0,
+              2,
+              4,
+              7,
+              9,
+              11,
+              12,
+              15,
+              18,
+              22,
+              24,
+              26,
+              28,
+              30,
+              35,
+              38,
+              43,
+              49,
+              52,
+              61,
+              62,
+              65,
+              76,
+              82,
+              87,
+              90,
+              92,
+              94,
+              95,
+              100,
+              104,
+              105,
+              109,
+              112,
+              113,
+              116,
+              119,
+              120
+            ]
+          }
+        ]
+      },
+      {
+        "words": 14,
+        "ok": true,
+        "attempts": [
+          {
+            "attempt": 0,
+            "ok": true,
+            "changed_tokens": 0,
+            "ratio": 1.0,
+            "diff": {},
+            "out": "Наше взаимодействие будет легким и принесет нам тот результат, который мы желаем. Все вперед.",
+            "clause_ends": [
+              8,
+              11,
+              13
+            ]
+          }
+        ]
+      }
+    ],
+    "fallback_chunks": 0,
+    "sentences": 11,
+    "split_long": 0,
+    "units": 11
+  },
+  "asr": {
+    "language": "ru",
+    "language_probability": 0.999,
+    "audio_duration_s": 90.324,
+    "compute_type": "int8_float16",
+    "model": "faster-whisper large-v3",
+    "segments": [
+      {
+        "id": 1,
+        "start": 2.68,
+        "end": 11.72,
+        "text": "друзья ну что всем привет запишу первое видео такое ознакомительно целью познакомиться наверно",
+        "words": [
+          {
+            "word": " друзья",
+            "start": 2.68,
+            "end": 3.56,
+            "p": 0.404
+          },
+          {
+            "word": " ну",
+            "start": 3.56,
+            "end": 4.26,
+            "p": 0.945
+          },
+          {
+            "word": " что",
+            "start": 4.26,
+            "end": 4.48,
+            "p": 0.996
+          },
+          {
+            "word": " всем",
+            "start": 4.48,
+            "end": 4.68,
+            "p": 0.995
+          },
+          {
+            "word": " привет",
+            "start": 4.68,
+            "end": 5.1,
+            "p": 1.0
+          },
+          {
+            "word": " запишу",
+            "start": 5.1,
+            "end": 7.0,
+            "p": 0.984
+          },
+          {
+            "word": " первое",
+            "start": 7.0,
+            "end": 7.46,
+            "p": 0.993
+          },
+          {
+            "word": " видео",
+            "start": 7.46,
+            "end": 7.82,
+            "p": 1.0
+          },
+          {
+            "word": " такое",
+            "start": 7.82,
+            "end": 8.52,
+            "p": 0.936
+          },
+          {
+            "word": " ознакомительно",
+            "start": 8.52,
+            "end": 9.36,
+            "p": 0.684
+          },
+          {
+            "word": " целью",
+            "start": 9.36,
+            "end": 10.62,
+            "p": 0.885
+          },
+          {
+            "word": " познакомиться",
+            "start": 10.62,
+            "end": 11.36,
+            "p": 0.995
+          },
+          {
+            "word": " наверно",
+            "start": 11.36,
+            "end": 11.72,
+            "p": 0.877
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "start": 11.72,
+        "end": 19.96,
+        "text": "больше в общем что хочу сказать рад знакомству с вами рад сотрудничеству сегодня пятница 28",
+        "words": [
+          {
+            "word": " больше",
+            "start": 11.72,
+            "end": 12.02,
+            "p": 0.999
+          },
+          {
+            "word": " в",
+            "start": 12.02,
+            "end": 14.36,
+            "p": 0.993
+          },
+          {
+            "word": " общем",
+            "start": 14.36,
+            "end": 14.7,
+            "p": 0.997
+          },
+          {
+            "word": " что",
+            "start": 14.7,
+            "end": 14.94,
+            "p": 0.987
+          },
+          {
+            "word": " хочу",
+            "start": 14.94,
+            "end": 15.18,
+            "p": 0.995
+          },
+          {
+            "word": " сказать",
+            "start": 15.18,
+            "end": 15.46,
+            "p": 0.987
+          },
+          {
+            "word": " рад",
+            "start": 15.46,
+            "end": 15.72,
+            "p": 0.936
+          },
+          {
+            "word": " знакомству",
+            "start": 15.72,
+            "end": 16.38,
+            "p": 0.958
+          },
+          {
+            "word": " с",
+            "start": 16.38,
+            "end": 16.52,
+            "p": 0.997
+          },
+          {
+            "word": " вами",
+            "start": 16.52,
+            "end": 16.74,
+            "p": 1.0
+          },
+          {
+            "word": " рад",
+            "start": 16.74,
+            "end": 17.82,
+            "p": 0.927
+          },
+          {
+            "word": " сотрудничеству",
+            "start": 17.82,
+            "end": 18.66,
+            "p": 0.941
+          },
+          {
+            "word": " сегодня",
+            "start": 18.66,
+            "end": 18.94,
+            "p": 0.967
+          },
+          {
+            "word": " пятница",
+            "start": 18.94,
+            "end": 19.48,
+            "p": 0.99
+          },
+          {
+            "word": " 28",
+            "start": 19.48,
+            "end": 19.96,
+            "p": 0.984
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "start": 19.96,
+        "end": 32.42,
+        "text": "августа будем считать что это . начало нашего сотрудничества что хочется сказать пусть это",
+        "words": [
+          {
+            "word": " августа",
+            "start": 19.96,
+            "end": 20.88,
+            "p": 0.666
+          },
+          {
+            "word": " будем",
+            "start": 20.88,
+            "end": 22.36,
+            "p": 0.633
+          },
+          {
+            "word": " считать",
+            "start": 22.36,
+            "end": 22.96,
+            "p": 1.0
+          },
+          {
+            "word": " что",
+            "start": 22.96,
+            "end": 23.18,
+            "p": 0.803
+          },
+          {
+            "word": " это",
+            "start": 23.18,
+            "end": 24.02,
+            "p": 0.622
+          },
+          {
+            "word": " .",
+            "start": 24.02,
+            "end": 24.42,
+            "p": 0.365
+          },
+          {
+            "word": " начало",
+            "start": 24.42,
+            "end": 25.98,
+            "p": 0.77
+          },
+          {
+            "word": " нашего",
+            "start": 25.98,
+            "end": 26.32,
+            "p": 0.998
+          },
+          {
+            "word": " сотрудничества",
+            "start": 26.32,
+            "end": 28.58,
+            "p": 0.97
+          },
+          {
+            "word": " что",
+            "start": 28.58,
+            "end": 31.06,
+            "p": 0.614
+          },
+          {
+            "word": " хочется",
+            "start": 31.06,
+            "end": 31.44,
+            "p": 0.998
+          },
+          {
+            "word": " сказать",
+            "start": 31.44,
+            "end": 31.84,
+            "p": 1.0
+          },
+          {
+            "word": " пусть",
+            "start": 31.84,
+            "end": 32.24,
+            "p": 0.973
+          },
+          {
+            "word": " это",
+            "start": 32.24,
+            "end": 32.42,
+            "p": 0.97
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "start": 32.42,
+        "end": 40.06,
+        "text": "сотрудничество будет легким принесет нам всем тот желаемый результат который мы загадали чтобы на",
+        "words": [
+          {
+            "word": " сотрудничество",
+            "start": 32.42,
+            "end": 33.18,
+            "p": 0.989
+          },
+          {
+            "word": " будет",
+            "start": 33.18,
+            "end": 33.38,
+            "p": 0.994
+          },
+          {
+            "word": " легким",
+            "start": 33.38,
+            "end": 33.9,
+            "p": 0.984
+          },
+          {
+            "word": " принесет",
+            "start": 33.9,
+            "end": 34.56,
+            "p": 0.987
+          },
+          {
+            "word": " нам",
+            "start": 34.56,
+            "end": 34.74,
+            "p": 0.995
+          },
+          {
+            "word": " всем",
+            "start": 34.74,
+            "end": 35.08,
+            "p": 0.991
+          },
+          {
+            "word": " тот",
+            "start": 35.08,
+            "end": 35.96,
+            "p": 0.995
+          },
+          {
+            "word": " желаемый",
+            "start": 35.96,
+            "end": 36.58,
+            "p": 0.999
+          },
+          {
+            "word": " результат",
+            "start": 36.58,
+            "end": 36.94,
+            "p": 1.0
+          },
+          {
+            "word": " который",
+            "start": 36.94,
+            "end": 37.4,
+            "p": 0.971
+          },
+          {
+            "word": " мы",
+            "start": 37.4,
+            "end": 37.6,
+            "p": 0.989
+          },
+          {
+            "word": " загадали",
+            "start": 37.6,
+            "end": 38.12,
+            "p": 0.998
+          },
+          {
+            "word": " чтобы",
+            "start": 38.12,
+            "end": 39.6,
+            "p": 0.996
+          },
+          {
+            "word": " на",
+            "start": 39.6,
+            "end": 40.06,
+            "p": 0.999
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "start": 40.06,
+        "end": 49.8,
+        "text": "пути у нас никаких преград не возникало надеюсь все будет хорошо ибо взимные действия с вами и",
+        "words": [
+          {
+            "word": " пути",
+            "start": 40.06,
+            "end": 40.38,
+            "p": 0.998
+          },
+          {
+            "word": " у",
+            "start": 40.38,
+            "end": 40.48,
+            "p": 0.999
+          },
+          {
+            "word": " нас",
+            "start": 40.48,
+            "end": 40.76,
+            "p": 1.0
+          },
+          {
+            "word": " никаких",
+            "start": 40.76,
+            "end": 42.6,
+            "p": 0.995
+          },
+          {
+            "word": " преград",
+            "start": 42.6,
+            "end": 43.28,
+            "p": 0.996
+          },
+          {
+            "word": " не",
+            "start": 43.28,
+            "end": 43.38,
+            "p": 0.985
+          },
+          {
+            "word": " возникало",
+            "start": 43.38,
+            "end": 43.92,
+            "p": 0.986
+          },
+          {
+            "word": " надеюсь",
+            "start": 43.92,
+            "end": 46.6,
+            "p": 0.995
+          },
+          {
+            "word": " все",
+            "start": 46.6,
+            "end": 46.74,
+            "p": 0.952
+          },
+          {
+            "word": " будет",
+            "start": 46.74,
+            "end": 46.88,
+            "p": 0.999
+          },
+          {
+            "word": " хорошо",
+            "start": 46.88,
+            "end": 47.28,
+            "p": 0.999
+          },
+          {
+            "word": " ибо",
+            "start": 47.28,
+            "end": 48.32,
+            "p": 0.722
+          },
+          {
+            "word": " взимные",
+            "start": 48.32,
+            "end": 48.68,
+            "p": 0.488
+          },
+          {
+            "word": " действия",
+            "start": 48.68,
+            "end": 49.14,
+            "p": 0.893
+          },
+          {
+            "word": " с",
+            "start": 49.14,
+            "end": 49.26,
+            "p": 0.99
+          },
+          {
+            "word": " вами",
+            "start": 49.26,
+            "end": 49.46,
+            "p": 0.998
+          },
+          {
+            "word": " и",
+            "start": 49.46,
+            "end": 49.8,
+            "p": 0.994
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "start": 49.8,
+        "end": 60.74,
+        "text": "в целом с тем продуктом который мы сегодня собираем и делаем дальше отправлю еще несколько",
+        "words": [
+          {
+            "word": " в",
+            "start": 49.8,
+            "end": 50.02,
+            "p": 0.46
+          },
+          {
+            "word": " целом",
+            "start": 50.02,
+            "end": 50.62,
+            "p": 0.999
+          },
+          {
+            "word": " с",
+            "start": 50.62,
+            "end": 52.24,
+            "p": 0.988
+          },
+          {
+            "word": " тем",
+            "start": 52.24,
+            "end": 52.42,
+            "p": 0.995
+          },
+          {
+            "word": " продуктом",
+            "start": 52.42,
+            "end": 52.9,
+            "p": 0.96
+          },
+          {
+            "word": " который",
+            "start": 52.9,
+            "end": 53.16,
+            "p": 0.912
+          },
+          {
+            "word": " мы",
+            "start": 53.16,
+            "end": 53.46,
+            "p": 0.999
+          },
+          {
+            "word": " сегодня",
+            "start": 53.46,
+            "end": 54.22,
+            "p": 0.999
+          },
+          {
+            "word": " собираем",
+            "start": 54.22,
+            "end": 55.04,
+            "p": 0.999
+          },
+          {
+            "word": " и",
+            "start": 55.04,
+            "end": 55.14,
+            "p": 0.988
+          },
+          {
+            "word": " делаем",
+            "start": 55.14,
+            "end": 55.54,
+            "p": 0.997
+          },
+          {
+            "word": " дальше",
+            "start": 55.54,
+            "end": 59.7,
+            "p": 0.948
+          },
+          {
+            "word": " отправлю",
+            "start": 59.7,
+            "end": 60.3,
+            "p": 0.999
+          },
+          {
+            "word": " еще",
+            "start": 60.3,
+            "end": 60.44,
+            "p": 0.922
+          },
+          {
+            "word": " несколько",
+            "start": 60.44,
+            "end": 60.74,
+            "p": 0.999
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "start": 60.74,
+        "end": 70.58,
+        "text": "видео запишу различных форматах в очках без очков посмотрим как будет работать наша система ну и в",
+        "words": [
+          {
+            "word": " видео",
+            "start": 60.74,
+            "end": 61.18,
+            "p": 0.999
+          },
+          {
+            "word": " запишу",
+            "start": 61.18,
+            "end": 61.74,
+            "p": 0.996
+          },
+          {
+            "word": " различных",
+            "start": 61.74,
+            "end": 62.66,
+            "p": 0.974
+          },
+          {
+            "word": " форматах",
+            "start": 62.66,
+            "end": 63.46,
+            "p": 0.982
+          },
+          {
+            "word": " в",
+            "start": 63.46,
+            "end": 63.82,
+            "p": 0.951
+          },
+          {
+            "word": " очках",
+            "start": 63.82,
+            "end": 64.44,
+            "p": 0.999
+          },
+          {
+            "word": " без",
+            "start": 64.44,
+            "end": 64.66,
+            "p": 0.985
+          },
+          {
+            "word": " очков",
+            "start": 64.66,
+            "end": 65.08,
+            "p": 0.999
+          },
+          {
+            "word": " посмотрим",
+            "start": 65.08,
+            "end": 65.68,
+            "p": 0.997
+          },
+          {
+            "word": " как",
+            "start": 65.68,
+            "end": 66.12,
+            "p": 1.0
+          },
+          {
+            "word": " будет",
+            "start": 66.12,
+            "end": 66.4,
+            "p": 0.976
+          },
+          {
+            "word": " работать",
+            "start": 66.4,
+            "end": 67.42,
+            "p": 0.996
+          },
+          {
+            "word": " наша",
+            "start": 67.42,
+            "end": 67.68,
+            "p": 0.944
+          },
+          {
+            "word": " система",
+            "start": 67.68,
+            "end": 68.14,
+            "p": 1.0
+          },
+          {
+            "word": " ну",
+            "start": 68.14,
+            "end": 70.26,
+            "p": 0.931
+          },
+          {
+            "word": " и",
+            "start": 70.26,
+            "end": 70.44,
+            "p": 0.998
+          },
+          {
+            "word": " в",
+            "start": 70.44,
+            "end": 70.58,
+            "p": 0.964
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "start": 70.58,
+        "end": 79.08,
+        "text": "принципе все отправлю в наш чат так что давайте ребят всем нам успеха я хочу пожелать пусть",
+        "words": [
+          {
+            "word": " принципе",
+            "start": 70.58,
+            "end": 70.9,
+            "p": 1.0
+          },
+          {
+            "word": " все",
+            "start": 70.9,
+            "end": 71.14,
+            "p": 0.974
+          },
+          {
+            "word": " отправлю",
+            "start": 71.14,
+            "end": 71.78,
+            "p": 0.996
+          },
+          {
+            "word": " в",
+            "start": 71.78,
+            "end": 71.84,
+            "p": 0.971
+          },
+          {
+            "word": " наш",
+            "start": 71.84,
+            "end": 72.0,
+            "p": 0.982
+          },
+          {
+            "word": " чат",
+            "start": 72.0,
+            "end": 72.3,
+            "p": 0.958
+          },
+          {
+            "word": " так",
+            "start": 72.3,
+            "end": 73.86,
+            "p": 0.976
+          },
+          {
+            "word": " что",
+            "start": 73.86,
+            "end": 74.18,
+            "p": 1.0
+          },
+          {
+            "word": " давайте",
+            "start": 74.18,
+            "end": 74.8,
+            "p": 0.997
+          },
+          {
+            "word": " ребят",
+            "start": 74.8,
+            "end": 75.26,
+            "p": 0.99
+          },
+          {
+            "word": " всем",
+            "start": 75.26,
+            "end": 75.56,
+            "p": 0.992
+          },
+          {
+            "word": " нам",
+            "start": 75.56,
+            "end": 75.86,
+            "p": 0.996
+          },
+          {
+            "word": " успеха",
+            "start": 75.86,
+            "end": 76.54,
+            "p": 0.997
+          },
+          {
+            "word": " я",
+            "start": 76.54,
+            "end": 77.0,
+            "p": 0.982
+          },
+          {
+            "word": " хочу",
+            "start": 77.0,
+            "end": 77.16,
+            "p": 0.999
+          },
+          {
+            "word": " пожелать",
+            "start": 77.16,
+            "end": 77.8,
+            "p": 0.999
+          },
+          {
+            "word": " пусть",
+            "start": 77.8,
+            "end": 79.08,
+            "p": 0.986
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "start": 79.8,
+        "end": 88.98,
+        "text": "наше взаимодействие будет легким и принесет нам тот результат который мы желаем все вперед",
+        "words": [
+          {
+            "word": " наше",
+            "start": 79.8,
+            "end": 80.08,
+            "p": 0.73
+          },
+          {
+            "word": " взаимодействие",
+            "start": 80.08,
+            "end": 80.94,
+            "p": 1.0
+          },
+          {
+            "word": " будет",
+            "start": 80.94,
+            "end": 81.36,
+            "p": 0.998
+          },
+          {
+            "word": " легким",
+            "start": 81.36,
+            "end": 81.98,
+            "p": 0.953
+          },
+          {
+            "word": " и",
+            "start": 81.98,
+            "end": 83.42,
+            "p": 0.963
+          },
+          {
+            "word": " принесет",
+            "start": 83.42,
+            "end": 84.64,
+            "p": 0.995
+          },
+          {
+            "word": " нам",
+            "start": 84.64,
+            "end": 85.38,
+            "p": 0.993
+          },
+          {
+            "word": " тот",
+            "start": 85.38,
+            "end": 85.62,
+            "p": 0.996
+          },
+          {
+            "word": " результат",
+            "start": 85.62,
+            "end": 86.04,
+            "p": 1.0
+          },
+          {
+            "word": " который",
+            "start": 86.04,
+            "end": 86.44,
+            "p": 0.036
+          },
+          {
+            "word": " мы",
+            "start": 86.44,
+            "end": 86.68,
+            "p": 0.986
+          },
+          {
+            "word": " желаем",
+            "start": 86.68,
+            "end": 87.06,
+            "p": 0.997
+          },
+          {
+            "word": " все",
+            "start": 87.06,
+            "end": 88.48,
+            "p": 0.36
+          },
+          {
+            "word": " вперед",
+            "start": 88.48,
+            "end": 88.98,
+            "p": 0.977
+          }
+        ]
+      }
+    ]
+  },
+  "source_lang": "ru",
+  "diarization": {
+    "model": "pyannote/speaker-diarization-3.1",
+    "turns": [
+      {
+        "start": 3.254,
+        "end": 5.414,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 6.663,
+        "end": 8.097,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 8.384,
+        "end": 9.751,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 10.358,
+        "end": 12.316,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 14.307,
+        "end": 17.007,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 17.716,
+        "end": 21.142,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 22.306,
+        "end": 23.622,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 23.926,
+        "end": 24.871,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 25.546,
+        "end": 26.693,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 27.824,
+        "end": 28.752,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 30.49,
+        "end": 35.401,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 35.941,
+        "end": 38.303,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 39.518,
+        "end": 41.138,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 42.421,
+        "end": 44.176,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 46.319,
+        "end": 47.5,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 48.125,
+        "end": 50.723,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 51.348,
+        "end": 55.685,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 59.262,
+        "end": 68.425,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 70.13,
+        "end": 72.425,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 73.758,
+        "end": 76.643,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 76.846,
+        "end": 77.842,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 78.803,
+        "end": 79.225,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 79.867,
+        "end": 81.082,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 81.25,
+        "end": 82.128,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 83.9,
+        "end": 84.642,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 85.25,
+        "end": 87.14,
+        "speaker": "SPEAKER_00"
+      },
+      {
+        "start": 88.388,
+        "end": 89.114,
+        "speaker": "SPEAKER_00"
+      }
+    ],
+    "speakers": [
+      "SPEAKER_00"
+    ]
+  },
+  "tiny_unit_merge": {
+    "enabled": true,
+    "min_words": 3,
+    "min_s": 1.0,
+    "max_gap_s": 2.0,
+    "units_before": 11,
+    "units_after": 10,
+    "merges": [
+      {
+        "tiny": {
+          "start": 87.06,
+          "end": 88.98,
+          "text": "Все вперед.",
+          "words": 2
+        },
+        "into": {
+          "start": 79.8,
+          "end": 87.06,
+          "text": "Наше взаимодействие будет легким и принесет нам тот результат который мы желаем."
+        },
+        "gap_s": 0.0,
+        "merged": [
+          79.8,
+          88.98
+        ]
+      }
+    ],
+    "unmerged_tiny": []
+  },
+  "translation": {
+    "model": "qwen2.5-7b-instruct-q8_0-00001-of-00003.gguf",
+    "quant": "q8_0",
+    "n_ctx": 4096,
+    "n_threads": 14,
+    "n_gpu_layers": 0,
+    "system_prompt": "You are a professional translator. Return only the translation, with no explanation.",
+    "direction": "Russian->English",
+    "usage": {
+      "prompt_tokens": 588,
+      "completion_tokens": 194
+    },
+    "burst_split": null
+  },
+  "tts": {
+    "model": "ChatterboxMultilingualTTS t3=v3 (models/chatterbox)",
+    "sr": 24000,
+    "dtype": "float16",
+    "language_id": "en",
+    "mode": "phrase",
+    "voice_reference": "speaker's own diarized speech via audio_prompt_path/prepare_conditionals",
+    "speech_token_guard": {
+      "enabled": true,
+      "flow_calls": 15,
+      "violations": 0
+    },
+    "qa": {
+      "enabled": true,
+      "retries": 2,
+      "low_temp": 0.6
+    },
+    "fit": {
+      "enabled": true,
+      "rounds": 4,
+      "target_ratio": 1.05,
+      "short_min_words": 4,
+      "short_overflow_s": 0.3
+    },
+    "fit_up": {
+      "enabled": true,
+      "ratio": 0.8,
+      "rounds": 3,
+      "aim": 1.0,
+      "guard": false
+    },
+    "alignment": {
+      "method": "ctc_forced_align (wav2vec2-base-960h, torchaudio.forced_align)",
+      "cuts": "between words only"
+    },
+    "split": {
+      "min_part_words": 1,
+      "soft_part_words": 2,
+      "part_max_words": 16,
+      "retries": 2
+    },
+    "stats": {
+      "parts": 10,
+      "attempts": 15,
+      "retried_parts": 1,
+      "retry_success": 1,
+      "final_bad": 0,
+      "fit_parts_rewritten": 0,
+      "fit_parts_merged": 0,
+      "fit_rounds_used": 0,
+      "fit_rewrite_rejected": 0,
+      "fit_up_units": 3,
+      "fit_up_rounds": 8,
+      "fit_up_accepted": 4,
+      "fit_up_rejected": 4,
+      "fit_up_candidates": 5,
+      "units_single_burst": 0,
+      "units_qwen_split": 0,
+      "units_single_fallback": 0,
+      "spans": 33,
+      "span_merges": 0,
+      "align_ok": 10,
+      "align_fallback": 0,
+      "units_timing_split": 10,
+      "units_proportional_fallback": 0,
+      "gen_seconds": 16.33,
+      "qa_seconds": 2.75,
+      "align_seconds": 0.11,
+      "fitup_qwen_seconds": 257.46,
+      "fitdown_qwen_seconds": 0.0,
+      "fitup_gen_qa_seconds": 5.14,
+      "gap_qa_units": 0,
+      "gap_qa_left": 0,
+      "judge_calls": 16,
+      "judge_seconds": 70.88,
+      "pause_marks_seconds": 0.0,
+      "retry_success_rate": 1.0
+    },
+    "references": {
+      "SPEAKER_00": {
+        "file": "/workspace/dub/artifacts/baseline/03/work/work_03/ref_SPEAKER_00.wav",
+        "seconds": 10.0,
+        "turns_used": 2,
+        "source": "diarized_speech"
+      }
+    }
+  },
+  "alignment": {
+    "mode": "burst",
+    "min_burst_s": 0.0,
+    "spill": true,
+    "atempo_cap": 1.15,
+    "hard_cap": 1.2,
+    "fill_slowdown": 0.9,
+    "fallback_frac": 1.01,
+    "units_slot_fallback": 0,
+    "summary": {
+      "groups": 33,
+      "atempo_max": 1.15,
+      "atempo_min": 0.9,
+      "slowed_lt_1": 24,
+      "atempo_gt_1_15": 0,
+      "atempo_gt_1_25": 0,
+      "atempo_gt_1_3": 0,
+      "overflow_groups": 0,
+      "cut_groups": 0
+    }
+  },
+  "dubbed_track": {
+    "wav24k": "/workspace/dub/artifacts/baseline/03/work/work_03/dubbed_24k.wav",
+    "wav16k": "/workspace/dub/artifacts/baseline/03/work/work_03/dubbed_16k.wav",
+    "aac": "/workspace/dub/artifacts/baseline/03/work/work_03/dubbed_aac.m4a",
+    "seconds": 90.333,
+    "sr": 24000,
+    "peak_before_norm": 0.9999,
+    "speech_seconds": 85.42,
+    "non_speech": "silence (original timing preserved)"
+  },
+  "units": [
+    {
+      "asr_segment": 1,
+      "start": 2.68,
+      "end": 5.1,
+      "text": "Друзья ну что всем привет.",
+      "words": 5,
+      "sentence": "Друзья ну что всем привет.",
+      "source": "sentence",
+      "id": 0,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 1.846,
+      "translation": "Friends, hey everyone, greetings.",
+      "parts_original": [
+        "Friends, hey everyone, greetings."
+      ],
+      "fit": [],
+      "fit_up": [],
+      "gap_qa": {
+        "found": [],
+        "retries": []
+      },
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        1.15,
+        0.606
+      ],
+      "parts": [
+        "Friends, hey everyone,",
+        "greetings."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u00_p0.wav",
+          "seconds": 1.023,
+          "text": "Friends, hey everyone,",
+          "clip_span": [
+            0.0,
+            1.023
+          ],
+          "speech_span": [
+            0.0,
+            1.023
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1247,
+              "temperature": 0.8,
+              "seconds": 1.88,
+              "score": 0.019,
+              "bad": false,
+              "reasons": [],
+              "ctc": "friends hay everyone greetings",
+              "whisper": "Friends, hey everyone, greetings.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.019,
+          "seed_used": 1247,
+          "temperature_used": 0.8,
+          "words": 3,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u00_p1.wav",
+          "seconds": 0.533,
+          "text": "greetings.",
+          "clip_span": [
+            1.023,
+            1.556
+          ],
+          "speech_span": [
+            0.0,
+            0.533
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1247,
+              "temperature": 0.8,
+              "seconds": 1.88,
+              "score": 0.019,
+              "bad": false,
+              "reasons": [],
+              "ctc": "friends hay everyone greetings",
+              "whisper": "Friends, hey everyone, greetings.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.019,
+          "seed_used": 1247,
+          "temperature_used": 0.8,
+          "words": 1,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u00_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 2,
+        "seconds": 1.88,
+        "speech_seconds": 1.415,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 1.68,
+        "ratio_tts_to_source_speech": 0.842,
+        "word_spans": [
+          {
+            "word": "friends",
+            "start": 0.061,
+            "end": 0.303,
+            "score": 0.97
+          },
+          {
+            "word": "hey",
+            "start": 0.344,
+            "end": 0.485,
+            "score": 0.772
+          },
+          {
+            "word": "everyone",
+            "start": 0.586,
+            "end": 0.91,
+            "score": 0.965
+          },
+          {
+            "word": "greetings",
+            "start": 1.031,
+            "end": 1.476,
+            "score": 0.983
+          }
+        ]
+      },
+      "slot": {
+        "start": 2.68,
+        "end": 5.08,
+        "seconds": 2.4
+      },
+      "alignment": {
+        "tts_seconds": 1.88,
+        "ratio_tts_to_slot": 0.7833,
+        "mode": "burst",
+        "atempo": 1.15,
+        "bursts": 2,
+        "bursts_without_words": 0,
+        "placements": [
+          {
+            "burst": [
+              3.3,
+              4.1
+            ],
+            "window": [
+              3.25,
+              4.14
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 1.023,
+            "ratio": 1.15,
+            "atempo": 1.15,
+            "placed": [
+              3.25,
+              4.146
+            ],
+            "overflow_into_next_burst_s": 0.006,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.05,
+            "track_start": 2.68,
+            "text": "Friends, hey everyone,",
+            "source_words": "друзья ну"
+          },
+          {
+            "burst": [
+              4.2,
+              5.08
+            ],
+            "window": [
+              4.206,
+              5.08
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 0.533,
+            "ratio": 0.61,
+            "atempo": 0.9,
+            "placed": [
+              4.206,
+              4.781
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 2.68,
+            "text": "greetings.",
+            "source_words": "что всем привет"
+          }
+        ],
+        "aligned_seconds": 2.4,
+        "file": "/workspace/dub/artifacts/baseline/03/work/work_03/aligned_u00.wav",
+        "track_start": 2.68
+      }
+    },
+    {
+      "asr_segment": 1,
+      "start": 5.1,
+      "end": 11.36,
+      "text": "Запишу первое видео такое ознакомительно целью познакомиться.",
+      "words": 7,
+      "sentence": "Запишу первое видео такое ознакомительно целью познакомиться.",
+      "source": "sentence",
+      "id": 1,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 4.117,
+      "translation": "I'll record the first video as an introduction to get to know each other.",
+      "parts_original": [
+        "I'll record the first video as an introduction to get to know each other."
+      ],
+      "fit": [],
+      "fit_up": [
+        {
+          "round": 1,
+          "ratio_before": 0.761,
+          "old": "I'll record the first video as an introduction to get to know each other.",
+          "target_words": 18,
+          "min_words": 16,
+          "source_seconds": 4.44,
+          "tts_seconds_before": 3.377,
+          "new": "I will record the first video as an introductory one to get to know each other.",
+          "tts_seconds_after": 3.778,
+          "ratio_after": 0.851,
+          "qa_before": 0.025,
+          "qa_after": 0.008,
+          "closer": true,
+          "intelligible": true,
+          "result": "accepted"
+        }
+      ],
+      "gap_qa": {
+        "found": [],
+        "retries": []
+      },
+      "translation_fitted": "I will record the first video as an introductory one to get to know each other.",
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.576,
+        0.538,
+        0.724,
+        0.804
+      ],
+      "parts": [
+        "I will record",
+        "the first video as",
+        "an introductory one to get",
+        "to know each other."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u01_p0.wav",
+          "seconds": 0.887,
+          "text": "I will record",
+          "clip_span": [
+            0.0,
+            0.887
+          ],
+          "speech_span": [
+            0.0,
+            0.887
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001407,
+              "temperature": 0.8,
+              "seconds": 4.36,
+              "score": 0.008,
+              "bad": false,
+              "reasons": [],
+              "ctc": "i will record the first vido as an introductory one to get to know each other",
+              "whisper": "I will record the first video as an introductory one to get to know each other.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.008,
+          "seed_used": 2001407,
+          "temperature_used": 0.8,
+          "words": 3,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u01_p1.wav",
+          "seconds": 0.883,
+          "text": "the first video as",
+          "clip_span": [
+            0.887,
+            1.77
+          ],
+          "speech_span": [
+            0.0,
+            0.883
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001407,
+              "temperature": 0.8,
+              "seconds": 4.36,
+              "score": 0.008,
+              "bad": false,
+              "reasons": [],
+              "ctc": "i will record the first vido as an introductory one to get to know each other",
+              "whisper": "I will record the first video as an introductory one to get to know each other.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.008,
+          "seed_used": 2001407,
+          "temperature_used": 0.8,
+          "words": 4,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u01_p2.wav",
+          "seconds": 1.332,
+          "text": "an introductory one to get",
+          "clip_span": [
+            1.77,
+            3.102
+          ],
+          "speech_span": [
+            0.0,
+            1.332
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001407,
+              "temperature": 0.8,
+              "seconds": 4.36,
+              "score": 0.008,
+              "bad": false,
+              "reasons": [],
+              "ctc": "i will record the first vido as an introductory one to get to know each other",
+              "whisper": "I will record the first video as an introductory one to get to know each other.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.008,
+          "seed_used": 2001407,
+          "temperature_used": 0.8,
+          "words": 5,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u01_p3.wav",
+          "seconds": 0.836,
+          "text": "to know each other.",
+          "clip_span": [
+            3.102,
+            3.938
+          ],
+          "speech_span": [
+            0.0,
+            0.836
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001407,
+              "temperature": 0.8,
+              "seconds": 4.36,
+              "score": 0.008,
+              "bad": false,
+              "reasons": [],
+              "ctc": "i will record the first vido as an introductory one to get to know each other",
+              "whisper": "I will record the first video as an introductory one to get to know each other.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.008,
+          "seed_used": 2001407,
+          "temperature_used": 0.8,
+          "words": 4,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u01_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 4,
+        "seconds": 4.36,
+        "speech_seconds": 3.778,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 4.44,
+        "ratio_tts_to_source_speech": 0.851,
+        "word_spans": [
+          {
+            "word": "i",
+            "start": 0.08,
+            "end": 0.121,
+            "score": 0.983
+          },
+          {
+            "word": "will",
+            "start": 0.181,
+            "end": 0.362,
+            "score": 0.997
+          },
+          {
+            "word": "record",
+            "start": 0.442,
+            "end": 0.824,
+            "score": 0.996
+          },
+          {
+            "word": "the",
+            "start": 0.944,
+            "end": 1.005,
+            "score": 0.998
+          },
+          {
+            "word": "first",
+            "start": 1.085,
+            "end": 1.286,
+            "score": 0.98
+          },
+          {
+            "word": "video",
+            "start": 1.346,
+            "end": 1.607,
+            "score": 0.728
+          },
+          {
+            "word": "as",
+            "start": 1.708,
+            "end": 1.768,
+            "score": 0.991
+          },
+          {
+            "word": "an",
+            "start": 1.808,
+            "end": 1.869,
+            "score": 0.923
+          },
+          {
+            "word": "introductory",
+            "start": 1.929,
+            "end": 2.572,
+            "score": 0.992
+          },
+          {
+            "word": "one",
+            "start": 2.692,
+            "end": 2.793,
+            "score": 0.989
+          },
+          {
+            "word": "to",
+            "start": 2.853,
+            "end": 2.933,
+            "score": 1.0
+          },
+          {
+            "word": "get",
+            "start": 2.974,
+            "end": 3.094,
+            "score": 0.994
+          },
+          {
+            "word": "to",
+            "start": 3.134,
+            "end": 3.195,
+            "score": 0.929
+          },
+          {
+            "word": "know",
+            "start": 3.235,
+            "end": 3.355,
+            "score": 0.993
+          },
+          {
+            "word": "each",
+            "start": 3.436,
+            "end": 3.556,
+            "score": 0.953
+          },
+          {
+            "word": "other",
+            "start": 3.637,
+            "end": 3.858,
+            "score": 0.81
+          }
+        ]
+      },
+      "slot": {
+        "start": 5.1,
+        "end": 11.34,
+        "seconds": 6.24
+      },
+      "alignment": {
+        "tts_seconds": 4.36,
+        "ratio_tts_to_slot": 0.6987,
+        "mode": "burst",
+        "atempo": 1.0,
+        "bursts": 4,
+        "bursts_without_words": 0,
+        "placements": [
+          {
+            "burst": [
+              5.1,
+              5.5
+            ],
+            "window": [
+              5.1,
+              6.64
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 0.887,
+            "ratio": 0.576,
+            "atempo": 1.0,
+            "placed": [
+              5.1,
+              5.987
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 4.7,
+            "text": "I will record",
+            "source_words": "запишу"
+          },
+          {
+            "burst": [
+              6.7,
+              8.2
+            ],
+            "window": [
+              6.7,
+              8.34
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 0.883,
+            "ratio": 0.538,
+            "atempo": 0.9,
+            "placed": [
+              6.7,
+              7.668
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 4.7,
+            "text": "the first video as",
+            "source_words": "первое видео такое"
+          },
+          {
+            "burst": [
+              8.4,
+              9.9
+            ],
+            "window": [
+              8.4,
+              10.24
+            ],
+            "phrases": [
+              2
+            ],
+            "group_s": 1.332,
+            "ratio": 0.724,
+            "atempo": 0.9,
+            "placed": [
+              8.4,
+              9.867
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 4.7,
+            "text": "an introductory one to get",
+            "source_words": "ознакомительно целью"
+          },
+          {
+            "burst": [
+              10.3,
+              11.34
+            ],
+            "window": [
+              10.3,
+              11.34
+            ],
+            "phrases": [
+              3
+            ],
+            "group_s": 0.836,
+            "ratio": 0.804,
+            "atempo": 0.9,
+            "placed": [
+              10.3,
+              11.213
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 4.7,
+            "text": "to know each other.",
+            "source_words": "познакомиться"
+          }
+        ],
+        "aligned_seconds": 6.64,
+        "file": "/workspace/dub/artifacts/baseline/03/work/work_03/aligned_u01.wav",
+        "track_start": 4.7
+      }
+    },
+    {
+      "asr_segment": 1,
+      "start": 11.36,
+      "end": 18.66,
+      "text": "Наверно больше в общем что хочу сказать рад знакомству с вами рад сотрудничеству.",
+      "words": 13,
+      "sentence": "Наверно больше в общем что хочу сказать рад знакомству с вами рад сотрудничеству.",
+      "source": "sentence",
+      "id": 2,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 4.6,
+      "translation": "Probably more in general what I want to say is that I am glad to meet you and glad to cooperate.",
+      "parts_original": [
+        "Probably more in general what I want to say is that I am glad to meet you and glad to cooperate."
+      ],
+      "fit": [],
+      "fit_up": [],
+      "gap_qa": {
+        "found": [],
+        "retries": []
+      },
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.475,
+        0.825,
+        0.847
+      ],
+      "parts": [
+        "Probably more in general",
+        "what I want to say is that I am glad to meet you and glad",
+        "to cooperate."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u02_p0.wav",
+          "seconds": 1.367,
+          "text": "Probably more in general",
+          "clip_span": [
+            0.0,
+            1.367
+          ],
+          "speech_span": [
+            0.0,
+            1.367
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1447,
+              "temperature": 0.8,
+              "seconds": 5.12,
+              "score": 0.013,
+              "bad": false,
+              "reasons": [],
+              "ctc": "probably more in general what i want to say is that i am glad to meet you and glad to corporate",
+              "whisper": "Probably more in general what I want to say is that I am glad to meet you and glad to cooperate.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.013,
+          "seed_used": 1447,
+          "temperature_used": 0.8,
+          "words": 4,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u02_p1.wav",
+          "seconds": 2.756,
+          "text": "what I want to say is that I am glad to meet you and glad",
+          "clip_span": [
+            1.367,
+            4.123
+          ],
+          "speech_span": [
+            0.0,
+            2.756
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1447,
+              "temperature": 0.8,
+              "seconds": 5.12,
+              "score": 0.013,
+              "bad": false,
+              "reasons": [],
+              "ctc": "probably more in general what i want to say is that i am glad to meet you and glad to corporate",
+              "whisper": "Probably more in general what I want to say is that I am glad to meet you and glad to cooperate.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.013,
+          "seed_used": 1447,
+          "temperature_used": 0.8,
+          "words": 15,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u02_p2.wav",
+          "seconds": 0.796,
+          "text": "to cooperate.",
+          "clip_span": [
+            4.123,
+            4.919
+          ],
+          "speech_span": [
+            0.0,
+            0.796
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1447,
+              "temperature": 0.8,
+              "seconds": 5.12,
+              "score": 0.013,
+              "bad": false,
+              "reasons": [],
+              "ctc": "probably more in general what i want to say is that i am glad to meet you and glad to corporate",
+              "whisper": "Probably more in general what I want to say is that I am glad to meet you and glad to cooperate.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.013,
+          "seed_used": 1447,
+          "temperature_used": 0.8,
+          "words": 2,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u02_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 3,
+        "seconds": 5.12,
+        "speech_seconds": 4.799,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 4.88,
+        "ratio_tts_to_source_speech": 0.983,
+        "word_spans": [
+          {
+            "word": "probably",
+            "start": 0.04,
+            "end": 0.502,
+            "score": 1.0
+          },
+          {
+            "word": "more",
+            "start": 0.562,
+            "end": 0.743,
+            "score": 0.869
+          },
+          {
+            "word": "in",
+            "start": 0.803,
+            "end": 0.863,
+            "score": 0.999
+          },
+          {
+            "word": "general",
+            "start": 0.944,
+            "end": 1.305,
+            "score": 0.957
+          },
+          {
+            "word": "what",
+            "start": 1.385,
+            "end": 1.506,
+            "score": 1.0
+          },
+          {
+            "word": "i",
+            "start": 1.586,
+            "end": 1.626,
+            "score": 0.86
+          },
+          {
+            "word": "want",
+            "start": 1.687,
+            "end": 1.847,
+            "score": 0.998
+          },
+          {
+            "word": "to",
+            "start": 1.907,
+            "end": 1.968,
+            "score": 1.0
+          },
+          {
+            "word": "say",
+            "start": 2.068,
+            "end": 2.249,
+            "score": 1.0
+          },
+          {
+            "word": "is",
+            "start": 2.329,
+            "end": 2.369,
+            "score": 0.999
+          },
+          {
+            "word": "that",
+            "start": 2.409,
+            "end": 2.53,
+            "score": 0.999
+          },
+          {
+            "word": "i",
+            "start": 2.65,
+            "end": 2.67,
+            "score": 1.0
+          },
+          {
+            "word": "am",
+            "start": 2.771,
+            "end": 2.811,
+            "score": 0.999
+          },
+          {
+            "word": "glad",
+            "start": 2.891,
+            "end": 3.092,
+            "score": 0.972
+          },
+          {
+            "word": "to",
+            "start": 3.152,
+            "end": 3.213,
+            "score": 1.0
+          },
+          {
+            "word": "meet",
+            "start": 3.293,
+            "end": 3.453,
+            "score": 1.0
+          },
+          {
+            "word": "you",
+            "start": 3.514,
+            "end": 3.634,
+            "score": 0.994
+          },
+          {
+            "word": "and",
+            "start": 3.795,
+            "end": 3.875,
+            "score": 0.988
+          },
+          {
+            "word": "glad",
+            "start": 3.935,
+            "end": 4.116,
+            "score": 0.971
+          },
+          {
+            "word": "to",
+            "start": 4.156,
+            "end": 4.216,
+            "score": 1.0
+          },
+          {
+            "word": "cooperate",
+            "start": 4.277,
+            "end": 4.839,
+            "score": 0.755
+          }
+        ]
+      },
+      "slot": {
+        "start": 11.36,
+        "end": 18.64,
+        "seconds": 7.28
+      },
+      "alignment": {
+        "tts_seconds": 5.12,
+        "ratio_tts_to_slot": 0.7033,
+        "mode": "burst",
+        "atempo": 1.0,
+        "bursts": 3,
+        "bursts_without_words": 0,
+        "placements": [
+          {
+            "burst": [
+              11.36,
+              12.4
+            ],
+            "window": [
+              11.36,
+              14.24
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 1.367,
+            "ratio": 0.475,
+            "atempo": 1.0,
+            "placed": [
+              11.36,
+              12.727
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 10.96,
+            "text": "Probably more in general",
+            "source_words": "наверно больше в"
+          },
+          {
+            "burst": [
+              14.3,
+              17.2
+            ],
+            "window": [
+              14.3,
+              17.64
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 2.756,
+            "ratio": 0.825,
+            "atempo": 0.95,
+            "placed": [
+              14.3,
+              17.187
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 10.96,
+            "text": "what I want to say is that I am glad to meet you and glad",
+            "source_words": "общем что хочу сказать рад знакомству с вами рад"
+          },
+          {
+            "burst": [
+              17.7,
+              18.64
+            ],
+            "window": [
+              17.7,
+              18.64
+            ],
+            "phrases": [
+              2
+            ],
+            "group_s": 0.796,
+            "ratio": 0.847,
+            "atempo": 0.9,
+            "placed": [
+              17.7,
+              18.569
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 10.96,
+            "text": "to cooperate.",
+            "source_words": "сотрудничеству"
+          }
+        ],
+        "aligned_seconds": 7.68,
+        "file": "/workspace/dub/artifacts/baseline/03/work/work_03/aligned_u02.wav",
+        "track_start": 10.96
+      }
+    },
+    {
+      "asr_segment": 2,
+      "start": 18.66,
+      "end": 28.58,
+      "text": "Сегодня пятница 28 августа будем считать что это начало нашего сотрудничества.",
+      "words": 11,
+      "sentence": "Сегодня пятница 28 августа будем считать что это начало нашего сотрудничества.",
+      "source": "sentence",
+      "id": 3,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 6.646,
+      "translation": "Today is Friday, August 28th; let's consider this the beginning of our cooperation.",
+      "parts_original": [
+        "Today is Friday, August 28th; let's consider this the beginning of our cooperation."
+      ],
+      "fit": [],
+      "fit_up": [
+        {
+          "round": 1,
+          "ratio_before": 0.62,
+          "old": "Today is Friday, August 28th; let's consider this the beginning of our cooperation.",
+          "target_words": 21,
+          "min_words": 18,
+          "source_seconds": 6.64,
+          "tts_seconds_before": 4.118,
+          "new": "Today is Friday, August 28th, and we will consider this the start of our cooperation.",
+          "tts_seconds_after": 5.099,
+          "ratio_after": 0.768,
+          "qa_before": 0.019,
+          "qa_after": 0.019,
+          "closer": true,
+          "intelligible": true,
+          "result": "accepted"
+        },
+        {
+          "round": 2,
+          "ratio_before": 0.768,
+          "old": "Today is Friday, August 28th, and we will consider this the start of our cooperation.",
+          "target_words": 20,
+          "min_words": 17,
+          "source_seconds": 6.64,
+          "tts_seconds_before": 5.099,
+          "result": "rewrite_rejected",
+          "reason": "identical"
+        }
+      ],
+      "gap_qa": {
+        "found": [],
+        "retries": []
+      },
+      "translation_fitted": "Today is Friday, August 28th, and we will consider this the start of our cooperation.",
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.574,
+        0.951,
+        0.303,
+        0.396
+      ],
+      "parts": [
+        "Today is Friday, August 28th,",
+        "and we will consider this",
+        "the start",
+        "of our cooperation."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u03_p0.wav",
+          "seconds": 2.056,
+          "text": "Today is Friday, August 28th,",
+          "clip_span": [
+            0.0,
+            2.056
+          ],
+          "speech_span": [
+            0.0,
+            2.056
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001607,
+              "temperature": 0.8,
+              "seconds": 5.44,
+              "score": 0.019,
+              "bad": false,
+              "reasons": [],
+              "ctc": "to day is friday august twenty eighth and we will consider this the start of our corporation",
+              "whisper": "Today is Friday, August 28th and we will consider this the start of our cooperation.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.019,
+          "seed_used": 2001607,
+          "temperature_used": 0.8,
+          "words": 6,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u03_p1.wav",
+          "seconds": 1.465,
+          "text": "and we will consider this",
+          "clip_span": [
+            2.056,
+            3.521
+          ],
+          "speech_span": [
+            0.0,
+            1.465
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001607,
+              "temperature": 0.8,
+              "seconds": 5.44,
+              "score": 0.019,
+              "bad": false,
+              "reasons": [],
+              "ctc": "to day is friday august twenty eighth and we will consider this the start of our corporation",
+              "whisper": "Today is Friday, August 28th and we will consider this the start of our cooperation.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.019,
+          "seed_used": 2001607,
+          "temperature_used": 0.8,
+          "words": 5,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u03_p2.wav",
+          "seconds": 0.467,
+          "text": "the start",
+          "clip_span": [
+            3.521,
+            3.988
+          ],
+          "speech_span": [
+            0.0,
+            0.467
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001607,
+              "temperature": 0.8,
+              "seconds": 5.44,
+              "score": 0.019,
+              "bad": false,
+              "reasons": [],
+              "ctc": "to day is friday august twenty eighth and we will consider this the start of our corporation",
+              "whisper": "Today is Friday, August 28th and we will consider this the start of our cooperation.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.019,
+          "seed_used": 2001607,
+          "temperature_used": 0.8,
+          "words": 2,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u03_p3.wav",
+          "seconds": 1.211,
+          "text": "of our cooperation.",
+          "clip_span": [
+            3.988,
+            5.199
+          ],
+          "speech_span": [
+            0.0,
+            1.211
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2001607,
+              "temperature": 0.8,
+              "seconds": 5.44,
+              "score": 0.019,
+              "bad": false,
+              "reasons": [],
+              "ctc": "to day is friday august twenty eighth and we will consider this the start of our corporation",
+              "whisper": "Today is Friday, August 28th and we will consider this the start of our cooperation.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.019,
+          "seed_used": 2001607,
+          "temperature_used": 0.8,
+          "words": 3,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u03_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 4,
+        "seconds": 5.44,
+        "speech_seconds": 5.099,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 6.64,
+        "ratio_tts_to_source_speech": 0.768,
+        "word_spans": [
+          {
+            "word": "today",
+            "start": 0.02,
+            "end": 0.321,
+            "score": 0.894
+          },
+          {
+            "word": "is",
+            "start": 0.482,
+            "end": 0.542,
+            "score": 1.0
+          },
+          {
+            "word": "friday",
+            "start": 0.683,
+            "end": 1.044,
+            "score": 0.968
+          },
+          {
+            "word": "august",
+            "start": 1.184,
+            "end": 1.405,
+            "score": 0.958
+          },
+          {
+            "word": "twenty",
+            "start": 1.485,
+            "end": 1.766,
+            "score": 0.995
+          },
+          {
+            "word": "eightth",
+            "start": 1.847,
+            "end": 2.048,
+            "score": 0.634
+          },
+          {
+            "word": "and",
+            "start": 2.228,
+            "end": 2.288,
+            "score": 0.999
+          },
+          {
+            "word": "we",
+            "start": 2.349,
+            "end": 2.449,
+            "score": 0.97
+          },
+          {
+            "word": "will",
+            "start": 2.489,
+            "end": 2.67,
+            "score": 0.997
+          },
+          {
+            "word": "consider",
+            "start": 2.71,
+            "end": 3.091,
+            "score": 0.998
+          },
+          {
+            "word": "this",
+            "start": 3.232,
+            "end": 3.413,
+            "score": 1.0
+          },
+          {
+            "word": "the",
+            "start": 3.553,
+            "end": 3.653,
+            "score": 0.973
+          },
+          {
+            "word": "start",
+            "start": 3.694,
+            "end": 3.975,
+            "score": 1.0
+          },
+          {
+            "word": "of",
+            "start": 4.095,
+            "end": 4.135,
+            "score": 1.0
+          },
+          {
+            "word": "our",
+            "start": 4.256,
+            "end": 4.316,
+            "score": 0.999
+          },
+          {
+            "word": "cooperation",
+            "start": 4.376,
+            "end": 5.119,
+            "score": 0.736
+          }
+        ]
+      },
+      "slot": {
+        "start": 18.66,
+        "end": 28.56,
+        "seconds": 9.9
+      },
+      "alignment": {
+        "tts_seconds": 5.44,
+        "ratio_tts_to_slot": 0.5495,
+        "mode": "burst",
+        "atempo": 0.977,
+        "bursts": 4,
+        "bursts_without_words": 1,
+        "placements": [
+          {
+            "burst": [
+              18.66,
+              21.4
+            ],
+            "window": [
+              18.66,
+              22.24
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 2.056,
+            "ratio": 0.574,
+            "atempo": 0.9,
+            "placed": [
+              18.66,
+              20.937
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 18.26,
+            "text": "Today is Friday, August 28th,",
+            "source_words": "сегодня пятница 28 августа будем"
+          },
+          {
+            "burst": [
+              22.3,
+              23.8
+            ],
+            "window": [
+              22.3,
+              23.84
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 1.465,
+            "ratio": 0.951,
+            "atempo": 0.977,
+            "placed": [
+              22.3,
+              23.789
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 18.26,
+            "text": "and we will consider this",
+            "source_words": "считать что это"
+          },
+          {
+            "burst": [
+              23.9,
+              25.0
+            ],
+            "window": [
+              23.9,
+              25.44
+            ],
+            "phrases": [
+              2
+            ],
+            "group_s": 0.467,
+            "ratio": 0.303,
+            "atempo": 0.9,
+            "placed": [
+              23.9,
+              24.401
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 18.26,
+            "text": "the start",
+            "source_words": "начало"
+          },
+          {
+            "burst": [
+              25.5,
+              26.8
+            ],
+            "window": [
+              25.5,
+              28.56
+            ],
+            "phrases": [
+              3
+            ],
+            "group_s": 1.211,
+            "ratio": 0.396,
+            "atempo": 0.932,
+            "placed": [
+              25.5,
+              26.79
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 18.26,
+            "text": "of our cooperation.",
+            "source_words": "нашего сотрудничества"
+          }
+        ],
+        "aligned_seconds": 10.3,
+        "file": "/workspace/dub/artifacts/baseline/03/work/work_03/aligned_u03.wav",
+        "track_start": 18.26
+      }
+    },
+    {
+      "asr_segment": 3,
+      "start": 28.58,
+      "end": 43.92,
+      "text": "Что хочется сказать пусть это сотрудничество будет легким принесет нам всем тот желаемый результат который мы загадали чтобы на пути у нас никаких преград не возникало.",
+      "words": 26,
+      "sentence": "Что хочется сказать пусть это сотрудничество будет легким принесет нам всем тот желаемый результат который мы загадали чтобы на пути у нас никаких преград не возникало.",
+      "source": "sentence",
+      "id": 4,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 10.564,
+      "translation": "Let's hope that this cooperation will be smooth, bringing us all the desired result that we wished for, so that on our path, no obstacles arise.",
+      "parts_original": [
+        "Let's hope that this cooperation will be smooth, bringing us all the desired result that we wished for, so that on our path, no obstacles arise."
+      ],
+      "fit": [],
+      "fit_up": [
+        {
+          "round": 1,
+          "ratio_before": 0.699,
+          "old": "Let's hope that this cooperation will be smooth, bringing us all the desired result that we wished for, so that on our path, no obstacles arise.",
+          "target_words": 37,
+          "min_words": 32,
+          "source_seconds": 11.22,
+          "tts_seconds_before": 7.839,
+          "result": "rewrite_rejected",
+          "reason": "added information: ensuring a seamless journey and fulfillment of our goals"
+        }
+      ],
+      "gap_qa": {
+        "found": [],
+        "retries": []
+      },
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.325,
+        0.628,
+        0.412,
+        0.48,
+        0.811
+      ],
+      "parts": [
+        "Let's hope",
+        "that this cooperation will be smooth, bringing us all the desired",
+        "result that we wished for,",
+        "so that on our path,",
+        "no obstacles arise."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u04_p0.wav",
+          "seconds": 0.604,
+          "text": "Let's hope",
+          "clip_span": [
+            0.05,
+            0.654
+          ],
+          "speech_span": [
+            0.0,
+            0.604
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1647,
+              "temperature": 0.8,
+              "seconds": 8.48,
+              "score": 0.035,
+              "bad": false,
+              "reasons": [],
+              "ctc": "let's hope that this corporation will be smooth bringing us all the desired resulv that we wished for so that on our path no obstacourse arise",
+              "whisper": "Let's hope that this cooperation will be smooth, bringing us all the desired results that we wished for, so that on our path no obstacles arise.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.035,
+          "seed_used": 1647,
+          "temperature_used": 0.8,
+          "words": 2,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u04_p1.wav",
+          "seconds": 3.356,
+          "text": "that this cooperation will be smooth, bringing us all the desired",
+          "clip_span": [
+            0.654,
+            4.01
+          ],
+          "speech_span": [
+            0.0,
+            3.356
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1647,
+              "temperature": 0.8,
+              "seconds": 8.48,
+              "score": 0.035,
+              "bad": false,
+              "reasons": [],
+              "ctc": "let's hope that this corporation will be smooth bringing us all the desired resulv that we wished for so that on our path no obstacourse arise",
+              "whisper": "Let's hope that this cooperation will be smooth, bringing us all the desired results that we wished for, so that on our path no obstacles arise.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.035,
+          "seed_used": 1647,
+          "temperature_used": 0.8,
+          "words": 11,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u04_p2.wav",
+          "seconds": 1.375,
+          "text": "result that we wished for,",
+          "clip_span": [
+            4.01,
+            5.385
+          ],
+          "speech_span": [
+            0.0,
+            1.375
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1647,
+              "temperature": 0.8,
+              "seconds": 8.48,
+              "score": 0.035,
+              "bad": false,
+              "reasons": [],
+              "ctc": "let's hope that this corporation will be smooth bringing us all the desired resulv that we wished for so that on our path no obstacourse arise",
+              "whisper": "Let's hope that this cooperation will be smooth, bringing us all the desired results that we wished for, so that on our path no obstacles arise.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.035,
+          "seed_used": 1647,
+          "temperature_used": 0.8,
+          "words": 5,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u04_p3.wav",
+          "seconds": 1.458,
+          "text": "so that on our path,",
+          "clip_span": [
+            5.385,
+            6.843
+          ],
+          "speech_span": [
+            0.0,
+            1.458
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1647,
+              "temperature": 0.8,
+              "seconds": 8.48,
+              "score": 0.035,
+              "bad": false,
+              "reasons": [],
+              "ctc": "let's hope that this corporation will be smooth bringing us all the desired resulv that we wished for so that on our path no obstacourse arise",
+              "whisper": "Let's hope that this cooperation will be smooth, bringing us all the desired results that we wished for, so that on our path no obstacles arise.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.035,
+          "seed_used": 1647,
+          "temperature_used": 0.8,
+          "words": 5,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u04_p4.wav",
+          "seconds": 1.216,
+          "text": "no obstacles arise.",
+          "clip_span": [
+            6.843,
+            8.059
+          ],
+          "speech_span": [
+            0.0,
+            1.216
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1647,
+              "temperature": 0.8,
+              "seconds": 8.48,
+              "score": 0.035,
+              "bad": false,
+              "reasons": [],
+              "ctc": "let's hope that this corporation will be smooth bringing us all the desired resulv that we wished for so that on our path no obstacourse arise",
+              "whisper": "Let's hope that this cooperation will be smooth, bringing us all the desired results that we wished for, so that on our path no obstacles arise.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.035,
+          "seed_used": 1647,
+          "temperature_used": 0.8,
+          "words": 3,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u04_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 5,
+        "seconds": 8.48,
+        "speech_seconds": 7.839,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 11.22,
+        "ratio_tts_to_source_speech": 0.699,
+        "word_spans": [
+          {
+            "word": "let's",
+            "start": 0.14,
+            "end": 0.341,
+            "score": 0.952
+          },
+          {
+            "word": "hope",
+            "start": 0.421,
+            "end": 0.601,
+            "score": 1.0
+          },
+          {
+            "word": "that",
+            "start": 0.702,
+            "end": 0.802,
+            "score": 0.999
+          },
+          {
+            "word": "this",
+            "start": 0.842,
+            "end": 0.962,
+            "score": 0.994
+          },
+          {
+            "word": "cooperation",
+            "start": 1.002,
+            "end": 1.463,
+            "score": 0.801
+          },
+          {
+            "word": "will",
+            "start": 1.504,
+            "end": 1.664,
+            "score": 0.996
+          },
+          {
+            "word": "be",
+            "start": 1.704,
+            "end": 1.764,
+            "score": 1.0
+          },
+          {
+            "word": "smooth",
+            "start": 1.844,
+            "end": 2.205,
+            "score": 0.946
+          },
+          {
+            "word": "bringing",
+            "start": 2.706,
+            "end": 2.967,
+            "score": 0.942
+          },
+          {
+            "word": "us",
+            "start": 3.047,
+            "end": 3.107,
+            "score": 0.977
+          },
+          {
+            "word": "all",
+            "start": 3.288,
+            "end": 3.388,
+            "score": 1.0
+          },
+          {
+            "word": "the",
+            "start": 3.448,
+            "end": 3.528,
+            "score": 0.995
+          },
+          {
+            "word": "desired",
+            "start": 3.588,
+            "end": 4.009,
+            "score": 0.999
+          },
+          {
+            "word": "result",
+            "start": 4.07,
+            "end": 4.39,
+            "score": 0.877
+          },
+          {
+            "word": "that",
+            "start": 4.491,
+            "end": 4.591,
+            "score": 0.998
+          },
+          {
+            "word": "we",
+            "start": 4.651,
+            "end": 4.731,
+            "score": 0.925
+          },
+          {
+            "word": "wished",
+            "start": 4.831,
+            "end": 5.052,
+            "score": 0.982
+          },
+          {
+            "word": "for",
+            "start": 5.112,
+            "end": 5.272,
+            "score": 0.968
+          },
+          {
+            "word": "so",
+            "start": 5.713,
+            "end": 5.794,
+            "score": 1.0
+          },
+          {
+            "word": "that",
+            "start": 5.854,
+            "end": 5.974,
+            "score": 0.998
+          },
+          {
+            "word": "on",
+            "start": 6.074,
+            "end": 6.114,
+            "score": 0.999
+          },
+          {
+            "word": "our",
+            "start": 6.215,
+            "end": 6.355,
+            "score": 0.962
+          },
+          {
+            "word": "path",
+            "start": 6.475,
+            "end": 6.716,
+            "score": 0.997
+          },
+          {
+            "word": "no",
+            "start": 6.936,
+            "end": 7.037,
+            "score": 0.996
+          },
+          {
+            "word": "obstacles",
+            "start": 7.137,
+            "end": 7.618,
+            "score": 0.718
+          },
+          {
+            "word": "arise",
+            "start": 7.698,
+            "end": 7.979,
+            "score": 0.985
+          }
+        ]
+      },
+      "slot": {
+        "start": 28.58,
+        "end": 43.9,
+        "seconds": 15.32
+      },
+      "alignment": {
+        "tts_seconds": 8.48,
+        "ratio_tts_to_slot": 0.5535,
+        "mode": "burst",
+        "atempo": 1.0,
+        "bursts": 5,
+        "bursts_without_words": 0,
+        "placements": [
+          {
+            "burst": [
+              28.58,
+              28.9
+            ],
+            "window": [
+              28.58,
+              30.44
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 0.604,
+            "ratio": 0.325,
+            "atempo": 1.0,
+            "placed": [
+              28.58,
+              29.184
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 28.18,
+            "text": "Let's hope",
+            "source_words": "что"
+          },
+          {
+            "burst": [
+              30.5,
+              35.5
+            ],
+            "window": [
+              30.5,
+              35.84
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 3.356,
+            "ratio": 0.628,
+            "atempo": 0.9,
+            "placed": [
+              30.5,
+              34.219
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 28.18,
+            "text": "that this cooperation will be smooth, bringing us all the desired",
+            "source_words": "хочется сказать пусть это сотрудничество будет легким принесет нам всем тот"
+          },
+          {
+            "burst": [
+              35.9,
+              38.5
+            ],
+            "window": [
+              35.9,
+              39.24
+            ],
+            "phrases": [
+              2
+            ],
+            "group_s": 1.375,
+            "ratio": 0.412,
+            "atempo": 0.9,
+            "placed": [
+              35.9,
+              37.418
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 28.18,
+            "text": "result that we wished for,",
+            "source_words": "желаемый результат который мы загадали чтобы"
+          },
+          {
+            "burst": [
+              39.3,
+              41.1
+            ],
+            "window": [
+              39.3,
+              42.34
+            ],
+            "phrases": [
+              3
+            ],
+            "group_s": 1.458,
+            "ratio": 0.48,
+            "atempo": 0.9,
+            "placed": [
+              39.3,
+              40.907
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 28.18,
+            "text": "so that on our path,",
+            "source_words": "на пути у нас никаких"
+          },
+          {
+            "burst": [
+              42.4,
+              43.9
+            ],
+            "window": [
+              42.4,
+              43.9
+            ],
+            "phrases": [
+              4
+            ],
+            "group_s": 1.216,
+            "ratio": 0.811,
+            "atempo": 0.9,
+            "placed": [
+              42.4,
+              43.74
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 28.18,
+            "text": "no obstacles arise.",
+            "source_words": "преград не возникало"
+          }
+        ],
+        "aligned_seconds": 15.72,
+        "file": "/workspace/dub/artifacts/baseline/03/work/work_03/aligned_u04.wav",
+        "track_start": 28.18
+      }
+    },
+    {
+      "asr_segment": 5,
+      "start": 43.92,
+      "end": 55.54,
+      "text": "Надеюсь все будет хорошо ибо взимные действия с вами и в целом с тем продуктом который мы сегодня собираем и делаем.",
+      "words": 21,
+      "sentence": "Надеюсь все будет хорошо ибо взимные действия с вами и в целом с тем продуктом который мы сегодня собираем и делаем.",
+      "source": "sentence",
+      "id": 5,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 8.227,
+      "translation": "I hope everything will be well, for the actions we are taking with you and in general with the product we are assembling and making today.",
+      "parts_original": [
+        "I hope everything will be well, for the actions we are taking with you and in general with the product we are assembling and making today."
+      ],
+      "fit": [],
+      "fit_up": [],
+      "gap_qa": {
+        "found": [],
+        "retries": []
+      },
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.163,
+        0.92,
+        0.414,
+        0.89
+      ],
+      "parts": [
+        "I hope",
+        "everything will be well,",
+        "for the actions we are taking",
+        "with you and in general with the product we are assembling and making today."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u05_p0.wav",
+          "seconds": 0.379,
+          "text": "I hope",
+          "clip_span": [
+            0.0,
+            0.379
+          ],
+          "speech_span": [
+            0.0,
+            0.379
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1747,
+              "temperature": 0.8,
+              "seconds": 7.44,
+              "score": 0.0,
+              "bad": false,
+              "reasons": [],
+              "ctc": "i hope everything will be well for the actions we are taking with you and in general with the product we are assembling and making to day",
+              "whisper": "I hope everything will be well for the actions we are taking with you and in general with the product we are assembling and making today.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.0,
+          "seed_used": 1747,
+          "temperature_used": 0.8,
+          "words": 2,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u05_p1.wav",
+          "seconds": 1.692,
+          "text": "everything will be well,",
+          "clip_span": [
+            0.379,
+            2.071
+          ],
+          "speech_span": [
+            0.0,
+            1.692
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1747,
+              "temperature": 0.8,
+              "seconds": 7.44,
+              "score": 0.0,
+              "bad": false,
+              "reasons": [],
+              "ctc": "i hope everything will be well for the actions we are taking with you and in general with the product we are assembling and making to day",
+              "whisper": "I hope everything will be well for the actions we are taking with you and in general with the product we are assembling and making today.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.0,
+          "seed_used": 1747,
+          "temperature_used": 0.8,
+          "words": 4,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u05_p2.wav",
+          "seconds": 1.3,
+          "text": "for the actions we are taking",
+          "clip_span": [
+            2.071,
+            3.371
+          ],
+          "speech_span": [
+            0.0,
+            1.3
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1747,
+              "temperature": 0.8,
+              "seconds": 7.44,
+              "score": 0.0,
+              "bad": false,
+              "reasons": [],
+              "ctc": "i hope everything will be well for the actions we are taking with you and in general with the product we are assembling and making to day",
+              "whisper": "I hope everything will be well for the actions we are taking with you and in general with the product we are assembling and making today.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.0,
+          "seed_used": 1747,
+          "temperature_used": 0.8,
+          "words": 6,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u05_p3.wav",
+          "seconds": 3.668,
+          "text": "with you and in general with the product we are assembling and making today.",
+          "clip_span": [
+            3.371,
+            7.039
+          ],
+          "speech_span": [
+            0.0,
+            3.668
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1747,
+              "temperature": 0.8,
+              "seconds": 7.44,
+              "score": 0.0,
+              "bad": false,
+              "reasons": [],
+              "ctc": "i hope everything will be well for the actions we are taking with you and in general with the product we are assembling and making to day",
+              "whisper": "I hope everything will be well for the actions we are taking with you and in general with the product we are assembling and making today.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.0,
+          "seed_used": 1747,
+          "temperature_used": 0.8,
+          "words": 14,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u05_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 4,
+        "seconds": 7.44,
+        "speech_seconds": 6.899,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 8.4,
+        "ratio_tts_to_source_speech": 0.821,
+        "word_spans": [
+          {
+            "word": "i",
+            "start": 0.06,
+            "end": 0.1,
+            "score": 0.999
+          },
+          {
+            "word": "hope",
+            "start": 0.18,
+            "end": 0.361,
+            "score": 0.938
+          },
+          {
+            "word": "everything",
+            "start": 0.521,
+            "end": 0.922,
+            "score": 0.999
+          },
+          {
+            "word": "will",
+            "start": 1.023,
+            "end": 1.183,
+            "score": 1.0
+          },
+          {
+            "word": "be",
+            "start": 1.243,
+            "end": 1.324,
+            "score": 1.0
+          },
+          {
+            "word": "well",
+            "start": 1.424,
+            "end": 1.664,
+            "score": 0.992
+          },
+          {
+            "word": "for",
+            "start": 2.126,
+            "end": 2.226,
+            "score": 1.0
+          },
+          {
+            "word": "the",
+            "start": 2.286,
+            "end": 2.366,
+            "score": 1.0
+          },
+          {
+            "word": "actions",
+            "start": 2.447,
+            "end": 2.727,
+            "score": 1.0
+          },
+          {
+            "word": "we",
+            "start": 2.767,
+            "end": 2.848,
+            "score": 0.892
+          },
+          {
+            "word": "are",
+            "start": 2.908,
+            "end": 2.988,
+            "score": 1.0
+          },
+          {
+            "word": "taking",
+            "start": 3.028,
+            "end": 3.309,
+            "score": 0.992
+          },
+          {
+            "word": "with",
+            "start": 3.389,
+            "end": 3.509,
+            "score": 1.0
+          },
+          {
+            "word": "you",
+            "start": 3.57,
+            "end": 3.69,
+            "score": 1.0
+          },
+          {
+            "word": "and",
+            "start": 3.87,
+            "end": 3.951,
+            "score": 0.938
+          },
+          {
+            "word": "in",
+            "start": 4.031,
+            "end": 4.071,
+            "score": 1.0
+          },
+          {
+            "word": "general",
+            "start": 4.151,
+            "end": 4.492,
+            "score": 0.966
+          },
+          {
+            "word": "with",
+            "start": 4.612,
+            "end": 4.733,
+            "score": 1.0
+          },
+          {
+            "word": "the",
+            "start": 4.793,
+            "end": 4.853,
+            "score": 0.999
+          },
+          {
+            "word": "product",
+            "start": 4.913,
+            "end": 5.234,
+            "score": 0.998
+          },
+          {
+            "word": "we",
+            "start": 5.274,
+            "end": 5.334,
+            "score": 1.0
+          },
+          {
+            "word": "are",
+            "start": 5.395,
+            "end": 5.495,
+            "score": 0.993
+          },
+          {
+            "word": "assembling",
+            "start": 5.535,
+            "end": 5.996,
+            "score": 0.977
+          },
+          {
+            "word": "and",
+            "start": 6.096,
+            "end": 6.177,
+            "score": 0.998
+          },
+          {
+            "word": "making",
+            "start": 6.237,
+            "end": 6.538,
+            "score": 0.999
+          },
+          {
+            "word": "today",
+            "start": 6.598,
+            "end": 6.959,
+            "score": 0.875
+          }
+        ]
+      },
+      "slot": {
+        "start": 43.92,
+        "end": 55.52,
+        "seconds": 11.6
+      },
+      "alignment": {
+        "tts_seconds": 7.44,
+        "ratio_tts_to_slot": 0.6414,
+        "mode": "burst",
+        "atempo": 1.0,
+        "bursts": 4,
+        "bursts_without_words": 0,
+        "placements": [
+          {
+            "burst": [
+              43.92,
+              44.3
+            ],
+            "window": [
+              43.92,
+              46.24
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 0.379,
+            "ratio": 0.163,
+            "atempo": 0.997,
+            "placed": [
+              43.92,
+              44.296
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 43.52,
+            "text": "I hope",
+            "source_words": "надеюсь"
+          },
+          {
+            "burst": [
+              46.3,
+              47.6
+            ],
+            "window": [
+              46.3,
+              48.14
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 1.692,
+            "ratio": 0.92,
+            "atempo": 1.0,
+            "placed": [
+              46.3,
+              47.992
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 43.52,
+            "text": "everything will be well,",
+            "source_words": "все будет хорошо ибо"
+          },
+          {
+            "burst": [
+              48.2,
+              50.8
+            ],
+            "window": [
+              48.2,
+              51.34
+            ],
+            "phrases": [
+              2
+            ],
+            "group_s": 1.3,
+            "ratio": 0.414,
+            "atempo": 0.9,
+            "placed": [
+              48.2,
+              49.635
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 43.52,
+            "text": "for the actions we are taking",
+            "source_words": "взимные действия с вами и в целом с"
+          },
+          {
+            "burst": [
+              51.4,
+              55.52
+            ],
+            "window": [
+              51.4,
+              55.52
+            ],
+            "phrases": [
+              3
+            ],
+            "group_s": 3.668,
+            "ratio": 0.89,
+            "atempo": 0.9,
+            "placed": [
+              51.4,
+              55.465
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 43.52,
+            "text": "with you and in general with the product we are assembling and making today.",
+            "source_words": "тем продуктом который мы сегодня собираем и делаем"
+          }
+        ],
+        "aligned_seconds": 12.0,
+        "file": "/workspace/dub/artifacts/baseline/03/work/work_03/aligned_u05.wav",
+        "track_start": 43.52
+      }
+    },
+    {
+      "asr_segment": 6,
+      "start": 55.54,
+      "end": 68.14,
+      "text": "Дальше отправлю еще несколько видео запишу различных форматах в очках без очков посмотрим как будет работать наша система.",
+      "words": 18,
+      "sentence": "Дальше отправлю еще несколько видео запишу различных форматах в очках без очков посмотрим как будет работать наша система.",
+      "source": "sentence",
+      "id": 6,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 9.023,
+      "translation": "Next, I will send a few more videos recorded in different formats, both with and without glasses, to see how our system will work.",
+      "parts_original": [
+        "Next, I will send a few more videos recorded in different formats, both with and without glasses, to see how our system will work."
+      ],
+      "fit": [],
+      "fit_up": [
+        {
+          "round": 1,
+          "ratio_before": 0.691,
+          "old": "Next, I will send a few more videos recorded in different formats, both with and without glasses, to see how our system will work.",
+          "target_words": 35,
+          "min_words": 30,
+          "source_seconds": 9.18,
+          "tts_seconds_before": 6.339,
+          "result": "rewrite_rejected",
+          "reason": "identical"
+        }
+      ],
+      "gap_qa": {
+        "found": [],
+        "retries": []
+      },
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.091,
+        0.693
+      ],
+      "parts": [
+        "Next,",
+        "I will send a few more videos recorded in different formats, both with and without glasses, to see how our system will work."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u06_p0.wav",
+          "seconds": 0.329,
+          "text": "Next,",
+          "clip_span": [
+            0.05,
+            0.379
+          ],
+          "speech_span": [
+            0.0,
+            0.329
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1847,
+              "temperature": 0.8,
+              "seconds": 6.76,
+              "score": 0.01,
+              "bad": false,
+              "reasons": [],
+              "ctc": "next i will send a few more vitos recorded in different formats both with and without glasses to see how our system will work",
+              "whisper": "Next I will send a few more videos recorded in different formats both with and without glasses to see how our system will work.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.01,
+          "seed_used": 1847,
+          "temperature_used": 0.8,
+          "words": 1,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u06_p1.wav",
+          "seconds": 6.18,
+          "text": "I will send a few more videos recorded in different formats, both with and without glasses, to see how our system will work.",
+          "clip_span": [
+            0.379,
+            6.559
+          ],
+          "speech_span": [
+            0.0,
+            6.18
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1847,
+              "temperature": 0.8,
+              "seconds": 6.76,
+              "score": 0.01,
+              "bad": false,
+              "reasons": [],
+              "ctc": "next i will send a few more vitos recorded in different formats both with and without glasses to see how our system will work",
+              "whisper": "Next I will send a few more videos recorded in different formats both with and without glasses to see how our system will work.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.01,
+          "seed_used": 1847,
+          "temperature_used": 0.8,
+          "words": 23,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u06_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 2,
+        "seconds": 6.76,
+        "speech_seconds": 6.339,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 9.18,
+        "ratio_tts_to_source_speech": 0.691,
+        "word_spans": [
+          {
+            "word": "next",
+            "start": 0.14,
+            "end": 0.341,
+            "score": 0.983
+          },
+          {
+            "word": "i",
+            "start": 0.481,
+            "end": 0.501,
+            "score": 1.0
+          },
+          {
+            "word": "will",
+            "start": 0.562,
+            "end": 0.702,
+            "score": 0.997
+          },
+          {
+            "word": "send",
+            "start": 0.742,
+            "end": 0.883,
+            "score": 1.0
+          },
+          {
+            "word": "a",
+            "start": 0.963,
+            "end": 0.983,
+            "score": 0.999
+          },
+          {
+            "word": "few",
+            "start": 1.023,
+            "end": 1.143,
+            "score": 1.0
+          },
+          {
+            "word": "more",
+            "start": 1.204,
+            "end": 1.344,
+            "score": 0.926
+          },
+          {
+            "word": "videos",
+            "start": 1.384,
+            "end": 1.685,
+            "score": 0.659
+          },
+          {
+            "word": "recorded",
+            "start": 1.725,
+            "end": 2.186,
+            "score": 0.993
+          },
+          {
+            "word": "in",
+            "start": 2.367,
+            "end": 2.407,
+            "score": 1.0
+          },
+          {
+            "word": "different",
+            "start": 2.467,
+            "end": 2.748,
+            "score": 0.975
+          },
+          {
+            "word": "formats",
+            "start": 2.808,
+            "end": 3.27,
+            "score": 0.991
+          },
+          {
+            "word": "both",
+            "start": 3.39,
+            "end": 3.551,
+            "score": 1.0
+          },
+          {
+            "word": "with",
+            "start": 3.611,
+            "end": 3.771,
+            "score": 0.999
+          },
+          {
+            "word": "and",
+            "start": 3.871,
+            "end": 3.932,
+            "score": 1.0
+          },
+          {
+            "word": "without",
+            "start": 3.992,
+            "end": 4.253,
+            "score": 0.998
+          },
+          {
+            "word": "glasses",
+            "start": 4.333,
+            "end": 4.734,
+            "score": 0.978
+          },
+          {
+            "word": "to",
+            "start": 5.155,
+            "end": 5.235,
+            "score": 0.948
+          },
+          {
+            "word": "see",
+            "start": 5.296,
+            "end": 5.416,
+            "score": 1.0
+          },
+          {
+            "word": "how",
+            "start": 5.476,
+            "end": 5.576,
+            "score": 0.999
+          },
+          {
+            "word": "our",
+            "start": 5.637,
+            "end": 5.717,
+            "score": 0.987
+          },
+          {
+            "word": "system",
+            "start": 5.777,
+            "end": 6.078,
+            "score": 0.993
+          },
+          {
+            "word": "will",
+            "start": 6.138,
+            "end": 6.299,
+            "score": 0.998
+          },
+          {
+            "word": "work",
+            "start": 6.319,
+            "end": 6.479,
+            "score": 0.997
+          }
+        ]
+      },
+      "slot": {
+        "start": 55.54,
+        "end": 68.12,
+        "seconds": 12.58
+      },
+      "alignment": {
+        "tts_seconds": 6.76,
+        "ratio_tts_to_slot": 0.5374,
+        "mode": "burst",
+        "atempo": 1.0,
+        "bursts": 2,
+        "bursts_without_words": 0,
+        "placements": [
+          {
+            "burst": [
+              55.54,
+              55.8
+            ],
+            "window": [
+              55.54,
+              59.14
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 0.329,
+            "ratio": 0.091,
+            "atempo": 1.0,
+            "placed": [
+              55.54,
+              55.869
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 55.14,
+            "text": "Next,",
+            "source_words": "дальше"
+          },
+          {
+            "burst": [
+              59.2,
+              68.12
+            ],
+            "window": [
+              59.2,
+              68.12
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 6.18,
+            "ratio": 0.693,
+            "atempo": 0.9,
+            "placed": [
+              59.2,
+              66.054
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 55.14,
+            "text": "I will send a few more videos recorded in different formats, both with and without glasses, to see how our system will work.",
+            "source_words": "отправлю еще несколько видео запишу различных форматах в очках без очков посмотрим как будет работать наша система"
+          }
+        ],
+        "aligned_seconds": 12.98,
+        "file": "/workspace/dub/artifacts/baseline/03/work/work_03/aligned_u06.wav",
+        "track_start": 55.14
+      }
+    },
+    {
+      "asr_segment": 7,
+      "start": 68.14,
+      "end": 71.14,
+      "text": "Ну и в принципе все.",
+      "words": 5,
+      "sentence": "Ну и в принципе все.",
+      "source": "sentence",
+      "id": 7,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 1.295,
+      "translation": "Well, and basically that's it.",
+      "parts_original": [
+        "Well, and basically that's it."
+      ],
+      "fit": [],
+      "fit_up": [],
+      "gap_qa": {
+        "found": [],
+        "retries": []
+      },
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.168,
+        1.15
+      ],
+      "parts": [
+        "Well,",
+        "and basically that's it."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u07_p0.wav",
+          "seconds": 0.32,
+          "text": "Well,",
+          "clip_span": [
+            0.0,
+            0.32
+          ],
+          "speech_span": [
+            0.0,
+            0.32
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1947,
+              "temperature": 0.8,
+              "seconds": 2.16,
+              "score": 0.188,
+              "bad": true,
+              "reasons": [
+                "interjection oh"
+              ],
+              "ctc": "o an basically that's it",
+              "whisper": "Oh, and basically that's it",
+              "lost_words": [
+                "Well,"
+              ]
+            },
+            {
+              "attempt": 2,
+              "seed": 9866,
+              "temperature": 0.8,
+              "seconds": 1.88,
+              "score": 0.021,
+              "bad": false,
+              "reasons": [],
+              "ctc": "well an basically that's it",
+              "whisper": "well and basically that's it",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.021,
+          "seed_used": 9866,
+          "temperature_used": 0.8,
+          "words": 1,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u07_p1.wav",
+          "seconds": 1.236,
+          "text": "and basically that's it.",
+          "clip_span": [
+            0.32,
+            1.556
+          ],
+          "speech_span": [
+            0.0,
+            1.236
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 1947,
+              "temperature": 0.8,
+              "seconds": 2.16,
+              "score": 0.188,
+              "bad": true,
+              "reasons": [
+                "interjection oh"
+              ],
+              "ctc": "o an basically that's it",
+              "whisper": "Oh, and basically that's it",
+              "lost_words": [
+                "Well,"
+              ]
+            },
+            {
+              "attempt": 2,
+              "seed": 9866,
+              "temperature": 0.8,
+              "seconds": 1.88,
+              "score": 0.021,
+              "bad": false,
+              "reasons": [],
+              "ctc": "well an basically that's it",
+              "whisper": "well and basically that's it",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.021,
+          "seed_used": 9866,
+          "temperature_used": 0.8,
+          "words": 4,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u07_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 2,
+        "seconds": 1.88,
+        "speech_seconds": 1.375,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 1.38,
+        "ratio_tts_to_source_speech": 0.996,
+        "word_spans": [
+          {
+            "word": "well",
+            "start": 0.101,
+            "end": 0.243,
+            "score": 0.881
+          },
+          {
+            "word": "and",
+            "start": 0.323,
+            "end": 0.404,
+            "score": 0.424
+          },
+          {
+            "word": "basically",
+            "start": 0.647,
+            "end": 1.051,
+            "score": 0.996
+          },
+          {
+            "word": "that's",
+            "start": 1.092,
+            "end": 1.274,
+            "score": 0.867
+          },
+          {
+            "word": "it",
+            "start": 1.375,
+            "end": 1.476,
+            "score": 0.962
+          }
+        ]
+      },
+      "slot": {
+        "start": 68.14,
+        "end": 71.12,
+        "seconds": 2.98
+      },
+      "alignment": {
+        "tts_seconds": 1.88,
+        "ratio_tts_to_slot": 0.6309,
+        "mode": "burst",
+        "atempo": 1.15,
+        "bursts": 2,
+        "bursts_without_words": 0,
+        "placements": [
+          {
+            "burst": [
+              68.14,
+              68.5
+            ],
+            "window": [
+              68.14,
+              70.04
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 0.32,
+            "ratio": 0.168,
+            "atempo": 0.9,
+            "placed": [
+              68.14,
+              68.484
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 67.74,
+            "text": "Well,",
+            "source_words": "ну"
+          },
+          {
+            "burst": [
+              70.1,
+              71.12
+            ],
+            "window": [
+              70.045,
+              71.12
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 1.236,
+            "ratio": 1.15,
+            "atempo": 1.15,
+            "placed": [
+              70.045,
+              71.12
+            ],
+            "overflow_into_next_burst_s": 0.012,
+            "cut_at_slot_end_s": 0.012,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.055,
+            "track_start": 67.74,
+            "text": "and basically that's it.",
+            "source_words": "и в принципе все"
+          }
+        ],
+        "aligned_seconds": 3.38,
+        "file": "/workspace/dub/artifacts/baseline/03/work/work_03/aligned_u07.wav",
+        "track_start": 67.74
+      }
+    },
+    {
+      "asr_segment": 8,
+      "start": 71.14,
+      "end": 79.08,
+      "text": "Отправлю в наш чат так что давайте ребят всем нам успеха я хочу пожелать пусть.",
+      "words": 15,
+      "sentence": "Отправлю в наш чат так что давайте ребят всем нам успеха я хочу пожелать пусть.",
+      "source": "sentence",
+      "id": 8,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 5.443,
+      "translation": "I'll send it to our chat so let's all wish each other success.",
+      "parts_original": [
+        "I'll send it to our chat so let's all wish each other success."
+      ],
+      "fit": [],
+      "fit_up": [
+        {
+          "round": 1,
+          "ratio_before": 0.472,
+          "old": "I'll send it to our chat so let's all wish each other success.",
+          "target_words": 28,
+          "min_words": 23,
+          "source_seconds": 5.46,
+          "tts_seconds_before": 2.576,
+          "new": "I will send it to our chat so that we can all wish each other success.",
+          "tts_seconds_after": 3.398,
+          "ratio_after": 0.622,
+          "qa_before": 0.01,
+          "qa_after": 0.019,
+          "closer": true,
+          "intelligible": true,
+          "result": "accepted"
+        },
+        {
+          "round": 2,
+          "ratio_before": 0.622,
+          "old": "I will send it to our chat so that we can all wish each other success.",
+          "target_words": 26,
+          "min_words": 22,
+          "source_seconds": 5.46,
+          "tts_seconds_before": 3.398,
+          "new": "I will send it to our chat so that we can all express our wishes for success to each other.",
+          "tts_seconds_after": 4.358,
+          "ratio_after": 0.798,
+          "qa_before": 0.019,
+          "qa_after": 0.007,
+          "closer": true,
+          "intelligible": true,
+          "result": "accepted"
+        },
+        {
+          "round": 3,
+          "ratio_before": 0.798,
+          "old": "I will send it to our chat so that we can all express our wishes for success to each other.",
+          "target_words": 25,
+          "min_words": 21,
+          "source_seconds": 5.46,
+          "tts_seconds_before": 4.358,
+          "result": "rewrite_rejected",
+          "reason": "added information: and I hope for everyone's success"
+        }
+      ],
+      "gap_qa": {
+        "found": [],
+        "retries": []
+      },
+      "translation_fitted": "I will send it to our chat so that we can all express our wishes for success to each other.",
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.501,
+        0.682,
+        0.381
+      ],
+      "parts": [
+        "I will send it to our chat",
+        "so that we can all express our wishes for",
+        "success to each other."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u08_p0.wav",
+          "seconds": 1.303,
+          "text": "I will send it to our chat",
+          "clip_span": [
+            0.0,
+            1.303
+          ],
+          "speech_span": [
+            0.0,
+            1.303
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2102110,
+              "temperature": 0.8,
+              "seconds": 4.84,
+              "score": 0.007,
+              "bad": false,
+              "reasons": [],
+              "ctc": "i will send it to our chet so that we can all express our wishes for success to each other",
+              "whisper": "I will send it to our chat so that we can all express our wishes for success to each other.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.007,
+          "seed_used": 2102110,
+          "temperature_used": 0.8,
+          "words": 7,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u08_p1.wav",
+          "seconds": 2.074,
+          "text": "so that we can all express our wishes for",
+          "clip_span": [
+            1.303,
+            3.377
+          ],
+          "speech_span": [
+            0.0,
+            2.074
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2102110,
+              "temperature": 0.8,
+              "seconds": 4.84,
+              "score": 0.007,
+              "bad": false,
+              "reasons": [],
+              "ctc": "i will send it to our chet so that we can all express our wishes for success to each other",
+              "whisper": "I will send it to our chat so that we can all express our wishes for success to each other.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.007,
+          "seed_used": 2102110,
+          "temperature_used": 0.8,
+          "words": 9,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u08_p2.wav",
+          "seconds": 1.121,
+          "text": "success to each other.",
+          "clip_span": [
+            3.377,
+            4.498
+          ],
+          "speech_span": [
+            0.0,
+            1.121
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2102110,
+              "temperature": 0.8,
+              "seconds": 4.84,
+              "score": 0.007,
+              "bad": false,
+              "reasons": [],
+              "ctc": "i will send it to our chet so that we can all express our wishes for success to each other",
+              "whisper": "I will send it to our chat so that we can all express our wishes for success to each other.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.007,
+          "seed_used": 2102110,
+          "temperature_used": 0.8,
+          "words": 4,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u08_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 3,
+        "seconds": 4.84,
+        "speech_seconds": 4.358,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 5.46,
+        "ratio_tts_to_source_speech": 0.798,
+        "word_spans": [
+          {
+            "word": "i",
+            "start": 0.06,
+            "end": 0.08,
+            "score": 0.997
+          },
+          {
+            "word": "will",
+            "start": 0.161,
+            "end": 0.321,
+            "score": 1.0
+          },
+          {
+            "word": "send",
+            "start": 0.402,
+            "end": 0.562,
+            "score": 0.949
+          },
+          {
+            "word": "it",
+            "start": 0.643,
+            "end": 0.703,
+            "score": 0.992
+          },
+          {
+            "word": "to",
+            "start": 0.743,
+            "end": 0.803,
+            "score": 0.999
+          },
+          {
+            "word": "our",
+            "start": 0.884,
+            "end": 0.964,
+            "score": 0.999
+          },
+          {
+            "word": "chat",
+            "start": 1.044,
+            "end": 1.285,
+            "score": 0.771
+          },
+          {
+            "word": "so",
+            "start": 1.386,
+            "end": 1.446,
+            "score": 1.0
+          },
+          {
+            "word": "that",
+            "start": 1.526,
+            "end": 1.647,
+            "score": 0.938
+          },
+          {
+            "word": "we",
+            "start": 1.707,
+            "end": 1.767,
+            "score": 1.0
+          },
+          {
+            "word": "can",
+            "start": 1.828,
+            "end": 1.948,
+            "score": 0.985
+          },
+          {
+            "word": "all",
+            "start": 2.149,
+            "end": 2.269,
+            "score": 0.995
+          },
+          {
+            "word": "express",
+            "start": 2.35,
+            "end": 2.691,
+            "score": 0.988
+          },
+          {
+            "word": "our",
+            "start": 2.792,
+            "end": 2.852,
+            "score": 1.0
+          },
+          {
+            "word": "wishes",
+            "start": 2.892,
+            "end": 3.153,
+            "score": 0.978
+          },
+          {
+            "word": "for",
+            "start": 3.213,
+            "end": 3.314,
+            "score": 1.0
+          },
+          {
+            "word": "success",
+            "start": 3.394,
+            "end": 3.796,
+            "score": 0.959
+          },
+          {
+            "word": "to",
+            "start": 3.836,
+            "end": 3.916,
+            "score": 1.0
+          },
+          {
+            "word": "each",
+            "start": 3.976,
+            "end": 4.097,
+            "score": 0.996
+          },
+          {
+            "word": "other",
+            "start": 4.197,
+            "end": 4.418,
+            "score": 0.899
+          }
+        ]
+      },
+      "slot": {
+        "start": 71.14,
+        "end": 79.08,
+        "seconds": 7.94
+      },
+      "alignment": {
+        "tts_seconds": 4.84,
+        "ratio_tts_to_slot": 0.6096,
+        "mode": "burst",
+        "atempo": 1.0,
+        "bursts": 3,
+        "bursts_without_words": 1,
+        "placements": [
+          {
+            "burst": [
+              71.14,
+              72.5
+            ],
+            "window": [
+              71.14,
+              73.74
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 1.303,
+            "ratio": 0.501,
+            "atempo": 0.958,
+            "placed": [
+              71.14,
+              72.487
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 70.74,
+            "text": "I will send it to our chat",
+            "source_words": "отправлю в наш чат так"
+          },
+          {
+            "burst": [
+              73.8,
+              76.8
+            ],
+            "window": [
+              73.8,
+              76.84
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 2.074,
+            "ratio": 0.682,
+            "atempo": 0.9,
+            "placed": [
+              73.8,
+              76.088
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 70.74,
+            "text": "so that we can all express our wishes for",
+            "source_words": "что давайте ребят всем нам успеха я"
+          },
+          {
+            "burst": [
+              76.9,
+              78.0
+            ],
+            "window": [
+              76.9,
+              79.84
+            ],
+            "phrases": [
+              2
+            ],
+            "group_s": 1.121,
+            "ratio": 0.381,
+            "atempo": 1.0,
+            "placed": [
+              76.9,
+              78.021
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 70.74,
+            "text": "success to each other.",
+            "source_words": "хочу пожелать пусть"
+          }
+        ],
+        "aligned_seconds": 9.1,
+        "file": "/workspace/dub/artifacts/baseline/03/work/work_03/aligned_u08.wav",
+        "track_start": 70.74
+      }
+    },
+    {
+      "asr_segment": 9,
+      "start": 79.8,
+      "end": 88.98,
+      "text": "Наше взаимодействие будет легким и принесет нам тот результат который мы желаем. Все вперед.",
+      "words": 14,
+      "sentence": "Наше взаимодействие будет легким и принесет нам тот результат который мы желаем. Все вперед.",
+      "source": "sentence+sentence",
+      "id": 9,
+      "speaker": "SPEAKER_00",
+      "speaker_method": "max_overlap",
+      "speaker_overlap_s": 4.645,
+      "merged_from": [
+        {
+          "start": 79.8,
+          "end": 87.06,
+          "text": "Наше взаимодействие будет легким и принесет нам тот результат который мы желаем.",
+          "words": 12
+        },
+        {
+          "start": 87.06,
+          "end": 88.98,
+          "text": "Все вперед.",
+          "words": 2
+        }
+      ],
+      "translation": "Our interaction will be smooth and will bring us the result we desire. Forward we go.",
+      "parts_original": [
+        "Our interaction will be smooth and will bring us the result we desire. Forward we go."
+      ],
+      "fit": [],
+      "fit_up": [],
+      "gap_qa": {
+        "found": [],
+        "retries": []
+      },
+      "split": {
+        "method": "timing+acoustic",
+        "attempts": []
+      },
+      "fit_final_ratios": [
+        0.495,
+        0.666,
+        0.618,
+        0.236
+      ],
+      "parts": [
+        "Our interaction will be smooth",
+        "and will bring us",
+        "the result we desire. Forward",
+        "we go."
+      ],
+      "tts_parts": [
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u09_p0.wav",
+          "seconds": 1.952,
+          "text": "Our interaction will be smooth",
+          "clip_span": [
+            0.0,
+            1.952
+          ],
+          "speech_span": [
+            0.0,
+            1.952
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2147,
+              "temperature": 0.8,
+              "seconds": 5.6,
+              "score": 0.037,
+              "bad": false,
+              "reasons": [],
+              "ctc": "our interraction would be smooth and will bring us the result we desire for werd we go",
+              "whisper": "Our interaction will be smooth and will bring us the result we desire. Forward we go.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.037,
+          "seed_used": 2147,
+          "temperature_used": 0.8,
+          "words": 5,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u09_p1.wav",
+          "seconds": 0.826,
+          "text": "and will bring us",
+          "clip_span": [
+            1.952,
+            2.778
+          ],
+          "speech_span": [
+            0.0,
+            0.826
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2147,
+              "temperature": 0.8,
+              "seconds": 5.6,
+              "score": 0.037,
+              "bad": false,
+              "reasons": [],
+              "ctc": "our interraction would be smooth and will bring us the result we desire for werd we go",
+              "whisper": "Our interaction will be smooth and will bring us the result we desire. Forward we go.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.037,
+          "seed_used": 2147,
+          "temperature_used": 0.8,
+          "words": 4,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u09_p2.wav",
+          "seconds": 2.002,
+          "text": "the result we desire. Forward",
+          "clip_span": [
+            2.778,
+            4.78
+          ],
+          "speech_span": [
+            0.0,
+            2.002
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2147,
+              "temperature": 0.8,
+              "seconds": 5.6,
+              "score": 0.037,
+              "bad": false,
+              "reasons": [],
+              "ctc": "our interraction would be smooth and will bring us the result we desire for werd we go",
+              "whisper": "Our interaction will be smooth and will bring us the result we desire. Forward we go.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.037,
+          "seed_used": 2147,
+          "temperature_used": 0.8,
+          "words": 5,
+          "cut": "ctc_forced_align"
+        },
+        {
+          "file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u09_p3.wav",
+          "seconds": 0.418,
+          "text": "we go.",
+          "clip_span": [
+            4.78,
+            5.198
+          ],
+          "speech_span": [
+            0.0,
+            0.418
+          ],
+          "attempts": [
+            {
+              "attempt": 1,
+              "seed": 2147,
+              "temperature": 0.8,
+              "seconds": 5.6,
+              "score": 0.037,
+              "bad": false,
+              "reasons": [],
+              "ctc": "our interraction would be smooth and will bring us the result we desire for werd we go",
+              "whisper": "Our interaction will be smooth and will bring us the result we desire. Forward we go.",
+              "lost_words": []
+            }
+          ],
+          "qa_bad_final": false,
+          "qa_score": 0.037,
+          "seed_used": 2147,
+          "temperature_used": 0.8,
+          "words": 2,
+          "cut": "ctc_forced_align"
+        }
+      ],
+      "tts_raw_file": "/workspace/dub/artifacts/baseline/03/work/work_03/tts_u09_raw.wav",
+      "tts": {
+        "file": null,
+        "parts": 4,
+        "seconds": 5.6,
+        "speech_seconds": 5.038,
+        "sr": 24000,
+        "reference": "diarized_speech",
+        "dtype": "float16",
+        "mode": "phrase",
+        "cut": "ctc_forced_align",
+        "source_speech_seconds": 5.78,
+        "ratio_tts_to_source_speech": 0.872,
+        "word_spans": [
+          {
+            "word": "our",
+            "start": 0.08,
+            "end": 0.161,
+            "score": 1.0
+          },
+          {
+            "word": "interaction",
+            "start": 0.281,
+            "end": 0.783,
+            "score": 0.973
+          },
+          {
+            "word": "will",
+            "start": 0.863,
+            "end": 1.004,
+            "score": 0.636
+          },
+          {
+            "word": "be",
+            "start": 1.064,
+            "end": 1.124,
+            "score": 1.0
+          },
+          {
+            "word": "smooth",
+            "start": 1.204,
+            "end": 1.525,
+            "score": 0.986
+          },
+          {
+            "word": "and",
+            "start": 2.047,
+            "end": 2.108,
+            "score": 1.0
+          },
+          {
+            "word": "will",
+            "start": 2.168,
+            "end": 2.348,
+            "score": 0.852
+          },
+          {
+            "word": "bring",
+            "start": 2.389,
+            "end": 2.569,
+            "score": 0.998
+          },
+          {
+            "word": "us",
+            "start": 2.67,
+            "end": 2.71,
+            "score": 0.999
+          },
+          {
+            "word": "the",
+            "start": 2.79,
+            "end": 2.87,
+            "score": 0.997
+          },
+          {
+            "word": "result",
+            "start": 2.91,
+            "end": 3.211,
+            "score": 0.981
+          },
+          {
+            "word": "we",
+            "start": 3.272,
+            "end": 3.332,
+            "score": 0.969
+          },
+          {
+            "word": "desire",
+            "start": 3.412,
+            "end": 3.794,
+            "score": 0.998
+          },
+          {
+            "word": "forward",
+            "start": 4.396,
+            "end": 4.757,
+            "score": 0.788
+          },
+          {
+            "word": "we",
+            "start": 4.797,
+            "end": 4.857,
+            "score": 1.0
+          },
+          {
+            "word": "go",
+            "start": 4.918,
+            "end": 5.118,
+            "score": 0.5
+          }
+        ]
+      },
+      "slot": {
+        "start": 79.8,
+        "end": 88.98,
+        "seconds": 9.18
+      },
+      "alignment": {
+        "tts_seconds": 5.6,
+        "ratio_tts_to_slot": 0.61,
+        "mode": "burst",
+        "atempo": 0.953,
+        "bursts": 4,
+        "bursts_without_words": 0,
+        "placements": [
+          {
+            "burst": [
+              79.9,
+              82.2
+            ],
+            "window": [
+              79.9,
+              83.84
+            ],
+            "phrases": [
+              0
+            ],
+            "group_s": 1.952,
+            "ratio": 0.495,
+            "atempo": 0.9,
+            "placed": [
+              79.9,
+              82.057
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 79.4,
+            "text": "Our interaction will be smooth",
+            "source_words": "наше взаимодействие будет легким и"
+          },
+          {
+            "burst": [
+              83.9,
+              84.8
+            ],
+            "window": [
+              83.9,
+              85.14
+            ],
+            "phrases": [
+              1
+            ],
+            "group_s": 0.826,
+            "ratio": 0.666,
+            "atempo": 0.918,
+            "placed": [
+              83.9,
+              84.782
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 79.4,
+            "text": "and will bring us",
+            "source_words": "принесет нам"
+          },
+          {
+            "burst": [
+              85.2,
+              87.3
+            ],
+            "window": [
+              85.2,
+              88.44
+            ],
+            "phrases": [
+              2
+            ],
+            "group_s": 2.002,
+            "ratio": 0.618,
+            "atempo": 0.953,
+            "placed": [
+              85.2,
+              87.29
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 79.4,
+            "text": "the result we desire. Forward",
+            "source_words": "тот результат который мы желаем все"
+          },
+          {
+            "burst": [
+              88.5,
+              88.98
+            ],
+            "window": [
+              88.5,
+              90.273
+            ],
+            "phrases": [
+              3
+            ],
+            "group_s": 0.418,
+            "ratio": 0.236,
+            "atempo": 0.9,
+            "placed": [
+              88.5,
+              88.948
+            ],
+            "overflow_into_next_burst_s": 0.0,
+            "cut_at_slot_end_s": 0.0,
+            "spilled_past_slot_s": 0.0,
+            "lead_s": 0.0,
+            "track_start": 79.4,
+            "text": "we go.",
+            "source_words": "вперед"
+          }
+        ],
+        "aligned_seconds": 10.873,
+        "file": "/workspace/dub/artifacts/baseline/03/work/work_03/aligned_u09.wav",
+        "track_start": 79.4
+      }
+    }
+  ],
+  "background": {
+    "enabled": true,
+    "separation": {
+      "model": "torchaudio HDEMUCS_HIGH_MUSDB_PLUS (bg = drums+bass+other)",
+      "weights": "/workspace/dub/dubai/models/demucs/hdemucs_high_trained.pt",
+      "bg": "/workspace/dub/artifacts/baseline/03/work/work_03/bg_44k.wav",
+      "vocals": "/workspace/dub/artifacts/baseline/03/work/work_03/vocals_44k.wav",
+      "seconds": 90.324,
+      "load_s": 0.398,
+      "separate_s": 0.671,
+      "total_s": 1.245,
+      "source_db": -23.54,
+      "vocals_db": -23.71,
+      "bg_db": -40.41
+    },
+    "mix": {
+      "wav": "/workspace/dub/artifacts/baseline/03/work/work_03/final_mix_44k.wav",
+      "aac": "/workspace/dub/artifacts/baseline/03/work/work_03/final_mix_aac.m4a",
+      "room_fill": {
+        "enabled": true,
+        "applied": false,
+        "skipped": "floor -40.5 dBFS > -42 (music / loud ambience)"
+      },
+      "bg_gain_db": 2.96,
+      "duck_db": -6.0,
+      "src_duck_db": 0.0,
+      "attack_s": 0.08,
+      "release_s": 0.35,
+      "bg_offset_db": 0.0,
+      "dub_voice_db": -19.03,
+      "orig_vocals_db": -21.99,
+      "peak_norm": 0.9691,
+      "bed_db_in_dub_pauses": -36.78,
+      "mix_db_in_dub_pauses": -37.03,
+      "seconds": 90.333,
+      "mix_s": 1.421
+    }
+  },
+  "video_backend": "optimized",
+  "speech_gate": {
+    "enabled": true,
+    "margin_s": 0.24,
+    "merge_gap_s": 1.2,
+    "crossfade_frames": 4,
+    "source_speech_seconds": 60.7,
+    "dubbed_speech_seconds": 51.7,
+    "gate_seconds": 80.92,
+    "gate_fraction": 0.8958,
+    "intervals": [
+      [
+        3.06,
+        44.54
+      ],
+      [
+        46.06,
+        56.24
+      ],
+      [
+        58.96,
+        82.44
+      ],
+      [
+        83.66,
+        89.44
+      ]
+    ]
+  },
+  "lipsync": {
+    "router": "retinaface",
+    "router_params": {
+      "detector": "facexlib retinaface_resnet50 fp16",
+      "weights": "/workspace/dub/dubai/models/facexlib",
+      "face_min_w": 50,
+      "face_min_h": 80,
+      "retina_conf": 0.8,
+      "aspect_range": [
+        0.2,
+        1.5
+      ]
+    },
+    "router_stride": 3,
+    "router_detections": 676,
+    "speech_gate": {
+      "enabled": true,
+      "intervals": [
+        [
+          3.06,
+          44.54
+        ],
+        [
+          46.06,
+          56.24
+        ],
+        [
+          58.96,
+          82.44
+        ],
+        [
+          83.66,
+          89.44
+        ]
+      ],
+      "gated_in_frames": 2025,
+      "gated_out_frames": 235,
+      "gated_in_seconds": 81.0,
+      "gated_out_seconds": 9.4
+    },
+    "execution": "in_memory_segments (detector shared with LatentSync)",
+    "crossfade_frames": 4,
+    "master_fps": 25,
+    "master_frames": 2260,
+    "frame_classes": {
+      "VALID_FACE": 2025,
+      "SMALL_FACE": 0,
+      "NO_FACE": 0,
+      "NO_SPEECH": 235
+    },
+    "skip_reasons": {
+      "outside_speech_gate": 235
+    },
+    "by_action": {
+      "PASS_THROUGH": {
+        "segments": 5,
+        "frames": 235,
+        "seconds": 9.4
+      },
+      "LATENT_SYNC": {
+        "segments": 4,
+        "frames": 2025,
+        "seconds": 81.0
+      }
+    },
+    "latentsync_seconds_of_video": 81.0,
+    "pass_through_seconds_of_video": 9.4,
+    "ls_fraction": 0.896,
+    "latentsync_inference_total_s": 390.22,
+    "verify_seconds": 8.03,
+    "latentsync_calls": 4,
+    "verify_splits": [],
+    "assembly": {
+      "frames_written": 2260,
+      "master_frames": 2260,
+      "padded_with_original": {},
+      "crossfaded_frames": 32
+    },
+    "output_frame_check": {
+      "decoded_frames": 2260,
+      "expected_frames": 2260,
+      "blank_frames": 0,
+      "undecodable_frames": 0,
+      "pass": true
+    },
+    "codeformer": {
+      "mode": "optimized",
+      "config": {
+        "fidelity_weight": 1.0,
+        "batch_size": 8,
+        "use_parse": true,
+        "empty_cache_per_face": false,
+        "autocast": true,
+        "parse_autocast": true,
+        "pinned": true,
+        "workers": 4,
+        "mask_blur": "gpu",
+        "roi_paste": true,
+        "overlap": true,
+        "template": "FFHQ 512 (facelib)",
+        "geometry": "preserved (no read_image upscale)",
+        "landmark_source": "insightface"
+      },
+      "load_s": 0.456,
+      "totals": {
+        "frames_in": 2025,
+        "faces_restored": 2025,
+        "frames_without_landmarks": 0,
+        "fallback_detections": 0,
+        "gray_faces": 0,
+        "seconds": 54.279
+      },
+      "eligible_frames": 2025,
+      "master_frames": 2260,
+      "restored_segments": [
+        1,
+        3,
+        5,
+        7
+      ],
+      "seconds": 54.309
+    },
+    "codeformer_eligible_segments": [
+      1,
+      3,
+      5,
+      7
+    ],
+    "runner": {
+      "window_batch_size": 2,
+      "deepcache": true,
+      "deepcache_interval": 5,
+      "compile_backend": "none",
+      "sdpa_backend": "auto",
+      "steps": 20,
+      "guidance": 1.5,
+      "seed": 1247,
+      "fp16": true,
+      "stage2_512": true,
+      "mouth_only_pasteback": true,
+      "mask_top": 0.52,
+      "mask_feather": 0.08,
+      "mask_smooth_frames": 3,
+      "composite_after_codeformer": true
+    },
+    "runner_calls": [
+      {
+        "frames": 1040,
+        "windows": 65,
+        "groups": 33,
+        "unet_calls": 660,
+        "seconds": 195.22,
+        "stages": {
+          "preprocess_audio_video": 0.086,
+          "affine": 4.734,
+          "vae_and_cond": 50.764,
+          "unet_denoise": 136.03,
+          "restore": 3.224,
+          "write": 0.0,
+          "total": 195.135
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      },
+      {
+        "frames": 257,
+        "windows": 17,
+        "groups": 9,
+        "unet_calls": 180,
+        "seconds": 48.25,
+        "stages": {
+          "preprocess_audio_video": 0.039,
+          "affine": 1.099,
+          "vae_and_cond": 12.554,
+          "unet_denoise": 33.84,
+          "restore": 0.694,
+          "write": 0.0,
+          "total": 48.227
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      },
+      {
+        "frames": 589,
+        "windows": 37,
+        "groups": 19,
+        "unet_calls": 380,
+        "seconds": 117.85,
+        "stages": {
+          "preprocess_audio_video": 0.049,
+          "affine": 2.689,
+          "vae_and_cond": 28.941,
+          "unet_denoise": 77.336,
+          "restore": 8.792,
+          "write": 0.0,
+          "total": 117.809
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      },
+      {
+        "frames": 147,
+        "windows": 10,
+        "groups": 6,
+        "unet_calls": 120,
+        "seconds": 28.9,
+        "stages": {
+          "preprocess_audio_video": 0.05,
+          "affine": 0.993,
+          "vae_and_cond": 7.328,
+          "unet_denoise": 19.563,
+          "restore": 0.96,
+          "write": 0.0,
+          "total": 28.897
+        },
+        "detector": "replayed_verify_pass",
+        "detector_fallback_calls": 0
+      }
+    ],
+    "segments": [
+      {
+        "index": 0,
+        "start_frame": 0,
+        "end_frame": 76,
+        "frames": 76,
+        "start_s": 0.0,
+        "end_s": 3.04,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 1,
+        "start_frame": 76,
+        "end_frame": 1114,
+        "frames": 1038,
+        "start_s": 3.04,
+        "end_s": 44.56,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "verify_depth": 1,
+        "codeformer": {
+          "frames_in": 1038,
+          "faces_restored": 1038,
+          "frames_without_landmarks": 0,
+          "fallback_detections": 0,
+          "gray_faces": 0,
+          "seconds": {
+            "landmarks": 0.0,
+            "align": 0.229,
+            "net": 18.888,
+            "parse": 8.717,
+            "paste": 4.31,
+            "gpu_wait": 23.097,
+            "total": 27.638
+          },
+          "locality": {
+            "frames": 1038,
+            "changed_px_sum": 126560088,
+            "soft_mask_px_sum": 108110817,
+            "roi_px_sum": 251963631,
+            "frame_px": 393472,
+            "change_outside_square_max_px": 0,
+            "changed_fraction_of_frame_mean": 0.3099,
+            "roi_fraction_of_frame_mean": 0.6169,
+            "changed_px_per_soft_mask_px": 1.171
+          },
+          "peak_vram_mib": 9312,
+          "faces_per_s": 37.56,
+          "landmarks": "insightface106->5 (verify pass)"
+        },
+        "latentsync": {
+          "seconds": 195.22,
+          "frames_in": 1038,
+          "frames_out": 1040
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 2,
+        "start_frame": 1114,
+        "end_frame": 1151,
+        "frames": 37,
+        "start_s": 44.56,
+        "end_s": 46.04,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 3,
+        "start_frame": 1151,
+        "end_frame": 1406,
+        "frames": 255,
+        "start_s": 46.04,
+        "end_s": 56.24,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "verify_depth": 1,
+        "codeformer": {
+          "frames_in": 255,
+          "faces_restored": 255,
+          "frames_without_landmarks": 0,
+          "fallback_detections": 0,
+          "gray_faces": 0,
+          "seconds": {
+            "landmarks": 0.0,
+            "align": 0.057,
+            "net": 4.635,
+            "parse": 2.149,
+            "paste": 0.978,
+            "gpu_wait": 5.774,
+            "total": 6.809
+          },
+          "locality": {
+            "frames": 255,
+            "changed_px_sum": 29629448,
+            "soft_mask_px_sum": 25039153,
+            "roi_px_sum": 58964871,
+            "frame_px": 393472,
+            "change_outside_square_max_px": 0,
+            "changed_fraction_of_frame_mean": 0.2953,
+            "roi_fraction_of_frame_mean": 0.5877,
+            "changed_px_per_soft_mask_px": 1.183
+          },
+          "peak_vram_mib": 7353,
+          "faces_per_s": 37.45,
+          "landmarks": "insightface106->5 (verify pass)"
+        },
+        "latentsync": {
+          "seconds": 48.25,
+          "frames_in": 255,
+          "frames_out": 257
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 4,
+        "start_frame": 1406,
+        "end_frame": 1474,
+        "frames": 68,
+        "start_s": 56.24,
+        "end_s": 58.96,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 5,
+        "start_frame": 1474,
+        "end_frame": 2061,
+        "frames": 587,
+        "start_s": 58.96,
+        "end_s": 82.44,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "verify_depth": 1,
+        "codeformer": {
+          "frames_in": 587,
+          "faces_restored": 587,
+          "frames_without_landmarks": 0,
+          "fallback_detections": 0,
+          "gray_faces": 0,
+          "seconds": {
+            "landmarks": 0.0,
+            "align": 0.153,
+            "net": 10.843,
+            "parse": 4.987,
+            "paste": 2.72,
+            "gpu_wait": 12.978,
+            "total": 15.853
+          },
+          "locality": {
+            "frames": 587,
+            "changed_px_sum": 66894248,
+            "soft_mask_px_sum": 56018191,
+            "roi_px_sum": 135372157,
+            "frame_px": 393472,
+            "change_outside_square_max_px": 0,
+            "changed_fraction_of_frame_mean": 0.2896,
+            "roi_fraction_of_frame_mean": 0.5861,
+            "changed_px_per_soft_mask_px": 1.194
+          },
+          "peak_vram_mib": 8917,
+          "faces_per_s": 37.03,
+          "landmarks": "insightface106->5 (verify pass)"
+        },
+        "latentsync": {
+          "seconds": 117.85,
+          "frames_in": 587,
+          "frames_out": 589
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 6,
+        "start_frame": 2061,
+        "end_frame": 2091,
+        "frames": 30,
+        "start_s": 82.44,
+        "end_s": 83.64,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      },
+      {
+        "index": 7,
+        "start_frame": 2091,
+        "end_frame": 2236,
+        "frames": 145,
+        "start_s": 83.64,
+        "end_s": 89.44,
+        "classification": "VALID_FACE",
+        "action": "LATENT_SYNC",
+        "verify_depth": 1,
+        "codeformer": {
+          "frames_in": 145,
+          "faces_restored": 145,
+          "frames_without_landmarks": 0,
+          "fallback_detections": 0,
+          "gray_faces": 0,
+          "seconds": {
+            "landmarks": 0.0,
+            "align": 0.041,
+            "net": 2.714,
+            "parse": 1.252,
+            "paste": 0.604,
+            "gpu_wait": 3.333,
+            "total": 3.979
+          },
+          "locality": {
+            "frames": 145,
+            "changed_px_sum": 16075733,
+            "soft_mask_px_sum": 13519151,
+            "roi_px_sum": 31933141,
+            "frame_px": 393472,
+            "change_outside_square_max_px": 0,
+            "changed_fraction_of_frame_mean": 0.2818,
+            "roi_fraction_of_frame_mean": 0.5597,
+            "changed_px_per_soft_mask_px": 1.189
+          },
+          "peak_vram_mib": 7611,
+          "faces_per_s": 36.44,
+          "landmarks": "insightface106->5 (verify pass)"
+        },
+        "latentsync": {
+          "seconds": 28.9,
+          "frames_in": 145,
+          "frames_out": 147
+        },
+        "codeformer_eligible": true,
+        "crossfade": {
+          "in": 4,
+          "out": 4
+        }
+      },
+      {
+        "index": 8,
+        "start_frame": 2236,
+        "end_frame": 2260,
+        "frames": 24,
+        "start_s": 89.44,
+        "end_s": 90.4,
+        "classification": "NO_SPEECH",
+        "action": "PASS_THROUGH",
+        "codeformer_eligible": false
+      }
+    ],
+    "backend": "optimized"
+  },
+  "output_meta": {
+    "duration_s": 90.4,
+    "size_bytes": 36375623,
+    "container": "mov,mp4,m4a,3gp,3g2,mj2",
+    "video": {
+      "codec": "h264",
+      "profile": "High",
+      "width": 464,
+      "height": 848,
+      "r_frame_rate": "25/1",
+      "avg_frame_rate": "25/1",
+      "fps": 25.0,
+      "avg_fps": 25.0,
+      "vfr": false,
+      "pix_fmt": "yuv420p",
+      "nb_frames": "2260",
+      "duration_s": 90.4,
+      "bit_rate": "3012942"
+    },
+    "audio": {
+      "codec": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "channel_layout": "stereo",
+      "bit_rate": "199428",
+      "duration_s": 90.332993
+    },
+    "has_video": true,
+    "has_audio": true
+  },
+  "validation": {
+    "tolerance_s": 0.15,
+    "tolerance_rule": "max(0.15 s, 2 source frames)",
+    "duration_delta_s": 0.0667,
+    "checks": {
+      "output_exists_nonempty": true,
+      "output_has_video_audio": true,
+      "duration_within_tolerance": true,
+      "resolution_preserved": true,
+      "all_units_have_tts_and_translation": true,
+      "frame_count_preserved": true,
+      "output_frames_decodable_no_blank": true,
+      "no_latentsync_oom": true
+    },
+    "pass": true
+  },
+  "stage_seconds": {
+    "audio_extract": 0.104,
+    "vad": 1.677,
+    "asr": 4.628,
+    "translation_load": 3.013,
+    "segmentation": 47.476,
+    "diarization": 8.637,
+    "translation": 37.733,
+    "tts_load": 6.465,
+    "qa_load": 1.259,
+    "tts": 277.179,
+    "alignment": 0.933,
+    "dubbed_track": 0.562,
+    "background_sep": 1.298,
+    "background_mix": 1.935,
+    "speech_gate": 0.537,
+    "face_router_load": 0.233,
+    "latentsync_load": 7.032,
+    "codeformer_load": 0.51,
+    "ls_master_25fps": 2.642,
+    "ls_master_decode": 0.541,
+    "face_classify": 9.262,
+    "latentsync": 401.818,
+    "latentsync_verify": 8.034,
+    "codeformer": 54.309,
+    "final_assembly": 3.302,
+    "total": 880.874
+  },
+  "gpu": {
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 580.178.04",
+    "name": "NVIDIA GeForce RTX 5090",
+    "capability": "sm_120",
+    "total_vram_bytes": 33668726784,
+    "total_vram_gib": 31.36,
+    "free_vram_gib": 23.35,
+    "multi_processor_count": 170,
+    "arch_list": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "at": "2026-10-16T19:02:43Z"
+}

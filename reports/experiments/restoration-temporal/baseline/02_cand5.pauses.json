@@ -1,0 +1,413 @@
+{
+ "duration_s": 110.866667,
+ "original": {
+  "speech_s": 56.9,
+  "segments": 29,
+  "pauses": 28,
+  "pause_total_s": 51.9,
+  "median": 1.15,
+  "p90": 5.0,
+  "max": 8.2,
+  "gt_0_3": 25,
+  "gt_0_5": 23,
+  "gt_1_0": 15,
+  "hist_s": {
+   "0-0.15": 1,
+   "0.15-0.3": 2,
+   "0.3-0.5": 1,
+   "0.5-0.8": 6,
+   "0.8-1.2": 4,
+   "1.2-2.0": 7,
+   "2.0-99": 7
+  }
+ },
+ "dub": {
+  "speech_s": 51.7,
+  "segments": 35,
+  "pauses": 34,
+  "pause_total_s": 56.5,
+  "median": 0.9,
+  "p90": 4.37,
+  "max": 9.2,
+  "gt_0_3": 28,
+  "gt_0_5": 24,
+  "gt_1_0": 14,
+  "hist_s": {
+   "0-0.15": 1,
+   "0.15-0.3": 5,
+   "0.3-0.5": 4,
+   "0.5-0.8": 4,
+   "0.8-1.2": 7,
+   "1.2-2.0": 5,
+   "2.0-99": 8
+  }
+ },
+ "vad_iou": 0.716,
+ "source_without_dub_s": 11.6,
+ "dub_without_source_s": 6.4,
+ "source_without_dub_events": [
+  {
+   "t": 9.0,
+   "seconds": 0.9,
+   "cause": "inner_gap",
+   "unit": 1
+  },
+  {
+   "t": 17.7,
+   "seconds": 0.3,
+   "cause": "inner_gap",
+   "unit": 3
+  },
+  {
+   "t": 20.7,
+   "seconds": 0.3,
+   "cause": "inner_gap",
+   "unit": 3
+  },
+  {
+   "t": 21.7,
+   "seconds": 0.3,
+   "cause": "inner_gap",
+   "unit": 3
+  },
+  {
+   "t": 24.4,
+   "seconds": 0.5,
+   "cause": "short_fill",
+   "unit": 3
+  },
+  {
+   "t": 25.6,
+   "seconds": 0.8,
+   "cause": "short_fill",
+   "unit": 3
+  },
+  {
+   "t": 29.8,
+   "seconds": 0.6,
+   "cause": "short_fill",
+   "unit": 4
+  },
+  {
+   "t": 39.0,
+   "seconds": 0.5,
+   "cause": "inner_gap",
+   "unit": 5
+  },
+  {
+   "t": 44.8,
+   "seconds": 0.9,
+   "cause": "short_fill",
+   "unit": 6
+  },
+  {
+   "t": 51.0,
+   "seconds": 0.6,
+   "cause": "short_fill",
+   "unit": 8
+  },
+  {
+   "t": 68.5,
+   "seconds": 0.4,
+   "cause": "short_fill",
+   "unit": 9
+  },
+  {
+   "t": 69.9,
+   "seconds": 0.5,
+   "cause": "short_fill",
+   "unit": 9
+  },
+  {
+   "t": 81.2,
+   "seconds": 0.9,
+   "cause": "inner_gap",
+   "unit": 12
+  },
+  {
+   "t": 100.7,
+   "seconds": 0.8,
+   "cause": "inner_gap",
+   "unit": 14
+  },
+  {
+   "t": 104.3,
+   "seconds": 0.4,
+   "cause": "inner_gap",
+   "unit": 15
+  },
+  {
+   "t": 109.2,
+   "seconds": 0.6,
+   "cause": "short_fill",
+   "unit": 16
+  }
+ ],
+ "source_without_dub_by_cause_s": {
+  "inner_gap": 4.4,
+  "short_fill": 4.9
+ },
+ "dub_without_source_events": [
+  {
+   "t": 10.4,
+   "seconds": 0.5,
+   "cause": "inside_slot_pause",
+   "unit": 1
+  },
+  {
+   "t": 15.6,
+   "seconds": 0.4,
+   "cause": "inside_slot_pause",
+   "unit": 3
+  },
+  {
+   "t": 26.8,
+   "seconds": 0.4,
+   "cause": "inside_slot_pause",
+   "unit": 4
+  },
+  {
+   "t": 30.8,
+   "seconds": 0.4,
+   "cause": "inside_slot_pause",
+   "unit": 5
+  },
+  {
+   "t": 46.0,
+   "seconds": 0.6,
+   "cause": "inside_slot_pause",
+   "unit": 7
+  },
+  {
+   "t": 48.3,
+   "seconds": 0.6,
+   "cause": "inside_slot_pause",
+   "unit": 8
+  },
+  {
+   "t": 79.5,
+   "seconds": 1.2,
+   "cause": "inside_slot_pause",
+   "unit": 12
+  },
+  {
+   "t": 83.8,
+   "seconds": 0.5,
+   "cause": "inside_slot_pause",
+   "unit": 13
+  },
+  {
+   "t": 86.0,
+   "seconds": 0.4,
+   "cause": "inside_slot_pause",
+   "unit": 14
+  }
+ ],
+ "dub_without_source_by_cause_s": {
+  "inside_slot_pause": 5.0
+ },
+ "intra_sentence_pauses": [
+  {
+   "unit": 0,
+   "t": 3.66,
+   "gap_s": 1.44,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "r premises, there is a bath complex",
+   "after": "that is ready for the first"
+  },
+  {
+   "unit": 0,
+   "t": 6.21,
+   "gap_s": 0.36,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "that is ready for the first",
+   "after": "steam room sessions."
+  },
+  {
+   "unit": 1,
+   "t": 10.89,
+   "gap_s": 0.61,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "n 3-4 days, the floating will start",
+   "after": "right here."
+  },
+  {
+   "unit": 3,
+   "t": 15.92,
+   "gap_s": 0.48,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "Here are the various",
+   "after": "things we have here:"
+  },
+  {
+   "unit": 3,
+   "t": 17.73,
+   "gap_s": 1.27,
+   "source_silent_frac": 0.79,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "things we have here:",
+   "after": "a zone for changing clothes, and so"
+  },
+  {
+   "unit": 3,
+   "t": 21.67,
+   "gap_s": 2.33,
+   "source_silent_frac": 0.86,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "r changing clothes, and some chaise",
+   "after": "longues."
+  },
+  {
+   "unit": 4,
+   "t": 27.32,
+   "gap_s": 1.38,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "In this place,",
+   "after": "we have a Finnish sauna."
+  },
+  {
+   "unit": 5,
+   "t": 31.23,
+   "gap_s": 9.07,
+   "source_silent_frac": 0.94,
+   "kind": "preserved",
+   "weak_boundary": true,
+   "before": "I will",
+   "after": "show the Russian sauna."
+  },
+  {
+   "unit": 6,
+   "t": 42.0,
+   "gap_s": 1.2,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "The Russian",
+   "after": "bath should have a stove burning wo"
+  },
+  {
+   "unit": 7,
+   "t": 46.54,
+   "gap_s": 0.76,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "So it all looks",
+   "after": "like this."
+  },
+  {
+   "unit": 8,
+   "t": 48.85,
+   "gap_s": 0.75,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "What is such a nice",
+   "after": "smell here?"
+  },
+  {
+   "unit": 9,
+   "t": 60.24,
+   "gap_s": 5.26,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "There is also our second floor,",
+   "after": "this also all falls into the infras"
+  },
+  {
+   "unit": 11,
+   "t": 74.69,
+   "gap_s": 2.91,
+   "source_silent_frac": 0.99,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "Well,",
+   "after": "this definitely won't break the ban"
+  },
+  {
+   "unit": 14,
+   "t": 86.33,
+   "gap_s": 1.87,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "The massage",
+   "after": "room has a mini fridge,"
+  },
+  {
+   "unit": 14,
+   "t": 89.49,
+   "gap_s": 4.71,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "room has a mini fridge,",
+   "after": "and here is a spot for drinking tea"
+  },
+  {
+   "unit": 14,
+   "t": 97.32,
+   "gap_s": 1.68,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": " for drinking tea or mineral water.",
+   "after": "There is also a relaxation"
+  },
+  {
+   "unit": 14,
+   "t": 100.65,
+   "gap_s": 0.95,
+   "source_silent_frac": 0.1,
+   "kind": "inserted",
+   "weak_boundary": false,
+   "before": "There is also a relaxation",
+   "after": "zone with loungers."
+  },
+  {
+   "unit": 15,
+   "t": 105.07,
+   "gap_s": 0.93,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "Here's our interesting sauna",
+   "after": "bath."
+  },
+  {
+   "unit": 16,
+   "t": 107.47,
+   "gap_s": 0.83,
+   "source_silent_frac": 0.95,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "Hamam",
+   "after": "and all this space."
+  }
+ ],
+ "intra_inserted": 1,
+ "intra_preserved": 18,
+ "intra_inserted_gt_0_3": 1,
+ "weak_boundary_pauses_gt_0_3": 1,
+ "weak_boundary_pauses_gt_0_8": 1,
+ "weak_boundary_pause_s": 9.07,
+ "atempo": {
+  "max": 1.15,
+  "gt_1_15": 0,
+  "lt_1": 17
+ },
+ "timeline_png": "/workspace/dub/artifacts/baseline/02/pauses/02_cand5_timeline.png"
+}

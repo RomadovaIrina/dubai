@@ -1,0 +1,963 @@
+{
+ "manifest": "/workspace/dub/artifacts/baseline/05/final/05_final.manifest.json",
+ "duration_s": 52.366667,
+ "dub_voice_p90_db": -15.4,
+ "placed_parts": 21,
+ "counts": {
+  "bed_step": 19,
+  "hot_edge": 6
+ },
+ "clicks": {
+  "dub_voice": 0,
+  "final_mix": 0,
+  "mp4": 0
+ },
+ "bed": {
+  "bed_rms_db": -20.6,
+  "dub_voice_p90_db": -15.4,
+  "bed_speech_intervals": 0,
+  "bed_speech_seconds": 0,
+  "bed_file": "/workspace/dub/artifacts/baseline/05/audio_stages/05_cand5_bed.wav"
+ },
+ "events": [
+  {
+   "type": "bed_step",
+   "t": 4.74,
+   "step_db": -8.2,
+   "bed_db": -28.1,
+   "trace": {
+    "original": -22.2,
+    "dub_voice": -48.9,
+    "final_mix": -29.3,
+    "mp4": -29.3
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 5.33,
+   "step_db": -11.0,
+   "bed_db": -41.2,
+   "trace": {
+    "original": -20.9,
+    "dub_voice": -27.8,
+    "final_mix": -24.7,
+    "mp4": -24.7,
+    "raw_tts_t": 2.456,
+    "raw_tts": -27.2,
+    "part": -26.5,
+    "unit": 0,
+    "part_k": 1,
+    "atempo": 0.9
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 5.73,
+   "step_db": -9.3,
+   "bed_db": -45.8,
+   "trace": {
+    "original": -32.0,
+    "dub_voice": -44.5,
+    "final_mix": -39.0,
+    "mp4": -39.0,
+    "raw_tts_t": 2.816,
+    "raw_tts": -44.1,
+    "part": -43.4,
+    "unit": 0,
+    "part_k": 1,
+    "atempo": 0.9
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 8.97,
+   "step_db": 9.6,
+   "bed_db": -39.3,
+   "trace": {
+    "original": -17.2,
+    "dub_voice": -180.0,
+    "final_mix": -34.8,
+    "mp4": -34.8
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 10.84,
+   "step_db": -9.1,
+   "bed_db": -26.7,
+   "trace": {
+    "original": -33.4,
+    "dub_voice": -30.9,
+    "final_mix": -24.0,
+    "mp4": -24.0
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 13.68,
+   "step_db": -11.2,
+   "bed_db": -30.1,
+   "trace": {
+    "original": -19.9,
+    "dub_voice": -23.5,
+    "final_mix": -20.1,
+    "mp4": -20.1,
+    "raw_tts_t": 0.754,
+    "raw_tts": -18.1,
+    "part": -19.6,
+    "unit": 2,
+    "part_k": 1,
+    "atempo": 0.9
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "hot_edge",
+   "edge": "head",
+   "t": 13.7,
+   "rel_db": -5.5,
+   "unit": 2,
+   "k": 1,
+   "text": "of course, adds to our popularity",
+   "trace": {
+    "original": -20.8,
+    "dub_voice": -23.4,
+    "final_mix": -20.0,
+    "mp4": -20.0,
+    "raw_tts_t": 0.772,
+    "raw_tts": -18.2,
+    "part": -20.4,
+    "unit": 2,
+    "part_k": 1,
+    "atempo": 0.9
+   },
+   "first_stage": "cut (raw TTS still voiced at the cut)"
+  },
+  {
+   "type": "bed_step",
+   "t": 14.8,
+   "step_db": 8.2,
+   "bed_db": -36.5,
+   "trace": {
+    "original": -33.2,
+    "dub_voice": -23.7,
+    "final_mix": -20.7,
+    "mp4": -20.7,
+    "raw_tts_t": 1.762,
+    "raw_tts": -23.9,
+    "part": -23.6,
+    "unit": 2,
+    "part_k": 1,
+    "atempo": 0.9
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 15.76,
+   "step_db": 8.6,
+   "bed_db": -27.9,
+   "trace": {
+    "original": -28.3,
+    "dub_voice": -180.0,
+    "final_mix": -24.4,
+    "mp4": -24.4
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 16.93,
+   "step_db": -9.2,
+   "bed_db": -28.6,
+   "trace": {
+    "original": -16.7,
+    "dub_voice": -32.8,
+    "final_mix": -25.6,
+    "mp4": -25.6
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "hot_edge",
+   "edge": "head",
+   "t": 17.0,
+   "rel_db": -8.0,
+   "unit": 2,
+   "k": 2,
+   "text": "and possible",
+   "trace": {
+    "original": -14.2,
+    "dub_voice": -26.4,
+    "final_mix": -22.0,
+    "mp4": -22.0,
+    "raw_tts_t": 2.263,
+    "raw_tts": -21.7,
+    "part": -23.3,
+    "unit": 2,
+    "part_k": 2,
+    "atempo": 0.9
+   },
+   "first_stage": "cut (raw TTS still voiced at the cut)"
+  },
+  {
+   "type": "bed_step",
+   "t": 17.99,
+   "step_db": 8.6,
+   "bed_db": -24.3,
+   "trace": {
+    "original": -16.6,
+    "dub_voice": -180.0,
+    "final_mix": -23.0,
+    "mp4": -23.0
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 20.3,
+   "step_db": 8.8,
+   "bed_db": -26.1,
+   "trace": {
+    "original": -34.7,
+    "dub_voice": -52.8,
+    "final_mix": -24.0,
+    "mp4": -24.1,
+    "raw_tts_t": 3.383,
+    "raw_tts": -51.2,
+    "part": -48.2,
+    "unit": 2,
+    "part_k": 3,
+    "atempo": 0.9
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 20.81,
+   "step_db": -8.6,
+   "bed_db": -20.0,
+   "trace": {
+    "original": -19.6,
+    "dub_voice": -180.0,
+    "final_mix": -20.4,
+    "mp4": -20.4
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 21.16,
+   "step_db": -10.0,
+   "bed_db": -27.1,
+   "trace": {
+    "original": -19.4,
+    "dub_voice": -58.5,
+    "final_mix": -24.9,
+    "mp4": -24.9
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 21.62,
+   "step_db": -11.2,
+   "bed_db": -24.8,
+   "trace": {
+    "original": -21.0,
+    "dub_voice": -22.0,
+    "final_mix": -17.5,
+    "mp4": -17.5,
+    "raw_tts_t": 0.38,
+    "raw_tts": -19.8,
+    "part": -19.0,
+    "unit": 3,
+    "part_k": 0,
+    "atempo": 1.0
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 21.96,
+   "step_db": 8.1,
+   "bed_db": -22.9,
+   "trace": {
+    "original": -16.8,
+    "dub_voice": -180.0,
+    "final_mix": -20.9,
+    "mp4": -20.9
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "hot_edge",
+   "edge": "head",
+   "t": 22.9,
+   "rel_db": -8.0,
+   "unit": 3,
+   "k": 1,
+   "text": "we just want to see",
+   "trace": {
+    "original": -21.1,
+    "dub_voice": -25.2,
+    "final_mix": -20.4,
+    "mp4": -20.4,
+    "raw_tts_t": 0.38,
+    "raw_tts": -20.2,
+    "part": -22.1,
+    "unit": 3,
+    "part_k": 1,
+    "atempo": 0.9
+   },
+   "first_stage": "cut (raw TTS still voiced at the cut)"
+  },
+  {
+   "type": "bed_step",
+   "t": 23.69,
+   "step_db": -8.3,
+   "bed_db": -26.2,
+   "trace": {
+    "original": -25.9,
+    "dub_voice": -28.2,
+    "final_mix": -21.9,
+    "mp4": -21.9
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "hot_edge",
+   "edge": "head",
+   "t": 26.2,
+   "rel_db": -9.8,
+   "unit": 3,
+   "k": 2,
+   "text": "how our application will manage in this ",
+   "trace": {
+    "original": -20.1,
+    "dub_voice": -23.1,
+    "final_mix": -18.7,
+    "mp4": -18.7,
+    "raw_tts_t": 1.057,
+    "raw_tts": -20.6,
+    "part": -20.1,
+    "unit": 3,
+    "part_k": 2,
+    "atempo": 0.9
+   },
+   "first_stage": "cut (raw TTS still voiced at the cut)"
+  },
+  {
+   "type": "bed_step",
+   "t": 28.37,
+   "step_db": 11.6,
+   "bed_db": -29.8,
+   "trace": {
+    "original": -20.4,
+    "dub_voice": -31.5,
+    "final_mix": -25.7,
+    "mp4": -25.7,
+    "raw_tts_t": 3.01,
+    "raw_tts": -31.0,
+    "part": -30.7,
+    "unit": 3,
+    "part_k": 2,
+    "atempo": 0.9
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 32.77,
+   "step_db": 8.5,
+   "bed_db": -25.2,
+   "trace": {
+    "original": -22.0,
+    "dub_voice": -180.0,
+    "final_mix": -21.6,
+    "mp4": -21.6
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "hot_edge",
+   "edge": "head",
+   "t": 32.9,
+   "rel_db": -10.2,
+   "unit": 4,
+   "k": 1,
+   "text": "something.",
+   "trace": {
+    "original": -24.6,
+    "dub_voice": -24.6,
+    "final_mix": -17.7,
+    "mp4": -17.7,
+    "raw_tts_t": 2.132,
+    "raw_tts": -19.9,
+    "part": -21.6,
+    "unit": 4,
+    "part_k": 1,
+    "atempo": 0.9
+   },
+   "first_stage": "cut (raw TTS still voiced at the cut)"
+  },
+  {
+   "type": "hot_edge",
+   "edge": "tail",
+   "t": 33.359,
+   "rel_db": -8.1,
+   "unit": 4,
+   "k": 1,
+   "text": "something.",
+   "trace": {
+    "original": -24.0,
+    "dub_voice": -24.9,
+    "final_mix": -18.6,
+    "mp4": -18.6,
+    "raw_tts_t": 2.545,
+    "raw_tts": -24.2,
+    "part": -22.1,
+    "unit": 4,
+    "part_k": 1,
+    "atempo": 0.9
+   },
+   "first_stage": "cut (raw TTS still voiced at the cut)"
+  },
+  {
+   "type": "bed_step",
+   "t": 45.96,
+   "step_db": -8.3,
+   "bed_db": -27.3,
+   "trace": {
+    "original": -13.4,
+    "dub_voice": -27.5,
+    "final_mix": -22.5,
+    "mp4": -22.5
+   },
+   "first_stage": "final_mix (background bed)"
+  }
+ ],
+ "edges": [
+  {
+   "unit": 0,
+   "k": 0,
+   "t0": 1.8,
+   "t1": 3.984,
+   "head_rel_db": -42.4,
+   "tail_rel_db": -29.9,
+   "tail_profile_db_-100..+100ms": [
+    -22.9,
+    -23.9,
+    -23.8,
+    -26.9,
+    -41.0,
+    -50.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "Let's test another format of video shooting",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 0,
+   "k": 1,
+   "t0": 4.8,
+   "t1": 5.759,
+   "head_rel_db": -29.2,
+   "tail_rel_db": -45.9,
+   "tail_profile_db_-100..+100ms": [
+    -40.7,
+    -36.3,
+    -41.7,
+    -45.7,
+    -56.5,
+    -72.9,
+    -180.0,
+    -180.0,
+    -180.0,
+    -62.0,
+    -43.4
+   ],
+   "text": "to see how it works.",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 1,
+   "k": 0,
+   "t0": 5.84,
+   "t1": 6.607,
+   "head_rel_db": -39.3,
+   "tail_rel_db": -36.1,
+   "tail_profile_db_-100..+100ms": [
+    -39.3,
+    -40.7,
+    -39.9,
+    -39.6,
+    -39.5,
+    -59.8,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "After all,",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 1,
+   "k": 1,
+   "t0": 7.4,
+   "t1": 8.082,
+   "head_rel_db": -19.3,
+   "tail_rel_db": -21.1,
+   "tail_profile_db_-100..+100ms": [
+    -20.3,
+    -34.9,
+    -37.1,
+    -38.6,
+    -24.9,
+    -49.7,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "modern phones",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 1,
+   "k": 2,
+   "t0": 10.9,
+   "t1": 11.862,
+   "head_rel_db": -12.3,
+   "tail_rel_db": -36.1,
+   "tail_profile_db_-100..+100ms": [
+    -48.3,
+    -44.1,
+    -46.0,
+    -49.4,
+    -49.5,
+    -57.2,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "already allow this.",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 2,
+   "k": 0,
+   "t0": 12.0,
+   "t1": 12.772,
+   "head_rel_db": -37.7,
+   "tail_rel_db": -15.0,
+   "tail_profile_db_-100..+100ms": [
+    -21.9,
+    -23.4,
+    -16.5,
+    -15.4,
+    -18.2,
+    -33.9,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "And such a function,",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 2,
+   "k": 1,
+   "t0": 13.7,
+   "t1": 15.346,
+   "head_rel_db": -5.5,
+   "tail_rel_db": -21.6,
+   "tail_profile_db_-100..+100ms": [
+    -21.2,
+    -21.8,
+    -21.5,
+    -20.7,
+    -21.6,
+    -38.3,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "of course, adds to our popularity",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 2,
+   "k": 2,
+   "t0": 17.0,
+   "t1": 17.535,
+   "head_rel_db": -8.0,
+   "tail_rel_db": -22.4,
+   "tail_profile_db_-100..+100ms": [
+    -18.7,
+    -19.6,
+    -19.9,
+    -19.1,
+    -25.6,
+    -53.1,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "and possible",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 2,
+   "k": 3,
+   "t0": 19.6,
+   "t1": 20.297,
+   "head_rel_db": -32.4,
+   "tail_rel_db": -93.5,
+   "tail_profile_db_-100..+100ms": [
+    -44.0,
+    -44.8,
+    -56.4,
+    -81.8,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "opportunities.",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 3,
+   "k": 0,
+   "t0": 21.24,
+   "t1": 21.62,
+   "head_rel_db": -40.8,
+   "tail_rel_db": -21.5,
+   "tail_profile_db_-100..+100ms": [
+    -14.2,
+    -18.9,
+    -19.1,
+    -20.8,
+    -23.0,
+    -38.8,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "Here,",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 3,
+   "k": 1,
+   "t0": 22.9,
+   "t1": 23.642,
+   "head_rel_db": -8.0,
+   "tail_rel_db": -17.6,
+   "tail_profile_db_-100..+100ms": [
+    -28.6,
+    -20.0,
+    -20.0,
+    -20.4,
+    -25.2,
+    -47.1,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "we just want to see",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 3,
+   "k": 2,
+   "t0": 26.2,
+   "t1": 28.5,
+   "head_rel_db": -9.8,
+   "tail_rel_db": -35.5,
+   "tail_profile_db_-100..+100ms": [
+    -61.5,
+    -62.3,
+    -61.7,
+    -58.8,
+    -49.3,
+    -60.8,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "how our application will manage in this format.",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 4,
+   "k": 0,
+   "t0": 30.4,
+   "t1": 32.532,
+   "head_rel_db": -43.7,
+   "tail_rel_db": -21.3,
+   "tail_profile_db_-100..+100ms": [
+    -17.7,
+    -16.6,
+    -16.8,
+    -19.2,
+    -23.1,
+    -50.1,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "I just come here, go, take off and start saying",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 4,
+   "k": 1,
+   "t0": 32.9,
+   "t1": 33.359,
+   "head_rel_db": -10.2,
+   "tail_rel_db": -8.1,
+   "tail_profile_db_-100..+100ms": [
+    -22.8,
+    -20.8,
+    -20.4,
+    -20.9,
+    -23.4,
+    -36.4,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "something.",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 5,
+   "k": 0,
+   "t0": 36.3,
+   "t1": 37.112,
+   "head_rel_db": -38.8,
+   "tail_rel_db": -25.7,
+   "tail_profile_db_-100..+100ms": [
+    -27.2,
+    -16.2,
+    -14.2,
+    -25.6,
+    -30.9,
+    -50.2,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "So let such a video",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 5,
+   "k": 1,
+   "t0": 38.4,
+   "t1": 39.782,
+   "head_rel_db": -18.9,
+   "tail_rel_db": -23.8,
+   "tail_profile_db_-100..+100ms": [
+    -18.1,
+    -23.0,
+    -28.6,
+    -32.7,
+    -33.4,
+    -47.8,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "be made; it certainly won't",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 5,
+   "k": 2,
+   "t0": 40.3,
+   "t1": 41.19,
+   "head_rel_db": -17.8,
+   "tail_rel_db": -48.9,
+   "tail_profile_db_-100..+100ms": [
+    -30.5,
+    -56.5,
+    -76.2,
+    -84.1,
+    -70.2,
+    -72.9,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "be unnecessary.",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 6,
+   "k": 0,
+   "t0": 41.58,
+   "t1": 42.4,
+   "head_rel_db": -45.6,
+   "tail_rel_db": -29.9,
+   "tail_profile_db_-100..+100ms": [
+    -21.4,
+    -18.5,
+    -18.4,
+    -21.1,
+    -35.4,
+    -58.1,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "We will thoroughly",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 6,
+   "k": 1,
+   "t0": 42.8,
+   "t1": 43.661,
+   "head_rel_db": -24.0,
+   "tail_rel_db": -26.8,
+   "tail_profile_db_-100..+100ms": [
+    -15.4,
+    -15.0,
+    -15.1,
+    -28.4,
+    -37.0,
+    -43.5,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "test all variants",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 6,
+   "k": 2,
+   "t0": 46.0,
+   "t1": 46.764,
+   "head_rel_db": -26.3,
+   "tail_rel_db": -28.2,
+   "tail_profile_db_-100..+100ms": [
+    -21.1,
+    -19.7,
+    -28.1,
+    -30.4,
+    -35.6,
+    -53.2,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "that can possibly",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 6,
+   "k": 3,
+   "t0": 47.6,
+   "t1": 48.283,
+   "head_rel_db": -13.6,
+   "tail_rel_db": -17.0,
+   "tail_profile_db_-100..+100ms": [
+    -43.0,
+    -39.3,
+    -39.9,
+    -37.8,
+    -36.1,
+    -40.4,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "be imagined.",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  }
+ ],
+ "sheets": [
+  "/workspace/dub/artifacts/baseline/05/audio_stages/05_cand5_ev_bed_step_0004.74.png",
+  "/workspace/dub/artifacts/baseline/05/audio_stages/05_cand5_ev_bed_step_0005.33.png",
+  "/workspace/dub/artifacts/baseline/05/audio_stages/05_cand5_ev_bed_step_0005.73.png",
+  "/workspace/dub/artifacts/baseline/05/audio_stages/05_cand5_ev_bed_step_0008.97.png",
+  "/workspace/dub/artifacts/baseline/05/audio_stages/05_cand5_ev_bed_step_0010.84.png",
+  "/workspace/dub/artifacts/baseline/05/audio_stages/05_cand5_ev_bed_step_0013.68.png",
+  "/workspace/dub/artifacts/baseline/05/audio_stages/05_cand5_ev_bed_step_0014.80.png",
+  "/workspace/dub/artifacts/baseline/05/audio_stages/05_cand5_ev_bed_step_0015.76.png",
+  "/workspace/dub/artifacts/baseline/05/audio_stages/05_cand5_ev_bed_step_0016.93.png",
+  "/workspace/dub/artifacts/baseline/05/audio_stages/05_cand5_ev_bed_step_0017.99.png"
+ ]
+}
