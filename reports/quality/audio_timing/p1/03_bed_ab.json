@@ -1,0 +1,133 @@
+{
+ "spleeter": {
+  "model": "Spleeter 2stems v1.4.0 (bg = accompaniment)",
+  "separate_s_cpu": 10.6,
+  "mix": {
+   "room_fill": {
+    "enabled": true,
+    "applied": false,
+    "skipped": "floor -40.1 dBFS > -42 (music / loud ambience)"
+   },
+   "bg_gain_db": 3.01,
+   "bed_db_in_dub_pauses": -35.35,
+   "mix_db_in_dub_pauses": -35.7,
+   "peak_norm": 0.9581
+  },
+  "bed_db_risk": -35.43,
+  "bed_db_ambience": -35.32,
+  "continuity_db": -0.11,
+  "residue_speech_prob_risk_mean": 0.003,
+  "residue_speech_s_risk": 0.0,
+  "residue_speech_prob_ambience_mean": 0.003,
+  "residue_speech_s_ambience": 0.0,
+  "risk_s": 11.1,
+  "ambience_s": 27.53,
+  "level_jump_p95_db": 4.51,
+  "mix_db_dub_pauses": -35.7
+ },
+ "umxhq": {
+  "model": "Open-Unmix UMX-HQ (bg = drums + bass + other)",
+  "separate_s_cpu": 14.3,
+  "mix": {
+   "room_fill": {
+    "enabled": true,
+    "applied": false,
+    "skipped": "floor -40.2 dBFS > -42 (music / loud ambience)"
+   },
+   "bg_gain_db": 3.17,
+   "bed_db_in_dub_pauses": -35.65,
+   "mix_db_in_dub_pauses": -35.94,
+   "peak_norm": 0.9649
+  },
+  "bed_db_risk": -37.08,
+  "bed_db_ambience": -35.18,
+  "continuity_db": -1.9,
+  "residue_speech_prob_risk_mean": 0.305,
+  "residue_speech_s_risk": 3.23,
+  "residue_speech_prob_ambience_mean": 0.066,
+  "residue_speech_s_ambience": 1.41,
+  "risk_s": 11.1,
+  "ambience_s": 27.53,
+  "level_jump_p95_db": 3.96,
+  "mix_db_dub_pauses": -35.94
+ },
+ "umxse": {
+  "model": "Open-Unmix UMX-SE (16 kHz, bg = noise)",
+  "separate_s_cpu": 1.3,
+  "mix": {
+   "room_fill": {
+    "enabled": true,
+    "applied": false,
+    "skipped": "floor -40.2 dBFS > -42 (music / loud ambience)"
+   },
+   "bg_gain_db": 2.93,
+   "bed_db_in_dub_pauses": -36.15,
+   "mix_db_in_dub_pauses": -36.47,
+   "peak_norm": 0.9614
+  },
+  "bed_db_risk": -38.69,
+  "bed_db_ambience": -35.43,
+  "continuity_db": -3.26,
+  "residue_speech_prob_risk_mean": 0.021,
+  "residue_speech_s_risk": 0.0,
+  "residue_speech_prob_ambience_mean": 0.004,
+  "residue_speech_s_ambience": 0.0,
+  "risk_s": 11.1,
+  "ambience_s": 27.53,
+  "level_jump_p95_db": 4.07,
+  "mix_db_dub_pauses": -36.47
+ },
+ "roomtone": {
+  "model": "none: source outside source speech (+-0.15 s); under speech the video's own steady non-speech frames, shuffled + crossfaded",
+  "tone_floor_db": -40.1,
+  "separate_s_cpu": 1.4,
+  "mix": {
+   "room_fill": {
+    "enabled": true,
+    "applied": false,
+    "skipped": "floor -40.1 dBFS > -42 (music / loud ambience)"
+   },
+   "bg_gain_db": 2.84,
+   "bed_db_in_dub_pauses": -36.19,
+   "mix_db_in_dub_pauses": -36.43,
+   "peak_norm": 0.9695
+  },
+  "bed_db_risk": -38.02,
+  "bed_db_ambience": -35.63,
+  "continuity_db": -2.39,
+  "residue_speech_prob_risk_mean": 0.003,
+  "residue_speech_s_risk": 0.0,
+  "residue_speech_prob_ambience_mean": 0.004,
+  "residue_speech_s_ambience": 0.0,
+  "risk_s": 11.1,
+  "ambience_s": 27.53,
+  "level_jump_p95_db": 3.73,
+  "mix_db_dub_pauses": -36.43
+ },
+ "hdemucs": {
+  "model": "torchaudio HDEMUCS_HIGH_MUSDB_PLUS (cand5; NO licence: reference only)",
+  "separate_s_cpu": 0.0,
+  "mix": {
+   "room_fill": {
+    "enabled": true,
+    "applied": false,
+    "skipped": "floor -40.5 dBFS > -42 (music / loud ambience)"
+   },
+   "bg_gain_db": 2.96,
+   "bed_db_in_dub_pauses": -36.78,
+   "mix_db_in_dub_pauses": -37.03,
+   "peak_norm": 0.9691
+  },
+  "bed_db_risk": -39.1,
+  "bed_db_ambience": -36.11,
+  "continuity_db": -2.99,
+  "residue_speech_prob_risk_mean": 0.048,
+  "residue_speech_s_risk": 0.22,
+  "residue_speech_prob_ambience_mean": 0.012,
+  "residue_speech_s_ambience": 0.0,
+  "risk_s": 11.1,
+  "ambience_s": 27.53,
+  "level_jump_p95_db": 7.41,
+  "mix_db_dub_pauses": -37.03
+ }
+}

@@ -51,7 +51,9 @@ def candidates(u: dict, k: int, y_raw: np.ndarray, sr: int, norm_fn, func_words,
         t, lv = _quietest(y_raw, sr, a - 0.015, b + 0.015)
         rel = lv - ref
         if rel > (punct_rel_db if punct else quiet_rel_db): continue      # still voiced at the quietest 10 ms (CTC word ends are early): a cut would be heard
-        q = 3 if punct else 2 if nw in CLAUSE_NEXT else 1 if gap >= 0.12 else 0    # 1 = Chatterbox itself paused after a content word
+        # 1 = Chatterbox itself paused after a content word AND a function word follows (a phonological-phrase boundary: "laminate | of",
+        # "work | entails" no, "high-density | MDF" no -- adjective + noun / verb + object stay together)
+        q = 3 if punct else 2 if nw in CLAUSE_NEXT else 1 if (gap >= 0.12 and (nw in func_words or nw in PREPOSITIONS)) else 0
         if q == 0: continue
         out.append({"t_raw": t, "quality": q, "word": w, "next": raw[i + 1] if i + 1 < len(raw) else "", "tts_gap": round(gap, 3), "cut_rel_db": round(rel, 1)})
     return out

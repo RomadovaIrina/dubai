@@ -18,13 +18,16 @@ def main() -> int:
     ap.add_argument("--master", required=True); ap.add_argument("--vid", required=True); ap.add_argument("--out", required=True)
     ap.add_argument("--track", action="append", required=True, help="name=dub.wav[:gaps.json]"); ap.add_argument("--window", action="append", required=True, help="t0-t1 (s)")
     ap.add_argument("--mark-s", type=float, default=0.3); ap.add_argument("--suffix", default="dubvoice-only_nobed_lips-NOT-resynced")
+    ap.add_argument("--label2", default="dub voice only, lips NOT re-synced", help="second label line for the non-orig tracks")
     a = ap.parse_args(); out = pathlib.Path(a.out); out.mkdir(parents=True, exist_ok=True); made = []
     for w in a.window:
         t0, t1 = (float(x) for x in w.split("-")); d = t1 - t0
         for i, tr in enumerate(a.track):
             name, rest = tr.split("=", 1); wav, _, gj = rest.partition(":")
-            vf = [f"drawtext=fontfile={FONT}:text='{a.vid} {name}  {t0:.1f}-{t1:.1f}s  {'ORIGINAL AUDIO' if name == 'orig' else 'dub voice only, lips NOT re-synced'}':x=10:y=h-32:fontsize=20:fontcolor=white:box=1:boxcolor=black@0.6",
-                  f"drawtext=fontfile={FONT}:text='%{{pts\\:hms\\:{t0:.3f}}}':x=w-170:y=10:fontsize=20:fontcolor=white:box=1:boxcolor=black@0.6"]
+            lab2 = "ORIGINAL AUDIO" if name == "orig" else a.label2
+            vf = [f"drawtext=fontfile={FONT}:text='{a.vid} {name}  {t0:.1f}-{t1:.1f}s':x=8:y=h-50:fontsize=16:fontcolor=white:box=1:boxcolor=black@0.6",
+                  f"drawtext=fontfile={FONT}:text='{lab2}':x=8:y=h-26:fontsize=16:fontcolor=yellow:box=1:boxcolor=black@0.6",
+                  f"drawtext=fontfile={FONT}:text='%{{pts\\:hms\\:{t0:.3f}}}':x=w-150:y=18:fontsize=16:fontcolor=white:box=1:boxcolor=black@0.6"]
             if gj:
                 for g in json.loads(pathlib.Path(gj).read_text())["gaps"]:
                     if g["seconds"] > a.mark_s and g["t1"] > t0 and g["t0"] < t1:
@@ -32,7 +35,7 @@ def main() -> int:
             f = out / f"{a.vid}_{int(t0):03d}s_{i}_{name}_{'original-audio_reference' if name == 'orig' else a.suffix}.mp4"
             subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-nostdin", "-ss", f"{t0:.3f}", "-t", f"{d:.3f}", "-i", a.master, "-ss", f"{t0:.3f}", "-t", f"{d:.3f}", "-i", wav,
                             "-map", "0:v:0", "-map", "1:a:0", "-vf", ",".join(vf), "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p",
-                            "-c:a", "aac", "-b:a", "160k", "-ar", "48000", "-shortest", str(f)], check=True)
+                            "-c:a", "aac", "-b:a", "160k", "-ar", "48000", "-shortest", "-threads", "2", str(f)], check=True)
             made.append(f.name)
     print("\n".join(made)); return 0
 
