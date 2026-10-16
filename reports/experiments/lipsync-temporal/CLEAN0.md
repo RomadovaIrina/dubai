@@ -62,3 +62,16 @@ Reading:
 
 Side-by-side clips (ORIGINAL | CAND5 | CLEAN0, full + 2x lower-face zoom, incl. 24-25 s and 35-36 s): `/workspace/dub/artifacts/lipsync-temporal/sbs/`
 (index: `clean0/sbs_index.md`).
+
+## 04 — full E2E runner smoke (`refresh_e2e.sh` with the clean0 flags; audio regenerated, so audio metrics are a new take)
+
+| | cand5 (Phase 0) | clean0 E2E |
+|---|---:|---:|
+| validation | PASS | PASS (router `mediapipe`, CodeFormer OFF, 1349/1349 face frames) |
+| LS segments / frames | 6 / 1074 | 6 / 1074 |
+| wall s (s per video-minute) | 622 (692) | 595 (662) — audio = CPU Qwen dominates |
+| LatentSync s (s/video-min) | 244 (271) | 229 (255) |
+| MediaPipe face-stack pass s (s/video-min) | – | 40 (44): CPU, depends only on the master -> can run in parallel with the audio stage (like `--video-prep parallel`), off the critical path |
+| peak VRAM MiB (nvidia-smi) | 22451 | 21565 |
+
+Output: `/workspace/dub/outbox/clean0-e2e-04/04_clean0_e2e.mp4`.

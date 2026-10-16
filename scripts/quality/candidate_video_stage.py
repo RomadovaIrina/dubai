@@ -147,7 +147,7 @@ def main() -> int:
         import clean_face_stack as cfs
         cfs.guard_nc()
         with rp.timed(times, "face_stack_mediapipe"): prep = cfs.CleanPrep(src, work, a.face_min_w, a.face_min_h, calib=a.mp_anchor_calib == "on")
-        router = prep.router; man["face_stack"] = {**prep.info, "times": prep.times}
+        router = prep.router; man["face_stack"] = {**prep.info, "times": prep.times}; man["frame_map"] = prep.frame_map
     else:
         with rp.timed(times, "face_router_load"): router = faa.make_router("retinaface", a.face_min_w, a.face_min_h, a.retina_conf)
     with rp.timed(times, "latentsync_load"): runner = faa.AccelRunner(a.window_batch_size, not a.no_deepcache, "none", "auto", steps=a.steps, guidance=a.guidance, deepcache_interval=a.deepcache_interval)

@@ -22,6 +22,9 @@ dst = ROOT / "reports/latentsync_clean_demo.mp4"
 w = cv2.VideoWriter(str(dst), cv2.VideoWriter_fourcc(*"mp4v"), 25, (W, H))
 for f in out[:len(frames)]: w.write(cv2.cvtColor(np.asarray(f), cv2.COLOR_RGB2BGR))
 w.release()
-ok = len(out) >= len(frames) and dst.stat().st_size > 0 and float(np.abs(np.asarray(out[len(frames) // 2], np.float32) - cv2.cvtColor(frames[len(frames) // 2], cv2.COLOR_BGR2RGB)).mean()) > 0.1
+mid = len(frames) // 2; x1, y1, x2, y2 = dets[mid][0]                                      # the generated mouth lives inside LatentSync's face box
+change = float(np.abs(np.asarray(out[mid], np.float32)[y1:y2, x1:x2] - cv2.cvtColor(frames[mid], cv2.COLOR_BGR2RGB)[y1:y2, x1:x2]).mean())
+print(f"mean abs change inside the face box (middle frame): {change:.2f}")
+ok = len(out) >= len(frames) and dst.stat().st_size > 0 and change > 0.5 and runner.acc.last_stats.get("detector_fallback_calls", 0) == 0
 print(f"{len(frames)} frames in, {len(out)} out, LatentSync {dt}s, replay fallbacks {runner.acc.last_stats.get('detector_fallback_calls')} -> {dst.name}")
 print("PASS latentsync (clean face stack)" if ok else "FAIL"); sys.exit(0 if ok else 1)

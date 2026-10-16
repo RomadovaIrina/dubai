@@ -122,6 +122,8 @@ def main() -> int:
     ap.add_argument("--tag", required=True); ap.add_argument("--out", required=True)
     ap.add_argument("--mode", choices=["ls", "wrapper", "vae"], default="ls"); ap.add_argument("--audio", choices=["dub", "src"], default="dub")
     ap.add_argument("--stride", type=int, default=None); ap.add_argument("--ref-mode", choices=["same", "fixed"], default="same")
+    ap.add_argument("--overlap", choices=["fuse", "continue"], default="fuse", help="with --stride: fuse = per-step latent fusion (needs DeepCache off for long segments); continue = sequential windows pinned to the previous result")
+    ap.add_argument("--window-len", type=int, default=None, help="LatentSync temporal window (16 trained, <= 24)")
     ap.add_argument("--ref-select", choices=["calm_any", "calm_closed"], default="calm_any"); ap.add_argument("--ref-lm", default=None, help="master landmark npz (lipsync_jitter cache) for the reference choice")
     # cand5 video settings (defaults = the baseline)
     ap.add_argument("--window-batch-size", type=int, default=2); ap.add_argument("--deepcache-interval", type=int, default=5); ap.add_argument("--no-deepcache", action="store_true")
@@ -174,7 +176,8 @@ def main() -> int:
     if a.precomputed:
         runner = PrecomputedRunner(pathlib.Path(a.precomputed), frames, a.precomputed_label, a.precomputed_seconds)
     else:
-        runner = StableRunner(a.window_batch_size, not a.no_deepcache, a.steps, a.guidance, 1247, a.deepcache_interval, stride=a.stride, ref_mode=a.ref_mode, mode=a.mode)
+        runner = StableRunner(a.window_batch_size, not a.no_deepcache, a.steps, a.guidance, 1247, a.deepcache_interval, stride=a.stride, ref_mode=a.ref_mode, mode=a.mode,
+                              overlap=a.overlap, window_len=a.window_len)
     times["latentsync_load"] = round(time.perf_counter() - t, 3)
     ref_info = None
     if a.ref_mode == "fixed" and not a.precomputed:
@@ -219,6 +222,11 @@ def main() -> int:
             tmpl = ob / (".tmp_" + pth.name)
             if tmpl.exists(): tmpl.unlink()
             os.link(pth, tmpl); os.replace(tmpl, ob / pth.name)
+    calls = list(getattr(getattr(runner, "inner", runner), "calls", []) or [])
+    ls_segs = [s for s in rep["segments"] if s["action"] == "LATENT_SYNC"]          # processed in this order (no verify splits on these windows)
+    if len(calls) == len(ls_segs):
+        for s, c in zip(ls_segs, calls):
+            if "seams" in c: s["ls_seams"] = [s["start_frame"] + f0 + x for x in c["seams"]]
     for s in rep["segments"]:
         s["start_frame"] += f0; s["end_frame"] += f0; s["start_s"] = round(s["start_frame"] / FPS, 3); s["end_s"] = round(s["end_frame"] / FPS, 3)
     rep["master_frames"] = man["lipsync"]["master_frames"]

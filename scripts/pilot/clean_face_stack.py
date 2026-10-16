@@ -134,6 +134,12 @@ class CleanPrep:
         else:
             self.master, self.frames = master, frames
         self.times["prep_master"] = round(time.perf_counter() - t0, 3); t0 = time.perf_counter()
+        try:   # spec 9.4 support: exact source-frame <-> master-frame mapping (scripts/pilot/frame_map.py), recorded in the manifest
+            import frame_map as fmap
+            self.frame_map = fmap.frame_map(pathlib.Path(src), self.frames)
+        except Exception as e:   # never fail the video stage for a bookkeeping table
+            self.frame_map = {"error": f"{type(e).__name__}: {str(e)[:200]}"}
+        self.times["prep_frame_map"] = round(time.perf_counter() - t0, 3); t0 = time.perf_counter()
         npz = run_mediapipe(pathlib.Path(self.master), pathlib.Path(work) / "master_mediapipe.npz")
         z = np.load(npz); lm = z["lm"]
         if len(lm) != len(self.frames):
@@ -144,7 +150,8 @@ class CleanPrep:
         self.router_rows = [self.router.row(f if np.isfinite(f[0, 0]) else None) for f in lm]
         self.ls_dets = ls_detections(lm, W, H, calib)
         self.info = {"face_stack": "mediapipe", "frames": len(lm), "face_frames": int(np.isfinite(lm[:, 0, 0]).sum()),
-                     "ls_detections": int(sum(d[0] is not None for d in self.ls_dets)), "anchor_calib": ANCHOR_CALIB if calib else None, "npz": str(npz)}
+                     "ls_detections": int(sum(d[0] is not None for d in self.ls_dets)), "anchor_calib": ANCHOR_CALIB if calib else None, "npz": str(npz),
+                     "frame_map_summary": self.frame_map.get("summary", self.frame_map)}
 
     def result(self):
         return self

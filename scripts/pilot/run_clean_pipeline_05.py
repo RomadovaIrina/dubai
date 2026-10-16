@@ -981,7 +981,7 @@ def main() -> int:
                 cfs.guard_nc()
                 with timed(times, "face_stack_mediapipe"):
                     prep = cfs.CleanPrep(src, work, a.face_min_w, a.face_min_h, calib=a.mp_anchor_calib == "on")
-                man["face_stack"] = {**prep.info, "times": prep.times}
+                man["face_stack"] = {**prep.info, "times": prep.times}; man["frame_map"] = prep.frame_map
                 print(f"  [face-stack] mediapipe {prep.info['face_frames']}/{prep.info['frames']} face frames, {prep.info['ls_detections']} LatentSync detections {prep.times}", flush=True)
             man["lipsync"] = run_lipsync_optimized(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), mux_aac, out, a, times,
                                                    speech_gate=speech_gate, prep=prep)
