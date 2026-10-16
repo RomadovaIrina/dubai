@@ -782,6 +782,7 @@ def main() -> int:
                     help="optimized backend: mediapipe = clean face stack (scripts/pilot/clean_face_stack.py, Apache-2.0 MediaPipe Face Landmarker in /venv/mediapipe) "
                          "for the router, LatentSync's crop / verify detections and the mouth-mask landmarks; InsightFace / RetinaFace loaders are blocked. "
                          "insightface = previous stack (non-commercial weights, needs DUB_ALLOW_NC=1). Default since 2026-10-16 (CLEAN-ONLY)")
+    ap.add_argument("--max-faces", type=int, default=2, help="spec 8.2: faces tracked per frame; with >= 2 faces only the active speaker's face (diarization <-> mouth motion) is lip-synced")
     ap.add_argument("--pose-precheck", choices=["on", "off"], default="on", help="spec 5.4: > 30 %% of face frames with |yaw| > 30 deg -> voice-only result (no lip-sync), flagged")
     ap.add_argument("--pose-gate-deg", type=float, default=0.0, help="spec 5.5 test: frames with |yaw| above this go to pass-through (held +-3 frames, eased by the crossfade); 0 = off")
     ap.add_argument("--mp-anchor-calib", choices=["on", "off"], default="on", help="--face-stack mediapipe: constant anchor correction to LatentSync's training alignment")
@@ -982,7 +983,8 @@ def main() -> int:
                 import clean_face_stack as cfs
                 cfs.guard_nc()
                 with timed(times, "face_stack_mediapipe"):
-                    prep = cfs.CleanPrep(src, work, a.face_min_w, a.face_min_h, calib=a.mp_anchor_calib == "on", pose_precheck=a.pose_precheck == "on", pose_gate_deg=a.pose_gate_deg)
+                    prep = cfs.CleanPrep(src, work, a.face_min_w, a.face_min_h, calib=a.mp_anchor_calib == "on", pose_precheck=a.pose_precheck == "on", pose_gate_deg=a.pose_gate_deg,
+                                     max_faces=a.max_faces, turns=(man.get("diarization") or {}).get("turns"))
                 man["face_stack"] = {**prep.info, "times": prep.times}; man["frame_map"] = prep.frame_map
                 if prep.voice_only:
                     flag = "voice_only_face_stack_failed" if prep.face_stack_failed else "voice_only_pose_precheck"

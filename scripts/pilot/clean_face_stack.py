@@ -38,11 +38,12 @@ if CALIB_FILE.exists():
 LMK_ADAPT_ORIGIN_ORDER = [1, 10, 12, 14, 16, 3, 5, 7, 0, 23, 21, 19, 32, 30, 28, 26, 17, 43, 48, 49, 51, 50, 102, 103, 104, 105, 101, 73, 74, 86]
 
 
-def run_mediapipe(video: pathlib.Path, out: pathlib.Path, mode: str = "video") -> pathlib.Path:
+def run_mediapipe(video: pathlib.Path, out: pathlib.Path, mode: str = "video", num_faces: int = 1) -> pathlib.Path:
     """MediaPipe Face Landmarker over every frame of `video` in its own env -> npz (cached next to the master)."""
     if out.exists():
         try:
-            if "matrix" in np.load(out).files: return out   # older caches lack the head-pose matrices -> recompute
+            f_ = np.load(out).files
+            if "matrix" in f_ and (num_faces <= 1 or "lm_all" in f_): return out   # older caches lack the pose matrices / extra faces -> recompute
         except Exception:
             pass
     import hashlib
@@ -50,7 +51,7 @@ def run_mediapipe(video: pathlib.Path, out: pathlib.Path, mode: str = "video") -
     if h != MP_MODEL_SHA256:
         raise RuntimeError(f"{MP_MODEL}: sha256 {h} != pinned {MP_MODEL_SHA256}")
     env = {**os.environ, "GLOG_minloglevel": "2", "OMP_NUM_THREADS": "4"}
-    p = subprocess.run([MP_PY, str(HERE / "mp_landmarks.py"), str(video), str(out), "--model", str(MP_MODEL), "--mode", mode],
+    p = subprocess.run([MP_PY, str(HERE / "mp_landmarks.py"), str(video), str(out), "--model", str(MP_MODEL), "--mode", mode, "--num-faces", str(num_faces)],
                        env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     if p.returncode != 0 or not out.exists():
         raise RuntimeError(f"mediapipe landmarks failed ({p.returncode}): {p.stdout[-1500:]}")
@@ -72,6 +73,59 @@ def pose_from_matrix(M: np.ndarray) -> np.ndarray:
 
 POSE_PRECHECK = {"yaw_deg": 30.0, "max_fraction": 0.30}
 HOLD_GAP_FRAMES = 5   # spec 11: missing landmarks for <= 5 frames (0.2 s) inside a face run -> previous valid frame   # spec 5.4: > 30 % of face frames with |yaw| > 30 deg -> voice-only result, flagged
+
+
+def track_faces(lm_all: np.ndarray, mats_all: np.ndarray | None = None):
+    """Unordered faces per frame (T, F, 478, 2) -> identity-consistent tracks (same shape): greedy nearest-centroid continuity, a face
+    that moved more than 1.5 face widths starts / joins the track that was free longest."""
+    T, F = lm_all.shape[:2]; out = np.full_like(lm_all, np.nan); mo = None if mats_all is None else np.full_like(mats_all, np.nan)
+    last = [None] * F; seen = [-10 ** 9] * F
+    for t in range(T):
+        cur = [k for k in range(F) if np.isfinite(lm_all[t, k, 0, 0])]
+        cen = {k: lm_all[t, k].mean(0) for k in cur}; wid = {k: float(np.ptp(lm_all[t, k, :, 0])) for k in cur}
+        pairs = sorted((float(np.linalg.norm(cen[k] - last[j])), k, j) for k in cur for j in range(F) if last[j] is not None)
+        uk, uj, asg = set(), set(), {}
+        for d, k, j in pairs:
+            if k in uk or j in uj or d > 1.5 * wid[k]: continue
+            asg[k] = j; uk.add(k); uj.add(j)
+        for k in cur:
+            if k not in asg:
+                j = min((j for j in range(F) if j not in uj), key=lambda j: seen[j]); asg[k] = j; uj.add(j)
+        for k, j in asg.items():
+            out[t, j] = lm_all[t, k]; last[j] = cen[k]; seen[j] = t
+            if mo is not None: mo[t, j] = mats_all[t, k]
+    return out, mo
+
+
+def mouth_open(lm478: np.ndarray) -> np.ndarray:
+    """(T, 478, 2) -> inner-lip gap (MediaPipe 13 / 14) in eye distances, NaN where no face."""
+    eL, eR = lm478[:, MP_EYE_IMG_LEFT].mean(1), lm478[:, MP_EYE_IMG_RIGHT].mean(1)
+    return np.linalg.norm(lm478[:, 13] - lm478[:, 14], axis=1) / np.maximum(np.linalg.norm(eR - eL, axis=1), 1e-6)
+
+
+def assign_speakers(tracks: np.ndarray, turns: list, fps: float = 25.0, min_presence: float = 0.1) -> dict:
+    """Diarization speakers -> face tracks (spec 8.2): Pearson correlation of each face's mouth-opening speed with each speaker's
+    speech indicator (source diarization turns); each face is used at most once, best scores first."""
+    T, F = tracks.shape[:2]; vel = {}
+    for j in range(F):
+        pres = np.isfinite(tracks[:, j, 0, 0])
+        if pres.mean() < min_presence: continue
+        o = mouth_open(np.where(pres[:, None, None], tracks[:, j], np.nan)); idx = np.arange(T)
+        o = np.interp(idx, idx[pres], o[pres]) if pres.sum() > 1 else np.zeros(T)
+        v = np.abs(np.gradient(o)); k = np.exp(-0.5 * (np.arange(-3, 4) / 1.5) ** 2); vel[j] = (np.convolve(v, k / k.sum(), "same"), pres)
+    spk = sorted({t["speaker"] for t in turns}); scores = {}
+    for sp in spk:
+        ind = np.zeros(T)
+        for t in turns:
+            if t["speaker"] == sp: ind[int(t["start"] * fps):int(np.ceil(t["end"] * fps))] = 1.0
+        for j, (v, pres) in vel.items():
+            m = pres & np.isfinite(v)
+            scores[(sp, j)] = float(np.corrcoef(v[m], ind[m])[0, 1]) if m.sum() > 10 and ind[m].std() > 0 and v[m].std() > 0 else 0.0
+    mapping, used = {}, set()
+    for (sp, j), sc in sorted(scores.items(), key=lambda kv: -kv[1]):
+        if sp in mapping or j in used: continue
+        mapping[sp] = j; used.add(j)
+    return {"mapping": mapping, "scores": {f"{sp}->face{j}": round(v, 3) for (sp, j), v in scores.items()}, "faces": sorted(vel)}
 
 
 def face_frame(mp478: np.ndarray):
@@ -146,7 +200,7 @@ class CleanPrep:
     """Stands in for face_aware_latentsync_accel.VideoPrep: the master frames + MediaPipe-derived router rows and LatentSync detections."""
 
     def __init__(self, src: pathlib.Path, work: pathlib.Path, min_w: int = 50, min_h: int = 80, calib: bool = True, frames=None, master=None,
-                 pose_precheck: bool = True, pose_gate_deg: float = 0.0, pose_gate_hold: int = 3):
+                 pose_precheck: bool = True, pose_gate_deg: float = 0.0, pose_gate_hold: int = 3, max_faces: int = 2, turns: list | None = None):
         import face_aware_latentsync as fa
         self.times = {}; self.error = None
         t0 = time.perf_counter()
@@ -165,7 +219,7 @@ class CleanPrep:
         self.failure = None; npz = pathlib.Path(work) / "master_mediapipe.npz"; lm = None; z = None
         for attempt in (1, 2):
             try:
-                run_mediapipe(pathlib.Path(self.master), npz); z = np.load(npz); lm = z["lm"]
+                run_mediapipe(pathlib.Path(self.master), npz, num_faces=max_faces); z = np.load(npz); lm = z["lm"]
                 if len(lm) != len(self.frames):
                     raise RuntimeError(f"mediapipe frames {len(lm)} != master frames {len(self.frames)}")
                 break
@@ -173,10 +227,31 @@ class CleanPrep:
                 self.failure = f"attempt {attempt}: {type(e).__name__}: {str(e)[:300]}"; lm = None
                 try: npz.unlink(missing_ok=True)
                 except Exception: pass
+        # spec 8.2: several faces -> lip-sync only the active speaker's face (diarization <-> face by mouth motion); the others stay untouched
+        self.faces = {"max_faces": max_faces, "tracks": 1}
+        if lm is not None and "lm_all" in z.files:
+            tr, trm = track_faces(z["lm_all"], z["matrix_all"] if "matrix_all" in z.files else None)
+            present = [j for j in range(tr.shape[1]) if np.isfinite(tr[:, j, 0, 0]).mean() >= 0.1]
+            if len(present) >= 2 and turns:
+                asg = assign_speakers(tr, turns); mp_ = asg["mapping"]
+                if mp_:
+                    T_ = len(lm); sel = np.full(T_, next(iter(mp_.values())), int); cur = sel[0]
+                    order = sorted(turns, key=lambda t: t["start"])
+                    spk_at = np.full(T_, "", object)
+                    for t in order: spk_at[int(t["start"] * 25):int(np.ceil(t["end"] * 25))] = t["speaker"]
+                    for i in range(T_):   # between turns keep the last active speaker's face
+                        if spk_at[i] in mp_: cur = mp_[spk_at[i]]
+                        sel[i] = cur
+                    lm = tr[np.arange(T_), sel].astype(np.float32)
+                    z = {"matrix": trm[np.arange(T_), sel] if trm is not None else np.full((T_, 4, 4), np.nan, np.float32), "files": ["matrix"]}
+                    self.faces = {"max_faces": max_faces, "tracks": len(present), "assignment": asg, "selected_face_frames": {int(j): int((sel == j).sum()) for j in np.unique(sel)}}
+            else:
+                self.faces = {"max_faces": max_faces, "tracks": len(present), "note": "single face (or no diarization turns): largest face"}
         self.face_stack_failed = lm is None
         if lm is None:
             lm = np.full((len(self.frames), 478, 2), np.nan, np.float32)
-        matrix = z["matrix"] if (z is not None and "matrix" in z.files) else np.full((len(self.frames), 4, 4), np.nan, np.float32)
+        zf = (z["files"] if isinstance(z, dict) else z.files) if z is not None else []
+        matrix = z["matrix"] if "matrix" in zf else np.full((len(self.frames), 4, 4), np.nan, np.float32)
         # short landmark gaps inside a face run: hold the previous valid frame (a split would add two LS <-> original switches)
         lm = lm.copy(); held = 0; ok = np.isfinite(lm[:, 0, 0]); i = 0; n_ = len(lm)
         while i < n_:
@@ -219,7 +294,7 @@ class CleanPrep:
         self.info = {"face_stack": "mediapipe", "frames": len(lm), "face_frames": int(np.isfinite(lm[:, 0, 0]).sum()),
                      "ls_detections": int(sum(d[0] is not None for d in self.ls_dets)), "anchor_calib": ANCHOR_CALIB if calib else None, "npz": str(npz),
                      "frame_map_summary": self.frame_map.get("summary", self.frame_map), "pose": self.pose_info,
-                     "voice_only": self.voice_only, "face_stack_failed": self.face_stack_failed,
+                     "voice_only": self.voice_only, "face_stack_failed": self.face_stack_failed, "faces": self.faces,
                      "held_landmark_frames": int(self.held_frames), "failure": self.failure}
 
     def result(self):
