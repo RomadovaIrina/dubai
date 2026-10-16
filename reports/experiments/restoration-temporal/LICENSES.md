@@ -25,13 +25,16 @@ weights. Not legal advice.
 
 ## Candidates (Phase 2+)
 
+Installed so far (2026-10-16): GFPGAN v1.4 + RestoreFormer — code only from the pinned clone `third_party/GFPGAN` (arch files imported
+directly, no pip install, `/venv/dabai` untouched), weights in `models/gfpgan/`; facexlib RetinaFace / ParseNet NOT used by this path.
+
 | model | repository | code license | weights license | commercial | problematic dependencies | replacement risk / plan |
 |---|---|---|---|---|---|---|
 | **no restorer** (LatentSync raw in the mouth composite) | – | – | – | **YES** | – | softer mouth (sharpness 0.61 of the source) |
 | **own temporal stabilisation** (DIS-flow motion-compensated filtering of the mouth ROI, window-boundary smoothing) | this repo | repo | none | **YES** | none (OpenCV DIS) | – |
-| **GFPGAN v1.4** (clean arch) | [TencentARC/GFPGAN](https://github.com/TencentARC/GFPGAN/blob/master/LICENSE) | Apache-2.0 (+ listed third-party; NVIDIA-NC only for the v1 paper model's CUDA ops, not the clean v1.3/1.4) | release v1.3.0 `GFPGANv1.4.pth`, repo license | **YES\*** | FFHQ (NC-SA); `GFPGANer` would load facexlib RetinaFace + ParseNet (NO) -> bypassed: own aligned crops (`has_aligned`), own paste mask | install allowed (code + weights YES); FFHQ needs legal sign-off |
+| **GFPGAN v1.4** (clean arch) | [TencentARC/GFPGAN](https://github.com/TencentARC/GFPGAN/blob/master/LICENSE) | Apache-2.0 (+ listed third-party; NVIDIA-NC only for the v1 paper model's CUDA ops, not the clean v1.3/1.4) | release v1.3.0 `GFPGANv1.4.pth` (sha256 e2cd4703…be5ad; code pinned at tag v1.3.8 = 2eac203), repo license | **YES\*** | FFHQ (NC-SA); `GFPGANer` would load facexlib RetinaFace + ParseNet (NO) -> bypassed: own aligned crops (`has_aligned`), own paste mask | install allowed (code + weights YES); FFHQ needs legal sign-off |
 | **RestoreFormer++** | [wzhouxiff/RestoreFormerPlusPlus](https://github.com/wzhouxiff/RestoreFormerPlusPlus) | Apache-2.0 | repo license (inferred) | **YES\*** | FFHQ; facexlib helper (bypassed) | same |
-| **RestoreFormer** | [wzhouxiff/RestoreFormer](https://github.com/wzhouxiff/RestoreFormer); weights also in GFPGAN release v1.3.4 | Apache-2.0 | repo license (inferred) | **YES\*** | FFHQ | same |
+| **RestoreFormer** | [wzhouxiff/RestoreFormer](https://github.com/wzhouxiff/RestoreFormer); weights also in GFPGAN release v1.3.4 | Apache-2.0 | `RestoreFormer.pth` from GFPGAN release v1.3.4 (sha256 07404d44…24ace0), repo license (inferred) | **YES\*** | FFHQ | same |
 | **VQFR** | [TencentARC/VQFR](https://github.com/TencentARC/VQFR) | Apache-2.0 (+ opencv / ffmpeg / numpy notices) | Google Drive, repo license (inferred) | **YES\*** | FFHQ; facexlib detection / parsing (bypass) | same |
 | MediaPipe Face Landmarker (478 pts) | [google-ai-edge/mediapipe](https://github.com/google-ai-edge/mediapipe) | Apache-2.0 | model card: Apache-2.0 | **YES** | trained on Google's consented data | candidate for the paste-back mask / alignment landmarks (own venv: its opencv-contrib dependency would shadow the pinned cv2) |
 | BasicVSR++ / RealBasicVSR | [ckkelvinchan/BasicVSR_PlusPlus](https://github.com/ckkelvinchan/BasicVSR_PlusPlus), [RealBasicVSR](https://github.com/ckkelvinchan/RealBasicVSR) | Apache-2.0 | Apache (inferred), REDS CC BY 4.0 | **YES** (SPyNet flow inside: Chairs/Things data risk) | mmcv | fallback temporal restorer on the lower-face crop |
