@@ -675,7 +675,7 @@ def main() -> int:
     ap.add_argument("--target-lang", required=True, help="Chatterbox language id (en, de, ru, ...)")
     ap.add_argument("--no-codeformer", action="store_true", help="pilot 0.5 contract: the clean pipeline without CodeFormer (= --codeformer off)")
     ap.add_argument("--codeformer", choices=["off", "optimized"], default=None,
-                    help="off = frozen baseline (never invoked); optimized = week-2 in-memory CodeFormer on LATENT_SYNC frames (optimized backend only)")
+                    help="off = default (CLEAN-ONLY 2026-10-16); optimized = week-2 in-memory CodeFormer on LATENT_SYNC frames (non-commercial: needs DUB_ALLOW_NC=1)")
     ap.add_argument("--codeformer-w", type=float, default=1.0, help="CodeFormer fidelity weight w (optimized mode); 1.0 = week-2 A/B choice on 04 (smallest SyncNet drop, AV offset 0)")
     ap.add_argument("--codeformer-batch", type=int, default=8, help="faces per CodeFormer batch (optimized mode); 8 = week-2 choice (5 GB alone, no E2E peak increase)")
     ap.add_argument("--codeformer-landmarks", choices=["insightface", "retinaface"], default="insightface",
@@ -752,7 +752,7 @@ def main() -> int:
     ap.add_argument("--min-ls-frames", type=int, default=25, help="VALID_FACE runs shorter than this are passed through")
     ap.add_argument("--max-verify-depth", type=int, default=3)
     ap.add_argument("--seed", type=int, default=1247)
-    ap.add_argument("--video-backend", choices=["baseline", "optimized"], default="baseline",
+    ap.add_argument("--video-backend", choices=["baseline", "optimized"], default="optimized",
                     help="baseline = face_aware_latentsync.py functions (insightface classification, sequential windows); "
                          "optimized = face_aware_latentsync_accel.py (RetinaFace router, batched windows, SDPA/compile options)")
     ap.add_argument("--face-router", choices=["retinaface", "insightface"], default=OPTIMIZED_DEFAULTS["face_router"], help="optimized backend only")
@@ -778,10 +778,10 @@ def main() -> int:
                     help="with --mouth-only-pasteback: face = CodeFormer on the composited frame (re-renders eyes / brows, previous behaviour); mouth = CodeFormer on the raw "
                          "LatentSync frame, then the mouth-only composite (eyes / brows stay the source; 2026-10-13 'мимика дергается')")
     ap.add_argument("--ls-landmark-smooth", type=int, default=0, help="optimized backend: centred moving average (+-N frames) of the landmarks replayed into LatentSync's affine crop")
-    ap.add_argument("--face-stack", choices=["insightface", "mediapipe"], default="insightface",
+    ap.add_argument("--face-stack", choices=["insightface", "mediapipe"], default="mediapipe",
                     help="optimized backend: mediapipe = clean face stack (scripts/pilot/clean_face_stack.py, Apache-2.0 MediaPipe Face Landmarker in /venv/mediapipe) "
                          "for the router, LatentSync's crop / verify detections and the mouth-mask landmarks; InsightFace / RetinaFace loaders are blocked. "
-                         "insightface = previous stack (non-commercial weights). Use with --codeformer off for the clean pipeline (clean0)")
+                         "insightface = previous stack (non-commercial weights, needs DUB_ALLOW_NC=1). Default since 2026-10-16 (CLEAN-ONLY)")
     ap.add_argument("--mp-anchor-calib", choices=["on", "off"], default="on", help="--face-stack mediapipe: constant anchor correction to LatentSync's training alignment")
     ap.add_argument("--video-prep", choices=["sequential", "parallel"], default="sequential",
                     help="optimized backend: parallel = master decode + router / LatentSync face detection of every frame in a thread during the audio stage, "
@@ -795,9 +795,9 @@ def main() -> int:
         if not llama_cpp.llama_supports_gpu_offload():
             print(f"--qwen-gpu-layers {a.qwen_gpu_layers}: the imported llama_cpp ({llama_cpp.__file__}) is a CPU build", file=sys.stderr); return 2
     if a.codeformer is None:
-        a.codeformer = "off" if a.no_codeformer else None
-    if a.codeformer is None:
-        print("CodeFormer mode not chosen: pass --no-codeformer (= --codeformer off, pilot baseline) or --codeformer optimized", file=sys.stderr); return 2
+        a.codeformer = "off"          # CLEAN-ONLY default (2026-10-16): CodeFormer is S-Lab non-commercial
+    import clean_face_stack as cfs   # refuses NC settings unless DUB_ALLOW_NC=1, then blocks every NC loader in this process
+    cfs.enforce_clean(a.face_stack, a.codeformer, a.video_backend, what="run_clean_pipeline_05")
     if a.no_codeformer and a.codeformer != "off":
         print("--no-codeformer contradicts --codeformer optimized", file=sys.stderr); return 2
     if a.codeformer != "off" and a.video_backend != "optimized":

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Video-stage A/B on a time WINDOW of a finished baseline run (track A, 2026-10-16): same master frames, same dubbed track, same speech
-gate intervals (taken from the baseline manifest, not recomputed), same router / verify / crossfade / mouth-only paste-back / CodeFormer-mouth
-settings as cand5; only the lip-sync generator variant changes (scripts/quality/ls_stable.py). The baseline arm must be re-run on the same
+gate intervals (taken from the baseline manifest, not recomputed), same router / verify / crossfade / mouth-only paste-back settings as clean0
+(2026-10-16: clean face stack + no restorer by default; the cand5 stack only with DUB_ALLOW_NC=1); only the lip-sync generator variant changes (scripts/quality/ls_stable.py). The baseline arm must be re-run on the same
 window too (LatentSync windows restart at the cut).
 
 Writes <out>/<id>_<tag>.mp4 (window clip, final mix muxed; L2 muxes the source audio), <id>_<tag>_dubonly.mp4 (same frames, driving audio
@@ -128,12 +128,15 @@ def main() -> int:
     ap.add_argument("--steps", type=int, default=20); ap.add_argument("--guidance", type=float, default=1.5)
     ap.add_argument("--crossfade-frames", type=int, default=4); ap.add_argument("--router-stride", type=int, default=3); ap.add_argument("--min-ls-frames", type=int, default=25)
     ap.add_argument("--mask-top", type=float, default=0.52); ap.add_argument("--mask-feather", type=float, default=0.08); ap.add_argument("--mask-smooth", type=int, default=3)
-    ap.add_argument("--ls-landmark-smooth", type=int, default=2); ap.add_argument("--codeformer", choices=["off", "optimized"], default="optimized")
+    ap.add_argument("--ls-landmark-smooth", type=int, default=2); ap.add_argument("--codeformer", choices=["off", "optimized"], default="off")
+    ap.add_argument("--face-stack", choices=["mediapipe", "insightface"], default="mediapipe", help="mediapipe = clean face stack (default); insightface needs DUB_ALLOW_NC=1")
     ap.add_argument("--precomputed", default=None, help="window-length video of an external lip-sync backend (same driving audio); replaces LatentSync")
     ap.add_argument("--precomputed-label", default="external"); ap.add_argument("--precomputed-seconds", type=float, default=None)
     ap.add_argument("--dump-stages", action="store_true", help="also write <tag>_raw.mp4 (raw LatentSync frames) and <tag>_precomp.mp4 (after CodeFormer, before the mouth composite)")
     ap.add_argument("--outbox", default=None, help="hardlink the viewable clips into this dir (e.g. /workspace/dub/outbox/p2-03win-L3)")
     a = ap.parse_args()
+    import clean_face_stack as cfs
+    cfs.enforce_clean(a.face_stack, a.codeformer, "optimized", what="ls_window_ab")
     import cv2, soundfile as sf, torch
     import face_aware_latentsync as fa
     import face_aware_latentsync_accel as faa
@@ -156,8 +159,17 @@ def main() -> int:
     drv_aac = work / "drive_aac.m4a"; subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-nostdin", "-i", str(drv), "-c:a", "aac", "-b:a", "192k", str(drv_aac)], check=True)
     # gate: the baseline's intervals, shifted into the window
     gate = [(round(max(0.0, s - t0s), 3), round(min(dur, e - t0s), 3)) for s, e in man["speech_gate"]["intervals"] if e > t0s and s < t0s + dur]
-    router = faa.make_router("retinaface", 50, 80, 0.8)
-    t = time.perf_counter(); prep = WindowPrep(frames, router, fa.face_detector()); times["prep"] = round(time.perf_counter() - t, 3)
+    t = time.perf_counter(); lm106_all = None
+    if a.face_stack == "mediapipe":   # the clean stack's own VIDEO-mode pass over the FULL master (= what a full clean run replays), sliced
+        mp_lm = np.load(cfs.run_mediapipe(work_b / "master_25fps.mp4", work_b / "master_mediapipe.npz"))["lm"]
+        H_, W_ = frames[0].shape[:2]; router = cfs.MediaPipeRouter(50, 80)
+        dets_all = cfs.ls_detections(mp_lm, W_, H_, calib=True)
+        prep = WindowPrep.__new__(WindowPrep); prep.master = None; prep.frames = frames; prep.times = {}
+        prep.router_rows = [router.row(f if np.isfinite(f[0, 0]) else None) for f in mp_lm[f0:f1]]; prep.ls_dets = dets_all[f0:f1]
+        lm106_all = np.stack([d[1] if d[1] is not None else np.full((106, 2), np.nan, np.float32) for d in dets_all])
+    else:
+        router = faa.make_router("retinaface", 50, 80, 0.8); prep = WindowPrep(frames, router, fa.face_detector())
+    times["prep"] = round(time.perf_counter() - t, 3)
     t = time.perf_counter()
     if a.precomputed:
         runner = PrecomputedRunner(pathlib.Path(a.precomputed), frames, a.precomputed_label, a.precomputed_seconds)
@@ -167,15 +179,18 @@ def main() -> int:
     ref_info = None
     if a.ref_mode == "fixed" and not a.precomputed:
         lm_npz = pathlib.Path(a.ref_lm) if a.ref_lm else None
-        if lm_npz and lm_npz.exists():
+        if lm106_all is not None:
+            LM = lm106_all
+        elif lm_npz and lm_npz.exists():
             LM = np.load(lm_npz)["lm"]
         else:
             det = fa.face_detector(); allf = read_frames(work_b / "master_25fps.mp4", 0, man["lipsync"]["master_frames"])
             LM = np.stack([np.asarray(d[1], np.float32) if d[0] is not None else np.full((106, 2), np.nan, np.float32) for d in (det(cv2.cvtColor(f, cv2.COLOR_BGR2RGB)) for f in allf)])
         ok = np.isfinite(LM[:, 0, 0]); excl = np.zeros(len(LM), bool); excl[f0:f1] = True            # reference from OUTSIDE the window (as in training)
         cost, rs = pick_reference(LM, ok, a.ref_select, 16, excl)
-        rf = read_frames(work_b / "master_25fps.mp4", rs, rs + 16); det = fa.face_detector()
-        runner.acc.set_reference(np.stack([cv2.cvtColor(f, cv2.COLOR_BGR2RGB) for f in rf]), [det(cv2.cvtColor(f, cv2.COLOR_BGR2RGB)) for f in rf])
+        rf = read_frames(work_b / "master_25fps.mp4", rs, rs + 16)
+        ref_dets = dets_all[rs:rs + 16] if lm106_all is not None else [fa.face_detector()(cv2.cvtColor(f, cv2.COLOR_BGR2RGB)) for f in rf]
+        runner.acc.set_reference(np.stack([cv2.cvtColor(f, cv2.COLOR_BGR2RGB) for f in rf]), ref_dets)
         ref_info = {"select": a.ref_select, "start_frame": int(rs), "t": round(rs / FPS, 2), "cost": round(cost, 4)}
         print(f"  [ref] fixed reference frames {rs}-{rs + 16} ({rs / FPS:.2f}s), cost {cost:.4f}", flush=True)
     Mo = make_dumper(MouthOnlyRunner, frames) if a.dump_stages else MouthOnlyRunner
@@ -209,7 +224,7 @@ def main() -> int:
     rep["master_frames"] = man["lipsync"]["master_frames"]
     times["total"] = round(time.perf_counter() - t_all, 3)
     wm = {k: man[k] for k in ("input", "work_dir", "source", "dubbed_track", "speech_intervals")}
-    wm.update({"output": str(clip), "output_dubonly": str(dubonly), "stage_clips": stage_clips, "window": {"t0": round(t0s, 3), "t1": round(f1 / FPS, 3), "f0": f0, "f1": f1},
+    wm.update({"face_stack": a.face_stack, "output": str(clip), "output_dubonly": str(dubonly), "stage_clips": stage_clips, "window": {"t0": round(t0s, 3), "t1": round(f1 / FPS, 3), "f0": f0, "f1": f1},
                "variant": {"tag": a.tag, "mode": a.mode, "audio": a.audio, "stride": a.stride, "ref_mode": a.ref_mode, "reference": ref_info,
                            "video_params": {k: v for k, v in vars(a).items() if k not in ("manifest", "out", "tag")}},
                "speech_gate": {"intervals_window": gate, "source": "baseline manifest"}, "lipsync": rep, "stage_seconds": times,

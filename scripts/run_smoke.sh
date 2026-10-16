@@ -7,6 +7,11 @@ TESTS=("chatterbox:python scripts/check_chatterbox.py" "tts-intelligibility:pyth
        "pyannote:python scripts/check_pyannote.py" "librosa/atempo:python scripts/check_atempo.py" "llama.cpp:python scripts/check_llama.py"
        "retinaface:python scripts/check_retinaface.py" "latentsync:bash scripts/check_latentsync.sh" "codeformer:bash scripts/check_codeformer.sh"
        "ffmpeg-mux:bash scripts/check_ffmpeg_mux.sh")
+if [ "${DUB_ALLOW_NC:-0}" != "1" ]; then   # CLEAN-ONLY (2026-10-16): no smoke test may load a non-commercial model
+  TESTS=("${TESTS[@]/retinaface:python scripts\/check_retinaface.py/mediapipe-face:python scripts/check_mediapipe_face.py}")
+  TESTS=("${TESTS[@]/latentsync:bash scripts\/check_latentsync.sh/latentsync:python scripts/check_latentsync_clean.py}")
+  TESTS=("${TESTS[@]/codeformer:bash scripts\/check_codeformer.sh/codeformer:echo SKIP CodeFormer is non-commercial and quarantined (DUB_ALLOW_NC=1 to test)}")
+fi
 if [ $# -gt 0 ]; then  # optional filter by component name(s), e.g. run_smoke.sh retinaface llama.cpp
   sel=" $* "; keep=()
   for t in "${TESTS[@]}"; do case "$sel" in *" ${t%%:*} "*) keep+=("$t");; esac; done

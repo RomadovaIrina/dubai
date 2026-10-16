@@ -101,10 +101,12 @@ def main() -> int:
     ap.add_argument("--codeformer-w", type=float, default=1.0); ap.add_argument("--codeformer-batch", type=int, default=8)
     ap.add_argument("--codeformer-empty-cache", action="store_true", help="A/B: upstream per-face torch.cuda.empty_cache()")
     ap.add_argument("--codeformer-landmarks", choices=["insightface", "retinaface"], default="insightface")
-    ap.add_argument("--face-stack", choices=["insightface", "mediapipe"], default="insightface", help="mediapipe = clean face stack (scripts/pilot/clean_face_stack.py)")
+    ap.add_argument("--face-stack", choices=["insightface", "mediapipe"], default="mediapipe", help="mediapipe = clean face stack (default); insightface needs DUB_ALLOW_NC=1")
     ap.add_argument("--mp-anchor-calib", choices=["on", "off"], default="on")
     ap.add_argument("--codeformer-precision", choices=["fp32", "parse16", "fp16"], default="fp16", help="fp32 = upstream numerics; parse16 = ParseNet under fp16 autocast; fp16 = CodeFormer net + ParseNet under autocast")
     a = ap.parse_args()
+    import clean_face_stack as cfs
+    cfs.enforce_clean(a.face_stack, a.codeformer, "optimized", what="candidate_video_stage")
     import run_clean_pipeline_05 as rp
     import face_aware_latentsync_accel as faa
     from measure_stages import probe

@@ -184,3 +184,42 @@ def guard_nc():
     import face_aware_latentsync as fa
     fa.face_detector = blocked("LatentSync FaceDetector (face_aware_latentsync.face_detector)")
     return True
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------
+# CLEAN-ONLY policy (2026-10-16, user decision): clean is the default everywhere; non-commercial components only with DUB_ALLOW_NC=1
+# ---------------------------------------------------------------------------------------------------------------------------------
+def nc_allowed() -> bool:
+    return os.environ.get("DUB_ALLOW_NC", "0") == "1"
+
+
+TRIPWIRES = [ROOT / "third_party/latentsync/checkpoints/auxiliary/models/buffalo_l", pathlib.Path(os.path.expanduser("~/.insightface/models/buffalo_l"))]
+
+
+def install_tripwires() -> list:
+    """insightface.utils.storage.download() fetches a model pack whenever its directory is missing. An EMPTY directory makes FaceAnalysis
+    fail (no detection model) instead of silently downloading the non-commercial buffalo_l pack again."""
+    made = []
+    for d in TRIPWIRES:
+        if not d.exists():
+            d.mkdir(parents=True, exist_ok=True)
+            (d / "NOTICE_NC_QUARANTINED.txt").write_text("InsightFace buffalo_l is non-commercial and quarantined (CLEAN-ONLY, 2026-10-16). This empty "
+                                                          "directory blocks insightface's auto-download. Remove it only together with DUB_ALLOW_NC=1.\n")
+            made.append(str(d))
+    return made
+
+
+def enforce_clean(face_stack: str | None = "mediapipe", codeformer: str | None = "off", video_backend: str | None = "optimized", what: str = "run"):
+    """Refuse non-commercial settings unless DUB_ALLOW_NC=1, then block every NC loader in this process (guard_nc) and arm the tripwires."""
+    if nc_allowed():
+        print(f"[clean] DUB_ALLOW_NC=1: non-commercial components allowed for this {what} (NOT a product-path run)", flush=True)
+        return False
+    bad = []
+    if face_stack not in (None, "mediapipe"): bad.append(f"--face-stack {face_stack} (InsightFace buffalo_l / RetinaFace R50)")
+    if codeformer not in (None, "off"): bad.append(f"--codeformer {codeformer} (CodeFormer S-Lab NC)")
+    if video_backend not in (None, "optimized"): bad.append(f"--video-backend {video_backend} (InsightFace classification)")
+    if bad:
+        raise SystemExit("CLEAN-ONLY: non-commercial component requested: " + "; ".join(bad) + ". Use the clean defaults, or set DUB_ALLOW_NC=1 "
+                         "for a research-only run.")
+    install_tripwires(); guard_nc()
+    return True

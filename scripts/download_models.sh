@@ -46,5 +46,7 @@ if [ "${DUB_ALLOW_NC:-0}" = "1" ]; then
   FX="$M/facexlib"; mkdir -p "$FX"; ln -sfn "$CF/weights/facelib/detection_Resnet50_Final.pth" "$FX/detection_Resnet50_Final.pth"
 else
   echo "skip NC weights (CodeFormer / ParseNet / RetinaFace R50): set DUB_ALLOW_NC=1 to fetch them"
+  # tripwires: insightface auto-downloads buffalo_l (NC) whenever its directory is missing; an empty directory makes it fail instead
+  "${PY}" -c "import sys; sys.path.insert(0, '${DUB_ROOT}/scripts/pilot'); import clean_face_stack as c; print('tripwires', c.install_tripwires() or 'present')"
 fi
 echo "== done"; du -sh "$M"/* 2>/dev/null

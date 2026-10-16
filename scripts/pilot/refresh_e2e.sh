@@ -1,8 +1,9 @@
 #!/bin/bash
 # Pipeline refresh (2026-10-02): the five CURRENT production-candidate E2E outputs (01-05) with the plain runner command
-#   run_clean_pipeline_05.py --target-lang en --alignment burst --video-backend optimized --codeformer optimized
+#   run_clean_pipeline_05.py --target-lang en --alignment burst --video-backend optimized --codeformer off
+# (2026-10-16 CLEAN-ONLY: --codeformer off + the default --face-stack mediapipe; NC components only with DUB_ALLOW_NC=1)
 # (all other settings = runner defaults: TTS fp16 token-ID guard, natural chunking, TTS QA/retry, duration-aware
-# retranslation, atempo cap 1.15 / hard cap 1.2, burst alignment, optimized LatentSync, optimized CodeFormer w 1.0 b8 fp16).
+# retranslation, atempo cap 1.15 / hard cap 1.2, burst alignment, optimized LatentSync; CodeFormer off since 2026-10-16).
 # One nvidia-smi sampler (1 s) per run -> <out>.nvsmi.log (device-wide peak VRAM); runs are strictly sequential.
 #   bash scripts/pilot/refresh_e2e.sh            # 01 02 03 04 05
 #   bash scripts/pilot/refresh_e2e.sh 03         # one video
@@ -20,7 +21,7 @@ for id in "${IDS[@]}"; do
   nvidia-smi --query-gpu=timestamp,memory.used --format=csv,noheader,nounits -l 1 > "$F/${id}_final.nvsmi.log" 2>/dev/null & NV=$!
   s=$(date +%s)
   python scripts/pilot/run_clean_pipeline_05.py --input "$in" --output "$out" --target-lang en \
-      --alignment burst --video-backend optimized --codeformer optimized --work-dir "$W" ${DUB_EXTRA_ARGS:-} > "$L/${id}_e2e.log" 2>&1; rc=$?
+      --alignment burst --video-backend optimized --codeformer off --work-dir "$W" ${DUB_EXTRA_ARGS:-} > "$L/${id}_e2e.log" 2>&1; rc=$?
   kill $NV 2>/dev/null; wait $NV 2>/dev/null
   peak=$(awk -F', ' '{print $2}' "$F/${id}_final.nvsmi.log" | sort -n | tail -1)
   echo "===== $id exit $rc wall $(( $(date +%s) - s ))s peak_nvsmi_MiB=$peak"

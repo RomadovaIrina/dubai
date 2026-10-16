@@ -79,6 +79,9 @@ def crop(fr, box):
 
 
 def main() -> int:
+    import os
+    if os.environ.get("DUB_ALLOW_NC", "0") != "1":   # CLEAN-ONLY (2026-10-16)
+        raise SystemExit("face_temporal.py loads non-commercial face models (InsightFace 2d106 via LatentSync FaceDetector); use scripts/quality/lipsync_jitter.py (v3, MediaPipe) or the common mouth_jitter_hr.py, or DUB_ALLOW_NC=1 for a research-only run")
     import cv2
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--manifest", required=True); ap.add_argument("--video", default=None, help="default: manifest output")
