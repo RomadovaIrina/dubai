@@ -519,6 +519,11 @@ def align_units_burst(units: list[dict], plans: list[dict], work: pathlib.Path, 
     import soundfile as sf
     from e1_burst_align import SR16, TTS_SR as E1_SR, burst_fit_ratios, place_groups, place_slot_fallback, placement_summary, vad_intervals
     report = []; n_fallback = 0; prev_end = None
+    spread_cfg = getattr(opts, "spread", None); spread_cfg = spread_cfg if spread_cfg and spread_cfg.get("mode", "off") != "off" else None; spread_log = []
+    if spread_cfg:   # --spread (2026-10-16, Agent C): leftover silence of a part shorter than its source burst -> late start + pauses at phrase boundaries
+        import timing_spread
+        from tts_burst import CUT_FUNC_WORDS, FIXED_PHRASES
+        from tts_qa import norm as tts_norm
     for u, p in zip(units, plans):
         chunks = []
         for k, t in enumerate(u["tts_parts"]):
@@ -547,10 +552,20 @@ def align_units_burst(units: list[dict], plans: list[dict], work: pathlib.Path, 
                           "placements": placements, "aligned_seconds": round(len(track) / E1_SR, 3), "file": str(aligned),
                           "track_start": next((pl["track_start"] for pl in placements if "track_start" in pl), round(slot_s, 3))}
         placed_ends = [pl["placed"][1] for pl in placements if pl.get("placed")]
-        prev_end = max(placed_ends) if placed_ends else prev_end
+        prev_end = max(placed_ends) if placed_ends else prev_end      # before --spread: the next unit's lead room is that of the plain placement
+        if spread_cfg and u.get("tts_raw_file") and (u.get("tts") or {}).get("word_spans"):
+            y_raw, _ = sf.read(u["tts_raw_file"], dtype="float32")
+            track2, lg = timing_spread.spread_unit(u, track, E1_SR, y_raw, spread_cfg, tts_norm, CUT_FUNC_WORDS, FIXED_PHRASES)
+            if lg:
+                sf.write(str(aligned), track2, E1_SR, subtype="PCM_16"); spread_log += lg
         report.append({"id": u["id"], "placements": placements})
-    return {"mode": "burst", "min_burst_s": getattr(opts, "min_burst_s", None), "spill": opts.spill, "atempo_cap": opts.atempo_cap, "hard_cap": opts.hard_cap,
-            "fill_slowdown": opts.fill_slowdown, "fallback_frac": getattr(opts, "fallback_frac", 0.5), "units_slot_fallback": n_fallback, "summary": placement_summary(report)}
+    out = {"mode": "burst", "min_burst_s": getattr(opts, "min_burst_s", None), "spill": opts.spill, "atempo_cap": opts.atempo_cap, "hard_cap": opts.hard_cap,
+           "fill_slowdown": opts.fill_slowdown, "fallback_frac": getattr(opts, "fallback_frac", 0.5), "units_slot_fallback": n_fallback, "summary": placement_summary(report)}
+    if spread_cfg:
+        out["spread"] = {"cfg": {k: v for k, v in spread_cfg.items() if k != "src_ivs"}, "parts_spread": len(spread_log), "pauses": sum(len(x["pauses"]) for x in spread_log),
+                         "pause_s": round(sum(q["s"] for x in spread_log for q in x["pauses"]), 2), "head_s": round(sum(x["head_s"] for x in spread_log), 2), "log": spread_log}
+        print(f"  [spread] {out['spread']['parts_spread']} parts, {out['spread']['pauses']} inner pauses ({out['spread']['pause_s']} s), late start {out['spread']['head_s']} s", flush=True)
+    return out
 
 
 def build_dubbed_track(units: list[dict], duration: float, work: pathlib.Path) -> dict:
@@ -732,6 +747,13 @@ def main() -> int:
                     "is QA-bad -> retry ladder (04 \"Sochi\" -> \"Salkis\", 05 \"Just here\" -> \"This year\"; the sentence CER hid them)")
     ap.add_argument("--pause-marks", choices=["off", "qwen"], default="off", help="with --long-pause-func: qwen = Qwen marks the natural pause points of every multi-burst "
                     "sentence; a long source pause is free only there (function-word list otherwise / on a malformed answer)")
+    ap.add_argument("--spread", choices=["off", "centre", "pauses"], default="off", help="burst + phrase mode (2026-10-16, Agent C P1): where the leftover silence of a part "
+                    "shorter than its source burst goes: off = one tail gap (dub silent while the speaker still talks); centre = late start <= --spread-head-max + tail; pauses = + "
+                    "pauses <= --spread-pause-max at phrase boundaries inside the part (offline 01/03/04/05: LatentSync frames in gaps >= 0.35 s 525 -> 382, gaps > 1 s 6 -> 3)")
+    ap.add_argument("--spread-ok", type=float, default=0.3, help="--spread: tail gaps up to this many s are left alone / the target")
+    ap.add_argument("--spread-head-max", type=float, default=0.2); ap.add_argument("--spread-pause-max", type=float, default=0.25)
+    ap.add_argument("--spread-pause-total-max", type=float, default=0.35, help="--spread: max silence at one boundary = the TTS's own pause + the inserted one")
+    ap.add_argument("--spread-min-seg", type=float, default=0.5, help="--spread: min s of speech between two inserted pauses / a pause and the part edge")
     ap.add_argument("--cut-fade", choices=["fixed", "adaptive"], default="fixed", help="--phrase-cut acoustic: fixed = 5 ms declick fades; adaptive = 25 ms fade-out / 8 ms fade-in on inner cuts that are still voiced")
     ap.add_argument("--fit-up-guard", choices=["on", "off"], default="off", help="phrase mode: reject fit-up rewrites that append a clause / end on a dangling auxiliary before the Qwen judge "
                                                                                   "(deterministic; 2026-10-12 candidate, fewer judge calls)")
@@ -884,6 +906,8 @@ def main() -> int:
             sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
             from e1_burst_align import PlaceOpts
             burst_opts = PlaceOpts(a.atempo_cap, a.hard_cap, True, 0.06, a.fill_slowdown, spill=a.burst_spill == "on", max_lead=a.burst_max_lead); burst_opts.min_burst_s = a.burst_min_s; burst_opts.fallback_frac = a.burst_fallback_frac
+            burst_opts.spread = {"mode": a.spread, "ok": a.spread_ok, "head_max": a.spread_head_max, "pause_max": a.spread_pause_max, "pause_total_max": a.spread_pause_total_max,
+                                 "min_seg": a.spread_min_seg, "src_ivs": [(v["start"], v["end"]) for v in speech]}
         phrase_mode = a.alignment == "burst" and a.tts_mode == "phrase"
         tr = run_translation(units, src_lang, tgt, times, plans=plans, split_retries=a.split_retries,
                              min_part_words=a.min_part_words, soft_part_words=a.soft_part_words, part_max_words=a.part_max_words,

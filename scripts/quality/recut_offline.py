@@ -110,18 +110,13 @@ def main() -> int:
             u["tts_parts"].append({"file": str(f), "seconds": round(len(seg) / sr, 3), "text": ptxt, "clip_span": [round(s_, 3), round(e_, 3)], "speech_span": [0.0, round(len(seg) / sr, 3)]})
         log.append({"unit": u["id"], "parts": parts})
     if mc_path: mc_path.write_text(json.dumps(marks_cache, indent=1, ensure_ascii=False))
+    if a.spread != "off":   # same code path as the runner (run_clean_pipeline_05 --spread): align_units_burst applies timing_spread per unit
+        opts.spread = {"mode": a.spread, "ok": a.spread_ok, "head_max": a.spread_head_max, "pause_max": a.spread_pause_max, "pause_total_max": a.spread_pause_total_max,
+                       "min_seg": a.spread_min_seg, "src_ivs": [(v["start"], v["end"]) for v in man["speech_intervals"]]}
     man2 = copy.deepcopy(man); man2["alignment"] = rp.align_units_burst(units, plans, out, opts)
     if a.spread != "off":
-        import timing_spread as tsp
-        cfg = {"mode": a.spread, "ok": a.spread_ok, "head_max": a.spread_head_max, "pause_max": a.spread_pause_max, "pause_total_max": a.spread_pause_total_max, "min_seg": a.spread_min_seg,
-               "src_ivs": [(v["start"], v["end"]) for v in man["speech_intervals"]]}; slog = []
-        for u in units:
-            tr, sr_ = sf.read(u["alignment"]["file"], dtype="float32"); yr, _ = sf.read(u["tts_raw_file"], dtype="float32")
-            tr2, lg = tsp.spread_unit(u, tr, sr_, yr, cfg, norm, tb.CUT_FUNC_WORDS, tb.FIXED_PHRASES)
-            if lg: sf.write(u["alignment"]["file"], tr2, sr_, subtype="PCM_16"); slog += lg
-        man2["alignment"]["spread"] = {"cfg": {k: v for k, v in cfg.items() if k != "src_ivs"}, "parts_spread": len(slog), "pauses": sum(len(x["pauses"]) for x in slog),
-                                       "pause_s": round(sum(p["s"] for x in slog for p in x["pauses"]), 2), "head_s": round(sum(x["head_s"] for x in slog), 2), "log": slog}
-        print(f"spread {a.spread}: {len(slog)} parts, {man2['alignment']['spread']['pauses']} inner pauses ({man2['alignment']['spread']['pause_s']} s), head {man2['alignment']['spread']['head_s']} s")
+        sp = man2["alignment"].get("spread") or {}
+        print(f"spread {a.spread}: {sp.get('parts_spread', 0)} parts, {sp.get('pauses', 0)} inner pauses ({sp.get('pause_s', 0)} s), head {sp.get('head_s', 0)} s")
     man2["dubbed_track"] = rp.build_dubbed_track(units, dur, out); man2["units"] = units; man2["work_dir"] = str(out)
     for f in ("audio16k.wav", "master_25fps.mp4", "bg_44k.wav", "vocals_44k.wav"):
         if (W / f).exists() and not (out / f).exists(): (out / f).symlink_to(W / f)
