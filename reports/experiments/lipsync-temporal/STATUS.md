@@ -6,8 +6,8 @@ landmarks, mask, paste-back, speech gate, LS<->original switches)? Then: a more 
 | phase | state | report |
 |---|---|---|
 | 0 reproduce baseline (cand5) | **done**: 5/5 PASS, metrics saved | `PHASE0.md`, `baseline/` |
-| 1 prior work, diagnosis plan, shortlist, licenses | desk part done (CPU only, while the baseline ran); **waiting for the go** | `PHASE1_PLAN.md`, `LICENSES.md`, `research/` |
-| 2 cheapest A/B on a 03 window | – | – |
+| 1 prior work, diagnosis plan, shortlist, licenses | **done** (coordinator pre-approved continuing) | `PHASE1_PLAN.md`, `LICENSES.md`, `research/` |
+| 2 cheapest A/B on a 03 window (40-58 s) | **running**: L0/L1/L3 done, L2/S1/S2/S3 + TBDub (installed in /venv/tbdub, all sub-models Apache-2.0) next | `p2/` (soon) |
 | 3 refine winner | – | – |
 | 4 E2E regression 01/03/04/05 (+02) | – | – |
 | 5 FINAL.md | – | – |
@@ -42,3 +42,10 @@ formats      01 480x848 avg 25.0 fps (r 30), 02 464x848 29.98, 03 464x848 30.0 C
 
 GPU: baseline 5 videos 3725 s wall (LatentSync 1023 s, CodeFormer 129 s) + smoke 10.7 min + metrics (SyncNet, face_temporal,
 lipsync_jitter) ≈ 30 min. No candidate model installed, no experiment GPU time yet.
+
+## Phase 2 notes (live)
+
+* L0 (no generation: crop -> inverse warp -> CodeFormer -> mouth composite) on 03 40-58 s, metric v2 (native resolution): mouth
+  warping error vs source = 0.96 BEFORE CodeFormer, **1.29 after CodeFormer** (upper face 0.96 -> 1.31 before the mouth composite).
+  CodeFormer's per-frame re-synthesis alone adds ~33 % unexplained mouth texture change with no lip-sync at all -> relevant for track B;
+  CodeFormer stays fixed in this track's A/Bs, every arm is measured at three stages (raw LatentSync / after CodeFormer / composite).

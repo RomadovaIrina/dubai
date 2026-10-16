@@ -24,6 +24,9 @@ smoothed, applied identically to master and output so head motion cancels and bo
   upper_*        the same on the upper face (eyes / brows): must stay = master with the mouth-only paste-back
   lip_jitter     2nd difference of the output's own mouth landmarks (52-71) in the stabilised frame (inter-ocular units)
   mouth_sharp    Laplacian variance of the mouth ROI
+  lip_hf         |x - SavGol(7,2)(x)| of the output's mouth landmarks (high-frequency residual, >~5 Hz) per frame; mouth_pix_hf = same on pixels
+  lip_spectrum   Welch spectrum of the mouth landmark trajectories in LS runs >= 64 frames: energy share 6-12.5 Hz, output vs master
+Native resolution: the stabilised frame keeps the source's eye distance (canvas 3.4 x eye distance), no downscaling.
 All are reported as output / master ratios per situation (1.0 = as calm as the source at the same frames).
 
 Window test (generator-internal): LatentSync denoises every LS segment in independent 16-frame windows starting at the segment start.
@@ -46,7 +49,7 @@ sys.path.insert(0, str(HERE.parent / "pilot")); sys.path.insert(0, str(HERE.pare
 FPS = 25; NWIN = 16
 EYE_L, EYE_R, NOSE = list(range(33, 43)), list(range(87, 97)), list(range(72, 87))
 MOUTH = list(range(52, 72)); INNER_UP, INNER_LO = 60, 62
-CAN = 192                                   # canonical face crop (px)
+CAN = 192                                   # canonical face crop (px); main() resets it to the native scale (3.4 x source eye distance)
 
 
 def read_range(path, f0, f1):
@@ -111,6 +114,7 @@ def runs(mask, min_len=3, merge=2):
 
 
 def main() -> int:
+    global CAN
     import cv2
     cv2.setNumThreads(8)
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -151,7 +155,8 @@ def main() -> int:
     # ---- stabilisation: similarity from the master's stable points to a per-video template (median shape), smoothed over time
     P = stable_points(LMi); iod = np.linalg.norm(P[:, 1] - P[:, 0], axis=1)
     norm = (P - P.mean(1, keepdims=True)) / iod[:, None, None]; tmpl = np.nanmedian(norm, axis=0)
-    tmpl = tmpl * (0.30 * CAN) + np.array([CAN / 2, 0.36 * CAN])            # eyes ~0.3 CAN apart, eye/nose centroid at 36 % height
+    iod_med = float(np.nanmedian(iod)); CAN = int(np.clip(round(3.4 * iod_med), 160, 640))   # NATIVE scale: canonical eye distance = the source's
+    tmpl = tmpl * iod_med + np.array([CAN / 2, 0.36 * CAN])                  # eye/nose centroid at 36 % height
     A = np.stack([similarity(P[i], tmpl) for i in range(n)]); A = gsmooth(A.reshape(n, 6), a.stab_sigma).reshape(n, 2, 3)
     def warp_pts(L, Ai): return L @ Ai[:, :2].T + Ai[:, 2]
     LMc = np.stack([warp_pts(LMi[i], A[i]) for i in range(n)]); LOc = np.stack([warp_pts(LOi[i], A[i]) for i in range(n)])
@@ -192,6 +197,11 @@ def main() -> int:
     def acc2(X):
         d = np.zeros(len(X)); d[1:-1] = np.linalg.norm(X[2:] - 2 * X[1:-1] + X[:-2], axis=-1).mean(-1); return d
     sig["lip_jitter"] = (acc2(LOc[:, MOUTH]) / s_io, acc2(LMc[:, MOUTH]) / s_io)
+    from scipy.signal import savgol_filter, welch
+    def hf_res(X, axis_mean):   # |x - SavGol(7, 2)(x)| = high-frequency residual (>~5 Hz at 25 fps), averaged over the non-time axes
+        return np.abs(X - savgol_filter(X, 7, 2, axis=0)).mean(axis=axis_mean)
+    sig["lip_hf"] = (hf_res(LOc[:, MOUTH], (1, 2)) / s_io, hf_res(LMc[:, MOUTH], (1, 2)) / s_io)
+    sig["mouth_pix_hf"] = (hf_res(roi(GO, mouth_roi), (1, 2)), hf_res(roi(GM, mouth_roi), (1, 2)))
     open_o = np.linalg.norm(LOc[:, INNER_UP] - LOc[:, INNER_LO], axis=1) / s_io; open_m = np.linalg.norm(LMc[:, INNER_UP] - LMc[:, INNER_LO], axis=1) / s_io
     sig["open_jitter"] = (np.abs(np.convolve(open_o, [1, -2, 1], "same")), np.abs(np.convolve(open_m, [1, -2, 1], "same")))
     # ---- situations
@@ -234,13 +244,24 @@ def main() -> int:
     inner = ls & ~near & ~xf_mask[sl] & valid & (gidx - seg_start[sl] >= 1)
     bnd = inner & (phase == 0); intr = inner & (phase != 0)
     wtest = {}
-    for key in ("mouth_diff", "mouth_warp", "mouth_flicker", "lip_jitter", "upper_diff"):
+    for key in ("mouth_diff", "mouth_warp", "mouth_flicker", "mouth_pix_hf", "lip_hf", "lip_jitter", "upper_diff"):
         so, sm = sig[key]
         if bnd.sum() >= 3 and intr.sum() >= 10:
             ro = float(so[bnd].mean() / max(so[intr].mean(), 1e-9)); rm = float(sm[bnd].mean() / max(sm[intr].mean(), 1e-9))
             wtest[key] = {"n_boundary": int(bnd.sum()), "out_boundary_vs_interior": round(ro, 3), "master_boundary_vs_interior": round(rm, 3), "window_step_factor": round(ro / max(rm, 1e-9), 3)}
     prof = {k: [round(float(sig[k][0][inner & (phase == p)].mean()), 4) if (inner & (phase == p)).any() else None for p in range(NWIN)] for k in ("mouth_warp", "mouth_diff")}
     prof_m = {k: [round(float(sig[k][1][inner & (phase == p)].mean()), 4) if (inner & (phase == p)).any() else None for p in range(NWIN)] for k in ("mouth_warp", "mouth_diff")}
+    # ---- spectrum of the lip trajectories inside LS runs >= 64 frames: share of motion energy at 6-12.5 Hz (twitch band) vs 0.5-12.5 Hz
+    def band_frac(L):
+        num = den = 0.0
+        for r0, r1 in runs(ls & valid, min_len=64, merge=0):
+            X = L[r0:r1][:, MOUTH] / s_io[r0:r1, None, None]; X = X - X.mean(0)
+            f, pxx = welch(X.reshape(len(X), -1), fs=FPS, nperseg=64, axis=0); pxx = pxx.sum(1)
+            num += pxx[(f >= 6.0)].sum(); den += pxx[(f >= 0.5)].sum()
+        return round(float(num / den), 4) if den > 0 else None
+    spectral = {"lip_hf_band_fraction_out": band_frac(LOc), "lip_hf_band_fraction_master": band_frac(LMc)}
+    if spectral["lip_hf_band_fraction_out"] and spectral["lip_hf_band_fraction_master"]:
+        spectral["ratio"] = round(spectral["lip_hf_band_fraction_out"] / spectral["lip_hf_band_fraction_master"], 3)
     # ---- situation frame ranges (seconds, absolute)
     ranges = {s: [[round((f0 + r[0]) / FPS, 2), round((f0 + r[1]) / FPS, 2)] for r in runs(m)] for s, m in sit.items() if s not in ("ls_core", "orig_core")}
     # ---- worst 1 s windows per situation by mouth_warp ratio (for side-by-side clips)
@@ -266,14 +287,14 @@ def main() -> int:
            "open_percentiles": {"out_ls": np.round(np.percentile(open_o[ls], [5, 25, 50, 75, 95]), 4).tolist() if ls.any() else None,
                                 "master_ls": np.round(np.percentile(open_m[ls], [5, 25, 50, 75, 95]), 4).tolist() if ls.any() else None,
                                 "master_orig": np.round(np.percentile(open_m[~ls], [5, 25, 50, 75, 95]), 4).tolist() if (~ls).any() else None}, "table": table, "window_test": wtest, "window_profile_out": prof, "window_profile_master": prof_m,
-           "situation_ranges_s": ranges, "worst_1s_by_situation": worst_by, "switch_frames": [f for f in sw if f0 <= f < f1], "timeline": tl}
+           "situation_ranges_s": ranges, "lip_spectrum": spectral, "native_iod_px": round(iod_med, 1), "worst_1s_by_situation": worst_by, "switch_frames": [f for f in sw if f0 <= f < f1], "timeline": tl}
     (out / f"{stem}.lipsync_jitter.json").write_text(json.dumps(rep, indent=1))
-    keys = ("mouth_warp", "mouth_diff", "mouth_flicker", "lip_jitter", "open_jitter", "upper_warp", "upper_diff", "mouth_sharp")
+    keys = ("mouth_warp", "mouth_pix_hf", "mouth_diff", "mouth_flicker", "lip_hf", "lip_jitter", "open_jitter", "upper_warp", "upper_diff", "mouth_sharp")
     lines = [f"# lipsync_jitter {stem} frames {f0}-{f1} (output / master ratios; 1.0 = as calm as the source)", "",
              "| situation | frames | " + " | ".join(keys) + " |", "|---|---:|" + "---:|" * len(keys)]
     for s, row in table.items():
         lines.append(f"| {s} | {rep['situation_frames'][s]} | " + " | ".join("–" if row[k] is None else f"{row[k]['ratio']}" for k in keys) + " |")
-    lines += ["", "window test (LatentSync 16-frame windows): " + ", ".join(f"{k} step x{v['window_step_factor']} (out {v['out_boundary_vs_interior']}, master {v['master_boundary_vs_interior']}, n={v['n_boundary']})" for k, v in wtest.items())]
+    lines += ["", f"lip trajectory energy share 6-12.5 Hz (LS runs >= 64 frames): {spectral}", "", "window test (LatentSync 16-frame windows): " + ", ".join(f"{k} step x{v['window_step_factor']} (out {v['out_boundary_vs_interior']}, master {v['master_boundary_vs_interior']}, n={v['n_boundary']})" for k, v in wtest.items())]
     (out / f"{stem}.lipsync_jitter.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
     return 0

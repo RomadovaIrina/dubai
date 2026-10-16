@@ -30,6 +30,61 @@ class WindowPrep:
         t0 = time.perf_counter(); self.ls_dets = [ls_det(cv2.cvtColor(f, cv2.COLOR_BGR2RGB)) for f in frames]; self.times["prep_ls_detect_all_frames"] = round(time.perf_counter() - t0, 3)
 
 
+def make_dumper(MouthOnlyRunner, frames):
+    """MouthOnlyRunner that also keeps, per LS segment, the RAW LatentSync frames (LatentSync's own restore / paste of its 512 crop) and
+    the frames after CodeFormer (right before the mouth-only composite), so each stage can be measured on its own."""
+    import cv2, hashlib
+    index = {hashlib.md5(f.tobytes()).hexdigest(): i for i, f in enumerate(frames)}
+
+    class Dumper(MouthOnlyRunner):
+        raw: dict = {}; pre: dict = {}
+        def run_frames(self, frames_rgb, audio_wav, detections=None):
+            outs, dt = super().run_frames(frames_rgb, audio_wav, detections)
+            self._start = index.get(hashlib.md5(cv2.cvtColor(frames_rgb[0], cv2.COLOR_RGB2BGR).tobytes()).hexdigest())
+            if self._start is not None: Dumper.raw[self._start] = [cv2.cvtColor(np.asarray(o), cv2.COLOR_RGB2BGR) for o in outs[:len(frames_rgb)]]
+            return outs, dt
+        def composite(self, outs, originals, boxes=None):
+            if getattr(self, "_start", None) is not None: Dumper.pre[self._start] = [np.array(o, copy=True) for o in outs]
+            return super().composite(outs, originals, boxes)
+    return Dumper
+
+
+def write_stage(frames, stage: dict, path, audio):
+    """master frames with the stage's LS frames substituted (no crossfade), muxed with `audio`."""
+    import imageio, cv2
+    out = list(frames)
+    for st, frs in stage.items():
+        for k, f in enumerate(frs):
+            if st + k < len(out): out[st + k] = f
+    tmp = path.with_name(path.stem + "_v.mp4")
+    w = imageio.get_writer(str(tmp), fps=FPS, codec="libx264", macro_block_size=None, ffmpeg_params=["-crf", "13"], ffmpeg_log_level="error")
+    for f in out: w.append_data(cv2.cvtColor(f, cv2.COLOR_BGR2RGB))
+    w.close()
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-nostdin", "-i", str(tmp), "-i", str(audio), "-map", "0:v:0", "-map", "1:a:0", "-c", "copy", str(path)], check=True)
+    tmp.unlink(missing_ok=True)
+
+
+class PrecomputedRunner:
+    """Lip-sync frames produced OUTSIDE this process for the whole window (e.g. TBDub in its own venv, same driving audio), served per LS
+    segment so gate / verify / CodeFormer-mouth / mouth-only composite / crossfade stay identical to the LatentSync arms."""
+
+    def __init__(self, video, frames_bgr, label, seconds=None):
+        import cv2, hashlib
+        gen = read_frames(video, 0, len(frames_bgr))
+        assert len(gen) == len(frames_bgr), f"{video}: {len(gen)} frames, window has {len(frames_bgr)}"
+        assert gen[0].shape == frames_bgr[0].shape, f"{video}: {gen[0].shape} vs {frames_bgr[0].shape}"
+        self.gen = [cv2.cvtColor(f, cv2.COLOR_BGR2RGB) for f in gen]
+        self.index = {hashlib.md5(cv2.cvtColor(f, cv2.COLOR_BGR2RGB).tobytes()).hexdigest(): i for i, f in enumerate(frames_bgr)}
+        self.config = {"backend": label, "precomputed_video": str(video), "external_seconds": seconds}
+        self.calls: list = []; self.steps = self.guidance = self.seed = None; self.load_s = 0.0
+
+    def run_frames(self, frames_rgb, audio_wav, detections=None):
+        import hashlib
+        st = self.index[hashlib.md5(np.ascontiguousarray(frames_rgb[0]).tobytes()).hexdigest()]
+        out = np.stack(self.gen[st:st + len(frames_rgb)]); self.calls.append({"frames": len(out), "start": st, "seconds": 0.0})
+        return out, 0.0
+
+
 def read_frames(path, f0, f1):
     import cv2
     cap = cv2.VideoCapture(str(path)); cap.set(cv2.CAP_PROP_POS_FRAMES, f0); out = []
@@ -74,6 +129,10 @@ def main() -> int:
     ap.add_argument("--crossfade-frames", type=int, default=4); ap.add_argument("--router-stride", type=int, default=3); ap.add_argument("--min-ls-frames", type=int, default=25)
     ap.add_argument("--mask-top", type=float, default=0.52); ap.add_argument("--mask-feather", type=float, default=0.08); ap.add_argument("--mask-smooth", type=int, default=3)
     ap.add_argument("--ls-landmark-smooth", type=int, default=2); ap.add_argument("--codeformer", choices=["off", "optimized"], default="optimized")
+    ap.add_argument("--precomputed", default=None, help="window-length video of an external lip-sync backend (same driving audio); replaces LatentSync")
+    ap.add_argument("--precomputed-label", default="external"); ap.add_argument("--precomputed-seconds", type=float, default=None)
+    ap.add_argument("--dump-stages", action="store_true", help="also write <tag>_raw.mp4 (raw LatentSync frames) and <tag>_precomp.mp4 (after CodeFormer, before the mouth composite)")
+    ap.add_argument("--outbox", default=None, help="hardlink the viewable clips into this dir (e.g. /workspace/dub/outbox/p2-03win-L3)")
     a = ap.parse_args()
     import cv2, soundfile as sf, torch
     import face_aware_latentsync as fa
@@ -100,10 +159,13 @@ def main() -> int:
     router = faa.make_router("retinaface", 50, 80, 0.8)
     t = time.perf_counter(); prep = WindowPrep(frames, router, fa.face_detector()); times["prep"] = round(time.perf_counter() - t, 3)
     t = time.perf_counter()
-    runner = StableRunner(a.window_batch_size, not a.no_deepcache, a.steps, a.guidance, 1247, a.deepcache_interval, stride=a.stride, ref_mode=a.ref_mode, mode=a.mode)
+    if a.precomputed:
+        runner = PrecomputedRunner(pathlib.Path(a.precomputed), frames, a.precomputed_label, a.precomputed_seconds)
+    else:
+        runner = StableRunner(a.window_batch_size, not a.no_deepcache, a.steps, a.guidance, 1247, a.deepcache_interval, stride=a.stride, ref_mode=a.ref_mode, mode=a.mode)
     times["latentsync_load"] = round(time.perf_counter() - t, 3)
     ref_info = None
-    if a.ref_mode == "fixed":
+    if a.ref_mode == "fixed" and not a.precomputed:
         lm_npz = pathlib.Path(a.ref_lm) if a.ref_lm else None
         if lm_npz and lm_npz.exists():
             LM = np.load(lm_npz)["lm"]
@@ -116,7 +178,8 @@ def main() -> int:
         runner.acc.set_reference(np.stack([cv2.cvtColor(f, cv2.COLOR_BGR2RGB) for f in rf]), [det(cv2.cvtColor(f, cv2.COLOR_BGR2RGB)) for f in rf])
         ref_info = {"select": a.ref_select, "start_frame": int(rs), "t": round(rs / FPS, 2), "cost": round(cost, 4)}
         print(f"  [ref] fixed reference frames {rs}-{rs + 16} ({rs / FPS:.2f}s), cost {cost:.4f}", flush=True)
-    runner = MouthOnlyRunner(runner, a.mask_top, a.mask_feather, a.mask_smooth, defer=True)
+    Mo = make_dumper(MouthOnlyRunner, frames) if a.dump_stages else MouthOnlyRunner
+    runner = Mo(runner, a.mask_top, a.mask_feather, a.mask_smooth, defer=True)
     cf = None
     if a.codeformer == "optimized":
         from codeformer_accel import CodeFormerAccel
@@ -130,12 +193,23 @@ def main() -> int:
     if cf is not None: cf.close()
     dubonly = out / f"{vid}_{a.tag}_dubonly.mp4"
     subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-nostdin", "-i", str(clip), "-i", str(drv_aac), "-map", "0:v:0", "-map", "1:a:0", "-c", "copy", str(dubonly)], check=True)
+    stage_clips = {}
+    if a.dump_stages:
+        for name, st in (("raw", Mo.raw), ("precomp", Mo.pre)):
+            pth = out / f"{vid}_{a.tag}_{name}.mp4"; write_stage(frames, st, pth, mux); stage_clips[name] = str(pth)
+    if a.outbox:
+        import os
+        ob = pathlib.Path(a.outbox); ob.mkdir(parents=True, exist_ok=True)
+        for pth in [clip] + [pathlib.Path(x) for x in stage_clips.values()]:
+            tmpl = ob / (".tmp_" + pth.name)
+            if tmpl.exists(): tmpl.unlink()
+            os.link(pth, tmpl); os.replace(tmpl, ob / pth.name)
     for s in rep["segments"]:
         s["start_frame"] += f0; s["end_frame"] += f0; s["start_s"] = round(s["start_frame"] / FPS, 3); s["end_s"] = round(s["end_frame"] / FPS, 3)
     rep["master_frames"] = man["lipsync"]["master_frames"]
     times["total"] = round(time.perf_counter() - t_all, 3)
     wm = {k: man[k] for k in ("input", "work_dir", "source", "dubbed_track", "speech_intervals")}
-    wm.update({"output": str(clip), "output_dubonly": str(dubonly), "window": {"t0": round(t0s, 3), "t1": round(f1 / FPS, 3), "f0": f0, "f1": f1},
+    wm.update({"output": str(clip), "output_dubonly": str(dubonly), "stage_clips": stage_clips, "window": {"t0": round(t0s, 3), "t1": round(f1 / FPS, 3), "f0": f0, "f1": f1},
                "variant": {"tag": a.tag, "mode": a.mode, "audio": a.audio, "stride": a.stride, "ref_mode": a.ref_mode, "reference": ref_info,
                            "video_params": {k: v for k, v in vars(a).items() if k not in ("manifest", "out", "tag")}},
                "speech_gate": {"intervals_window": gate, "source": "baseline manifest"}, "lipsync": rep, "stage_seconds": times,
