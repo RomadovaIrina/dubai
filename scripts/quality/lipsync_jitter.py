@@ -34,9 +34,8 @@ For transitions INTO a window start (frame s0 + 16k, k >= 1, crossfade frames ex
 mean mouth_diff / mouth_warp, output and master; boundary/interior ratio of the output divided by that of the master (control) = the
 step that the window cut adds. Also the 16-bin profile of mouth_warp over (t - s0) mod 16.
 
-Landmarks: LatentSync's own FaceDetector (insightface buffalo_l: det_10g + 2d106det). NOTE: InsightFace model packs are licensed for
-non-commercial research only; used here as an INTERNAL measurement (same detector the shipped LatentSync crop already uses, see
-reports/experiments/lipsync-temporal/LICENSES.md), never shipped by this tool.
+Landmarks (v3, 2026-10-16 CLEAN-ONLY): MediaPipe Face Landmarker (Apache-2.0, /venv/mediapipe subprocess) on master and output, mapped
+to the 106-point index layout used below (clean_face_stack.MAP106). v1/v2 numbers (InsightFace 2d106) are not comparable with v3.
 
     python scripts/quality/lipsync_jitter.py --manifest RUN/final/03_final.manifest.json --out DIR --tag baseline [--video X.mp4] [--t0 40 --t1 60]
     (a window manifest of ls_window_ab.py is measured on its own window against the full master: no --t0/--t1 needed)
@@ -45,7 +44,7 @@ from __future__ import annotations
 import argparse, json, pathlib, sys
 import numpy as np
 HERE = pathlib.Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent / "pilot")); sys.path.insert(0, str(HERE.parents[1] / "third_party" / "latentsync"))
+sys.path.insert(0, str(HERE.parent / "pilot"))
 FPS = 25; NWIN = 16
 EYE_L, EYE_R, NOSE = list(range(33, 43)), list(range(87, 97)), list(range(72, 87))
 MOUTH = list(range(52, 72)); INNER_UP, INNER_LO = 60, 62
@@ -62,14 +61,12 @@ def read_range(path, f0, f1):
     cap.release(); return out
 
 
-def detect(frames):
-    import cv2
-    import face_aware_latentsync as fa
-    det = fa.face_detector(); L = np.full((len(frames), 106, 2), np.nan, np.float32)
-    for i, f in enumerate(frames):
-        bb, lm = det(cv2.cvtColor(f, cv2.COLOR_BGR2RGB))
-        if bb is not None: L[i] = np.asarray(lm, np.float32)
-    return L
+def detect_video(video, cache):
+    """MediaPipe Face Landmarker in IMAGE mode (every frame on its own: no tracking smoothing that would hide jitter; Apache-2.0, own env) on every frame of `video`, mapped to the
+    106-point index layout this tool uses (clean_face_stack.MAP106, no anchor calibration) -> (T, 106, 2), NaN = no face."""
+    import clean_face_stack as cfs
+    z = np.load(cfs.run_mediapipe(pathlib.Path(video), pathlib.Path(cache), mode="image")); lm = z["lm"]   # IMAGE mode: no tracking / smoothing
+    return np.where(np.isfinite(lm[:, :1, :1]), lm[:, cfs.MAP106], np.nan).astype(np.float32)
 
 
 def interp_nan(a):
@@ -126,7 +123,7 @@ def main() -> int:
     ap.add_argument("--turn-yaw", type=float, default=0.005); ap.add_argument("--turn-pitch", type=float, default=0.007)
     ap.add_argument("--turn-roll", type=float, default=0.4, help="deg per frame"); ap.add_argument("--turn-shift", type=float, default=0.015, help="inter-ocular units per frame")
     ap.add_argument("--closed-thr", type=float, default=0.05, help="closed mouth: inner-lip gap (lmk 60-62) / inter-ocular distance (03 master, silent frames: p25 0.043, median 0.054)")
-    ap.add_argument("--master-cache", default=None, help="npz with master landmarks (reused across candidates; default <out>/<id>_master_lm.npz)")
+    ap.add_argument("--master-cache", default=None, help="MediaPipe IMAGE-mode npz of the master (default <work_dir>/master_mediapipe_image.npz)")
     a = ap.parse_args()
     man = json.loads(pathlib.Path(a.manifest).read_text()); vid = pathlib.Path(a.video or man["output"])
     master_p = pathlib.Path(a.master or (pathlib.Path(man["work_dir"]) / "master_25fps.mp4"))
@@ -137,19 +134,12 @@ def main() -> int:
     f1 = min(n_all, int(round(a.t1 * FPS)) if a.t1 else int(win.get("f1", n_all)))
     M = read_range(master_p, f0, f1); O = read_range(vid, f0 - voff, f1 - voff); n = min(len(M), len(O)); M, O = M[:n], O[:n]; f1 = f0 + n
     # ---- landmarks (master cached: identical for every candidate of this video)
-    cache = pathlib.Path(a.master_cache or (out / f"{vid_id}_master_lm.npz"))
-    LMall = None
-    if cache.exists():
-        z = np.load(cache); LMall = z["lm"] if str(z["master"]) == str(master_p) and len(z["lm"]) == n_all else None
-    if LMall is None:
-        LMall = detect(read_range(master_p, 0, n_all)); np.savez_compressed(cache, lm=LMall, master=str(master_p))
+    cache = pathlib.Path(a.master_cache or (pathlib.Path(man["work_dir"]) / "master_mediapipe_image.npz"))
+    LMall = detect_video(master_p, cache)
+    if len(LMall) != n_all: raise RuntimeError(f"{cache}: {len(LMall)} frames != master {n_all}")
     LM = LMall[f0:f1]
-    oc = out / f"{stem}_out_lm.npz"; st = vid.stat(); key = f"{vid}|{st.st_size}|{int(st.st_mtime)}|{f0}|{f1}"
-    LO = None
-    if oc.exists():
-        z = np.load(oc); LO = z["lm"] if str(z["key"]) == key else None
-    if LO is None:
-        LO = detect(O); np.savez_compressed(oc, lm=LO, key=key)
+    st = vid.stat(); oc = out / f"{stem}_out_mpimg_{st.st_size}_{int(st.st_mtime)}.npz"
+    LO = detect_video(vid, oc)[f0 - voff:f1 - voff]
     det_ok_m = np.isfinite(LM[:, 0, 0]); det_ok_o = np.isfinite(LO[:, 0, 0])
     LMi = interp_nan(LM); LOi = interp_nan(LO)
     # ---- stabilisation: similarity from the master's stable points to a per-video template (median shape), smoothed over time
@@ -281,7 +271,7 @@ def main() -> int:
            "lip_jitter_master": round(float(sig["lip_jitter"][1][t]), 5), "open_out": round(float(open_o[t]), 4), "open_master": round(float(open_m[t]), 4), "dyaw": round(float(dyaw[t]), 4),
            "dpitch": round(float(dpitch[t]), 4), "droll": round(float(droll[t]), 3), "shift": round(float(shift[t]), 4), "turn": bool(turn[t])} for t in range(n)]
     rep = {"video": str(vid), "master": str(master_p), "tag": a.tag, "frames": [f0, f1], "params": {k: v for k, v in vars(a).items() if k not in ("manifest", "out")},
-           "landmarker": "insightface buffalo_l 2d106det via LatentSync FaceDetector (non-commercial weights; internal measurement only)",
+           "landmarker": "mediapipe face_landmarker.task float16 v1 (Apache-2.0) mapped to the 106 layout (metric v3)",
            "det_rate": {"master": round(float(det_ok_m.mean()), 4), "output": round(float(det_ok_o.mean()), 4)}, "rois_canonical": {"mouth": mouth_roi, "upper": upper_roi, "size": CAN},
            "situation_frames": {s: int(m.sum()) for s, m in sit.items()},
            "open_percentiles": {"out_ls": np.round(np.percentile(open_o[ls], [5, 25, 50, 75, 95]), 4).tolist() if ls.any() else None,

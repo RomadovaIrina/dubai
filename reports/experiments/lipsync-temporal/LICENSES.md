@@ -9,7 +9,24 @@ Legend: **YES** = code and weights licences both allow commercial use; **NO** = 
 **UNCLEAR** = permissive file licence but non-commercial training data or missing text. `RESEARCH_ONLY — cannot ship` marks anything
 that may run here only as a diagnostic upper bound.
 
-## 1. What the current video stage (cand5) loads
+
+## 0. CLEAN-ONLY status (user decision 2026-10-16 ~21:00 UTC) — clean face stack, quarantine, eval-only tools
+
+Rule: only components with verdict YES (code + weights + every pretrained sub-model) may run in a product-path run.
+
+| component of the clean0 video stage (`--face-stack mediapipe --codeformer off`) | licence | verdict |
+|---|---|---|
+| MediaPipe 0.10.21 (code, `/venv/mediapipe`, subprocess) + `face_landmarker.task` float16 v1 (BlazeFace short-range + Face Mesh V2 + blendshapes; sha256 64184e22…c9ff) | Apache-2.0 code; model cards "LICENSED UNDER Apache License, Version 2.0"; trained on consented Google-collected images | **YES** — replaces the router (RetinaFace R50), LatentSync's crop / verify detector and the mouth-mask / smoothing landmarks (InsightFace buffalo_l) |
+| venv deps of MediaPipe: opencv-contrib-python 4.11, jax / jaxlib, protobuf 4.25, numpy 1.26, matplotlib, sounddevice | Apache-2.0 / Apache-2.0 / BSD-3 / BSD / PSF-style / MIT | YES |
+| LatentSync 1.6 UNet (`openrail++`), Whisper tiny (MIT), sd-vae-ft-mse (MIT), DeepCache / kornia (Apache-2.0), Silero VAD (MIT) | see §1 | YES (LatentSync: Open RAIL++-M use restrictions must flow into our ToS — false information to harm, defamation, harassment, impersonation without consent, …) |
+| the 106-point index table + anchor correction in `scripts/pilot/clean_face_stack.py` (`MAP106`, `clean_face_stack_calib.json`) | our code; derived offline from cached evaluation landmarks of the baseline masters (no InsightFace model runs in the product path) | YES |
+| CodeFormer / ParseNet / RetinaFace R50 / InsightFace buffalo_l | NC | **quarantined** in `/workspace/dub/quarantine_nc/` (README with sha256 + reason); `guard_nc()` makes their loaders raise in clean runs; `download_models.sh` fetches them only with `DUB_ALLOW_NC=1` |
+
+EVAL_ONLY (never imported by the product path): SyncNet `syncnet_v2.model` + S3FD `sfd_face.pth` (SyncNet scoring),
+YuNet `face_detection_yunet_2023mar.onnx` (common metric `mouth_jitter_hr.py`; MIT file, WIDER FACE data), MediaPipe in IMAGE mode for
+`lipsync_jitter.py` v3 (metric landmarks). `face_temporal.py` (InsightFace landmarks) is retired by this track.
+
+## 1. What the cand5 video stage loaded (before the CLEAN-ONLY decision)
 
 | model | repository | code licence | weights licence | commercial | problematic dependencies / data | replacement risk |
 |---|---|---|---|---|---|---|

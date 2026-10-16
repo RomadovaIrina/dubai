@@ -7,7 +7,8 @@ landmarks, mask, paste-back, speech gate, LS<->original switches)? Then: a more 
 |---|---|---|
 | 0 reproduce baseline (cand5) | **done**: 5/5 PASS, metrics saved | `PHASE0.md`, `baseline/` |
 | 1 prior work, diagnosis plan, shortlist, licenses | **done** (coordinator pre-approved continuing) | `PHASE1_PLAN.md`, `LICENSES.md`, `research/` |
-| 2 cheapest A/B on a 03 window (40-58 s) | **running**: L0/L1/L3 done, L2/S1/S2/S3 + TBDub (installed in /venv/tbdub, all sub-models Apache-2.0) next | `p2/` (soon) |
+| CLEAN-ONLY (user decision ~21:00 UTC) | **clean0 delivered**: `--face-stack mediapipe --codeformer off`, validated on 03 vs cand5; NC weights quarantined | `CLEAN0.md`, `clean0/`, `LICENSES.md` §0 |
+| 2 cheapest A/B on a 03 window | cand5-stack arms L0-L3 + S1 on 40-58 s done before the directive (diagnostic only); continues on the clean base | – |
 | 3 refine winner | – | – |
 | 4 E2E regression 01/03/04/05 (+02) | – | – |
 | 5 FINAL.md | – | – |
@@ -49,3 +50,5 @@ lipsync_jitter) ≈ 30 min. No candidate model installed, no experiment GPU time
   warping error vs source = 0.96 BEFORE CodeFormer, **1.29 after CodeFormer** (upper face 0.96 -> 1.31 before the mouth composite).
   CodeFormer's per-frame re-synthesis alone adds ~33 % unexplained mouth texture change with no lip-sync at all -> relevant for track B;
   CodeFormer stays fixed in this track's A/Bs, every arm is measured at three stages (raw LatentSync / after CodeFormer / composite).
+* CLEAN-ONLY directive: the cand5-stack window chain was stopped (S2/S3 and window B never ran); InsightFace-based metrics retired
+  (`face_temporal.py`; `lipsync_jitter.py` v3 uses MediaPipe IMAGE mode). clean0 results: `CLEAN0.md`.

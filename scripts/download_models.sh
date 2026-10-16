@@ -32,12 +32,19 @@ LS="${DUB_ROOT}/third_party/latentsync/checkpoints"; mkdir -p "$LS"
 ln -sfn "$M/latentsync/latentsync_unet.pt" "$LS/latentsync_unet.pt"; ln -sfn "$M/latentsync/whisper" "$LS/whisper"
 # SyncNet evaluator weights (scripts/pilot/syncnet_common.py -> eval/eval_sync_conf.py reads checkpoints/auxiliary/)
 mkdir -p "$LS/auxiliary"; for f in syncnet_v2.model sfd_face.pth; do ln -sfn "$M/latentsync/auxiliary/$f" "$LS/auxiliary/$f"; done
-# CodeFormer + facelib weights (github releases) into the clone's weights/ dir
-CF="${DUB_ROOT}/third_party/CodeFormer"; mkdir -p "$CF/weights/CodeFormer" "$CF/weights/facelib"
 dl(){ [ -s "$2" ] || curl -fL --retry 3 -o "$2" "$1"; echo "ok $2"; }
-dl https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth "$CF/weights/CodeFormer/codeformer.pth"
-dl https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/detection_Resnet50_Final.pth "$CF/weights/facelib/detection_Resnet50_Final.pth"
-dl https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/parsing_parsenet.pth "$CF/weights/facelib/parsing_parsenet.pth"
-# facexlib (RetinaFace) uses the identical detector weights; pre-seed its cache so first use is offline
-FX="$M/facexlib"; mkdir -p "$FX"; ln -sfn "$CF/weights/facelib/detection_Resnet50_Final.pth" "$FX/detection_Resnet50_Final.pth"
+# Clean face stack (2026-10-16): MediaPipe Face Landmarker bundle (BlazeFace + Face Mesh V2, Apache-2.0 model cards), pinned by sha256
+mkdir -p "$M/mediapipe"; dl https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task "$M/mediapipe/face_landmarker.task"
+echo "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff  $M/mediapipe/face_landmarker.task" | sha256sum -c -
+# NON-COMMERCIAL weights (CLEAN-ONLY directive 2026-10-16): CodeFormer (S-Lab NC), ParseNet (CC BY-NC-SA), RetinaFace R50 (WIDER FACE NC data)
+# are no longer fetched by default; the clean pipeline (--face-stack mediapipe --codeformer off) never loads them. DUB_ALLOW_NC=1 = old behaviour.
+if [ "${DUB_ALLOW_NC:-0}" = "1" ]; then
+  CF="${DUB_ROOT}/third_party/CodeFormer"; mkdir -p "$CF/weights/CodeFormer" "$CF/weights/facelib"
+  dl https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth "$CF/weights/CodeFormer/codeformer.pth"
+  dl https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/detection_Resnet50_Final.pth "$CF/weights/facelib/detection_Resnet50_Final.pth"
+  dl https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/parsing_parsenet.pth "$CF/weights/facelib/parsing_parsenet.pth"
+  FX="$M/facexlib"; mkdir -p "$FX"; ln -sfn "$CF/weights/facelib/detection_Resnet50_Final.pth" "$FX/detection_Resnet50_Final.pth"
+else
+  echo "skip NC weights (CodeFormer / ParseNet / RetinaFace R50): set DUB_ALLOW_NC=1 to fetch them"
+fi
 echo "== done"; du -sh "$M"/* 2>/dev/null

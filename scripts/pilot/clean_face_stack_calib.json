@@ -1,0 +1,79 @@
+{
+ "anchor_calib": {
+  "brow_l": [
+   -0.0362,
+   0.0509
+  ],
+  "brow_r": [
+   0.0328,
+   0.0588
+  ],
+  "nose": [
+   0.0136,
+   0.0304
+  ]
+ },
+ "per_video": {
+  "01": {
+   "brow_l": [
+    -0.0043,
+    0.0504
+   ],
+   "brow_r": [
+    0.04,
+    0.0613
+   ],
+   "nose": [
+    0.0197,
+    0.0374
+   ],
+   "n": 260
+  },
+  "03": {
+   "brow_l": [
+    -0.0287,
+    0.0307
+   ],
+   "brow_r": [
+    0.0196,
+    0.0242
+   ],
+   "nose": [
+    0.0251,
+    -0.0065
+   ],
+   "n": 2260
+  },
+  "04": {
+   "brow_l": [
+    -0.05,
+    0.0835
+   ],
+   "brow_r": [
+    0.0587,
+    0.0985
+   ],
+   "nose": [
+    0.0076,
+    0.0437
+   ],
+   "n": 1349
+  },
+  "05": {
+   "brow_l": [
+    -0.0436,
+    0.0515
+   ],
+   "brow_r": [
+    0.0256,
+    0.0564
+   ],
+   "nose": [
+    -0.0085,
+    0.0234
+   ],
+   "n": 1144
+  }
+ },
+ "note": "median offset of the MediaPipe-mapped LatentSync affine anchors vs the InsightFace 2d106 anchors (cached evaluation landmarks of the 2026-10-16 baseline masters 01/03/04/05; no InsightFace model run), eye-distance units (along the eye line, down); subtracted from the MediaPipe anchors."
+}

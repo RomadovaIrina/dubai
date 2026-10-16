@@ -778,6 +778,11 @@ def main() -> int:
                     help="with --mouth-only-pasteback: face = CodeFormer on the composited frame (re-renders eyes / brows, previous behaviour); mouth = CodeFormer on the raw "
                          "LatentSync frame, then the mouth-only composite (eyes / brows stay the source; 2026-10-13 'мимика дергается')")
     ap.add_argument("--ls-landmark-smooth", type=int, default=0, help="optimized backend: centred moving average (+-N frames) of the landmarks replayed into LatentSync's affine crop")
+    ap.add_argument("--face-stack", choices=["insightface", "mediapipe"], default="insightface",
+                    help="optimized backend: mediapipe = clean face stack (scripts/pilot/clean_face_stack.py, Apache-2.0 MediaPipe Face Landmarker in /venv/mediapipe) "
+                         "for the router, LatentSync's crop / verify detections and the mouth-mask landmarks; InsightFace / RetinaFace loaders are blocked. "
+                         "insightface = previous stack (non-commercial weights). Use with --codeformer off for the clean pipeline (clean0)")
+    ap.add_argument("--mp-anchor-calib", choices=["on", "off"], default="on", help="--face-stack mediapipe: constant anchor correction to LatentSync's training alignment")
     ap.add_argument("--video-prep", choices=["sequential", "parallel"], default="sequential",
                     help="optimized backend: parallel = master decode + router / LatentSync face detection of every frame in a thread during the audio stage, "
                          "replayed by the video stage (same calls, same results; 2026-10-13 speed lever)")
@@ -823,7 +828,7 @@ def main() -> int:
             ff(["-i", str(src), "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", str(wav16)])
 
         video_prep = None
-        if a.video_prep == "parallel" and a.video_backend == "optimized" and a.face_router == "retinaface" and not a.segment_files and a.stop_after != "audio":
+        if a.video_prep == "parallel" and a.video_backend == "optimized" and a.face_router == "retinaface" and a.face_stack == "insightface" and not a.segment_files and a.stop_after != "audio":
             import face_aware_latentsync_accel as faa
             video_prep = faa.VideoPrep(src, work, a.face_router, a.face_min_w, a.face_min_h, a.retina_conf)   # runs while the audio stage runs
         with timed(times, "vad"):
@@ -971,6 +976,13 @@ def main() -> int:
             if video_prep is not None:
                 prep = video_prep.result(); man["video_prep"] = {"mode": "parallel", "times": video_prep.times, "error": video_prep.error}
                 print(f"  [video-prep] parallel {video_prep.times}" + (f" FAILED -> sequential: {video_prep.error}" if video_prep.error else ""), flush=True)
+            if a.face_stack == "mediapipe":   # 2026-10-16 CLEAN-ONLY: MediaPipe router + LatentSync crop / verify / mask landmarks, NC loaders blocked
+                import clean_face_stack as cfs
+                cfs.guard_nc()
+                with timed(times, "face_stack_mediapipe"):
+                    prep = cfs.CleanPrep(src, work, a.face_min_w, a.face_min_h, calib=a.mp_anchor_calib == "on")
+                man["face_stack"] = {**prep.info, "times": prep.times}
+                print(f"  [face-stack] mediapipe {prep.info['face_frames']}/{prep.info['frames']} face frames, {prep.info['ls_detections']} LatentSync detections {prep.times}", flush=True)
             man["lipsync"] = run_lipsync_optimized(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), mux_aac, out, a, times,
                                                    speech_gate=speech_gate, prep=prep)
         else:

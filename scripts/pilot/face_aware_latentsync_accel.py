@@ -315,7 +315,7 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
 
     t0 = time.perf_counter()
     if router is not None:
-        frames, n_detected = classify_master(master_frames, router, gate, router_stride, cache=prep.router_rows if prep is not None else None); router_name = "retinaface"
+        frames, n_detected = classify_master(master_frames, router, gate, router_stride, cache=prep.router_rows if prep is not None else None); router_name = getattr(router, "name", "retinaface")
     else:
         frames = fa.classify_frames(master); router_name = "insightface(latentsync)"; n_detected = len(frames)
         if gate is not None:

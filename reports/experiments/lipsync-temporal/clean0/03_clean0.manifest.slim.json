@@ -1,0 +1,891 @@
+{
+ "task": "0.5-runner",
+ "input": "/workspace/dub/inputs/test_videos_raw/03.mp4",
+ "output": "/workspace/dub/artifacts/lipsync-temporal/clean0/03_clean0.mp4",
+ "target_lang": "en",
+ "alignment_mode": "burst",
+ "tts_mode": "phrase",
+ "segmentation_mode": "sentence",
+ "codeformer": "DISABLED (not invoked)",
+ "work_dir": "/workspace/dub/artifacts/lipsync-temporal/clean0/work_03_clean0",
+ "config": {
+  "seed": 1247,
+  "max_unit_s": 20.0,
+  "threads": 16
+ },
+ "source": {
+  "duration_s": 90.333333,
+  "size_bytes": 18898111,
+  "container": "mov,mp4,m4a,3gp,3g2,mj2",
+  "video": {
+   "codec": "h264",
+   "profile": "High",
+   "width": 464,
+   "height": 848,
+   "r_frame_rate": "30/1",
+   "avg_frame_rate": "30/1",
+   "fps": 30.0,
+   "avg_fps": 30.0,
+   "vfr": false,
+   "pix_fmt": "yuv420p",
+   "nb_frames": "2710",
+   "duration_s": 90.333333,
+   "bit_rate": "1605991"
+  },
+  "audio": {
+   "codec": "aac",
+   "sample_rate": "44100",
+   "channels": 2,
+   "channel_layout": "stereo",
+   "bit_rate": "62788",
+   "duration_s": 90.32
+  },
+  "has_video": true,
+  "has_audio": true
+ },
+ "speech_intervals": [
+  {
+   "start": 3.3,
+   "end": 4.1
+  },
+  {
+   "start": 4.2,
+   "end": 5.5
+  },
+  {
+   "start": 6.7,
+   "end": 8.2
+  },
+  {
+   "start": 8.4,
+   "end": 9.9
+  },
+  {
+   "start": 10.3,
+   "end": 12.4
+  },
+  {
+   "start": 14.3,
+   "end": 17.2
+  },
+  {
+   "start": 17.7,
+   "end": 21.4
+  },
+  {
+   "start": 22.3,
+   "end": 23.8
+  },
+  {
+   "start": 23.9,
+   "end": 25.0
+  },
+  {
+   "start": 25.5,
+   "end": 26.8
+  },
+  {
+   "start": 27.8,
+   "end": 28.9
+  },
+  {
+   "start": 30.5,
+   "end": 35.5
+  },
+  {
+   "start": 35.9,
+   "end": 38.5
+  },
+  {
+   "start": 39.3,
+   "end": 41.1
+  },
+  {
+   "start": 42.4,
+   "end": 44.3
+  },
+  {
+   "start": 46.3,
+   "end": 47.6
+  },
+  {
+   "start": 48.2,
+   "end": 50.8
+  },
+  {
+   "start": 51.4,
+   "end": 55.8
+  },
+  {
+   "start": 59.2,
+   "end": 68.5
+  },
+  {
+   "start": 70.1,
+   "end": 72.5
+  },
+  {
+   "start": 73.8,
+   "end": 76.8
+  },
+  {
+   "start": 76.9,
+   "end": 78.0
+  },
+  {
+   "start": 78.8,
+   "end": 79.3
+  },
+  {
+   "start": 79.9,
+   "end": 82.2
+  },
+  {
+   "start": 83.9,
+   "end": 84.8
+  },
+  {
+   "start": 85.2,
+   "end": 87.3
+  },
+  {
+   "start": 88.5,
+   "end": 89.2
+  }
+ ],
+ "source_lang": "ru",
+ "diarization": {
+  "model": "pyannote/speaker-diarization-3.1",
+  "turns": [
+   {
+    "start": 3.254,
+    "end": 5.414,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 6.663,
+    "end": 8.097,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 8.384,
+    "end": 9.751,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 10.358,
+    "end": 12.316,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 14.307,
+    "end": 17.007,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 17.716,
+    "end": 21.142,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 22.306,
+    "end": 23.622,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 23.926,
+    "end": 24.871,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 25.546,
+    "end": 26.693,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 27.824,
+    "end": 28.752,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 30.49,
+    "end": 35.401,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 35.941,
+    "end": 38.303,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 39.518,
+    "end": 41.138,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 42.421,
+    "end": 44.176,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 46.319,
+    "end": 47.5,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 48.125,
+    "end": 50.723,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 51.348,
+    "end": 55.685,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 59.262,
+    "end": 68.425,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 70.13,
+    "end": 72.425,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 73.758,
+    "end": 76.643,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 76.846,
+    "end": 77.842,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 78.803,
+    "end": 79.225,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 79.867,
+    "end": 81.082,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 81.25,
+    "end": 82.128,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 83.9,
+    "end": 84.642,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 85.25,
+    "end": 87.14,
+    "speaker": "SPEAKER_00"
+   },
+   {
+    "start": 88.388,
+    "end": 89.114,
+    "speaker": "SPEAKER_00"
+   }
+  ],
+  "speakers": [
+   "SPEAKER_00"
+  ]
+ },
+ "tiny_unit_merge": {
+  "enabled": true,
+  "min_words": 3,
+  "min_s": 1.0,
+  "max_gap_s": 2.0,
+  "units_before": 11,
+  "units_after": 10,
+  "merges": [
+   {
+    "tiny": {
+     "start": 87.06,
+     "end": 88.98,
+     "text": "\u0412\u0441\u0435 \u0432\u043f\u0435\u0440\u0435\u0434.",
+     "words": 2
+    },
+    "into": {
+     "start": 79.8,
+     "end": 87.06,
+     "text": "\u041d\u0430\u0448\u0435 \u0432\u0437\u0430\u0438\u043c\u043e\u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0431\u0443\u0434\u0435\u0442 \u043b\u0435\u0433\u043a\u0438\u043c \u0438 \u043f\u0440\u0438\u043d\u0435\u0441\u0435\u0442 \u043d\u0430\u043c \u0442\u043e\u0442 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u043a\u043e\u0442\u043e\u0440\u044b\u0439 \u043c\u044b \u0436\u0435\u043b\u0430\u0435\u043c."
+    },
+    "gap_s": 0.0,
+    "merged": [
+     79.8,
+     88.98
+    ]
+   }
+  ],
+  "unmerged_tiny": []
+ },
+ "alignment": {
+  "mode": "burst",
+  "min_burst_s": 0.0,
+  "spill": true,
+  "atempo_cap": 1.15,
+  "hard_cap": 1.2,
+  "fill_slowdown": 0.9,
+  "fallback_frac": 1.01,
+  "units_slot_fallback": 0,
+  "summary": {
+   "groups": 33,
+   "atempo_max": 1.15,
+   "atempo_min": 0.9,
+   "slowed_lt_1": 24,
+   "atempo_gt_1_15": 0,
+   "atempo_gt_1_25": 0,
+   "atempo_gt_1_3": 0,
+   "overflow_groups": 0,
+   "cut_groups": 0
+  }
+ },
+ "dubbed_track": {
+  "wav24k": "/workspace/dub/artifacts/baseline/03/work/work_03/dubbed_24k.wav",
+  "wav16k": "/workspace/dub/artifacts/baseline/03/work/work_03/dubbed_16k.wav",
+  "aac": "/workspace/dub/artifacts/baseline/03/work/work_03/dubbed_aac.m4a",
+  "seconds": 90.333,
+  "sr": 24000,
+  "peak_before_norm": 0.9999,
+  "speech_seconds": 85.42,
+  "non_speech": "silence (original timing preserved)"
+ },
+ "background": {
+  "enabled": true,
+  "separation": {
+   "model": "torchaudio HDEMUCS_HIGH_MUSDB_PLUS (bg = drums+bass+other)",
+   "weights": "/workspace/dub/dubai/models/demucs/hdemucs_high_trained.pt",
+   "bg": "/workspace/dub/artifacts/baseline/03/work/work_03/bg_44k.wav",
+   "vocals": "/workspace/dub/artifacts/baseline/03/work/work_03/vocals_44k.wav",
+   "seconds": 90.324,
+   "load_s": 0.841,
+   "separate_s": 0.833,
+   "total_s": 2.203,
+   "source_db": -23.54,
+   "vocals_db": -23.71,
+   "bg_db": -40.41
+  },
+  "mix": {
+   "wav": "/workspace/dub/artifacts/baseline/03/work/work_03/final_mix_44k.wav",
+   "aac": "/workspace/dub/artifacts/baseline/03/work/work_03/final_mix_aac.m4a",
+   "room_fill": {
+    "enabled": true,
+    "applied": false,
+    "skipped": "floor -40.5 dBFS > -42 (music / loud ambience)"
+   },
+   "bg_gain_db": 2.96,
+   "duck_db": -6.0,
+   "src_duck_db": 0.0,
+   "attack_s": 0.08,
+   "release_s": 0.35,
+   "bg_offset_db": 0.0,
+   "dub_voice_db": -19.03,
+   "orig_vocals_db": -21.99,
+   "peak_norm": 0.9691,
+   "bed_db_in_dub_pauses": -36.78,
+   "mix_db_in_dub_pauses": -37.03,
+   "seconds": 90.333,
+   "mix_s": 3.34
+  }
+ },
+ "video_backend": "optimized",
+ "speech_gate": {
+  "enabled": true,
+  "margin_s": 0.24,
+  "merge_gap_s": 1.2,
+  "crossfade_frames": 4,
+  "source_speech_seconds": 60.7,
+  "dubbed_speech_seconds": 51.7,
+  "gate_seconds": 80.92,
+  "gate_fraction": 0.8958,
+  "intervals": [
+   [
+    3.06,
+    44.54
+   ],
+   [
+    46.06,
+    56.24
+   ],
+   [
+    58.96,
+    82.44
+   ],
+   [
+    83.66,
+    89.44
+   ]
+  ]
+ },
+ "lipsync": {
+  "router": "retinaface",
+  "router_params": {
+   "detector": "mediapipe face_landmarker.task float16 v1 (BlazeFace short-range + Face Mesh V2), Apache-2.0",
+   "face_min_w": 50,
+   "face_min_h": 80,
+   "aspect_range": [
+    0.2,
+    1.5
+   ],
+   "model_sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff"
+  },
+  "router_stride": 3,
+  "router_detections": 676,
+  "speech_gate": {
+   "enabled": true,
+   "intervals": [
+    [
+     3.06,
+     44.54
+    ],
+    [
+     46.06,
+     56.24
+    ],
+    [
+     58.96,
+     82.44
+    ],
+    [
+     83.66,
+     89.44
+    ]
+   ],
+   "gated_in_frames": 2025,
+   "gated_out_frames": 235,
+   "gated_in_seconds": 81.0,
+   "gated_out_seconds": 9.4
+  },
+  "execution": "in_memory_segments (detector shared with LatentSync)",
+  "crossfade_frames": 4,
+  "master_fps": 25,
+  "master_frames": 2260,
+  "frame_classes": {
+   "VALID_FACE": 2025,
+   "SMALL_FACE": 0,
+   "NO_FACE": 0,
+   "NO_SPEECH": 235
+  },
+  "skip_reasons": {
+   "outside_speech_gate": 235
+  },
+  "by_action": {
+   "PASS_THROUGH": {
+    "segments": 5,
+    "frames": 235,
+    "seconds": 9.4
+   },
+   "LATENT_SYNC": {
+    "segments": 4,
+    "frames": 2025,
+    "seconds": 81.0
+   }
+  },
+  "latentsync_seconds_of_video": 81.0,
+  "pass_through_seconds_of_video": 9.4,
+  "ls_fraction": 0.896,
+  "latentsync_inference_total_s": 580.84,
+  "verify_seconds": 0.0,
+  "latentsync_calls": 4,
+  "verify_splits": [],
+  "assembly": {
+   "frames_written": 2260,
+   "master_frames": 2260,
+   "padded_with_original": {},
+   "crossfaded_frames": 32
+  },
+  "output_frame_check": {
+   "decoded_frames": 2260,
+   "expected_frames": 2260,
+   "blank_frames": 0,
+   "undecodable_frames": 0,
+   "pass": true
+  },
+  "codeformer": "OFF (gate metadata only: codeformer_eligible on LATENT_SYNC segments)",
+  "codeformer_eligible_segments": [
+   1,
+   3,
+   5,
+   7
+  ],
+  "runner": {
+   "window_batch_size": 2,
+   "deepcache": true,
+   "deepcache_interval": 5,
+   "compile_backend": "none",
+   "sdpa_backend": "auto",
+   "steps": 20,
+   "guidance": 1.5,
+   "seed": 1247,
+   "fp16": true,
+   "stage2_512": true,
+   "mouth_only_pasteback": true,
+   "mask_top": 0.52,
+   "mask_feather": 0.08,
+   "mask_smooth_frames": 3,
+   "composite_after_codeformer": true
+  },
+  "runner_calls": [
+   {
+    "frames": 1040,
+    "windows": 65,
+    "groups": 33,
+    "unet_calls": 660,
+    "seconds": 320.0,
+    "stages": {
+     "preprocess_audio_video": 0.672,
+     "affine": 71.619,
+     "vae_and_cond": 56.793,
+     "unet_denoise": 142.772,
+     "restore": 47.306,
+     "write": 0.0,
+     "total": 319.187
+    },
+    "detector": "replayed_verify_pass",
+    "detector_fallback_calls": 0
+   },
+   {
+    "frames": 257,
+    "windows": 17,
+    "groups": 9,
+    "unet_calls": 180,
+    "seconds": 63.76,
+    "stages": {
+     "preprocess_audio_video": 0.161,
+     "affine": 7.49,
+     "vae_and_cond": 14.663,
+     "unet_denoise": 36.221,
+     "restore": 5.107,
+     "write": 0.0,
+     "total": 63.679
+    },
+    "detector": "replayed_verify_pass",
+    "detector_fallback_calls": 0
+   },
+   {
+    "frames": 589,
+    "windows": 37,
+    "groups": 19,
+    "unet_calls": 380,
+    "seconds": 165.87,
+    "stages": {
+     "preprocess_audio_video": 0.241,
+     "affine": 42.927,
+     "vae_and_cond": 31.349,
+     "unet_denoise": 79.509,
+     "restore": 11.546,
+     "write": 0.0,
+     "total": 165.63
+    },
+    "detector": "replayed_verify_pass",
+    "detector_fallback_calls": 0
+   },
+   {
+    "frames": 147,
+    "windows": 10,
+    "groups": 6,
+    "unet_calls": 120,
+    "seconds": 31.21,
+    "stages": {
+     "preprocess_audio_video": 0.098,
+     "affine": 2.011,
+     "vae_and_cond": 7.879,
+     "unet_denoise": 20.122,
+     "restore": 1.066,
+     "write": 0.0,
+     "total": 31.181
+    },
+    "detector": "replayed_verify_pass",
+    "detector_fallback_calls": 0
+   }
+  ],
+  "segments": [
+   {
+    "index": 0,
+    "start_frame": 0,
+    "end_frame": 76,
+    "frames": 76,
+    "start_s": 0.0,
+    "end_s": 3.04,
+    "classification": "NO_SPEECH",
+    "action": "PASS_THROUGH",
+    "codeformer_eligible": false
+   },
+   {
+    "index": 1,
+    "start_frame": 76,
+    "end_frame": 1114,
+    "frames": 1038,
+    "start_s": 3.04,
+    "end_s": 44.56,
+    "classification": "VALID_FACE",
+    "action": "LATENT_SYNC",
+    "verify_depth": 1,
+    "latentsync": {
+     "seconds": 320.0,
+     "frames_in": 1038,
+     "frames_out": 1040
+    },
+    "codeformer_eligible": true,
+    "crossfade": {
+     "in": 4,
+     "out": 4
+    }
+   },
+   {
+    "index": 2,
+    "start_frame": 1114,
+    "end_frame": 1151,
+    "frames": 37,
+    "start_s": 44.56,
+    "end_s": 46.04,
+    "classification": "NO_SPEECH",
+    "action": "PASS_THROUGH",
+    "codeformer_eligible": false
+   },
+   {
+    "index": 3,
+    "start_frame": 1151,
+    "end_frame": 1406,
+    "frames": 255,
+    "start_s": 46.04,
+    "end_s": 56.24,
+    "classification": "VALID_FACE",
+    "action": "LATENT_SYNC",
+    "verify_depth": 1,
+    "latentsync": {
+     "seconds": 63.76,
+     "frames_in": 255,
+     "frames_out": 257
+    },
+    "codeformer_eligible": true,
+    "crossfade": {
+     "in": 4,
+     "out": 4
+    }
+   },
+   {
+    "index": 4,
+    "start_frame": 1406,
+    "end_frame": 1474,
+    "frames": 68,
+    "start_s": 56.24,
+    "end_s": 58.96,
+    "classification": "NO_SPEECH",
+    "action": "PASS_THROUGH",
+    "codeformer_eligible": false
+   },
+   {
+    "index": 5,
+    "start_frame": 1474,
+    "end_frame": 2061,
+    "frames": 587,
+    "start_s": 58.96,
+    "end_s": 82.44,
+    "classification": "VALID_FACE",
+    "action": "LATENT_SYNC",
+    "verify_depth": 1,
+    "latentsync": {
+     "seconds": 165.87,
+     "frames_in": 587,
+     "frames_out": 589
+    },
+    "codeformer_eligible": true,
+    "crossfade": {
+     "in": 4,
+     "out": 4
+    }
+   },
+   {
+    "index": 6,
+    "start_frame": 2061,
+    "end_frame": 2091,
+    "frames": 30,
+    "start_s": 82.44,
+    "end_s": 83.64,
+    "classification": "NO_SPEECH",
+    "action": "PASS_THROUGH",
+    "codeformer_eligible": false
+   },
+   {
+    "index": 7,
+    "start_frame": 2091,
+    "end_frame": 2236,
+    "frames": 145,
+    "start_s": 83.64,
+    "end_s": 89.44,
+    "classification": "VALID_FACE",
+    "action": "LATENT_SYNC",
+    "verify_depth": 1,
+    "latentsync": {
+     "seconds": 31.21,
+     "frames_in": 145,
+     "frames_out": 147
+    },
+    "codeformer_eligible": true,
+    "crossfade": {
+     "in": 4,
+     "out": 4
+    }
+   },
+   {
+    "index": 8,
+    "start_frame": 2236,
+    "end_frame": 2260,
+    "frames": 24,
+    "start_s": 89.44,
+    "end_s": 90.4,
+    "classification": "NO_SPEECH",
+    "action": "PASS_THROUGH",
+    "codeformer_eligible": false
+   }
+  ],
+  "backend": "optimized"
+ },
+ "output_meta": {
+  "duration_s": 90.4,
+  "size_bytes": 35262462,
+  "container": "mov,mp4,m4a,3gp,3g2,mj2",
+  "video": {
+   "codec": "h264",
+   "profile": "High",
+   "width": 464,
+   "height": 848,
+   "r_frame_rate": "25/1",
+   "avg_frame_rate": "25/1",
+   "fps": 25.0,
+   "avg_fps": 25.0,
+   "vfr": false,
+   "pix_fmt": "yuv420p",
+   "nb_frames": "2260",
+   "duration_s": 90.4,
+   "bit_rate": "2914563"
+  },
+  "audio": {
+   "codec": "aac",
+   "sample_rate": "44100",
+   "channels": 2,
+   "channel_layout": "stereo",
+   "bit_rate": "199294",
+   "duration_s": 90.332993
+  },
+  "has_video": true,
+  "has_audio": true
+ },
+ "validation": {
+  "tolerance_s": 0.15,
+  "duration_delta_s": 0.0667,
+  "checks": {
+   "output_exists_nonempty": true,
+   "output_has_video_audio": true,
+   "duration_within_tolerance": true,
+   "resolution_preserved": true,
+   "all_units_have_tts_and_translation": true,
+   "frame_count_preserved": true,
+   "output_frames_decodable_no_blank": true
+  },
+  "pass": true
+ },
+ "stage_seconds": {
+  "speech_gate": 3.918,
+  "face_stack_mediapipe": 58.524,
+  "latentsync_load": 29.427,
+  "prep_master": 2.653,
+  "prep_mediapipe": 54.743,
+  "ls_master_25fps": 0.0,
+  "ls_master_decode": 0.0,
+  "face_classify": 0.002,
+  "latentsync": 596.424,
+  "latentsync_verify": 0.0,
+  "final_assembly": 8.962,
+  "total": 714.221
+ },
+ "gpu": {
+  "nvidia_smi": "NVIDIA GeForce RTX 5090, 12.0, 32607 MiB, 590.48.01",
+  "name": "NVIDIA GeForce RTX 5090",
+  "capability": "sm_120",
+  "total_vram_bytes": 33671348224,
+  "total_vram_gib": 31.36,
+  "free_vram_gib": 25.24,
+  "multi_processor_count": 170,
+  "arch_list": [
+   "sm_75",
+   "sm_80",
+   "sm_86",
+   "sm_90",
+   "sm_100",
+   "sm_120",
+   "compute_120"
+  ]
+ },
+ "at": "2026-10-16T21:16:43Z",
+ "candidate": {
+  "tag": "clean0",
+  "dubbed_dir": "/workspace/dub/artifacts/baseline/03/work/work_03",
+  "video_params": {
+   "manifest": "/workspace/dub/artifacts/baseline/03/final/03_final.manifest.json",
+   "mux": "final_mix",
+   "speech_gate": "on",
+   "gate_margin_s": 0.24,
+   "gate_merge_gap_s": 1.2,
+   "crossfade_frames": 4,
+   "router_stride": 3,
+   "window_batch_size": 2,
+   "deepcache_interval": 5,
+   "no_deepcache": false,
+   "steps": 20,
+   "guidance": 1.5,
+   "face_min_w": 50,
+   "face_min_h": 80,
+   "retina_conf": 0.8,
+   "min_ls_frames": 25,
+   "max_verify_depth": 3,
+   "mouth_only_pasteback": "on",
+   "mask_top": 0.52,
+   "mask_feather": 0.08,
+   "ls_landmark_smooth": 2,
+   "mask_smooth": 3,
+   "codeformer_scope": "mouth",
+   "codeformer": "off",
+   "codeformer_w": 1.0,
+   "codeformer_batch": 8,
+   "codeformer_empty_cache": false,
+   "codeformer_landmarks": "insightface",
+   "face_stack": "mediapipe",
+   "mp_anchor_calib": "on",
+   "codeformer_precision": "fp16"
+  }
+ },
+ "face_stack": {
+  "face_stack": "mediapipe",
+  "frames": 2260,
+  "face_frames": 2260,
+  "ls_detections": 2260,
+  "anchor_calib": {
+   "brow_l": [
+    -0.0362,
+    0.0509
+   ],
+   "brow_r": [
+    0.0328,
+    0.0588
+   ],
+   "nose": [
+    0.0136,
+    0.0304
+   ]
+  },
+  "npz": "/workspace/dub/artifacts/lipsync-temporal/clean0/work_03_clean0/master_mediapipe.npz",
+  "times": {
+   "prep_master": 2.653,
+   "prep_mediapipe": 54.743
+  }
+ }
+}
