@@ -1,0 +1,14 @@
+{
+ "C2_nocf": {
+  "confidence": 6.31,
+  "av_offset": 0
+ },
+ "C1_cf": {
+  "confidence": 6.2,
+  "av_offset": 0
+ },
+ "C1C2_cf": {
+  "confidence": 6.14,
+  "av_offset": 0
+ }
+}

@@ -1,0 +1,22 @@
+{
+ "master": {
+  "confidence": 0.72,
+  "av_offset": 4
+ },
+ "S0_ls_raw": {
+  "confidence": 6.33,
+  "av_offset": 0
+ },
+ "S1_ls_cf": {
+  "confidence": 5.98,
+  "av_offset": 0
+ },
+ "S3_final": {
+  "confidence": 6.12,
+  "av_offset": 0
+ },
+ "S3nc_final_nocf": {
+  "confidence": 6.32,
+  "av_offset": 0
+ }
+}

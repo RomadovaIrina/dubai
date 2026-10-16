@@ -4,8 +4,8 @@
 |---|---|---|
 | 0 baseline reproduction | **done 2026-10-16, accepted by the coordinator** | `env_phase0.md`, `baseline_phase0.md`, `baseline/`, `/workspace/dub/artifacts/baseline/<id>/` |
 | 1 prior work, diagnosis plan, shortlist, licenses | **done** (go given; pre-approved to continue) | `PHASE1.md`, `LICENSES.md`, `LICENSES_desk_research.md` |
-| 2 cheapest A/B on a 03 window | decomposition done; candidates C1-C3 next | `decomp_03_w1050_1506/`, `metric_mouth_jitter_hr.md`, `/workspace/dub/artifacts/restoration-temporal/` |
-| 3 refine | – | – |
+| 2 cheapest A/B on a 03 window | **done**: C2 (window-boundary interpolation) removes the 0.64 s jump; C1 removes restorer shimmer at a sharpness cost; no per-frame restorer is crisp and calm | `PHASE2.md`, `phase2_03_window/`, `sbs_index.md` |
+| 3 refine | in progress: source-texture transfer outside the lips | – |
 | 4 E2E regression | – | – |
 | 5 final | – | – |
 
