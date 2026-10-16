@@ -38,9 +38,9 @@ change that smooth motion does not explain, i.e. texture popping / twitch. JSON:
 Findings:
 1. **LatentSync's 16-frame windows leave a seam every 0.64 s.** Transitions into a window start vs all other LS transitions:
    output mouth_diff ×1.46, mouth_warp ×1.43, master at the same frames ×0.97 / ×0.98 -> window step factor **×1.51 / ×1.45**
-   (n = 123 seams on 03; upper face ×1.00). Per-phase profile of mouth_warp: phase 0 = 2.59, phases 1-15 = 1.71-1.99, master flat 1.57-1.76.
+   (n = 123 seams on 03; upper face ×1.00). Same on every face video: mouth_warp step ×1.42 (01), ×1.40 (04), ×1.60 (05) (`PHASE0.md`). Per-phase profile of mouth_warp: phase 0 = 2.59, phases 1-15 = 1.71-1.99, master flat 1.57-1.76.
    This is generator-internal (windows are denoised independently; the noise is identical, the content is not) and is periodic = "constant".
-2. **The generated mouth articulates about half as much as the source and carries more unexplained texture change**: inner-lip gap median
+2. **The generated mouth articulates about half as much as the source (03; 0.65-0.70x on 01 / 04 / 05) and carries more unexplained texture change**: inner-lip gap median
    0.044 vs 0.087 inter-ocular units (output 95th pct 0.14 vs 0.20); 953 of 1985 LS frames are "closed or almost closed" in the output vs
    112 in the source. Overall motion (mouth_diff 0.86) is calmer than the source, but motion-unexplained change is higher (warp 1.13).
    Hypothesis: **reference leakage** — at inference LatentSync's reference image is the current frame (with the Russian mouth), while it was

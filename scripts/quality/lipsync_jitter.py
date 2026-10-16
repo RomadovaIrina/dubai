@@ -36,6 +36,7 @@ non-commercial research only; used here as an INTERNAL measurement (same detecto
 reports/experiments/lipsync-temporal/LICENSES.md), never shipped by this tool.
 
     python scripts/quality/lipsync_jitter.py --manifest RUN/final/03_final.manifest.json --out DIR --tag baseline [--video X.mp4] [--t0 40 --t1 60]
+    (a window manifest of ls_window_ab.py is measured on its own window against the full master: no --t0/--t1 needed)
 """
 from __future__ import annotations
 import argparse, json, pathlib, sys
@@ -127,8 +128,10 @@ def main() -> int:
     master_p = pathlib.Path(a.master or (pathlib.Path(man["work_dir"]) / "master_25fps.mp4"))
     out = pathlib.Path(a.out); out.mkdir(parents=True, exist_ok=True); vid_id = pathlib.Path(man["input"]).stem; stem = f"{vid_id}_{a.tag}"
     n_all = int(man["lipsync"]["master_frames"])
-    f0 = int(round(a.t0 * FPS)); f1 = min(n_all, int(round(a.t1 * FPS)) if a.t1 else n_all)
-    M = read_range(master_p, f0, f1); O = read_range(vid, f0, f1); n = min(len(M), len(O)); M, O = M[:n], O[:n]; f1 = f0 + n
+    win = man.get("window") or {}; voff = int(win.get("f0", 0))                 # ls_window_ab.py clips start at master frame f0
+    f0 = int(round(a.t0 * FPS)) if (a.t0 or not win) else int(win["f0"])
+    f1 = min(n_all, int(round(a.t1 * FPS)) if a.t1 else int(win.get("f1", n_all)))
+    M = read_range(master_p, f0, f1); O = read_range(vid, f0 - voff, f1 - voff); n = min(len(M), len(O)); M, O = M[:n], O[:n]; f1 = f0 + n
     # ---- landmarks (master cached: identical for every candidate of this video)
     cache = pathlib.Path(a.master_cache or (out / f"{vid_id}_master_lm.npz"))
     LMall = None

@@ -5,8 +5,8 @@ landmarks, mask, paste-back, speech gate, LS<->original switches)? Then: a more 
 
 | phase | state | report |
 |---|---|---|
-| 0 reproduce baseline (cand5) | in progress | this file, `PHASE0.md` |
-| 1 prior work, diagnosis plan, shortlist, licenses | not started (waiting for the go) | – |
+| 0 reproduce baseline (cand5) | **done**: 5/5 PASS, metrics saved | `PHASE0.md`, `baseline/` |
+| 1 prior work, diagnosis plan, shortlist, licenses | desk part done (CPU only, while the baseline ran); **waiting for the go** | `PHASE1_PLAN.md`, `LICENSES.md`, `research/` |
 | 2 cheapest A/B on a 03 window | – | – |
 | 3 refine winner | – | – |
 | 4 E2E regression 01/03/04/05 (+02) | – | – |
@@ -37,3 +37,8 @@ inputs       /workspace/dub/inputs/test_videos_raw/{01.MP4,02..05.mp4}, sha256 -
 formats      01 480x848 avg 25.0 fps (r 30), 02 464x848 29.98, 03 464x848 30.0 CFR, 04 464x848 30.0 CFR, 05 464x848 29.9;
              the pipeline works on a 25 fps master -> on 30 fps sources every 6th frame is dropped in the whole output
 ```
+
+## Cost so far
+
+GPU: baseline 5 videos 3725 s wall (LatentSync 1023 s, CodeFormer 129 s) + smoke 10.7 min + metrics (SyncNet, face_temporal,
+lipsync_jitter) ≈ 30 min. No candidate model installed, no experiment GPU time yet.
