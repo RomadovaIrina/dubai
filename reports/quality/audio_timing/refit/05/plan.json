@@ -1,0 +1,189 @@
+{
+ "vid": "05",
+ "l1": "/workspace/dub/artifacts/audio-timing/ab/05_flow02_sp_p_f0875/recut.manifest.json",
+ "residual": "/workspace/dub/artifacts/audio-timing/residual/05_L1_0.875.residual.json",
+ "units": [
+  {
+   "unit": 1,
+   "source": "Все -таки современные телефоны уже позволяют это делать.",
+   "text": "After all, modern phones already allow this.",
+   "rate_wps": 3.31,
+   "pieces": [
+    "After all,",
+    "modern phones",
+    "already allow this."
+   ],
+   "ru": [
+    "Все",
+    "-таки современные телефоны уже позволяют",
+    "это делать"
+   ],
+   "bursts": [
+    [
+     5.84,
+     6.3
+    ],
+    [
+     7.4,
+     9.5
+    ],
+    [
+     10.9,
+     11.98
+    ]
+   ],
+   "short": {
+    "1": {
+     "words_now": 2,
+     "shortfall_s": 1.1,
+     "budget": 6
+    }
+   },
+   "gaps": [
+    "05-g02"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 2,
+   "source": "И такая функция добавляет, конечно же, у нас популярности и возможностей.",
+   "text": "And such a function, of course, adds to our popularity and possible opportunities.",
+   "rate_wps": 3.99,
+   "pieces": [
+    "And such a function,",
+    "of course, adds to our popularity",
+    "and possible",
+    "opportunities."
+   ],
+   "ru": [
+    "И такая",
+    "функция добавляет, конечно же, у",
+    "нас популярности",
+    "и возможностей"
+   ],
+   "bursts": [
+    [
+     12.0,
+     12.7
+    ],
+    [
+     13.7,
+     15.8
+    ],
+    [
+     17.0,
+     17.6
+    ],
+    [
+     19.6,
+     21.22
+    ]
+   ],
+   "short": {
+    "3": {
+     "words_now": 1,
+     "shortfall_s": 0.6,
+     "budget": 3
+    }
+   },
+   "gaps": [
+    "05-g06"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 3,
+   "source": "Вот, хочется просто посмотреть, как справится наше приложение в таком формате.",
+   "text": "Here, we just want to see how our application will manage in this format.",
+   "rate_wps": 4.77,
+   "pieces": [
+    "Here,",
+    "we just want to see",
+    "how our application will manage in this format."
+   ],
+   "ru": [
+    "Вот,",
+    "хочется просто посмотреть, как",
+    "справится наше приложение в таком формате"
+   ],
+   "bursts": [
+    [
+     21.24,
+     21.5
+    ],
+    [
+     22.9,
+     24.6
+    ],
+    [
+     26.2,
+     28.86
+    ]
+   ],
+   "short": {
+    "1": {
+     "words_now": 5,
+     "shortfall_s": 0.6,
+     "budget": 8
+    },
+    "2": {
+     "words_now": 8,
+     "shortfall_s": 0.6,
+     "budget": 11
+    }
+   },
+   "gaps": [
+    "05-g08",
+    "05-g10"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 6,
+   "source": "Тестим полностью все варианты, которые возможно придумать.",
+   "text": "We will thoroughly test all variants that can possibly be imagined.",
+   "rate_wps": 3.85,
+   "pieces": [
+    "We will thoroughly",
+    "test all variants",
+    "that can possibly",
+    "be imagined."
+   ],
+   "ru": [
+    "Тестим",
+    "полностью все варианты, которые",
+    "возможно",
+    "придумать"
+   ],
+   "bursts": [
+    [
+     41.58,
+     41.9
+    ],
+    [
+     42.8,
+     44.8
+    ],
+    [
+     46.0,
+     46.7
+    ],
+    [
+     47.6,
+     48.78
+    ]
+   ],
+   "short": {
+    "1": {
+     "words_now": 3,
+     "shortfall_s": 0.8,
+     "budget": 6
+    }
+   },
+   "gaps": [
+    "05-g16"
+   ],
+   "speaker": "SPEAKER_00"
+  }
+ ]
+}

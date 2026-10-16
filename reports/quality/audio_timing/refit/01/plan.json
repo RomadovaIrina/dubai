@@ -1,0 +1,123 @@
+{
+ "vid": "01",
+ "l1": "/workspace/dub/artifacts/audio-timing/ab/01_flow02_sp_p_f0875/recut.manifest.json",
+ "residual": "/workspace/dub/artifacts/audio-timing/residual/01_L1_0.875.residual.json",
+ "units": [
+  {
+   "unit": 1,
+   "source": "Давайте посмотрим, что включает в себя ремонт, предлагаемый застройщиком..",
+   "text": "Let's take a look at what the developer's repair work entails.",
+   "rate_wps": 4.02,
+   "pieces": [
+    "Let's take a look at what the developer's repair work entails."
+   ],
+   "ru": [
+    "Давайте посмотрим, что включает в себя ремонт, предлагаемый застройщиком."
+   ],
+   "bursts": [
+    [
+     1.52,
+     5.24
+    ]
+   ],
+   "short": {
+    "0": {
+     "words_now": 11,
+     "shortfall_s": 0.5,
+     "budget": 13
+    }
+   },
+   "gaps": [
+    "01-g01"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 8,
+   "source": "Ламинат 33 класса..",
+   "text": "A laminate of 33 class.",
+   "rate_wps": 3.22,
+   "pieces": [
+    "A laminate of 33 class."
+   ],
+   "ru": [
+    "Ламинат 33 класса."
+   ],
+   "bursts": [
+    [
+     30.66,
+     32.86
+    ]
+   ],
+   "short": {
+    "0": {
+     "words_now": 5,
+     "shortfall_s": 0.4,
+     "budget": 6
+    }
+   },
+   "gaps": [
+    "01-g09"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 12,
+   "source": "Межкомнатные двери.. Лаконичное полотно из МДФ высокой плотности с премиальным финишным покрытием..",
+   "text": "Interior doors... A concise panel made of high-density MDF with a premium finish...",
+   "rate_wps": 2.92,
+   "pieces": [
+    "Interior doors... A concise panel made of high-density MDF with a premium finish..."
+   ],
+   "ru": [
+    "Межкомнатные двери. Лаконичное полотно из МДФ высокой плотности с премиальным финишным покрытием."
+   ],
+   "bursts": [
+    [
+     43.6,
+     50.24
+    ]
+   ],
+   "short": {
+    "0": {
+     "words_now": 13,
+     "shortfall_s": 1.1,
+     "budget": 16
+    }
+   },
+   "gaps": [
+    "01-g17"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 14,
+   "source": "С влагопоглощением менее 0 ,5%..",
+   "text": "With moisture absorption less than 0.5%.",
+   "rate_wps": 1.84,
+   "pieces": [
+    "With moisture absorption less than 0.5%."
+   ],
+   "ru": [
+    "С влагопоглощением менее 0 ,5%."
+   ],
+   "bursts": [
+    [
+     56.66,
+     61.08
+    ]
+   ],
+   "short": {
+    "0": {
+     "words_now": 6,
+     "shortfall_s": 0.6,
+     "budget": 7
+    }
+   },
+   "gaps": [
+    "01-g21"
+   ],
+   "speaker": "SPEAKER_00"
+  }
+ ]
+}

@@ -16,7 +16,8 @@ step was cancelled before it started).
   residual-gap lists for the video side in `residual/` (cand5, L1 + 0.875, L1 + 0.85 per video, frame indices + context); layer-3 design.
 * Layer 3 (partial, CPU only): `refit_offline.py` plan → Qwen per-burst literal rewrite (v3: only short pieces, word range, boundary-repeat
   check, faithfulness + fluency judges). Rewrites in `/workspace/dub/artifacts/audio-timing/refit/<id>/rewrite.json` (log
-  `refit/rewrite.log`); NOT synthesised. See the rewrite result line below.
+  `refit/rewrite.log`; copies in `reports/quality/audio_timing/refit/`); NOT synthesised. Result: **6 of 17 sentences passed all guards** (03 u03 / u04 / u08,
+  04 u05, 05 u03, 01 u14); rejections: added information 3, not fluent 3, boundary repeat 1, length not met 4. The run finished at 23:17 UTC.
 * Clean background bed `bed_p1.md` + `LICENSES.md`: on 03 Spleeter 2stems (MIT; weights = release asset of the MIT repo, counsel note) has
   no detectable voice residue and continuous ambience (−0.1 dB vs HDEMUCS −3.0 dB); UMX-HQ leaks the Russian voice; UMX-SE / room tone are
   clean but dip 2–3 dB under speech.
