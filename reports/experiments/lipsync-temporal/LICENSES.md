@@ -10,6 +10,25 @@ Legend: **YES** = code and weights licences both allow commercial use; **NO** = 
 that may run here only as a diagnostic upper bound.
 
 
+## FINAL LICENCE RULE (user decision 2026-10-16, supersedes the stricter CLEAN-ONLY "YES* is not enough" line)
+
+**The licence of the FILES decides.** Allowed: code and weights under MIT / Apache-2.0 / BSD / ISC / OpenRAIL (honour the use restrictions).
+Not allowed: non-commercial / research-only licences, and weights with NO licence statement. Training-data provenance is recorded for a later
+legal review and no longer blocks.
+
+| component | file licence (code / weights) | verdict | note |
+|---|---|---|---|
+| LatentSync 1.6 | Apache-2.0 / OpenRAIL++ | **allowed** | honour the Open RAIL++-M use restrictions in our ToS; trained on VoxCeleb2 + HDTF (+ undisclosed) -> recorded |
+| MediaPipe Face Landmarker | Apache-2.0 / Apache-2.0 (model cards) | **allowed** | the clean face stack |
+| Whisper tiny, sd-vae-ft-mse, Silero VAD, DeepCache, kornia | MIT / MIT / MIT / Apache-2.0 / Apache-2.0 | **allowed** | |
+| TBDub (+ Wan2.2 VAE, HuBERT-large) | Apache-2.0 / Apache-2.0 | **allowed** | proprietary + X-Dub-inherited data -> recorded |
+| MuseTalk 1.5 code + UNet weights | MIT / "available for any purpose, even commercially" | **allowed** | |
+| MuseTalk's BiSeNet face parser `79999_iter.pth` (zllrunning/face-parsing.PyTorch) | MIT repo, weights file distributed via Google Drive without its own licence statement | **NO** (no weights licence, same pattern as RetinaFace R50) | MuseTalk only with this parser replaced (e.g. our mouth ellipse / MediaPipe lip polygon); CelebAMask-HQ data recorded |
+| InsightFace buffalo_l, CodeFormer + ParseNet, Wav2Lip weights, VideoReTalking NC parts, KEEP | non-commercial / research-only | **NO** | quarantined (buffalo_l, CodeFormer, ParseNet) |
+| RetinaFace R50 (facexlib), HDemucs MUSDB18-HQ | no weights licence | **NO** | quarantined |
+| pyannote 3.1 + segmentation-3.0 + wespeaker | MIT | allowed (audio side, coordinator) | MSDWild / VoxCeleb data recorded |
+| YuNet (common metric), SyncNet + S3FD | MIT / research / none | EVAL_ONLY | never imported by the product path |
+
 ## 0. CLEAN-ONLY status (user decision 2026-10-16 ~21:00 UTC) — clean face stack, quarantine, eval-only tools
 
 Rule: only components with verdict YES (code + weights + every pretrained sub-model) may run in a product-path run.
