@@ -32,3 +32,17 @@ Reading (so far):
   a quality ceiling) is queued to decide whether a budget fusion (only near seams / only late steps) is worth building.
 
 Side-by-side zoom clips (ORIGINAL | CLEAN0 | (W24) | K24o2 | K16o4): `/workspace/dub/artifacts/lipsync-temporal/sbs/03_seams_*_zoom.mp4`.
+
+## Update before the pause (2026-10-16 ~23:20 UTC)
+
+| arm (window B) | LatentSync cost | seam jump median (source 0.83) | seams > 1.5x (source 8 %) | mouth resid / twitch | human-marked resid / twitch | SyncNet dub-only |
+|---|---|---|---|---|---|---|
+| clean0 | – | 1.71 | 67 % | 0.99 / 1.08 | 0.94 / 1.12 | 5.64 |
+| per-step fusion, stride 8, no DeepCache (ceiling) | +322 % | 0.96 | 8 % | 0.89 / 1.05 | 0.82 / 1.11 | 5.88 |
+| 24f + 1-frame continuation | +7 % | 1.71 | 59 % | 0.99 / 1.08 | 0.92 / 1.11 | 6.18 |
+| **bridge 8 frames x last 4 steps** | **+10 %** | **1.28** | **29 %** | **0.94 / 1.05** | **0.89 / 1.07** | 5.62 |
+
+* Per-step fusion removes the seam completely (seam numbers at the source level) -> the seam IS a window-independence artefact of the
+  generator, fixable on the generator side.
+* The budget bridge (`--bridge-len 8 --bridge-steps 4`, scripts/quality/ls_stable.py) gets about half of the way at exactly the +10 % budget.
+  Not yet run: window A, bridges 16x4 / 16x8, full 03, human look. Full table: `seams_table_v2.md`.
