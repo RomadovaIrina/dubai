@@ -2,9 +2,9 @@
 
 | phase | state | evidence |
 |---|---|---|
-| 0 baseline reproduction | **done 2026-10-16, waiting for the coordinator** | `env_phase0.md`, `baseline_phase0.md`, `baseline/`, `/workspace/dub/artifacts/baseline/<id>/` |
-| 1 prior work, diagnosis plan, shortlist, licenses | desk research started (CPU / web only); `LICENSES.md` preliminary | – |
-| 2 cheapest A/B on a 03 window | not started (needs go) | – |
+| 0 baseline reproduction | **done 2026-10-16, accepted by the coordinator** | `env_phase0.md`, `baseline_phase0.md`, `baseline/`, `/workspace/dub/artifacts/baseline/<id>/` |
+| 1 prior work, diagnosis plan, shortlist, licenses | **done** (go given; pre-approved to continue) | `PHASE1.md`, `LICENSES.md`, `LICENSES_desk_research.md` |
+| 2 cheapest A/B on a 03 window | decomposition done; candidates C1-C3 next | `decomp_03_w1050_1506/`, `metric_mouth_jitter_hr.md`, `/workspace/dub/artifacts/restoration-temporal/` |
 | 3 refine | – | – |
 | 4 E2E regression | – | – |
 | 5 final | – | – |
@@ -25,4 +25,5 @@ Phase 0 result: 5/5 valid; SyncNet dub-only 7.86 / – / 5.69 / 3.81 / 3.66, AV 
 Open flags for the coordinator:
 * License: CodeFormer (baseline restoration) is NTU S-Lab 1.0 = non-commercial; InsightFace buffalo_l (LatentSync detector + the 106
   landmarks this track's CodeFormer alignment / mask / smoothing use) is non-commercial research-only. See `LICENSES.md`.
-* Metric gap: the existing face_temporal metrics rate the cand5 mouth as calm as the source while the reviewer sees constant twitching.
+* Metric gap: fixed — common metric `scripts/quality/mouth_jitter_hr.py` (25aedba).
+* Cross-track: the 16-frame window-boundary jump is created inside LatentSync (independent windows); a generator-side fix belongs to track A.
