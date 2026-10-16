@@ -65,8 +65,14 @@ def main() -> int:
     for u, p in zip(units, plans):
         y, sr = sf.read(u["tts_raw_file"], dtype="float32"); spans = u["tts"]["word_spans"]
         text = u.get("translation_fitted") or u["translation"]; raw_words = text.split()
-        tb.flow_merge_bursts(p, a.flow_gap); n = len(p["bursts"])
-        if n == 1 or not spans:
+        if u.get("refit_pieces"):   # refit_offline.py (layer 3): the rewritten pieces ARE the parts, on the bursts of the L1 run (no flow merge / cut DP)
+            p["bursts"] = [tuple(b) for b in u["refit_bursts"]]; p["groups"] = list(u["refit_groups"]); p["group_counts"] = [len(g.split()) for g in p["groups"]]
+            parts = list(u["refit_pieces"]); n = len(parts)
+        else:
+            tb.flow_merge_bursts(p, a.flow_gap); n = len(p["bursts"])
+        if u.get("refit_pieces"):
+            pass
+        elif n == 1 or not spans:
             parts = [text]
         else:
             marks = None
