@@ -39,10 +39,14 @@ def main() -> int:
                     note="track A recipe on this server"))
     md5 = jl(R / f"fps/{i}/{i}_audio_md5.json") or {}
     for v, lab in (("F0_clean0fps", "F0 source fps (clean0 composite, 12 px edge)"), ("F1_C2", "F1 + C2 window-seam interpolation"), ("F2_C2T", "F2 + source skin texture"),
-                   ("F3_C2TL", "F3 + lip texture"), ("OPT1_still", "OPT1 = F2 + still lower face in dub-silent stretches"), ("OPT2_orig", "OPT2 = F2 + original pass-through there")):
-        s = jl(R / f"fps/{i}/{i}_{v}.syncnet.json") or {}
-        r = row(lab, jl(R / f"fps/{i}/{i}_{v}.mouth_jitter_hr.json"), [(s.get("mix") or [None])[0], (s.get("dub_only") or [None])[0]] if s else None,
-                jl(R / f"fps/{i}/{i}_{v}.fps_composite.json"), note={True: "audio md5 = baseline", False: "audio md5 DIFFERS"}.get(md5.get(v), ""))
+                   ("F3_C2TL", "F3 + lip texture"), ("OPT1_still", "OPT1 = F2 + still lower face in dub-silent stretches"), ("OPT2_orig", "OPT2 = F2 + original pass-through there"),
+                   ("F0n_nearest", "F0 with nearest-frame retiming"), ("F0r_nearest_rigid", "F0 with nearest + rigid retiming"),
+                   ("sharp/03_L4_all15", "F3 + sharpen 1.5 (flow retiming)"), ("sharp/03_Q1_all15_lips15", "F3 + sharpen 1.5 + lips 1.5 (flow retiming)")):
+        base_p = R / f"fps/{i}/{v}" if v.startswith("sharp/") else R / f"fps/{i}/{i}_{v}"
+        s = jl(f"{base_p}.syncnet.json") or {}
+        mjp = jl(f"{base_p}.mouth_jitter_hr.json") or jl(f"{base_p}.mjhr.json")
+        r = row(lab, mjp, [(s.get("mix") or [None])[0], (s.get("dub_only") or [None])[0]] if s else None,
+                jl(f"{base_p}.fps_composite.json"), note={True: "audio md5 = baseline", False: "audio md5 DIFFERS"}.get(md5.get(v), "") + (" (frames 1380-1800 only)" if v.startswith("sharp/") else ""))
         if r: rows.append(r)
     f = lambda x: "-" if x is None else (f"{x:.2f}" if isinstance(x, float) else str(x))
     hdr = ["variant", "licence", "mouth resid", "mouth sharp", "lower-face sharp", "LS-seam jump (d1)", "seams > 1.5x", "switch resid / jerk", "upper resid",

@@ -93,8 +93,9 @@ def main() -> int:
     ap.add_argument("--tex-sigma", type=float, default=1.5); ap.add_argument("--tex-tau", type=float, default=12.0); ap.add_argument("--lip-dilate", type=float, default=0.12)
     ap.add_argument("--silence", choices=["none", "still", "orig"], default="none"); ap.add_argument("--silence-min-s", type=float, default=0.3); ap.add_argument("--silence-ramp", type=int, default=6)
     ap.add_argument("--gaps", default=None, help="residual-gap JSON (temporal_mouth_stabilize.load_gaps; e.g. track C's list); default: computed from the manifest")
-    ap.add_argument("--retime", choices=["flow", "nearest"], default="flow", help="LatentSync layer at a source timestamp: flow interpolation between the two master "
-                    "frames, or the nearest master frame (exact LatentSync shapes, the mouth repeats one frame in six for a 30 fps source)")
+    ap.add_argument("--retime", choices=["flow", "nearest", "nearest_rigid"], default="flow", help="LatentSync layer at a source timestamp: flow interpolation between the two master "
+                    "frames, or the nearest master frame (exact LatentSync shapes, the mouth repeats one frame in six for a 30 fps source); nearest_rigid = the "
+                    "nearest frame moved by the head's similarity motion (MediaPipe eyes / nose bridge, master -> source time): exact shapes at the right position")
     ap.add_argument("--ls-sharpen", type=float, default=0.0, help="unsharp-mask amount on the LatentSync layer (0 = off), radius --ls-sharpen-sigma")
     ap.add_argument("--ls-sharpen-sigma", type=float, default=1.2)
     ap.add_argument("--ls-sharpen-scope", choices=["all", "lips"], default="all", help="lips = only inside the lip mask (the skin gets the source texture instead)")
@@ -150,8 +151,17 @@ def main() -> int:
         alpha, roi = ellipse_alpha(box, H, W, a.edge_px)
         if alpha is None: return S[k], 0, None
         ya, yb, xa, xb = roi; f = flow()
-        if a.retime == "nearest":
-            mn = m0 if (al < 0.5 or wm[m1] <= 0) else m1; Lk = L[mn][ya:yb, xa:xb].astype(np.float32)
+        if a.retime in ("nearest", "nearest_rigid"):
+            mn = m0 if (al < 0.5 or wm[m1] <= 0) else m1
+            if a.retime == "nearest_rigid" and abs(m - mn) > 1e-3:
+                tgt = lerp(mp, m); src_ = mp[mn]; RIG = [33, 133, 362, 263, 168, 6, 197, 4]
+                Mr, _ = cv2.estimateAffinePartial2D(src_[RIG, :2].astype(np.float32), tgt[RIG, :2].astype(np.float32)) if np.isfinite(src_[RIG]).all() and np.isfinite(tgt[RIG]).all() else (None, None)
+                if Mr is not None:
+                    Lk = cv2.warpAffine(L[mn], Mr, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)[ya:yb, xa:xb].astype(np.float32)
+                else:
+                    Lk = L[mn][ya:yb, xa:xb].astype(np.float32)
+            else:
+                Lk = L[mn][ya:yb, xa:xb].astype(np.float32)
         elif al < 0.04 or m1 == m0 or wm[m1] <= 0: Lk = L[m0][ya:yb, xa:xb].astype(np.float32)
         elif al > 0.96 or wm[m0] <= 0: Lk = L[m1][ya:yb, xa:xb].astype(np.float32)
         else: Lk = tms.interp(f, L[m0][ya:yb, xa:xb].astype(np.float32), L[m1][ya:yb, xa:xb].astype(np.float32), al)

@@ -1,0 +1,23 @@
+{
+ "id": "03",
+ "tag": "clean0",
+ "output": "/workspace/dub/artifacts/restoration-temporal/eval/03_clean0.mp4",
+ "frames": {
+  "candidate": 2260,
+  "baseline": 2260,
+  "equal": true
+ },
+ "audio_md5": {
+  "candidate": "MD5=6cf53a89cf7377dce0ce2a71ebe4dcd4",
+  "baseline": "MD5=6cf53a89cf7377dce0ce2a71ebe4dcd4",
+  "identical": true
+ },
+ "syncnet_mix": {
+  "confidence": 5.5,
+  "av_offset": 0
+ },
+ "syncnet_dub_only": {
+  "confidence": 5.74,
+  "av_offset": 0
+ }
+}

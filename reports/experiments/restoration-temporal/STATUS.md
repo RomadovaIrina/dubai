@@ -1,29 +1,42 @@
-# Track B — restoration / temporal stabilization (`experiment/restoration-temporal`) — STATUS
+# Track B — restoration / temporal stabilization (`experiment/restoration-temporal`) — STATUS (program PAUSED 2026-10-16 ~23:20 UTC)
 
 | phase | state | evidence |
 |---|---|---|
-| 0 baseline reproduction | **done 2026-10-16, accepted by the coordinator** | `env_phase0.md`, `baseline_phase0.md`, `baseline/`, `/workspace/dub/artifacts/baseline/<id>/` |
-| 1 prior work, diagnosis plan, shortlist, licenses | **done** (go given; pre-approved to continue) | `PHASE1.md`, `LICENSES.md`, `LICENSES_desk_research.md` |
-| 2 cheapest A/B on a 03 window | **done**: C2 (window-boundary interpolation) removes the 0.64 s jump; C1 removes restorer shimmer at a sharpness cost; no per-frame restorer is crisp and calm | `PHASE2.md`, `phase2_03_window/`, `sbs_index.md` |
-| 3 refine | in progress: source-texture transfer outside the lips | – |
-| 4 E2E regression | – | – |
-| 5 final | – | – |
+| 0 baseline reproduction (cand5) | done, accepted | `env_phase0.md`, `baseline_phase0.md`, `baseline/` |
+| 1 prior work, plan, licences | done, accepted | `PHASE1.md`, `LICENSES.md`, `LICENSES_desk_research.md` |
+| 2 decomposition + first candidates (03 window) | done, accepted | `PHASE2.md`, `phase2_03_window/`, `metric_mouth_jitter_hr.md` |
+| human-marked windows 24-25 s / 35-36 s | done, accepted | `human_windows_03.md` (dub-silent stretches: frozen mouth in a talking face + seam snap) |
+| 3 clean line on clean0 (source fps, seams, sharpness, frozen mouth) | done | `PHASE3.md` |
+| 4 main line on 01 / 03 / 04 / 05 + 02 | done (one open issue: SyncNet on 01 / 05) | `PHASE4.md`, `phase4/` |
+| 5 final report | not started | – |
 
-Branch base: `tts-intelligibility-fix` @ `559d700e0bf14ffa5692d855e5eae10a42eadd11` (verified 2026-10-16, remote not moved).
-Baseline = cand5 (`reports/quality/feedback_2026-10-13/README.md`, "new candidate"), CPU Qwen, run with `scripts/pilot/refresh_e2e.sh`
-(`baseline/baseline_run.sh` = exactly this, one run root per video):
+Base: clean-base 326e807 merged (c0b37d8). Rules: final licence rule (file licences decide), NC / unlicensed weights in
+`/workspace/dub/quarantine_nc/` (buffalo_l, CodeFormer, ParseNet, RetinaFace R50, HDEMUCS); GFPGAN / RestoreFormer kept quarantined by the
+user's choice; every video under `/workspace/dub/artifacts/` only (review clips and copies: `artifacts/restoration-temporal/sbs/`, index
+`sbs_index.md`); GPU jobs under `flock /workspace/dub/gpu.lock`.
+
+## Recommended main-line flags (clean, no restorer, no model in the post-process)
 
 ```bash
-DUB_EXTRA_ARGS="--phrase-cut acoustic --long-pause-func 1.2 --cut-fade adaptive --tts-gap-qa on --gate-merge-gap-s 1.2 \
-  --mouth-only-pasteback on --codeformer-scope mouth --mask-smooth 3 --ls-landmark-smooth 2" \
-  PILOT_REFRESH_ROOT=/workspace/dub/artifacts/baseline/<id> bash scripts/pilot/refresh_e2e.sh <id>
+# 1) clean0 video stage (track A recipe, CLEAN0.md): --face-stack mediapipe --codeformer off on top of the cand5 flags
+# 2) LatentSync raw frames of the same run: scripts/quality/decompose_video_stage.py --manifest <clean0 manifest> --frames all --out <dir>
+# 3) source-fps composite:
+python scripts/quality/fps_composite.py --manifest <clean0 manifest> --ls-raw <dir>/S0_ls_raw.mp4 --out <out>.mp4 \
+  --retime nearest_rigid --boundary on --skin-texture source --lip-texture on --ls-sharpen 1.5 --ls-sharpen-lips 1.5 --edge-px 12
+#    frozen-mouth option for dub-silent stretches (human decision pending): add --silence still|orig [--gaps <track C residual-gap JSON>]
 ```
+(Production integration: step 2 is a research convenience — the composite should consume the LatentSync frames in-process instead.)
 
-Phase 0 result: 5/5 valid; SyncNet dub-only 7.86 / – / 5.69 / 3.81 / 3.66, AV offset 0; wall 549 / 256 / 881 / 426 / 500 s
-(324 / 139 / 585 / 474 / 572 s per video-minute); peak VRAM 22.4-23.5 GB. Table: `baseline_phase0.md`.
+## Done (highlights)
+* Common metric `scripts/quality/mouth_jitter_hr.py` (v4 + fps-aware), adopted by both tracks; it explains the human marks.
+* Decomposition: LatentSync = 16-frame window seams + softness; CodeFormer = texture popping (+36 %); paste-back neutral.
+* Source-fps composite: 25 fps judder removed (upper-face jerk 1.36 -> 1.03), spec 9.4 met on all five videos, audio bit-identical.
+* C2 seam interpolation: seam jump 1.34-1.56 -> 1.04-1.20; feather 7.7 px -> 11.4 px (spec 10-15).
+* Clean sharpness recovery (source texture + unsharp): mouth 1.02-1.19 / lower face 0.95-1.04 of the source vs clean0 0.67-0.87 / 0.87-0.97.
 
-Open flags for the coordinator:
-* License: CodeFormer (baseline restoration) is NTU S-Lab 1.0 = non-commercial; InsightFace buffalo_l (LatentSync detector + the 106
-  landmarks this track's CodeFormer alignment / mask / smoothing use) is non-commercial research-only. See `LICENSES.md`.
-* Metric gap: fixed — common metric `scripts/quality/mouth_jitter_hr.py` (25aedba).
-* Cross-track: the 16-frame window-boundary jump is created inside LatentSync (independent windows); a generator-side fix belongs to track A.
+## Open / next steps (when resumed)
+1. SyncNet drop on 01 (-0.7) / 05 (-0.3 / -0.6) vs cand5: score clean0 01 / 04 / 05 and MAIN with `--ls-sharpen 0` to locate the cause.
+2. Adaptive sharpening amount (target sharpness ~1.0 per video; 01 / 05 are over-sharpened at the fixed 1.5 + 1.5).
+3. Strong seams on 04 / 05 still above the source (33 % / 28 % vs 16 % / 12 %): compare with track A's generator-side seam fix.
+4. Frozen-mouth option: human verdict on OPT1 vs OPT2 (p3 / p4 clips), then feed track C's residual-gap JSON via `--gaps`.
+5. Clean processing-cost measurement on a quiet box (post-process numbers so far are upper bounds: 13-80 s / video-min under contention).

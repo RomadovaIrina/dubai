@@ -1,0 +1,236 @@
+[
+ {
+  "id": "01",
+  "checks": true,
+  "src": {
+   "w": 480,
+   "h": 848,
+   "fps": 25.003,
+   "frames": 2542,
+   "duration": 101.667
+  },
+  "out": {
+   "w": 480,
+   "h": 848,
+   "fps": 25.011,
+   "frames": 2542,
+   "duration": 101.666
+  },
+  "md5": true,
+  "fall": 0,
+  "edge": 11.465,
+  "cost": 63.3,
+  "ls": 260,
+  "resid": 1.218,
+  "sharp": 1.193,
+  "lfs": 1.036,
+  "upper": 0.985,
+  "bnd": [
+   1.052,
+   0.125,
+   0.188
+  ],
+  "c0_resid": 1.033,
+  "c0_sharp": 0.868,
+  "c0_lfs": 0.946,
+  "c0_bnd": [
+   1.382,
+   0.5,
+   0.125
+  ],
+  "sync": [
+   7.23,
+   7.12,
+   0
+  ],
+  "base": [
+   7.89,
+   7.86
+  ]
+ },
+ {
+  "id": "03",
+  "checks": true,
+  "src": {
+   "w": 464,
+   "h": 848,
+   "fps": 30.0,
+   "frames": 2710,
+   "duration": 90.333
+  },
+  "out": {
+   "w": 464,
+   "h": 848,
+   "fps": 30.011,
+   "frames": 2710,
+   "duration": 90.333
+  },
+  "md5": true,
+  "fall": 0,
+  "edge": 11.415,
+  "cost": 26.9,
+  "ls": 2434,
+  "resid": 1.123,
+  "sharp": 1.028,
+  "lfs": 1.022,
+  "upper": 1.016,
+  "bnd": [
+   1.035,
+   0.161,
+   0.177
+  ],
+  "c0_resid": 1.025,
+  "c0_sharp": 0.674,
+  "c0_lfs": 0.874,
+  "c0_bnd": [
+   1.558,
+   0.581,
+   0.169
+  ],
+  "sync": [
+   5.5,
+   5.78,
+   0
+  ],
+  "base": [
+   5.46,
+   5.69
+  ]
+ },
+ {
+  "id": "04",
+  "checks": true,
+  "src": {
+   "w": 464,
+   "h": 848,
+   "fps": 30.0,
+   "frames": 1617,
+   "duration": 53.9
+  },
+  "out": {
+   "w": 464,
+   "h": 848,
+   "fps": 30.018,
+   "frames": 1617,
+   "duration": 53.9
+  },
+  "md5": true,
+  "fall": 0,
+  "edge": 11.42,
+  "cost": 225.0,
+  "ls": 1298,
+  "resid": 1.034,
+  "sharp": 1.022,
+  "lfs": 0.978,
+  "upper": 1.016,
+  "bnd": [
+   1.203,
+   0.328,
+   0.156
+  ],
+  "c0_resid": 0.961,
+  "c0_sharp": 0.795,
+  "c0_lfs": 0.947,
+  "c0_bnd": [
+   1.345,
+   0.5,
+   0.156
+  ],
+  "sync": [
+   3.62,
+   3.63,
+   0
+  ],
+  "base": [
+   3.69,
+   3.81
+  ]
+ },
+ {
+  "id": "05",
+  "checks": true,
+  "src": {
+   "w": 464,
+   "h": 848,
+   "fps": 29.924,
+   "frames": 1567,
+   "duration": 52.367
+  },
+  "out": {
+   "w": 464,
+   "h": 848,
+   "fps": 29.942,
+   "frames": 1567,
+   "duration": 52.366
+  },
+  "md5": true,
+  "fall": 0,
+  "edge": 11.51,
+  "cost": 100.8,
+  "ls": 1034,
+  "resid": 1.049,
+  "sharp": 1.162,
+  "lfs": 0.948,
+  "upper": 1.045,
+  "bnd": [
+   1.07,
+   0.275,
+   0.118
+  ],
+  "c0_resid": 0.907,
+  "c0_sharp": 0.861,
+  "c0_lfs": 0.971,
+  "c0_bnd": [
+   1.339,
+   0.471,
+   0.118
+  ],
+  "sync": null,
+  "base": [
+   3.15,
+   3.66
+  ]
+ },
+ {
+  "id": "02",
+  "checks": true,
+  "src": {
+   "w": 464,
+   "h": 848,
+   "fps": 29.982,
+   "frames": 3324,
+   "duration": 110.867
+  },
+  "out": {
+   "w": 464,
+   "h": 848,
+   "fps": 29.991,
+   "frames": 3324,
+   "duration": 110.866
+  },
+  "md5": true,
+  "fall": 0,
+  "edge": null,
+  "cost": 46.3,
+  "ls": 0,
+  "resid": null,
+  "sharp": null,
+  "lfs": null,
+  "upper": null,
+  "bnd": [
+   null,
+   null,
+   null
+  ],
+  "c0_resid": null,
+  "c0_sharp": null,
+  "c0_lfs": null,
+  "c0_bnd": [
+   null,
+   null,
+   null
+  ],
+  "sync": null,
+  "base": null
+ }
+]
