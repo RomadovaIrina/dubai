@@ -233,7 +233,13 @@ class CleanPrep:
         if lm is not None and "lm_all" in z.files:
             tr, trm = track_faces(z["lm_all"], z["matrix_all"] if "matrix_all" in z.files else None)
             present = [j for j in range(tr.shape[1]) if np.isfinite(tr[:, j, 0, 0]).mean() >= 0.1]
-            if len(present) >= 2 and turns:
+            la = z["lm_all"]; both = int((np.isfinite(la[:, 0, 0, 0]) & np.isfinite(la[:, 1, 0, 0])).sum()) if la.shape[1] >= 2 else 0
+            any_face = int(np.isfinite(la[:, :, 0, 0]).any(1).sum())
+            co_occur = both / max(any_face, 1)   # 2026-10-17 fix: one person split into two tracks across detection gaps (05) is NOT two faces
+            if len(present) >= 2 and turns and co_occur < 0.10:
+                self.faces = {"max_faces": max_faces, "tracks": len(present), "co_occurrence": round(co_occur, 4),
+                              "note": "faces never co-occur (< 10 % of face frames): one person split across tracks -> largest face per frame"}
+            elif len(present) >= 2 and turns:
                 asg = assign_speakers(tr, turns); mp_ = asg["mapping"]
                 if mp_:
                     T_ = len(lm); sel = np.full(T_, next(iter(mp_.values())), int); cur = sel[0]

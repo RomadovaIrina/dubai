@@ -37,8 +37,10 @@ def main():
     L = np.nanmedian(lm[f0:f1], 0); iod = float(np.linalg.norm(L[33] - L[263])); cx, cy = L[[4, 13]].mean(0); s = 1.4 * iod
     box = (int(cx - s / 2), int(cy - 0.45 * s), int(cx + s / 2), int(cy + 0.55 * s))
     panels = [("ORIGINAL", read(R2 / f"masters/{a.id}/master_25fps.mp4", f0, n))]
-    for p in a.panel:
-        lab, path = p.split("=", 1); panels.append((lab, read(path, 0, n)))
+    for p in a.panel:   # LABEL=path[@offset_s]: offset = source time of the clip's first frame (window clips: t0; full videos: 0)
+        lab, path = p.split("=", 1); off = a.t0
+        if "@" in path: path, o = path.rsplit("@", 1); off = float(o)
+        panels.append((lab, read(path, int(round((a.t0 - off) * 25)), n)))
     n = min(len(fr) for _, fr in panels)
     W, Hh = panels[0][1][0].shape[1], panels[0][1][0].shape[0]
     tmp = pathlib.Path(a.out).with_name(".tmp_" + pathlib.Path(a.out).name); pathlib.Path(a.out).parent.mkdir(parents=True, exist_ok=True)
