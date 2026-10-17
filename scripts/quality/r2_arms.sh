@@ -16,10 +16,17 @@ for arm in "$@"; do
     flow4nr32) X="--anchor-filter flow:4 --anchor-round off --affine-precision fp32";;
     flow2nr32) X="--anchor-filter flow:2 --anchor-round off --affine-precision fp32";;
     flow8nr32) X="--anchor-filter flow:8 --anchor-round off --affine-precision fp32";;
+    c032) X="--affine-precision fp32";;
+    c0nr) X="--anchor-round off";;
     c0nr32) X="--anchor-round off --affine-precision fp32";;
     kal) X="--anchor-filter kalman:5.0:0.5";;
     kalnr32) X="--anchor-filter kalman:5.0:0.5 --anchor-round off --affine-precision fp32";;
     sub3nr32) X="--anchor-filter sub:3:4 --anchor-round off --affine-precision fp32";;
+    wrap) X="--mode wrapper";;
+    wrapnr) X="--mode wrapper --anchor-round off";;
+    wrap32) X="--mode wrapper --affine-precision fp32";;
+    wrapnr32) X="--mode wrapper --anchor-round off --affine-precision fp32";;
+    wrapflownr32) X="--mode wrapper --anchor-filter flow:4 --anchor-round off --affine-precision fp32";;
     *) echo "unknown arm $arm"; continue;;
   esac
   tag=${w}_$arm
