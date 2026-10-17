@@ -106,12 +106,21 @@ def main() -> int:
     ap.add_argument("--pose-precheck", choices=["on", "off"], default="on", help="spec 5.4: > 30 %% of face frames with |yaw| > 30 deg -> voice-only result (no lip-sync), flagged")
     ap.add_argument("--pose-gate-deg", type=float, default=0.0, help="spec 5.5 test: frames with |yaw| above this go to pass-through (held +-3 frames, eased by the crossfade); 0 = off")
     ap.add_argument("--mp-anchor-calib", choices=["on", "off"], default="on")
+    ap.add_argument("--anchor-filter", default=None, help="round 2: temporal filter of the landmarks driving LatentSync's crop AND the mouth mask (anchor_filters.py: "
+                    "flow:S = rigid head motion from DIS flow, noise smoothed around it); forces --ls-landmark-smooth 0 --mask-smooth 0")
+    ap.add_argument("--mask-track", choices=["dets", "head"], default="dets", help="head: mouth-mask boxes locked to the rigid head motion (needs the rigid pass)")
+    ap.add_argument("--affine-precision", choices=["fp16", "fp32"], default="fp16", help="fp32: LatentSync AlignRestore in float32 (ls_geometry.py)")
+    ap.add_argument("--anchor-round", choices=["on", "off"], default="on", help="off: sub-pixel affine anchors (ls_geometry.py)")
     ap.add_argument("--codeformer-precision", choices=["fp32", "parse16", "fp16"], default="fp16", help="fp32 = upstream numerics; parse16 = ParseNet under fp16 autocast; fp16 = CodeFormer net + ParseNet under autocast")
     a = ap.parse_args()
     import clean_face_stack as cfs
     cfs.enforce_clean(a.face_stack, a.codeformer, "optimized", what="candidate_video_stage")
     import run_clean_pipeline_05 as rp
     import face_aware_latentsync_accel as faa
+    if a.anchor_filter or a.mask_track == "head":
+        a.ls_landmark_smooth = 0; a.mask_smooth = 0
+    import ls_geometry
+    geom = ls_geometry.apply(a.affine_precision, a.anchor_round)
     from measure_stages import probe
     if a.manifest:   # any finished E2E run (e.g. refresh_e2e.sh final/<id>_final.manifest.json): its own work dir holds the audio stages
         man = json.loads(pathlib.Path(a.manifest).read_text()); base_work = pathlib.Path(man["work_dir"])
@@ -150,8 +159,9 @@ def main() -> int:
         import clean_face_stack as cfs
         cfs.guard_nc()
         with rp.timed(times, "face_stack_mediapipe"): prep = cfs.CleanPrep(src, work, a.face_min_w, a.face_min_h, calib=a.mp_anchor_calib == "on", pose_precheck=a.pose_precheck == "on", pose_gate_deg=a.pose_gate_deg,
-                                     max_faces=a.max_faces, turns=(man.get("diarization") or {}).get("turns"))
-        router = prep.router; man["face_stack"] = {**prep.info, "times": prep.times}; man["frame_map"] = prep.frame_map
+                                     max_faces=a.max_faces, turns=(man.get("diarization") or {}).get("turns"),
+                                     anchor_filter=a.anchor_filter, mask_track=a.mask_track)
+        router = prep.router; man["face_stack"] = {**prep.info, "times": prep.times, "ls_geometry": geom}; man["frame_map"] = prep.frame_map
     else:
         with rp.timed(times, "face_router_load"): router = faa.make_router("retinaface", a.face_min_w, a.face_min_h, a.retina_conf)
     with rp.timed(times, "latentsync_load"): runner = faa.AccelRunner(a.window_batch_size, not a.no_deepcache, "none", "auto", steps=a.steps, guidance=a.guidance, deepcache_interval=a.deepcache_interval)

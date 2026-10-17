@@ -25,6 +25,7 @@ for arm in "$@"; do
     flow4nr32hm) X="--anchor-filter flow:4 --anchor-round off --affine-precision fp32 --mask-track head";;
     flowc0mask) X="--anchor-filter flow:4 --anchor-round off --affine-precision fp32 --mask-track rawbox3";;
     box2hm) X="--anchor-filter box:2 --anchor-round off --affine-precision fp32 --mask-track head";;
+    blend5hm) X="--anchor-filter blend:0.5:2:4 --anchor-round off --affine-precision fp32 --mask-track head";;
     wrap) X="--mode wrapper";;
     wrapnr) X="--mode wrapper --anchor-round off";;
     wrap32) X="--mode wrapper --affine-precision fp32";;

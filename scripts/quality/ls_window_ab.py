@@ -206,10 +206,8 @@ def main() -> int:
     from candidate_video_stage import MouthOnlyRunner
     from ls_stable import StableRunner
     from pilot_common import gpu_info, write_json
-    if a.anchor_round == "off":
-        patch_affine_no_round()
-    if a.affine_precision == "fp32":
-        patch_alignrestore_fp32()
+    import ls_geometry
+    ls_geometry.apply(a.affine_precision, a.anchor_round)
     man = json.loads(pathlib.Path(a.manifest).read_text()); work_b = pathlib.Path(man["work_dir"]); vid = pathlib.Path(man["input"]).stem
     out = pathlib.Path(a.out); out.mkdir(parents=True, exist_ok=True); work = out / f"work_{vid}_{a.tag}"; work.mkdir(parents=True, exist_ok=True)
     f0, f1 = int(round(a.t0 * FPS)), int(round(a.t1 * FPS)); t0s, dur = f0 / FPS, (f1 - f0) / FPS
@@ -234,7 +232,7 @@ def main() -> int:
         if a.anchor_filter:   # round 2: the corrected trajectory drives the crop / affine, the verify pass and the mask bbox alike
             import anchor_filters as af
             Hrig = None
-            if a.anchor_filter.split(":")[0] in ("flow", "sub"):
+            if a.anchor_filter.split(":")[0] in ("flow", "sub", "blend"):
                 rp = pathlib.Path(a.rigid) if a.rigid else work_b / "master_rigid.npz"
                 if rp.exists(): Hrig = np.load(rp)["H"]
                 else:

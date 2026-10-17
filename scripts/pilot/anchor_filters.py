@@ -16,6 +16,7 @@ two by measuring the REAL rigid head motion without any detector: dense optical 
                                       frame by frame, no lag
       kalman:Q:R                      constant-velocity Kalman + RTS smoother per coordinate (offline, zero phase); Q accel noise, R meas noise (px^2)
       euro:MINCUT:BETA                One-Euro filter (causal, streaming), cutoff in Hz at 25 fps
+      blend:A:K:S                     box:K + A * (flow:S - box:K): follows a fraction A of the real head motion (sync / slide compromise)
       sub:N:S                         MediaPipe only every N-th frame, the frames in between from the flow track (stabilised-coordinate
                                       linear interpolation), then flow:S
 All filters work inside contiguous face runs (a gap restarts them).
@@ -149,6 +150,9 @@ def filter_landmarks(lm: np.ndarray, H: np.ndarray | None, spec: str) -> np.ndar
     """(T, P, 2) landmarks -> filtered copy (NaN pattern kept; filters restart at every gap). See module doc for `spec`."""
     kind, *args = spec.split(":"); out = lm.astype(np.float64).copy(); ok = np.isfinite(lm[:, 0, 0])
     if kind == "raw": return out
+    if kind == "blend":   # blend:A:K:S = box:K + A * (flow:S - box:K): follow a fraction A of the real (flow-measured) head motion
+        b = filter_landmarks(lm, H, f"box:{args[1]}"); fl = filter_landmarks(lm, H, f"flow:{args[2]}")
+        return b + float(args[0]) * (fl - b)
     for s, e in runs(ok):
         seg = lm[s:e].astype(np.float64); n, P, _ = seg.shape
         if kind == "box":

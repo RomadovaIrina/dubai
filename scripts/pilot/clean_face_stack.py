@@ -200,7 +200,8 @@ class CleanPrep:
     """Stands in for face_aware_latentsync_accel.VideoPrep: the master frames + MediaPipe-derived router rows and LatentSync detections."""
 
     def __init__(self, src: pathlib.Path, work: pathlib.Path, min_w: int = 50, min_h: int = 80, calib: bool = True, frames=None, master=None,
-                 pose_precheck: bool = True, pose_gate_deg: float = 0.0, pose_gate_hold: int = 3, max_faces: int = 2, turns: list | None = None):
+                 pose_precheck: bool = True, pose_gate_deg: float = 0.0, pose_gate_hold: int = 3, max_faces: int = 2, turns: list | None = None,
+                 anchor_filter: str | None = None, mask_track: str = "dets"):
         import face_aware_latentsync as fa
         self.times = {}; self.error = None
         t0 = time.perf_counter()
@@ -268,7 +269,23 @@ class CleanPrep:
         H, W = self.frames[0].shape[:2]
         self.router = MediaPipeRouter(min_w, min_h)
         self.router_rows = [self.router.row(f if np.isfinite(f[0, 0]) else None) for f in lm]
-        self.ls_dets = ls_detections(lm, W, H, calib)
+        # round 2 (2026-10-17): LatentSync's crop / affine and the mouth-mask box follow the REAL head motion (rigid upper-face DIS flow),
+        # detector noise is smoothed only around that trajectory (anchor_filters.py; r2/STAGE1.md). Router rows / pose keep the raw landmarks.
+        self.anchor_info = {"anchor_filter": anchor_filter, "mask_track": mask_track}
+        lm_ls = lm; Hrig = None
+        if anchor_filter or mask_track == "head":
+            import anchor_filters as af
+            t1 = time.perf_counter(); rp = pathlib.Path(work) / "master_rigid.npz"
+            if rp.exists() and len(np.load(rp)["H"]) == len(lm): Hrig = np.load(rp)["H"]
+            else:
+                Hrig = af.rigid_motion(self.frames, lm); np.savez_compressed(rp, H=Hrig)
+            self.times["prep_rigid_motion"] = round(time.perf_counter() - t1, 3)
+            if anchor_filter: lm_ls = af.filter_landmarks(lm, Hrig, anchor_filter).astype(np.float32)
+        self.ls_dets = ls_detections(lm_ls, W, H, calib)
+        if mask_track == "head":   # mouth-mask boxes locked to the head motion (LatentSync reads the bbox only as a presence flag)
+            l106 = np.stack([d[1] if d[1] is not None else np.full((106, 2), np.nan, np.float32) for d in self.ls_dets]).astype(np.float64)
+            hb = af.head_locked_boxes(l106, Hrig)
+            self.ls_dets = [(tuple(float(v) for v in hb[i]) if d[0] is not None and np.isfinite(hb[i, 0]) else d[0], d[1]) for i, d in enumerate(self.ls_dets)]
         # ---- head pose (spec 5.4 / 5.5): pre-check -> voice-only; optional per-frame gate -> pass-through (eased by the LS<->original crossfade)
         pose = pose_from_matrix(matrix)
         face = np.isfinite(pose[:, 0]); big = face & (np.abs(pose[:, 0]) > POSE_PRECHECK["yaw_deg"])
@@ -295,7 +312,8 @@ class CleanPrep:
                      "ls_detections": int(sum(d[0] is not None for d in self.ls_dets)), "anchor_calib": ANCHOR_CALIB if calib else None, "npz": str(npz),
                      "frame_map_summary": self.frame_map.get("summary", self.frame_map), "pose": self.pose_info,
                      "voice_only": self.voice_only, "face_stack_failed": self.face_stack_failed, "faces": self.faces,
-                     "held_landmark_frames": int(self.held_frames), "failure": self.failure}
+                     "held_landmark_frames": int(self.held_frames), "failure": self.failure,
+                     "anchors": self.anchor_info}
 
     def result(self):
         return self
