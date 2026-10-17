@@ -165,14 +165,26 @@ def main() -> int:
     else:
         with rp.timed(times, "face_router_load"): router = faa.make_router("retinaface", a.face_min_w, a.face_min_h, a.retina_conf)
     with rp.timed(times, "latentsync_load"): runner = faa.AccelRunner(a.window_batch_size, not a.no_deepcache, "none", "auto", steps=a.steps, guidance=a.guidance, deepcache_interval=a.deepcache_interval)
+    rec_cls = None
     if a.mouth_only_pasteback == "on":
-        runner = MouthOnlyRunner(runner, a.mask_top, a.mask_feather, a.mask_smooth, defer=a.codeformer_scope == "mouth")
+        Mo = MouthOnlyRunner
+        if prep is not None:   # round 2: record the composite mask boxes per master frame (slide_metric.py --boxes)
+            from ls_window_ab import make_box_recorder
+            Mo = rec_cls = make_box_recorder(MouthOnlyRunner, prep.frames)
+        runner = Mo(runner, a.mask_top, a.mask_feather, a.mask_smooth, defer=a.codeformer_scope == "mouth")
     cf_runner = None
     if a.codeformer == "optimized":
         from codeformer_accel import CodeFormerAccel
         with rp.timed(times, "codeformer_load"): cf_runner = CodeFormerAccel(fidelity_weight=a.codeformer_w, batch_size=a.codeformer_batch, empty_cache_per_face=a.codeformer_empty_cache, landmark_source=a.codeformer_landmarks, autocast=a.codeformer_precision == "fp16", parse_autocast=a.codeformer_precision != "fp32")
     rep = faa.process_video(src, work, dub16, dub_aac, out, router=router, runner=runner, min_ls_frames=a.min_ls_frames, max_verify_depth=a.max_verify_depth, codeformer=a.codeformer, times=times,
                             log=lambda m: print(m, flush=True), speech_gate=gate, crossfade_frames=a.crossfade_frames, router_stride=a.router_stride, in_memory=True, cf_runner=cf_runner, lm_smooth=a.ls_landmark_smooth, prep=prep)
+    if rec_cls is not None and rec_cls.rec:
+        import numpy as np
+        fr_, bx_ = [], []
+        for st, bxs in rec_cls.rec.items():
+            for k, b in enumerate(bxs):
+                if b is not None: fr_.append(st + k); bx_.append(b)
+        np.savez_compressed(out.with_name(out.stem + "_maskboxes.npz"), frames=np.array(fr_, int), boxes=np.array(bx_, np.float64))
     rep["backend"] = "optimized"; man["lipsync"] = rep; man["codeformer"] = "DISABLED (not invoked)" if a.codeformer == "off" else {"mode": a.codeformer, "w": a.codeformer_w, "batch": a.codeformer_batch, "landmarks": a.codeformer_landmarks, "precision": a.codeformer_precision}
     if cf_runner is not None: cf_runner.close()
     rp.free_cuda(runner, cf_runner)

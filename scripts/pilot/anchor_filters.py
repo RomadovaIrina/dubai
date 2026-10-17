@@ -61,6 +61,15 @@ def rigid_motion(frames, lm: np.ndarray, step: int = 3, return_info: bool = Fals
     on a grey crop around the upper face of frame t-1; RANSAC partial affine (rotation + scale + translation) on flow samples inside the
     upper-face hull (eyes excluded)."""
     import cv2
+    nth = cv2.getNumThreads(); cv2.setNumThreads(4)   # the container CPU quota is ~17 cores; OpenCV's default (all 128) oversubscribes it 10x
+    try:
+        return _rigid_motion(frames, lm, step, return_info)
+    finally:
+        cv2.setNumThreads(nth)
+
+
+def _rigid_motion(frames, lm, step, return_info):
+    import cv2
     T = len(frames); Hs = np.tile(np.array([[1, 0, 0], [0, 1, 0]], np.float64), (T, 1, 1)); info = np.zeros((T, 2))
     dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
     Hh, Ww = frames[0].shape[:2]; prev_g = cv2.cvtColor(frames[0], cv2.COLOR_BGR2GRAY)
