@@ -91,9 +91,9 @@ def lip_distance(lip, shape):
 
 
 class Dis:
-    def __init__(self):
+    def __init__(self, finest=1, vr=5):
         import cv2
-        self.d = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM); self.d.setFinestScale(0); self.d.setVariationalRefinementIterations(10)
+        self.d = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM); self.d.setFinestScale(finest); self.d.setVariationalRefinementIterations(vr)
 
     def __call__(self, a, b):
         return self.d.calc(np.ascontiguousarray(a), np.ascontiguousarray(b), None)
@@ -104,14 +104,16 @@ def gray(x):
     return cv2.cvtColor(x, cv2.COLOR_BGR2GRAY)
 
 
-def nosecut_alpha(L, shape, edge_px, top=0.52):
-    """Ellipse of clean0's geometry on the CURRENT landmarks' LatentSync bbox, explicit edge, cut above the nose base (face coordinates)."""
+def nosecut_alpha(L, shape, edge_px, top=0.52, cut=True):
+    """Ellipse of clean0's geometry on the CURRENT landmarks' LatentSync bbox, explicit edge, cut above the nose base (face coordinates).
+    cut=False: the ellipse only (--mask ellipse_raw: separates mask tracking from the nose cut). Returns (alpha, roi, bbox)."""
     import cv2, clean_face_stack as cfs
     from fps_composite import ellipse_alpha
     H, W = shape; lm106 = cfs.lm106_from_mp(L, True); bb = cfs.ls_bbox(lm106, W, H)
-    if bb is None: return None, None
+    if bb is None: return None, None, None
     al, roi = ellipse_alpha(bb, H, W, edge_px, top)
-    if al is None: return None, None
+    if al is None: return None, None, None
+    if not cut: return al.astype(np.float32), roi, bb
     ya, yb, xa, xb = roi; u, v, iod = face_axes(L)
     # cut line: through the lowest of subnasale / alar bases along v; alpha_cut = Phi((s - s0) / sig) with 0.1 at s0 and 0.9 at s0 + edge
     # s0 = where alpha_cut = 0.1: on the nose-base line (subnasale / alar bases) when the gap to the upper lip holds the whole edge, else moved
@@ -119,8 +121,8 @@ def nosecut_alpha(L, shape, edge_px, top=0.52):
     s_nb = max(float(L[k] @ v) for k in (2, 98, 327, 64, 294)); s_tip = float(L[1] @ v); s_lip = float(L[0] @ v)
     s_line = max(s_tip, min(s_nb, s_lip - edge_px - 1.0)); sig = edge_px / 2.563; s0 = s_line + 1.2816 * sig   # Phi(-1.28) = 0.1
     yy, xx = np.mgrid[ya:yb, xa:xb].astype(np.float32); s = xx * v[0] + yy * v[1]
-    cut = 0.5 * (1 + _erf((s - s0) / (sig * math.sqrt(2))))
-    return (al * cut).astype(np.float32), roi
+    ramp = 0.5 * (1 + _erf((s - s0) / (sig * math.sqrt(2))))
+    return (al * ramp).astype(np.float32), roi, bb
 
 
 def _erf(z):
@@ -128,6 +130,28 @@ def _erf(z):
     s = np.sign(z); z = np.abs(z); t = 1 / (1 + 0.3275911 * z)
     y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * np.exp(-z * z)
     return s * y
+
+
+JAW_LIPS = sorted(set([152, 148, 176, 149, 150, 136, 172, 58, 132, 377, 400, 378, 379, 365, 397, 288, 361, 323, 454, 234, 93] + LIPS_OUTER +
+                      [17, 84, 314, 18, 200, 199, 175, 83, 313, 201, 421, 208, 428, 32, 262, 140, 369, 171, 396, 211, 431, 194, 418]))
+
+
+def head_locked_landmarks(frames, lm, sig_rigid=8.0, sig_jaw=1.0):
+    """Landmarks that move with the HEAD (track A's head_locked_boxes idea applied to every point): per face run, landmarks are expressed in
+    head-stabilised coordinates (inverse cumulative rigid motion of the upper face: DIS + RANSAC similarity, anchor_filters.rigid_motion),
+    smoothed over time (sigma_rigid frames; jaw / chin / lip points sigma_jaw: articulation), and mapped back with each frame's rigid motion.
+    Detector noise and lag disappear from the mask; real head motion is followed frame by frame."""
+    import anchor_filters as af
+    H = af.rigid_motion(frames, lm); T = len(lm); out = np.full_like(lm, np.nan); ok = np.isfinite(lm[:, 0, 0])
+    sig = np.full(lm.shape[1], sig_rigid); sig[JAW_LIPS] = sig_jaw
+    for s, e in af.runs(ok):
+        C = af.cumulative(H, s, e); Ci = np.stack([af._inv(c) for c in C])
+        st = np.einsum("tij,tkj->tki", Ci[:, :, :2], lm[s:e]) + Ci[:, None, :, 2]
+        sm = st.copy()
+        for sg in np.unique(sig):
+            idx = np.flatnonzero(sig == sg); sm[:, idx] = af.gauss1d(st[:, idx], float(sg))
+        out[s:e] = np.einsum("tij,tkj->tki", C[:, :, :2], sm) + C[:, None, :, 2]
+    return out, H
 
 
 def main() -> int:
@@ -138,16 +162,26 @@ def main() -> int:
     ap.add_argument("--win", required=True); ap.add_argument("--npz", required=True); ap.add_argument("--name", required=True)
     ap.add_argument("--variant", choices=["clean0", "reg"], default="reg"); ap.add_argument("--reg", choices=["none", "trans", "sim"], default="sim")
     ap.add_argument("--ring", choices=["off", "on"], default="off"); ap.add_argument("--ring-sigma", type=float, default=0.12); ap.add_argument("--ring-width", type=float, default=0.35)
-    ap.add_argument("--mask", choices=["clean0", "nosecut"], default="clean0"); ap.add_argument("--edge-px", type=float, default=12.0)
+    ap.add_argument("--mask", choices=["clean0", "ellipse_raw", "nosecut"], default="clean0"); ap.add_argument("--edge-px", type=float, default=12.0)
     ap.add_argument("--lip-guard", type=float, default=0.12); ap.add_argument("--ransac-px", type=float, default=1.0)
     ap.add_argument("--reg-regions", choices=["all", "nosebase", "cheeks"], default="all", help="correspondence regions (nosebase / cheeks = held-out check)")
     ap.add_argument("--threads", type=int, default=12)
+    ap.add_argument("--flow-finest", type=int, default=1, help="DIS finest pyramid level (0 = full resolution, 1 = half: 6x faster, same registration)")
+    ap.add_argument("--flow-vr", type=int, default=5, help="DIS variational refinement iterations")
+    ap.add_argument("--mask-track", choices=["raw", "headlock"], default="raw", help="landmarks for --mask ellipse_raw / nosecut: the current frame's (raw) or head-locked")
     ap.add_argument("--max-shift-iod", type=float, default=0.15, help="larger estimated shifts are treated as failures (registration skipped for that frame)")
     a = ap.parse_args()
+    cv2.setNumThreads(1)   # parallelism comes from the frame thread pool (OpenCV's own pool would size itself to the host's 128 cores)
     win = pathlib.Path(a.win); wm = json.loads((win / "window_manifest.json").read_text()); A, B = wm["window"]
     t_all = time.perf_counter()
     M = read_video(win / "master.mp4"); Lr = read_video(win / "S0_ls_raw.mp4"); n = min(len(M), len(Lr)); H, W = M[0].shape[:2]
     mp = np.load(a.npz)["lm"].astype(np.float64)
+    mp_mask = mp
+    if a.mask != "clean0" and a.mask_track == "headlock":
+        cache = win / "headlock_lm.npz"
+        if cache.exists(): hl = np.load(cache)["lm"]
+        else: hl, _ = head_locked_landmarks(M, mp[A:A + n]); np.savez_compressed(cache, lm=hl)
+        mp_mask = mp.copy(); mp_mask[A:A + n] = hl
     dets_all = cfs.ls_detections(mp.astype(np.float32), W, H, calib=True)
     # clean0 boxes + crossfade weights per piece (decompose_video_stage: dets ±2 inside the piece, MouthOnlyRunner.boxes ±3 inside the piece)
     runner = MouthOnlyRunner(type("I", (), {"config": {}, "calls": 0, "steps": 0, "guidance": 0, "seed": 0, "load_s": 0})(), wm["settings"]["mask_top"],
@@ -162,13 +196,14 @@ def main() -> int:
             if s["xf_out"] and k >= L_ - s["xf_out"]: w = min(w, (L_ - k) / (s["xf_out"] + 1))
             wts[st - A + k] = w
     import threading, concurrent.futures as cf
-    local = threading.local(); box_rec = np.full((n, 4), np.nan)
+    local = threading.local(); box_rec = np.full((n, 4), np.nan); mbox_rec = np.full((n, 4), np.nan)
 
     def one(i):
-        if not hasattr(local, "dis"): local.dis = Dis()
+        if not hasattr(local, "dis"): local.dis = Dis(a.flow_finest, a.flow_vr)
         dis = local.dis; t = A + i; m = M[i]
         if wts[i] <= 0 or boxes[i] is None: return m, None, 0.0
         box_rec[i] = boxes[i]
+        if a.variant == "clean0": mbox_rec[i] = boxes[i]
         if a.variant == "clean0":   # exact decompose S2nc + crossfade
             al, roi = runner.mask(boxes[i], H, W); ya, yb, xa, xb = roi; r = m.copy()
             r[ya:yb, xa:xb] = (Lr[i][ya:yb, xa:xb].astype(np.float32) * al + r[ya:yb, xa:xb].astype(np.float32) * (1 - al)).round().clip(0, 255).astype(np.uint8)
@@ -177,15 +212,17 @@ def main() -> int:
         if not np.isfinite(Lm).all(): return m, None, 0.0
         u, v, iod = face_axes(Lm)
         if a.mask == "clean0":
-            al, roi = runner.mask(boxes[i], H, W); al = al[..., 0]
+            al, roi = runner.mask(boxes[i], H, W); al = al[..., 0]; mbox_rec[i] = boxes[i]
         else:
-            al, roi = nosecut_alpha(Lm, (H, W), a.edge_px)
+            Lmask = mp_mask[t] if np.isfinite(mp_mask[t]).all() else Lm
+            al, roi, mb = nosecut_alpha(Lmask, (H, W), a.edge_px, cut=a.mask == "nosecut")
+            if mb is not None: mbox_rec[i] = mb
         if al is None: return m, None, 0.0
         ya, yb, xa, xb = roi
         # registration crop: lower face + margin (mask roi grown by 0.25 IOD, plus the nose base)
         g = int(0.25 * iod); y0 = max(0, min(ya, int(Lm[NOSEBASE, 1].min())) - g); y1 = min(H, yb + g); x0 = max(0, xa - g); x1 = min(W, xb + g)
         gm, gl = gray(m[y0:y1, x0:x1]), gray(Lr[i][y0:y1, x0:x1])
-        stab, lip = stable_mask(Lm, (H, W), iod, a.lip_guard, a.reg_regions); stab = stab[y0:y1, x0:x1]; lip = lip[y0:y1, x0:x1]
+        stab, lip = stable_mask(Lm - [x0, y0], (y1 - y0, x1 - x0), iod, a.lip_guard, a.reg_regions)
         rec = {"t": t, "w": float(wts[i])}
         Lk = Lr[i][y0:y1, x0:x1]
         if a.reg != "none":
@@ -228,7 +265,8 @@ def main() -> int:
     out = [r[0] for r in res]; reg = [r[1] for r in res if r[1] is not None]; tsec = sum(r[2] for r in res)
     out += M[n:]
     write_video(win / f"{a.name}.mp4", out)
-    np.savez_compressed(win / f"{a.name}.boxes.npz", frames=np.flatnonzero(np.isfinite(box_rec[:, 0])) + A, boxes=box_rec[np.isfinite(box_rec[:, 0])])
+    np.savez_compressed(win / f"{a.name}.boxes.npz", frames=np.flatnonzero(np.isfinite(box_rec[:, 0])) + A, boxes=box_rec[np.isfinite(box_rec[:, 0])])   # clean0 boxes: same slide-metric pixels for every variant
+    np.savez_compressed(win / f"{a.name}.maskboxes.npz", frames=np.flatnonzero(np.isfinite(mbox_rec[:, 0])) + A, boxes=mbox_rec[np.isfinite(mbox_rec[:, 0])])   # the mask actually used (mask lag)
     ls_frames = int((wts > 0).sum())
     summ = {"name": a.name, "args": vars(a), "window": [A, B], "ls_frames": ls_frames, "composite_cpu_s": round(tsec, 2), "composite_wall_s": round(t_comp, 2), "threads": a.threads,
             "composite_wall_s_per_ls_video_min": round(t_comp / max(ls_frames / FPS / 60, 1e-9), 1), "total_s": round(time.perf_counter() - t_all, 2)}

@@ -102,6 +102,11 @@ def main() -> int:
     ap.add_argument("--ls-sharpen-lips", type=float, default=0.0, help="EXTRA unsharp amount inside the outer lip contour of the LatentSync frame (on top of --ls-sharpen)")
     ap.add_argument("--edge-px", type=float, default=12.0); ap.add_argument("--threads", type=int, default=12); ap.add_argument("--crf", type=int, default=13)
     ap.add_argument("--max-fallback", type=float, default=0.02)
+    ap.add_argument("--master-timing", default=None, help="r2: <id>_master_timing.json (master frame m shows source time tau[m], NOT m/25: ffmpeg -r 25 lags ~60 ms on 30 fps "
+                    "sources). Given: mask / landmarks / registration target follow the TRUE time of each source frame (mu = tau^-1(t_k)); the mouth stays audio-synced (25 t_k)")
+    ap.add_argument("--register", choices=["off", "rigid", "sim", "sim_ring"], default="off", help="r2: move the LatentSync layer from its own head pose to the shown source frame's: "
+                    "rigid = similarity on MediaPipe eyes / nose bridge / nose tip (layer pose -> true-time pose); sim = rigid + DIS-flow RANSAC similarity on the stable lower-face "
+                    "parts vs the source frame (composite_register.py); sim_ring = sim + smooth flow refinement on the paste ring")
     a = ap.parse_args()
     t_all = time.perf_counter(); times = {}
     man = json.loads(pathlib.Path(a.manifest).read_text()); work = pathlib.Path(man["work_dir"]); src = man["input"]
@@ -132,6 +137,13 @@ def main() -> int:
                 L[b - 1] = np.clip(tms.interp(fl0, y, z, 1 / 3), 0, 255).astype(np.uint8); L[b] = np.clip(tms.interp(fl0, y, z, 2 / 3), 0, 255).astype(np.uint8); nbnd += 1
         times["c2_boundaries"] = round(time.perf_counter() - t0, 2)
     tk = pts.astype(np.float64) * float(tb); mpos = tk * FPS_M
+    mu_arr = mpos.copy()   # geometry index: nominal (= the old behaviour) unless the true master timing is given
+    if a.master_timing:
+        tau = np.asarray(json.loads(pathlib.Path(a.master_timing).read_text())["tau_s"], np.float64)[:nm]
+        mu_arr = np.interp(tk, tau, np.arange(len(tau), dtype=np.float64))
+        times["geometry_minus_audio_index_mean"] = round(float(np.mean(mu_arr - mpos)), 3)
+    import composite_register as creg
+    RIG_POSE = [33, 133, 362, 263, 168, 6, 197, 4]   # eyes / nose bridge / nose tip: the layer's head pose
     def lerp(arr, m):
         m0 = int(np.clip(math.floor(m), 0, nm - 1)); m1 = min(m0 + 1, nm - 1); al = float(m - math.floor(m))
         if not (np.isfinite(arr[m0]).all() and np.isfinite(arr[m1]).all()): return arr[m0] if np.isfinite(arr[m0]).all() else arr[m1]
@@ -143,14 +155,16 @@ def main() -> int:
         return local.f
     edge_meas = []
     def one(k):
-        m = mpos[k]; m0 = int(np.clip(math.floor(m), 0, nm - 1)); m1 = min(m0 + 1, nm - 1); al = float(m - math.floor(m))
+        m = mpos[k]; m0 = int(np.clip(math.floor(m), 0, nm - 1)); m1 = min(m0 + 1, nm - 1); al = float(m - math.floor(m)); mu = float(mu_arr[k])
         w = float((1 - al) * wm[m0] + al * wm[m1])
         if w <= 0: return S[k], 0, None
-        box = lerp(bb, m)
+        box = lerp(bb, mu)
         if not np.isfinite(box).all(): return S[k], 0, None
         alpha, roi = ellipse_alpha(box, H, W, a.edge_px)
         if alpha is None: return S[k], 0, None
-        ya, yb, xa, xb = roi; f = flow()
+        ya, yb, xa, xb = roi; f = flow(); roi_r = roi
+        if a.register != "off":   # build the LatentSync layer on a larger box: it moves by up to head speed x 60 ms before the roi is cut
+            pad = int(0.25 * (box[2] - box[0])); ya, yb, xa, xb = max(0, ya - pad), min(H, yb + pad), max(0, xa - pad), min(W, xb + pad)
         if a.retime in ("nearest", "nearest_rigid"):
             mn = m0 if (al < 0.5 or wm[m1] <= 0) else m1
             if a.retime == "nearest_rigid" and abs(m - mn) > 1e-3:
@@ -165,10 +179,35 @@ def main() -> int:
         elif al < 0.04 or m1 == m0 or wm[m1] <= 0: Lk = L[m0][ya:yb, xa:xb].astype(np.float32)
         elif al > 0.96 or wm[m0] <= 0: Lk = L[m1][ya:yb, xa:xb].astype(np.float32)
         else: Lk = tms.interp(f, L[m0][ya:yb, xa:xb].astype(np.float32), L[m1][ya:yb, xa:xb].astype(np.float32), al)
+        if a.register != "off":
+            pose_l = mp[m0 if (al < 0.5 or wm[m1] <= 0) else m1] if a.retime == "nearest" else lerp(mp, m); pose_t = lerp(mp, mu)
+            if np.isfinite(pose_l[RIG_POSE]).all() and np.isfinite(pose_t[RIG_POSE]).all():
+                off = np.array([xa, ya], np.float64); Mr, _ = cv2.estimateAffinePartial2D((pose_l[RIG_POSE] - off).astype(np.float32), (pose_t[RIG_POSE] - off).astype(np.float32), method=cv2.LMEDS)
+                if Mr is not None: Lk = cv2.warpAffine(Lk, Mr, (xb - xa, yb - ya), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+                if a.register in ("sim", "sim_ring"):
+                    if not hasattr(local, "dis"): local.dis = creg.Dis(1, 5)
+                    Lt = pose_t - off; iod = creg.face_axes(pose_t)[2]; gs = creg.gray(S[k][ya:yb, xa:xb]); gl = cv2.cvtColor(np.clip(Lk, 0, 255).astype(np.uint8), cv2.COLOR_BGR2GRAY)
+                    stab, lip = creg.stable_mask(Lt, (yb - ya, xb - xa), iod, 0.12)
+                    F = local.dis(gs, gl); ys, xs = np.nonzero(stab)
+                    if len(xs) >= 30:
+                        P_ = np.stack([xs[::2], ys[::2]], 1).astype(np.float32); Q_ = P_ + F[ys[::2], xs[::2]]
+                        Ms, inl = cv2.estimateAffinePartial2D(P_, Q_, method=cv2.RANSAC, ransacReprojThreshold=1.0, maxIters=2000, confidence=0.995, refineIters=10)
+                        if Ms is not None and float(inl.mean()) >= 0.4 and abs(math.hypot(Ms[0, 0], Ms[1, 0]) - 1) < 0.04 and np.linalg.norm(Ms[:, 2]) < 0.15 * iod + 5:
+                            Lk = cv2.warpAffine(Lk, Ms, (xb - xa, yb - ya), flags=cv2.INTER_CUBIC | cv2.WARP_INVERSE_MAP, borderMode=cv2.BORDER_REPLICATE)
+                    if a.register == "sim_ring":
+                        al_c = np.zeros((yb - ya, xb - xa), np.float32); al_c[roi_r[0] - ya:roi_r[1] - ya, roi_r[2] - xa:roi_r[3] - xa] = alpha
+                        F2 = local.dis(gs, cv2.cvtColor(np.clip(Lk, 0, 255).astype(np.uint8), cv2.COLOR_BGR2GRAY)); ringw = int(max(3, 0.35 * iod))
+                        band = cv2.dilate(((al_c > 0.02) & (al_c < 0.98)).astype(np.uint8), cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * ringw + 1, 2 * ringw + 1))) > 0
+                        wgt = ((band | stab) & ~lip).astype(np.float32); sg = 0.12 * iod; den = cv2.GaussianBlur(wgt, (0, 0), sg) + 1e-4
+                        Fs = np.stack([cv2.GaussianBlur(F2[..., c_] * wgt, (0, 0), sg) / den for c_ in range(2)], -1)
+                        fade = np.clip(creg.lip_distance(lip, lip.shape) / max(0.25 * iod, 1.0), 0, 1).astype(np.float32); Fs *= fade[..., None] * (den > 0.02)[..., None]
+                        yy, xx = np.mgrid[0:yb - ya, 0:xb - xa].astype(np.float32)
+                        Lk = cv2.remap(Lk, xx + Fs[..., 0], yy + Fs[..., 1], cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+            Lk = Lk[roi_r[0] - ya:roi_r[1] - ya, roi_r[2] - xa:roi_r[3] - xa].astype(np.float32); ya, yb, xa, xb = roi_r
         sk = S[k][ya:yb, xa:xb].astype(np.float32)
         ex = None
         if a.skin_texture == "source" or (a.ls_sharpen > 0 and a.ls_sharpen_scope == "lips"):
-            lm_s = lerp(mp, m); lm_l = lerp(mp_ls, m) if mp_ls is not None else None; mw_ = tms.mouth_width(lm_s)
+            lm_s = lerp(mp, mu); lm_l = lerp(mp_ls, m) if mp_ls is not None else None; mw_ = tms.mouth_width(lm_s)
             idx = tms.LIPS_INNER if a.lip_texture == "on" else tms.LIPS_OUTER
             ex = tms.poly_mask(lm_l[idx] if lm_l is not None else None, roi, a.lip_dilate * mw_, 0.08 * mw_)
             if a.lip_texture == "off": ex = np.maximum(ex, tms.poly_mask(lm_s[idx], roi, a.lip_dilate * mw_, 0.08 * mw_))
@@ -176,14 +215,14 @@ def main() -> int:
             det = Lk - cv2.GaussianBlur(Lk, (0, 0), a.ls_sharpen_sigma); amt = np.full(Lk.shape[:2], a.ls_sharpen, np.float32)
             if a.ls_sharpen_scope == "lips": amt = a.ls_sharpen * ex
             if a.ls_sharpen_lips > 0:
-                lm_l2 = lerp(mp_ls, m) if mp_ls is not None else lerp(mp, m); mw2 = tms.mouth_width(lm_l2)
+                lm_l2 = lerp(mp_ls, m) if mp_ls is not None else lerp(mp, m); mw2 = tms.mouth_width(lm_l2)   # LatentSync layer's own lips (its pose)
                 amt = amt + a.ls_sharpen_lips * tms.poly_mask(lm_l2[tms.LIPS_OUTER], roi, 0.08 * mw2, 0.08 * mw2)
             Lk = Lk + amt[..., None] * det
         if a.skin_texture == "source":
             Lk = tms.skin_texture_transfer(f, [Lk], [sk], [ex], a.tex_sigma, a.tex_tau)[0]
         aw = alpha * w
         if a.silence == "still" and (sil_w[m0] > 0 or sil_w[m1] > 0):
-            g = (1 - al) * sil_w[m0] + al * sil_w[m1]; lm_s = lerp(mp, m)
+            g = (1 - al) * sil_w[m0] + al * sil_w[m1]; lm_s = lerp(mp, mu)
             if np.isfinite(lm_s).all():
                 oval = lm_s[tms.FACE_OVAL, :2]; ny = float(lm_s[tms.NOSE_BASE, 1].mean()); low = oval[oval[:, 1] >= ny - 1]
                 hull = cv2.convexHull(np.concatenate([low, [[oval[:, 0].min(), ny], [oval[:, 0].max(), ny]]]).astype(np.float32))[:, 0]
