@@ -26,6 +26,7 @@ def main() -> int:
     ap.add_argument("--model", default=str(ROOT / "models/mediapipe/face_landmarker.task"))
     ap.add_argument("--mode", choices=["video", "image"], default="video")
     ap.add_argument("--min-conf", type=float, default=0.5)
+    ap.add_argument("--every", type=int, default=1, help="process only every N-th frame (others NaN); a cheap probe, use with --mode image")
     ap.add_argument("--num-faces", type=int, default=1, help="> 1: also store every face per frame (lm_all / matrix_all, unordered; spec 8.2 two faces)")
     a = ap.parse_args()
     mode = vision.RunningMode.VIDEO if a.mode == "video" else vision.RunningMode.IMAGE
@@ -39,6 +40,10 @@ def main() -> int:
             ok, f = cap.read()
             if not ok: break
             H, W = f.shape[:2]
+            if a.every > 1 and i % a.every:
+                alls.append(np.full((F, 478, 2), np.nan, np.float32)); amats.append(np.full((F, 4, 4), np.nan, np.float32))
+                lms.append(np.full((478, 2), np.nan, np.float32)); zs.append(np.full(478, np.nan, np.float32)); pres.append(False)
+                mats.append(np.full((4, 4), np.nan, np.float32)); i += 1; continue
             img = mp.Image(image_format=mp.ImageFormat.SRGB, data=np.ascontiguousarray(cv2.cvtColor(f, cv2.COLOR_BGR2RGB)))
             r = det.detect_for_video(img, int(round(i * 1000 / fps))) if a.mode == "video" else det.detect(img)
             fa_ = np.full((F, 478, 2), np.nan, np.float32); fm_ = np.full((F, 4, 4), np.nan, np.float32)

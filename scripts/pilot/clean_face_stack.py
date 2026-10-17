@@ -38,12 +38,13 @@ if CALIB_FILE.exists():
 LMK_ADAPT_ORIGIN_ORDER = [1, 10, 12, 14, 16, 3, 5, 7, 0, 23, 21, 19, 32, 30, 28, 26, 17, 43, 48, 49, 51, 50, 102, 103, 104, 105, 101, 73, 74, 86]
 
 
-def run_mediapipe(video: pathlib.Path, out: pathlib.Path, mode: str = "video", num_faces: int = 1) -> pathlib.Path:
+def run_mediapipe(video: pathlib.Path, out: pathlib.Path, mode: str = "video", num_faces: int = 1, every: int = 1) -> pathlib.Path:
     """MediaPipe Face Landmarker over every frame of `video` in its own env -> npz (cached next to the master)."""
     if out.exists():
         try:
             f_ = np.load(out).files
-            if "matrix" in f_ and (num_faces <= 1 or "lm_all" in f_): return out   # older caches lack the pose matrices / extra faces -> recompute
+            # older caches lack the pose matrices / extra faces -> recompute; a num_faces=2 cache is NOT a single-face pass (coverage differs)
+            if "matrix" in f_ and ((num_faces <= 1 and "lm_all" not in f_) or (num_faces > 1 and "lm_all" in f_)): return out
         except Exception:
             pass
     import hashlib
@@ -51,7 +52,7 @@ def run_mediapipe(video: pathlib.Path, out: pathlib.Path, mode: str = "video", n
     if h != MP_MODEL_SHA256:
         raise RuntimeError(f"{MP_MODEL}: sha256 {h} != pinned {MP_MODEL_SHA256}")
     env = {**os.environ, "GLOG_minloglevel": "2", "OMP_NUM_THREADS": "4"}
-    p = subprocess.run([MP_PY, str(HERE / "mp_landmarks.py"), str(video), str(out), "--model", str(MP_MODEL), "--mode", mode, "--num-faces", str(num_faces)],
+    p = subprocess.run([MP_PY, str(HERE / "mp_landmarks.py"), str(video), str(out), "--model", str(MP_MODEL), "--mode", mode, "--num-faces", str(num_faces), "--every", str(every)],
                        env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     if p.returncode != 0 or not out.exists():
         raise RuntimeError(f"mediapipe landmarks failed ({p.returncode}): {p.stdout[-1500:]}")
@@ -155,6 +156,12 @@ def ls_bbox(lm106: np.ndarray, W: int, H: int):
     return (max(0, x1), max(0, y1), min(W, x2), min(H, y2))
 
 
+# The router thresholds (w >= 50, h >= 80) were defined on RetinaFace's WIDER-FACE-style box; a WIDER-style box (YuNet, MIT, same
+# annotation convention) is 1.10-1.16x TALLER than MediaPipe's face oval (median 1.157 / 1.128 / 1.095 on 03 / 04 / 05), widths equal
+# (0.98-1.01). Comparing 80 px against the raw oval height rejected ~2x more frames than cand5 on small faces (05: 214 vs 111).
+OVAL_TO_BOX_H = 1.12
+
+
 class MediaPipeRouter:
     """Face router rows from the MediaPipe pass (same classes / reasons / thresholds as retinaface_router.RetinaFaceRouter)."""
 
@@ -166,7 +173,7 @@ class MediaPipeRouter:
     def row(self, mp478):
         if mp478 is None or not np.isfinite(mp478[0, 0]):
             return {"cls": "NO_FACE", "reason": "no_face", "bbox": None, "landmarks_5": None, "confidence": None}
-        ov = mp478[MP_FACE_OVAL]; x1, y1 = ov.min(0); x2, y2 = ov.max(0); w, h = int(x2 - x1), int(y2 - y1)
+        ov = mp478[MP_FACE_OVAL]; x1, y1 = ov.min(0); x2, y2 = ov.max(0); w, h = int(x2 - x1), int(round((y2 - y1) * OVAL_TO_BOX_H))
         bbox = {"x1": int(x1), "y1": int(y1), "x2": int(x2), "y2": int(y2), "w": w, "h": h, "score": 1.0}
         lm5 = [mp478[MP_EYE_IMG_LEFT].mean(0), mp478[MP_EYE_IMG_RIGHT].mean(0), mp478[4], mp478[61], mp478[291]]
         extra = {"landmarks_5": [[round(float(p[0]), 2), round(float(p[1]), 2)] for p in lm5], "confidence": 1.0}
@@ -220,7 +227,18 @@ class CleanPrep:
         self.failure = None; npz = pathlib.Path(work) / "master_mediapipe.npz"; lm = None; z = None
         for attempt in (1, 2):
             try:
-                run_mediapipe(pathlib.Path(self.master), npz, num_faces=max_faces); z = np.load(npz); lm = z["lm"]
+                # 2026-10-17 coverage fix: MediaPipe's VIDEO-mode landmarker run with num_faces=2 finds the face in far fewer frames than with
+                # num_faces=1 (05: 640 vs 1265 of 1311, 01: 174 vs 260) -> the primary pass is single-face (= clean-base / clean0); the two-face
+                # pass (spec 8.2) only runs when a cheap IMAGE-mode probe on every 10th frame sees two faces together often enough.
+                run_mediapipe(pathlib.Path(self.master), npz, num_faces=1); z = np.load(npz); lm = z["lm"]
+                self.two_face_probe = None
+                if max_faces >= 2:
+                    pz = np.load(run_mediapipe(pathlib.Path(self.master), pathlib.Path(work) / "master_mediapipe_probe2.npz", mode="image", num_faces=2, every=10))["lm_all"]
+                    n1 = int(np.isfinite(pz[:, :, 0, 0]).any(1).sum()); n2 = int(np.isfinite(pz[:, :, 0, 0]).all(1).sum())
+                    self.two_face_probe = {"probed_frames_with_face": n1, "with_two_faces": n2, "share": round(n2 / max(n1, 1), 4)}
+                    if n2 >= 3 and n2 / max(n1, 1) >= 0.10:
+                        npz2 = pathlib.Path(work) / "master_mediapipe_2faces.npz"
+                        run_mediapipe(pathlib.Path(self.master), npz2, num_faces=max_faces); z = np.load(npz2); lm = z["lm"]
                 if len(lm) != len(self.frames):
                     raise RuntimeError(f"mediapipe frames {len(lm)} != master frames {len(self.frames)}")
                 break
@@ -319,7 +337,7 @@ class CleanPrep:
                      "frame_map_summary": self.frame_map.get("summary", self.frame_map), "pose": self.pose_info,
                      "voice_only": self.voice_only, "face_stack_failed": self.face_stack_failed, "faces": self.faces,
                      "held_landmark_frames": int(self.held_frames), "failure": self.failure,
-                     "anchors": self.anchor_info}
+                     "anchors": self.anchor_info, "two_face_probe": getattr(self, "two_face_probe", None)}
 
     def result(self):
         return self
