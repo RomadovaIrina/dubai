@@ -202,3 +202,32 @@ def anchor_stats(anc: np.ndarray, H: np.ndarray, sel: np.ndarray) -> dict:
     xc = [float((np.roll(vxh, -L) * hxh).sum()) for L in range(-3, 4)]; lag = int(np.argmax(xc)) - 3
     def st(x): return {"mean": round(float(np.mean(x)), 4), "p95": round(float(np.percentile(x, 95)), 4)} if len(x) else None
     return {"n": int(okv.sum()), "resid_vs_head_px": st(r), "head_vel_px": st(hv), "acc_px": st(acc), "hp_gain_x": round(gain, 3), "lag_frames_x": lag}
+
+
+def ls_bbox_float(lm106: np.ndarray) -> np.ndarray | None:
+    """clean_face_stack.ls_bbox (LatentSync FaceDetector's formula) without the integer rounding: (x1, y1, x2, y2) float."""
+    from clean_face_stack import LMK_ADAPT_ORIGIN_ORDER
+    half = 0.5 * (lm106[74] + lm106[73]); sub = lm106[LMK_ADAPT_ORIGIN_ORDER]
+    dist = sub[:, 1].max() - half[1]; upper = half[1] - dist
+    x1, y1, x2, y2 = sub[:, 0].min(), upper, sub[:, 0].max(), sub[:, 1].max()
+    if y2 - y1 <= 0 or x2 - x1 <= 0: return None
+    w = x2 - x1; return np.array([x1 - 0.05 * w, y1, x2 + 0.05 * w, y2 + 0.1 * w])
+
+
+def head_locked_boxes(lm106: np.ndarray, H: np.ndarray, sig_rigid: float = 8.0, sig_chin: float = 1.0) -> np.ndarray:
+    """Mouth-mask boxes (T, 4) that move with the HEAD: per face run, the float LatentSync box is expressed in head-stabilised coordinates
+    (inverse cumulative rigid motion), its centre-x, width and top are smoothed with sigma_rigid (they only change with yaw / scale, slowly),
+    its bottom (chin: jaw opening) with sigma_chin, then mapped back with the frame's rigid motion (centre by the similarity, size by its scale).
+    NaN rows where there is no face."""
+    T = len(lm106); out = np.full((T, 4), np.nan); ok = np.isfinite(lm106[:, 0, 0])
+    for s, e in runs(ok):
+        bx = np.array([ls_bbox_float(lm106[t]) if ls_bbox_float(lm106[t]) is not None else (np.nan,) * 4 for t in range(s, e)], np.float64)
+        C = cumulative(H, s, e); sc = np.sqrt(np.abs(np.linalg.det(C[:, :, :2])))
+        cen = np.stack([(bx[:, 0] + bx[:, 2]) / 2, (bx[:, 1] + bx[:, 3]) / 2], 1)
+        Ci = np.stack([_inv(c) for c in C]); cs = np.einsum("tij,tj->ti", Ci[:, :, :2], cen) + Ci[:, :, 2]
+        w = (bx[:, 2] - bx[:, 0]) / sc; top = cs[:, 1] - (bx[:, 3] - bx[:, 1]) / 2 / sc; bot = cs[:, 1] + (bx[:, 3] - bx[:, 1]) / 2 / sc
+        cx = gauss1d(cs[:, 0], sig_rigid); w = gauss1d(w, sig_rigid); top = gauss1d(top, sig_rigid); bot = gauss1d(bot, sig_chin)
+        cst = np.stack([cx, (top + bot) / 2], 1); cb = np.einsum("tij,tj->ti", C[:, :, :2], cst) + C[:, :, 2]
+        hw, hh = w * sc / 2, (bot - top) * sc / 2
+        out[s:e] = np.stack([cb[:, 0] - hw, cb[:, 1] - hh, cb[:, 0] + hw, cb[:, 1] + hh], 1)
+    return out

@@ -22,6 +22,7 @@ for arm in "$@"; do
     kal) X="--anchor-filter kalman:5.0:0.5";;
     kalnr32) X="--anchor-filter kalman:5.0:0.5 --anchor-round off --affine-precision fp32";;
     sub3nr32) X="--anchor-filter sub:3:4 --anchor-round off --affine-precision fp32";;
+    flow4nr32hm) X="--anchor-filter flow:4 --anchor-round off --affine-precision fp32 --mask-track head";;
     wrap) X="--mode wrapper";;
     wrapnr) X="--mode wrapper --anchor-round off";;
     wrap32) X="--mode wrapper --affine-precision fp32";;
