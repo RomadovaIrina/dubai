@@ -20,7 +20,8 @@ Per LatentSync master frame t (L = LatentSync raw frame, M = master frame; both 
   mask      --mask clean0: clean0's lower-face ellipse (MouthOnlyRunner geometry on the ±2-smoothed MediaPipe detections, box ±3 inside each
             LatentSync piece = exactly clean0 / decompose S2nc). --mask nosecut: the same ellipse built on the CURRENT frame's landmarks
             (no smoothing lag) with an explicit --edge-px (10-90 %) edge, and cut from above in face coordinates so that alpha < 0.1 at and
-            above the subnasale / alar bases (no nose in the patch); the cut ramps 0.1 -> 0.9 over --edge-px below that line.
+            above the subnasale / alar bases (no nose in the patch); the cut ramps 0.1 -> 0.9 over --edge-px below that line
+            (on small faces the line moves up towards the nose tip so the upper lip still gets alpha >= 0.9).
   blend     out = M + w (alpha (A - M)), w = the clean0 crossfade weight of the piece (decompose's rule).
 --variant clean0 reproduces decompose's S3nc_final_nocf bit for bit (two roundings, cv2.addWeighted crossfade) as a pipeline check.
 
@@ -110,7 +111,10 @@ def nosecut_alpha(L, shape, edge_px, top=0.52):
     if al is None: return None, None
     ya, yb, xa, xb = roi; u, v, iod = face_axes(L)
     # cut line: through the lowest of subnasale / alar bases along v; alpha_cut = Phi((s - s0) / sig) with 0.1 at s0 and 0.9 at s0 + edge
-    s_nb = max(float(L[k] @ v) for k in (2, 98, 327, 64, 294)); sig = edge_px / 2.563; s0 = s_nb + 1.2816 * sig   # Phi(-1.28) = 0.1 -> alpha_cut = 0.1 exactly on the nose-base line
+    # s0 = where alpha_cut = 0.1: on the nose-base line (subnasale / alar bases) when the gap to the upper lip holds the whole edge, else moved
+    # up just enough that alpha_cut reaches 0.9 one pixel above the upper-lip top (small faces: 01 / 05 have 7-10 px), never above the nose tip
+    s_nb = max(float(L[k] @ v) for k in (2, 98, 327, 64, 294)); s_tip = float(L[1] @ v); s_lip = float(L[0] @ v)
+    s_line = max(s_tip, min(s_nb, s_lip - edge_px - 1.0)); sig = edge_px / 2.563; s0 = s_line + 1.2816 * sig   # Phi(-1.28) = 0.1
     yy, xx = np.mgrid[ya:yb, xa:xb].astype(np.float32); s = xx * v[0] + yy * v[1]
     cut = 0.5 * (1 + _erf((s - s0) / (sig * math.sqrt(2))))
     return (al * cut).astype(np.float32), roi
