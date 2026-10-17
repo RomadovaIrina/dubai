@@ -67,14 +67,17 @@ def face_axes(L):
     return u, np.array([-u[1], u[0]]), iod   # v points down the face (image y grows downwards)
 
 
-def stable_mask(L, shape, iod, lip_guard):
-    """Stable generated parts (nose base, cheeks, nasolabial bands) minus a dilated lip hull; bool, frame coordinates."""
+def stable_mask(L, shape, iod, lip_guard, regions="all"):
+    """Stable generated parts (nose base, cheeks, nasolabial bands; regions = all | nosebase | cheeks for the held-out check) minus a dilated
+    lip hull; bool, frame coordinates."""
     import cv2
     H, W = shape; m = np.zeros((H, W), np.uint8)
-    cv2.fillConvexPoly(m, cv2.convexHull(L[NOSEBASE].astype(np.int32)), 1)
+    if regions in ("all", "nosebase"): cv2.fillConvexPoly(m, cv2.convexHull(L[NOSEBASE].astype(np.int32)), 1)
     r = max(3, int(round(0.16 * iod)))
-    for k in CHEEKS: cv2.circle(m, tuple(int(round(v)) for v in L[k]), r, 1, -1)
-    for band in NASOLABIAL: cv2.polylines(m, [L[band].astype(np.int32)], False, 1, max(2, int(round(0.12 * iod))))
+    if regions in ("all", "cheeks"):
+        for k in CHEEKS: cv2.circle(m, tuple(int(round(v)) for v in L[k]), r, 1, -1)
+    if regions == "all":
+        for band in NASOLABIAL: cv2.polylines(m, [L[band].astype(np.int32)], False, 1, max(2, int(round(0.12 * iod))))
     mw = float(np.linalg.norm(L[61] - L[291])); lip = np.zeros((H, W), np.uint8)
     cv2.fillConvexPoly(lip, cv2.convexHull(L[LIPS_OUTER].astype(np.int32)), 1)
     g = int(round(lip_guard * mw))
@@ -137,6 +140,8 @@ def main() -> int:
     ap.add_argument("--ring", choices=["off", "on"], default="off"); ap.add_argument("--ring-sigma", type=float, default=0.12); ap.add_argument("--ring-width", type=float, default=0.35)
     ap.add_argument("--mask", choices=["clean0", "nosecut"], default="clean0"); ap.add_argument("--edge-px", type=float, default=12.0)
     ap.add_argument("--lip-guard", type=float, default=0.12); ap.add_argument("--ransac-px", type=float, default=1.0)
+    ap.add_argument("--reg-regions", choices=["all", "nosebase", "cheeks"], default="all", help="correspondence regions (nosebase / cheeks = held-out check)")
+    ap.add_argument("--threads", type=int, default=12)
     ap.add_argument("--max-shift-iod", type=float, default=0.15, help="larger estimated shifts are treated as failures (registration skipped for that frame)")
     a = ap.parse_args()
     win = pathlib.Path(a.win); wm = json.loads((win / "window_manifest.json").read_text()); A, B = wm["window"]
@@ -156,28 +161,31 @@ def main() -> int:
             if s["xf_in"] and k < s["xf_in"]: w = (k + 1) / (s["xf_in"] + 1)
             if s["xf_out"] and k >= L_ - s["xf_out"]: w = min(w, (L_ - k) / (s["xf_out"] + 1))
             wts[st - A + k] = w
-    dis = Dis(); out = []; reg = []; tsec = 0.0; box_rec = np.full((n, 4), np.nan)
-    for i in range(n):
-        t = A + i; m = M[i]
-        if wts[i] <= 0 or boxes[i] is None: out.append(m); continue
+    import threading, concurrent.futures as cf
+    local = threading.local(); box_rec = np.full((n, 4), np.nan)
+
+    def one(i):
+        if not hasattr(local, "dis"): local.dis = Dis()
+        dis = local.dis; t = A + i; m = M[i]
+        if wts[i] <= 0 or boxes[i] is None: return m, None, 0.0
         box_rec[i] = boxes[i]
         if a.variant == "clean0":   # exact decompose S2nc + crossfade
             al, roi = runner.mask(boxes[i], H, W); ya, yb, xa, xb = roi; r = m.copy()
             r[ya:yb, xa:xb] = (Lr[i][ya:yb, xa:xb].astype(np.float32) * al + r[ya:yb, xa:xb].astype(np.float32) * (1 - al)).round().clip(0, 255).astype(np.uint8)
-            out.append(cv2.addWeighted(r, float(wts[i]), m, 1.0 - float(wts[i]), 0.0) if wts[i] < 1.0 else r); continue
+            return (cv2.addWeighted(r, float(wts[i]), m, 1.0 - float(wts[i]), 0.0) if wts[i] < 1.0 else r), None, 0.0
         t0 = time.perf_counter(); Lm = mp[t]
-        if not np.isfinite(Lm).all(): out.append(m); continue
+        if not np.isfinite(Lm).all(): return m, None, 0.0
         u, v, iod = face_axes(Lm)
         if a.mask == "clean0":
             al, roi = runner.mask(boxes[i], H, W); al = al[..., 0]
         else:
             al, roi = nosecut_alpha(Lm, (H, W), a.edge_px)
-        if al is None: out.append(m); continue
+        if al is None: return m, None, 0.0
         ya, yb, xa, xb = roi
         # registration crop: lower face + margin (mask roi grown by 0.25 IOD, plus the nose base)
         g = int(0.25 * iod); y0 = max(0, min(ya, int(Lm[NOSEBASE, 1].min())) - g); y1 = min(H, yb + g); x0 = max(0, xa - g); x1 = min(W, xb + g)
         gm, gl = gray(m[y0:y1, x0:x1]), gray(Lr[i][y0:y1, x0:x1])
-        stab, lip = stable_mask(Lm, (H, W), iod, a.lip_guard); stab = stab[y0:y1, x0:x1]; lip = lip[y0:y1, x0:x1]
+        stab, lip = stable_mask(Lm, (H, W), iod, a.lip_guard, a.reg_regions); stab = stab[y0:y1, x0:x1]; lip = lip[y0:y1, x0:x1]
         rec = {"t": t, "w": float(wts[i])}
         Lk = Lr[i][y0:y1, x0:x1]
         if a.reg != "none":
@@ -212,13 +220,18 @@ def main() -> int:
         # blend inside the mask roi
         o = m.copy(); sk = m[ya:yb, xa:xb].astype(np.float32); lk = Lk[ya - y0:yb - y0, xa - x0:xb - x0].astype(np.float32)
         aw = (al * wts[i])[..., None]; o[ya:yb, xa:xb] = np.clip(sk + aw * (lk - sk), 0, 255).round().astype(np.uint8)
-        out.append(o); tsec += time.perf_counter() - t0; reg.append(rec)
+        return o, rec, time.perf_counter() - t0
+
+    t0 = time.perf_counter()
+    with cf.ThreadPoolExecutor(max_workers=a.threads) as ex: res = list(ex.map(one, range(n)))
+    t_comp = time.perf_counter() - t0
+    out = [r[0] for r in res]; reg = [r[1] for r in res if r[1] is not None]; tsec = sum(r[2] for r in res)
     out += M[n:]
     write_video(win / f"{a.name}.mp4", out)
     np.savez_compressed(win / f"{a.name}.boxes.npz", frames=np.flatnonzero(np.isfinite(box_rec[:, 0])) + A, boxes=box_rec[np.isfinite(box_rec[:, 0])])
     ls_frames = int((wts > 0).sum())
-    summ = {"name": a.name, "args": vars(a), "window": [A, B], "ls_frames": ls_frames, "composite_s": round(tsec, 2),
-            "composite_s_per_ls_video_min": round(tsec / max(ls_frames / FPS / 60, 1e-9), 1), "total_s": round(time.perf_counter() - t_all, 2)}
+    summ = {"name": a.name, "args": vars(a), "window": [A, B], "ls_frames": ls_frames, "composite_cpu_s": round(tsec, 2), "composite_wall_s": round(t_comp, 2), "threads": a.threads,
+            "composite_wall_s_per_ls_video_min": round(t_comp / max(ls_frames / FPS / 60, 1e-9), 1), "total_s": round(time.perf_counter() - t_all, 2)}
     if reg and "dx" in reg[0]:
         dxy = np.array([[r["dx"], r["dy"]] for r in reg if "dx" in r]); kinds = [r["kind"] for r in reg if "kind" in r]
         summ["est_misreg_px"] = {"abs_mean": round(float(np.linalg.norm(dxy, axis=1).mean()), 3), "abs_p95": round(float(np.percentile(np.linalg.norm(dxy, axis=1), 95)), 3),
