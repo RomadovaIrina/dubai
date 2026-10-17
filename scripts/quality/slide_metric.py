@@ -117,6 +117,13 @@ def main():
             e["gain_vs_shake_x"] = round(float((xm * hm).sum() / max((hm ** 2).sum(), 1e-9)), 3)
         res["regions"][r] = e
         if a.series: res.setdefault("series", {})[r] = np.round(x, 3).tolist()
+    if boxes is not None and a.rigid:   # composite mask (ellipse) centre vs the rigid head motion: does the mask follow the same trajectory?
+        cxy = np.stack([(boxes[:, 0] + boxes[:, 2]) / 2, boxes[:, 1] + 0.76 * (boxes[:, 3] - boxes[:, 1])], 1)   # ~ellipse centre (mask_top 0.52)
+        r = []
+        for t in range(max(A, 1), B):
+            if ls[t] and ls[t - 1] and np.isfinite(cxy[t, 0]) and np.isfinite(cxy[t - 1, 0]):
+                head = af._apply(H[t], cxy[t - 1][None])[0] - cxy[t - 1]; r.append(np.linalg.norm((cxy[t] - cxy[t - 1]) - head))
+        res["mask_centre_resid_vs_head_px"] = stats(r)
     pathlib.Path(a.out).write_text(json.dumps(res, indent=1))
     nb = res["regions"]["nosebase"]; ch = res["regions"]["cheeks"]; up = res["regions"]["upper"]
     print(f"slide {pathlib.Path(a.video).name}: nosebase abs {nb['abs_px']} slide {nb['slide_px']} slide_x {nb['slide_x_px']} corr {nb.get('corr_shake_x')} | "
