@@ -1,0 +1,269 @@
+{
+ "qwen": "qwen2.5-7b-instruct-q8_0-00001-of-00003.gguf",
+ "threads": 16,
+ "load_s": 2.0,
+ "units": [
+  {
+   "unit": 1,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "Let's examine precisely what the developer's repair work includes."
+     ],
+     "raw": "{\"1\": \"Let's examine precisely what the developer's repair work includes.\"}",
+     "result": "piece 1 is not longer (9 words); it needs about 13 words"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "Let's carefully examine exactly what the developer's repair work includes."
+     ],
+     "raw": "{\"1\": \"Let's carefully examine exactly what the developer's repair work includes.\"}",
+     "result": "piece 1 is not longer (10 words); it needs about 13 words"
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "Let's thoroughly examine precisely what the developer's repair work encompasses."
+     ],
+     "raw": "{\"1\": \"Let's thoroughly examine precisely what the developer's repair work encompasses.\"}",
+     "result": "piece 1 is not longer (10 words); it needs about 13 words"
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "Let's carefully examine precisely what the developer's repair work entails fully."
+     ],
+     "raw": "{\"1\": \"Let's carefully examine precisely what the developer's repair work entails fully.\"}",
+     "result": "piece 1 is not longer (11 words); it needs about 13 words"
+    },
+    {
+     "attempt": 5,
+     "pieces": [
+      "Let's examine precisely what the developer's repair work includes."
+     ],
+     "raw": "{\"1\": \"Let's examine precisely what the developer's repair work includes.\"}",
+     "result": "piece 1 is not longer (9 words); it needs about 13 words"
+    },
+    {
+     "attempt": 6,
+     "pieces": [
+      "Let's examine precisely what the developer's repair work includes."
+     ],
+     "raw": "{\"1\": \"Let's examine precisely what the developer's repair work includes.\"}",
+     "result": "piece 1 is not longer (9 words); it needs about 13 words"
+    },
+    {
+     "attempt": 7,
+     "pieces": [
+      "Let's examine precisely what the developer's repair work includes."
+     ],
+     "raw": "{\"1\": \"Let's examine precisely what the developer's repair work includes.\"}",
+     "result": "piece 1 is not longer (9 words); it needs about 13 words"
+    },
+    {
+     "attempt": 8,
+     "pieces": [
+      "Let's examine precisely what the developer's repair work includes."
+     ],
+     "raw": "{\"1\": \"Let's examine precisely what the developer's repair work includes.\"}",
+     "result": "piece 1 is not longer (9 words); it needs about 13 words"
+    }
+   ],
+   "seconds": 1.2
+  },
+  {
+   "unit": 12,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "Interior doors... A concise panel made of high-density MDF with a premium finish..."
+     ],
+     "raw": "{\"1\": \"Interior doors... A concise panel made of high-density MDF with a premium finish...\"}",
+     "result": "piece 1 is not longer (13 words); it needs about 16 words"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "Interior doors... A concise panel made of high-density MDF with a premium finish coating..."
+     ],
+     "raw": "{\"1\": \"Interior doors... A concise panel made of high-density MDF with a premium finish coating...\"}",
+     "result": "not fluent: The sentence is somewhat awkward and could be more natural in spoken English."
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "Interior doors... A concise panel made of high-density MDF with a premium finish, "
+     ],
+     "raw": "{\"1\": \"Interior doors... A concise panel made of high-density MDF with a premium finish, \"}",
+     "result": "piece 1 is not longer (13 words); it needs about 16 words"
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "Interior doors... A concise panel made of high-density MDF with a premium finish, offering a sleek and modern appearance..."
+     ],
+     "raw": "{\"1\": \"Interior doors... A concise panel made of high-density MDF with a premium finish, offering a sleek and modern appearance...\"}",
+     "result": "piece 1 is too long (19 words); it needs about 16 words"
+    },
+    {
+     "attempt": 5,
+     "pieces": [
+      "Interior doors... A concise panel made of high-density MDF, featuring premium finish."
+     ],
+     "raw": "{\"1\": \"Interior doors... A concise panel made of high-density MDF, featuring premium finish.\"}",
+     "result": "piece 1 is not longer (12 words); it needs about 16 words"
+    },
+    {
+     "attempt": 6,
+     "pieces": [
+      "Interior doors... A concise panel crafted from high-density MDF with a premium finish..."
+     ],
+     "raw": "{\"1\": \"Interior doors... A concise panel crafted from high-density MDF with a premium finish...\"}",
+     "result": "piece 1 is not longer (13 words); it needs about 16 words"
+    },
+    {
+     "attempt": 7,
+     "pieces": [
+      "Interior doors... A concise panel made of high-density MDF, featuring a premium finish..."
+     ],
+     "raw": "{\"1\": \"Interior doors... A concise panel made of high-density MDF, featuring a premium finish...\" }",
+     "result": "piece 1 is not longer (13 words); it needs about 16 words"
+    },
+    {
+     "attempt": 8,
+     "pieces": [
+      "Interior doors... A concise panel made of high-density MDF with a premium finish..."
+     ],
+     "raw": "{\"1\": \"Interior doors... A concise panel made of high-density MDF with a premium finish...\"}",
+     "result": "piece 1 is not longer (13 words); it needs about 16 words"
+    }
+   ],
+   "seconds": 1.6
+  },
+  {
+   "unit": 14,
+   "accepted": true,
+   "pieces": [
+    "With moisture absorption lower than 0.5 percent."
+   ],
+   "text": "With moisture absorption lower than 0.5 percent.",
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "With moisture absorption below 0.5%."
+     ],
+     "raw": "{\"1\": \"With moisture absorption below 0.5%.\"}",
+     "result": "piece 1 is not longer (5 words); it needs about 7 words"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "With moisture absorption lower than 0.5%."
+     ],
+     "raw": "{\"1\": \"With moisture absorption lower than 0.5%.\"}",
+     "result": "piece 1 is not longer (6 words); it needs about 7 words"
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "With moisture absorption below 0.5 percent."
+     ],
+     "raw": "{\"1\": \"With moisture absorption below 0.5 percent.\"}",
+     "result": "piece 1 is not longer (6 words); it needs about 7 words"
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "With moisture absorption lower than 0.5 percent."
+     ],
+     "raw": "{\"1\": \"With moisture absorption lower than 0.5 percent.\"}",
+     "result": "accepted"
+    }
+   ],
+   "seconds": 0.6
+  },
+  {
+   "unit": 23,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "Waterproof paints can last up to ten years."
+     ],
+     "raw": "{\"1\": \"Waterproof paints can last up to ten years.\"}",
+     "result": "piece 1 is not longer (8 words); it needs about 10 words"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "Waterproof paints can endure up to ten years."
+     ],
+     "raw": "{\"1\": \"Waterproof paints can endure up to ten years.\"}",
+     "result": "piece 1 is not longer (8 words); it needs about 10 words"
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "Waterproof paints can provide protection for up to ten years."
+     ],
+     "raw": "{\"1\": \"Waterproof paints can provide protection for up to ten years.\"}",
+     "result": "piece 1 lost a number"
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "Waterproof paints can offer protection for up to ten years."
+     ],
+     "raw": "{\"1\": \"Waterproof paints can offer protection for up to ten years.\"}",
+     "result": "piece 1 lost a number"
+    },
+    {
+     "attempt": 5,
+     "pieces": [
+      "Waterproof paints can last up to ten years."
+     ],
+     "raw": "{\"1\": \"Waterproof paints can last up to ten years.\"}",
+     "result": "piece 1 is not longer (8 words); it needs about 10 words"
+    },
+    {
+     "attempt": 6,
+     "pieces": [
+      "Waterproof paints can endure up to ten years."
+     ],
+     "raw": "{\"1\": \"Waterproof paints can endure up to ten years.\"}",
+     "result": "piece 1 is not longer (8 words); it needs about 10 words"
+    },
+    {
+     "attempt": 7,
+     "pieces": [
+      "Waterproof paints can endure up to ten years."
+     ],
+     "raw": "{\"1\": \"Waterproof paints can endure up to ten years.\"}",
+     "result": "piece 1 is not longer (8 words); it needs about 10 words"
+    },
+    {
+     "attempt": 8,
+     "pieces": [
+      "Waterproof paints can endure up to ten years."
+     ],
+     "raw": "{\"1\": \"Waterproof paints can endure up to ten years.\"}",
+     "result": "piece 1 is not longer (8 words); it needs about 10 words"
+    }
+   ],
+   "seconds": 0.9
+  }
+ ]
+}

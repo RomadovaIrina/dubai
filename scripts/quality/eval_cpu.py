@@ -25,7 +25,7 @@ def main() -> int:
     import tts_qa, eval_run
     qa = tts_qa.TtsQA(device="cpu"); out = pathlib.Path(a.out); out.mkdir(parents=True, exist_ok=True)
     for mp in a.manifest:
-        man = json.loads(pathlib.Path(mp).read_text()); W = pathlib.Path(man["work_dir"]); tag = W.name
+        man = json.loads(pathlib.Path(mp).read_text()); W = pathlib.Path(man["work_dir"]); tag = f"{W.parent.parent.name}_{W.name}" if W.name.startswith("work_") else W.name   # runner work dirs: <root>/work/work_<id>
         r = eval_run.evaluate(man, str(W / "dubbed_24k.wav"), label=tag, qa=qa)
         (out / f"{tag}.eval.json").write_text(json.dumps(r, indent=1, ensure_ascii=False)); s = r["summary"]
         print(f"{tag:28s} WER {s['wer_whisper_mean']} CER {s['cer_ctc_mean']} bad {s['units_bad(cer_ctc>=0.3)']} interj {s['interjection_units']} final_miss {s['final_word_missing_units']}", flush=True)

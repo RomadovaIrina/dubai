@@ -1,0 +1,145 @@
+{
+ "load_s": 3.0,
+ "qa_s": 2.0,
+ "peak_vram_gib": 0.43,
+ "units": {
+  "14": {
+   "file": "/workspace/dub/runs/refit/01/tts_u14_refit_raw.wav",
+   "take": 1,
+   "seed": 6010746,
+   "temperature": 0.8,
+   "bad": false,
+   "score": 0.078,
+   "spans": [
+    {
+     "word": "with",
+     "start": 0.06,
+     "end": 0.221,
+     "score": 0.999
+    },
+    {
+     "word": "moisture",
+     "start": 0.503,
+     "end": 0.885,
+     "score": 0.931
+    },
+    {
+     "word": "absorption",
+     "start": 0.946,
+     "end": 1.388,
+     "score": 0.996
+    },
+    {
+     "word": "lower",
+     "start": 1.63,
+     "end": 1.911,
+     "score": 0.992
+    },
+    {
+     "word": "than",
+     "start": 1.972,
+     "end": 2.072,
+     "score": 1.0
+    },
+    {
+     "word": "zero",
+     "start": 2.153,
+     "end": 2.394,
+     "score": 0.984
+    },
+    {
+     "word": "point",
+     "start": 2.434,
+     "end": 2.555,
+     "score": 0.199
+    },
+    {
+     "word": "five",
+     "start": 2.575,
+     "end": 2.656,
+     "score": 0.001
+    },
+    {
+     "word": "percent",
+     "start": 2.676,
+     "end": 2.978,
+     "score": 0.559
+    }
+   ],
+   "gap_voice_s": 0,
+   "whisper": "with moisture absorption lower than 0.5%."
+  },
+  "23": {
+   "file": "/workspace/dub/runs/refit/01/tts_u23_refit_raw.wav",
+   "take": 0,
+   "seed": 6003727,
+   "temperature": 0.8,
+   "bad": false,
+   "score": 0.011,
+   "spans": [
+    {
+     "word": "waterproof",
+     "start": 0.06,
+     "end": 0.503,
+     "score": 0.998
+    },
+    {
+     "word": "paints",
+     "start": 0.584,
+     "end": 0.826,
+     "score": 0.826
+    },
+    {
+     "word": "can",
+     "start": 0.886,
+     "end": 0.987,
+     "score": 0.998
+    },
+    {
+     "word": "offer",
+     "start": 1.128,
+     "end": 1.329,
+     "score": 0.991
+    },
+    {
+     "word": "up",
+     "start": 1.43,
+     "end": 1.49,
+     "score": 1.0
+    },
+    {
+     "word": "to",
+     "start": 1.53,
+     "end": 1.611,
+     "score": 0.915
+    },
+    {
+     "word": "ten",
+     "start": 1.691,
+     "end": 1.832,
+     "score": 0.97
+    },
+    {
+     "word": "years",
+     "start": 1.893,
+     "end": 2.094,
+     "score": 0.975
+    },
+    {
+     "word": "of",
+     "start": 2.134,
+     "end": 2.174,
+     "score": 0.999
+    },
+    {
+     "word": "service",
+     "start": 2.275,
+     "end": 2.638,
+     "score": 0.921
+    }
+   ],
+   "gap_voice_s": 0,
+   "whisper": "Waterproof paints can offer up to 10 years of service."
+  }
+ }
+}

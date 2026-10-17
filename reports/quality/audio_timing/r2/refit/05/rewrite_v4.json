@@ -1,0 +1,420 @@
+{
+ "version": "v4",
+ "qwen": "qwen2.5-7b-instruct-q8_0-00001-of-00003.gguf",
+ "gpu_layers": -1,
+ "load_s": 2.2,
+ "calls": 23,
+ "units": [
+  {
+   "unit": 1,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "After all,",
+      "in fact modern smartphones have already enabled us to do so",
+      "already allow this."
+     ],
+     "result": "piece 2 is too long (11 words); it needs about 6 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "After all,",
+      "to be honest modern smartphones now allow us to accomplish this",
+      "already allow this."
+     ],
+     "result": "piece 2 is too long (11 words); it needs about 6 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "After all,",
+      "let's be clear modern smartphones have indeed made this feasible",
+      "already allow this."
+     ],
+     "result": "piece 2 is too long (10 words); it needs about 6 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "After all,",
+      "to put it simply modern smartphones have already facilitated this",
+      "already allow this."
+     ],
+     "result": "piece 2 is too long (10 words); it needs about 6 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "After all,",
+      "indeed modern smartphones already make it possible",
+      "already allow this."
+     ],
+     "result": "added information: indeed; smartphones"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "After all,",
+      "modern phones already allow this",
+      "already allow this."
+     ],
+     "result": "pieces 2 and 3 repeat the words 'already allow this'"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "After all,",
+      "in fact modern phones already let us",
+      "already allow this."
+     ],
+     "result": "added information: already let us"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "After all,",
+      "to be clear modern phones already enable",
+      "already allow this."
+     ],
+     "result": "not natural: Redundant 'already' and awkward phrasing"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "After all,",
+      "modern smartphones already make it possible",
+      "already allow this."
+     ],
+     "result": "added information: smartphones; make it possible"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "After all,",
+      "to be clear modern phones already let us",
+      "already allow this."
+     ],
+     "result": "added information: to be clear; already let us"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "After all,",
+      "modern smartphones already make this possible",
+      "already allow this."
+     ],
+     "result": "added information: smartphones; make this possible"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "After all,",
+      "in fact modern phones already enable",
+      "already allow this."
+     ],
+     "result": "added information: already enable"
+    }
+   ],
+   "seconds": 7.7
+  },
+  {
+   "unit": 2,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "And such a function,",
+      "of course, adds to our popularity",
+      "and possible",
+      "we want to see more"
+     ],
+     "result": "piece 4 must end the sentence like \"opportunities.\" does (with a full stop / ? / !)"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "And such a function,",
+      "of course, adds to our popularity",
+      "and possible",
+      "we'd like to see more"
+     ],
+     "result": "piece 4 must end the sentence like \"opportunities.\" does (with a full stop / ? / !)"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "And such a function,",
+      "of course, adds to our popularity",
+      "and possible",
+      "we'd really like to see more"
+     ],
+     "result": "piece 4 is too long (6 words); it needs about 3 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "And such a function,",
+      "of course, adds to our popularity",
+      "and possible",
+      "we'd love to see more"
+     ],
+     "result": "piece 4 must end the sentence like \"opportunities.\" does (with a full stop / ? / !)"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "And such a function,",
+      "of course, adds to our popularity",
+      "and possible",
+      "we'd appreciate seeing more"
+     ],
+     "result": "piece 4 must end the sentence like \"opportunities.\" does (with a full stop / ? / !)"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "And such a function,",
+      "of course, adds to our popularity",
+      "and possible",
+      "we see more"
+     ],
+     "result": "piece 4 must end the sentence like \"opportunities.\" does (with a full stop / ? / !)"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "And such a function,",
+      "of course, adds to our popularity",
+      "and possible",
+      "we'd see more"
+     ],
+     "result": "piece 4 must end the sentence like \"opportunities.\" does (with a full stop / ? / !)"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "And such a function,",
+      "of course, adds to our popularity",
+      "and possible",
+      "we'd like more"
+     ],
+     "result": "piece 4 must end the sentence like \"opportunities.\" does (with a full stop / ? / !)"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "And such a function,",
+      "of course, adds to our popularity",
+      "and possible",
+      "we'd get more"
+     ],
+     "result": "piece 4 must end the sentence like \"opportunities.\" does (with a full stop / ? / !)"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "And such a function,",
+      "of course, adds to our popularity",
+      "and possible",
+      "we'd have more"
+     ],
+     "result": "piece 4 must end the sentence like \"opportunities.\" does (with a full stop / ? / !)"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "And such a function,",
+      "of course, adds to our popularity",
+      "and possible",
+      "we see more."
+     ],
+     "result": "appended clause 'we see more' (translate the Russian words of the SHORT piece instead of adding a clause)"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "And such a function,",
+      "of course, adds to our popularity",
+      "and possible",
+      "we'd see more."
+     ],
+     "result": "appended clause 'we'd see more' (translate the Russian words of the SHORT piece instead of adding a clause)"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "And such a function,",
+      "of course, adds to our popularity",
+      "and possible",
+      "we'd like more."
+     ],
+     "result": "appended clause 'we'd like more' (translate the Russian words of the SHORT piece instead of adding a clause)"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "And such a function,",
+      "of course, adds to our popularity",
+      "and possible",
+      "we'd get more."
+     ],
+     "result": "appended clause 'we'd get more' (translate the Russian words of the SHORT piece instead of adding a clause)"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "And such a function,",
+      "of course, adds to our popularity",
+      "and possible",
+      "we'd have more."
+     ],
+     "result": "appended clause 'we'd have more' (translate the Russian words of the SHORT piece instead of adding a clause)"
+    }
+   ],
+   "seconds": 5.7
+  },
+  {
+   "unit": 3,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "Here,",
+      "we'd really like to take a look",
+      "to see how our application performs in this particular format"
+     ],
+     "result": "piece 3 must end the sentence like \"how our application will manage in this format.\" does (with a full stop / ? / !)"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Here,",
+      "we're just curious to see",
+      "how our app will function in this kind of format"
+     ],
+     "result": "piece 2 is not longer (5 words); it needs about 8 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Here,",
+      "we'd love to observe",
+      "how our software will behave in this specific format"
+     ],
+     "result": "piece 2 is not longer (4 words); it needs about 8 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Here,",
+      "we're keen to check out",
+      "how our app will operate in this exact format"
+     ],
+     "result": "piece 2 is not longer (5 words); it needs about 8 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Here,",
+      "we'd like to take a peek",
+      "to see how our application will handle in this format"
+     ],
+     "result": "piece 3 must end the sentence like \"how our application will manage in this format.\" does (with a full stop / ? / !)"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Here,",
+      "we're just eager to see",
+      "how our app will perform in this format."
+     ],
+     "result": "piece 2 is not longer (5 words); it needs about 8 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Here,",
+      "we'd like to inspect closely",
+      "to see how our application will manage in this format."
+     ],
+     "result": "piece 2 is not longer (5 words); it needs about 8 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Here,",
+      "we'd really like to take a closer look",
+      "to see how our application manages in this format."
+     ],
+     "result": "added information: to take a closer look"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Here,",
+      "we're curious to take a detailed look",
+      "to see how our app will function in this format."
+     ],
+     "result": "added information: curious; detailed look"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Here,",
+      "we'd love to have a look",
+      "to see how our application will behave in this format."
+     ],
+     "result": "added information: would love to have a look"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Here,",
+      "we're just hoping to see",
+      "how our app will handle in this format."
+     ],
+     "result": "piece 2 is not longer (5 words); it needs about 8 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Here,",
+      "we'd really like to take a thorough look",
+      "to see how our application will manage in this format."
+     ],
+     "result": "added information: would really like to take a thorough look"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Here,",
+      "we'd love to get a better look",
+      "to see how our application will perform in this format."
+     ],
+     "result": "added information: would love to get a better look"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Here,",
+      "we're eager to take a good look",
+      "to see how our app will manage in this format."
+     ],
+     "result": "added information: eager"
+    }
+   ],
+   "seconds": 9.1
+  }
+ ]
+}

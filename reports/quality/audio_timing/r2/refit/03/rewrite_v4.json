@@ -1,0 +1,753 @@
+{
+ "version": "v4",
+ "qwen": "qwen2.5-7b-instruct-q8_0-00001-of-00003.gguf",
+ "gpu_layers": -1,
+ "load_s": 2.0,
+ "calls": 42,
+ "units": [
+  {
+   "unit": 3,
+   "accepted": true,
+   "pieces": [
+    "Today is Friday, August 28th,",
+    "and we will consider this the start",
+    "of our working relationship."
+   ],
+   "text": "Today is Friday, August 28th, and we will consider this the start of our working relationship.",
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "Today is Friday, August 28th,",
+      "and we will consider this the start",
+      "of our cooperation."
+     ],
+     "result": "piece 3 is not longer (3 words); it needs about 5 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Today is Friday, August 28th,",
+      "and we will consider this the start",
+      "of our partnership."
+     ],
+     "result": "piece 3 is not longer (3 words); it needs about 5 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Today is Friday, August 28th,",
+      "and we will consider this the start",
+      "of our collaboration."
+     ],
+     "result": "piece 3 is not longer (3 words); it needs about 5 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Today is Friday, August 28th,",
+      "and we will consider this the start",
+      "of our joint venture."
+     ],
+     "result": "added information: joint venture"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Today is Friday, August 28th,",
+      "and we will consider this the start",
+      "of our working relationship."
+     ],
+     "result": "accepted"
+    }
+   ],
+   "seconds": 1.4
+  },
+  {
+   "unit": 4,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "Let's hope",
+      "that this cooperation will be smooth, bringing us all the desired outcome",
+      "result that we had envisioned to ensure",
+      "so that on our path,",
+      "no obstacles arise."
+     ],
+     "result": "not natural: The sentence is overly formal and contains some awkward phrasing, such as 'bringing us all the desired outcome result' and 'so that on our path, no obstacles ar"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Let's hope",
+      "that this collaboration will be seamless, delivering us all the desired outcome",
+      "result that we had envisioned to ensure",
+      "so that on our path,",
+      "no obstacles arise."
+     ],
+     "result": "not natural: The sentence is overly formal and contains some awkward phrasing, such as 'delivering us all the desired outcome result' and 'so that on our path, no obstacles "
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Let's hope",
+      "that this partnership will be effortless, delivering us all the desired outcome",
+      "result that we had envisioned to ensure",
+      "so that on our path,",
+      "no obstacles arise."
+     ],
+     "result": "added information: ... partnership will be effortless"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Let's hope",
+      "that this cooperation will be smooth, delivering us the desired result",
+      "result that we had envisioned to ensure",
+      "so that on our path,",
+      "no obstacles arise."
+     ],
+     "result": "piece 2 is not longer (11 words); it needs about 14 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Let's hope",
+      "that this collaboration will be effortless, delivering us the desired result",
+      "result that we had envisioned to ensure",
+      "so that on our path,",
+      "no obstacles arise."
+     ],
+     "result": "piece 2 is not longer (11 words); it needs about 14 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Let's hope",
+      "that this cooperation will be smooth, bringing us all the desired result",
+      "result that we had envisioned to ensure",
+      "so that on our path,",
+      "no obstacles arise."
+     ],
+     "result": "not natural: The sentence is overly formal and contains doubled words ('result result'). It also has a structure that sounds unnatural in spoken English."
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Let's hope",
+      "that this collaboration will be seamless, bringing us all the desired result",
+      "result that we had envisioned to ensure",
+      "so that on our path,",
+      "no obstacles arise."
+     ],
+     "result": "not natural: The sentence is overly formal and contains doubled words ('result result'). It also has a structure that sounds unnatural in spoken English."
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Let's hope",
+      "that this partnership will be effortless, bringing us all the desired result",
+      "result that we had envisioned to ensure",
+      "so that on our path,",
+      "no obstacles arise."
+     ],
+     "result": "added information: ... partnership will be effortless"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Let's hope",
+      "that this collaboration will be smooth, bringing us all the desired outcome",
+      "result that we had envisioned to ensure",
+      "so that on our path,",
+      "no obstacles arise."
+     ],
+     "result": "added information: ... envisioned"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Let's hope",
+      "that this cooperation will be seamless, bringing us all the desired outcome",
+      "result that we had envisioned to ensure",
+      "so that on our path,",
+      "no obstacles arise."
+     ],
+     "result": "added information: seamless; had envisioned"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Let's hope",
+      "that this partnership will be smooth, bringing us all the desired result",
+      "outcome that we had envisioned to ensure",
+      "so that on our path,",
+      "no obstacles arise."
+     ],
+     "result": "added information: ... partnership... ; ... envisioned... "
+    }
+   ],
+   "seconds": 14.3
+  },
+  {
+   "unit": 5,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "I hope",
+      "everything will be well,",
+      "for the actions we are taking, including those necessary for ensuring the quality of the product we are assembling today,",
+      "with you and in general with the product we are assembling and making today."
+     ],
+     "result": "piece 3 is too long (20 words); it needs about 9 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "I hope",
+      "everything will be well,",
+      "for the actions we are taking, such as quality checks and improvements for the product we are making today,",
+      "with you and in general with the product we are assembling and making today."
+     ],
+     "result": "piece 3 is too long (19 words); it needs about 9 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "I hope",
+      "everything will be well,",
+      "for the actions we are taking, including the steps we are performing to ensure the product we are assembling today meets our standards,",
+      "with you and in general with the product we are assembling and making today."
+     ],
+     "result": "piece 3 is too long (23 words); it needs about 9 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "I hope",
+      "everything will be well,",
+      "for the actions we are taking, including the measures we are implementing to ensure the quality of the product we are making today,",
+      "with you and in general with the product we are assembling and making today."
+     ],
+     "result": "piece 3 is too long (23 words); it needs about 9 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "I hope",
+      "everything will be well,",
+      "for the actions we are taking, including the steps we are performing to ensure the product we are assembling and making today is of the highest quality,",
+      "with you and in general with the product we are assembling and making today."
+     ],
+     "result": "piece 3 is too long (27 words); it needs about 9 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "I hope",
+      "everything will be well,",
+      "for the actions we are taking, such as quality checks for the product we are making today,",
+      "with you and in general with the product we are assembling and making today."
+     ],
+     "result": "piece 3 is too long (17 words); it needs about 9 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "I hope",
+      "everything will be well,",
+      "for the actions we are taking, including quality control for the product we are assembling today,",
+      "with you and in general with the product we are assembling and making today."
+     ],
+     "result": "piece 3 is too long (16 words); it needs about 9 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "I hope",
+      "everything will be well,",
+      "for the actions we are taking, including steps to ensure the product we are making today is good,",
+      "with you and in general with the product we are assembling and making today."
+     ],
+     "result": "piece 3 is too long (18 words); it needs about 9 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "I hope",
+      "everything will be well,",
+      "for the actions we are taking, such as quality checks for the product we are assembling today,",
+      "with you and in general with the product we are assembling and making today."
+     ],
+     "result": "piece 3 is too long (17 words); it needs about 9 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "I hope",
+      "everything will be well,",
+      "for the actions we are taking, including the steps we are performing to ensure the product we are making today is good,",
+      "with you and in general with the product we are assembling and making today."
+     ],
+     "result": "piece 3 is too long (22 words); it needs about 9 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "I hope",
+      "everything will be well,",
+      "for the actions we are taking, such as quality control measures,",
+      "with you and in general with the product we are assembling and making today."
+     ],
+     "result": "added information: such as quality control measures"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "I hope",
+      "everything will be well,",
+      "for the actions we are taking, such as quality checks,",
+      "with you and in general with the product we are assembling and making today."
+     ],
+     "result": "added information: such as quality checks"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "I hope",
+      "everything will be well,",
+      "for the actions we are taking, including quality assurance steps,",
+      "with you and in general with the product we are assembling and making today."
+     ],
+     "result": "added information: including quality assurance steps"
+    }
+   ],
+   "seconds": 13.2
+  },
+  {
+   "unit": 6,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "Next,",
+      "I will send a few more videos recorded in different formats, both with and without glasses, to see how our system will work, especially focusing on the differences between wearing and not wearing them."
+     ],
+     "result": "piece 2 is too long (34 words); it needs about 28 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Next,",
+      "I will send a few more videos recorded in various formats, both with and without glasses, to see how our system will function, as we want to observe the impact of wearing glasses on the overall performance."
+     ],
+     "result": "piece 2 is too long (37 words); it needs about 28 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Next,",
+      "I will send a few more videos recorded in different formats, both with and without glasses, to see how our system will operate, particularly noting the variations in performance with and without glasses."
+     ],
+     "result": "piece 2 is too long (33 words); it needs about 28 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Next,",
+      "I will send a few more videos recorded in various formats, both with and without glasses, to see how our system will perform, as we aim to evaluate the differences in results with and without glasses."
+     ],
+     "result": "piece 2 is too long (36 words); it needs about 28 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Next,",
+      "I will send a few more videos recorded in different formats, both with and without glasses, to see how our system will function, especially highlighting the differences in performance with and without glasses."
+     ],
+     "result": "piece 2 is too long (33 words); it needs about 28 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Next,",
+      "I will send a few more videos, recorded in different formats, both with and without glasses, to see how our system will work."
+     ],
+     "result": "piece 2 is not longer (23 words); it needs about 28 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Next,",
+      "I will send a few more videos, in various formats, with and without glasses, to see how our system will perform."
+     ],
+     "result": "piece 2 is not longer (21 words); it needs about 28 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Next,",
+      "I will send a few more videos, recorded in different formats, both with and without glasses, to see how our system will function."
+     ],
+     "result": "piece 2 is not longer (23 words); it needs about 28 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Next,",
+      "I will send a few more videos, in various formats, with and without glasses, to see how our system will operate."
+     ],
+     "result": "piece 2 is not longer (21 words); it needs about 28 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Next,",
+      "I will send a few more videos, recorded in different formats, both with and without glasses, to see how our system will work, especially focusing on the differences."
+     ],
+     "result": "appended clause 'especially focusing on the differences' (translate the Russian words of the SHORT piece instead of adding a clause)"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Next,",
+      "I will send a few more videos, recorded in different formats, both with and without glasses, to see how our system will work, and observe the results."
+     ],
+     "result": "appended clause 'and observe the results' (translate the Russian words of the SHORT piece instead of adding a clause)"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Next,",
+      "I will send a few more videos, recorded in various formats, with and without glasses, to see how our system will perform, and compare them."
+     ],
+     "result": "appended clause 'perform and compare them' (translate the Russian words of the SHORT piece instead of adding a clause)"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Next,",
+      "I will send a few more videos, recorded in different formats, both with and without glasses, to see how our system will function, and analyze the outcomes."
+     ],
+     "result": "appended clause 'function and analyze the outcomes' (translate the Russian words of the SHORT piece instead of adding a clause)"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Next,",
+      "I will send a few more videos, recorded in various formats, with and without glasses, to see how our system will operate, and evaluate the differences."
+     ],
+     "result": "appended clause 'operate and evaluate the differences' (translate the Russian words of the SHORT piece instead of adding a clause)"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Next,",
+      "I will send a few more videos, recorded in different formats, both with and without glasses, to see how our system will work, and document the variations."
+     ],
+     "result": "appended clause 'and document the variations' (translate the Russian words of the SHORT piece instead of adding a clause)"
+    }
+   ],
+   "seconds": 17.6
+  },
+  {
+   "unit": 8,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "I will send it to our chat, so that we can all express our wishes for success to each other.",
+      "I will send it to our chat, so that we can all share our hopes for success with one another."
+     ],
+     "result": "piece 1 is too long (20 words); it needs about 9 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "I will send it to our chat, so that we can all express our aspirations for success to each other.",
+      "I will send it to our chat, so that we can all share our dreams for success with one another."
+     ],
+     "result": "piece 1 is too long (20 words); it needs about 9 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "I will send it to our chat, so that we can all express our ambitions for success to each other.",
+      "I will send it to our chat, so that we can all share our goals for success with one another."
+     ],
+     "result": "piece 1 is too long (20 words); it needs about 9 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "I will send it to our chat, so that we can all express our desires for success to each other.",
+      "I will send it to our chat, so that we can all share our wishes for success with one another."
+     ],
+     "result": "piece 1 is too long (20 words); it needs about 9 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "I will send it to our chat, so that we can all express our hopes for success to each other.",
+      "I will send it to our chat, so that we can all share our aspirations for success with one another."
+     ],
+     "result": "piece 1 is too long (20 words); it needs about 9 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "I will send it to our chat so we can all express our wishes for success.",
+      "I will send it to our chat so we can all share our hopes for success."
+     ],
+     "result": "piece 1 is too long (16 words); it needs about 9 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "I will send it to our chat so we can all express our aspirations for success.",
+      "I will send it to our chat so we can all share our dreams for success."
+     ],
+     "result": "piece 1 is too long (16 words); it needs about 9 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "I will send it to our chat so we can all express our ambitions for success.",
+      "I will send it to our chat so we can all share our goals for success."
+     ],
+     "result": "piece 1 is too long (16 words); it needs about 9 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "I will send it to our chat so we can all express our desires for success.",
+      "I will send it to our chat so we can all share our wishes for success."
+     ],
+     "result": "piece 1 is too long (16 words); it needs about 9 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "I will send it to our chat so we can all express our hopes for success.",
+      "I will send it to our chat so we can all share our aspirations for success."
+     ],
+     "result": "piece 1 is too long (16 words); it needs about 9 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "I will send it to our chat, so we can all express our wishes for success.",
+      "I will send it to our chat, so we can all share our hopes for success."
+     ],
+     "result": "piece 1 is too long (16 words); it needs about 9 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "I will send it to our chat, so we can all express our aspirations for success.",
+      "I will send it to our chat, so we can all share our dreams for success."
+     ],
+     "result": "piece 1 is too long (16 words); it needs about 9 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "I will send it to our chat, so we can all express our ambitions for success.",
+      "I will send it to our chat, so we can all share our goals for success."
+     ],
+     "result": "piece 1 is too long (16 words); it needs about 9 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "I will send it to our chat, so we can all express our desires for success.",
+      "I will send it to our chat, so we can all share our wishes for success."
+     ],
+     "result": "piece 1 is too long (16 words); it needs about 9 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "I will send it to our chat, so we can all express our hopes for success.",
+      "I will send it to our chat, so we can all share our aspirations for success."
+     ],
+     "result": "piece 1 is too long (16 words); it needs about 9 words"
+    }
+   ],
+   "seconds": 24.0
+  },
+  {
+   "unit": 9,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "Our interaction will be smooth",
+      "and will bring us the precise outcome we",
+      "the result we desire. Forward",
+      "we go."
+     ],
+     "result": "piece 2 is too long (8 words); it needs about 5 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Our interaction will be smooth",
+      "and will bring us the very result we",
+      "the result we desire. Forward",
+      "we go."
+     ],
+     "result": "piece 2 is too long (8 words); it needs about 5 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Our interaction will be smooth",
+      "and will bring us the precise result we",
+      "the result we desire. Forward",
+      "we go."
+     ],
+     "result": "piece 2 is too long (8 words); it needs about 5 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Our interaction will be smooth",
+      "and will bring us the exact outcome",
+      "the result we desire. Forward",
+      "we go."
+     ],
+     "result": "added information: the exact outcome"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Our interaction will be smooth",
+      "and will bring us precisely the result",
+      "the result we desire. Forward",
+      "we go."
+     ],
+     "result": "added information: precisely"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Our interaction will be smooth",
+      "and will bring us the result we",
+      "the result we desire. Forward",
+      "we go."
+     ],
+     "result": "pieces 2 and 3 repeat the words 'the result we'"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Our interaction will be smooth",
+      "and will bring us the result we desire",
+      "the result we desire. Forward",
+      "we go."
+     ],
+     "result": "piece 2 is too long (8 words); it needs about 5 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Our interaction will be smooth",
+      "and will bring us the result we want",
+      "the result we desire. Forward",
+      "we go."
+     ],
+     "result": "piece 2 is too long (8 words); it needs about 5 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Our interaction will be smooth",
+      "and will bring us the result we need",
+      "the result we desire. Forward",
+      "we go."
+     ],
+     "result": "piece 2 is too long (8 words); it needs about 5 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Our interaction will be smooth",
+      "and will bring us the precise result",
+      "the result we desire. Forward",
+      "we go."
+     ],
+     "result": "added information: the precise"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Our interaction will be smooth",
+      "and will bring us the result we",
+      "the result we desire. Forward",
+      "we go."
+     ],
+     "result": "pieces 2 and 3 repeat the words 'the result we'"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Our interaction will be smooth",
+      "and will bring us the result we seek",
+      "the result we desire. Forward",
+      "we go."
+     ],
+     "result": "piece 2 is too long (8 words); it needs about 5 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Our interaction will be smooth",
+      "and will bring us the desired result",
+      "the result we desire. Forward",
+      "we go."
+     ],
+     "result": "added information: the result we desire"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Our interaction will be smooth",
+      "and will bring us the result",
+      "the result we desire. Forward",
+      "we go."
+     ],
+     "result": "not natural: The line is repetitive with 'result the result' and contains a slight awkwardness in phrasing that a native speaker might not use."
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Our interaction will be smooth",
+      "and will bring us the outcome",
+      "the result we desire. Forward",
+      "we go."
+     ],
+     "result": "added information: outcome"
+    }
+   ],
+   "seconds": 9.0
+  }
+ ]
+}

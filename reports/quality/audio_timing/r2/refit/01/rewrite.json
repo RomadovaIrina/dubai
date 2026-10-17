@@ -1,0 +1,135 @@
+{
+ "version": "selection of v3 / v4 after review",
+ "units": [
+  {
+   "unit": 1,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "review": "no candidate passed guards + judges + Agent C meaning review",
+   "log": []
+  },
+  {
+   "unit": 12,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "review": "no candidate passed guards + judges + Agent C meaning review",
+   "log": []
+  },
+  {
+   "unit": 14,
+   "accepted": true,
+   "pieces": [
+    "With moisture absorption lower than 0.5 percent."
+   ],
+   "text": "With moisture absorption lower than 0.5 percent.",
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "With moisture absorption below 0.5%."
+     ],
+     "raw": "{\"1\": \"With moisture absorption below 0.5%.\"}",
+     "result": "piece 1 is not longer (5 words); it needs about 7 words"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "With moisture absorption lower than 0.5%."
+     ],
+     "raw": "{\"1\": \"With moisture absorption lower than 0.5%.\"}",
+     "result": "piece 1 is not longer (6 words); it needs about 7 words"
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "With moisture absorption below 0.5 percent."
+     ],
+     "raw": "{\"1\": \"With moisture absorption below 0.5 percent.\"}",
+     "result": "piece 1 is not longer (6 words); it needs about 7 words"
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "With moisture absorption lower than 0.5 percent."
+     ],
+     "raw": "{\"1\": \"With moisture absorption lower than 0.5 percent.\"}",
+     "result": "accepted"
+    }
+   ],
+   "seconds": 0.6,
+   "version": "v3",
+   "review": "accepted by Agent C meaning review: faithful, natural"
+  },
+  {
+   "unit": 23,
+   "accepted": true,
+   "pieces": [
+    "Waterproof paints can offer up to 10 years of service."
+   ],
+   "text": "Waterproof paints can offer up to 10 years of service.",
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "Waterproof paints, which are built to last, can serve up to 10 years."
+     ],
+     "result": "piece 1 is too long (13 words); it needs about 10 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Waterproof paints, formulated to provide long-lasting protection, can serve up to 10 years."
+     ],
+     "result": "piece 1 is too long (13 words); it needs about 10 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Waterproof paints, which are highly durable, can serve up to 10 years."
+     ],
+     "result": "added information: which are highly durable"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Waterproof paints, designed to withstand moisture, can serve up to 10 years."
+     ],
+     "result": "added information: designed to withstand moisture"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Waterproof paints, known for their longevity, can serve up to 10 years."
+     ],
+     "result": "added information: known for their longevity"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Waterproof paints can last up to 10 years."
+     ],
+     "result": "piece 1 is not longer (8 words); it needs about 10 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Waterproof paints can provide up to 10 years of protection."
+     ],
+     "result": "added information: of protection"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Waterproof paints can offer up to 10 years of service."
+     ],
+     "result": "accepted"
+    }
+   ],
+   "seconds": 5.0,
+   "version": "v4",
+   "review": "accepted by Agent C meaning review: faithful (прослужить = last / give service)"
+  }
+ ]
+}

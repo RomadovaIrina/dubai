@@ -1,0 +1,69 @@
+{
+ "version": "selection of v3 / v4 after review",
+ "units": [
+  {
+   "unit": 2,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "review": "no candidate passed guards + judges + Agent C meaning review",
+   "log": []
+  },
+  {
+   "unit": 3,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "review": "no candidate passed guards + judges + Agent C meaning review",
+   "log": []
+  },
+  {
+   "unit": 4,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "review": "no candidate passed guards + judges + Agent C meaning review",
+   "log": []
+  },
+  {
+   "unit": 5,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "review": "no candidate passed guards + judges + Agent C meaning review",
+   "log": []
+  },
+  {
+   "unit": 8,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "review": "no candidate passed guards + judges + Agent C meaning review",
+   "log": []
+  },
+  {
+   "unit": 9,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "review": "no candidate passed guards + judges + Agent C meaning review",
+   "log": []
+  },
+  {
+   "unit": 14,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "review": "no candidate passed guards + judges + Agent C meaning review",
+   "log": []
+  },
+  {
+   "unit": 16,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "review": "no candidate passed guards + judges + Agent C meaning review",
+   "log": []
+  }
+ ]
+}

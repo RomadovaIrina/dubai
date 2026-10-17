@@ -1,0 +1,26 @@
+{
+ "candidates": [
+  5
+ ],
+ "accepted": [
+  5
+ ],
+ "decisions": {
+  "5": {
+   "before": {
+    "residual_s": 0.4,
+    "max_gap": 0.4,
+    "atempo_max": 1.0,
+    "ls_frames": 10
+   },
+   "after": {
+    "residual_s": 0,
+    "max_gap": 0.2,
+    "atempo_max": 1.0,
+    "ls_frames": 0
+   },
+   "accepted": true
+  }
+ },
+ "final_manifest": "/workspace/dub/runs/refit/04/recut_final/recut.manifest.json"
+}

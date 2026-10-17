@@ -1,0 +1,298 @@
+{
+ "qwen": "qwen2.5-7b-instruct-q8_0-00001-of-00003.gguf",
+ "threads": 16,
+ "load_s": 2.3,
+ "units": [
+  {
+   "unit": 2,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "Sochi city",
+      "Sochi, August 28, today,",
+      "August 28,",
+      "and we are initiating the work processes for the development of our magical application."
+     ],
+     "raw": "{\"2\": \"Sochi, August 28, today,\", \"4\": \"and we are initiating the work processes for the development of our magical application.\"}",
+     "result": "added information: August 28; initiating"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "Sochi city",
+      "Sochi, August 28, today",
+      "August 28,",
+      "and we are starting the working processes for creating our magical application"
+     ],
+     "raw": "{\"2\": \"Sochi, August 28, today\", \"4\": \"and we are starting the working processes for creating our magical application\"}",
+     "result": "piece 4 is not longer (12 words); it needs about 14 words"
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "Sochi city",
+      "Sochi, August 28, today",
+      "August 28,",
+      "and we are beginning the work processes for creating our magical application."
+     ],
+     "raw": "{\"2\": \"Sochi, August 28, today\", \"4\": \"and we are beginning the work processes for creating our magical application.\"}",
+     "result": "piece 4 is not longer (12 words); it needs about 14 words"
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "Sochi city",
+      "Sochi, August 28, today",
+      "August 28,",
+      "and we are starting the work processes for the creation of our magical application."
+     ],
+     "raw": "{\"2\": \"Sochi, August 28, today\", \"4\": \"and we are starting the work processes for the creation of our magical application.\"}",
+     "result": "added information: Sochi, August 28, today August 28"
+    },
+    {
+     "attempt": 5,
+     "pieces": [
+      "Sochi city",
+      "Sochi, August 28, today,",
+      "August 28,",
+      "and we are initiating work processes for the creation of our magical application."
+     ],
+     "raw": "{\"2\": \"Sochi, August 28, today,\", \"4\": \"and we are initiating work processes for the creation of our magical application.\"}",
+     "result": "added information: August 28, today"
+    },
+    {
+     "attempt": 6,
+     "pieces": [
+      "Sochi city",
+      "Sochi, August 28, today,",
+      "August 28,",
+      "and we are beginning the work processes for the creation of our magical application."
+     ],
+     "raw": "{\"2\": \"Sochi, August 28, today,\", \"4\": \"and we are beginning the work processes for the creation of our magical application.\"}",
+     "result": "added information: Sochi, August 28, today, August 28"
+    },
+    {
+     "attempt": 7,
+     "pieces": [
+      "Sochi city",
+      "Sochi, August 28,",
+      "August 28,",
+      "and we are initiating the working procedures for developing our magical application."
+     ],
+     "raw": "{\"2\": \"Sochi, August 28,\", \"4\": \"and we are initiating the working procedures for developing our magical application.\"}",
+     "result": "piece 4 is not longer (12 words); it needs about 14 words"
+    },
+    {
+     "attempt": 8,
+     "pieces": [
+      "Sochi city",
+      "Sochi, August 28, today,",
+      "August 28,",
+      "and we are initiating the working procedures for developing our magical application."
+     ],
+     "raw": "{\"2\": \"Sochi, August 28, today,\", \"4\": \"and we are initiating the working procedures for developing our magical application.\"}",
+     "result": "piece 4 is not longer (12 words); it needs about 14 words"
+    }
+   ],
+   "seconds": 2.5
+  },
+  {
+   "unit": 3,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "I hope will be popular with",
+      "bloggers and influencers",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "raw": "{\"3\": \"I hope will be popular with\", \"4\": \"bloggers and influencers\"}",
+     "result": "added information: influencers"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "I hope will be popular among",
+      "bloggers",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "raw": "{\"3\": \"I hope will be popular among\", \"4\": \"bloggers\"}",
+     "result": "piece 4 is not longer (1 words); it needs about 3 words"
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "I hope will be popular with",
+      "blogging professionals",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "raw": "{\"3\": \"I hope will be popular with\", \"4\": \"blogging professionals\"}",
+     "result": "added information: ... professionals"
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "I hope will be popular with",
+      "bloggers and",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "raw": "{\"3\": \"I hope will be popular with\", \"4\": \"bloggers and\"}",
+     "result": "not fluent: Doubled 'I hope', missing comma for clarity, and awkward phrasing"
+    },
+    {
+     "attempt": 5,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "I hope will be popular among",
+      "influencers and",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "raw": "{\"3\": \"I hope will be popular among\", \"4\": \"influencers and\"}",
+     "result": "added information: influencers"
+    },
+    {
+     "attempt": 6,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "I hope will be popular with",
+      "influencers and creators",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "raw": "{\"3\": \"I hope will be popular with\", \"4\": \"influencers and creators\"}",
+     "result": "added information: influencers and creators"
+    },
+    {
+     "attempt": 7,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "I hope will be popular with",
+      "bloggers and influencers",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "raw": "{\"3\": \"I hope will be popular with\"}, {\"4\": \"bloggers and influencers\"}",
+     "result": "added information: influencers"
+    },
+    {
+     "attempt": 8,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "I hope will be popular among",
+      "influencers and creators",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "raw": "{\"3\": \"I hope will be popular among\", \"4\": \"influencers and creators\"}",
+     "result": "added information: influencers and creators"
+    }
+   ],
+   "seconds": 2.0
+  },
+  {
+   "unit": 5,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "The really nice weather, wouldn't you say?",
+      "That's great."
+     ],
+     "raw": "{\"1\": \"The really nice weather, wouldn't you say?\"}",
+     "result": "piece 1 is not longer (7 words); it needs about 9 words"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "The weather is so nice, isn't it?",
+      "That's great."
+     ],
+     "raw": "{\"1\": \"The weather is so nice, isn't it?\"}",
+     "result": "piece 1 is not longer (7 words); it needs about 9 words"
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "The weather is truly delightful, isn't it?",
+      "That's great."
+     ],
+     "raw": "{\"1\": \"The weather is truly delightful, isn't it?\"}",
+     "result": "piece 1 is not longer (7 words); it needs about 9 words"
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "The weather is really pleasant, isn't it?",
+      "That's great."
+     ],
+     "raw": "{\"1\": \"The weather is really pleasant, isn't it?\"}",
+     "result": "piece 1 is not longer (7 words); it needs about 9 words"
+    },
+    {
+     "attempt": 5,
+     "pieces": [
+      "The really nice weather, wouldn't you say?",
+      "That's great."
+     ],
+     "raw": "{\"1\": \"The really nice weather, wouldn't you say?\"}",
+     "result": "piece 1 is not longer (7 words); it needs about 9 words"
+    },
+    {
+     "attempt": 6,
+     "pieces": [
+      "What nice weather it is, indeed.",
+      "That's great."
+     ],
+     "raw": "{\"1\": \"What nice weather it is, indeed.\"}",
+     "result": "piece 1 is not longer (6 words); it needs about 9 words"
+    },
+    {
+     "attempt": 7,
+     "pieces": [
+      "What nice weather it is, isn't it?",
+      "That's great."
+     ],
+     "raw": "{\"1\": \"What nice weather it is, isn't it?\"}",
+     "result": "piece 1 is not longer (7 words); it needs about 9 words"
+    },
+    {
+     "attempt": 8,
+     "pieces": [
+      "What nice weather it is, isn't it?",
+      "That's great."
+     ],
+     "raw": "{\"1\": \"What nice weather it is, isn't it?\"}",
+     "result": "piece 1 is not longer (7 words); it needs about 9 words"
+    }
+   ],
+   "seconds": 0.9
+  }
+ ]
+}

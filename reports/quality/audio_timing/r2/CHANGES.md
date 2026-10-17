@@ -11,3 +11,20 @@ One entry per change: what / why / files / result, commit SHA (the SHA of an ent
 * **Why**: the chosen timing policy was opt-in only; `--background on` (the default) still loaded the non-commercial HDEMUCS weights.
 * **Files**: `scripts/pilot/run_clean_pipeline_05.py`, `scripts/pilot/background_bed.py`, `scripts/setup_spleeter.sh`.
 * **Result**: Spleeter on 03 (90 s): 4.6 s wall incl. TF load (16 threads); the HDEMUCS guard raises. Reproduction of the offline numbers: entry 2.
+
+## 2. Step 2 verified in the real pipeline: r2 vs cand5 E2E on 01–05 (`s2_timing_e2e.md`)
+* **What**: audio-only E2E runs (`--stop-after audio`, Qwen on the GPU) with `--audio-policy cand5` and `r2`; `face_ref.py` (LS mask from the
+  MediaPipe router × speech gate, no video run); `r2_metrics.sh`; `eval_cpu.py` tags `<root>_work_<id>` (cand5 / r2 no longer overwrite each other).
+* **Why**: show that the integrated defaults reproduce yesterday's offline numbers (canonical baselines only partly uploaded: own baselines).
+* **Result**: r2 and cand5 share all 66 TTS takes; 03 / 04 reproduce yesterday's offline table exactly, 01 within 0.2 s. 01+03+04+05: LS frames in
+  gaps ≥ 0.35 s 449 → 281 (−37 %), gaps > 1 s 5 → 3, longest 2.0 → 1.3 s, weak pauses 4 → 2; WER unchanged except 02 +0.007 (one word);
+  CTC CER 05 +0.019. Audio stage 36–61 s per video-minute.
+
+## 3. Layer 3 refit on the GPU (`refit_table.md`, `refit/<id>/`)
+* **What**: `refit_offline.py` v4: Qwen on the GPU, 5 alternatives per call under a JSON schema (unconstrained answers were malformed), natural-
+  spoken-English prompt + `natural_check` judge, guards for sentence end / dangling word, mid-sentence capital, added vocative ("…, folks"),
+  content bigram repeated across a cut; QA rejects a take whose ASR loses a number (01 u14 take 0 said "0.0 %" at CER 0.078); `build --ref-manifest`.
+* **Why**: v3 (yesterday) accepted 6/17 with 2 wrong; with Qwen-7B judging itself, defects pass ("stunning swimming pool", "such a nice | what a nice").
+* **Result**: 24 target units; guards + judges passed 13 candidates (v3 + v4), Agent C meaning review kept 4, the timing gate accepted 2: 01 u23
+  (gap 0.6 → 0 s) and 04 u05 (0.4 → 0 s; 04 LS frames in gaps 67 → 57). The long residuals (03 u04 / u06, 05 u01) were not fixed by any
+  faithful rewrite → video side. Qwen time: 1–24 s per unit.

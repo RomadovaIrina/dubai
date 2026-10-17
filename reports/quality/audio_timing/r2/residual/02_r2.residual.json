@@ -1,0 +1,1266 @@
+{
+ "video": "02",
+ "policy": "r2",
+ "flags": "--audio-policy r2",
+ "fps": 25,
+ "frames_are": "master_25fps.mp4 frame indices, [f0, f1)",
+ "manifest": "/workspace/dub/runs/e2e_r2/final/02_final.manifest.json",
+ "dub_track": "/workspace/dub/runs/e2e_r2/work/work_02/dubbed_16k.wav",
+ "definition": "source Silero VAD speaking AND dub Silero VAD (min speech 60 ms) silent, 10 ms grid; natural = shorter than 0.35 s",
+ "summary": {
+  "gaps": 33,
+  "residual": 12,
+  "residual_s": 7.0,
+  "residual_in_latentsync": 0,
+  "residual_ls_frames": 0,
+  "residual_without_asr_words": 0,
+  "residual_layer3_candidates": 12,
+  "longest_s": 0.9
+ },
+ "gaps": [
+  {
+   "id": "02-g00",
+   "t0": 2.3,
+   "t1": 2.6,
+   "seconds": 0.3,
+   "frames": [
+    57,
+    65
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "inner",
+   "source_burst": [
+    1.0,
+    3.5
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "банный",
+   "cause": "inner_gap",
+   "unit": 0,
+   "sentence_src": "Также на территории у нас банный комплекс все готово к первым парением.",
+   "sentence_dub": "Also on our premises, there is a bath complex that is ready for the first steam room sessions.",
+   "prev_dub": null,
+   "next_dub": {
+    "unit": 0,
+    "text": "that is ready for the first",
+    "start": 5.1,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g01",
+   "t0": 9.0,
+   "t1": 9.9,
+   "seconds": 0.9,
+   "frames": [
+    225,
+    248
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "residual",
+   "position_in_burst": "inner",
+   "source_burst": [
+    6.7,
+    10.4
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "буквально уже тут",
+   "cause": "inner_gap",
+   "unit": 1,
+   "sentence_src": "Через 3 -4 дня буквально уже тут начнутся парения.",
+   "sentence_dub": "Within 3-4 days, the floating will start right here.",
+   "prev_dub": {
+    "unit": 0,
+    "text": "steam room sessions.",
+    "end": 7.36,
+    "atempo": 1.15
+   },
+   "next_dub": {
+    "unit": 1,
+    "text": "right here.",
+    "start": 11.5,
+    "atempo": 0.875
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "02-g02",
+   "t0": 12.2,
+   "t1": 12.4,
+   "seconds": 0.2,
+   "frames": [
+    305,
+    310
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "inner",
+   "source_burst": [
+    11.5,
+    12.9
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "парения",
+   "cause": "short_fill",
+   "unit": 1,
+   "sentence_src": "Через 3 -4 дня буквально уже тут начнутся парения.",
+   "sentence_dub": "Within 3-4 days, the floating will start right here.",
+   "prev_dub": {
+    "unit": 1,
+    "text": "right here.",
+    "end": 12.125,
+    "atempo": 0.875
+   },
+   "next_dub": {
+    "unit": 3,
+    "text": "Here are the various",
+    "start": 15.08,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g03",
+   "t0": 14.6,
+   "t1": 15.1,
+   "seconds": 0.5,
+   "frames": [
+    365,
+    378
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "residual",
+   "position_in_burst": "head",
+   "source_burst": [
+    14.6,
+    15.6
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "бассейн",
+   "cause": "short_fill",
+   "unit": 2,
+   "sentence_src": "Сейчас покажу бассейн.",
+   "sentence_dub": "I will now show you the swimming pool.",
+   "prev_dub": {
+    "unit": 2,
+    "text": "I will now show you the swimming pool.",
+    "end": 14.387,
+    "atempo": 0.979
+   },
+   "next_dub": {
+    "unit": 3,
+    "text": "Here are the various",
+    "start": 15.08,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "02-g04",
+   "t0": 17.7,
+   "t1": 18.0,
+   "seconds": 0.3,
+   "frames": [
+    442,
+    450
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    16.4,
+    18.0
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "разные",
+   "cause": "inner_gap",
+   "unit": 3,
+   "sentence_src": "Вот такие вот у нас тут разные штуки зона для переодевания бочки шезлонги.",
+   "sentence_dub": "Here are the various things we have here: a zone for changing clothes, and some chaise longues.",
+   "prev_dub": {
+    "unit": 3,
+    "text": "Here are the various",
+    "end": 15.921,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 3,
+    "text": "a zone for changing clothes, and some chaise",
+    "start": 19.0,
+    "atempo": 0.875
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g05",
+   "t0": 20.7,
+   "t1": 21.1,
+   "seconds": 0.4,
+   "frames": [
+    517,
+    528
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "residual",
+   "position_in_burst": "inner",
+   "source_burst": [
+    19.0,
+    22.0
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "для переодевания",
+   "cause": "inner_gap",
+   "unit": 3,
+   "sentence_src": "Вот такие вот у нас тут разные штуки зона для переодевания бочки шезлонги.",
+   "sentence_dub": "Here are the various things we have here: a zone for changing clothes, and some chaise longues.",
+   "prev_dub": {
+    "unit": 3,
+    "text": "things we have here:",
+    "end": 17.769,
+    "atempo": 0.875
+   },
+   "next_dub": {
+    "unit": 3,
+    "text": "longues.",
+    "start": 24.2,
+    "atempo": 0.875
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "02-g06",
+   "t0": 21.8,
+   "t1": 22.0,
+   "seconds": 0.2,
+   "frames": [
+    545,
+    550
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    19.0,
+    22.0
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "бочки",
+   "cause": "inner_gap",
+   "unit": 3,
+   "sentence_src": "Вот такие вот у нас тут разные штуки зона для переодевания бочки шезлонги.",
+   "sentence_dub": "Here are the various things we have here: a zone for changing clothes, and some chaise longues.",
+   "prev_dub": {
+    "unit": 3,
+    "text": "a zone for changing clothes, and some chaise",
+    "end": 21.747,
+    "atempo": 0.875
+   },
+   "next_dub": {
+    "unit": 3,
+    "text": "longues.",
+    "start": 24.2,
+    "atempo": 0.875
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g07",
+   "t0": 24.0,
+   "t1": 24.2,
+   "seconds": 0.2,
+   "frames": [
+    600,
+    605
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    24.0,
+    24.9
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "бочки",
+   "cause": "inner_gap",
+   "unit": 3,
+   "sentence_src": "Вот такие вот у нас тут разные штуки зона для переодевания бочки шезлонги.",
+   "sentence_dub": "Here are the various things we have here: a zone for changing clothes, and some chaise longues.",
+   "prev_dub": {
+    "unit": 3,
+    "text": "a zone for changing clothes, and some chaise",
+    "end": 21.747,
+    "atempo": 0.875
+   },
+   "next_dub": {
+    "unit": 3,
+    "text": "longues.",
+    "start": 24.2,
+    "atempo": 0.875
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g08",
+   "t0": 24.6,
+   "t1": 24.9,
+   "seconds": 0.3,
+   "frames": [
+    615,
+    623
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    24.0,
+    24.9
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "шезлонги",
+   "cause": "short_fill",
+   "unit": 3,
+   "sentence_src": "Вот такие вот у нас тут разные штуки зона для переодевания бочки шезлонги.",
+   "sentence_dub": "Here are the various things we have here: a zone for changing clothes, and some chaise longues.",
+   "prev_dub": {
+    "unit": 3,
+    "text": "longues.",
+    "end": 24.564,
+    "atempo": 0.875
+   },
+   "next_dub": {
+    "unit": 4,
+    "text": "In this place,",
+    "start": 26.36,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g09",
+   "t0": 25.6,
+   "t1": 26.4,
+   "seconds": 0.8,
+   "frames": [
+    640,
+    660
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "residual",
+   "position_in_burst": "head",
+   "source_burst": [
+    25.6,
+    26.8
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "шезлонги",
+   "cause": "short_fill",
+   "unit": 3,
+   "sentence_src": "Вот такие вот у нас тут разные штуки зона для переодевания бочки шезлонги.",
+   "sentence_dub": "Here are the various things we have here: a zone for changing clothes, and some chaise longues.",
+   "prev_dub": {
+    "unit": 3,
+    "text": "longues.",
+    "end": 24.564,
+    "atempo": 0.875
+   },
+   "next_dub": {
+    "unit": 4,
+    "text": "we have a Finnish sauna.",
+    "start": 28.9,
+    "atempo": 0.875
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "02-g10",
+   "t0": 28.7,
+   "t1": 28.9,
+   "seconds": 0.2,
+   "frames": [
+    717,
+    723
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    28.7,
+    30.8
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "здесь",
+   "cause": "inner_gap",
+   "unit": 4,
+   "sentence_src": "Здесь у нас финская сауна.",
+   "sentence_dub": "In this place, we have a Finnish sauna.",
+   "prev_dub": {
+    "unit": 4,
+    "text": "In this place,",
+    "end": 27.318,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 4,
+    "text": "we have a Finnish sauna.",
+    "start": 28.9,
+    "atempo": 0.875
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g11",
+   "t0": 30.0,
+   "t1": 30.4,
+   "seconds": 0.4,
+   "frames": [
+    750,
+    760
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "residual",
+   "position_in_burst": "inner",
+   "source_burst": [
+    28.7,
+    30.8
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "сауна",
+   "cause": "short_fill",
+   "unit": 4,
+   "sentence_src": "Здесь у нас финская сауна.",
+   "sentence_dub": "In this place, we have a Finnish sauna.",
+   "prev_dub": {
+    "unit": 4,
+    "text": "we have a Finnish sauna.",
+    "end": 29.981,
+    "atempo": 0.875
+   },
+   "next_dub": {
+    "unit": 5,
+    "text": "I will",
+    "start": 30.42,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "02-g12",
+   "t0": 39.0,
+   "t1": 39.5,
+   "seconds": 0.5,
+   "frames": [
+    975,
+    988
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "residual",
+   "position_in_burst": "whole",
+   "source_burst": [
+    39.0,
+    39.5
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "покажу",
+   "cause": "inner_gap",
+   "unit": 5,
+   "sentence_src": "Покажу русскую баню.",
+   "sentence_dub": "I will show the Russian banya.",
+   "prev_dub": {
+    "unit": 5,
+    "text": "I will",
+    "end": 31.401,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 5,
+    "text": "show the Russian banya.",
+    "start": 40.3,
+    "atempo": 1.096
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "02-g13",
+   "t0": 40.3,
+   "t1": 40.4,
+   "seconds": 0.1,
+   "frames": [
+    1007,
+    1010
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    40.3,
+    41.8
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "inner_gap",
+   "unit": 5,
+   "sentence_src": "Покажу русскую баню.",
+   "sentence_dub": "I will show the Russian banya.",
+   "prev_dub": {
+    "unit": 5,
+    "text": "I will",
+    "end": 31.401,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 6,
+    "text": "The Russian",
+    "start": 41.52,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g14",
+   "t0": 45.6,
+   "t1": 45.7,
+   "seconds": 0.1,
+   "frames": [
+    1140,
+    1143
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "inner",
+   "source_burst": [
+    43.2,
+    46.0
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "short_fill",
+   "unit": 6,
+   "sentence_src": "Русская баня как положено на дровах печка.",
+   "sentence_dub": "The Russian bath as it should be a hearth burning wood.",
+   "prev_dub": {
+    "unit": 6,
+    "text": "bath as it should be a hearth burning wood.",
+    "end": 45.558,
+    "atempo": 0.875
+   },
+   "next_dub": {
+    "unit": 7,
+    "text": "So it all looks",
+    "start": 45.72,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g15",
+   "t0": 49.6,
+   "t1": 49.8,
+   "seconds": 0.2,
+   "frames": [
+    1240,
+    1245
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    49.6,
+    50.6
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "запах",
+   "cause": "inner_gap",
+   "unit": 8,
+   "sentence_src": "Какой запах здесь хороший.",
+   "sentence_dub": "What is such a nice smell here?",
+   "prev_dub": {
+    "unit": 8,
+    "text": "What is such a nice",
+    "end": 48.85,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 8,
+    "text": "smell here?",
+    "start": 49.8,
+    "atempo": 0.875
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g16",
+   "t0": 51.0,
+   "t1": 51.6,
+   "seconds": 0.6,
+   "frames": [
+    1275,
+    1290
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "residual",
+   "position_in_burst": "whole",
+   "source_burst": [
+    51.0,
+    51.6
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "хороший",
+   "cause": "short_fill",
+   "unit": 8,
+   "sentence_src": "Какой запах здесь хороший.",
+   "sentence_dub": "What is such a nice smell here?",
+   "prev_dub": {
+    "unit": 8,
+    "text": "smell here?",
+    "end": 50.673,
+    "atempo": 0.875
+   },
+   "next_dub": {
+    "unit": 9,
+    "text": "There is also our second floor,",
+    "start": 57.9,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "02-g17",
+   "t0": 65.5,
+   "t1": 65.7,
+   "seconds": 0.2,
+   "frames": [
+    1637,
+    1643
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    65.5,
+    68.9
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "inner_gap",
+   "unit": 9,
+   "sentence_src": "Есть еще у нас второй этаж это также все входит в инфраструктуру комплекса.",
+   "sentence_dub": "There is also our second floor, this also all falls into the infrastructure of the complex.",
+   "prev_dub": {
+    "unit": 9,
+    "text": "There is also our second floor,",
+    "end": 60.239,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 9,
+    "text": "this also all falls into the infrastructure of the complex.",
+    "start": 65.69,
+    "atempo": 0.875
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g18",
+   "t0": 68.7,
+   "t1": 68.9,
+   "seconds": 0.2,
+   "frames": [
+    1717,
+    1723
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    65.5,
+    68.9
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "комплекса",
+   "cause": "short_fill",
+   "unit": 9,
+   "sentence_src": "Есть еще у нас второй этаж это также все входит в инфраструктуру комплекса.",
+   "sentence_dub": "There is also our second floor, this also all falls into the infrastructure of the complex.",
+   "prev_dub": {
+    "unit": 9,
+    "text": "this also all falls into the infrastructure of the complex.",
+    "end": 68.71,
+    "atempo": 0.875
+   },
+   "next_dub": {
+    "unit": 10,
+    "text": "Of course, for the bath complex for these procedures, you wi",
+    "start": 70.38,
+    "atempo": 1.104
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g19",
+   "t0": 69.9,
+   "t1": 70.4,
+   "seconds": 0.5,
+   "frames": [
+    1747,
+    1761
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "residual",
+   "position_in_burst": "head",
+   "source_burst": [
+    69.9,
+    74.7
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "комплекса",
+   "cause": "short_fill",
+   "unit": 9,
+   "sentence_src": "Есть еще у нас второй этаж это также все входит в инфраструктуру комплекса.",
+   "sentence_dub": "There is also our second floor, this also all falls into the infrastructure of the complex.",
+   "prev_dub": {
+    "unit": 9,
+    "text": "this also all falls into the infrastructure of the complex.",
+    "end": 68.71,
+    "atempo": 0.875
+   },
+   "next_dub": {
+    "unit": 10,
+    "text": "Of course, for the bath complex for these procedures, you wi",
+    "start": 70.38,
+    "atempo": 1.104
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "02-g20",
+   "t0": 71.0,
+   "t1": 71.3,
+   "seconds": 0.3,
+   "frames": [
+    1775,
+    1783
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "inner",
+   "source_burst": [
+    69.9,
+    74.7
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "банный",
+   "cause": "inner_gap",
+   "unit": 10,
+   "sentence_src": "Конечно за банный комплекс за эти процедуры все нужно будет платить.",
+   "sentence_dub": "Of course, for the bath complex for these procedures, you will need to pay.",
+   "prev_dub": {
+    "unit": 9,
+    "text": "this also all falls into the infrastructure of the complex.",
+    "end": 68.71,
+    "atempo": 0.875
+   },
+   "next_dub": {
+    "unit": 11,
+    "text": "Well,",
+    "start": 74.44,
+    "atempo": 0.888
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g21",
+   "t0": 81.2,
+   "t1": 82.1,
+   "seconds": 0.9,
+   "frames": [
+    2030,
+    2053
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "residual",
+   "position_in_burst": "inner",
+   "source_burst": [
+    80.7,
+    83.8
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "бане все",
+   "cause": "inner_gap",
+   "unit": 12,
+   "sentence_src": "То есть все мы ходим в бане все мы платим за это деньги.",
+   "sentence_dub": "That is, we all go to the sauna, and we all pay money for it.",
+   "prev_dub": {
+    "unit": 11,
+    "text": "this definitely won't break the bank.",
+    "end": 78.98,
+    "atempo": 1.118
+   },
+   "next_dub": {
+    "unit": 13,
+    "text": "And the hamam is also available here.",
+    "start": 83.44,
+    "atempo": 1.024
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "02-g22",
+   "t0": 89.3,
+   "t1": 89.5,
+   "seconds": 0.2,
+   "frames": [
+    2232,
+    2238
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    88.2,
+    89.5
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "inner_gap",
+   "unit": 14,
+   "sentence_src": "Массажная комната холодильничек и вот здесь такое место для распития чая или минералочки зона отдыха также лежечки.",
+   "sentence_dub": "The massage room has a mini fridge, and here is a spot for drinking tea or mineral water. There is also a relaxation zone with loungers.",
+   "prev_dub": {
+    "unit": 14,
+    "text": "The massage",
+    "end": 86.328,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 14,
+    "text": "and here is a spot for drinking tea or mineral water.",
+    "start": 94.2,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g23",
+   "t0": 94.2,
+   "t1": 94.3,
+   "seconds": 0.1,
+   "frames": [
+    2355,
+    2358
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    94.2,
+    97.1
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "inner_gap",
+   "unit": 14,
+   "sentence_src": "Массажная комната холодильничек и вот здесь такое место для распития чая или минералочки зона отдыха также лежечки.",
+   "sentence_dub": "The massage room has a mini fridge, and here is a spot for drinking tea or mineral water. There is also a relaxation zone with loungers.",
+   "prev_dub": {
+    "unit": 14,
+    "text": "room has a mini fridge,",
+    "end": 89.492,
+    "atempo": 0.987
+   },
+   "next_dub": {
+    "unit": 14,
+    "text": "There is also a relaxation zone with loungers.",
+    "start": 99.2,
+    "atempo": 0.875
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g24",
+   "t0": 96.9,
+   "t1": 97.1,
+   "seconds": 0.2,
+   "frames": [
+    2422,
+    2428
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    94.2,
+    97.1
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "inner_gap",
+   "unit": 14,
+   "sentence_src": "Массажная комната холодильничек и вот здесь такое место для распития чая или минералочки зона отдыха также лежечки.",
+   "sentence_dub": "The massage room has a mini fridge, and here is a spot for drinking tea or mineral water. There is also a relaxation zone with loungers.",
+   "prev_dub": {
+    "unit": 14,
+    "text": "room has a mini fridge,",
+    "end": 89.492,
+    "atempo": 0.987
+   },
+   "next_dub": {
+    "unit": 14,
+    "text": "There is also a relaxation zone with loungers.",
+    "start": 99.2,
+    "atempo": 0.875
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g25",
+   "t0": 99.0,
+   "t1": 99.3,
+   "seconds": 0.3,
+   "frames": [
+    2475,
+    2483
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    99.0,
+    101.5
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "распития",
+   "cause": "inner_gap",
+   "unit": 14,
+   "sentence_src": "Массажная комната холодильничек и вот здесь такое место для распития чая или минералочки зона отдыха также лежечки.",
+   "sentence_dub": "The massage room has a mini fridge, and here is a spot for drinking tea or mineral water. There is also a relaxation zone with loungers.",
+   "prev_dub": {
+    "unit": 14,
+    "text": "and here is a spot for drinking tea or mineral water.",
+    "end": 97.323,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 15,
+    "text": "Here's our interesting sauna",
+    "start": 103.04,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g26",
+   "t0": 102.3,
+   "t1": 103.0,
+   "seconds": 0.7,
+   "frames": [
+    2557,
+    2575
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "residual",
+   "position_in_burst": "inner",
+   "source_burst": [
+    101.6,
+    105.0
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "также лежечки",
+   "cause": "short_fill",
+   "unit": 14,
+   "sentence_src": "Массажная комната холодильничек и вот здесь такое место для распития чая или минералочки зона отдыха также лежечки.",
+   "sentence_dub": "The massage room has a mini fridge, and here is a spot for drinking tea or mineral water. There is also a relaxation zone with loungers.",
+   "prev_dub": {
+    "unit": 14,
+    "text": "There is also a relaxation zone with loungers.",
+    "end": 102.256,
+    "atempo": 0.875
+   },
+   "next_dub": {
+    "unit": 15,
+    "text": "Here's our interesting sauna",
+    "start": 103.04,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "02-g27",
+   "t0": 104.3,
+   "t1": 104.7,
+   "seconds": 0.4,
+   "frames": [
+    2607,
+    2618
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "residual",
+   "position_in_burst": "inner",
+   "source_burst": [
+    101.6,
+    105.0
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "интересная",
+   "cause": "inner_gap",
+   "unit": 15,
+   "sentence_src": "Вот такая вот у нас интересная баня сауна.",
+   "sentence_dub": "Here's our interesting sauna bath.",
+   "prev_dub": {
+    "unit": 14,
+    "text": "There is also a relaxation zone with loungers.",
+    "end": 102.256,
+    "atempo": 0.875
+   },
+   "next_dub": {
+    "unit": 15,
+    "text": "bath.",
+    "start": 106.153,
+    "atempo": 0.875
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "02-g28",
+   "t0": 106.0,
+   "t1": 106.1,
+   "seconds": 0.1,
+   "frames": [
+    2650,
+    2653
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    106.0,
+    107.5
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "inner_gap",
+   "unit": 15,
+   "sentence_src": "Вот такая вот у нас интересная баня сауна.",
+   "sentence_dub": "Here's our interesting sauna bath.",
+   "prev_dub": {
+    "unit": 15,
+    "text": "Here's our interesting sauna",
+    "end": 105.067,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 15,
+    "text": "bath.",
+    "start": 106.153,
+    "atempo": 0.875
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g29",
+   "t0": 106.6,
+   "t1": 106.8,
+   "seconds": 0.2,
+   "frames": [
+    2665,
+    2670
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "inner",
+   "source_burst": [
+    106.0,
+    107.5
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "сауна",
+   "cause": "short_fill",
+   "unit": 15,
+   "sentence_src": "Вот такая вот у нас интересная баня сауна.",
+   "sentence_dub": "Here's our interesting sauna bath.",
+   "prev_dub": {
+    "unit": 15,
+    "text": "bath.",
+    "end": 106.587,
+    "atempo": 0.875
+   },
+   "next_dub": {
+    "unit": 16,
+    "text": "and all this space.",
+    "start": 108.477,
+    "atempo": 0.875
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g30",
+   "t0": 107.4,
+   "t1": 107.5,
+   "seconds": 0.1,
+   "frames": [
+    2685,
+    2688
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    106.0,
+    107.5
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "inner_gap",
+   "unit": 16,
+   "sentence_src": "Хамам ну и все это пространство.",
+   "sentence_dub": "Hamam and all this space.",
+   "prev_dub": {
+    "unit": 15,
+    "text": "bath.",
+    "end": 106.587,
+    "atempo": 0.875
+   },
+   "next_dub": {
+    "unit": 16,
+    "text": "and all this space.",
+    "start": 108.477,
+    "atempo": 0.875
+   },
+   "unit_fit_up": "rejected: identical",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g31",
+   "t0": 108.3,
+   "t1": 108.5,
+   "seconds": 0.2,
+   "frames": [
+    2707,
+    2713
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    108.3,
+    109.8
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "и",
+   "cause": "inner_gap",
+   "unit": 16,
+   "sentence_src": "Хамам ну и все это пространство.",
+   "sentence_dub": "Hamam and all this space.",
+   "prev_dub": {
+    "unit": 16,
+    "text": "Hamam",
+    "end": 107.483,
+    "atempo": 0.878
+   },
+   "next_dub": {
+    "unit": 16,
+    "text": "and all this space.",
+    "start": 108.477,
+    "atempo": 0.875
+   },
+   "unit_fit_up": "rejected: identical",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "02-g32",
+   "t0": 109.4,
+   "t1": 109.8,
+   "seconds": 0.4,
+   "frames": [
+    2735,
+    2745
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    108.3,
+    109.8
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "пространство",
+   "cause": "short_fill",
+   "unit": 16,
+   "sentence_src": "Хамам ну и все это пространство.",
+   "sentence_dub": "Hamam and all this space.",
+   "prev_dub": {
+    "unit": 16,
+    "text": "and all this space.",
+    "end": 109.383,
+    "atempo": 0.875
+   },
+   "next_dub": null,
+   "unit_fit_up": "rejected: identical",
+   "layer3_could_fill": true
+  }
+ ]
+}

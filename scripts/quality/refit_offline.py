@@ -21,6 +21,7 @@ import numpy as np
 HERE = pathlib.Path(__file__).resolve().parent
 for d in ("pilot", "quality"): sys.path.insert(0, str(HERE.parent / d))
 SEED = 1247; SALT = 60; VRAM_GB = 6.0
+VOCATIVE = re.compile(r"\b(folks|guys|everyone|everybody|team|friends|partners|people|y'all|my friends)\b[.!?]?$|,\s*(folks|guys|everyone|team|friends|partners)\b", re.I)
 DANGLING_END = frozenset("and or but so to of for in on at by with from as that which who the a an my our your their is are was were will would can could should must let".split())
 
 
@@ -84,6 +85,8 @@ def check_pieces(r: dict, new: list) -> str | None:
         if w > s["budget"] + 2: return f"piece {k + 1} is too long ({w} words); it needs about {s['budget']} words"
         if missing_numbers(old, nw): return f"piece {k + 1} lost a number"
         if FILLER.search(nw): return f"piece {k + 1} has a filler word '{FILLER.search(nw).group(0)}'"
+        voc = VOCATIVE.search(nw)   # r2: unconstrained v4 padded with "..., folks." / "guys" / "team" where the Russian addresses nobody
+        if voc and not VOCATIVE.search(old) and not re.search(r"ребят|друз|народ|всем привет|коллег", r["ru"][k].lower()): return f"piece {k + 1} adds an address '{voc.group(0)}' that the Russian does not have"
         changed += 1
     tok = lambda t: re.findall(r"[a-z0-9']+", t.lower())
     for k in range(len(new) - 1):   # a rewritten piece must not repeat the start / end of its neighbour (03 u05: "... in general with | with you and in general with")
@@ -91,11 +94,18 @@ def check_pieces(r: dict, new: list) -> str | None:
         a_, b_ = tok(new[k]), tok(new[k + 1])
         for n in (4, 3):
             if len(a_) >= n and len(b_) >= n and any(a_[i:i + n] == b_[:n] for i in range(len(a_) - n + 1)): return f"pieces {k + 1} and {k + 2} repeat the words '{' '.join(b_[:n])}'"
+        from tts_burst import CUT_FUNC_WORDS   # r2: a content bigram on both sides of the boundary (02 u08 "such a nice | what a nice smell")
+        bg = lambda t: {(t[i], t[i + 1]) for i in range(len(t) - 1) if t[i] not in CUT_FUNC_WORDS or t[i + 1] not in CUT_FUNC_WORDS}
+        rep = bg(a_[-4:]) & bg(b_[:4])
+        if rep: return f"pieces {k + 1} and {k + 2} repeat '{' '.join(sorted(rep)[0])}' across their boundary"
     for k, (old, nw) in enumerate(zip(r["pieces"], new)):   # r2 (human review 10-16: 03 u08 "... and I wish"): a piece keeps its sentence-end role
         if not r["short"].get(str(k)): continue
         nw = " ".join(nw.split()); end_old = old.rstrip()[-1:] in ".?!"; last = k == len(new) - 1
         if (end_old or last) and nw.rstrip()[-1:] not in ".?!": return f"piece {k + 1} must end the sentence like \"{old}\" does (with a full stop / ? / !)"
         if not end_old and not last and nw.rstrip()[-1:] in ".?!": return f"piece {k + 1} must not end the sentence: the sentence continues with piece {k + 2}"
+        fw = nw.split()[0]
+        if k > 0 and old[:1].islower() and fw[:1].isupper() and fw not in ("I", "I'm", "I'll", "I've", "I'd") and not old.split()[0][:1].isupper():
+            return f"piece {k + 1} continues the sentence: it must not start with a capital letter ('{fw}')"
         lw = tok(nw)[-1:] or [""]
         if (end_old or last) and (lw[0] in DANGLING_END or re.search(r"\b(i|we|you) (wish|want|hope|think)[.?!]?$", nw.lower())): return f"piece {k + 1} ends on a dangling word '{lw[0]}'"
     old_t, new_t = " ".join(r["pieces"]), " ".join(" ".join(x.split()) for x in new)
@@ -117,6 +127,67 @@ def fluent_check(llm, sentence: str) -> tuple[bool, str]:
         return False, f"judge answer unparsable: {txt[:100]}"
 
 
+def rewrite_prompt_v4(r: dict, n_alt: int) -> str:
+    """v4 (r2, 2026-10-17): ONE call returns n_alt alternatives; natural spoken English instead of "literal" (v3's literal wording gave stiff
+    English: "we simply wish to observe how", "the result we envisioned to achieve")."""
+    lines = [f'{k + 1}. RU: "{ru}" | EN: "{en}"' for k, (ru, en) in enumerate(zip(r["ru"], r["pieces"]))]
+    asks = []
+    for k_, s in sorted(r["short"].items(), key=lambda kv: int(kv[0])):
+        k = int(k_); lo, hi = s["words_now"] + 1, s["budget"] + 2
+        asks.append(f'- piece {k + 1}: now "{r["pieces"][k]}" ({s["words_now"]} words) -> {lo} to {hi} words, saying what ITS Russian words "{r["ru"][k]}" say')
+    keys = ", ".join(f'"{int(k) + 1}": "..."' for k in sorted(r["short"], key=int))
+    return (f'A Russian video blogger says this sentence:\n"{r["source"]}"\n\nThe sentence is split at the speaker\'s pauses; each piece has its current English dubbing:\n'
+            + "\n".join(lines) +
+            "\n\nThe English of some pieces ends too early: the speaker is still talking. Make ONLY these pieces longer:\n" + "\n".join(asks) +
+            "\nWrite natural, relaxed spoken English, the way a native-speaking blogger would say it on camera, never stiff or formal. Lengthen by saying the "
+            "SAME Russian words more fully: every Russian word rendered, a natural fuller phrasing (\"we want to see\" -> \"we'd really like to see\", "
+            "\"modern phones\" -> \"modern smartphones\"), the subject or object said out loud. Do NOT add any fact, quality, outcome or idea that the Russian does not say, "
+            "no filler words (um, you know, basically, actually), no word that repeats the meaning of a word next to it. Each new piece must connect grammatically to the "
+            "unchanged pieces before and after it, so that the whole sentence reads as one fluent sentence; keep the sentence-final punctuation where the sentence ends. "
+            f"Give {n_alt} clearly different alternatives. Answer with JSON only: {{\"alternatives\": [{n_alt} objects, each {{{keys}}}]}}")
+
+
+def natural_check(llm, sentence: str) -> tuple[bool, str]:
+    """v4 judge: fluent AND natural spoken English (not stiff / formal / redundant). An unparsable answer = not natural."""
+    from tts_burst import JUDGE_SYSTEM
+    prompt = (f'English dubbing line of a video blogger: "{sentence}"\n\nIs this one fluent, grammatical sentence of NATURAL spoken English, with no missing, doubled or '
+              'misplaced words, no two neighbouring words with the same meaning, and nothing stiff, bookish or overly formal that a native speaker would not say on camera? '
+              'Answer with JSON only: {"natural": true} or {"natural": false, "problem": "..."}')
+    r = llm.create_chat_completion([{"role": "system", "content": JUDGE_SYSTEM}, {"role": "user", "content": prompt}], max_tokens=120, temperature=0.0)
+    txt = r["choices"][0]["message"]["content"].strip(); m_ = re.search(r"\{.*\}", txt, re.S)
+    try:
+        o = json.loads(m_.group(0) if m_ else txt); return bool(o.get("natural")), str(o.get("problem", ""))
+    except Exception:
+        return False, f"judge answer unparsable: {txt[:100]}"
+
+
+def _alts_schema(r: dict, n_alt: int) -> dict:
+    keys = [str(int(k) + 1) for k in sorted(r["short"], key=int)]
+    item = {"type": "object", "properties": {k: {"type": "string"} for k in keys}, "required": keys}
+    return {"type": "object", "properties": {"alternatives": {"type": "array", "items": item, "minItems": n_alt, "maxItems": n_alt}}, "required": ["alternatives"]}
+
+
+def _parse_alts(txt: str, r: dict) -> list:
+    """Schema-constrained answer {"alternatives": [{...}, ...]}; fallback: every "<key>": "<text>" pair in order, a new alternative whenever a key repeats
+    (unconstrained Qwen wrote ["1": "..."] lists, 2026-10-17)."""
+    keys = [str(int(k) + 1) for k in sorted(r["short"], key=int)]; objs = []
+    try:
+        o = json.loads(txt); objs = o["alternatives"] if isinstance(o, dict) else o
+    except Exception:
+        cur = {}
+        for k, v in re.findall(r'"(\d+)"\s*:\s*"([^"]*)"', txt):
+            if k in cur: objs.append(cur); cur = {}
+            cur[k] = v
+        if cur: objs.append(cur)
+    out = []
+    for o in objs:
+        if not isinstance(o, dict) or not all(k in o for k in keys): continue
+        new = list(r["pieces"])
+        for k_ in r["short"]: new[int(k_)] = str(o[str(int(k_) + 1)]).strip().rstrip("}").strip()
+        out.append(new)
+    return out
+
+
 def rewrite(a) -> int:
     out = pathlib.Path(a.out); P = jload(out / "plan.json")
     from llama_cpp import Llama
@@ -125,38 +196,32 @@ def rewrite(a) -> int:
     from tts_burst import REWRITE_SYSTEM, faithful_check
     f = sorted(glob.glob(str(MODELS / "qwen2.5-7b-instruct-gguf" / "*q8_0*.gguf")))[0]; th = int(os.environ.get("DUB_THREADS", "6"))
     t0 = time.perf_counter(); llm = Llama(model_path=f, n_ctx=4096, n_threads=th, n_threads_batch=th, n_gpu_layers=a.qwen_gpu_layers, verbose=False, seed=SEED); load_s = time.perf_counter() - t0
-    res = []
+    res = []; calls = 0
     for r in P["units"]:
-        msgs = [{"role": "system", "content": REWRITE_SYSTEM}, {"role": "user", "content": rewrite_prompt(r)}]; log = []; accepted = None; t1 = time.perf_counter()
-        first = list(msgs)
-        for att in range(a.attempts):
-            # r2: attempts 1-4 = greedy + feedback (v3 behaviour); later attempts restart from the plain prompt with sampling (GPU Qwen: ~1 s per call)
-            if att >= 4: msgs = list(first)
-            raw = llm.create_chat_completion(msgs, max_tokens=320, temperature=0.0 if att < 4 else 0.7, seed=SEED + att)["choices"][0]["message"]["content"]
-            txt = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip()); m_ = re.search(r"\{.*\}", txt, re.S)
-            try:   # Qwen sometimes answers one object per piece: {"2": "..."}, {"3": "..."} -> merge every flat {...}
-                obj = {}
-                for blk in re.findall(r"\{[^{}]*\}", txt) or [txt]: obj.update(json.loads(blk))
-                new = list(r["pieces"])
-                for k_ in r["short"]: new[int(k_)] = str(obj[str(int(k_) + 1)])
-            except Exception: new = None
-            why = check_pieces(r, new) if new is not None else "answer is not the JSON object with one key per requested piece number"
-            if why is None:
-                new = [" ".join(x.split()) for x in new]; ok, added = faithful_check(llm, "Russian", "English", r["source"], r["text"], " ".join(new))
-                if ok:
-                    fl, prob = fluent_check(llm, " ".join(new))
-                    if fl: accepted = new; log.append({"attempt": att + 1, "pieces": new, "raw": raw[:400], "result": "accepted"}); break
-                    why = "not fluent: " + prob[:200]
-                    fb = f"Read in order, the sentence is not fluent English: {prob[:200]}. Rewrite the requested pieces so that they connect grammatically to the pieces around them. Answer with the JSON only."
-                else:
-                    why = "added information: " + "; ".join(added)[:200]
-                    fb = f"Your rewrite states something the Russian speaker does not say: {'; '.join(added)[:200]}. Remove it; reach the length only by translating the Russian words of the SHORT pieces fully. Answer with the JSON only."
-            else:
-                fb = f"That answer is invalid: {why}. Count the words. Fix it and answer with the JSON only."
-            log.append({"attempt": att + 1, "pieces": new, "raw": raw[:400], "result": why}); msgs = msgs + [{"role": "assistant", "content": raw}, {"role": "user", "content": fb}]
+        msgs = [{"role": "system", "content": REWRITE_SYSTEM}, {"role": "user", "content": rewrite_prompt_v4(r, a.alts)}]; log = []; accepted = None; t1 = time.perf_counter()
+        for rnd in range(a.rounds):
+            raw = llm.create_chat_completion(msgs, max_tokens=900, temperature=0.0 if rnd == 0 else 0.7, seed=SEED + rnd,
+                                             response_format={"type": "json_object", "schema": _alts_schema(r, a.alts)})["choices"][0]["message"]["content"]; calls += 1
+            alts = _parse_alts(raw, r); why_all = []
+            cands = []
+            for new in alts:   # deterministic guards first (cheap), then the judges on the survivors, longest first (= most fill)
+                why = check_pieces(r, new)
+                if why: why_all.append(why); log.append({"round": rnd + 1, "pieces": new, "result": why}); continue
+                cands.append([" ".join(x.split()) for x in new])
+            cands.sort(key=lambda nw: -sum(nwords(nw[int(k)]) for k in r["short"]))
+            for new in cands[:a.judge_max]:
+                ok, added = faithful_check(llm, "Russian", "English", r["source"], r["text"], " ".join(new)); calls += 1
+                if not ok: why_all.append("added information: " + "; ".join(added)[:160]); log.append({"round": rnd + 1, "pieces": new, "result": why_all[-1]}); continue
+                nat, prob = natural_check(llm, " ".join(new)); calls += 1
+                if not nat: why_all.append("not natural: " + prob[:160]); log.append({"round": rnd + 1, "pieces": new, "result": why_all[-1]}); continue
+                accepted = new; log.append({"round": rnd + 1, "pieces": new, "result": "accepted"}); break
+            if accepted: break
+            if not alts: why_all = ["answer is not a JSON list of objects with one key per requested piece number"]
+            fb = ("None of these can be used: " + " | ".join(sorted(set(why_all)))[:600] + f". Give {a.alts} new, different alternatives that fix this. Answer with the JSON only.")
+            msgs = msgs + [{"role": "assistant", "content": raw}, {"role": "user", "content": fb}]
         res.append({"unit": r["unit"], "accepted": accepted is not None, "pieces": accepted, "text": " ".join(accepted) if accepted else None, "log": log, "seconds": round(time.perf_counter() - t1, 1)})
-        print(f"u{r['unit']:02d} {'ACCEPTED' if accepted else 'rejected'} {res[-1]['seconds']}s: {' | '.join(accepted) if accepted else log[-1]['result']}", flush=True)
-    jsave(out / "rewrite.json", {"qwen": os.path.basename(f), "threads": th, "load_s": round(load_s, 1), "units": res}); return 0
+        print(f"u{r['unit']:02d} {'ACCEPTED' if accepted else 'rejected'} {res[-1]['seconds']}s: {' | '.join(accepted) if accepted else (log[-1]['result'] if log else 'no candidates')}", flush=True)
+    jsave(out / "rewrite.json", {"version": "v4", "qwen": os.path.basename(f), "gpu_layers": a.qwen_gpu_layers, "load_s": round(load_s, 1), "calls": calls, "units": res}); return 0
 
 
 # ----------------------------------------------------------------------------------------------------------------------------------- GPU helpers
@@ -202,6 +267,7 @@ def qa(a) -> int:
     from tts_qa import TtsQA
     from tts_align import CtcAligner
     from tts_burst import gap_voice
+    from burst_aware_audio import missing_numbers
     out = pathlib.Path(a.out); T = jload(out / "takes.json"); R = {r["unit"]: r for r in jload(out / "rewrite.json")["units"]}
     t0 = time.perf_counter(); _vram_cap(); torch.cuda.reset_peak_memory_stats(); q = TtsQA(device="cuda"); al = CtcAligner.from_qa(q); load_s = time.perf_counter() - t0
     by = {}
@@ -212,6 +278,8 @@ def qa(a) -> int:
         for t in ts:
             y, sr = sf.read(t["file"], dtype="float32"); r = q.assess(text, y, sr, "en"); sp = al.align(y, sr, text); gv = gap_voice(y, sr, sp) if sp else []
             t.update({"bad": bool(r["bad"]), "score": r["score"], "reasons": r["reasons"], "whisper": r["whisper"][:160], "spans": sp, "gap_voice_s": round(sum(b - a_ for a_, b, _ in gv), 3)})
+            if missing_numbers(text, r["whisper"]):   # r2: 01 u14 take 0 said "0.0 %" for "0.5 percent" at CER 0.078 (< the QA threshold) and was chosen
+                t["bad"] = True; t["reasons"] = list(t["reasons"] or []) + [f"number missing in the ASR: {missing_numbers(text, r['whisper'])}"]
         ladder = [t for t in ts if not t["gap_alt"]]; alt = [t for t in ts if t["gap_alt"]]
         best = next((t for t in ladder if not t["bad"]), min(ladder, key=lambda t: (t["bad"], t["score"])))
         if best["gap_voice_s"] > 0 and alt and not alt[0]["bad"] and alt[0]["spans"] and alt[0]["gap_voice_s"] < best["gap_voice_s"]: best = alt[0]
@@ -246,7 +314,7 @@ def build(a) -> int:
             u["refit_pieces"] = rw["pieces"]; u["refit_bursts"] = r["bursts"]; u["refit_groups"] = r["ru"]
         mp = out / f"manifest_{tag}.json"; jsave(mp, m2); o = out / f"recut_{tag}"
         subprocess.run([py, str(HERE / "recut_offline.py"), "--manifest", str(mp), "--out", str(o), *flags], check=True, capture_output=True)
-        subprocess.run([py, str(HERE / "dub_gaps.py"), "--manifest", str(o / "recut.manifest.json"), "--ref-manifest", a.base, "--tag", tag, "--out", str(out / "gaps")], check=True, capture_output=True)
+        subprocess.run([py, str(HERE / "dub_gaps.py"), "--manifest", str(o / "recut.manifest.json"), "--ref-manifest", a.ref_manifest or a.base, "--tag", tag, "--out", str(out / "gaps")], check=True, capture_output=True)
         return jload(o / "recut.manifest.json"), jload(out / "gaps" / f"{P['vid']}_{tag}.gaps.json")
     cand = [int(k) for k, v in C.items() if v and not v["bad"]]
     l1_man = jload(P["l1"]); l1_g = jload(pathlib.Path(a.l1_gaps))
@@ -264,8 +332,9 @@ def build(a) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter); ap.add_argument("stage", choices=["plan", "rewrite", "tts", "qa", "build"])
     ap.add_argument("--out", required=True); ap.add_argument("--vid"); ap.add_argument("--l1"); ap.add_argument("--residual"); ap.add_argument("--base"); ap.add_argument("--l1-flags", default="")
-    ap.add_argument("--l1-gaps"); ap.add_argument("--qwen-gpu-layers", type=int, default=0, help="rewrite: Qwen layers on the GPU (-1 = all; CUDA llama.cpp build on PYTHONPATH)")
-    ap.add_argument("--attempts", type=int, default=4, help="rewrite: Qwen attempts per unit (1-4 greedy with feedback, then sampled restarts)")
+    ap.add_argument("--l1-gaps"); ap.add_argument("--ref-manifest", default=None, help="build: dub_gaps LS reference (default --base; face_ref.py output when the base has no video run)"); ap.add_argument("--qwen-gpu-layers", type=int, default=0, help="rewrite: Qwen layers on the GPU (-1 = all; CUDA llama.cpp build on PYTHONPATH)")
+    ap.add_argument("--alts", type=int, default=5, help="rewrite v4: alternatives per Qwen call"); ap.add_argument("--rounds", type=int, default=3, help="rewrite v4: calls per unit (feedback between)")
+    ap.add_argument("--judge-max", type=int, default=3, help="rewrite v4: guard-passing alternatives judged per round")
     a = ap.parse_args()
     return {"plan": plan, "rewrite": rewrite, "tts": tts, "qa": qa, "build": build}[a.stage](a)
 

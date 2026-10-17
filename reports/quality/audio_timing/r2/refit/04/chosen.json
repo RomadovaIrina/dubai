@@ -1,0 +1,79 @@
+{
+ "load_s": 3.0,
+ "qa_s": 1.5,
+ "peak_vram_gib": 0.44,
+ "units": {
+  "5": {
+   "file": "/workspace/dub/runs/refit/04/tts_u05_refit_raw.wav",
+   "take": 0,
+   "seed": 6001927,
+   "temperature": 0.8,
+   "bad": false,
+   "score": 0.033,
+   "spans": [
+    {
+     "word": "the",
+     "start": 0.101,
+     "end": 0.181,
+     "score": 0.998
+    },
+    {
+     "word": "weather",
+     "start": 0.241,
+     "end": 0.523,
+     "score": 0.997
+    },
+    {
+     "word": "is",
+     "start": 0.623,
+     "end": 0.704,
+     "score": 0.97
+    },
+    {
+     "word": "really",
+     "start": 1.146,
+     "end": 1.367,
+     "score": 0.977
+    },
+    {
+     "word": "quite",
+     "start": 1.427,
+     "end": 1.628,
+     "score": 0.975
+    },
+    {
+     "word": "nice",
+     "start": 1.689,
+     "end": 1.95,
+     "score": 0.99
+    },
+    {
+     "word": "isn't",
+     "start": 2.05,
+     "end": 2.251,
+     "score": 0.937
+    },
+    {
+     "word": "it",
+     "start": 2.332,
+     "end": 2.372,
+     "score": 0.988
+    },
+    {
+     "word": "that's",
+     "start": 2.834,
+     "end": 3.015,
+     "score": 0.419
+    },
+    {
+     "word": "great",
+     "start": 3.096,
+     "end": 3.458,
+     "score": 0.77
+    }
+   ],
+   "gap_voice_s": 0,
+   "whisper": "the weather is really quite nice isn't it that's great"
+  }
+ }
+}
