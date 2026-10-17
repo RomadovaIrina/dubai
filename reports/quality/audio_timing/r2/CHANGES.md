@@ -28,3 +28,20 @@ One entry per change: what / why / files / result, commit SHA (the SHA of an ent
 * **Result**: 24 target units; guards + judges passed 13 candidates (v3 + v4), Agent C meaning review kept 4, the timing gate accepted 2: 01 u23
   (gap 0.6 → 0 s) and 04 u05 (0.4 → 0 s; 04 LS frames in gaps 67 → 57). The long residuals (03 u04 / u06, 05 u01) were not fixed by any
   faithful rewrite → video side. Qwen time: 1–24 s per unit.
+
+## 4. Clean bed on 01–05 + residue duck (`s4_bed.md`)
+* **What**: `background_bed.bed_speech_runs` + `mix_background(residue_duck_db)`, runner `--bg-residue-duck-db -15` (default): the bed is lowered
+  only where the separated bed itself sounds like speech while the source speaks and the dub is silent. `bed_ab.py` uses the pipeline's Spleeter
+  path (HDEMUCS reference separated on the fly behind `DUB_ALLOW_NC_BED`, measurement only).
+* **Why**: Spleeter leaked a vocal sound into the bed on 02 (39.0–39.4 s, Silero p 0.99, dub silent) and a consonant onset on 03 (59.3 s).
+* **Result**: voice residue in dub pauses 02 0.45 → 0 s, 03 0.13 → 0.1 s; ambience continuity (bed under source speech − pure ambience) Spleeter
+  −2.7…+0.1 dB vs HDEMUCS −0.5…−8.9 dB; ducked ≤ 0.6 s per video.
+
+## 5. Foreign sounds / clicks / hot cuts: declick stage, gentler duck (`s5_detectors.md`)
+* **What**: `scripts/pilot/declick.py` + runner `--declick on` (default): isolated clicks of the assembled dub voice (audio_stages' detector)
+  repaired in ±1.5 ms (4 kHz low-pass, 0.5 ms crossfades). Runner duck defaults −6 dB / 0.08 s / 0.35 s → **−4 dB / 0.25 s / 0.6 s**
+  (`--bg-duck-attack-s`, `--bg-duck-release-s`). `audio_stages.py` measures the bed as heard (mix − dub at 44.1 kHz) when stems are not kept.
+* **Why**: 7 dub-voice clicks (01: 4 in the raw Chatterbox takes + 2 after atempo, one of them new with r2 at 42.28 s; 05: 1 raw-take click
+  at 41.99 s); 3–19 bed steps of 8–10 dB per video created by the fast duck attack right before each phrase ("pumping").
+* **Result**: dub-voice clicks 7 → 0; mix-created bed steps 03 9 → 1, 04 5 → 0, 05 6 → 2, 02 19 → 11; bed "breathing" 7–8 → 5–6 dB;
+  Whisper WER on the mix unchanged (01 0.019 / 0.022, 05 0.053 / 0.053). Hot cut edges r2 ≤ cand5 on every video.

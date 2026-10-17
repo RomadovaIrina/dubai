@@ -39,10 +39,10 @@ sf.write(sys.argv[2], s["accompaniment"], sr, subtype="FLOAT"); sf.write(sys.arg
 """
 
 
-def sep_spleeter(src, d):
-    env = {**os.environ, "MODEL_PATH": str(BM / "spleeter" / "pretrained_models"), "CUDA_VISIBLE_DEVICES": ""}
-    subprocess.run([SPLEETER_PY, "-c", SPLEETER_CODE, str(src), str(d / "bg_44k.wav"), str(d / "vocals_44k.wav")], check=True, env=env, cwd=str(d))
-    return {"model": "Spleeter 2stems v1.4.0 (bg = accompaniment)"}
+def sep_spleeter(src, d):   # r2: the pipeline's own separator (background_bed.separate_spleeter, scripts/setup_spleeter.sh)
+    import background_bed as bb, shutil
+    tmp = d / "source_44k.wav"; shutil.copy(src, tmp); info = bb.separate_spleeter(tmp, d, time.perf_counter())
+    return {"model": info["model"], "separate_s": info["separate_s"]}
 
 
 def _umx(kind, y, sr):
@@ -118,6 +118,7 @@ def metrics(mix_wav, dub24, norm, speech, dubsp, dur):
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--manifest", required=True); ap.add_argument("--out", required=True); ap.add_argument("--beds", nargs="+", default=["spleeter", "umxhq", "umxse", "roomtone", "hdemucs"])
+    ap.add_argument("--residue-duck-db", type=float, default=0.0, help="background_bed.mix_background residue_duck_db (runner default -15)")
     ap.add_argument("--dub", default=None, help="dub track (24 kHz); default: the manifest work dir's dubbed_24k.wav")
     a = ap.parse_args()
     import background_bed as bb
@@ -135,13 +136,16 @@ def main() -> int:
         elif b == "roomtone": info = sep_roomtone(src, d, speech)
         elif b == "hdemucs":   # comparison only: the reference run's own HDEMUCS stems (read-only, never shipped)
             orig = pathlib.Path("/workspace/dub/artifacts/baseline") / pathlib.Path(man["input"]).stem / "work" / f"work_{pathlib.Path(man['input']).stem}"
-            for f in ("bg_44k.wav", "vocals_44k.wav"):
-                if not (d / f).exists(): (d / f).symlink_to(orig / f)
+            if (orig / "bg_44k.wav").exists():
+                for f in ("bg_44k.wav", "vocals_44k.wav"):
+                    if not (d / f).exists(): (d / f).symlink_to(orig / f)
+            elif not (d / "bg_44k.wav").exists():   # r2: stems not uploaded -> separate again, comparison only (the runner refuses HDEMUCS without this variable)
+                os.environ["DUB_ALLOW_NC_BED"] = "1"; bb.separate_background(pathlib.Path(man["input"]), d, separator="hdemucs"); os.environ.pop("DUB_ALLOW_NC_BED")
             info = {"model": "torchaudio HDEMUCS_HIGH_MUSDB_PLUS (cand5; NO licence: reference only)"}
         sep_s = round(time.perf_counter() - t0, 1)
-        mx = bb.mix_background({"bg": str(d / "bg_44k.wav"), "vocals": str(d / "vocals_44k.wav")}, dub24, speech, dubsp, dur, d)
+        mx = bb.mix_background({"bg": str(d / "bg_44k.wav"), "vocals": str(d / "vocals_44k.wav")}, dub24, speech, dubsp, dur, d, residue_duck_db=a.residue_duck_db)
         m = metrics(mx["wav"], dub24, mx["peak_norm"], speech, dubsp, dur)
-        rows[b] = {**info, "separate_s_cpu": sep_s, "mix": {k: mx[k] for k in ("room_fill", "bg_gain_db", "bed_db_in_dub_pauses", "mix_db_in_dub_pauses", "peak_norm")}, **m}
+        rows[b] = {**info, "separate_s_cpu": sep_s, "mix": {k: mx[k] for k in ("room_fill", "residue_duck", "bg_gain_db", "bed_db_in_dub_pauses", "mix_db_in_dub_pauses", "peak_norm")}, **m}
         print(f"{b:9s} sep {sep_s:6.1f}s | residue risk p {m['residue_speech_prob_risk_mean']} ({m['residue_speech_s_risk']} s of {m['risk_s']}) amb p {m['residue_speech_prob_ambience_mean']} "
               f"| bed dB risk {m['bed_db_risk']} amb {m['bed_db_ambience']} cont {m['continuity_db']} | jump p95 {m['level_jump_p95_db']} | mix dB in pauses {m['mix_db_dub_pauses']} | fill {mx['room_fill'].get('applied')}", flush=True)
     (out / "bed_ab.json").write_text(json.dumps(rows, indent=1)); return 0

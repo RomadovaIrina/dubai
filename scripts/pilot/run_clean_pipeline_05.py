@@ -588,7 +588,7 @@ def align_units_burst(units: list[dict], plans: list[dict], work: pathlib.Path, 
     return out
 
 
-def build_dubbed_track(units: list[dict], duration: float, work: pathlib.Path) -> dict:
+def build_dubbed_track(units: list[dict], duration: float, work: pathlib.Path, declick: bool = False) -> dict:
     import numpy as np
     import soundfile as sf
     n = int(round(duration * TTS_SR)); track = np.zeros(n, dtype=np.float32)
@@ -600,11 +600,15 @@ def build_dubbed_track(units: list[dict], duration: float, work: pathlib.Path) -
     if peak > 0.99:
         track *= 0.99 / peak
     wav24 = work / "dubbed_24k.wav"; sf.write(str(wav24), track, TTS_SR, subtype="PCM_16")
+    dc = None
+    if declick:   # r2 2026-10-17: isolated vocoder / atempo clicks in the dub voice, repaired in +-1.5 ms (declick.py)
+        from declick import declick_file
+        dc = declick_file(str(wav24))
     wav16 = work / "dubbed_16k.wav"; ff(["-i", str(wav24), "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", str(wav16)])
     m4a = work / "dubbed_aac.m4a"; ff(["-i", str(wav24), "-c:a", "aac", "-b:a", "192k", str(m4a)])
     return {"wav24k": str(wav24), "wav16k": str(wav16), "aac": str(m4a), "seconds": round(n / TTS_SR, 3), "sr": TTS_SR,
             "peak_before_norm": round(peak, 4), "speech_seconds": round(sum(u["slot"]["seconds"] for u in units), 3),
-            "non_speech": "silence (original timing preserved)"}
+            "non_speech": "silence (original timing preserved)", "declick": dc}
 
 
 # --------------------------------------------------------------------------------------------------------------
@@ -786,14 +790,22 @@ def main() -> int:
                                                                    "(A/B 2026-10-12: translation 18x faster, outputs not identical to the CPU)")
     ap.add_argument("--audio-policy", choices=sorted(AUDIO_POLICIES), default="r2", help="audio-stage flag bundle (explicit flags win): r2 (default since 2026-10-17) = cand5 + "
                     "--sentence-flow-gap 0.2 --spread pauses --fill-slowdown 0.875; cand5 = --phrase-cut acoustic --long-pause-func 1.2 --cut-fade adaptive --tts-gap-qa on; legacy = the plain flag defaults")
+    ap.add_argument("--declick", choices=["on", "off"], default="on", help="repair isolated impulsive clicks of the assembled dub voice in +-1.5 ms (declick.py; r2 2026-10-17: "
+                    "Chatterbox vocoder clicks 01 / 05, atempo splice clicks 01)")
     ap.add_argument("--bed-separator", choices=["spleeter", "hdemucs"], default="spleeter", help="--background on: stem separator of the bed. spleeter = Deezer Spleeter 2stems (MIT code, "
                     "weights = MIT repo release asset; own TF venv, scripts/setup_spleeter.sh; default since 2026-10-17); hdemucs = torchaudio HDEMUCS_HIGH_MUSDB_PLUS, weights WITHOUT a licence: "
                     "reference only, refused unless DUB_ALLOW_NC_BED=1")
     ap.add_argument("--background", choices=["on", "off"], default="on",
                     help="final mix: on = source background bed (--bed-separator accompaniment stem, original voice/bed balance, ducked under the dub) under the dubbed voice; "
                          "off = dubbed voice over digital silence (previous behaviour). LatentSync / speech gate always use the clean dubbed voice. Default on since 2026-10-12 (dead air 16-54 s -> 0-6 s, WER unchanged)")
-    ap.add_argument("--bg-duck-db", type=float, default=-6.0, help="--background on: bed attenuation while the dub speaks (dB)")
+    ap.add_argument("--bg-duck-db", type=float, default=-4.0, help="--background on: bed attenuation while the dub speaks (dB). r2 2026-10-17: -4 (was -6): with the clean Spleeter bed "
+                    "the duck only keeps the dub in front; -6 made the bed 'breathe' 7-8 dB between dub phrases (Whisper WER on the mix unchanged at -4)")
+    ap.add_argument("--bg-duck-attack-s", type=float, default=0.25, help="--background on: duck ramp before a dub onset (r2: 0.25, was 0.08: the fast ramp made 8-10 dB bed steps "
+                    "in the pause right before each phrase, 03: 9 -> 1)")
+    ap.add_argument("--bg-duck-release-s", type=float, default=0.6, help="--background on: duck release after a dub offset (r2: 0.6, was 0.35)")
     ap.add_argument("--bg-src-duck-db", type=float, default=0.0, help="--background on: extra bed attenuation where the source speaks and the dub is silent (Demucs voice residue); 0 = off")
+    ap.add_argument("--bg-residue-duck-db", type=float, default=-15.0, help="--background on: bed attenuation where the BED itself sounds like speech (Silero on the "
+                    "separated stem) while the source speaks and the dub is silent = voice leak of the separator (r2 2026-10-17: Spleeter 02 39.0-39.4 s); 0 = off")
     ap.add_argument("--bg-offset-db", type=float, default=0.0, help="--background on: bed level relative to the original voice/background balance (dB)")
     ap.add_argument("--stop-after", choices=["none", "audio"], default="none", help="audio = stop after the dubbed track (audio-only candidate: manifest + dubbed_24k/16k.wav, no LatentSync)")
     ap.add_argument("--min-ls-frames", type=int, default=25, help="VALID_FACE runs shorter than this are passed through")
@@ -982,7 +994,7 @@ def main() -> int:
             else:
                 align_units(units, duration, work); man["alignment"] = {"mode": "slot"}
         with timed(times, "dubbed_track"):
-            man["dubbed_track"] = build_dubbed_track(units, duration, work)
+            man["dubbed_track"] = build_dubbed_track(units, duration, work, declick=a.declick == "on")
         man["units"] = units
         mux_aac = pathlib.Path(man["dubbed_track"]["aac"]); man["background"] = {"enabled": False}
         if a.background == "on":   # only the MUXED audio changes; dubbed_16k (LatentSync, speech gate) stays the clean voice
@@ -992,7 +1004,8 @@ def main() -> int:
             with timed(times, "background_mix"):
                 dub_vad = run_vad(pathlib.Path(man["dubbed_track"]["wav16k"]))
                 mix = mix_background(sep, pathlib.Path(man["dubbed_track"]["wav24k"]), [(v["start"], v["end"]) for v in speech], [(v["start"], v["end"]) for v in dub_vad],
-                                     duration, work, bg_offset_db=a.bg_offset_db, duck_db=a.bg_duck_db, src_duck_db=a.bg_src_duck_db)
+                                     duration, work, bg_offset_db=a.bg_offset_db, duck_db=a.bg_duck_db, src_duck_db=a.bg_src_duck_db,
+                                     residue_duck_db=a.bg_residue_duck_db, attack_s=a.bg_duck_attack_s, release_s=a.bg_duck_release_s)
             man["background"] = {"enabled": True, "separation": sep, "mix": mix}; mux_aac = pathlib.Path(mix["aac"])
             print(f"  [background] bed gain {mix['bg_gain_db']:+.1f} dB, duck {mix['duck_db']} dB, separation {sep['separate_s']}s (+load {sep['load_s']}s), bed in dub pauses {mix['bed_db_in_dub_pauses']} dBFS", flush=True)
         print(f"  [align] ratios tts/slot: " + " ".join(f"{u['alignment']['ratio_tts_to_slot']:.2f}" for u in units), flush=True)
