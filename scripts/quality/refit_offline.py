@@ -21,6 +21,7 @@ import numpy as np
 HERE = pathlib.Path(__file__).resolve().parent
 for d in ("pilot", "quality"): sys.path.insert(0, str(HERE.parent / d))
 SEED = 1247; SALT = 60; VRAM_GB = 6.0
+DANGLING_END = frozenset("and or but so to of for in on at by with from as that which who the a an my our your their is are was were will would can could should must let".split())
 
 
 def jload(p): return json.loads(pathlib.Path(p).read_text())
@@ -90,6 +91,13 @@ def check_pieces(r: dict, new: list) -> str | None:
         a_, b_ = tok(new[k]), tok(new[k + 1])
         for n in (4, 3):
             if len(a_) >= n and len(b_) >= n and any(a_[i:i + n] == b_[:n] for i in range(len(a_) - n + 1)): return f"pieces {k + 1} and {k + 2} repeat the words '{' '.join(b_[:n])}'"
+    for k, (old, nw) in enumerate(zip(r["pieces"], new)):   # r2 (human review 10-16: 03 u08 "... and I wish"): a piece keeps its sentence-end role
+        if not r["short"].get(str(k)): continue
+        nw = " ".join(nw.split()); end_old = old.rstrip()[-1:] in ".?!"; last = k == len(new) - 1
+        if (end_old or last) and nw.rstrip()[-1:] not in ".?!": return f"piece {k + 1} must end the sentence like \"{old}\" does (with a full stop / ? / !)"
+        if not end_old and not last and nw.rstrip()[-1:] in ".?!": return f"piece {k + 1} must not end the sentence: the sentence continues with piece {k + 2}"
+        lw = tok(nw)[-1:] or [""]
+        if (end_old or last) and (lw[0] in DANGLING_END or re.search(r"\b(i|we|you) (wish|want|hope|think)[.?!]?$", nw.lower())): return f"piece {k + 1} ends on a dangling word '{lw[0]}'"
     old_t, new_t = " ".join(r["pieces"]), " ".join(" ".join(x.split()) for x in new)
     ac = appended_clause(old_t, new_t)
     if ac: return ac + " (translate the Russian words of the SHORT piece instead of adding a clause)"
@@ -116,12 +124,15 @@ def rewrite(a) -> int:
     from pilot_common import MODELS
     from tts_burst import REWRITE_SYSTEM, faithful_check
     f = sorted(glob.glob(str(MODELS / "qwen2.5-7b-instruct-gguf" / "*q8_0*.gguf")))[0]; th = int(os.environ.get("DUB_THREADS", "6"))
-    t0 = time.perf_counter(); llm = Llama(model_path=f, n_ctx=4096, n_threads=th, n_threads_batch=th, n_gpu_layers=0, verbose=False); load_s = time.perf_counter() - t0
+    t0 = time.perf_counter(); llm = Llama(model_path=f, n_ctx=4096, n_threads=th, n_threads_batch=th, n_gpu_layers=a.qwen_gpu_layers, verbose=False, seed=SEED); load_s = time.perf_counter() - t0
     res = []
     for r in P["units"]:
         msgs = [{"role": "system", "content": REWRITE_SYSTEM}, {"role": "user", "content": rewrite_prompt(r)}]; log = []; accepted = None; t1 = time.perf_counter()
-        for att in range(4):
-            raw = llm.create_chat_completion(msgs, max_tokens=320, temperature=0.0)["choices"][0]["message"]["content"]
+        first = list(msgs)
+        for att in range(a.attempts):
+            # r2: attempts 1-4 = greedy + feedback (v3 behaviour); later attempts restart from the plain prompt with sampling (GPU Qwen: ~1 s per call)
+            if att >= 4: msgs = list(first)
+            raw = llm.create_chat_completion(msgs, max_tokens=320, temperature=0.0 if att < 4 else 0.7, seed=SEED + att)["choices"][0]["message"]["content"]
             txt = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip()); m_ = re.search(r"\{.*\}", txt, re.S)
             try:   # Qwen sometimes answers one object per piece: {"2": "..."}, {"3": "..."} -> merge every flat {...}
                 obj = {}
@@ -253,7 +264,8 @@ def build(a) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter); ap.add_argument("stage", choices=["plan", "rewrite", "tts", "qa", "build"])
     ap.add_argument("--out", required=True); ap.add_argument("--vid"); ap.add_argument("--l1"); ap.add_argument("--residual"); ap.add_argument("--base"); ap.add_argument("--l1-flags", default="")
-    ap.add_argument("--l1-gaps")
+    ap.add_argument("--l1-gaps"); ap.add_argument("--qwen-gpu-layers", type=int, default=0, help="rewrite: Qwen layers on the GPU (-1 = all; CUDA llama.cpp build on PYTHONPATH)")
+    ap.add_argument("--attempts", type=int, default=4, help="rewrite: Qwen attempts per unit (1-4 greedy with feedback, then sampled restarts)")
     a = ap.parse_args()
     return {"plan": plan, "rewrite": rewrite, "tts": tts, "qa": qa, "build": build}[a.stage](a)
 
