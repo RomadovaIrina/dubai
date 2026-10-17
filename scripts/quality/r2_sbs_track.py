@@ -15,9 +15,12 @@ def main():
     a = ap.parse_args()
     A, B = (int(x) for x in a.frames.split(":")); lm = np.load(a.lm)["lm"].astype(np.float64)
     iod = float(np.nanmedian(np.linalg.norm(lm[A:B, 33] - lm[A:B, 263], axis=1))); w, h = int(1.3 * iod) // 2 * 2, int(1.05 * iod) // 2 * 2
+    import av
     caps = []
-    for p in a.panel:
-        lab, path = p.split("=", 1); c = cv2.VideoCapture(path); c.set(cv2.CAP_PROP_POS_FRAMES, A); caps.append((lab, c))
+    for p in a.panel:   # sequential decode (OpenCV seeking is not frame-exact on these files)
+        lab, path = p.split("=", 1); c = av.open(path); it = (f.to_ndarray(format="bgr24") for f in c.decode(c.streams.video[0]))
+        for _ in range(A): next(it)
+        caps.append((lab, it))
     W, H = int(w * a.zoom), int(h * a.zoom); out = pathlib.Path(a.out); out.parent.mkdir(parents=True, exist_ok=True); tmp = out.with_name(".v_" + out.name)
     rate = a.fps / (2 if a.half else 1)
     enc = subprocess.Popen(["ffmpeg", "-loglevel", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W * len(caps)}x{H}", "-r", str(rate), "-i", "-",
@@ -26,8 +29,8 @@ def main():
         L = lm[t]; c = 0.5 * (L[1] + 0.5 * (L[61] + L[291])) if np.isfinite(L[0, 0]) else c
         x0, y0 = int(round(c[0] - w / 2)), int(round(c[1] - h / 2)); row = []
         for lab, cap in caps:
-            ok, f = cap.read()
-            if not ok: f = np.zeros((2000, 2000, 3), np.uint8)
+            f = next(cap, None)
+            if f is None: f = np.zeros((2000, 2000, 3), np.uint8)
             f = cv2.copyMakeBorder(f, h, h, w, w, cv2.BORDER_CONSTANT); crop = f[y0 + h:y0 + 2 * h, x0 + w:x0 + 2 * w]
             z = cv2.resize(crop, (W, H), interpolation=cv2.INTER_LANCZOS4)
             if a.grid and np.isfinite(L[0, 0]):

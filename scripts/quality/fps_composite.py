@@ -107,6 +107,10 @@ def main() -> int:
     ap.add_argument("--register", choices=["off", "rigid", "sim", "sim_ring"], default="off", help="r2: move the LatentSync layer from its own head pose to the shown source frame's: "
                     "rigid = similarity on MediaPipe eyes / nose bridge / nose tip (layer pose -> true-time pose); sim = rigid + DIS-flow RANSAC similarity on the stable lower-face "
                     "parts vs the source frame (composite_register.py); sim_ring = sim + smooth flow refinement on the paste ring")
+    ap.add_argument("--register-prior", choices=["landmarks", "image"], default="landmarks", help="r2: first (rigid) step of --register: landmark similarity, or "
+                    "image = DIS + RANSAC similarity of the upper face between the SOURCE frame the LatentSync layer was made from (j[m]) and the shown frame "
+                    "(same camera image both sides: no detector lag on fast motion)")
+    ap.add_argument("--small-face-iod", type=float, default=80.0, help="r2: below this inter-ocular distance the registration flow runs at full resolution")
     a = ap.parse_args()
     t_all = time.perf_counter(); times = {}
     man = json.loads(pathlib.Path(a.manifest).read_text()); work = pathlib.Path(man["work_dir"]); src = man["input"]
@@ -141,9 +145,27 @@ def main() -> int:
     if a.master_timing:
         tau = np.asarray(json.loads(pathlib.Path(a.master_timing).read_text())["tau_s"], np.float64)[:nm]
         mu_arr = np.interp(tk, tau, np.arange(len(tau), dtype=np.float64))
+        jsrc = np.asarray(json.loads(pathlib.Path(a.master_timing).read_text())["j"], np.int64)[:nm]   # master frame m = source frame jsrc[m]
         times["geometry_minus_audio_index_mean"] = round(float(np.mean(mu_arr - mpos)), 3)
     import composite_register as creg
     RIG_POSE = [33, 133, 362, 263, 168, 6, 197, 4]   # eyes / nose bridge / nose tip: the layer's head pose
+    import anchor_filters as af
+    def dis_for(iod):
+        key = "dis_full" if iod < a.small_face_iod else "dis"
+        if not hasattr(local, key): setattr(local, key, creg.Dis(0, 5) if key == "dis_full" else creg.Dis(1, 5))
+        return getattr(local, key)
+    def src_rigid(js, k, lm_src):
+        """similarity mapping source frame js -> source frame k (full-frame coords), from DIS on the upper face (anchor_filters' region)."""
+        if js == k: return np.array([[1, 0, 0], [0, 1, 0]], np.float64)
+        if not np.isfinite(lm_src).all(): return None
+        iod = float(np.linalg.norm(lm_src[33] - lm_src[263])); msk, (x0, y0, x1, y1) = af._region_mask(lm_src, H, W, pad=int(0.6 * iod))
+        X0, Y0, X1, Y1 = max(0, x0 - 16), max(0, y0 - 16), min(W, x1 + 16), min(H, y1 + 16)
+        Fr = dis_for(iod)(creg.gray(S[js][Y0:Y1, X0:X1]), creg.gray(S[k][Y0:Y1, X0:X1]))
+        ys, xs = np.nonzero(msk[::2, ::2]); ys = ys * 2 + (y0 - Y0); xs = xs * 2 + (x0 - X0)
+        if len(xs) < 12: return None
+        p0 = np.stack([xs + X0, ys + Y0], 1).astype(np.float32); p1 = p0 + Fr[ys, xs]
+        Mj, inl = cv2.estimateAffinePartial2D(p0, p1, method=cv2.RANSAC, ransacReprojThreshold=0.5, maxIters=2000, confidence=0.995)
+        return Mj if Mj is not None and float(inl.mean()) > 0.3 else None
     def lerp(arr, m):
         m0 = int(np.clip(math.floor(m), 0, nm - 1)); m1 = min(m0 + 1, nm - 1); al = float(m - math.floor(m))
         if not (np.isfinite(arr[m0]).all() and np.isfinite(arr[m1]).all()): return arr[m0] if np.isfinite(arr[m0]).all() else arr[m1]
@@ -182,10 +204,17 @@ def main() -> int:
         if a.register != "off":
             pose_l = mp[m0 if (al < 0.5 or wm[m1] <= 0) else m1] if a.retime == "nearest" else lerp(mp, m); pose_t = lerp(mp, mu)
             if np.isfinite(pose_l[RIG_POSE]).all() and np.isfinite(pose_t[RIG_POSE]).all():
-                off = np.array([xa, ya], np.float64); Mr, _ = cv2.estimateAffinePartial2D((pose_l[RIG_POSE] - off).astype(np.float32), (pose_t[RIG_POSE] - off).astype(np.float32), method=cv2.LMEDS)
+                off = np.array([xa, ya], np.float64); Mr = None
+                if a.register_prior == "image":   # layer pose = source frame(s) jsrc[m0] / jsrc[m1]; blend the two similarities by the retime weight
+                    if a.retime == "nearest": Mr = src_rigid(int(jsrc[m0 if (al < 0.5 or wm[m1] <= 0) else m1]), k, pose_l)
+                    else:
+                        M0 = src_rigid(int(jsrc[m0]), k, mp[m0]); M1 = src_rigid(int(jsrc[m1]), k, mp[m1]) if al >= 0.04 else M0
+                        Mr = None if (M0 is None or M1 is None) else (1 - al) * M0 + al * M1
+                    if Mr is not None: Mr = np.concatenate([Mr[:, :2], (Mr[:, :2] @ off + Mr[:, 2] - off)[:, None]], 1)   # -> crop coords
+                if Mr is None: Mr, _ = cv2.estimateAffinePartial2D((pose_l[RIG_POSE] - off).astype(np.float32), (pose_t[RIG_POSE] - off).astype(np.float32), method=cv2.LMEDS)
                 if Mr is not None: Lk = cv2.warpAffine(Lk, Mr, (xb - xa, yb - ya), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
                 if a.register in ("sim", "sim_ring"):
-                    if not hasattr(local, "dis"): local.dis = creg.Dis(1, 5)
+                    local.dis = dis_for(creg.face_axes(pose_t)[2])
                     Lt = pose_t - off; iod = creg.face_axes(pose_t)[2]; gs = creg.gray(S[k][ya:yb, xa:xb]); gl = cv2.cvtColor(np.clip(Lk, 0, 255).astype(np.uint8), cv2.COLOR_BGR2GRAY)
                     stab, lip = creg.stable_mask(Lt, (yb - ya, xb - xa), iod, 0.12)
                     F = local.dis(gs, gl); ys, xs = np.nonzero(stab)
