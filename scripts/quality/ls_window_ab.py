@@ -190,7 +190,7 @@ def main() -> int:
     ap.add_argument("--dump-stages", action="store_true", help="also write <tag>_raw.mp4 (raw LatentSync frames) and <tag>_precomp.mp4 (after CodeFormer, before the mouth composite)")
     ap.add_argument("--anchor-filter", default=None, help="round 2: temporal filter of the MediaPipe landmarks that drive LatentSync's crop / affine AND the mouth-mask "
                     "bbox (scripts/pilot/anchor_filters.py spec: raw | box:K | flow:S | kalman:Q:R | euro:C:B | sub:N:S); sets --ls-landmark-smooth 0 --mask-smooth 0")
-    ap.add_argument("--mask-track", choices=["dets", "head"], default="dets", help="head: mouth-mask boxes locked to the rigid head motion (anchor_filters.head_locked_boxes: "
+    ap.add_argument("--mask-track", choices=["dets", "head", "rawbox3"], default="dets", help="rawbox3: clean0's mask (raw MediaPipe boxes, centred +-3 average) whatever the crop; head: mouth-mask boxes locked to the rigid head motion (anchor_filters.head_locked_boxes: "
                     "float box in head-stabilised coordinates, sides / top smoothed slowly, chin edge lightly); only the composite mask changes, not the crop")
     ap.add_argument("--rigid", default=None, help="rigid head motion npz of the full master (anchor_study.py); computed if missing (flow / sub filters)")
     ap.add_argument("--anchor-round", choices=["on", "off"], default="on", help="off: LatentSync's affine uses the sub-pixel anchors (upstream np.round removed)")
@@ -230,6 +230,7 @@ def main() -> int:
     if a.face_stack == "mediapipe":   # the clean stack's own VIDEO-mode pass over the FULL master (= what a full clean run replays), sliced
         mp_lm = np.load(cfs.run_mediapipe(work_b / "master_25fps.mp4", work_b / "master_mediapipe.npz"))["lm"]
         H_, W_ = frames[0].shape[:2]; router = cfs.MediaPipeRouter(50, 80)
+        mp_lm_raw = mp_lm
         if a.anchor_filter:   # round 2: the corrected trajectory drives the crop / affine, the verify pass and the mask bbox alike
             import anchor_filters as af
             Hrig = None
@@ -247,6 +248,12 @@ def main() -> int:
             l106 = np.stack([d[1] if d[1] is not None else np.full((106, 2), np.nan, np.float32) for d in dets_all]).astype(np.float64)
             hb = af.head_locked_boxes(l106, Hrig)
             dets_all = [(tuple(float(v) for v in hb[i]) if d[0] is not None and np.isfinite(hb[i, 0]) else d[0], d[1]) for i, d in enumerate(dets_all)]
+            a.mask_smooth = 0
+        elif a.mask_track == "rawbox3":   # crossover arm: clean0's mask boxes with any crop
+            raw_d = cfs.ls_detections(mp_lm_raw, W_, H_, calib=True); rb = np.array([d[0] if d[0] is not None else (np.nan,) * 4 for d in raw_d], np.float64); sb = rb.copy()
+            for i in range(len(rb)):
+                if np.isfinite(rb[i, 0]): sb[i] = np.nanmean(rb[max(0, i - 3):i + 4], axis=0)
+            dets_all = [(tuple(float(v) for v in sb[i]) if d[0] is not None and np.isfinite(sb[i, 0]) else d[0], d[1]) for i, d in enumerate(dets_all)]
             a.mask_smooth = 0
         prep = WindowPrep.__new__(WindowPrep); prep.master = None; prep.frames = frames; prep.times = {}
         prep.router_rows = [router.row(f if np.isfinite(f[0, 0]) else None) for f in mp_lm[f0:f1]]; prep.ls_dets = dets_all[f0:f1]

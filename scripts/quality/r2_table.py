@@ -10,7 +10,8 @@ ARM_DOC = {"clean0": "clean0 (box ±2 anchors, mask ±3, rounded anchors, fp16 a
            "flow4": "flow-driven anchors (sigma 4)", "flow4nr": "flow + sub-pixel", "flow4nr32": "flow-driven + sub-pixel + fp32",
            "kal": "Kalman CV+RTS (q5, r0.5)", "kalnr32": "Kalman + sub-pixel + fp32", "sub3nr32": "MediaPipe every 3rd frame + flow track + sub-pixel + fp32",
            "wrap": "NO generation, clean0 geometry (crop -> paste only)", "wrapnr": "no generation, sub-pixel", "wrap32": "no generation, fp32",
-           "wrapnr32": "NO generation, sub-pixel + fp32", "wrapflownr32": "no generation, flow + sub-pixel + fp32", "c0nr": "clean0 + sub-pixel"}
+           "wrapnr32": "NO generation, sub-pixel + fp32", "wrapflownr32": "no generation, flow + sub-pixel + fp32", "c0nr": "clean0 + sub-pixel",
+           "flow4nr32hm": "flow-driven + sub-pixel + fp32 + head-locked mouth-mask boxes"}
 
 
 def g(d, *ks):
@@ -55,6 +56,25 @@ def main():
            "inside the composite mask), px at master resolution; abs = |d_t|; corr = corr of d_x with the high-passed rigid head displacement; mask vs head = composite ellipse centre motion minus the rigid head motion (px/frame); upper = sanity "
            "(source region, flow noise floor). lf shear (lowerface shear mean / shear95) / lf jerk / mouth resid / sharp = common metric v4 ratios vs the master window. LS s/min = LatentSync seconds per "
            "minute of LS frames (CPU shared with evals; for ranking only).", ""]
+    # cross-window summary: nose-base slide mean (share of steps > 0.3 px) per arm and window, + SyncNet dub-only
+    wins = sorted(rows); arms = [k for k in ARM_DOC if any(r["arm"] == k for rs in rows.values() for r in rs)]
+    out += ["## Summary: nose-base slide px mean (steps > 0.3 px) per window", "",
+            "| arm | " + " | ".join(f"{v} {w}" for v, w in wins) + " |", "|---|" + "---|" * len(wins)]
+    for arm in arms:
+        cells = []
+        for k in wins:
+            r = next((r for r in rows[k] if r["arm"] == arm), None)
+            cells.append("" if r is None else f"{f(r['nose_slide_mean'])} ({f(r['jump03_pct'],1)} %)")
+        out.append(f"| {arm} | " + " | ".join(cells) + " |")
+    out += ["", "## Summary: SyncNet dub-only (AV offset) / composite-mask centre vs head px (mean)", "",
+            "| arm | " + " | ".join(f"{v} {w}" for v, w in wins) + " |", "|---|" + "---|" * len(wins)]
+    for arm in arms:
+        cells = []
+        for k in wins:
+            r = next((r for r in rows[k] if r["arm"] == arm), None)
+            cells.append("" if r is None else f"{f(r['sync_dub'],2)} ({f(r['av_dub'])}) / {f(r['mask_resid'],2)}")
+        out.append(f"| {arm} | " + " | ".join(cells) + " |")
+    out.append("")
     for (vid, w), rs in sorted(rows.items()):
         order = list(ARM_DOC); rs.sort(key=lambda r: order.index(r["arm"]) if r["arm"] in order else 99)
         out += [f"## {vid} {w} (IOD {rs[0]['iod']} px)", "",
