@@ -43,23 +43,23 @@ def main():
             "nose_abs_mean": g(nb, "abs_px", "mean"), "nose_abs_p95": g(nb, "abs_px", "p95"), "cheek_slide_mean": g(ch, "slide_px", "mean"),
             "corr_shake": nb.get("corr_shake_x"), "upper_abs": g(s, "regions", "upper", "abs_px", "mean"), "iod": s.get("iod_px"),
             "sync_dub": g(sy, "dub_only", "conf"), "av_dub": g(sy, "dub_only", "av_offset"), "sync_mix": g(sy, "mix", "conf"),
-            "shear": g(v4, "all", "shear", "ratio"), "lf_jerk": g(v4, "all", "jerk", "lowerface", "ratio"), "mouth_resid": g(v4, "all", "resid", "mouth", "ratio"),
+            "shear": g(v4, "all", "shear", "lowerface", "ratio"), "shear95": g(v4, "all", "shear95", "lowerface", "ratio"), "lf_jerk": g(v4, "all", "jerk", "lowerface", "ratio"), "mouth_resid": g(v4, "all", "resid", "mouth", "ratio"),
             "mouth_sharp": g(v4, "all", "sharp", "mouth", "ratio"),
             "ls_s": ls_s, "ls_s_per_ls_min": round(60 * ls_s / (ls_frames / 25), 1) if ls_s and ls_frames else None})
     out = ["# Round 2 stage 1 — lower-face position arms (25 fps windows)", "",
            "slide = |d_t − d_(t−1)| of the nose-base (alae / nostrils / subnasale / philtrum top) displacement output vs master on the same frame (DIS flow, "
            "inside the composite mask), px at master resolution; abs = |d_t|; corr = corr of d_x with the high-passed rigid head displacement; upper = sanity "
-           "(source region, flow noise floor). shear / lf jerk / mouth resid / sharp = common metric v4 ratios vs the master window. LS s/min = LatentSync seconds per "
+           "(source region, flow noise floor). lf shear (lowerface shear mean / shear95) / lf jerk / mouth resid / sharp = common metric v4 ratios vs the master window. LS s/min = LatentSync seconds per "
            "minute of LS frames (CPU shared with evals; for ranking only).", ""]
     for (vid, w), rs in sorted(rows.items()):
         order = list(ARM_DOC); rs.sort(key=lambda r: order.index(r["arm"]) if r["arm"] in order else 99)
         out += [f"## {vid} {w} (IOD {rs[0]['iod']} px)", "",
-                "| arm | nose slide mean / p95 | slide x | nose abs mean / p95 | cheek slide | corr shake | upper | SyncNet dub / mix (AV) | shear | lf jerk | mouth resid | sharp | LS s/min |",
+                "| arm | nose slide mean / p95 | slide x | nose abs mean / p95 | cheek slide | corr shake | upper | SyncNet dub / mix (AV) | lf shear / p95 | lf jerk | mouth resid | sharp | LS s/min |",
                 "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
         for r in rs:
             out.append(f"| {r['arm']} | {f(r['nose_slide_mean'])} / {f(r['nose_slide_p95'])} | {f(r['nose_slide_x_mean'])} | {f(r['nose_abs_mean'])} / {f(r['nose_abs_p95'])} | "
                        f"{f(r['cheek_slide_mean'])} | {f(r['corr_shake'],2)} | {f(r['upper_abs'])} | {f(r['sync_dub'],2)} / {f(r['sync_mix'],2)} ({f(r['av_dub'])}) | "
-                       f"{f(r['shear'],2)} | {f(r['lf_jerk'],2)} | {f(r['mouth_resid'],2)} | {f(r['mouth_sharp'],2)} | {f(r['ls_s_per_ls_min'],0)} |")
+                       f"{f(r['shear'],2)} / {f(r['shear95'],2)} | {f(r['lf_jerk'],2)} | {f(r['mouth_resid'],2)} | {f(r['mouth_sharp'],2)} | {f(r['ls_s_per_ls_min'],0)} |")
         out.append("")
     out += ["Arms: " + "; ".join(f"`{k}` = {v}" for k, v in ARM_DOC.items()), ""]
     pathlib.Path(a.out).write_text("\n".join(out)); pathlib.Path(a.json).write_text(json.dumps({f"{k[0]}_{k[1]}": v for k, v in rows.items()}, indent=1))
