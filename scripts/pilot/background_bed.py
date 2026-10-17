@@ -2,8 +2,13 @@
 and then there is nothing"). Before this module the muxed audio was the dubbed voice ONLY: every non-speech moment of the video (room tone,
 ambience, music, steps, water ...) was digital silence, so each pause between dubbed phrases sounded like a drop-out.
 
-    separate_background()  Hybrid Demucs (torchaudio HDEMUCS_HIGH_MUSDB_PLUS, no new dependency) splits the source audio into
-                           vocals + accompaniment; the background bed = drums + bass + other (44.1 kHz stereo). ~1-2 s GPU per video minute.
+    separate_background()  splits the source audio into vocals + accompaniment (44.1 kHz stereo); the accompaniment is the bed.
+                           separator="spleeter" (default since 2026-10-17, Agent C r2): Deezer Spleeter 2stems, MIT code, weights = release
+                           asset of the MIT repo (reports/quality/audio_timing/LICENSES.md), run in its own TensorFlow venv on the CPU
+                           (scripts/setup_spleeter.sh; ~8 s per 90 s video). 03 A/B (bed_p1.md): no detectable voice residue in dub pauses,
+                           ambience level continuous under the source speech (-0.1 dB vs HDEMUCS -3.0 dB).
+                           separator="hdemucs": torchaudio HDEMUCS_HIGH_MUSDB_PLUS (bg = drums + bass + other), weights WITHOUT a licence:
+                           non-commercial reference only, refused unless DUB_ALLOW_NC_BED=1.
     mix_background()       final = dubbed voice + background bed. The bed keeps its ORIGINAL balance against the voice (bed gain = dubbed voice
                            level - original vocal level, both measured inside their own speech), is ducked softly while the dub speaks
                            (masks residual source-voice leakage, keeps the dub in front) and is never gated, so pauses keep the real ambience.
@@ -15,6 +20,7 @@ Only the MUXED audio changes: LatentSync, the speech gate, the TTS QA and the du
 """
 from __future__ import annotations
 
+import os
 import pathlib
 import subprocess
 import time
@@ -26,6 +32,16 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 DEMUCS_WEIGHTS = ROOT / "models" / "demucs" / "hdemucs_high_trained.pt"   # scripts/download_models.sh; else torchaudio downloads it to the torch hub cache
 SEP_SR = 44100
 SOURCES = ["drums", "bass", "other", "vocals"]
+SPLEETER_PY = pathlib.Path(os.environ.get("DUB_SPLEETER_PY", "/workspace/dub/venv-spleeter/bin/python"))   # scripts/setup_spleeter.sh
+SPLEETER_MODELS = ROOT / "models" / "spleeter" / "pretrained_models"                                            # 2stems/ (sha256-checked release asset)
+SPLEETER_CODE = r"""
+import os, sys, time, numpy as np, soundfile as sf, tensorflow as tf
+n = int(os.environ.get("DUB_THREADS", "8")); tf.config.threading.set_intra_op_parallelism_threads(n); tf.config.threading.set_inter_op_parallelism_threads(1)
+from spleeter.separator import Separator
+y, sr = sf.read(sys.argv[1], dtype="float32"); assert sr == 44100
+t0 = time.perf_counter(); sep = Separator("spleeter:2stems", multiprocess=False); s = sep.separate(y); t1 = time.perf_counter()
+sf.write(sys.argv[2], s["accompaniment"], sr, subtype="FLOAT"); sf.write(sys.argv[3], s["vocals"], sr, subtype="FLOAT"); print("SEPARATE_S", round(t1 - t0, 3))
+"""
 
 
 def ff(args: list[str]) -> None:
@@ -81,11 +97,35 @@ def _separate(model, mix, device: str, seg_s: float = 10.0, overlap: float = 0.1
     return out * sd + mu
 
 
-def separate_background(src: pathlib.Path, work: pathlib.Path, device: str = "cuda") -> dict:
-    """Source audio -> bg_44k.wav (drums+bass+other, stereo) and vocals_44k.wav (stereo). Returns paths + timings + levels."""
-    import torch
+def separate_spleeter(wav: pathlib.Path, work: pathlib.Path, t0: float) -> dict:
+    """Spleeter 2stems in its own venv (CPU, TensorFlow): bg = accompaniment, vocals = vocals."""
+    if not SPLEETER_PY.exists() or not (SPLEETER_MODELS / "2stems" / "model.index").exists():
+        raise RuntimeError(f"Spleeter not set up ({SPLEETER_PY}, {SPLEETER_MODELS}/2stems): run scripts/setup_spleeter.sh")
+    p_bg, p_voc = work / "bg_44k.wav", work / "vocals_44k.wav"
+    env = {**os.environ, "MODEL_PATH": str(SPLEETER_MODELS), "CUDA_VISIBLE_DEVICES": "", "TF_CPP_MIN_LOG_LEVEL": "2"}
+    for k in ("PYTHONPATH", "VIRTUAL_ENV", "PYTHONHOME"): env.pop(k, None)
+    r = subprocess.run([str(SPLEETER_PY), "-I", "-c", SPLEETER_CODE, str(wav), str(p_bg), str(p_voc)], env=env, cwd=str(work), capture_output=True, text=True)
+    if r.returncode != 0:
+        raise RuntimeError(f"Spleeter failed (rc {r.returncode}): {r.stderr[-800:]}")
+    sep_s = float(next((ln.split()[1] for ln in r.stdout.splitlines() if ln.startswith("SEPARATE_S")), "nan"))
+    y, _ = sf.read(str(wav), dtype="float32"); bg, _ = sf.read(str(p_bg), dtype="float32"); voc, _ = sf.read(str(p_voc), dtype="float32"); wav.unlink()
+    total = time.perf_counter() - t0
+    return {"model": "Spleeter 2stems v1.4.0 (bg = accompaniment; MIT code, weights = MIT repo release asset)", "weights": str(SPLEETER_MODELS / "2stems"),
+            "bg": str(p_bg), "vocals": str(p_voc), "seconds": round(len(y) / SEP_SR, 3), "load_s": round(max(0.0, total - sep_s), 3), "separate_s": round(sep_s, 3),
+            "total_s": round(total, 3), "source_db": round(_db(y.mean(1)), 2), "vocals_db": round(_db(voc.mean(1)), 2), "bg_db": round(_db(bg.mean(1)), 2)}
+
+
+def separate_background(src: pathlib.Path, work: pathlib.Path, device: str = "cuda", separator: str = "spleeter") -> dict:
+    """Source audio -> bg_44k.wav (accompaniment, stereo) and vocals_44k.wav (stereo). Returns paths + timings + levels."""
     t0 = time.perf_counter()
     wav = work / "source_44k.wav"; ff(["-i", str(src), "-vn", "-ac", "2", "-ar", str(SEP_SR), "-c:a", "pcm_f32le", str(wav)])
+    if separator == "spleeter":
+        return separate_spleeter(wav, work, t0)
+    if separator != "hdemucs":
+        raise ValueError(f"unknown separator {separator}")
+    if os.environ.get("DUB_ALLOW_NC_BED") != "1":
+        raise RuntimeError("HDEMUCS weights have no licence (non-commercial reference only): set DUB_ALLOW_NC_BED=1 for a reference run")
+    import torch
     y, sr = sf.read(str(wav), dtype="float32"); assert sr == SEP_SR
     import model_cache
     t1 = time.perf_counter(); model = model_cache.get(("demucs", device), lambda: load_demucs(device)); t_load = time.perf_counter() - t1

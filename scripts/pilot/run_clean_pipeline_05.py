@@ -99,6 +99,26 @@ class Blocker(RuntimeError):
     """A real component cannot run; the runner must stop instead of faking the stage."""
 
 
+# --audio-policy (2026-10-17, Agent C r2): flag bundles of the audio stage. A flag passed explicitly on the command line always wins over the bundle.
+#   legacy = the argparse defaults below (pre-cand5 behaviour); cand5 = the 2026-10-13 production-candidate audio flags;
+#   r2     = cand5 + layer-1 timing (flow 0.2 + spread pauses) + slow-down floor 0.875 (reports/quality/audio_timing/p1_timing_ab.md, r2/CHANGES.md)
+AUDIO_POLICY_CAND5 = {"phrase_cut": "acoustic", "long_pause_func": 1.2, "cut_fade": "adaptive", "tts_gap_qa": "on"}
+AUDIO_POLICIES = {"legacy": {}, "cand5": dict(AUDIO_POLICY_CAND5),
+                  "r2": {**AUDIO_POLICY_CAND5, "sentence_flow_gap": 0.2, "spread": "pauses", "fill_slowdown": 0.875}}
+
+
+def apply_audio_policy(a, argv: list[str]) -> dict:
+    """Set the policy's values on every option NOT given explicitly in argv; returns the record for the manifest."""
+    explicit = {}; applied = {}
+    for k, v in AUDIO_POLICIES[a.audio_policy].items():
+        flag = "--" + k.replace("_", "-")
+        if any(x == flag or x.startswith(flag + "=") for x in argv):
+            explicit[k] = getattr(a, k)
+        else:
+            setattr(a, k, v); applied[k] = v
+    return {"name": a.audio_policy, "applied": applied, "explicit_overrides": explicit}
+
+
 def lang_name(code: str) -> str:
     return LANG_NAMES.get(code.lower(), code)
 
@@ -764,8 +784,13 @@ def main() -> int:
                     "all models + Qwen resident on the GPU at the LatentSync peak = the pilot 0.4 question); off = released before LatentSync")
     ap.add_argument("--qwen-gpu-layers", type=int, default=0, help="Qwen layers offloaded to the GPU (-1 = all); 0 = frozen CPU baseline. Needs a CUDA llama-cpp-python build "
                                                                    "(A/B 2026-10-12: translation 18x faster, outputs not identical to the CPU)")
+    ap.add_argument("--audio-policy", choices=sorted(AUDIO_POLICIES), default="r2", help="audio-stage flag bundle (explicit flags win): r2 (default since 2026-10-17) = cand5 + "
+                    "--sentence-flow-gap 0.2 --spread pauses --fill-slowdown 0.875; cand5 = --phrase-cut acoustic --long-pause-func 1.2 --cut-fade adaptive --tts-gap-qa on; legacy = the plain flag defaults")
+    ap.add_argument("--bed-separator", choices=["spleeter", "hdemucs"], default="spleeter", help="--background on: stem separator of the bed. spleeter = Deezer Spleeter 2stems (MIT code, "
+                    "weights = MIT repo release asset; own TF venv, scripts/setup_spleeter.sh; default since 2026-10-17); hdemucs = torchaudio HDEMUCS_HIGH_MUSDB_PLUS, weights WITHOUT a licence: "
+                    "reference only, refused unless DUB_ALLOW_NC_BED=1")
     ap.add_argument("--background", choices=["on", "off"], default="on",
-                    help="final mix: on = source background bed (Hybrid Demucs accompaniment, original voice/bed balance, ducked under the dub) under the dubbed voice; "
+                    help="final mix: on = source background bed (--bed-separator accompaniment stem, original voice/bed balance, ducked under the dub) under the dubbed voice; "
                          "off = dubbed voice over digital silence (previous behaviour). LatentSync / speech gate always use the clean dubbed voice. Default on since 2026-10-12 (dead air 16-54 s -> 0-6 s, WER unchanged)")
     ap.add_argument("--bg-duck-db", type=float, default=-6.0, help="--background on: bed attenuation while the dub speaks (dB)")
     ap.add_argument("--bg-src-duck-db", type=float, default=0.0, help="--background on: extra bed attenuation where the source speaks and the dub is silent (Demucs voice residue); 0 = off")
@@ -810,6 +835,9 @@ def main() -> int:
                          "replayed by the video stage (same calls, same results; 2026-10-13 speed lever)")
     ap.add_argument("--segment-files", action="store_true", help="optimized backend: legacy per-segment mp4 path instead of in-memory segments")
     a = ap.parse_args()
+    audio_policy = apply_audio_policy(a, sys.argv[1:])
+    if a.background == "on" and a.bed_separator == "hdemucs" and os.environ.get("DUB_ALLOW_NC_BED") != "1":
+        print("--bed-separator hdemucs: the HDEMUCS weights have no licence (non-commercial reference only); set DUB_ALLOW_NC_BED=1 for a reference run", file=sys.stderr); return 2
     global QWEN_GPU_LAYERS
     QWEN_GPU_LAYERS = a.qwen_gpu_layers
     if a.qwen_gpu_layers:
@@ -838,7 +866,8 @@ def main() -> int:
     man: dict = {"task": "0.5-runner", "input": str(src), "output": str(out), "target_lang": tgt, "alignment_mode": a.alignment,
                  "tts_mode": a.tts_mode if a.alignment == "burst" else "slot", "segmentation_mode": a.segmentation if a.alignment == "burst" else "whisper",
                  "codeformer": "DISABLED (not invoked)" if a.codeformer == "off" else {"mode": a.codeformer, "w": a.codeformer_w, "batch": a.codeformer_batch, "landmarks": a.codeformer_landmarks, "precision": a.codeformer_precision},
-                 "work_dir": str(work), "config": {"seed": a.seed, "max_unit_s": a.max_unit_s, "threads": THREADS}}
+                 "work_dir": str(work), "config": {"seed": a.seed, "max_unit_s": a.max_unit_s, "threads": THREADS},
+                 "audio_policy": {**audio_policy, "resolved": {k: getattr(a, k) for k in AUDIO_POLICIES["r2"]}}}
     try:
         source = probe(src); man["source"] = source; duration = source["duration_s"]
         if duration <= 0 or not source["has_audio"]:
@@ -959,7 +988,7 @@ def main() -> int:
         if a.background == "on":   # only the MUXED audio changes; dubbed_16k (LatentSync, speech gate) stays the clean voice
             from background_bed import mix_background, separate_background
             with timed(times, "background_sep"):
-                sep = separate_background(src, work)
+                sep = separate_background(src, work, separator=a.bed_separator)
             with timed(times, "background_mix"):
                 dub_vad = run_vad(pathlib.Path(man["dubbed_track"]["wav16k"]))
                 mix = mix_background(sep, pathlib.Path(man["dubbed_track"]["wav24k"]), [(v["start"], v["end"]) for v in speech], [(v["start"], v["end"]) for v in dub_vad],
