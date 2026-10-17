@@ -71,6 +71,22 @@ At 25 fps registration moves numbers that are already sub-pixel; the independent
 held-out fits generalise only partly (fit on cheeks -> nose base 0.137). Not worth its 47-117 s / LS-minute at 25 fps. The nose cut
 (item 4) keeps the source nose: worth keeping at any frame rate (no generated nose = nothing nose-shaped can move).
 
+## 3b. Whole-video SyncNet at the source frame rate (final mix / dub-only; `syncnet_fps.py`, fps=25 rendition of the 30 fps output)
+
+| video | cand5 (13.10 report) | clean0 25 fps (this server) | F0 30 fps (yesterday's geometry) | T3 30 fps (ring incl. chin) | T2 30 fps (no ring) | T3u 30 fps (ring above the mouth) |
+|---|---|---|---|---|---|---|
+| 01 | 7.89 / 7.86 | 7.99 / 7.91 | 7.61 / 7.49 | 7.21 / 7.11 | **7.70 / 7.72** | 7.64 / 7.56 |
+| 03 | 5.46 / 5.69 | 5.49 / 5.75 | 5.24 / 5.48 | 5.25 / 5.51 | running | running |
+| 04 | 3.69 / 3.81 | 3.86 / 3.98 | 3.53 / 3.55 | 3.63 / 3.77 | running | running |
+| 05 | 3.15 / 3.66 | 3.20 / 3.73 | 2.91 / 3.30 | 2.91 / 3.26 | running | running |
+
+* clean0 at 25 fps is at or above cand5 on all four videos. Every 30 fps variant loses ~0.25-0.45 against it: the mouth is flow-
+  interpolated from 25 to 30 fps (yesterday's finding; stage 3).
+* The geometry fix is SyncNet-neutral or positive on 03 / 04 / 05 (04 +0.22 dub-only), but the full-ring T3 costs 0.38 on 01: the ring
+  band includes the chin / jaw, and pulling the generated jaw towards the SOURCE jaw puts the original speech's articulation back into
+  the dub (01's face is small: IOD 50, the chin is within the ring). `--ring-region upper` (default now: ring only above the mouth-corner
+  line) recovers most of it (7.56), no ring (T2) is best for lip-sync (7.72) at a slide of 0.14 px (T3u 0.09 px) on 01.
+
 ## 4. Open / next
 * Whole-video SyncNet (mix / dub-only) of F0 vs T3 at source fps on 01 / 03 / 04 / 05 against clean0 25 fps and cand5: running.
 * Stage 2 / 3 combination: T3 on top of the other server's generator-input fix (fp32 AlignRestore, flow-driven anchors, head-locked mouth

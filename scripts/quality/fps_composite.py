@@ -110,6 +110,9 @@ def main() -> int:
     ap.add_argument("--register-prior", choices=["landmarks", "image"], default="landmarks", help="r2: first (rigid) step of --register: landmark similarity, or "
                     "image = DIS + RANSAC similarity of the upper face between the SOURCE frame the LatentSync layer was made from (j[m]) and the shown frame "
                     "(same camera image both sides: no detector lag on fast motion)")
+    ap.add_argument("--ring-region", choices=["all", "upper"], default="upper", help="r2: where the ring refinement may move the layer: all = the whole paste ring "
+                    "(chin / jaw included: pulls the generated jaw towards the SOURCE jaw, which articulates the original speech); upper = only above the "
+                    "mouth-corner line (cheeks, nasolabial, upper-lip skin), faded out over 0.1 IOD below it")
     ap.add_argument("--small-face-iod", type=float, default=80.0, help="r2: below this inter-ocular distance the registration flow runs at full resolution")
     a = ap.parse_args()
     t_all = time.perf_counter(); times = {}
@@ -227,7 +230,12 @@ def main() -> int:
                         al_c = np.zeros((yb - ya, xb - xa), np.float32); al_c[roi_r[0] - ya:roi_r[1] - ya, roi_r[2] - xa:roi_r[3] - xa] = alpha
                         F2 = local.dis(gs, cv2.cvtColor(np.clip(Lk, 0, 255).astype(np.uint8), cv2.COLOR_BGR2GRAY)); ringw = int(max(3, 0.35 * iod))
                         band = cv2.dilate(((al_c > 0.02) & (al_c < 0.98)).astype(np.uint8), cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * ringw + 1, 2 * ringw + 1))) > 0
-                        wgt = ((band | stab) & ~lip).astype(np.float32); sg = 0.12 * iod; den = cv2.GaussianBlur(wgt, (0, 0), sg) + 1e-4
+                        wgt = ((band | stab) & ~lip).astype(np.float32); sg = 0.12 * iod
+                        if a.ring_region == "upper":   # never chin / jaw: their position is the dub's articulation, not the head's
+                            u_, v_, _ = creg.face_axes(pose_t); s_mc = 0.5 * float((Lt[61] + Lt[291]) @ v_)
+                            yy_, xx_ = np.mgrid[0:yb - ya, 0:xb - xa].astype(np.float32); sv = xx_ * v_[0] + yy_ * v_[1]
+                            wgt *= np.clip(1 - (sv - s_mc) / max(0.1 * iod, 1.0), 0, 1)
+                        den = cv2.GaussianBlur(wgt, (0, 0), sg) + 1e-4
                         Fs = np.stack([cv2.GaussianBlur(F2[..., c_] * wgt, (0, 0), sg) / den for c_ in range(2)], -1)
                         fade = np.clip(creg.lip_distance(lip, lip.shape) / max(0.25 * iod, 1.0), 0, 1).astype(np.float32); Fs *= fade[..., None] * (den > 0.02)[..., None]
                         yy, xx = np.mgrid[0:yb - ya, 0:xb - xa].astype(np.float32)
