@@ -49,6 +49,57 @@ def make_dumper(MouthOnlyRunner, frames):
     return Dumper
 
 
+def make_box_recorder(Base, frames):
+    """Records the mouth-mask boxes the composite uses, per LS segment start (window frame index)."""
+    import cv2, hashlib
+    index = {hashlib.md5(f.tobytes()).hexdigest(): i for i, f in enumerate(frames)}
+
+    class Rec(Base):
+        rec: dict = {}
+        def run_frames(self, frames_rgb, audio_wav, detections=None):
+            outs, dt = super().run_frames(frames_rgb, audio_wav, detections)
+            st = index.get(hashlib.md5(cv2.cvtColor(frames_rgb[0], cv2.COLOR_RGB2BGR).tobytes()).hexdigest())
+            if st is not None and self._boxes is not None: Rec.rec[st] = [None if b is None else np.asarray(b, np.float64) for b in self._boxes]
+            return outs, dt
+    return Rec
+
+
+def patch_affine_no_round():
+    """LatentSync's ImageProcessor.affine_transform rounds the three anchors to integer pixels (np.round) before the similarity fit: +-0.5 px
+    quantisation noise on every crop. Same function without the rounding (everything else identical)."""
+    import cv2, torch
+    from einops import rearrange
+    import latentsync.utils.image_processor as ipm
+
+    def affine_transform(self, image):
+        if self.face_detector is None:
+            raise NotImplementedError("Using the CPU for face detection is not supported")
+        bbox, landmark_2d_106 = self.face_detector(image)
+        if bbox is None:
+            raise RuntimeError("Face not detected")
+        pt_left_eye = np.mean(landmark_2d_106[[43, 48, 49, 51, 50]], axis=0)
+        pt_right_eye = np.mean(landmark_2d_106[101:106], axis=0)
+        pt_nose = np.mean(landmark_2d_106[[74, 77, 83, 86]], axis=0)
+        landmarks3 = np.array([pt_left_eye, pt_right_eye, pt_nose], np.float64)   # upstream: np.round(...)
+        face, affine_matrix = self.restorer.align_warp_face(image.copy(), landmarks3=landmarks3, smooth=True)
+        box = [0, 0, face.shape[1], face.shape[0]]
+        face = cv2.resize(face, (self.resolution, self.resolution), interpolation=cv2.INTER_LANCZOS4)
+        face = rearrange(torch.from_numpy(face), "h w c -> c h w")
+        return face, box, affine_matrix
+    ipm.ImageProcessor.affine_transform = affine_transform
+
+
+def patch_alignrestore_fp32():
+    """AlignRestore(dtype=torch.float16) is LatentSync's default on CUDA: the 2x3 affine, kornia's sampling grid and the paste-back inverse
+    are all float16. Same class, float32 default."""
+    import torch
+    import latentsync.utils.affine_transform as atm
+    orig = atm.AlignRestore.__init__
+    def init(self, align_points=3, resolution=256, device="cpu", dtype=torch.float32):
+        orig(self, align_points, resolution, device, torch.float32)
+    atm.AlignRestore.__init__ = init
+
+
 def write_stage(frames, stage: dict, path, audio):
     """master frames with the stage's LS frames substituted (no crossfade), muxed with `audio`."""
     import imageio, cv2
@@ -137,6 +188,12 @@ def main() -> int:
     ap.add_argument("--precomputed", default=None, help="window-length video of an external lip-sync backend (same driving audio); replaces LatentSync")
     ap.add_argument("--precomputed-label", default="external"); ap.add_argument("--precomputed-seconds", type=float, default=None)
     ap.add_argument("--dump-stages", action="store_true", help="also write <tag>_raw.mp4 (raw LatentSync frames) and <tag>_precomp.mp4 (after CodeFormer, before the mouth composite)")
+    ap.add_argument("--anchor-filter", default=None, help="round 2: temporal filter of the MediaPipe landmarks that drive LatentSync's crop / affine AND the mouth-mask "
+                    "bbox (scripts/pilot/anchor_filters.py spec: raw | box:K | flow:S | kalman:Q:R | euro:C:B | sub:N:S); sets --ls-landmark-smooth 0 --mask-smooth 0")
+    ap.add_argument("--rigid", default=None, help="rigid head motion npz of the full master (anchor_study.py); computed if missing (flow / sub filters)")
+    ap.add_argument("--anchor-round", choices=["on", "off"], default="on", help="off: LatentSync's affine uses the sub-pixel anchors (upstream np.round removed)")
+    ap.add_argument("--affine-precision", choices=["fp16", "fp32"], default="fp16", help="fp32: LatentSync's AlignRestore (crop warp, paste-back warp and "
+                    "its inverse matrix) in float32 instead of the upstream float16 default (translations of ~500 px are quantised to 0.25-0.5 px in fp16)")
     ap.add_argument("--outbox", default=None, help="hardlink the viewable clips into this dir (e.g. /workspace/dub/outbox/p2-03win-L3)")
     a = ap.parse_args()
     import clean_face_stack as cfs
@@ -147,6 +204,10 @@ def main() -> int:
     from candidate_video_stage import MouthOnlyRunner
     from ls_stable import StableRunner
     from pilot_common import gpu_info, write_json
+    if a.anchor_round == "off":
+        patch_affine_no_round()
+    if a.affine_precision == "fp32":
+        patch_alignrestore_fp32()
     man = json.loads(pathlib.Path(a.manifest).read_text()); work_b = pathlib.Path(man["work_dir"]); vid = pathlib.Path(man["input"]).stem
     out = pathlib.Path(a.out); out.mkdir(parents=True, exist_ok=True); work = out / f"work_{vid}_{a.tag}"; work.mkdir(parents=True, exist_ok=True)
     f0, f1 = int(round(a.t0 * FPS)), int(round(a.t1 * FPS)); t0s, dur = f0 / FPS, (f1 - f0) / FPS
@@ -167,6 +228,16 @@ def main() -> int:
     if a.face_stack == "mediapipe":   # the clean stack's own VIDEO-mode pass over the FULL master (= what a full clean run replays), sliced
         mp_lm = np.load(cfs.run_mediapipe(work_b / "master_25fps.mp4", work_b / "master_mediapipe.npz"))["lm"]
         H_, W_ = frames[0].shape[:2]; router = cfs.MediaPipeRouter(50, 80)
+        if a.anchor_filter:   # round 2: the corrected trajectory drives the crop / affine, the verify pass and the mask bbox alike
+            import anchor_filters as af
+            Hrig = None
+            if a.anchor_filter.split(":")[0] in ("flow", "sub"):
+                rp = pathlib.Path(a.rigid) if a.rigid else work_b / "master_rigid.npz"
+                if rp.exists(): Hrig = np.load(rp)["H"]
+                else:
+                    Hrig = af.rigid_motion(read_frames(work_b / "master_25fps.mp4", 0, len(mp_lm)), mp_lm); np.savez_compressed(rp, H=Hrig)
+            mp_lm = af.filter_landmarks(mp_lm, Hrig, a.anchor_filter).astype(np.float32)
+            a.ls_landmark_smooth = 0; a.mask_smooth = 0
         dets_all = cfs.ls_detections(mp_lm, W_, H_, calib=True)
         prep = WindowPrep.__new__(WindowPrep); prep.master = None; prep.frames = frames; prep.times = {}
         prep.router_rows = [router.row(f if np.isfinite(f[0, 0]) else None) for f in mp_lm[f0:f1]]; prep.ls_dets = dets_all[f0:f1]
@@ -199,6 +270,7 @@ def main() -> int:
         ref_info = {"select": a.ref_select, "start_frame": int(rs), "t": round(rs / FPS, 2), "cost": round(cost, 4)}
         print(f"  [ref] fixed reference frames {rs}-{rs + 16} ({rs / FPS:.2f}s), cost {cost:.4f}", flush=True)
     Mo = make_dumper(MouthOnlyRunner, frames) if a.dump_stages else MouthOnlyRunner
+    Mo = make_box_recorder(Mo, frames)
     runner = Mo(runner, a.mask_top, a.mask_feather, a.mask_smooth, defer=True)
     cf = None
     if a.codeformer == "optimized":
@@ -224,6 +296,12 @@ def main() -> int:
             tmpl = ob / (".tmp_" + pth.name)
             if tmpl.exists(): tmpl.unlink()
             os.link(pth, tmpl); os.replace(tmpl, ob / pth.name)
+    if Mo.rec:   # composite mask boxes per absolute master frame (slide_metric.py --boxes)
+        fr_, bx_ = [], []
+        for st, bxs in Mo.rec.items():
+            for k, b in enumerate(bxs):
+                if b is not None: fr_.append(f0 + st + k); bx_.append(b)
+        np.savez_compressed(out / f"{vid}_{a.tag}_maskboxes.npz", frames=np.array(fr_, int), boxes=np.array(bx_, np.float64))
     calls = list(getattr(getattr(runner, "inner", runner), "calls", []) or [])
     ls_segs = [s for s in rep["segments"] if s["action"] == "LATENT_SYNC"]          # processed in this order (no verify splits on these windows)
     if len(calls) == len(ls_segs):
