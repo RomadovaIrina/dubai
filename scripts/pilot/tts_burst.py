@@ -31,8 +31,9 @@ def _spk(text: str) -> str:
 
 
 def _rw(text):
-    """A Qwen rewrite with foreign script / bracketed asides is rejected (r3 drift guard); else _spk()."""
-    return None if not text or script_defects(text) else _spk(text)
+    """A Qwen rewrite with foreign script / bracketed asides is rejected (r3 drift guard). Kept in the WRITTEN form (digits): the number
+    checks of the rewrites compare with the source digits (03 u03 2026-10-19: a spoken-form input made Qwen append "August twenty-eight")."""
+    return None if not text or script_defects(text) else text
 
 
 def _oom_backoff(obj, name: str, tries: int = 20, wait_s: float = 15.0) -> None:
@@ -647,6 +648,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
 
     def gen_sentence(u, text: str, dtype, salt: int = 0) -> tuple:
         """One whole-sentence generation with the QA retry ladder of run_tts_burst (same seed rule, part index 0). Returns (wav float32 1-D, record)."""
+        text = _spk(text)   # r3: Chatterbox + QA hear / judge the speakable form; Qwen and its number checks keep the written one
         base = seed + 100 * u["id"] + 100003 * salt
         ladder = [(0, 0.8)] + ([(1, 0.8), (2, qa_cfg.get("low_temp", 0.6))][: qa_cfg.get("retries", 2)] if qa is not None else [])
         attempts, best = [], None
@@ -672,6 +674,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                                                    "temperature_used": rec["temperature"], "seconds": round(len(wav[0]) / m.sr, 3)}
 
     def align(y, text):
+        text = _spk(text)
         if aligner is None:
             return None
         ta = time.perf_counter(); sp = aligner.align(y, m.sr, text); stats["align_seconds"] += time.perf_counter() - ta
@@ -707,8 +710,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                 if ref: m.prepare_conditionals(ref)
                 else: m.conds = builtin.to(device=dev()); guard.use_builtin()
             for u, p in ups:
-                text = _spk(u["translation"]); u["parts_original"] = [text]; u["fit"] = []; u["fit_up"] = []
-                if text != u["translation"]: u["tts_text_norm"] = {"written": u["translation"], "spoken": text}
+                text = u["translation"]; u["parts_original"] = [text]; u["fit"] = []; u["fit_up"] = []
                 y, rec = gen_sentence(u, text, dtype); spans = align(y, text); sp_s = speech_seconds(y, spans)
                 src_words = " ".join(p["groups"]); target = sum(e - s for s, e in p["bursts"]); prev_end = prev_end_of.get(u["id"])
                 total_win = max(0.2, p["next_start"] - opts.gap - p["bursts"][0][0])
@@ -775,6 +777,8 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                         if not gv:
                             break
                     stats["gap_qa_units"] = stats.get("gap_qa_units", 0) + (1 if u["gap_qa"]["found"] else 0); stats["gap_qa_left"] = stats.get("gap_qa_left", 0) + (1 if gv else 0)
+                if _spk(text) != text:   # r3: from here on the spoken form (= the words that were synthesised and aligned) is the unit text
+                    u["tts_text_norm"] = {"written": text, "spoken": _spk(text)}; text = _spk(text)
                 if text != u["translation"]:
                     u["translation_fitted"] = text
                     if u.get("ordered_pieces"): stats["ordered_dropped_by_fit"] = stats.get("ordered_dropped_by_fit", 0) + 1

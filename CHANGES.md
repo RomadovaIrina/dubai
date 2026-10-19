@@ -101,3 +101,12 @@ Base: `experiment/r2-audio` @ a1fd764. Round-2 log: `reports/quality/audio_timin
 ## 7. Qwen drift guard + TTS-session reload (`--qwen-tts-gpu-layers`)
 - **Drift guard:** an English translation with foreign-script characters or a bracketed aside (`tts_text.script_defects`) gets one strict retry. If that also fails, the text is stripped. Qwen rewrites with such defects are rejected.
 - **Reload:** Qwen Q8 runs on all GPU layers for segmentation and translation (nothing else is loaded then). It is reloaded with 14 layers for the TTS session, where the fit rewrites run next to Chatterbox and QA, so the audio stage stays ≤ ~10 GB.
+
+## 8. Fixes from the first audio-r3 attempt (03)
+- **Qwen reload:** `llm.close()` before reloading with fewer layers. The `tr` tuple still referenced the model, so both copies sat on the GPU: 01 hit 15.5 GB, and on 03 the reload failed.
+- **Diarization order:** diarization now runs before Qwen is loaded (pyannote 2.8 GB + Q8 8.3 GB had made an 11.2 GB spike). The output is unchanged.
+- **Text normaliser + Qwen:** with the normaliser on, fit-up rewrites got the spoken text ("twenty-eighth"). The number check then compared it with the source "28", and Qwen appended "…cooperation, August twenty-eight."
+  - Now Qwen and its number checks see the written text. Synthesis, QA and alignment see the spoken form (`_spk` inside `gen_sentence` / `align`).
+  - The final unit text is converted once, before the part split.
+- **First 03 r3a numbers** (before these fixes): 231 s = 153 s/video-min; TTS-stage VRAM 8.4–8.9 GB; WER 0.016 (audio-r2: 0.008, CPU eval).
+- **Batch:** `scripts/quality/r3a_batch.sh` runs the audio-r3 candidate one video at a time.
