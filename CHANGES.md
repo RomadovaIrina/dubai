@@ -9,7 +9,7 @@ Base: `experiment/r2-audio` @ a1fd764. Round-2 log: `reports/quality/audio_timin
 - Qwen stays on the CPU: the shared llama-cpp-python is a CPU build, and this keeps the 8 GB of weights off A's GPU.
 - `scripts/quality/r3_audio_run.sh <id>`: audio-only run with the r2 defaults. The Spleeter venv is in `/workspace/dub/c/venv-spleeter`.
 
-## 2. audio-r2 regenerated for 01, 03, 04, 05 (19.10), handed off to A / B / D
+## 2. audio-r2 regenerated for 01–05 (19.10), handed off to A / B / D (02 as `audio-r2-02`: 8 / 4.3 s, r2 12 / 7.0)
 - `r2_deliver.py` reuses the runner's own Spleeter bed and mix when the flags match, so there is no second Spleeter pass.
 - The face reference (`face_ref.py`) now comes from the r2 dub itself. In r2 it came from a cand5 run.
 - Residual gaps (n / s / LS frames) vs the r2 delivery before refit:
