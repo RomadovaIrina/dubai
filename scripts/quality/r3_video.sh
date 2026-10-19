@@ -17,6 +17,8 @@ for id in "$@"; do
   DD=""; [ -n "${DUBBED_DIR_TPL:-}" ] && DD="--dubbed-dir ${DUBBED_DIR_TPL//\{id\}/$id}"
   MAN=$C/final/${id}_final.manifest.json; [ -n "${MANIFEST_TPL:-}" ] && MAN=${MANIFEST_TPL//\{id\}/$id}   # e.g. C's delivered <id>_r2.manifest.json (its units / text)
   s=$(date +%s)
+  # CPU prep (master / MediaPipe / rigid motion caches) outside the GPU lock, then the real run reuses them
+  python scripts/quality/candidate_video_stage.py --id $id --tag $arm --manifest $MAN --out $O --work-out $O/work_${id}_$arm $DD $CLEAN0 $X --prep-only > $O/${id}_$arm.prep.log 2>&1
   flock /workspace/dub/gpu.lock python scripts/quality/candidate_video_stage.py --id $id --tag $arm --manifest $MAN --out $O --work-out $O/work_${id}_$arm \
      $DD $CLEAN0 $X > $O/${id}_$arm.log 2>&1 || echo "FAIL $id $arm (see $O/${id}_$arm.log)"
   echo "$(grep '^== ' $O/${id}_$arm.log | cut -c1-200)  wall $(( $(date +%s) - s )) s"

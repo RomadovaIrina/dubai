@@ -108,6 +108,8 @@ def main() -> int:
     ap.add_argument("--mp-anchor-calib", choices=["on", "off"], default="on")
     ap.add_argument("--anchor-filter", default=None, help="round 2: temporal filter of the landmarks driving LatentSync's crop AND the mouth mask (anchor_filters.py: "
                     "flow:S = rigid head motion from DIS flow, noise smoothed around it); forces --ls-landmark-smooth 0 --mask-smooth 0")
+    ap.add_argument("--prep-only", action="store_true", help="r3 D: run only the CPU face-stack prep (master, MediaPipe, rigid motion) into --work-out and exit: "
+                    "the caches are reused by the real run, so a queue can prep the next video while the GPU renders the current one")
     ap.add_argument("--dump-ls-raw", choices=["on", "off"], default="off", help="r3 D: also write <out>_ls_raw.mp4 = the RAW LatentSync frames on the 25 fps master "
                     "(master frames elsewhere, lossless): the --ls-raw input of fps_composite.py (FIX30) from the same run; needs --mouth-only-pasteback on --codeformer-scope mouth")
     ap.add_argument("--mask-track", choices=["dets", "head"], default="dets", help="head: mouth-mask boxes locked to the rigid head motion (needs the rigid pass)")
@@ -164,6 +166,8 @@ def main() -> int:
                                      max_faces=a.max_faces, turns=(man.get("diarization") or {}).get("turns"),
                                      anchor_filter=a.anchor_filter, mask_track=a.mask_track)
         router = prep.router; man["face_stack"] = {**prep.info, "times": prep.times, "ls_geometry": geom}; man["frame_map"] = prep.frame_map
+        if a.prep_only:
+            print(f"== {a.id} {a.tag}: prep-only done {prep.times} -> {work}", flush=True); return 0
     else:
         with rp.timed(times, "face_router_load"): router = faa.make_router("retinaface", a.face_min_w, a.face_min_h, a.retina_conf)
     with rp.timed(times, "latentsync_load"): runner = faa.AccelRunner(a.window_batch_size, not a.no_deepcache, "none", "auto", steps=a.steps, guidance=a.guidance, deepcache_interval=a.deepcache_interval)
