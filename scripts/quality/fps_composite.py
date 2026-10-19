@@ -84,7 +84,8 @@ def edge_width_px(alpha: np.ndarray) -> float | None:
 def interp_safe(fl, y, z, t, d0=3.5, c0=0.95, sc=2.0):
     """tms.interp + a confidence: on the pixels that change between the two LatentSync frames (|grey diff| > 10), D = mean |w0 - w1| (the two
     warped candidates disagree -> averaging them gives the double / torn lip contour the user saw) and the forward-backward flow consistency.
-    conf = clip(1 - max((D - d0) / 3, (c0 - cons) / 0.1), 0, 1); output = conf * interpolation + (1 - conf) * the NEAREST real frame.
+    conf = clip(1 - max((D - d0) / sc, (c0 - cons) / 0.1), 0, 1); conf >= 0.6: the interpolation; below: the NEARER frame alone, warped to t
+    (single source = no double contour; a soft blend with the nearest frame was tried and itself ghosts).
     Calibrated on 04 r3cand (flash frames: D median 7.8, cons 0.82; others D median 2.3, p90 4.7, cons 0.98); d0 3.5 / sc 2 / c0 0.95:
     mean confidence 0.08 on the flash frames, 0.82 elsewhere (frame 670: D 4.4, cons 0.946 -> 0.55)."""
     gy_, gz_ = tms.gray(y), tms.gray(z); F01, F10 = fl.calc(gy_, gz_), fl.calc(gz_, gy_)
@@ -97,9 +98,9 @@ def interp_safe(fl, y, z, t, d0=3.5, c0=0.95, sc=2.0):
     if mov.sum() < 20: return it, 1.0
     D = float(np.abs(w0 - w1).mean(2)[mov].mean()); cons = float(c01[mov].mean())
     conf = float(np.clip(1 - max((D - d0) / sc, (c0 - cons) / 0.1), 0, 1))
-    if conf >= 1: return it, 1.0
-    near = y if t < 0.5 else z
-    return conf * it + (1 - conf) * near, conf
+    if conf >= 0.6: return it, conf
+    # low confidence: NO averaging of two disagreeing mouths (that is what draws the double contour); the nearer frame alone, warped to t
+    return (w0 if t < 0.5 else w1), conf
 
 
 def main() -> int:
