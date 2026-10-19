@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import difflib
 import glob
+import os
 import pathlib
 import re
 
@@ -117,7 +118,7 @@ class TtsQA:
         from pilot_common import dev, whisper_compute
         device = device or dev()
         self.torch, self.device = torch, device
-        self.wh = WhisperModel(str(whisper_dir or MODELS / "whisper-large-v3"), device=device, compute_type=whisper_compute("float16"))
+        self.wh = WhisperModel(str(whisper_dir or MODELS / "whisper-large-v3"), device=device, compute_type=whisper_compute(os.environ.get("DUB_QA_WHISPER_COMPUTE", "float16")))
         p = str(w2v_dir or MODELS / "wav2vec2-base-960h")
         self.proc = Wav2Vec2Processor.from_pretrained(p)
         self.w2v = Wav2Vec2ForCTC.from_pretrained(p).to(device).eval()

@@ -21,6 +21,31 @@ HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent / "quality"))
 from e1_burst_align import SR16, burst_fit_ratios, ff, vad_intervals  # noqa: E402
 from pilot_common import dev, empty_cache, tts_dtypes  # noqa: E402
+import os                                                                    # noqa: E402
+from tts_text import speakable                                               # noqa: E402
+
+
+def _spk(text: str) -> str:
+    """--tts-text-norm on (r3): numbers / units / ".." -> speakable words before synthesis (tts_text.py); off = text unchanged."""
+    return speakable(text) if os.environ.get("DUB_TTS_TEXT_NORM") == "on" else text
+
+
+def _oom_backoff(obj, name: str, tries: int = 20, wait_s: float = 15.0) -> None:
+    """r3 shared GPU (coordinator 19.10: on CUDA OOM back off and retry): wrap obj.<name> so a CUDA OOM waits, frees the cache and retries the
+    SAME call with the RNG state restored (the take stays the one the seed asks for) instead of failing over to the next dtype."""
+    import torch
+    fn = getattr(obj, name)
+    def wrapped(*a, **k):
+        for i in range(tries):
+            st = (torch.get_rng_state(), torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None)
+            try:
+                return fn(*a, **k)
+            except Exception as e:
+                if "out of memory" not in str(e).lower() or i == tries - 1: raise
+                print(f"  [oom] {name}: CUDA OOM ({str(e)[:80]}), retry {i + 1}/{tries} in {wait_s:.0f}s", flush=True)
+                empty_cache(); time.sleep(wait_s); torch.set_rng_state(st[0])
+                if st[1] is not None: torch.cuda.set_rng_state_all(st[1])
+    setattr(obj, name, wrapped)
 
 TTS_SR = 24000
 REWRITE_SYSTEM = "You are a professional dubbing script adapter. You answer with the rewritten phrase only, without quotes or explanations."
@@ -588,6 +613,10 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
     import model_cache
     def _load_tts():
         m_ = ChatterboxMultilingualTTS.from_local(pathlib.Path(__file__).resolve().parents[2] / "models" / "chatterbox", dev(), t3_model="v3")
+        if dev() == "cuda":   # r3 shared GPU: cast to the first dtype of the ladder now and release the fp32 blocks (-1.4 GB reserved VRAM)
+            for mod in (m_.t3, m_.s3gen, m_.ve): mod.to(tts_dtypes(torch)[0])
+            empty_cache()
+        _oom_backoff(m_, "generate")
         return m_, m_.conds
     t0 = time.perf_counter(); m, builtin = model_cache.get("chatterbox_v3", _load_tts)
     guard = install_speech_token_guard(m); times["tts_load"] = round(time.perf_counter() - t0, 3)
@@ -595,6 +624,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
     if qa_cfg.get("enabled") or tgt_lang == "en":
         from tts_qa import TtsQA
         t0 = time.perf_counter(); qa_obj = model_cache.get("tts_qa", TtsQA); times["qa_load"] = round(time.perf_counter() - t0, 3)
+        if dev() == "cuda": _oom_backoff(qa_obj, "assess")
         qa = qa_obj if qa_cfg.get("enabled") else None
         if tgt_lang == "en":
             aligner = CtcAligner.from_qa(qa_obj)
@@ -672,7 +702,8 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                 if ref: m.prepare_conditionals(ref)
                 else: m.conds = builtin.to(device=dev()); guard.use_builtin()
             for u, p in ups:
-                text = u["translation"]; u["parts_original"] = [text]; u["fit"] = []; u["fit_up"] = []
+                text = _spk(u["translation"]); u["parts_original"] = [text]; u["fit"] = []; u["fit_up"] = []
+                if text != u["translation"]: u["tts_text_norm"] = {"written": u["translation"], "spoken": text}
                 y, rec = gen_sentence(u, text, dtype); spans = align(y, text); sp_s = speech_seconds(y, spans)
                 src_words = " ".join(p["groups"]); target = sum(e - s for s, e in p["bursts"]); prev_end = prev_end_of.get(u["id"])
                 total_win = max(0.2, p["next_start"] - opts.gap - p["bursts"][0][0])
@@ -691,6 +722,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                     if llm is None or r <= opts.hard_cap + 0.05 or (nw < 6 and not short_ok) or tgt_w >= nw:
                         recf.update(action="kept", result="short phrase or marginal overflow: lead / spill / moderate atempo instead"); u["fit"].append(recf); break
                     tq = time.perf_counter(); new = concise_rewrite(llm, src_name, tgt_name, src_words, text, tgt_w, sp_s / r); stats["fitdown_qwen_seconds"] += time.perf_counter() - tq
+                    new = _spk(new) if new else new
                     if new is None:
                         recf["result"] = "rewrite_rejected"; stats["fit_rewrite_rejected"] += 1; u["fit"].append(recf); break
                     y2, rec2 = gen_sentence(u, new, dtype, salt=10 + rnd); sp2 = align(y2, new); s2 = speech_seconds(y2, sp2)
@@ -706,6 +738,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                         tgt_w = max(words_of(text) + 1, int(round(rate * target * fit_up.get("aim", 1.0)))); lo_w = max(words_of(text) + 1, int(round(rate * target * fit_up.get("min_ratio", 0.85)))); stats["fit_up_rounds"] += 1
                         recu = {"round": rnd + 1, "ratio_before": round(ratio, 3), "old": text, "target_words": tgt_w, "min_words": lo_w, "source_seconds": round(target, 3), "tts_seconds_before": round(sp_s, 3)}
                         tq = time.perf_counter(); new, why = fuller_rewrite(llm, src_name, tgt_name, src_words, text, tgt_w, target, sp_s, min_words=lo_w, guard=fit_up.get("guard", False)); stats["fitup_qwen_seconds"] += time.perf_counter() - tq
+                        new = _spk(new) if new else new
                         if new is None:
                             recu["result"] = "rewrite_rejected"; recu["reason"] = why; stats["fit_up_rejected"] += 1; u["fit_up"].append(recu)
                             if rnd + 1 < fit_up.get("rounds", 2) and "too long" in why:   # ask once more with a smaller budget

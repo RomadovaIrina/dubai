@@ -22,3 +22,57 @@ Base: `experiment/r2-audio` @ a1fd764. Round-2 log: `reports/quality/audio_timin
   - Spleeter: 160–404 s per video (r2: 5 s). The first `separate()` call takes about 80 s, and the CPU is contended.
   - Qwen on CPU: segmentation about 120 s.
   - Without Spleeter: 283–389 s/min. Speed work is next.
+
+## 3. Spleeter 2stems PyTorch port on the GPU (`scripts/pilot/spleeter_torch.py`), default bed backend
+- **Why:** the TF/librosa path took 160–468 s per video. It ran on about 1 core of a saturated cgroup quota of about 31 CPUs, mostly used by other jobs.
+- **Port:** U-Net, ratio masks and STFT/iSTFT, with the same weights converted to npz by `setup_spleeter.sh` (MIT release asset).
+- **Fidelity:** SNR vs TF 68 / 82 dB (bed / vocals) on 04 0–20 s, and 119 dB for the bed on the full 03.
+- **Speed:** 1.2 s per video (was 404 s on 03).
+- `DUB_SPLEETER_BACKEND=tf` keeps the old path.
+
+## 4. Qwen on the GPU in my own CUDA build; VRAM fitting
+- **Build:** llama-cpp-python 0.3.35, CUDA 13.2, sm_120, built into `/workspace/dub/c/pylib-llama-cuda` and put first on PYTHONPATH. The shared CPU build is untouched.
+- **Measured VRAM (GB):**
+
+  | component | GB |
+  |---|---:|
+  | CUDA context | 0.6 |
+  | Whisper large-v3 int8_f16 | 1.8 |
+  | Whisper large-v3 fp16 | 3.6 |
+  | wav2vec2 | 0.4 |
+  | Chatterbox fp16 | 1.7 |
+  | Qwen Q8_0 | 7.7 |
+  | Qwen Q5_K_M | about 5 |
+
+- **New flags:**
+  - `--qwen-quant q8_0|q5_k_m`;
+  - `--qa-whisper-compute float16|int8_float16`.
+- **Memory handling in the TTS stage:**
+  - Chatterbox is cast to fp16 at load and the cache is released (-1.4 GB reserved);
+  - on CUDA OOM, the same call backs off and retries with its RNG state restored;
+  - `expandable_segments` is on.
+- **Result on 03, Q5_K_M + int8 QA:**
+  - total 180.6 s = **120 s/video-min** (was 632);
+  - segmentation 76 → 7.8 s, translation 55 → 5.6 s, TTS 345 → 103 s;
+  - peak VRAM 10.6 GB.
+- **Problem:** Q5 drifts. On 03 it produced "…will proceed顺利地" (CJK) in u05 and "[it better]" in u01; Q8 has neither. Q5 is not adopted. A translation-output guard is needed anyway.
+
+## 5. Intelligibility guard (`scripts/quality/intel_guard.py`) + speakable text (`scripts/pilot/tts_text.py`, `--tts-text-norm`)
+- **audio-r2 (Whisper WER / CTC CER):**
+
+  | video | WER | CTC CER |
+  |---|---:|---:|
+  | 01 | 0.028 | 0.057 |
+  | 02 | 0.060 | 0.164 |
+  | 03 | 0.008 | 0.038 |
+  | 04 | 0.009 | 0.037 |
+  | 05 | 0.011 | 0.149 |
+
+- The worst 20 are in `/workspace/dub/c/outbox/listen/audio-r2_worst*.wav`, with a README of expected vs heard text.
+- **Causes:**
+  - digits and units ("600x600 … 9 mm" heard as "600 x 67");
+  - rare names lose their onset ("Hamam" → "Tamam");
+  - slowed units (×0.875) dominate the CTC-only misses.
+- **`speakable()`:** numbers, ordinals, years, decimals, N×N, unit symbols, currencies and ".." become spoken words.
+  - It runs before TTS, QA, alignment and the part split. The spoken text is kept as `translation_fitted` (recut / refit / eval stay consistent).
+  - Opt-in for now; it goes into the r3 policy after the A/B.

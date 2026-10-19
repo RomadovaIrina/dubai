@@ -34,6 +34,9 @@ SEP_SR = 44100
 SOURCES = ["drums", "bass", "other", "vocals"]
 SPLEETER_PY = pathlib.Path(os.environ.get("DUB_SPLEETER_PY", "/workspace/dub/venv-spleeter/bin/python"))   # scripts/setup_spleeter.sh
 SPLEETER_MODELS = ROOT / "models" / "spleeter" / "pretrained_models"                                            # 2stems/ (sha256-checked release asset)
+SPLEETER_TORCH_W = ROOT / "models" / "spleeter" / "2stems_tf_vars.npz"   # the same weights as npz (spleeter_torch.py convert, setup_spleeter.sh)
+# r3 2026-10-19: torch port on the GPU (SNR vs TF 68 / 82 dB on 04 0-20 s, spleeter_torch.py verify) = default; tf = the TF 2.9 CPU venv
+SPLEETER_BACKEND = os.environ.get("DUB_SPLEETER_BACKEND", "torch")
 SPLEETER_CODE = r"""
 import os, sys, time, numpy as np, soundfile as sf, tensorflow as tf
 n = int(os.environ.get("DUB_THREADS", "8")); tf.config.threading.set_intra_op_parallelism_threads(n); tf.config.threading.set_inter_op_parallelism_threads(1)
@@ -97,6 +100,23 @@ def _separate(model, mix, device: str, seg_s: float = 10.0, overlap: float = 0.1
     return out * sd + mu
 
 
+def separate_spleeter_torch(wav: pathlib.Path, work: pathlib.Path, t0: float, device: str) -> dict:
+    """Spleeter 2stems, PyTorch port (spleeter_torch.py) on `device`, model cached per process: bg = accompaniment, vocals = vocals."""
+    import model_cache
+    from spleeter_torch import Spleeter2Stems
+    if not SPLEETER_TORCH_W.exists():
+        raise RuntimeError(f"{SPLEETER_TORCH_W} missing: run scripts/setup_spleeter.sh")
+    t1 = time.perf_counter(); sp = model_cache.get(("spleeter_torch", device), lambda: Spleeter2Stems(SPLEETER_TORCH_W, device)); load_s = time.perf_counter() - t1
+    y, sr = sf.read(str(wav), dtype="float32"); assert sr == SEP_SR
+    t2 = time.perf_counter(); out = sp.separate(y); sep_s = time.perf_counter() - t2
+    bg, voc = out["accompaniment"], out["vocals"]; p_bg, p_voc = work / "bg_44k.wav", work / "vocals_44k.wav"
+    sf.write(str(p_bg), bg, sr, subtype="FLOAT"); sf.write(str(p_voc), voc, sr, subtype="FLOAT"); wav.unlink()
+    total = time.perf_counter() - t0
+    return {"model": "Spleeter 2stems v1.4.0 (bg = accompaniment; MIT code, weights = MIT repo release asset) - PyTorch port spleeter_torch.py", "backend": f"torch/{device}",
+            "weights": str(SPLEETER_TORCH_W), "bg": str(p_bg), "vocals": str(p_voc), "seconds": round(len(y) / SEP_SR, 3), "load_s": round(load_s, 3), "separate_s": round(sep_s, 3),
+            "total_s": round(total, 3), "source_db": round(_db(y.mean(1)), 2), "vocals_db": round(_db(voc.mean(1)), 2), "bg_db": round(_db(bg.mean(1)), 2)}
+
+
 def separate_spleeter(wav: pathlib.Path, work: pathlib.Path, t0: float) -> dict:
     """Spleeter 2stems in its own venv (CPU, TensorFlow): bg = accompaniment, vocals = vocals."""
     if not SPLEETER_PY.exists() or not (SPLEETER_MODELS / "2stems" / "model.index").exists():
@@ -120,6 +140,9 @@ def separate_background(src: pathlib.Path, work: pathlib.Path, device: str = "cu
     t0 = time.perf_counter()
     wav = work / "source_44k.wav"; ff(["-i", str(src), "-vn", "-ac", "2", "-ar", str(SEP_SR), "-c:a", "pcm_f32le", str(wav)])
     if separator == "spleeter":
+        if SPLEETER_BACKEND == "torch":
+            from pilot_common import dev
+            return separate_spleeter_torch(wav, work, t0, dev())
         return separate_spleeter(wav, work, t0)
     if separator != "hdemucs":
         raise ValueError(f"unknown separator {separator}")

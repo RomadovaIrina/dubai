@@ -786,6 +786,9 @@ def main() -> int:
     ap.add_argument("--phrase-min-part-words", type=int, default=1); ap.add_argument("--phrase-soft-part-words", type=int, default=2)
     ap.add_argument("--qwen-resident", choices=["on", "off"], default="off", help="keep Qwen loaded until the end of the run (with --qwen-gpu-layers -1: "
                     "all models + Qwen resident on the GPU at the LatentSync peak = the pilot 0.4 question); off = released before LatentSync")
+    ap.add_argument("--qwen-quant", choices=["q8_0", "q5_k_m"], default="q8_0", help="Qwen2.5-7B-Instruct GGUF quant (same Apache-2.0 repo). r3 2026-10-19: q5_k_m (5.1 GiB) fits fully on a shared GPU next to Chatterbox + QA within ~10 GB; q8_0 = pilot 0.9 production quant")
+    ap.add_argument("--tts-text-norm", choices=["on", "off"], default="off", help="phrase mode: numbers / units / '..' -> speakable English words before Chatterbox, QA and alignment (tts_text.py; r3 2026-10-19: 01 '600x600 ... 9 mm' was heard as '600 x 67')")
+    ap.add_argument("--qa-whisper-compute", choices=["float16", "int8_float16"], default="float16", help="faster-whisper compute type of the TTS QA (r3: int8_float16 saves 1.8 GB VRAM on a shared GPU)")
     ap.add_argument("--qwen-gpu-layers", type=int, default=0, help="Qwen layers offloaded to the GPU (-1 = all); 0 = frozen CPU baseline. Needs a CUDA llama-cpp-python build "
                                                                    "(A/B 2026-10-12: translation 18x faster, outputs not identical to the CPU)")
     ap.add_argument("--audio-policy", choices=sorted(AUDIO_POLICIES), default="r2", help="audio-stage flag bundle (explicit flags win): r2 (default since 2026-10-17) = cand5 + "
@@ -850,8 +853,10 @@ def main() -> int:
     audio_policy = apply_audio_policy(a, sys.argv[1:])
     if a.background == "on" and a.bed_separator == "hdemucs" and os.environ.get("DUB_ALLOW_NC_BED") != "1":
         print("--bed-separator hdemucs: the HDEMUCS weights have no licence (non-commercial reference only); set DUB_ALLOW_NC_BED=1 for a reference run", file=sys.stderr); return 2
-    global QWEN_GPU_LAYERS
-    QWEN_GPU_LAYERS = a.qwen_gpu_layers
+    global QWEN_GPU_LAYERS, QWEN_QUANT
+    QWEN_GPU_LAYERS = a.qwen_gpu_layers; QWEN_QUANT = a.qwen_quant
+    os.environ["DUB_QA_WHISPER_COMPUTE"] = a.qa_whisper_compute
+    os.environ["DUB_TTS_TEXT_NORM"] = a.tts_text_norm
     if a.qwen_gpu_layers:
         import llama_cpp
         if not llama_cpp.llama_supports_gpu_offload():
@@ -878,7 +883,7 @@ def main() -> int:
     man: dict = {"task": "0.5-runner", "input": str(src), "output": str(out), "target_lang": tgt, "alignment_mode": a.alignment,
                  "tts_mode": a.tts_mode if a.alignment == "burst" else "slot", "segmentation_mode": a.segmentation if a.alignment == "burst" else "whisper",
                  "codeformer": "DISABLED (not invoked)" if a.codeformer == "off" else {"mode": a.codeformer, "w": a.codeformer_w, "batch": a.codeformer_batch, "landmarks": a.codeformer_landmarks, "precision": a.codeformer_precision},
-                 "work_dir": str(work), "config": {"seed": a.seed, "max_unit_s": a.max_unit_s, "threads": THREADS},
+                 "work_dir": str(work), "config": {"seed": a.seed, "max_unit_s": a.max_unit_s, "threads": THREADS, "qwen_quant": a.qwen_quant, "qwen_gpu_layers": a.qwen_gpu_layers, "qa_whisper_compute": a.qa_whisper_compute, "tts_text_norm": a.tts_text_norm},
                  "audio_policy": {**audio_policy, "resolved": {k: getattr(a, k) for k in AUDIO_POLICIES["r2"]}}}
     try:
         source = probe(src); man["source"] = source; duration = source["duration_s"]
