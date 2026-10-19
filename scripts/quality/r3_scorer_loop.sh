@@ -7,7 +7,7 @@ while true; do
     [ -f $S/${id}_${lab}.score.json ] && continue
     mkdir $S/.claim/${id}_${lab} 2>/dev/null || continue
     Q=/workspace/dub/artifacts/r3d/q4.log   # yield to the GPU audit (q4 waits for an idle scorer) and never overlap an audit / E2E timing run
-    while pgrep -f "r3_e2e[.]sh|r3_gpu_audit[.]sh" >/dev/null || { grep -q R2M_CANON_DONE $Q && ! grep -q AUDIT_RESIDENT_DONE $Q; }; do sleep 30; done
+    while pgrep -f "r3_e2e[.]sh|r3_gpu_audit[.]sh|r3_queue_v[0-9]+[.]sh" >/dev/null; do sleep 30; done
     python scripts/quality/r3_scorecard.py score --id $id --label $lab --video $V/$b.mp4 --manifest $m --out $S > $S/${id}_${lab}.log 2>&1; echo "scored $id $lab rc=$?"
   done
   grep -q E2E04_DONE /workspace/dub/artifacts/r3d/q4.log 2>/dev/null && break; sleep 60
