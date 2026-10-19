@@ -26,7 +26,8 @@ echo "== LatentSync 1.6 (unet 5 GB + whisper tiny)"; snap ByteDance/LatentSync-1
 echo "== sd-vae-ft-mse (LatentSync VAE)"; snap stabilityai/sd-vae-ft-mse "$M/sd-vae-ft-mse" "*.json" "*.safetensors"
 echo "== wav2vec2-base-960h (independent CTC ASR for the TTS intelligibility QA, 0.4 GB)"; snap facebook/wav2vec2-base-960h "$M/wav2vec2-base-960h" "*.json" "model.safetensors"
 # Hybrid Demucs (torchaudio HDEMUCS_HIGH_MUSDB_PLUS) for the background bed of the final mix (scripts/pilot/background_bed.py, 0.3 GB)
-mkdir -p "$M/demucs"; [ -s "$M/demucs/hdemucs_high_trained.pt" ] || curl -fL --retry 3 -o "$M/demucs/hdemucs_high_trained.pt" https://download.pytorch.org/torchaudio/models/hdemucs_high_trained.pt; echo "ok $M/demucs/hdemucs_high_trained.pt"
+# 2026-10-16 audio licence audit: HDemucs MUSDB18-HQ weights = NO (no weights licence, NC training data) -> only with DUB_ALLOW_NC=1; --background defaults to off
+if [ "${DUB_ALLOW_NC:-0}" = "1" ]; then mkdir -p "$M/demucs"; [ -s "$M/demucs/hdemucs_high_trained.pt" ] || curl -fL --retry 3 -o "$M/demucs/hdemucs_high_trained.pt" https://download.pytorch.org/torchaudio/models/hdemucs_high_trained.pt; echo "ok $M/demucs/hdemucs_high_trained.pt"; else echo "skip HDemucs (non-commercial; DUB_ALLOW_NC=1 to fetch)"; fi
 # LatentSync expects ./checkpoints/{latentsync_unet.pt,whisper/tiny.pt} relative to its repo root
 LS="${DUB_ROOT}/third_party/latentsync/checkpoints"; mkdir -p "$LS"
 ln -sfn "$M/latentsync/latentsync_unet.pt" "$LS/latentsync_unet.pt"; ln -sfn "$M/latentsync/whisper" "$LS/whisper"
@@ -46,5 +47,7 @@ if [ "${DUB_ALLOW_NC:-0}" = "1" ]; then
   FX="$M/facexlib"; mkdir -p "$FX"; ln -sfn "$CF/weights/facelib/detection_Resnet50_Final.pth" "$FX/detection_Resnet50_Final.pth"
 else
   echo "skip NC weights (CodeFormer / ParseNet / RetinaFace R50): set DUB_ALLOW_NC=1 to fetch them"
+  # tripwires: insightface auto-downloads buffalo_l (NC) whenever its directory is missing; an empty directory makes it fail instead
+  "${PY}" -c "import sys; sys.path.insert(0, '${DUB_ROOT}/scripts/pilot'); import clean_face_stack as c; print('tripwires', c.install_tripwires() or 'present')"
 fi
 echo "== done"; du -sh "$M"/* 2>/dev/null

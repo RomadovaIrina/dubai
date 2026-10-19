@@ -232,7 +232,12 @@ def main() -> int:
     # ---- window-boundary test (inside LS, crossfade frames and switch windows excluded)
     gidx = np.arange(f0, f1); phase = np.where(seg_start[sl] >= 0, (gidx - seg_start[sl]) % NWIN, -1)
     inner = ls & ~near & ~xf_mask[sl] & valid & (gidx - seg_start[sl] >= 1)
-    bnd = inner & (phase == 0); intr = inner & (phase != 0)
+    explicit = [f for sg in segs if sg["action"] == "LATENT_SYNC" for f in (sg.get("ls_seams") or [])]
+    if explicit:   # the generator recorded where new content starts (overlapping / longer windows): use those frames as the seams
+        seam_mask = np.zeros(n_all, bool); seam_mask[[f for f in explicit if 0 <= f < n_all]] = True
+        bnd = inner & seam_mask[sl]; intr = inner & ~seam_mask[sl]
+    else:
+        bnd = inner & (phase == 0); intr = inner & (phase != 0)
     wtest = {}
     for key in ("mouth_diff", "mouth_warp", "mouth_flicker", "mouth_pix_hf", "lip_hf", "lip_jitter", "upper_diff"):
         so, sm = sig[key]
@@ -273,7 +278,7 @@ def main() -> int:
     rep = {"video": str(vid), "master": str(master_p), "tag": a.tag, "frames": [f0, f1], "params": {k: v for k, v in vars(a).items() if k not in ("manifest", "out")},
            "landmarker": "mediapipe face_landmarker.task float16 v1 (Apache-2.0) mapped to the 106 layout (metric v3)",
            "det_rate": {"master": round(float(det_ok_m.mean()), 4), "output": round(float(det_ok_o.mean()), 4)}, "rois_canonical": {"mouth": mouth_roi, "upper": upper_roi, "size": CAN},
-           "situation_frames": {s: int(m.sum()) for s, m in sit.items()},
+           "situation_frames": {s: int(m.sum()) for s, m in sit.items()}, "seam_source": "ls_seams (recorded)" if explicit else "16-frame phase from segment start",
            "open_percentiles": {"out_ls": np.round(np.percentile(open_o[ls], [5, 25, 50, 75, 95]), 4).tolist() if ls.any() else None,
                                 "master_ls": np.round(np.percentile(open_m[ls], [5, 25, 50, 75, 95]), 4).tolist() if ls.any() else None,
                                 "master_orig": np.round(np.percentile(open_m[~ls], [5, 25, 50, 75, 95]), 4).tolist() if (~ls).any() else None}, "table": table, "window_test": wtest, "window_profile_out": prof, "window_profile_master": prof_m,

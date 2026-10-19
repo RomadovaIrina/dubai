@@ -16,6 +16,7 @@ two by measuring the REAL rigid head motion without any detector: dense optical 
                                       frame by frame, no lag
       kalman:Q:R                      constant-velocity Kalman + RTS smoother per coordinate (offline, zero phase); Q accel noise, R meas noise (px^2)
       euro:MINCUT:BETA                One-Euro filter (causal, streaming), cutoff in Hz at 25 fps
+      blend:A:K:S                     box:K + A * (flow:S - box:K): follows a fraction A of the real head motion (sync / slide compromise)
       sub:N:S                         MediaPipe only every N-th frame, the frames in between from the flow track (stabilised-coordinate
                                       linear interpolation), then flow:S
 All filters work inside contiguous face runs (a gap restarts them).
@@ -59,6 +60,15 @@ def rigid_motion(frames, lm: np.ndarray, step: int = 3, return_info: bool = Fals
     Returns H (T, 2, 3): similarity mapping frame t-1 coordinates -> frame t (identity where t-1 or t has no face). DIS flow (MEDIUM preset)
     on a grey crop around the upper face of frame t-1; RANSAC partial affine (rotation + scale + translation) on flow samples inside the
     upper-face hull (eyes excluded)."""
+    import cv2
+    nth = cv2.getNumThreads(); cv2.setNumThreads(4)   # the container CPU quota is ~17 cores; OpenCV's default (all 128) oversubscribes it 10x
+    try:
+        return _rigid_motion(frames, lm, step, return_info)
+    finally:
+        cv2.setNumThreads(nth)
+
+
+def _rigid_motion(frames, lm, step, return_info):
     import cv2
     T = len(frames); Hs = np.tile(np.array([[1, 0, 0], [0, 1, 0]], np.float64), (T, 1, 1)); info = np.zeros((T, 2))
     dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
@@ -149,6 +159,9 @@ def filter_landmarks(lm: np.ndarray, H: np.ndarray | None, spec: str) -> np.ndar
     """(T, P, 2) landmarks -> filtered copy (NaN pattern kept; filters restart at every gap). See module doc for `spec`."""
     kind, *args = spec.split(":"); out = lm.astype(np.float64).copy(); ok = np.isfinite(lm[:, 0, 0])
     if kind == "raw": return out
+    if kind == "blend":   # blend:A:K:S = box:K + A * (flow:S - box:K): follow a fraction A of the real (flow-measured) head motion
+        b = filter_landmarks(lm, H, f"box:{args[1]}"); fl = filter_landmarks(lm, H, f"flow:{args[2]}")
+        return b + float(args[0]) * (fl - b)
     for s, e in runs(ok):
         seg = lm[s:e].astype(np.float64); n, P, _ = seg.shape
         if kind == "box":

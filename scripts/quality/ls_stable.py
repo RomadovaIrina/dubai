@@ -15,6 +15,14 @@ jump at every window start on 03. Variants (each one isolated; everything else =
   mode wrapper    no generation: the aligned crop itself goes through restore (inverse affine) -> the caller's paste-back = jitter of
                   crop / affine / paste-back alone.
   mode vae        crop -> VAE encode / decode -> restore: adds the VAE's texture flicker.
+  overlap continue  (memory-light, DeepCache-compatible) windows are denoised ONE AT A TIME with stride S; the frames a window shares
+                  with the previous one are pinned to the previous result: at every step they are re-noised from it with the shared initial
+                  noise (RePaint-style temporal continuation), so the new frames are generated consistent with the tail of the previous window.
+  window_len L    temporal window length (16 = trained; the motion module's positional table allows up to 24).
+  bridge Lb/k     (budget seam fix) after the normal independent windows, every seam gets a short BRIDGE window of Lb frames centred on it:
+                  its latents are re-noised to the level of the last k DDIM steps (shared initial noise), denoised again for those k steps
+                  (DeepCache per bridge window, one at a time), and blended back with a triangular weight peaking at the seam. The motion
+                  module sees both sides of the seam in one window (what per-step fusion does at every step, here only at low noise).
 With stride None, ref_mode 'same', mode 'ls' the class is AccelLatentSync unchanged.
 """
 from __future__ import annotations
@@ -27,10 +35,15 @@ from latentsync_accel import LS, AccelLatentSync, _ReplayDetector, _sdpa_context
 
 
 class StableLatentSync(AccelLatentSync):
-    def __init__(self, pipe, *, stride: int | None = None, ref_mode: str = "same", mode: str = "ls", **kw):
+    def __init__(self, pipe, *, stride: int | None = None, ref_mode: str = "same", mode: str = "ls", overlap: str = "fuse", window_len: int | None = None,
+                 bridge_len: int = 0, bridge_steps: int = 0, **kw):
         super().__init__(pipe, **kw)
-        assert mode in ("ls", "wrapper", "vae") and ref_mode in ("same", "fixed")
-        self.stride, self.ref_mode, self.mode = stride, ref_mode, mode
+        assert mode in ("ls", "wrapper", "vae") and ref_mode in ("same", "fixed") and overlap in ("fuse", "continue")
+        self.stride, self.ref_mode, self.mode, self.overlap = stride, ref_mode, mode, overlap
+        self.bridge_len, self.bridge_steps = int(bridge_len), int(bridge_steps)
+        if window_len:
+            assert 1 <= window_len <= 24, "motion module positional table: <= 24 frames"
+            self.num_frames = int(window_len)
         self.ref_frames = None; self.ref_dets = None          # set by the caller for ref_mode fixed: (16, H, W, 3) RGB uint8 + replayed detections
 
     def set_reference(self, frames_rgb: np.ndarray, detections: list):
@@ -48,7 +61,7 @@ class StableLatentSync(AccelLatentSync):
 
     @torch.no_grad()
     def _core(self, video_frames, audio_path, detections=None, weight_dtype=torch.float16, video_fps=25, generator=None):
-        if self.stride is None and self.ref_mode == "same" and self.mode == "ls":
+        if self.stride is None and self.ref_mode == "same" and self.mode == "ls" and self.num_frames == 16 and not self.bridge_len:
             return super()._core(video_frames, audio_path, detections, weight_dtype, video_fps, generator)
         from accelerate.utils import set_seed
         pipe = self.pipe; set_seed(self.seed); old = os.getcwd(); os.chdir(LS)
@@ -87,6 +100,7 @@ class StableLatentSync(AccelLatentSync):
                 synced = torch.cat(out); t_vae = time.perf_counter() - t0
             else:
                 latents = pipe.prepare_latents(n, pipe.vae.config.latent_channels, H, W, weight_dtype, device, generator)   # (1, 4, n, h, w), same noise per frame
+                eps_init = latents.clone()   # the exact initial noise of this trajectory (bridges re-noise with it)
                 # per-frame conditioning latents, encoded once (chunks of 16, original order)
                 t0 = time.perf_counter(); m_l, mi_l, r_l = [], [], []
                 if ref_faces is not None:
@@ -117,8 +131,53 @@ class StableLatentSync(AccelLatentSync):
                     return torch.tensor([min(i + 1, Lw - i) for i in range(Lw)], device=device, dtype=torch.float32)
                 caches = [{} for _ in groups]; dc = self.deepcache_helper
                 t0 = time.perf_counter()
+                if self.overlap == "continue" and self.stride is not None:
+                    eps0 = latents.clone(); final = torch.empty_like(latents); done = 0
+                    with _sdpa_context(self.sdpa):
+                        for a_, b_ in windows:
+                            o = max(0, done - a_); x = eps0[:, :, a_:b_].clone(); known = final[:, :, a_:a_ + o] if o > 0 else None
+                            mk, mi, rl, au = mask_lat[:, :, a_:b_], masked_lat[:, :, a_:b_], ref_lat[:, :, a_:b_], audio_all[a_:b_]
+                            if do_cfg:
+                                mk, mi, rl, au = torch.cat([mk] * 2), torch.cat([mi] * 2), torch.cat([rl] * 2), torch.cat([torch.zeros_like(au), au])
+                            if dc is not None:
+                                dc.cached_output = {}
+                            for t in timesteps:
+                                if o > 0:   # pin the shared frames to the previous window's result at this noise level
+                                    x[:, :, :o] = pipe.scheduler.add_noise(known, eps0[:, :, a_:a_ + o], t.reshape(1))
+                                x2 = torch.cat([x] * 2) if do_cfg else x
+                                npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1
+                                if do_cfg:
+                                    nu, na = npred.chunk(2); npred = nu + self.guidance * (na - nu)
+                                x = pipe.scheduler.step(npred, t, x, **extra).prev_sample
+                            if o > 0:
+                                x[:, :, :o] = known
+                            final[:, :, a_:b_] = x; done = b_
+                    latents = final
+                    timesteps_done = True
+                elif self.stride is None:   # plain (longer) windows: group by group with all steps inside, like upstream -> ONE DeepCache cache alive
+                    with _sdpa_context(self.sdpa):
+                        for gi, grp in enumerate(groups):
+                            x = torch.cat([latents[:, :, a:b] for a, b in grp]); mk = torch.cat([mask_lat[:, :, a:b] for a, b in grp])
+                            mi = torch.cat([masked_lat[:, :, a:b] for a, b in grp]); rl = torch.cat([ref_lat[:, :, a:b] for a, b in grp]); au = torch.cat([audio_all[a:b] for a, b in grp])
+                            if do_cfg:
+                                mk, mi, rl, au = torch.cat([mk] * 2), torch.cat([mi] * 2), torch.cat([rl] * 2), torch.cat([torch.zeros_like(au), au])
+                            if dc is not None:
+                                dc.cached_output = {}
+                            for t in timesteps:
+                                x2 = torch.cat([x] * 2) if do_cfg else x
+                                npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1
+                                if do_cfg:
+                                    nu, na = npred.chunk(2); npred = nu + self.guidance * (na - nu)
+                                x = pipe.scheduler.step(npred, t, x, **extra).prev_sample
+                            for k, (a, b) in enumerate(grp):
+                                latents[:, :, a:b] = x[k:k + 1]
+                    timesteps_done = True
+                else:
+                    if dc is not None:   # per-step fusion keeps every window group's DeepCache feature cache alive at once -> OOM on long segments
+                        raise ValueError("overlap 'fuse' with a stride needs --no-deepcache (or use --overlap continue)")
+                    timesteps_done = False
                 with _sdpa_context(self.sdpa):
-                    for t in timesteps:
+                    for t in ([] if timesteps_done else timesteps):
                         eps_sum = torch.zeros(latents.shape, device=device, dtype=torch.float32); w_sum = torch.zeros(n, device=device, dtype=torch.float32)
                         for gi, grp in enumerate(groups):
                             x = torch.cat([latents[:, :, a:b] for a, b in grp]); mk = torch.cat([mask_lat[:, :, a:b] for a, b in grp])
@@ -140,6 +199,33 @@ class StableLatentSync(AccelLatentSync):
                         eps = (eps_sum / w_sum.view(1, 1, -1, 1, 1)).to(weight_dtype)
                         latents = pipe.scheduler.step(eps, t, latents, **extra).prev_sample
                 torch.cuda.synchronize(); t_unet = time.perf_counter() - t0
+                t_bridge = 0.0; bridges = 0
+                if self.bridge_len and self.bridge_steps and self.stride is None:   # budget seam fix: low-noise bridge windows over every seam
+                    t0 = time.perf_counter(); eps0 = eps_init
+                    k0 = max(0, len(timesteps) - self.bridge_steps); half = self.bridge_len // 2
+                    dc_start = getattr(dc, "start_timestep", None) if dc is not None else None
+                    if dc is not None: dc.start_timestep = k0   # DeepCache counts its skip schedule from start_timestep: each bridge must open with a full step
+                    with _sdpa_context(self.sdpa):
+                        for seam in [w[0] for w in windows[1:]]:
+                            a_, b_ = max(0, seam - half), min(n, seam + (self.bridge_len - half))
+                            if b_ - a_ < 4: continue
+                            x = pipe.scheduler.add_noise(latents[:, :, a_:b_], eps0[:, :, a_:b_], timesteps[k0].reshape(1))
+                            mk, mi, rl, au = mask_lat[:, :, a_:b_], masked_lat[:, :, a_:b_], ref_lat[:, :, a_:b_], audio_all[a_:b_]
+                            if do_cfg:
+                                mk, mi, rl, au = torch.cat([mk] * 2), torch.cat([mi] * 2), torch.cat([rl] * 2), torch.cat([torch.zeros_like(au), au])
+                            if dc is not None:
+                                dc.cached_output = {}
+                            for t in timesteps[k0:]:
+                                x2 = torch.cat([x] * 2) if do_cfg else x
+                                npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1
+                                if do_cfg:
+                                    nu, na = npred.chunk(2); npred = nu + self.guidance * (na - nu)
+                                x = pipe.scheduler.step(npred, t, x, **extra).prev_sample
+                            L_ = b_ - a_; w = torch.tensor([min(i + 1, L_ - i) for i in range(L_)], device=device, dtype=torch.float32)
+                            w = (w / w.max()).clamp(max=1.0).to(weight_dtype).view(1, 1, -1, 1, 1)
+                            latents[:, :, a_:b_] = w * x + (1 - w) * latents[:, :, a_:b_]; bridges += 1
+                    if dc is not None: dc.start_timestep = dc_start
+                    torch.cuda.synchronize(); t_bridge = time.perf_counter() - t0
                 if dc is not None:
                     dc.cached_output = {}
                 t0 = time.perf_counter(); out = []
@@ -148,9 +234,15 @@ class StableLatentSync(AccelLatentSync):
                     out.append(pipe.paste_surrounding_pixels_back(dec, cur_px[a:a + nf], 1 - masks[a:a + nf], device, weight_dtype))
                 synced = torch.cat(out); torch.cuda.synchronize(); t_vae += time.perf_counter() - t0
             t0 = time.perf_counter(); frames = pipe.restore_video(synced, video_frames, boxes, affine); t_res = time.perf_counter() - t0
-            stats = {"frames": int(frames.shape[0]), "windows": len(windows), "full_windows": len([w for w in windows if w[1] - w[0] == nf]),
+            # seams = first frame of NEW content after a previous window (segment-relative): window starts (none / fuse) or previous window ends (continue)
+            if self.overlap == "continue" and self.stride is not None:
+                seams = [windows[k - 1][1] for k in range(1, len(windows)) if windows[k - 1][1] < n]
+            else:
+                seams = [w[0] for w in windows[1:]] if windows else list(range(nf, n, nf))
+            stats = {"frames": int(frames.shape[0]), "windows": len(windows), "seams": seams, "full_windows": len([w for w in windows if w[1] - w[0] == nf]),
                      "partial_windows": len([w for w in windows if w[1] - w[0] != nf]), "groups": unet_calls // max(len(timesteps), 1) if windows else 0,
                      "window_batch_size": self.B, "unet_calls": unet_calls, "stride": self.stride, "ref_mode": self.ref_mode, "mode": self.mode,
+                     "overlap": self.overlap, "window_len": self.num_frames, "bridge": {"len": self.bridge_len, "steps": self.bridge_steps},
                      "detector": "replayed_verify_pass" if replay is not None else "latentsync_internal", "detector_fallback_calls": replay.fallbacks if replay else 0,
                      "seconds": {"preprocess_audio_video": round(t_pre, 3), "affine": round(t_aff, 3), "vae_and_cond": round(t_vae, 3), "unet_denoise": round(t_unet, 3),
                                  "restore": round(t_res, 3), "write": 0.0, "total": round(time.perf_counter() - t_all, 3)}}
@@ -162,18 +254,22 @@ class StableLatentSync(AccelLatentSync):
 class StableRunner:
     """Same interface as face_aware_latentsync_accel.AccelRunner (run_frames / calls / config), executing StableLatentSync."""
 
-    def __init__(self, window_batch_size=2, deepcache=True, steps=20, guidance=1.5, seed=1247, deepcache_interval=5, stride=None, ref_mode="same", mode="ls", pipe=None):
+    def __init__(self, window_batch_size=2, deepcache=True, steps=20, guidance=1.5, seed=1247, deepcache_interval=5, stride=None, ref_mode="same", mode="ls", pipe=None,
+                 overlap="fuse", window_len=None, bridge_len=0, bridge_steps=0):
         from resident_vram_probe import load_latentsync
         t0 = time.perf_counter(); pipe = pipe or load_latentsync()
-        self.acc = StableLatentSync(pipe, stride=stride, ref_mode=ref_mode, mode=mode, window_batch_size=window_batch_size, deepcache=deepcache,
-                                    steps=steps, guidance=guidance, seed=seed, deepcache_interval=deepcache_interval)
+        self.acc = StableLatentSync(pipe, stride=stride, ref_mode=ref_mode, mode=mode, overlap=overlap, window_len=window_len, bridge_len=bridge_len, bridge_steps=bridge_steps,
+                                    window_batch_size=window_batch_size,
+                                    deepcache=deepcache, steps=steps, guidance=guidance, seed=seed, deepcache_interval=deepcache_interval)
         self.load_s = round(time.perf_counter() - t0, 2); self.steps, self.guidance, self.seed = steps, guidance, seed
         self.config = {"window_batch_size": window_batch_size, "deepcache": deepcache, "deepcache_interval": deepcache_interval if deepcache else None,
-                       "steps": steps, "guidance": guidance, "seed": seed, "fp16": True, "stage2_512": True, "stride": stride, "ref_mode": ref_mode, "mode": mode}
+                       "steps": steps, "guidance": guidance, "seed": seed, "fp16": True, "stage2_512": True, "stride": stride, "ref_mode": ref_mode, "mode": mode,
+                       "overlap": overlap, "window_len": window_len or 16, "bridge_len": bridge_len, "bridge_steps": bridge_steps}
         self.calls: list[dict] = []
 
     def run_frames(self, frames_rgb, audio_wav, detections=None):
         t0 = time.perf_counter(); frames = self.acc.run_frames(frames_rgb, str(audio_wav), detections); dt = round(time.perf_counter() - t0, 2)
         st = self.acc.last_stats
-        self.calls.append({"frames": st["frames"], "windows": st["windows"], "groups": st["groups"], "unet_calls": st["unet_calls"], "seconds": dt, "stages": st["seconds"]})
+        seams = st.get("seams", list(range(self.acc.num_frames, len(frames_rgb), self.acc.num_frames)))   # AccelLatentSync path: 16-frame window starts
+        self.calls.append({"frames": st["frames"], "windows": st["windows"], "groups": st["groups"], "unet_calls": st["unet_calls"], "seconds": dt, "stages": st["seconds"], "seams": seams})
         return frames, dt

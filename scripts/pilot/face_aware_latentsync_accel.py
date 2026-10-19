@@ -473,6 +473,9 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
 
 
 def main() -> int:
+    import os
+    if os.environ.get("DUB_ALLOW_NC", "0") != "1":   # CLEAN-ONLY (2026-10-16)
+        raise SystemExit("face_aware_latentsync_accel.py CLI loads non-commercial face models (RetinaFace R50 router + InsightFace verify); use candidate_video_stage.py / run_clean_pipeline_05.py (clean defaults), or DUB_ALLOW_NC=1 for a research-only run")
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("video")
     ap.add_argument("--audio", default=None, help="16 kHz mono wav driving the lipsync (dubbed track); default: the video's own audio")
