@@ -1,0 +1,12 @@
+# Round 3, track B (face stability / composite): changelog
+
+Branch `experiment/r3-face` (from `experiment/r2-composite-position` 6341e2e + merge of `experiment/r2-lipsync-position` 92de423).
+Server: RTX 5090, 15.4 CPU cores. Outputs: `/workspace/dub/artifacts/r3-face/`. Every number: 04 = shakiest video, IOD ~155 px, px at source resolution.
+
+| # | what | why | result | commit |
+|---|---|---|---|---|
+| 1 | Merge A's round-2 generator; `candidate_video_stage.py --dump-ls-raw` (whole-video raw LatentSync layer); `r3_render.sh` | the source-fps composite needs the raw generator frames of the whole video, not windows | 04 / 05 / 03 / 01 rendered with A's flags (flow4nr32hm), validation PASS; video stage 04 248.6 s = 277 s/video-min | 98c8333, 4b5… |
+| 2 | `r3_master_timing.py` (exact source time of each master frame, frame-index video + pixel check), `r3_source_lm.py` (MediaPipe on every source frame) | round 2's timing / landmark files were never committed | 03 / 04 / 05 lag −59.4…−59.9 ms mean (−73…0), 100 % pixel agreement; same as r2 | |
+| 3 | `r3_flicker.py`: motion-compensated excess residual of the pasted region (border band above / below the mouth line, upper skin, chin), colour flicker, sharpness, per-second ranks | brief task 2: luma / colour flicker and edge crawl, not covered by slide / v4 | self-test (source vs source) 0.000 everywhere; encoder floor (eyes) 0.05 | |
+| 4 | `fps_composite.py --source-lm` (+ `--src-anchor flow:4`, `--mask-track`): mask, registration target and layer pose from the SOURCE frames' landmarks + source-rate rigid motion | the r2 composite interpolated master landmarks at mu: wrong on the 1-in-6 source frames the master dropped (shake is not linear) | 04 w1 nose-base slide 0.32 → 0.25 px, p95 1.25 → 0.68; head-locked mask = no further gain | |
+| 5 | **Master timing `--master-timing-mode fps` (`-vf fps=25`, `DUB_MASTER_TIMING=fps`)** | the generated jaw / chin keeps the INPUT frame's jaw: with `-r 25` that is 60 ms old, so registration (head pose) can't remove it: chin excess 2.4–2.7 at 30 fps vs ~0 at 25 fps | 04: chin excess 2.39 → 0.49, jaw band 2.75 → 0.62, colour flicker 0.58 → 0.38, nose-base slide 0.25 → 0.14 px (p95 0.31) | |
