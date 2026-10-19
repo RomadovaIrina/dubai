@@ -124,3 +124,26 @@ Base: `experiment/r2-audio` @ a1fd764. Round-2 log: `reports/quality/audio_timin
 
 - HDEMUCS: there are no weights on this server. A `find /` turns up only torchaudio's model *code* (`_hdemucs.py`, BSD).
 - `--bed-separator hdemucs` stays refused without `DUB_ALLOW_NC_BED`, which is never set.
+
+## 10. audio-r3 delivered (01–05) to A / B / D + tables
+- **Flags:** r2 policy + `--qwen-quant q8_0 --qwen-gpu-layers -1 --qwen-tts-gpu-layers 14 --qa-whisper-compute int8_float16 --tts-text-norm on` (`r3a_batch.sh`), then `r2_deliver.py --tag r3`.
+- **Report:** `reports/experiments/r3-audio/README.md` (WER / CER, sounds, residual gaps, LUFS, s/video-min, VRAM). Detail tables: `intel_audio-r{2,3}.md`, `sounds_audio-r{2,3}.md`, `listen_README.md` (worst-20 lists).
+- **WER r2 → r3:**
+
+  | video | WER | note |
+  |---|---|---|
+  | 01 | 0.028 → 0.017 | number sentences fixed |
+  | 02 | 0.060 → 0.075 | "Hamam" heard as "Our mom" |
+  | 03 | 0.008 → 0.010 | |
+  | 04 | 0.009 | unchanged |
+  | 05 | 0.011 | unchanged |
+
+- Speed 151–227 s per video-minute (was 478–632). Peak VRAM 9.2–9.3 GB.
+- **New tools:** `sound_table.py` (extraneous-sound table; bed steps "created by the mix" checked against the stem). `declick.py` now iterates up to 3 passes and never raises a peak (02 / 04: 1 click left → 0). `r2_deliver.py --tag / --redeclick`.
+- **Open:**
+  - loudness: −12.9…−20.4 LUFS, true peak up to −0.2 dBTP;
+  - layer-3 refit on top of r3;
+  - Qwen fully on the GPU in the TTS session (alternating phases);
+  - rare-word onsets ("Hamam");
+  - TTS repetition at a sentence end (01 u07 "floor to floor");
+  - the `r2_deliver --redeclick` re-mix is slow (680 s on 02; Silero frame loop in `bed_speech_runs`).

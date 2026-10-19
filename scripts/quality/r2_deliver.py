@@ -21,7 +21,9 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--manifest", required=True); ap.add_argument("--face-ref", required=True); ap.add_argument("--out", required=True)
     ap.add_argument("--residue-duck-db", type=float, default=-15.0); ap.add_argument("--duck-db", type=float, default=-4.0)
-    ap.add_argument("--attack-s", type=float, default=0.25); ap.add_argument("--release-s", type=float, default=0.6); ap.add_argument("--refit-build", default=None, help="refit_offline build.json (recorded in the manifest)")
+    ap.add_argument("--attack-s", type=float, default=0.25); ap.add_argument("--release-s", type=float, default=0.6); ap.add_argument("--redeclick", action="store_true", help="re-run declick.py on the dub voice even if the run declicked it, and re-mix the bed")
+    ap.add_argument("--tag", default="r2", help="file tag: <id>_<tag>.manifest.json / .residual.json / .gaps.json (r3: audio-r3 delivery)")
+    ap.add_argument("--refit-build", default=None, help="refit_offline build.json (recorded in the manifest)")
     a = ap.parse_args()
     import run_clean_pipeline_05 as rp, background_bed as bb
     from face_aware_latentsync_accel import build_speech_gate
@@ -47,7 +49,7 @@ def main() -> int:
     for k in sorted(mapping, key=len, reverse=True): txt = txt.replace(json.dumps(k)[1:-1], json.dumps(mapping[k])[1:-1])
     man = json.loads(txt); man["work_dir"] = str(out)
     # 1b. declick of the dub voice (runner default --declick on; the source runs were made before it existed)
-    if not (man.get("dubbed_track") or {}).get("declick"):
+    if a.redeclick or not (man.get("dubbed_track") or {}).get("declick"):
         from declick import declick_file
         dc = declick_file(str(out / "dubbed_24k.wav"))
         rp.ff(["-i", str(out / "dubbed_24k.wav"), "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", str(out / "dubbed_16k.wav")])
@@ -58,7 +60,7 @@ def main() -> int:
     dub = [(v["start"], v["end"]) for v in rp.run_vad(out / "dubbed_16k.wav")]
     bg0 = man.get("background") or {}; mix0 = bg0.get("mix") or {}
     same = (mix0.get("residue_duck") or {}).get("duck_db") == a.residue_duck_db and (mix0.get("duck_db"), mix0.get("attack_s"), mix0.get("release_s")) == (a.duck_db, a.attack_s, a.release_s)
-    if same and "Spleeter" in (bg0.get("separation") or {}).get("model", "") and (W / "final_mix_44k.wav").exists() and (man.get("dubbed_track") or {}).get("declick"):
+    if same and not a.redeclick and "Spleeter" in (bg0.get("separation") or {}).get("model", "") and (W / "final_mix_44k.wav").exists() and (man.get("dubbed_track") or {}).get("declick"):
         # r3: the runner (r2 defaults) already mixed this exact bed over this exact declicked dub voice -> reuse it, no second Spleeter pass
         for f in ("final_mix_44k.wav", "final_mix_aac.m4a"): shutil.copy(W / f, out / f)
         mix = {**mix0, "wav": str(out / "final_mix_44k.wav"), "aac": str(out / "final_mix_aac.m4a"), "reused_from_run": True}; sep = bg0["separation"]
@@ -71,17 +73,17 @@ def main() -> int:
     gate = build_speech_gate([man["speech_intervals"], [{"start": s, "end": e} for s, e in dub]], dur, 0.24, 0.6)
     man["speech_gate"] = {"enabled": True, "margin_s": 0.24, "merge_gap_s": 0.6, "intervals": gate, "gate_seconds": round(sum(e - s for s, e in gate), 3),
                           "dubbed_speech_seconds": round(sum(e - s for s, e in dub), 3), "note": "recomputed by the video stage from dubbed_16k.wav; stored for reference"}
-    man["delivery"] = {"by": "Agent C r2", "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "source_manifest": a.manifest,
+    man["delivery"] = {"by": f"Agent C ({a.tag})", "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "source_manifest": a.manifest,
                        "audio_policy": man.get("audio_policy") or {"name": "r2 (recut)"}, "refit": json.loads(pathlib.Path(a.refit_build).read_text()) if a.refit_build else None,
                        "lips": "NOT re-synced: the video stage must re-run LatentSync on dubbed_16k.wav", "mux_audio": str(out / "final_mix_aac.m4a")}
-    mp = out / f"{vid}_r2.manifest.json"; mp.write_text(json.dumps(man, indent=1, ensure_ascii=False))
+    mp = out / f"{vid}_{a.tag}.manifest.json"; mp.write_text(json.dumps(man, indent=1, ensure_ascii=False))
     # 4. residual gaps for the video side
     py = sys.executable; tmp = out / "_gaps"
-    subprocess.run([py, str(HERE / "dub_gaps.py"), "--manifest", str(mp), "--ref-manifest", a.face_ref, "--tag", "r2", "--out", str(tmp)], check=True, capture_output=True)
-    subprocess.run([py, str(HERE / "residual_for_video.py"), "--gaps", str(tmp / f"{vid}_r2.gaps.json"), "--manifest", str(mp), "--policy", "r2",
-                    "--flags", "--audio-policy r2 (+ accepted layer-3 refit units)", "--out", str(tmp)], check=True, capture_output=True)
-    shutil.move(str(tmp / f"{vid}_r2.residual.json"), out / f"{vid}_r2.residual.json"); shutil.move(str(tmp / f"{vid}_r2.gaps.json"), out / f"{vid}_r2.gaps.json"); shutil.rmtree(tmp)
-    r = json.loads((out / f"{vid}_r2.residual.json").read_text())["summary"]
+    subprocess.run([py, str(HERE / "dub_gaps.py"), "--manifest", str(mp), "--ref-manifest", a.face_ref, "--tag", a.tag, "--out", str(tmp)], check=True, capture_output=True)
+    subprocess.run([py, str(HERE / "residual_for_video.py"), "--gaps", str(tmp / f"{vid}_{a.tag}.gaps.json"), "--manifest", str(mp), "--policy", a.tag,
+                    "--flags", f"--audio-policy r2 + r3 flags (delivery {a.tag})", "--out", str(tmp)], check=True, capture_output=True)
+    shutil.move(str(tmp / f"{vid}_{a.tag}.residual.json"), out / f"{vid}_{a.tag}.residual.json"); shutil.move(str(tmp / f"{vid}_{a.tag}.gaps.json"), out / f"{vid}_{a.tag}.gaps.json"); shutil.rmtree(tmp)
+    r = json.loads((out / f"{vid}_{a.tag}.residual.json").read_text())["summary"]
     dc = man["dubbed_track"].get("declick") or {}
     print(f"{vid}: declick {len(dc.get('repaired', []))} repaired / {len(dc.get('left_after', []))} left;", end=" ")
     print(f"{vid}: {len(mapping)} files, bed {sep['model'][:22]} residue-duck {mix['residue_duck']['seconds']} s, residual {r['residual']} ({r['residual_s']} s, {r['residual_ls_frames']} LS frames), "

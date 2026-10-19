@@ -36,7 +36,8 @@ def repair(y: np.ndarray, sr: int, clicks: list, half_ms: float = 1.5, xf_ms: fl
         w = np.ones(b - a, np.float32); r = min(x, (b - a) // 2)
         if r > 0:
             ramp = 0.5 - 0.5 * np.cos(np.linspace(0, np.pi, r, dtype=np.float32)); w[:r] = ramp; w[-r:] = ramp[::-1]
-        before = float(np.abs(y[a:b]).max()); y[a:b] = (1 - w) * y[a:b] + w * lp.astype(np.float32)
+        before = float(np.abs(y[a:b]).max())
+        y[a:b] = np.clip((1 - w) * y[a:b] + w * lp.astype(np.float32), -before, before)   # r3: never louder than before (04 22.98 s: 0.99 -> 1.03 = clipping)
         log.append({"t": c["t"], "sample": int(i), "x_local": c["x_local"], "peak_before": round(before, 4), "peak_after": round(float(np.abs(y[a:b]).max()), 4)})
     return y, log
 
@@ -44,7 +45,8 @@ def repair(y: np.ndarray, sr: int, clicks: list, half_ms: float = 1.5, xf_ms: fl
 def declick_file(wav: str) -> dict:
     """In place: dubbed_24k.wav -> repaired; returns the log (re-detection after the repair included)."""
     import soundfile as sf
-    y, sr = sf.read(wav, dtype="float32"); c = find_clicks(y, sr); y2, log = repair(y, sr, c) if c else (y, [])
+    y, sr = sf.read(wav, dtype="float32"); c = find_clicks(y, sr); found = len(c); y2, log, passes = y, [], 0
+    while c and passes < 3:   # r3: re-detect after each repair (02 96.17 s / 04 22.99 s: a second click 6-8 ms after the repaired one was left)
+        y2, lg = repair(y2, sr, c); log += lg; passes += 1; c = find_clicks(y2, sr)
     if log: sf.write(wav, y2, sr, subtype="PCM_16")
-    left = find_clicks(y2, sr)
-    return {"found": len(c), "repaired": log, "left_after": left}
+    return {"found": found, "passes": passes, "repaired": log, "left_after": find_clicks(y2, sr) if log else c}
