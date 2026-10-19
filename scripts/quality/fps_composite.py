@@ -115,6 +115,8 @@ def main() -> int:
     ap.add_argument("--tex-sigma", type=float, default=1.5); ap.add_argument("--tex-tau", type=float, default=12.0); ap.add_argument("--lip-dilate", type=float, default=0.12)
     ap.add_argument("--silence", choices=["none", "still", "orig"], default="none"); ap.add_argument("--silence-min-s", type=float, default=0.3); ap.add_argument("--silence-ramp", type=int, default=6)
     ap.add_argument("--gaps", default=None, help="residual-gap JSON (temporal_mouth_stabilize.load_gaps; e.g. track C's list); default: computed from the manifest")
+    ap.add_argument("--sharpen-lips-max", type=float, default=0.0, help="r3 D: cap of the EXTRA lip unsharp amount after --sharpen-auto (the closed loop "
+                    "chased the source's open-mouth texture up to 1.6 on 04 and drew a hard pink edge); 0 = no cap")
     ap.add_argument("--sanitize-layer", type=float, default=0.0, help="r3 D (user: 'washed-out pink lips / torn lips'): raw LatentSync frames whose lip-box "
                     "texture collapses (min(lip Laplacian, lip contrast) / median of the frames 2..6 away < this, e.g. 0.83) are replaced, in runs of <= 4, by a "
                     "flow interpolation between the nearest good frames; 0 = off")
@@ -498,6 +500,7 @@ def main() -> int:
                 a.ls_sharpen_lips = round(max(0.0, tot - a.ls_sharpen), 3)
         best = min(hist, key=lambda h: abs((h["out_ratio_lips"] or a.sharpen_auto) - a.sharpen_auto) + abs((h["out_ratio_skin"] or a.sharpen_auto) - a.sharpen_auto))
         a.ls_sharpen, a.ls_sharpen_lips = best["ls_sharpen"], best["ls_sharpen_lips"]
+        if a.sharpen_lips_max > 0: a.ls_sharpen_lips = min(a.ls_sharpen_lips, a.sharpen_lips_max)
         times["sharpen_closed_loop"] = {"iterations": hist, "chosen": best, "seconds": round(time.perf_counter() - t0, 2)}; print("  sharpen closed loop:", best, flush=True)
     lip_cov.clear(); edge_meas.clear()   # calibration calls of one() do not count
     t0 = time.perf_counter(); out = [None] * len(S); fails = 0; touched = 0
