@@ -5,9 +5,22 @@
 set -u
 DUB_ROOT=/workspace/dub/dubai; . $DUB_ROOT/scripts/env.sh >/dev/null; cd $DUB_ROOT
 M=$1; suf=${2:-fix30}; stem=${M%.manifest.json}; out=${stem}_$suf.mp4
-FIX30_ARGS=${FIX30_ARGS:-"--register sim_ring --ring-region upper --edge-px 12"}
-src=$(python -c "import json;print(json.load(open('$M'))['input'])"); id=$(basename ${src%.*}); T=/workspace/dub/artifacts/r3d/timing/${id}_master_timing.json
-[ -f $T ] || python scripts/quality/master_timing.py --src $src --out $T
+# FIX30_MODE=r2 (default): B round 2 T3u on a `-r 25` master.  FIX30_MODE=r3F: B round 3 (28491dd) on an fps master (arm r3F):
+#   exact timing of THIS master (-vf fps=25), MediaPipe on every source frame, --source-lm + --colour-match upper --seam-lf 4 --sharpen-auto 1.0
+MODE=${FIX30_MODE:-r2}
+src=$(python -c "import json;print(json.load(open('$M'))['input'])"); id=$(basename ${src%.*}); TD=/workspace/dub/artifacts/r3d/timing
+WM=$(python -c "import json;print(json.load(open('$M'))['work_dir'])")/master_25fps.mp4
+if [ $MODE = r3F ]; then
+  FIX30_ARGS=${FIX30_ARGS:-"--register sim_ring --ring-region upper --edge-px 12 --colour-match upper --seam-lf 4 --sharpen-auto 1.0"}
+  T=$TD/${id}_master_timing_F.json; SL=$TD/${id}_source_lm_F.npz
+  [ -f $T ] || python scripts/quality/r3_master_timing.py --src $src --master $WM --vf fps=25 --out $T
+  [ -f $SL ] || python scripts/quality/r3_source_lm.py --src $src --timing $T --out $SL
+  FIX30_ARGS="$FIX30_ARGS --source-lm $SL"
+else
+  FIX30_ARGS=${FIX30_ARGS:-"--register sim_ring --ring-region upper --edge-px 12"}
+  T=$TD/${id}_master_timing.json
+  [ -f $T ] || python scripts/quality/master_timing.py --src $src --out $T
+fi
 LS=${stem}_ls_raw.mp4; nls=$(python -c "import json;print(json.load(open('$M'))['lipsync']['by_action'].get('LATENT_SYNC',{}).get('frames',0))")
 s=$(date +%s.%N)
 if [ "$nls" -gt 0 ]; then

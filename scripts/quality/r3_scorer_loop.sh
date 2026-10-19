@@ -2,8 +2,8 @@
 # score every finished output once; several copies may run (per-item claim dir); pause while a GPU audit / E2E timing run is active
 cd /workspace/dub/dubai; . scripts/env.sh >/dev/null; V=/workspace/dub/artifacts/r3d/video; S=/workspace/dub/artifacts/r3d/score; mkdir -p $S/.claim
 while true; do
-  for m in $V/??_clean0.manifest.json $V/??_r2m.manifest.json $V/??_r2m_fix30.manifest.json $V/??_r2mC.manifest.json $V/??_r2mC_fix30.manifest.json; do
-    [ -f "$m" ] || continue; b=$(basename $m .manifest.json); id=${b%%_*}; arm=${b#*_}; lab=${arm//_/}; [ $arm = r2m ] && lab=r2m25; [ $arm = r2mC ] && lab=r2mC25
+  for m in $V/??_clean0.manifest.json $V/??_r2m.manifest.json $V/??_r2m_fix30.manifest.json $V/??_r2mC.manifest.json $V/??_r2mC_fix30.manifest.json $V/??_r3F.manifest.json $V/??_r3F_fix30.manifest.json; do
+    [ -f "$m" ] || continue; b=$(basename $m .manifest.json); id=${b%%_*}; arm=${b#*_}; lab=${arm//_/}; [ $arm = r2m ] && lab=r2m25; [ $arm = r2mC ] && lab=r2mC25; [ $arm = r3F ] && lab=r3F25
     [ -f $S/${id}_${lab}.score.json ] && continue
     mkdir $S/.claim/${id}_${lab} 2>/dev/null || continue
     Q=/workspace/dub/artifacts/r3d/q4.log   # yield to the GPU audit (q4 waits for an idle scorer) and never overlap an audit / E2E timing run
