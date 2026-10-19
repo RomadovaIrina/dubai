@@ -49,3 +49,10 @@ For a separate venv instead: `CMAKE_ARGS=... FORCE_CMAKE=1 uv pip install --pyth
   canonical cand5 audio are video-only controls. Scorecard / spec status label the audio source per row.
 | 4 | `r3-face` 28491dd (B r3) | see 1a30201: `--dump-ls-raw` kept D's (accepts B's PATH form), B's `--master-timing-mode` kept |
 | 5 | `r3-audio` 49e8002 (C r3: device-agnostic audio stage, Spleeter torch port on the GPU, `--qwen-quant`, `--qa-whisper-compute`, OOM backoff, `--tts-text-norm`) | runner `main()` globals: D's `VAD_DEVICE` + C's `QWEN_QUANT` / env flags combined; C's changelog kept as `reports/experiments/r3-audio/CHANGES_C.md` |
+
+## Speed finding: the CPU quota, not the GPU, is the bottleneck (19.10 08:10)
+- Container cgroup `cpu.max` = 2304000/100000 = **23 CPUs**. Under a quota, `nice` does not help: every thread is throttled once the quota is spent.
+- With 3 video-stage preps (MediaPipe + rigid motion, ~5 cores each), FIX30 (`--threads 16`, 18 cores) and 3 v4 metric jobs at once, load hit 97,
+  the GPU sat at 0 % and the prep of the run holding the GPU lock took > 10 min (normally ~2 min).
+- Fixes used: `--prep-only` (prep outside the GPU lock), SIGSTOP / SIGCONT of side jobs while the critical run preps. Proposal for the worker:
+  a CPU budget per stage (FIX30 threads ≤ 8, one prep at a time), the face-stack prep in parallel with the audio stage (it only needs the master).
