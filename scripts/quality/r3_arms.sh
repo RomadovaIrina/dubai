@@ -21,6 +21,9 @@ for arm in "$@"; do
     nodc) X="--no-deepcache";;
     refc) X="--ref-mode fixed --ref-select calm_closed";;
     refa) X="--ref-mode fixed --ref-select calm_any";;
+    refs16) X="--ref-mode shift16";;
+    refs32) X="--ref-mode shift32";;
+    refs16g2) X="--ref-mode shift16 --guidance 2.0";;
     refcg2) X="--ref-mode fixed --ref-select calm_closed --guidance 2.0";;
     br8k4) X="--bridge-len 8 --bridge-steps 4";;
     br16k4) X="--bridge-len 16 --bridge-steps 4";;

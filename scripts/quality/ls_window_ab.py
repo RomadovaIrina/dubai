@@ -172,7 +172,7 @@ def main() -> int:
     ap.add_argument("--manifest", required=True); ap.add_argument("--t0", type=float, required=True); ap.add_argument("--t1", type=float, required=True)
     ap.add_argument("--tag", required=True); ap.add_argument("--out", required=True)
     ap.add_argument("--mode", choices=["ls", "wrapper", "vae"], default="ls"); ap.add_argument("--audio", choices=["dub", "src"], default="dub")
-    ap.add_argument("--stride", type=int, default=None); ap.add_argument("--ref-mode", choices=["same", "fixed"], default="same")
+    ap.add_argument("--stride", type=int, default=None); ap.add_argument("--ref-mode", choices=["same", "fixed", "shift8", "shift16", "shift32"], default="same")
     ap.add_argument("--overlap", choices=["fuse", "continue"], default="fuse", help="with --stride: fuse = per-step latent fusion (needs DeepCache off for long segments); continue = sequential windows pinned to the previous result")
     ap.add_argument("--window-len", type=int, default=None, help="LatentSync temporal window (16 trained, <= 24)")
     ap.add_argument("--bridge-len", type=int, default=0, help="budget seam fix: bridge window length over every seam (0 = off)")

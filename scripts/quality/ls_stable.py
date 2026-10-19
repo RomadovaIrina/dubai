@@ -38,7 +38,7 @@ class StableLatentSync(AccelLatentSync):
     def __init__(self, pipe, *, stride: int | None = None, ref_mode: str = "same", mode: str = "ls", overlap: str = "fuse", window_len: int | None = None,
                  bridge_len: int = 0, bridge_steps: int = 0, **kw):
         super().__init__(pipe, **kw)
-        assert mode in ("ls", "wrapper", "vae") and ref_mode in ("same", "fixed") and overlap in ("fuse", "continue")
+        assert mode in ("ls", "wrapper", "vae") and (ref_mode in ("same", "fixed") or ref_mode.startswith("shift")) and overlap in ("fuse", "continue")
         self.stride, self.ref_mode, self.mode, self.overlap = stride, ref_mode, mode, overlap
         self.bridge_len, self.bridge_steps = int(bridge_len), int(bridge_steps)
         if window_len:
@@ -117,6 +117,10 @@ class StableLatentSync(AccelLatentSync):
                     ref_lat = torch.cat(r_l, 2)
                 else:   # reference clip tiled so that every window sees the R reference frames in order
                     R = ref_lat16.shape[2]; ref_lat = ref_lat16[:, :, [k % R for k in range(n)]]
+                if self.ref_mode.startswith("shift"):   # round 3: reference = the same segment S frames away (training-like: another time, same pose / light)
+                    S = int(self.ref_mode[5:] or 16)
+                    idx = [i + S if i + S < n else (i - S if i - S >= 0 else (i + n // 2) % n) for i in range(n)]
+                    ref_lat = ref_lat[:, :, idx]
                 t_vae += time.perf_counter() - t0
                 audio_all = torch.stack(chunks).to(device, dtype=weight_dtype)                                    # (n, 50, 384)
                 L = min(nf, n)

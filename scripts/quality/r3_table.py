@@ -41,14 +41,14 @@ def silent_frozen(base, e, v4d):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("bases", nargs="+"); ap.add_argument("--md"); ap.add_argument("--worst", type=int, default=0)
     a = ap.parse_args()
-    L = ["| run | audio | SyncNet dub / mix (AV) | per-s conf@0 mean / p10 | lip-dub r lag0 / best (lag) | mouth vel / jerk / resid / sharp | lf shear | frozen s (>1.5) | silent-s frozen (n) | joint jump med / >1.5 (src) | nose slide | LS s/frame |",
+    L = ["| run | audio | SyncNet dub / mix (AV) | per-s conf@0 mean / p10 (dub-speech s) | lip-dub r lag0 / best (lag) | mouth vel / jerk / resid / sharp | lf shear | frozen s (>1.5) | silent-s frozen (n) | joint jump med / >1.5 (src) | nose slide | LS s/frame |",
          "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     W = []
     for b in a.bases:
         try: name, e, ps, v4d = load(b)
         except FileNotFoundError: continue
         sy = e.get("sync", {}); d, m = sy.get("dub_only", {}), sy.get("mix", {})
-        c0 = np.array([r["conf_at0"] for r in ps if "conf_at0" in r and r.get("n", 0) >= 20], float)
+        c0 = np.array([r["conf_at0"] for r in ps if "conf_at0" in r and r.get("n", 0) >= 20 and (r.get("dub_act") or 0) >= 0.5], float)   # seconds where the dub speaks
         pf = e.get("syncpf", {}); lags = pf.get("lip_env_r_by_lag") or {}
         best = max(lags.items(), key=lambda kv: kv[1] if kv[1] is not None else -9) if lags else (None, None)
         v4 = e.get("v4", {}); fz = frozen_seconds(v4d)
@@ -62,7 +62,7 @@ def main():
                  f"{f(v4.get('lf_shear'))} | {fz[0] if fz[0] is not None else '–'}/{fz[1] if fz[1] is not None else '–'} | {f(sf[0])} ({sf[1]}) | {jj} | {f(sl, 3)} | {f((e.get('speed') or {}).get('ls_s_per_ls_frame'), 3)} |")
         if a.worst:
             t0 = (e.get("f0") or 0) / 25
-            rows = sorted([r for r in ps if "conf_at0" in r and r.get("n", 0) >= 20], key=lambda r: r["conf_at0"])[:a.worst]
+            rows = sorted([r for r in ps if "conf_at0" in r and r.get("n", 0) >= 20 and (r.get("dub_act") or 0) >= 0.5], key=lambda r: r["conf_at0"])[:a.worst]
             W.append(f"* {name}: " + ", ".join(f"{t0 + r['t']:.0f}s conf {r['conf_at0']:.1f} (best {r['conf_best']:.1f}@{r['offset_best']}, dub {r.get('dub_act')}, src {r.get('src_act')}, lip r {r.get('lip_r0')})" for r in rows))
     txt = "\n".join(L + ([""] + W if W else [])); print(txt)
     if a.md: pathlib.Path(a.md).write_text(txt + "\n")
