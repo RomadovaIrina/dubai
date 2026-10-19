@@ -174,6 +174,11 @@ def cmd_score(a):
         ref = src if same else pathlib.Path(man["work_dir"]) / "master_25fps.mp4"
         try: r["slide"] = slide_windows(a.id, video, ref, same, None, out)
         except Exception as e: r["slide"] = {"error": repr(e)[:300]}
+    lmF = pathlib.Path("/workspace/dub/artifacts/r3d/timing") / f"{a.id}_source_lm_F.npz"
+    if abs(po["fps"] - ps["fps"]) < 0.05 and lmF.exists() and r["coverage"]["ls_frames"]:   # background ring beside the face (user defect 3)
+        p = subprocess.run([PY, str(HERE / "r3_bgring.py"), "--video", str(video), "--ref", str(src), "--lm", str(lmF)], capture_output=True, text=True)
+        try: r["bgring"] = json.loads(p.stdout.strip().splitlines()[-1])
+        except Exception: r["bgring"] = {"error": p.stderr[-300:]}
     r["loudness"] = loudness(video)
     if not a.skip_wer:
         try: r["asr"] = back_transcribe(video, man)
@@ -233,6 +238,7 @@ def cmd_table(a):
     line("slide nose-base mean px (shaky win)", lambda r: np.mean([w["nosebase"]["slide_px"]["mean"] for w in r["slide"]]), 3)
     line("8.4 feather 10-90 px", lambda r: r["feather"].get("edge_10_90_px"), 1)
     line("WER final mix (Whisper)", lambda r: r["asr"]["wer_final_mix"], 3)
+    line("bg ring beside face: lower - upper (grey, clean0 04 = 0.70)", lambda r: r["bgring"]["lower_minus_upper"], 2)
     line("loudness LUFS", lambda r: r["loudness"]["integrated_lufs"], 1); line("true peak dBTP", lambda r: r["loudness"]["true_peak_dbtp"], 1)
     line("total s / video-min", lambda r: r["speed"]["s_per_video_min"].get("total"), 0)
     line("LatentSync s / video-min", lambda r: r["speed"]["s_per_video_min"].get("latentsync"), 0)
