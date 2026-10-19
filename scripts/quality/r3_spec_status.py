@@ -101,10 +101,10 @@ def main() -> int:
     row("9.4 / 5.6", "fps, resolution, frames, duration, H.264 vs source", "**FAIL** (25 fps CFR master muxed; coordinator gap table 17.10)", r94)
 
     def r85w(v):
-        sh = [x["score"]["face_v4"]["window_boundaries"]["video"]["share_gt_1_5"] for x in v.values() if (x["score"].get("face_v4") or {}).get("window_boundaries")]
-        ref = [x["score"]["face_v4"]["window_boundaries"]["reference"]["share_gt_1_5"] for x in v.values() if (x["score"].get("face_v4") or {}).get("window_boundaries")]
+        wbs = [(x["score"].get("face_v4") or {}).get("window_boundaries") for x in v.values()]; wbs = [w for w in wbs if w and w.get("video") and w["video"].get("share_gt_1_5") is not None]
+        sh = [w["video"]["share_gt_1_5"] for w in wbs]; ref = [w["reference"]["share_gt_1_5"] for w in wbs]
         verdict = "**FAIL**" if sh and max(s - r for s, r in zip(sh, ref)) > 0.05 else "PASS"
-        return f"{verdict} " + per(v, lambda x: (lambda w: f"{w['video']['boundaries']} starts, >1.5x {w['video']['share_gt_1_5']:.2f} (src {w['reference']['share_gt_1_5']:.2f}), >2x {w['video']['share_gt_2']:.2f}" if w else "no LS")(
+        return f"{verdict} " + per(v, lambda x: (lambda w: f"{w['video']['boundaries']} starts, >1.5x {w['video']['share_gt_1_5']:.2f} (src {w['reference']['share_gt_1_5']:.2f}), >2x {w['video']['share_gt_2']:.2f}" if w and w.get("video") and w["video"].get("share_gt_1_5") is not None else "no LS")(
             (x["score"].get("face_v4") or {}).get("window_boundaries")))
     row("8.5", "video jumps at LatentSync window starts (mouth d1 step vs inside the window; source = same frames)", "x1.38 step, 41 % > 1.5x (03 only, CLEAN0.md)", r85w)
 
