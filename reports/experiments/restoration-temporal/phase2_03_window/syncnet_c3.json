@@ -1,0 +1,30 @@
+{
+ "P_gfpgan14": {
+  "confidence": 6.01,
+  "av_offset": 0
+ },
+ "P_gfpgan14_fixed": {
+  "confidence": 6.08,
+  "av_offset": 0
+ },
+ "P_restoreformer": {
+  "confidence": 6.31,
+  "av_offset": 0
+ },
+ "C1C2_gfpgan14_fixed": {
+  "confidence": 6.0,
+  "av_offset": 0
+ },
+ "C1C2_restoreformer": {
+  "confidence": 6.19,
+  "av_offset": 0
+ },
+ "C1C2_cf_a05g13": {
+  "confidence": 6.09,
+  "av_offset": 0
+ },
+ "C1C2_cf_a035g14": {
+  "confidence": 6.02,
+  "av_offset": 0
+ }
+}

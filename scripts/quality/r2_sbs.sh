@@ -1,22 +1,21 @@
 #!/bin/bash
-# Round 2 (track A): side-by-side clips ORIGINAL | CLEAN0 | variants at normal + half speed, and a 2x nose / mouth zoom (normal + half speed).
-#   r2_sbs.sh <id> <t0> <t1> <wtag> <arm>...      -> /workspace/dub/artifacts/lipsync-temporal/sbs/r2/<id>_<wtag>_*.mp4
+# Round 2 track B: labelled side-by-side clips (any frame rate, time-based): full frame + 2x nose / mouth crop, normal + half speed.
+#   bash scripts/quality/r2_sbs.sh <out_prefix> <t0> <dur> <crop x,y,w,h | none> LABEL=file [LABEL=file ...]   (audio from the 2nd panel)
 set -eu
-cd /workspace/dub/dubai
-id=$1; t0=$2; t1=$3; w=$4; shift 4
-O=/workspace/dub/artifacts/lipsync-temporal/r2/win; M=/workspace/dub/artifacts/lipsync-temporal/r2/masters/$id; S=/workspace/dub/artifacts/lipsync-temporal/sbs/r2
-mkdir -p $S; dur=$(python3 -c "print(round($t1-$t0,2))")
-P=(--panel ORIGINAL=$M/master_25fps.mp4@0)
-for arm in "$@"; do P+=(--panel "$(echo $arm | tr a-z A-Z)=$O/${id}_${w}_$arm.mp4@$t0"); done
-# nose / mouth zoom box: median landmarks over the window (nose bridge to chin, cheek to cheek)
-Z=$(/venv/dabai/bin/python -c "
-import numpy as np; lm=np.load('$M/master_mediapipe.npz')['lm'][int($t0*25):int($t1*25)]; L=np.nanmedian(lm,0); iod=np.linalg.norm(L[33]-L[263])
-cx,cy=L[[4,13]].mean(0); w=1.3*iod; h=1.3*iod
-print(f'{int(cx-w/2)},{int(cy-h/2)},{int(cx+w/2)},{int(cy+h/2)}')")
-base=$S/${id}_${w}_$(echo "$@" | tr ' ' '-')
-/venv/dabai/bin/python scripts/quality/make_sbs.py --out ${base}.mp4 --start $t0 --dur $dur "${P[@]}" --audio-from 1 --title "$id $w ${t0}-${t1}s 25fps"
-/venv/dabai/bin/python scripts/quality/make_sbs.py --out ${base}_zoom2x.mp4 --start $t0 --dur $dur "${P[@]}" --audio-from 1 --zoom $Z --title "$id $w nose/mouth 2x"
-for v in ${base}.mp4 ${base}_zoom2x.mp4; do
-  ffmpeg -loglevel error -y -nostdin -i $v -filter:v "setpts=2.0*PTS" -filter:a "atempo=0.5" -c:v libx264 -crf 18 ${v%.mp4}_half.mp4
+out=$1; t0=$2; dur=$3; crop=$4; shift 4
+IFS=, read cx cy cw ch <<< "${crop/none/0,0,8,8}"; ins=(); lab=(); i=0; f1=""; f2=""
+for p in "$@"; do lab+=("${p%%=*}"); ins+=(-ss "$t0" -t "$dur" -i "${p#*=}"); done
+n=${#lab[@]}
+for ((i=0;i<n;i++)); do
+  f1+="[$i:v]setpts=PTS-STARTPTS,drawtext=text='${lab[$i]}':x=6:y=6:fontsize=22:fontcolor=yellow:box=1:boxcolor=black@0.6[a$i];"
+  f2+="[$i:v]setpts=PTS-STARTPTS,crop=$cw:$ch:$cx:$cy,scale=iw*2:ih*2:flags=lanczos,drawtext=text='${lab[$i]} 2x':x=6:y=6:fontsize=22:fontcolor=yellow:box=1:boxcolor=black@0.6[c$i];"
 done
-ls -la ${base}*
+s1=""; s2=""; for ((i=0;i<n;i++)); do s1+="[a$i]"; s2+="[c$i]"; done
+mkdir -p "$(dirname $out)"
+ffmpeg -loglevel error -y "${ins[@]}" -filter_complex "${f1}${s1}hstack=inputs=$n[v]" -map "[v]" -map 1:a:0 -c:v libx264 -crf 16 -pix_fmt yuv420p -c:a aac -shortest ${out}_full.mp4
+kinds="full"
+if [ "$crop" != none ]; then
+  ffmpeg -loglevel error -y "${ins[@]}" -filter_complex "${f2}${s2}hstack=inputs=$n[v]" -map "[v]" -map 1:a:0 -c:v libx264 -crf 16 -pix_fmt yuv420p -c:a aac -shortest ${out}_crop2x.mp4; kinds="full crop2x"
+fi
+for k in $kinds; do ffmpeg -loglevel error -y -i ${out}_$k.mp4 -filter_complex "[0:v]setpts=2*PTS[v];[0:a]atempo=0.5[a]" -map "[v]" -map "[a]" -c:v libx264 -crf 16 -pix_fmt yuv420p -c:a aac ${out}_${k}_half.mp4; done
+ls -la ${out}_*

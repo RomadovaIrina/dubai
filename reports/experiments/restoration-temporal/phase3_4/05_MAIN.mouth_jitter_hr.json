@@ -1,0 +1,2251 @@
+{
+ "video": "/workspace/dub/artifacts/restoration-temporal/phase4/05_MAIN.mp4",
+ "reference": "/workspace/dub/inputs/test_videos_raw/05.mp4",
+ "fps": 29.94172160122289,
+ "ranges": [
+  [
+   1,
+   1565
+  ]
+ ],
+ "tag": "05_MAIN",
+ "params": {
+  "iod": 96.0,
+  "lm_sigma": 1.5,
+  "win": 5,
+  "landmarks": "YuNet 2023mar (reference frames)",
+  "flow": "OpenCV DIS medium"
+ },
+ "rois_canonical": {
+  "mouth": [
+   53,
+   168,
+   198,
+   266
+  ],
+  "upper": [
+   15,
+   53,
+   235,
+   144
+  ]
+ },
+ "lowerface_box": [
+  3,
+  143,
+  249,
+  317
+ ],
+ "canvas": [
+  250,
+  317
+ ],
+ "det_rate_reference": 1.0,
+ "all": {
+  "vel": {
+   "mouth": {
+    "video": 2.8185,
+    "reference": 2.004,
+    "ratio": 1.406,
+    "p95_ratio": 1.529,
+    "frames": 1564
+   },
+   "upper": {
+    "video": 2.0605,
+    "reference": 2.0782,
+    "ratio": 0.991,
+    "p95_ratio": 1.01,
+    "frames": 1564
+   },
+   "lowerface": {
+    "video": 4.5629,
+    "reference": 4.3244,
+    "ratio": 1.055,
+    "p95_ratio": 1.057,
+    "frames": 1564
+   }
+  },
+  "jerk": {
+   "mouth": {
+    "video": 3.4674,
+    "reference": 2.6511,
+    "ratio": 1.308,
+    "p95_ratio": 1.657,
+    "frames": 1564
+   },
+   "upper": {
+    "video": 2.3111,
+    "reference": 2.326,
+    "ratio": 0.994,
+    "p95_ratio": 1.05,
+    "frames": 1564
+   },
+   "lowerface": {
+    "video": 5.0938,
+    "reference": 4.6717,
+    "ratio": 1.09,
+    "p95_ratio": 1.103,
+    "frames": 1564
+   }
+  },
+  "resid": {
+   "mouth": {
+    "video": 2.0929,
+    "reference": 1.9952,
+    "ratio": 1.049,
+    "p95_ratio": 0.978,
+    "frames": 1562
+   },
+   "upper": {
+    "video": 2.6334,
+    "reference": 2.5333,
+    "ratio": 1.04,
+    "p95_ratio": 0.996,
+    "frames": 1563
+   },
+   "lowerface": {
+    "video": 2.7389,
+    "reference": 2.6798,
+    "ratio": 1.022,
+    "p95_ratio": 0.934,
+    "frames": 1562
+   }
+  },
+  "acc": {
+   "mouth": {
+    "video": 12.2071,
+    "reference": 8.1991,
+    "ratio": 1.489,
+    "p95_ratio": 1.25,
+    "frames": 1564
+   },
+   "upper": {
+    "video": 13.9069,
+    "reference": 11.1115,
+    "ratio": 1.252,
+    "p95_ratio": 1.124,
+    "frames": 1564
+   },
+   "lowerface": {
+    "video": 16.3724,
+    "reference": 15.7122,
+    "ratio": 1.042,
+    "p95_ratio": 0.96,
+    "frames": 1564
+   }
+  },
+  "d1": {
+   "mouth": {
+    "video": 8.3901,
+    "reference": 5.5913,
+    "ratio": 1.501,
+    "p95_ratio": 1.388,
+    "frames": 1564
+   },
+   "upper": {
+    "video": 9.5738,
+    "reference": 7.5133,
+    "ratio": 1.274,
+    "p95_ratio": 1.201,
+    "frames": 1564
+   },
+   "lowerface": {
+    "video": 10.7827,
+    "reference": 10.2485,
+    "ratio": 1.052,
+    "p95_ratio": 0.994,
+    "frames": 1564
+   }
+  },
+  "sharp": {
+   "mouth": {
+    "video": 7.3408,
+    "reference": 6.623,
+    "ratio": 1.108,
+    "p95_ratio": 1.084,
+    "frames": 1564
+   },
+   "upper": {
+    "video": 8.8269,
+    "reference": 8.8396,
+    "ratio": 0.999,
+    "p95_ratio": 0.997,
+    "frames": 1564
+   },
+   "lowerface": {
+    "video": 7.5645,
+    "reference": 7.8463,
+    "ratio": 0.964,
+    "p95_ratio": 0.958,
+    "frames": 1564
+   }
+  },
+  "shear": {
+   "mouth": {
+    "video": 0.1766,
+    "reference": 0.19,
+    "ratio": 0.93,
+    "p95_ratio": 0.914,
+    "frames": 1564
+   },
+   "upper": {
+    "video": 0.2307,
+    "reference": 0.2272,
+    "ratio": 1.015,
+    "p95_ratio": 1.005,
+    "frames": 1564
+   },
+   "lowerface": {
+    "video": 0.3317,
+    "reference": 0.3271,
+    "ratio": 1.014,
+    "p95_ratio": 1.013,
+    "frames": 1564
+   }
+  },
+  "shear95": {
+   "mouth": {
+    "video": 0.5288,
+    "reference": 0.5965,
+    "ratio": 0.887,
+    "p95_ratio": 0.936,
+    "frames": 1564
+   },
+   "upper": {
+    "video": 0.7946,
+    "reference": 0.7995,
+    "ratio": 0.994,
+    "p95_ratio": 0.988,
+    "frames": 1564
+   },
+   "lowerface": {
+    "video": 1.092,
+    "reference": 1.1047,
+    "ratio": 0.989,
+    "p95_ratio": 0.975,
+    "frames": 1564
+   }
+  },
+  "twitch_index": {
+   "mouth": {
+    "video": 1.2302,
+    "reference": 1.3229,
+    "ratio": 0.93
+   },
+   "lowerface": {
+    "video": 1.1164,
+    "reference": 1.0803,
+    "ratio": 1.033
+   },
+   "upper": {
+    "video": 1.1216,
+    "reference": 1.1192,
+    "ratio": 1.002
+   }
+  },
+  "impulse_index": {
+   "mouth": {
+    "video": 1.4549,
+    "reference": 1.4664,
+    "ratio": 0.992
+   },
+   "lowerface": {
+    "video": 1.5184,
+    "reference": 1.5331,
+    "ratio": 0.99
+   },
+   "upper": {
+    "video": 1.4526,
+    "reference": 1.4789,
+    "ratio": 0.982
+   }
+  },
+  "pop_rate_vs_reference": {
+   "mouth": {
+    "d1_above_ref_p98": 1.95,
+    "acc_above_ref_p98": 1.41
+   },
+   "lowerface": {
+    "d1_above_ref_p98": 1.09,
+    "acc_above_ref_p98": 0.99
+   },
+   "upper": {
+    "d1_above_ref_p98": 1.18,
+    "acc_above_ref_p98": 1.09
+   }
+  }
+ },
+ "per_range": {
+  "1:1565": {
+   "vel": {
+    "mouth": {
+     "video": 2.8185,
+     "reference": 2.004,
+     "ratio": 1.406,
+     "p95_ratio": 1.529,
+     "frames": 1564
+    },
+    "upper": {
+     "video": 2.0605,
+     "reference": 2.0782,
+     "ratio": 0.991,
+     "p95_ratio": 1.01,
+     "frames": 1564
+    },
+    "lowerface": {
+     "video": 4.5629,
+     "reference": 4.3244,
+     "ratio": 1.055,
+     "p95_ratio": 1.057,
+     "frames": 1564
+    }
+   },
+   "jerk": {
+    "mouth": {
+     "video": 3.4674,
+     "reference": 2.6511,
+     "ratio": 1.308,
+     "p95_ratio": 1.657,
+     "frames": 1564
+    },
+    "upper": {
+     "video": 2.3111,
+     "reference": 2.326,
+     "ratio": 0.994,
+     "p95_ratio": 1.05,
+     "frames": 1564
+    },
+    "lowerface": {
+     "video": 5.0938,
+     "reference": 4.6717,
+     "ratio": 1.09,
+     "p95_ratio": 1.103,
+     "frames": 1564
+    }
+   },
+   "resid": {
+    "mouth": {
+     "video": 2.0929,
+     "reference": 1.9952,
+     "ratio": 1.049,
+     "p95_ratio": 0.978,
+     "frames": 1562
+    },
+    "upper": {
+     "video": 2.6334,
+     "reference": 2.5333,
+     "ratio": 1.04,
+     "p95_ratio": 0.996,
+     "frames": 1563
+    },
+    "lowerface": {
+     "video": 2.7389,
+     "reference": 2.6798,
+     "ratio": 1.022,
+     "p95_ratio": 0.934,
+     "frames": 1562
+    }
+   },
+   "acc": {
+    "mouth": {
+     "video": 12.2071,
+     "reference": 8.1991,
+     "ratio": 1.489,
+     "p95_ratio": 1.25,
+     "frames": 1564
+    },
+    "upper": {
+     "video": 13.9069,
+     "reference": 11.1115,
+     "ratio": 1.252,
+     "p95_ratio": 1.124,
+     "frames": 1564
+    },
+    "lowerface": {
+     "video": 16.3724,
+     "reference": 15.7122,
+     "ratio": 1.042,
+     "p95_ratio": 0.96,
+     "frames": 1564
+    }
+   },
+   "d1": {
+    "mouth": {
+     "video": 8.3901,
+     "reference": 5.5913,
+     "ratio": 1.501,
+     "p95_ratio": 1.388,
+     "frames": 1564
+    },
+    "upper": {
+     "video": 9.5738,
+     "reference": 7.5133,
+     "ratio": 1.274,
+     "p95_ratio": 1.201,
+     "frames": 1564
+    },
+    "lowerface": {
+     "video": 10.7827,
+     "reference": 10.2485,
+     "ratio": 1.052,
+     "p95_ratio": 0.994,
+     "frames": 1564
+    }
+   },
+   "sharp": {
+    "mouth": {
+     "video": 7.3408,
+     "reference": 6.623,
+     "ratio": 1.108,
+     "p95_ratio": 1.084,
+     "frames": 1564
+    },
+    "upper": {
+     "video": 8.8269,
+     "reference": 8.8396,
+     "ratio": 0.999,
+     "p95_ratio": 0.997,
+     "frames": 1564
+    },
+    "lowerface": {
+     "video": 7.5645,
+     "reference": 7.8463,
+     "ratio": 0.964,
+     "p95_ratio": 0.958,
+     "frames": 1564
+    }
+   },
+   "shear": {
+    "mouth": {
+     "video": 0.1766,
+     "reference": 0.19,
+     "ratio": 0.93,
+     "p95_ratio": 0.914,
+     "frames": 1564
+    },
+    "upper": {
+     "video": 0.2307,
+     "reference": 0.2272,
+     "ratio": 1.015,
+     "p95_ratio": 1.005,
+     "frames": 1564
+    },
+    "lowerface": {
+     "video": 0.3317,
+     "reference": 0.3271,
+     "ratio": 1.014,
+     "p95_ratio": 1.013,
+     "frames": 1564
+    }
+   },
+   "shear95": {
+    "mouth": {
+     "video": 0.5288,
+     "reference": 0.5965,
+     "ratio": 0.887,
+     "p95_ratio": 0.936,
+     "frames": 1564
+    },
+    "upper": {
+     "video": 0.7946,
+     "reference": 0.7995,
+     "ratio": 0.994,
+     "p95_ratio": 0.988,
+     "frames": 1564
+    },
+    "lowerface": {
+     "video": 1.092,
+     "reference": 1.1047,
+     "ratio": 0.989,
+     "p95_ratio": 0.975,
+     "frames": 1564
+    }
+   },
+   "twitch_index": {
+    "mouth": {
+     "video": 1.2302,
+     "reference": 1.3229,
+     "ratio": 0.93
+    },
+    "lowerface": {
+     "video": 1.1164,
+     "reference": 1.0803,
+     "ratio": 1.033
+    },
+    "upper": {
+     "video": 1.1216,
+     "reference": 1.1192,
+     "ratio": 1.002
+    }
+   },
+   "impulse_index": {
+    "mouth": {
+     "video": 1.4549,
+     "reference": 1.4664,
+     "ratio": 0.992
+    },
+    "lowerface": {
+     "video": 1.5184,
+     "reference": 1.5331,
+     "ratio": 0.99
+    },
+    "upper": {
+     "video": 1.4526,
+     "reference": 1.4789,
+     "ratio": 0.982
+    }
+   },
+   "pop_rate_vs_reference": {
+    "mouth": {
+     "d1_above_ref_p98": 1.95,
+     "acc_above_ref_p98": 1.41
+    },
+    "lowerface": {
+     "d1_above_ref_p98": 1.09,
+     "acc_above_ref_p98": 0.99
+    },
+    "upper": {
+     "d1_above_ref_p98": 1.18,
+     "acc_above_ref_p98": 1.09
+    }
+   }
+  }
+ },
+ "classes": {
+  "ls_core": {
+   "vel": {
+    "mouth": {
+     "video": 3.2972,
+     "reference": 1.9838,
+     "ratio": 1.662,
+     "p95_ratio": 1.539,
+     "frames": 979
+    },
+    "upper": {
+     "video": 2.0109,
+     "reference": 1.9927,
+     "ratio": 1.009,
+     "p95_ratio": 0.975,
+     "frames": 979
+    },
+    "lowerface": {
+     "video": 4.542,
+     "reference": 4.0923,
+     "ratio": 1.11,
+     "p95_ratio": 1.07,
+     "frames": 979
+    }
+   },
+   "jerk": {
+    "mouth": {
+     "video": 3.8727,
+     "reference": 2.4875,
+     "ratio": 1.557,
+     "p95_ratio": 1.971,
+     "frames": 979
+    },
+    "upper": {
+     "video": 2.2131,
+     "reference": 2.1524,
+     "ratio": 1.028,
+     "p95_ratio": 1.052,
+     "frames": 979
+    },
+    "lowerface": {
+     "video": 5.1554,
+     "reference": 4.3904,
+     "ratio": 1.174,
+     "p95_ratio": 1.204,
+     "frames": 979
+    }
+   },
+   "resid": {
+    "mouth": {
+     "video": 2.1573,
+     "reference": 2.0572,
+     "ratio": 1.049,
+     "p95_ratio": 0.902,
+     "frames": 978
+    },
+    "upper": {
+     "video": 2.7211,
+     "reference": 2.6037,
+     "ratio": 1.045,
+     "p95_ratio": 1.01,
+     "frames": 979
+    },
+    "lowerface": {
+     "video": 2.6789,
+     "reference": 2.6839,
+     "ratio": 0.998,
+     "p95_ratio": 0.921,
+     "frames": 977
+    }
+   },
+   "acc": {
+    "mouth": {
+     "video": 13.9489,
+     "reference": 8.4042,
+     "ratio": 1.66,
+     "p95_ratio": 1.318,
+     "frames": 979
+    },
+    "upper": {
+     "video": 14.2847,
+     "reference": 10.9637,
+     "ratio": 1.303,
+     "p95_ratio": 1.2,
+     "frames": 979
+    },
+    "lowerface": {
+     "video": 16.0244,
+     "reference": 15.0762,
+     "ratio": 1.063,
+     "p95_ratio": 0.948,
+     "frames": 979
+    }
+   },
+   "d1": {
+    "mouth": {
+     "video": 9.5511,
+     "reference": 5.8095,
+     "ratio": 1.644,
+     "p95_ratio": 1.418,
+     "frames": 979
+    },
+    "upper": {
+     "video": 9.9076,
+     "reference": 7.4584,
+     "ratio": 1.328,
+     "p95_ratio": 1.214,
+     "frames": 979
+    },
+    "lowerface": {
+     "video": 10.6458,
+     "reference": 9.9315,
+     "ratio": 1.072,
+     "p95_ratio": 1.016,
+     "frames": 979
+    }
+   },
+   "sharp": {
+    "mouth": {
+     "video": 8.126,
+     "reference": 6.993,
+     "ratio": 1.162,
+     "p95_ratio": 1.083,
+     "frames": 979
+    },
+    "upper": {
+     "video": 9.1304,
+     "reference": 9.1637,
+     "ratio": 0.996,
+     "p95_ratio": 0.982,
+     "frames": 979
+    },
+    "lowerface": {
+     "video": 7.6546,
+     "reference": 8.0778,
+     "ratio": 0.948,
+     "p95_ratio": 0.954,
+     "frames": 979
+    }
+   },
+   "shear": {
+    "mouth": {
+     "video": 0.1662,
+     "reference": 0.189,
+     "ratio": 0.879,
+     "p95_ratio": 0.901,
+     "frames": 979
+    },
+    "upper": {
+     "video": 0.2246,
+     "reference": 0.2171,
+     "ratio": 1.034,
+     "p95_ratio": 1.029,
+     "frames": 979
+    },
+    "lowerface": {
+     "video": 0.3165,
+     "reference": 0.3062,
+     "ratio": 1.034,
+     "p95_ratio": 0.999,
+     "frames": 979
+    }
+   },
+   "shear95": {
+    "mouth": {
+     "video": 0.4894,
+     "reference": 0.59,
+     "ratio": 0.829,
+     "p95_ratio": 0.925,
+     "frames": 979
+    },
+    "upper": {
+     "video": 0.7486,
+     "reference": 0.7454,
+     "ratio": 1.004,
+     "p95_ratio": 0.971,
+     "frames": 979
+    },
+    "lowerface": {
+     "video": 1.0145,
+     "reference": 1.0142,
+     "ratio": 1.0,
+     "p95_ratio": 0.982,
+     "frames": 979
+    }
+   },
+   "twitch_index": {
+    "mouth": {
+     "video": 1.1745,
+     "reference": 1.2539,
+     "ratio": 0.937
+    },
+    "lowerface": {
+     "video": 1.135,
+     "reference": 1.0728,
+     "ratio": 1.058
+    },
+    "upper": {
+     "video": 1.1005,
+     "reference": 1.0801,
+     "ratio": 1.019
+    }
+   },
+   "impulse_index": {
+    "mouth": {
+     "video": 1.4605,
+     "reference": 1.4466,
+     "ratio": 1.01
+    },
+    "lowerface": {
+     "video": 1.5052,
+     "reference": 1.518,
+     "ratio": 0.992
+    },
+    "upper": {
+     "video": 1.4418,
+     "reference": 1.47,
+     "ratio": 0.981
+    }
+   },
+   "pop_rate_vs_reference": {
+    "mouth": {
+     "d1_above_ref_p98": 2.91,
+     "acc_above_ref_p98": 2.35
+    },
+    "lowerface": {
+     "d1_above_ref_p98": 0.97,
+     "acc_above_ref_p98": 0.87
+    },
+    "upper": {
+     "d1_above_ref_p98": 1.28,
+     "acc_above_ref_p98": 1.07
+    }
+   }
+  },
+  "switch": {
+   "vel": {
+    "mouth": {
+     "video": 2.2802,
+     "reference": 1.9225,
+     "ratio": 1.186,
+     "p95_ratio": 1.11,
+     "frames": 100
+    },
+    "upper": {
+     "video": 2.3945,
+     "reference": 2.2494,
+     "ratio": 1.065,
+     "p95_ratio": 0.962,
+     "frames": 100
+    },
+    "lowerface": {
+     "video": 4.7227,
+     "reference": 4.7237,
+     "ratio": 1.0,
+     "p95_ratio": 1.06,
+     "frames": 100
+    }
+   },
+   "jerk": {
+    "mouth": {
+     "video": 2.5675,
+     "reference": 2.3007,
+     "ratio": 1.116,
+     "p95_ratio": 0.987,
+     "frames": 100
+    },
+    "upper": {
+     "video": 2.2384,
+     "reference": 2.2023,
+     "ratio": 1.016,
+     "p95_ratio": 1.018,
+     "frames": 100
+    },
+    "lowerface": {
+     "video": 4.4299,
+     "reference": 4.4983,
+     "ratio": 0.985,
+     "p95_ratio": 1.01,
+     "frames": 100
+    }
+   },
+   "resid": {
+    "mouth": {
+     "video": 2.2594,
+     "reference": 1.9637,
+     "ratio": 1.151,
+     "p95_ratio": 1.035,
+     "frames": 100
+    },
+    "upper": {
+     "video": 2.4138,
+     "reference": 2.3256,
+     "ratio": 1.038,
+     "p95_ratio": 1.026,
+     "frames": 100
+    },
+    "lowerface": {
+     "video": 2.6793,
+     "reference": 2.5638,
+     "ratio": 1.045,
+     "p95_ratio": 1.067,
+     "frames": 100
+    }
+   },
+   "acc": {
+    "mouth": {
+     "video": 10.2376,
+     "reference": 8.1444,
+     "ratio": 1.257,
+     "p95_ratio": 0.957,
+     "frames": 100
+    },
+    "upper": {
+     "video": 13.8701,
+     "reference": 10.9227,
+     "ratio": 1.27,
+     "p95_ratio": 1.002,
+     "frames": 100
+    },
+    "lowerface": {
+     "video": 17.1144,
+     "reference": 17.0505,
+     "ratio": 1.004,
+     "p95_ratio": 0.909,
+     "frames": 100
+    }
+   },
+   "d1": {
+    "mouth": {
+     "video": 7.3824,
+     "reference": 5.5721,
+     "ratio": 1.325,
+     "p95_ratio": 1.071,
+     "frames": 100
+    },
+    "upper": {
+     "video": 9.6638,
+     "reference": 7.5818,
+     "ratio": 1.275,
+     "p95_ratio": 1.036,
+     "frames": 100
+    },
+    "lowerface": {
+     "video": 11.267,
+     "reference": 10.9828,
+     "ratio": 1.026,
+     "p95_ratio": 0.935,
+     "frames": 100
+    }
+   },
+   "sharp": {
+    "mouth": {
+     "video": 6.5669,
+     "reference": 6.5519,
+     "ratio": 1.002,
+     "p95_ratio": 1.099,
+     "frames": 100
+    },
+    "upper": {
+     "video": 8.7138,
+     "reference": 8.5965,
+     "ratio": 1.014,
+     "p95_ratio": 0.992,
+     "frames": 100
+    },
+    "lowerface": {
+     "video": 7.5885,
+     "reference": 7.8611,
+     "ratio": 0.965,
+     "p95_ratio": 0.978,
+     "frames": 100
+    }
+   },
+   "shear": {
+    "mouth": {
+     "video": 0.1957,
+     "reference": 0.1834,
+     "ratio": 1.067,
+     "p95_ratio": 1.105,
+     "frames": 100
+    },
+    "upper": {
+     "video": 0.2555,
+     "reference": 0.2551,
+     "ratio": 1.002,
+     "p95_ratio": 0.969,
+     "frames": 100
+    },
+    "lowerface": {
+     "video": 0.3564,
+     "reference": 0.3698,
+     "ratio": 0.964,
+     "p95_ratio": 1.029,
+     "frames": 100
+    }
+   },
+   "shear95": {
+    "mouth": {
+     "video": 0.5718,
+     "reference": 0.5551,
+     "ratio": 1.03,
+     "p95_ratio": 1.006,
+     "frames": 100
+    },
+    "upper": {
+     "video": 0.9279,
+     "reference": 0.9603,
+     "ratio": 0.966,
+     "p95_ratio": 1.021,
+     "frames": 100
+    },
+    "lowerface": {
+     "video": 1.2058,
+     "reference": 1.2821,
+     "ratio": 0.94,
+     "p95_ratio": 0.984,
+     "frames": 100
+    }
+   },
+   "twitch_index": {
+    "mouth": {
+     "video": 1.126,
+     "reference": 1.1967,
+     "ratio": 0.941
+    },
+    "lowerface": {
+     "video": 0.938,
+     "reference": 0.9523,
+     "ratio": 0.985
+    },
+    "upper": {
+     "video": 0.9348,
+     "reference": 0.9791,
+     "ratio": 0.955
+    }
+   },
+   "impulse_index": {
+    "mouth": {
+     "video": 1.3868,
+     "reference": 1.4616,
+     "ratio": 0.949
+    },
+    "lowerface": {
+     "video": 1.519,
+     "reference": 1.5525,
+     "ratio": 0.978
+    },
+    "upper": {
+     "video": 1.4353,
+     "reference": 1.4406,
+     "ratio": 0.996
+    }
+   },
+   "pop_rate_vs_reference": {
+    "mouth": {
+     "d1_above_ref_p98": 1.0,
+     "acc_above_ref_p98": 0.5
+    },
+    "lowerface": {
+     "d1_above_ref_p98": 0.5,
+     "acc_above_ref_p98": 0.5
+    },
+    "upper": {
+     "d1_above_ref_p98": 2.5,
+     "acc_above_ref_p98": 1.5
+    }
+   }
+  },
+  "orig": {
+   "vel": {
+    "mouth": {
+     "video": 1.963,
+     "reference": 2.0617,
+     "ratio": 0.952,
+     "p95_ratio": 0.903,
+     "frames": 485
+    },
+    "upper": {
+     "video": 2.0916,
+     "reference": 2.2155,
+     "ratio": 0.944,
+     "p95_ratio": 1.061,
+     "frames": 485
+    },
+    "lowerface": {
+     "video": 4.5719,
+     "reference": 4.7106,
+     "ratio": 0.971,
+     "p95_ratio": 0.953,
+     "frames": 485
+    }
+   },
+   "jerk": {
+    "mouth": {
+     "video": 2.8348,
+     "reference": 3.0535,
+     "ratio": 0.928,
+     "p95_ratio": 0.944,
+     "frames": 485
+    },
+    "upper": {
+     "video": 2.5238,
+     "reference": 2.7018,
+     "ratio": 0.934,
+     "p95_ratio": 1.055,
+     "frames": 485
+    },
+    "lowerface": {
+     "video": 5.1064,
+     "reference": 5.2755,
+     "ratio": 0.968,
+     "p95_ratio": 0.935,
+     "frames": 485
+    }
+   },
+   "resid": {
+    "mouth": {
+     "video": 1.9285,
+     "reference": 1.8764,
+     "ratio": 1.028,
+     "p95_ratio": 1.002,
+     "frames": 484
+    },
+    "upper": {
+     "video": 2.5013,
+     "reference": 2.4338,
+     "ratio": 1.028,
+     "p95_ratio": 0.989,
+     "frames": 484
+    },
+    "lowerface": {
+     "video": 2.8721,
+     "reference": 2.6955,
+     "ratio": 1.066,
+     "p95_ratio": 1.034,
+     "frames": 485
+    }
+   },
+   "acc": {
+    "mouth": {
+     "video": 9.0972,
+     "reference": 7.7966,
+     "ratio": 1.167,
+     "p95_ratio": 1.117,
+     "frames": 485
+    },
+    "upper": {
+     "video": 13.1517,
+     "reference": 11.4487,
+     "ratio": 1.149,
+     "p95_ratio": 1.002,
+     "frames": 485
+    },
+    "lowerface": {
+     "video": 16.9218,
+     "reference": 16.7201,
+     "ratio": 1.012,
+     "p95_ratio": 1.037,
+     "frames": 485
+    }
+   },
+   "d1": {
+    "mouth": {
+     "video": 6.2545,
+     "reference": 5.1549,
+     "ratio": 1.213,
+     "p95_ratio": 1.186,
+     "frames": 485
+    },
+    "upper": {
+     "video": 8.8814,
+     "reference": 7.6099,
+     "ratio": 1.167,
+     "p95_ratio": 1.17,
+     "frames": 485
+    },
+    "lowerface": {
+     "video": 10.9591,
+     "reference": 10.7371,
+     "ratio": 1.021,
+     "p95_ratio": 0.953,
+     "frames": 485
+    }
+   },
+   "sharp": {
+    "mouth": {
+     "video": 5.9153,
+     "reference": 5.891,
+     "ratio": 1.004,
+     "p95_ratio": 1.024,
+     "frames": 485
+    },
+    "upper": {
+     "video": 8.2375,
+     "reference": 8.2354,
+     "ratio": 1.0,
+     "p95_ratio": 0.998,
+     "frames": 485
+    },
+    "lowerface": {
+     "video": 7.3777,
+     "reference": 7.3761,
+     "ratio": 1.0,
+     "p95_ratio": 0.992,
+     "frames": 485
+    }
+   },
+   "shear": {
+    "mouth": {
+     "video": 0.1939,
+     "reference": 0.1935,
+     "ratio": 1.002,
+     "p95_ratio": 0.953,
+     "frames": 485
+    },
+    "upper": {
+     "video": 0.2381,
+     "reference": 0.2419,
+     "ratio": 0.984,
+     "p95_ratio": 0.943,
+     "frames": 485
+    },
+    "lowerface": {
+     "video": 0.3573,
+     "reference": 0.3604,
+     "ratio": 0.992,
+     "p95_ratio": 0.978,
+     "frames": 485
+    }
+   },
+   "shear95": {
+    "mouth": {
+     "video": 0.5995,
+     "reference": 0.6181,
+     "ratio": 0.97,
+     "p95_ratio": 0.939,
+     "frames": 485
+    },
+    "upper": {
+     "video": 0.8599,
+     "reference": 0.8756,
+     "ratio": 0.982,
+     "p95_ratio": 0.967,
+     "frames": 485
+    },
+    "lowerface": {
+     "video": 1.2249,
+     "reference": 1.2506,
+     "ratio": 0.979,
+     "p95_ratio": 0.971,
+     "frames": 485
+    }
+   },
+   "twitch_index": {
+    "mouth": {
+     "video": 1.4441,
+     "reference": 1.481,
+     "ratio": 0.975
+    },
+    "lowerface": {
+     "video": 1.1169,
+     "reference": 1.1199,
+     "ratio": 0.997
+    },
+    "upper": {
+     "video": 1.2066,
+     "reference": 1.2195,
+     "ratio": 0.989
+    }
+   },
+   "impulse_index": {
+    "mouth": {
+     "video": 1.4545,
+     "reference": 1.5125,
+     "ratio": 0.962
+    },
+    "lowerface": {
+     "video": 1.5441,
+     "reference": 1.5572,
+     "ratio": 0.992
+    },
+    "upper": {
+     "video": 1.4808,
+     "reference": 1.5044,
+     "ratio": 0.984
+    }
+   },
+   "pop_rate_vs_reference": {
+    "mouth": {
+     "d1_above_ref_p98": 0.72,
+     "acc_above_ref_p98": 0.82
+    },
+    "lowerface": {
+     "d1_above_ref_p98": 1.34,
+     "acc_above_ref_p98": 1.03
+    },
+    "upper": {
+     "d1_above_ref_p98": 1.03,
+     "acc_above_ref_p98": 1.03
+    }
+   }
+  }
+ },
+ "latentsync_window_boundaries": {
+  "window_frames": 16,
+  "d1": {
+   "video": {
+    "by_phase": [
+     10.0285,
+     10.0264,
+     9.6325,
+     9.1345,
+     9.5791,
+     10.1282,
+     9.7352,
+     9.8068,
+     10.0395,
+     8.2976,
+     9.1541,
+     9.6508,
+     8.6829,
+     8.6412,
+     10.4824,
+     9.88
+    ],
+    "phase0_over_inner": 1.07
+   },
+   "reference": {
+    "by_phase": [
+     5.4429,
+     5.2289,
+     5.378,
+     6.1744,
+     6.6326,
+     6.8723,
+     6.0428,
+     5.7925,
+     5.5869,
+     5.6214,
+     5.82,
+     6.2415,
+     5.8503,
+     5.4642,
+     5.228,
+     5.3914
+    ],
+    "phase0_over_inner": 0.914
+   }
+  },
+  "resid": {
+   "video": {
+    "by_phase": [
+     2.2474,
+     2.2156,
+     2.078,
+     2.0866,
+     2.0479,
+     2.0389,
+     2.5371,
+     2.292,
+     2.1865,
+     2.0138,
+     2.1131,
+     2.1743,
+     2.1052,
+     2.0572,
+     2.2674,
+     2.0422
+    ],
+    "phase0_over_inner": 1.048
+   },
+   "reference": {
+    "by_phase": [
+     1.8648,
+     1.7651,
+     1.9401,
+     2.2885,
+     2.0721,
+     2.0584,
+     2.6708,
+     2.1165,
+     1.8606,
+     1.8879,
+     2.0707,
+     2.2995,
+     2.0957,
+     2.0872,
+     1.8325,
+     1.9417
+    ],
+    "phase0_over_inner": 0.879
+   }
+  },
+  "vel": {
+   "video": {
+    "by_phase": [
+     3.5698,
+     3.4479,
+     2.8912,
+     3.5393,
+     3.5521,
+     2.8737,
+     3.4841,
+     3.897,
+     3.5347,
+     2.8595,
+     3.1428,
+     3.4035,
+     3.0157,
+     2.9996,
+     3.2867,
+     3.2582
+    ],
+    "phase0_over_inner": 1.093
+   },
+   "reference": {
+    "by_phase": [
+     1.7962,
+     1.5896,
+     1.6197,
+     2.2766,
+     2.5322,
+     1.94,
+     2.1098,
+     2.6259,
+     2.1263,
+     1.8156,
+     1.9079,
+     2.2311,
+     1.7625,
+     1.7915,
+     1.7215,
+     1.8005
+    ],
+    "phase0_over_inner": 0.871
+   }
+  },
+  "jerk": {
+   "video": {
+    "by_phase": [
+     3.9426,
+     3.591,
+     3.7263,
+     4.2783,
+     4.1145,
+     3.4937,
+     4.552,
+     4.4963,
+     3.7648,
+     3.1256,
+     3.8583,
+     3.7883,
+     3.057,
+     3.5622,
+     3.905,
+     4.6855
+    ],
+    "phase0_over_inner": 1.033
+   },
+   "reference": {
+    "by_phase": [
+     1.9283,
+     1.949,
+     2.6802,
+     3.4967,
+     2.7832,
+     2.3612,
+     3.308,
+     3.0596,
+     2.3347,
+     2.1894,
+     2.6755,
+     2.5593,
+     2.1549,
+     2.1427,
+     2.0278,
+     2.0911
+    ],
+    "phase0_over_inner": 0.729
+   }
+  },
+  "boundary_d1_jump": {
+   "video": {
+    "boundaries": 51,
+    "median": 1.043,
+    "p75": 1.556,
+    "share_gt_1_5": 0.275,
+    "share_gt_2": 0.078
+   },
+   "reference": {
+    "boundaries": 51,
+    "median": 0.931,
+    "p75": 1.269,
+    "share_gt_1_5": 0.118,
+    "share_gt_2": 0.039
+   }
+  }
+ },
+ "video_timing": "source timestamps (1567 frames, segments mapped through time)",
+ "switch_frames": [
+  94,
+  267,
+  414,
+  536,
+  581,
+  725,
+  833,
+  1024,
+  1078,
+  1477
+ ],
+ "worst_windows": [
+  {
+   "frame": 588,
+   "t": 19.64,
+   "mouth_jerk_vs_reference_median": 8.34
+  },
+  {
+   "frame": 792,
+   "t": 26.45,
+   "mouth_jerk_vs_reference_median": 7.75
+  },
+  {
+   "frame": 372,
+   "t": 12.42,
+   "mouth_jerk_vs_reference_median": 4.37
+  },
+  {
+   "frame": 120,
+   "t": 4.01,
+   "mouth_jerk_vs_reference_median": 3.94
+  },
+  {
+   "frame": 852,
+   "t": 28.46,
+   "mouth_jerk_vs_reference_median": 2.45
+  },
+  {
+   "frame": 1380,
+   "t": 46.09,
+   "mouth_jerk_vs_reference_median": 2.44
+  },
+  {
+   "frame": 192,
+   "t": 6.41,
+   "mouth_jerk_vs_reference_median": 2.39
+  },
+  {
+   "frame": 492,
+   "t": 16.43,
+   "mouth_jerk_vs_reference_median": 2.27
+  }
+ ],
+ "per_second": [
+  {
+   "t": 0,
+   "resid_mouth": 0.9901205051061528,
+   "d1_mouth": 0.998801647933264,
+   "impulse_mouth": null,
+   "shear95_lowerface": 1.008032856367388,
+   "shear_lowerface": 1.011462197357445,
+   "frozen_mouth": 1.0316026531731435,
+   "max_d1_jump": 0.7194195358537178,
+   "rank_resid_mouth": 40,
+   "rank_shear95_lowerface": 17,
+   "rank_frozen_mouth": 5,
+   "rank_max_d1_jump": 52,
+   "rank_d1_mouth": 51
+  },
+  {
+   "t": 1,
+   "resid_mouth": 1.0037622878718817,
+   "d1_mouth": 1.0038872593244037,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9753104269456315,
+   "shear_lowerface": 0.9824029193994241,
+   "frozen_mouth": 0.9985855152059158,
+   "max_d1_jump": 0.8071515699560362,
+   "rank_resid_mouth": 37,
+   "rank_shear95_lowerface": 32,
+   "rank_frozen_mouth": 9,
+   "rank_max_d1_jump": 51,
+   "rank_d1_mouth": 49
+  },
+  {
+   "t": 2,
+   "resid_mouth": 1.0126225872338437,
+   "d1_mouth": 1.0029720765726917,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9731665717587649,
+   "shear_lowerface": 0.9829538876991711,
+   "frozen_mouth": 1.0055554043632526,
+   "max_d1_jump": 1.0980342901326756,
+   "rank_resid_mouth": 34,
+   "rank_shear95_lowerface": 33,
+   "rank_frozen_mouth": 8,
+   "rank_max_d1_jump": 49,
+   "rank_d1_mouth": 50
+  },
+  {
+   "t": 3,
+   "resid_mouth": 1.1647617756306752,
+   "d1_mouth": 1.738292787721754,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9956715394864605,
+   "shear_lowerface": 1.023443127235661,
+   "frozen_mouth": 0.6670814380586959,
+   "max_d1_jump": 4.503209632913142,
+   "rank_resid_mouth": 7,
+   "rank_shear95_lowerface": 24,
+   "rank_frozen_mouth": 30,
+   "rank_max_d1_jump": 9,
+   "rank_d1_mouth": 20
+  },
+  {
+   "t": 4,
+   "resid_mouth": 1.1702142375664522,
+   "d1_mouth": 1.1114145232456458,
+   "impulse_mouth": null,
+   "shear95_lowerface": 1.016778760885897,
+   "shear_lowerface": 1.0201070500438183,
+   "frozen_mouth": 0.9018751299929361,
+   "max_d1_jump": 4.529349315173495,
+   "rank_resid_mouth": 6,
+   "rank_shear95_lowerface": 16,
+   "rank_frozen_mouth": 17,
+   "rank_max_d1_jump": 8,
+   "rank_d1_mouth": 43
+  },
+  {
+   "t": 5,
+   "resid_mouth": 1.0676135636411903,
+   "d1_mouth": 2.222127011413016,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9936988894325733,
+   "shear_lowerface": 1.047040846662986,
+   "frozen_mouth": 0.6482438641899982,
+   "max_d1_jump": 3.4363766668061846,
+   "rank_resid_mouth": 23,
+   "rank_shear95_lowerface": 25,
+   "rank_frozen_mouth": 33,
+   "rank_max_d1_jump": 14,
+   "rank_d1_mouth": 8
+  },
+  {
+   "t": 6,
+   "resid_mouth": 1.2708406975871374,
+   "d1_mouth": 2.1734242443542513,
+   "impulse_mouth": null,
+   "shear95_lowerface": 1.0061109601749607,
+   "shear_lowerface": 1.0496716358901923,
+   "frozen_mouth": 0.6541766257035111,
+   "max_d1_jump": 3.27352994591394,
+   "rank_resid_mouth": 2,
+   "rank_shear95_lowerface": 18,
+   "rank_frozen_mouth": 31,
+   "rank_max_d1_jump": 17,
+   "rank_d1_mouth": 10
+  },
+  {
+   "t": 7,
+   "resid_mouth": 1.1242935315130569,
+   "d1_mouth": 1.8343960077101542,
+   "impulse_mouth": null,
+   "shear95_lowerface": 1.0405292662899495,
+   "shear_lowerface": 1.0845811817186244,
+   "frozen_mouth": 0.6796503335971604,
+   "max_d1_jump": 3.389348398206824,
+   "rank_resid_mouth": 15,
+   "rank_shear95_lowerface": 11,
+   "rank_frozen_mouth": 28,
+   "rank_max_d1_jump": 15,
+   "rank_d1_mouth": 15
+  },
+  {
+   "t": 8,
+   "resid_mouth": 1.0786500853569738,
+   "d1_mouth": 2.182375870138293,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9464988885852194,
+   "shear_lowerface": 0.9631328698594144,
+   "frozen_mouth": 0.6728841450913322,
+   "max_d1_jump": 2.462274272717439,
+   "rank_resid_mouth": 19,
+   "rank_shear95_lowerface": 46,
+   "rank_frozen_mouth": 29,
+   "rank_max_d1_jump": 31,
+   "rank_d1_mouth": 9
+  },
+  {
+   "t": 9,
+   "resid_mouth": 1.0100901475244446,
+   "d1_mouth": 1.4377042082881866,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9720962650557262,
+   "shear_lowerface": 1.0003758600940718,
+   "frozen_mouth": 0.9597789020718795,
+   "max_d1_jump": 1.7246707030788475,
+   "rank_resid_mouth": 35,
+   "rank_shear95_lowerface": 34,
+   "rank_frozen_mouth": 15,
+   "rank_max_d1_jump": 39,
+   "rank_d1_mouth": 30
+  },
+  {
+   "t": 10,
+   "resid_mouth": 0.9732688755715839,
+   "d1_mouth": 1.0750554258332445,
+   "impulse_mouth": null,
+   "shear95_lowerface": 1.0686983712224194,
+   "shear_lowerface": 1.0351562050435081,
+   "frozen_mouth": 0.9805536331266743,
+   "max_d1_jump": 1.8107821447622272,
+   "rank_resid_mouth": 42,
+   "rank_shear95_lowerface": 7,
+   "rank_frozen_mouth": 11,
+   "rank_max_d1_jump": 38,
+   "rank_d1_mouth": 44
+  },
+  {
+   "t": 11,
+   "resid_mouth": 1.0273913204824652,
+   "d1_mouth": 1.1817116844838726,
+   "impulse_mouth": null,
+   "shear95_lowerface": 1.1107919875223193,
+   "shear_lowerface": 1.0849718361631435,
+   "frozen_mouth": 1.0453987671807836,
+   "max_d1_jump": 2.1117565608929687,
+   "rank_resid_mouth": 31,
+   "rank_shear95_lowerface": 2,
+   "rank_frozen_mouth": 3,
+   "rank_max_d1_jump": 34,
+   "rank_d1_mouth": 40
+  },
+  {
+   "t": 12,
+   "resid_mouth": 0.9908734444566252,
+   "d1_mouth": 1.0490195885870575,
+   "impulse_mouth": null,
+   "shear95_lowerface": 1.044735452576164,
+   "shear_lowerface": 1.0024348226857784,
+   "frozen_mouth": 0.7214655921308767,
+   "max_d1_jump": 5.8270827603777136,
+   "rank_resid_mouth": 39,
+   "rank_shear95_lowerface": 10,
+   "rank_frozen_mouth": 26,
+   "rank_max_d1_jump": 4,
+   "rank_d1_mouth": 46
+  },
+  {
+   "t": 13,
+   "resid_mouth": 0.9706215340341514,
+   "d1_mouth": 1.0562326508161848,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.8594053389063109,
+   "shear_lowerface": 0.9104263328678547,
+   "frozen_mouth": 0.924321887960944,
+   "max_d1_jump": 4.320274068931223,
+   "rank_resid_mouth": 43,
+   "rank_shear95_lowerface": 52,
+   "rank_frozen_mouth": 16,
+   "rank_max_d1_jump": 10,
+   "rank_d1_mouth": 45
+  },
+  {
+   "t": 14,
+   "resid_mouth": 1.1920167432669881,
+   "d1_mouth": 1.9764852026997535,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9602800017892946,
+   "shear_lowerface": 0.9985565680072251,
+   "frozen_mouth": 0.7313699341031059,
+   "max_d1_jump": 2.503809297742572,
+   "rank_resid_mouth": 4,
+   "rank_shear95_lowerface": 39,
+   "rank_frozen_mouth": 25,
+   "rank_max_d1_jump": 30,
+   "rank_d1_mouth": 12
+  },
+  {
+   "t": 15,
+   "resid_mouth": 1.1847546707304688,
+   "d1_mouth": 2.5513031332729605,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9852028079145358,
+   "shear_lowerface": 1.0003701277935595,
+   "frozen_mouth": 0.5740198706747133,
+   "max_d1_jump": 2.6005702448878574,
+   "rank_resid_mouth": 5,
+   "rank_shear95_lowerface": 30,
+   "rank_frozen_mouth": 44,
+   "rank_max_d1_jump": 28,
+   "rank_d1_mouth": 3
+  },
+  {
+   "t": 16,
+   "resid_mouth": 1.2147645586962375,
+   "d1_mouth": 2.244695132585984,
+   "impulse_mouth": null,
+   "shear95_lowerface": 1.1100199849200145,
+   "shear_lowerface": 1.1123880715792835,
+   "frozen_mouth": 0.6168487014607327,
+   "max_d1_jump": 2.525003064280148,
+   "rank_resid_mouth": 3,
+   "rank_shear95_lowerface": 3,
+   "rank_frozen_mouth": 35,
+   "rank_max_d1_jump": 29,
+   "rank_d1_mouth": 7
+  },
+  {
+   "t": 17,
+   "resid_mouth": 1.0287869057506762,
+   "d1_mouth": 1.6795445884590852,
+   "impulse_mouth": null,
+   "shear95_lowerface": 1.0205731957974644,
+   "shear_lowerface": 1.0563551141480771,
+   "frozen_mouth": 0.7575208016377839,
+   "max_d1_jump": 1.9590121602187487,
+   "rank_resid_mouth": 30,
+   "rank_shear95_lowerface": 15,
+   "rank_frozen_mouth": 23,
+   "rank_max_d1_jump": 36,
+   "rank_d1_mouth": 21
+  },
+  {
+   "t": 18,
+   "resid_mouth": 1.0053456796333553,
+   "d1_mouth": 1.5048307353530908,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9815922501173249,
+   "shear_lowerface": 1.0021917023657767,
+   "frozen_mouth": 0.961011875633904,
+   "max_d1_jump": 1.2638169443604446,
+   "rank_resid_mouth": 36,
+   "rank_shear95_lowerface": 31,
+   "rank_frozen_mouth": 13,
+   "rank_max_d1_jump": 47,
+   "rank_d1_mouth": 28
+  },
+  {
+   "t": 19,
+   "resid_mouth": 0.8788007554631109,
+   "d1_mouth": 1.0402989076234617,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9673330602623184,
+   "shear_lowerface": 0.9833601016544575,
+   "frozen_mouth": 0.8295191350633906,
+   "max_d1_jump": 6.6275938088635025,
+   "rank_resid_mouth": 50,
+   "rank_shear95_lowerface": 36,
+   "rank_frozen_mouth": 19,
+   "rank_max_d1_jump": 2,
+   "rank_d1_mouth": 48
+  },
+  {
+   "t": 20,
+   "resid_mouth": 0.9266976612989885,
+   "d1_mouth": 1.3605439476538543,
+   "impulse_mouth": null,
+   "shear95_lowerface": 1.1198123210146451,
+   "shear_lowerface": 1.1313793192265478,
+   "frozen_mouth": 0.868094570774912,
+   "max_d1_jump": 6.19598458440696,
+   "rank_resid_mouth": 49,
+   "rank_shear95_lowerface": 1,
+   "rank_frozen_mouth": 18,
+   "rank_max_d1_jump": 3,
+   "rank_d1_mouth": 34
+  },
+  {
+   "t": 21,
+   "resid_mouth": 1.0562580064120881,
+   "d1_mouth": 2.4585948690888775,
+   "impulse_mouth": null,
+   "shear95_lowerface": 1.0286485469053663,
+   "shear_lowerface": 1.0754464469680909,
+   "frozen_mouth": 0.7382028389453013,
+   "max_d1_jump": 2.834985430141151,
+   "rank_resid_mouth": 26,
+   "rank_shear95_lowerface": 13,
+   "rank_frozen_mouth": 24,
+   "rank_max_d1_jump": 23,
+   "rank_d1_mouth": 4
+  },
+  {
+   "t": 22,
+   "resid_mouth": 1.1263450380901046,
+   "d1_mouth": 1.8864427596432247,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9256300318141638,
+   "shear_lowerface": 0.9800504213851969,
+   "frozen_mouth": 0.6144111692063616,
+   "max_d1_jump": 2.6491244144800588,
+   "rank_resid_mouth": 14,
+   "rank_shear95_lowerface": 48,
+   "rank_frozen_mouth": 36,
+   "rank_max_d1_jump": 26,
+   "rank_d1_mouth": 14
+  },
+  {
+   "t": 23,
+   "resid_mouth": 1.0940847035544414,
+   "d1_mouth": 2.0886245094977145,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.8762479917949476,
+   "shear_lowerface": 0.9331009468907006,
+   "frozen_mouth": 0.6534696190957162,
+   "max_d1_jump": 2.9893926350748594,
+   "rank_resid_mouth": 16,
+   "rank_shear95_lowerface": 50,
+   "rank_frozen_mouth": 32,
+   "rank_max_d1_jump": 22,
+   "rank_d1_mouth": 11
+  },
+  {
+   "t": 24,
+   "resid_mouth": 1.0666600572318028,
+   "d1_mouth": 1.285304710438136,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9654726082363949,
+   "shear_lowerface": 0.9979072025738452,
+   "frozen_mouth": 1.0123824931212366,
+   "max_d1_jump": 1.2081175651098033,
+   "rank_resid_mouth": 24,
+   "rank_shear95_lowerface": 37,
+   "rank_frozen_mouth": 7,
+   "rank_max_d1_jump": 48,
+   "rank_d1_mouth": 37
+  },
+  {
+   "t": 25,
+   "resid_mouth": 1.0386172484988985,
+   "d1_mouth": 1.3492634572040918,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.999790058224494,
+   "shear_lowerface": 1.010577104103986,
+   "frozen_mouth": 0.960040572317344,
+   "max_d1_jump": 0.8711642574662728,
+   "rank_resid_mouth": 27,
+   "rank_shear95_lowerface": 21,
+   "rank_frozen_mouth": 14,
+   "rank_max_d1_jump": 50,
+   "rank_d1_mouth": 35
+  },
+  {
+   "t": 26,
+   "resid_mouth": 0.6053264695707216,
+   "d1_mouth": 1.044544416969083,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.95612982752964,
+   "shear_lowerface": 0.9959612596016516,
+   "frozen_mouth": 1.0868283223436679,
+   "max_d1_jump": 4.8151810891524764,
+   "rank_resid_mouth": 52,
+   "rank_shear95_lowerface": 43,
+   "rank_frozen_mouth": 2,
+   "rank_max_d1_jump": 6,
+   "rank_d1_mouth": 47
+  },
+  {
+   "t": 27,
+   "resid_mouth": 1.1561329944251473,
+   "d1_mouth": 0.8980357206325597,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.8608419627103326,
+   "shear_lowerface": 0.906905937956534,
+   "frozen_mouth": 1.1726742840421498,
+   "max_d1_jump": 9.166529917891554,
+   "rank_resid_mouth": 9,
+   "rank_shear95_lowerface": 51,
+   "rank_frozen_mouth": 1,
+   "rank_max_d1_jump": 1,
+   "rank_d1_mouth": 52
+  },
+  {
+   "t": 28,
+   "resid_mouth": 0.947906760773526,
+   "d1_mouth": 1.1330639377334872,
+   "impulse_mouth": null,
+   "shear95_lowerface": 1.0224440166878763,
+   "shear_lowerface": 1.0290757101258228,
+   "frozen_mouth": 0.9904683614041353,
+   "max_d1_jump": 3.6361282301594904,
+   "rank_resid_mouth": 46,
+   "rank_shear95_lowerface": 14,
+   "rank_frozen_mouth": 10,
+   "rank_max_d1_jump": 13,
+   "rank_d1_mouth": 42
+  },
+  {
+   "t": 29,
+   "resid_mouth": 1.1354856767906611,
+   "d1_mouth": 1.8326311037000653,
+   "impulse_mouth": null,
+   "shear95_lowerface": 1.0870649993320254,
+   "shear_lowerface": 1.1266627337606425,
+   "frozen_mouth": 0.7737139113376428,
+   "max_d1_jump": 5.188544248383597,
+   "rank_resid_mouth": 12,
+   "rank_shear95_lowerface": 6,
+   "rank_frozen_mouth": 22,
+   "rank_max_d1_jump": 5,
+   "rank_d1_mouth": 16
+  },
+  {
+   "t": 30,
+   "resid_mouth": 1.0893822360835077,
+   "d1_mouth": 2.3278293410823494,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9909408202985398,
+   "shear_lowerface": 1.0207840183643035,
+   "frozen_mouth": 0.5927612962618113,
+   "max_d1_jump": 3.749726282596436,
+   "rank_resid_mouth": 17,
+   "rank_shear95_lowerface": 27,
+   "rank_frozen_mouth": 38,
+   "rank_max_d1_jump": 12,
+   "rank_d1_mouth": 5
+  },
+  {
+   "t": 31,
+   "resid_mouth": 1.131774233774527,
+   "d1_mouth": 3.3408511218630323,
+   "impulse_mouth": null,
+   "shear95_lowerface": 1.0971358068982349,
+   "shear_lowerface": 1.0949203065926554,
+   "frozen_mouth": 0.5913437949368523,
+   "max_d1_jump": 4.719335397387757,
+   "rank_resid_mouth": 13,
+   "rank_shear95_lowerface": 4,
+   "rank_frozen_mouth": 39,
+   "rank_max_d1_jump": 7,
+   "rank_d1_mouth": 1
+  },
+  {
+   "t": 32,
+   "resid_mouth": 1.310976241313232,
+   "d1_mouth": 2.7327103300155935,
+   "impulse_mouth": null,
+   "shear95_lowerface": 1.0928507103074512,
+   "shear_lowerface": 1.1385840808522611,
+   "frozen_mouth": 0.5621665678823151,
+   "max_d1_jump": 3.769068147237467,
+   "rank_resid_mouth": 1,
+   "rank_shear95_lowerface": 5,
+   "rank_frozen_mouth": 46,
+   "rank_max_d1_jump": 11,
+   "rank_d1_mouth": 2
+  },
+  {
+   "t": 33,
+   "resid_mouth": 1.0688385156693767,
+   "d1_mouth": 1.3685392446677491,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9888705394084838,
+   "shear_lowerface": 1.0693718594708665,
+   "frozen_mouth": 0.5234648473790496,
+   "max_d1_jump": 1.6082838170142382,
+   "rank_resid_mouth": 22,
+   "rank_shear95_lowerface": 28,
+   "rank_frozen_mouth": 48,
+   "rank_max_d1_jump": 42,
+   "rank_d1_mouth": 31
+  },
+  {
+   "t": 34,
+   "resid_mouth": 1.0567866194563917,
+   "d1_mouth": 2.2911826171793925,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9686334720736388,
+   "shear_lowerface": 0.9840971590640374,
+   "frozen_mouth": 0.8192913565818618,
+   "max_d1_jump": 2.6475143750212573,
+   "rank_resid_mouth": 25,
+   "rank_shear95_lowerface": 35,
+   "rank_frozen_mouth": 20,
+   "rank_max_d1_jump": 27,
+   "rank_d1_mouth": 6
+  },
+  {
+   "t": 35,
+   "resid_mouth": 1.0225854190461345,
+   "d1_mouth": 1.7541203102516882,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9216522668276033,
+   "shear_lowerface": 0.9388292428697986,
+   "frozen_mouth": 0.9633495486677427,
+   "max_d1_jump": 2.6616154114859416,
+   "rank_resid_mouth": 32,
+   "rank_shear95_lowerface": 49,
+   "rank_frozen_mouth": 12,
+   "rank_max_d1_jump": 25,
+   "rank_d1_mouth": 19
+  },
+  {
+   "t": 36,
+   "resid_mouth": 1.1608935537046319,
+   "d1_mouth": 1.2356439898998863,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9598936313617568,
+   "shear_lowerface": 0.9942593290903772,
+   "frozen_mouth": 0.58308436045343,
+   "max_d1_jump": 1.6498400905672153,
+   "rank_resid_mouth": 8,
+   "rank_shear95_lowerface": 40,
+   "rank_frozen_mouth": 41,
+   "rank_max_d1_jump": 41,
+   "rank_d1_mouth": 39
+  },
+  {
+   "t": 37,
+   "resid_mouth": 0.9310835511151195,
+   "d1_mouth": 1.2368065771069003,
+   "impulse_mouth": null,
+   "shear95_lowerface": 1.001754947375226,
+   "shear_lowerface": 1.0406938876983034,
+   "frozen_mouth": 0.6122193193240993,
+   "max_d1_jump": 1.5614450738746426,
+   "rank_resid_mouth": 48,
+   "rank_shear95_lowerface": 19,
+   "rank_frozen_mouth": 37,
+   "rank_max_d1_jump": 45,
+   "rank_d1_mouth": 38
+  },
+  {
+   "t": 38,
+   "resid_mouth": 0.8521928400802089,
+   "d1_mouth": 1.1366619719751652,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9979871186522998,
+   "shear_lowerface": 1.0219579528580003,
+   "frozen_mouth": 0.7909919758678531,
+   "max_d1_jump": 1.4158247769385877,
+   "rank_resid_mouth": 51,
+   "rank_shear95_lowerface": 23,
+   "rank_frozen_mouth": 21,
+   "rank_max_d1_jump": 46,
+   "rank_d1_mouth": 41
+  },
+  {
+   "t": 39,
+   "resid_mouth": 0.9962737195431023,
+   "d1_mouth": 1.5938446875919507,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9543397201621195,
+   "shear_lowerface": 0.9877139904253941,
+   "frozen_mouth": 0.5816602421369392,
+   "max_d1_jump": 3.2575872752977095,
+   "rank_resid_mouth": 38,
+   "rank_shear95_lowerface": 44,
+   "rank_frozen_mouth": 42,
+   "rank_max_d1_jump": 18,
+   "rank_d1_mouth": 26
+  },
+  {
+   "t": 40,
+   "resid_mouth": 0.9494023084894236,
+   "d1_mouth": 1.332475413455525,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9539808395897905,
+   "shear_lowerface": 0.9937716877507464,
+   "frozen_mouth": 0.5861965019188371,
+   "max_d1_jump": 2.420655109226346,
+   "rank_resid_mouth": 45,
+   "rank_shear95_lowerface": 45,
+   "rank_frozen_mouth": 40,
+   "rank_max_d1_jump": 32,
+   "rank_d1_mouth": 36
+  },
+  {
+   "t": 41,
+   "resid_mouth": 0.9776442003011965,
+   "d1_mouth": 1.3643562273619367,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9624690054452069,
+   "shear_lowerface": 0.9981265821290979,
+   "frozen_mouth": 0.5593311821378731,
+   "max_d1_jump": 3.2026351597108516,
+   "rank_resid_mouth": 41,
+   "rank_shear95_lowerface": 38,
+   "rank_frozen_mouth": 47,
+   "rank_max_d1_jump": 19,
+   "rank_d1_mouth": 33
+  },
+  {
+   "t": 42,
+   "resid_mouth": 1.078480599014029,
+   "d1_mouth": 1.6586549231066248,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9888306194142185,
+   "shear_lowerface": 1.025132420672697,
+   "frozen_mouth": 0.45667960783658695,
+   "max_d1_jump": 1.908753259741648,
+   "rank_resid_mouth": 20,
+   "rank_shear95_lowerface": 29,
+   "rank_frozen_mouth": 52,
+   "rank_max_d1_jump": 37,
+   "rank_d1_mouth": 22
+  },
+  {
+   "t": 43,
+   "resid_mouth": 0.9320357173550688,
+   "d1_mouth": 1.900124203627267,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9999969464215455,
+   "shear_lowerface": 1.0274397867364051,
+   "frozen_mouth": 0.46366714728452313,
+   "max_d1_jump": 3.058225030608932,
+   "rank_resid_mouth": 47,
+   "rank_shear95_lowerface": 20,
+   "rank_frozen_mouth": 51,
+   "rank_max_d1_jump": 20,
+   "rank_d1_mouth": 13
+  },
+  {
+   "t": 44,
+   "resid_mouth": 1.0884872307539921,
+   "d1_mouth": 1.8241854952488874,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9382939730772767,
+   "shear_lowerface": 1.028577774952961,
+   "frozen_mouth": 0.5171988643939911,
+   "max_d1_jump": 2.319379634255793,
+   "rank_resid_mouth": 18,
+   "rank_shear95_lowerface": 47,
+   "rank_frozen_mouth": 49,
+   "rank_max_d1_jump": 33,
+   "rank_d1_mouth": 17
+  },
+  {
+   "t": 45,
+   "resid_mouth": 1.0696045371186025,
+   "d1_mouth": 1.4944237737586314,
+   "impulse_mouth": null,
+   "shear95_lowerface": 1.0519206385385438,
+   "shear_lowerface": 1.0895385844518728,
+   "frozen_mouth": 0.5671602987476073,
+   "max_d1_jump": 2.7207770173070687,
+   "rank_resid_mouth": 21,
+   "rank_shear95_lowerface": 9,
+   "rank_frozen_mouth": 45,
+   "rank_max_d1_jump": 24,
+   "rank_d1_mouth": 29
+  },
+  {
+   "t": 46,
+   "resid_mouth": 1.1533495724945246,
+   "d1_mouth": 1.5707097096179528,
+   "impulse_mouth": null,
+   "shear95_lowerface": 1.0394701595568085,
+   "shear_lowerface": 1.0529756418598128,
+   "frozen_mouth": 0.470658664197102,
+   "max_d1_jump": 3.0043881062149733,
+   "rank_resid_mouth": 10,
+   "rank_shear95_lowerface": 12,
+   "rank_frozen_mouth": 50,
+   "rank_max_d1_jump": 21,
+   "rank_d1_mouth": 27
+  },
+  {
+   "t": 47,
+   "resid_mouth": 1.01280284522291,
+   "d1_mouth": 1.364615388256311,
+   "impulse_mouth": null,
+   "shear95_lowerface": 1.0545588460777846,
+   "shear_lowerface": 1.0359774488243214,
+   "frozen_mouth": 0.5777122328332884,
+   "max_d1_jump": 3.3420149494088953,
+   "rank_resid_mouth": 33,
+   "rank_shear95_lowerface": 8,
+   "rank_frozen_mouth": 43,
+   "rank_max_d1_jump": 16,
+   "rank_d1_mouth": 32
+  },
+  {
+   "t": 48,
+   "resid_mouth": 0.9694256119576093,
+   "d1_mouth": 1.6094648120493094,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9576080602930523,
+   "shear_lowerface": 1.026031508585083,
+   "frozen_mouth": 0.6220490290126084,
+   "max_d1_jump": 2.07492530393773,
+   "rank_resid_mouth": 44,
+   "rank_shear95_lowerface": 42,
+   "rank_frozen_mouth": 34,
+   "rank_max_d1_jump": 35,
+   "rank_d1_mouth": 25
+  },
+  {
+   "t": 49,
+   "resid_mouth": 1.1460993151866712,
+   "d1_mouth": 1.6372181012148386,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9984210066388083,
+   "shear_lowerface": 1.0417613555430871,
+   "frozen_mouth": 0.6918205964155045,
+   "max_d1_jump": 1.7245128364994946,
+   "rank_resid_mouth": 11,
+   "rank_shear95_lowerface": 22,
+   "rank_frozen_mouth": 27,
+   "rank_max_d1_jump": 40,
+   "rank_d1_mouth": 23
+  },
+  {
+   "t": 50,
+   "resid_mouth": 1.0312667434067881,
+   "d1_mouth": 1.6239863490016422,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.9921405349226695,
+   "shear_lowerface": 1.00706584822998,
+   "frozen_mouth": 1.0260807890343737,
+   "max_d1_jump": 1.5688849107715133,
+   "rank_resid_mouth": 29,
+   "rank_shear95_lowerface": 26,
+   "rank_frozen_mouth": 6,
+   "rank_max_d1_jump": 44,
+   "rank_d1_mouth": 24
+  },
+  {
+   "t": 51,
+   "resid_mouth": 1.033070234750205,
+   "d1_mouth": 1.8115907669400935,
+   "impulse_mouth": null,
+   "shear95_lowerface": 0.958591343977027,
+   "shear_lowerface": 0.9733695065228193,
+   "frozen_mouth": 1.0325946596724924,
+   "max_d1_jump": 1.6017804840257774,
+   "rank_resid_mouth": 28,
+   "rank_shear95_lowerface": 41,
+   "rank_frozen_mouth": 4,
+   "rank_max_d1_jump": 43,
+   "rank_d1_mouth": 18
+  }
+ ],
+ "seconds": 156.1
+}

@@ -1,0 +1,292 @@
+{
+ "duration_s": 52.366667,
+ "original": {
+  "speech_s": 27.9,
+  "segments": 17,
+  "pauses": 16,
+  "pause_total_s": 19.4,
+  "median": 1.2,
+  "p90": 1.8,
+  "max": 2.3,
+  "gt_0_3": 16,
+  "gt_0_5": 15,
+  "gt_1_0": 10,
+  "hist_s": {
+   "0-0.15": 0,
+   "0.15-0.3": 0,
+   "0.3-0.5": 1,
+   "0.5-0.8": 2,
+   "0.8-1.2": 6,
+   "1.2-2.0": 5,
+   "2.0-99": 2
+  }
+ },
+ "dub": {
+  "speech_s": 22.5,
+  "segments": 19,
+  "pauses": 18,
+  "pause_total_s": 24.0,
+  "median": 1.05,
+  "p90": 2.73,
+  "max": 3.0,
+  "gt_0_3": 16,
+  "gt_0_5": 14,
+  "gt_1_0": 9,
+  "hist_s": {
+   "0-0.15": 0,
+   "0.15-0.3": 2,
+   "0.3-0.5": 1,
+   "0.5-0.8": 3,
+   "0.8-1.2": 5,
+   "1.2-2.0": 2,
+   "2.0-99": 5
+  }
+ },
+ "vad_iou": 0.686,
+ "source_without_dub_s": 7.4,
+ "dub_without_source_s": 2.0,
+ "source_without_dub_events": [
+  {
+   "t": 8.2,
+   "seconds": 1.3,
+   "cause": "inner_gap",
+   "unit": 1
+  },
+  {
+   "t": 15.5,
+   "seconds": 0.3,
+   "cause": "inner_gap",
+   "unit": 2
+  },
+  {
+   "t": 20.4,
+   "seconds": 0.8,
+   "cause": "short_fill",
+   "unit": 2
+  },
+  {
+   "t": 23.8,
+   "seconds": 0.8,
+   "cause": "inner_gap",
+   "unit": 3
+  },
+  {
+   "t": 26.2,
+   "seconds": 0.4,
+   "cause": "inner_gap",
+   "unit": 3
+  },
+  {
+   "t": 28.5,
+   "seconds": 0.7,
+   "cause": "short_fill",
+   "unit": 3
+  },
+  {
+   "t": 33.4,
+   "seconds": 0.6,
+   "cause": "between_units",
+   "unit": null
+  },
+  {
+   "t": 41.2,
+   "seconds": 0.4,
+   "cause": "short_fill",
+   "unit": 5
+  },
+  {
+   "t": 43.7,
+   "seconds": 1.1,
+   "cause": "inner_gap",
+   "unit": 6
+  },
+  {
+   "t": 48.4,
+   "seconds": 0.7,
+   "cause": "short_fill",
+   "unit": 6
+  }
+ ],
+ "source_without_dub_by_cause_s": {
+  "inner_gap": 3.9,
+  "short_fill": 2.6,
+  "between_units": 0.6
+ },
+ "dub_without_source_events": [
+  {
+   "t": 6.3,
+   "seconds": 0.4,
+   "cause": "inside_slot_pause",
+   "unit": 1
+  },
+  {
+   "t": 32.3,
+   "seconds": 0.3,
+   "cause": "inside_slot_pause",
+   "unit": 4
+  },
+  {
+   "t": 41.9,
+   "seconds": 0.6,
+   "cause": "inside_slot_pause",
+   "unit": 6
+  }
+ ],
+ "dub_without_source_by_cause_s": {
+  "inside_slot_pause": 1.3
+ },
+ "intra_sentence_pauses": [
+  {
+   "unit": 0,
+   "t": 3.98,
+   "gap_s": 0.82,
+   "source_silent_frac": 0.98,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "st another format of video shooting",
+   "after": "to see how it works."
+  },
+  {
+   "unit": 1,
+   "t": 6.61,
+   "gap_s": 0.79,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "After all,",
+   "after": "modern phones"
+  },
+  {
+   "unit": 1,
+   "t": 8.08,
+   "gap_s": 2.82,
+   "source_silent_frac": 0.5,
+   "kind": "inserted",
+   "weak_boundary": false,
+   "before": "modern phones",
+   "after": "already allow this."
+  },
+  {
+   "unit": 2,
+   "t": 12.77,
+   "gap_s": 0.93,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "And such a function,",
+   "after": "of course, adds to our popularity"
+  },
+  {
+   "unit": 2,
+   "t": 15.35,
+   "gap_s": 1.65,
+   "source_silent_frac": 0.72,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "of course, adds to our popularity",
+   "after": "and possible"
+  },
+  {
+   "unit": 2,
+   "t": 17.54,
+   "gap_s": 2.07,
+   "source_silent_frac": 0.97,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "and possible",
+   "after": "opportunities."
+  },
+  {
+   "unit": 3,
+   "t": 21.62,
+   "gap_s": 1.28,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "Here,",
+   "after": "we just want to see"
+  },
+  {
+   "unit": 3,
+   "t": 23.64,
+   "gap_s": 2.56,
+   "source_silent_frac": 0.62,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "we just want to see",
+   "after": "how our application will manage in "
+  },
+  {
+   "unit": 4,
+   "t": 32.53,
+   "gap_s": 0.37,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "here, go, take off and start saying",
+   "after": "something."
+  },
+  {
+   "unit": 5,
+   "t": 37.11,
+   "gap_s": 1.29,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "So let such a video",
+   "after": "be made; it certainly won't"
+  },
+  {
+   "unit": 5,
+   "t": 39.78,
+   "gap_s": 0.52,
+   "source_silent_frac": 0.76,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "be made; it certainly won't",
+   "after": "be unnecessary."
+  },
+  {
+   "unit": 6,
+   "t": 42.4,
+   "gap_s": 0.4,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "We will thoroughly",
+   "after": "test all variants"
+  },
+  {
+   "unit": 6,
+   "t": 43.66,
+   "gap_s": 2.34,
+   "source_silent_frac": 0.51,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "test all variants",
+   "after": "that can possibly"
+  },
+  {
+   "unit": 6,
+   "t": 46.76,
+   "gap_s": 0.84,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "that can possibly",
+   "after": "be imagined."
+  }
+ ],
+ "intra_inserted": 1,
+ "intra_preserved": 13,
+ "intra_inserted_gt_0_3": 1,
+ "weak_boundary_pauses_gt_0_3": 0,
+ "weak_boundary_pauses_gt_0_8": 0,
+ "weak_boundary_pause_s": 0,
+ "atempo": {
+  "max": 1.0,
+  "gt_1_15": 0,
+  "lt_1": 14
+ },
+ "timeline_png": "/workspace/dub/artifacts/baseline/05/pauses/05_cand5_timeline.png"
+}

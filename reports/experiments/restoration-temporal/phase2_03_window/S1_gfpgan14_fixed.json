@@ -1,0 +1,110 @@
+{
+ "kind": "gfpgan14_fixed",
+ "config": {
+  "fidelity_weight": 1.0,
+  "batch_size": 8,
+  "use_parse": false,
+  "empty_cache_per_face": false,
+  "autocast": false,
+  "parse_autocast": false,
+  "pinned": true,
+  "workers": 4,
+  "mask_blur": "gpu",
+  "roi_paste": true,
+  "overlap": true,
+  "template": "FFHQ 512 (facelib)",
+  "geometry": "preserved (no read_image upscale)",
+  "landmark_source": "insightface",
+  "network": "gfpgan14_fixed"
+ },
+ "pieces": [
+  {
+   "frames_in": 62,
+   "faces_restored": 62,
+   "frames_without_landmarks": 0,
+   "fallback_detections": 0,
+   "gray_faces": 0,
+   "seconds": {
+    "landmarks": 0.0,
+    "align": 0.018,
+    "net": 1.148,
+    "parse": 0.0,
+    "paste": 0.251,
+    "gpu_wait": 0.913,
+    "total": 1.183
+   },
+   "locality": {
+    "frames": 62,
+    "changed_px_sum": 9525982,
+    "soft_mask_px_sum": 9187901,
+    "roi_px_sum": 15694336,
+    "frame_px": 393472,
+    "change_outside_square_max_px": 0,
+    "changed_fraction_of_frame_mean": 0.3905,
+    "roi_fraction_of_frame_mean": 0.6433,
+    "changed_px_per_soft_mask_px": 1.037
+   },
+   "peak_vram_mib": 6074,
+   "faces_per_s": 52.41
+  },
+  {
+   "frames_in": 255,
+   "faces_restored": 255,
+   "frames_without_landmarks": 0,
+   "fallback_detections": 0,
+   "gray_faces": 0,
+   "seconds": {
+    "landmarks": 0.0,
+    "align": 0.059,
+    "net": 3.378,
+    "parse": 0.0,
+    "paste": 0.827,
+    "gpu_wait": 2.517,
+    "total": 3.404
+   },
+   "locality": {
+    "frames": 255,
+    "changed_px_sum": 36869781,
+    "soft_mask_px_sum": 35683616,
+    "roi_px_sum": 58964871,
+    "frame_px": 393472,
+    "change_outside_square_max_px": 0,
+    "changed_fraction_of_frame_mean": 0.3675,
+    "roi_fraction_of_frame_mean": 0.5877,
+    "changed_px_per_soft_mask_px": 1.033
+   },
+   "peak_vram_mib": 6074,
+   "faces_per_s": 74.91
+  },
+  {
+   "frames_in": 32,
+   "faces_restored": 32,
+   "frames_without_landmarks": 0,
+   "fallback_detections": 0,
+   "gray_faces": 0,
+   "seconds": {
+    "landmarks": 0.0,
+    "align": 0.008,
+    "net": 0.425,
+    "parse": 0.0,
+    "paste": 0.108,
+    "gpu_wait": 0.335,
+    "total": 0.451
+   },
+   "locality": {
+    "frames": 32,
+    "changed_px_sum": 4524978,
+    "soft_mask_px_sum": 4374507,
+    "roi_px_sum": 7222827,
+    "frame_px": 393472,
+    "change_outside_square_max_px": 0,
+    "changed_fraction_of_frame_mean": 0.3594,
+    "roi_fraction_of_frame_mean": 0.5736,
+    "changed_px_per_soft_mask_px": 1.034
+   },
+   "peak_vram_mib": 6074,
+   "faces_per_s": 70.95
+  }
+ ],
+ "seconds": 16.3
+}

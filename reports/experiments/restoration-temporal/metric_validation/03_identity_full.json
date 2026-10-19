@@ -1,0 +1,1121 @@
+{
+ "video": "/workspace/dub/artifacts/baseline/03/work/work_03/master_25fps.mp4",
+ "reference": "/workspace/dub/artifacts/baseline/03/work/work_03/master_25fps.mp4",
+ "fps": 25.0,
+ "ranges": [
+  [
+   1,
+   2258
+  ]
+ ],
+ "tag": "03_identity",
+ "params": {
+  "iod": 96.0,
+  "lm_sigma": 1.5,
+  "win": 5,
+  "landmarks": "YuNet 2023mar (reference frames)",
+  "flow": "OpenCV DIS medium"
+ },
+ "rois_canonical": {
+  "mouth": [
+   57,
+   173,
+   199,
+   269
+  ],
+  "upper": [
+   15,
+   53,
+   235,
+   144
+  ]
+ },
+ "lowerface_box": [
+  7,
+  148,
+  249,
+  317
+ ],
+ "canvas": [
+  250,
+  317
+ ],
+ "det_rate_reference": 1.0,
+ "all": {
+  "vel": {
+   "mouth": {
+    "video": 0.7839,
+    "reference": 0.7839,
+    "ratio": 1.0,
+    "p95_ratio": 1.0,
+    "frames": 2257
+   },
+   "upper": {
+    "video": 0.2159,
+    "reference": 0.2159,
+    "ratio": 1.0,
+    "p95_ratio": 1.0,
+    "frames": 2257
+   },
+   "lowerface": {
+    "video": 0.6175,
+    "reference": 0.6175,
+    "ratio": 1.0,
+    "p95_ratio": 1.0,
+    "frames": 2257
+   }
+  },
+  "jerk": {
+   "mouth": {
+    "video": 0.8618,
+    "reference": 0.8618,
+    "ratio": 1.0,
+    "p95_ratio": 1.0,
+    "frames": 2257
+   },
+   "upper": {
+    "video": 0.248,
+    "reference": 0.248,
+    "ratio": 1.0,
+    "p95_ratio": 1.0,
+    "frames": 2257
+   },
+   "lowerface": {
+    "video": 0.7037,
+    "reference": 0.7037,
+    "ratio": 1.0,
+    "p95_ratio": 1.0,
+    "frames": 2257
+   }
+  },
+  "resid": {
+   "mouth": {
+    "video": 1.3188,
+    "reference": 1.3188,
+    "ratio": 1.0,
+    "p95_ratio": 1.0,
+    "frames": 2257
+   },
+   "upper": {
+    "video": 1.2546,
+    "reference": 1.2546,
+    "ratio": 1.0,
+    "p95_ratio": 1.0,
+    "frames": 2257
+   },
+   "lowerface": {
+    "video": 1.8944,
+    "reference": 1.8944,
+    "ratio": 1.0,
+    "p95_ratio": 1.0,
+    "frames": 2257
+   }
+  },
+  "acc": {
+   "mouth": {
+    "video": 3.9944,
+    "reference": 3.9944,
+    "ratio": 1.0,
+    "p95_ratio": 1.0,
+    "frames": 2257
+   },
+   "upper": {
+    "video": 3.2265,
+    "reference": 3.2265,
+    "ratio": 1.0,
+    "p95_ratio": 1.0,
+    "frames": 2257
+   },
+   "lowerface": {
+    "video": 6.2052,
+    "reference": 6.2052,
+    "ratio": 1.0,
+    "p95_ratio": 1.0,
+    "frames": 2257
+   }
+  },
+  "d1": {
+   "mouth": {
+    "video": 2.8521,
+    "reference": 2.8521,
+    "ratio": 1.0,
+    "p95_ratio": 1.0,
+    "frames": 2257
+   },
+   "upper": {
+    "video": 2.5354,
+    "reference": 2.5354,
+    "ratio": 1.0,
+    "p95_ratio": 1.0,
+    "frames": 2257
+   },
+   "lowerface": {
+    "video": 4.5074,
+    "reference": 4.5074,
+    "ratio": 1.0,
+    "p95_ratio": 1.0,
+    "frames": 2257
+   }
+  },
+  "twitch_index": {
+   "mouth": {
+    "video": 1.0994,
+    "reference": 1.0994,
+    "ratio": 1.0
+   },
+   "lowerface": {
+    "video": 1.1395,
+    "reference": 1.1395,
+    "ratio": 1.0
+   },
+   "upper": {
+    "video": 1.1486,
+    "reference": 1.1486,
+    "ratio": 1.0
+   }
+  },
+  "impulse_index": {
+   "mouth": {
+    "video": 1.4005,
+    "reference": 1.4005,
+    "ratio": 1.0
+   },
+   "lowerface": {
+    "video": 1.3767,
+    "reference": 1.3767,
+    "ratio": 1.0
+   },
+   "upper": {
+    "video": 1.2726,
+    "reference": 1.2726,
+    "ratio": 1.0
+   }
+  },
+  "pop_rate_vs_reference": {
+   "mouth": {
+    "d1_above_ref_p98": 1.02,
+    "acc_above_ref_p98": 1.02
+   },
+   "lowerface": {
+    "d1_above_ref_p98": 1.02,
+    "acc_above_ref_p98": 1.02
+   },
+   "upper": {
+    "d1_above_ref_p98": 1.02,
+    "acc_above_ref_p98": 1.02
+   }
+  }
+ },
+ "per_range": {
+  "1:2258": {
+   "vel": {
+    "mouth": {
+     "video": 0.7839,
+     "reference": 0.7839,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 2257
+    },
+    "upper": {
+     "video": 0.2159,
+     "reference": 0.2159,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 2257
+    },
+    "lowerface": {
+     "video": 0.6175,
+     "reference": 0.6175,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 2257
+    }
+   },
+   "jerk": {
+    "mouth": {
+     "video": 0.8618,
+     "reference": 0.8618,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 2257
+    },
+    "upper": {
+     "video": 0.248,
+     "reference": 0.248,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 2257
+    },
+    "lowerface": {
+     "video": 0.7037,
+     "reference": 0.7037,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 2257
+    }
+   },
+   "resid": {
+    "mouth": {
+     "video": 1.3188,
+     "reference": 1.3188,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 2257
+    },
+    "upper": {
+     "video": 1.2546,
+     "reference": 1.2546,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 2257
+    },
+    "lowerface": {
+     "video": 1.8944,
+     "reference": 1.8944,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 2257
+    }
+   },
+   "acc": {
+    "mouth": {
+     "video": 3.9944,
+     "reference": 3.9944,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 2257
+    },
+    "upper": {
+     "video": 3.2265,
+     "reference": 3.2265,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 2257
+    },
+    "lowerface": {
+     "video": 6.2052,
+     "reference": 6.2052,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 2257
+    }
+   },
+   "d1": {
+    "mouth": {
+     "video": 2.8521,
+     "reference": 2.8521,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 2257
+    },
+    "upper": {
+     "video": 2.5354,
+     "reference": 2.5354,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 2257
+    },
+    "lowerface": {
+     "video": 4.5074,
+     "reference": 4.5074,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 2257
+    }
+   },
+   "twitch_index": {
+    "mouth": {
+     "video": 1.0994,
+     "reference": 1.0994,
+     "ratio": 1.0
+    },
+    "lowerface": {
+     "video": 1.1395,
+     "reference": 1.1395,
+     "ratio": 1.0
+    },
+    "upper": {
+     "video": 1.1486,
+     "reference": 1.1486,
+     "ratio": 1.0
+    }
+   },
+   "impulse_index": {
+    "mouth": {
+     "video": 1.4005,
+     "reference": 1.4005,
+     "ratio": 1.0
+    },
+    "lowerface": {
+     "video": 1.3767,
+     "reference": 1.3767,
+     "ratio": 1.0
+    },
+    "upper": {
+     "video": 1.2726,
+     "reference": 1.2726,
+     "ratio": 1.0
+    }
+   },
+   "pop_rate_vs_reference": {
+    "mouth": {
+     "d1_above_ref_p98": 1.02,
+     "acc_above_ref_p98": 1.02
+    },
+    "lowerface": {
+     "d1_above_ref_p98": 1.02,
+     "acc_above_ref_p98": 1.02
+    },
+    "upper": {
+     "d1_above_ref_p98": 1.02,
+     "acc_above_ref_p98": 1.02
+    }
+   }
+  }
+ },
+ "classes": {
+  "ls_core": {
+   "vel": {
+    "mouth": {
+     "video": 0.8528,
+     "reference": 0.8528,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 1985
+    },
+    "upper": {
+     "video": 0.2152,
+     "reference": 0.2152,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 1985
+    },
+    "lowerface": {
+     "video": 0.6475,
+     "reference": 0.6475,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 1985
+    }
+   },
+   "jerk": {
+    "mouth": {
+     "video": 0.94,
+     "reference": 0.94,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 1985
+    },
+    "upper": {
+     "video": 0.2483,
+     "reference": 0.2483,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 1985
+    },
+    "lowerface": {
+     "video": 0.7423,
+     "reference": 0.7423,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 1985
+    }
+   },
+   "resid": {
+    "mouth": {
+     "video": 1.363,
+     "reference": 1.363,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 1985
+    },
+    "upper": {
+     "video": 1.254,
+     "reference": 1.254,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 1985
+    },
+    "lowerface": {
+     "video": 1.9059,
+     "reference": 1.9059,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 1985
+    }
+   },
+   "acc": {
+    "mouth": {
+     "video": 4.2499,
+     "reference": 4.2499,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 1985
+    },
+    "upper": {
+     "video": 3.2511,
+     "reference": 3.2511,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 1985
+    },
+    "lowerface": {
+     "video": 6.3791,
+     "reference": 6.3791,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 1985
+    }
+   },
+   "d1": {
+    "mouth": {
+     "video": 3.0199,
+     "reference": 3.0199,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 1985
+    },
+    "upper": {
+     "video": 2.5628,
+     "reference": 2.5628,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 1985
+    },
+    "lowerface": {
+     "video": 4.605,
+     "reference": 4.605,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 1985
+    }
+   },
+   "twitch_index": {
+    "mouth": {
+     "video": 1.1022,
+     "reference": 1.1022,
+     "ratio": 1.0
+    },
+    "lowerface": {
+     "video": 1.1465,
+     "reference": 1.1465,
+     "ratio": 1.0
+    },
+    "upper": {
+     "video": 1.1536,
+     "reference": 1.1536,
+     "ratio": 1.0
+    }
+   },
+   "impulse_index": {
+    "mouth": {
+     "video": 1.4073,
+     "reference": 1.4073,
+     "ratio": 1.0
+    },
+    "lowerface": {
+     "video": 1.3853,
+     "reference": 1.3853,
+     "ratio": 1.0
+    },
+    "upper": {
+     "video": 1.2686,
+     "reference": 1.2686,
+     "ratio": 1.0
+    }
+   },
+   "pop_rate_vs_reference": {
+    "mouth": {
+     "d1_above_ref_p98": 1.01,
+     "acc_above_ref_p98": 1.01
+    },
+    "lowerface": {
+     "d1_above_ref_p98": 1.01,
+     "acc_above_ref_p98": 1.01
+    },
+    "upper": {
+     "d1_above_ref_p98": 1.01,
+     "acc_above_ref_p98": 1.01
+    }
+   }
+  },
+  "switch": {
+   "vel": {
+    "mouth": {
+     "video": 0.2948,
+     "reference": 0.2948,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 80
+    },
+    "upper": {
+     "video": 0.2058,
+     "reference": 0.2058,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 80
+    },
+    "lowerface": {
+     "video": 0.3613,
+     "reference": 0.3613,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 80
+    }
+   },
+   "jerk": {
+    "mouth": {
+     "video": 0.2936,
+     "reference": 0.2936,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 80
+    },
+    "upper": {
+     "video": 0.2521,
+     "reference": 0.2521,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 80
+    },
+    "lowerface": {
+     "video": 0.3718,
+     "reference": 0.3718,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 80
+    }
+   },
+   "resid": {
+    "mouth": {
+     "video": 0.9951,
+     "reference": 0.9951,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 80
+    },
+    "upper": {
+     "video": 1.249,
+     "reference": 1.249,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 80
+    },
+    "lowerface": {
+     "video": 1.7639,
+     "reference": 1.7639,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 80
+    }
+   },
+   "acc": {
+    "mouth": {
+     "video": 2.1261,
+     "reference": 2.1261,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 80
+    },
+    "upper": {
+     "video": 2.7451,
+     "reference": 2.7451,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 80
+    },
+    "lowerface": {
+     "video": 4.0155,
+     "reference": 4.0155,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 80
+    }
+   },
+   "d1": {
+    "mouth": {
+     "video": 1.575,
+     "reference": 1.575,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 80
+    },
+    "upper": {
+     "video": 2.1792,
+     "reference": 2.1792,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 80
+    },
+    "lowerface": {
+     "video": 3.1573,
+     "reference": 3.1573,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 80
+    }
+   },
+   "twitch_index": {
+    "mouth": {
+     "video": 0.9958,
+     "reference": 0.9958,
+     "ratio": 1.0
+    },
+    "lowerface": {
+     "video": 1.0291,
+     "reference": 1.0291,
+     "ratio": 1.0
+    },
+    "upper": {
+     "video": 1.2252,
+     "reference": 1.2252,
+     "ratio": 1.0
+    }
+   },
+   "impulse_index": {
+    "mouth": {
+     "video": 1.3499,
+     "reference": 1.3499,
+     "ratio": 1.0
+    },
+    "lowerface": {
+     "video": 1.2718,
+     "reference": 1.2718,
+     "ratio": 1.0
+    },
+    "upper": {
+     "video": 1.2597,
+     "reference": 1.2597,
+     "ratio": 1.0
+    }
+   },
+   "pop_rate_vs_reference": {
+    "mouth": {
+     "d1_above_ref_p98": 1.25,
+     "acc_above_ref_p98": 1.25
+    },
+    "lowerface": {
+     "d1_above_ref_p98": 1.25,
+     "acc_above_ref_p98": 1.25
+    },
+    "upper": {
+     "d1_above_ref_p98": 1.25,
+     "acc_above_ref_p98": 1.25
+    }
+   }
+  },
+  "orig": {
+   "vel": {
+    "mouth": {
+     "video": 0.2753,
+     "reference": 0.2753,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 192
+    },
+    "upper": {
+     "video": 0.2275,
+     "reference": 0.2275,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 192
+    },
+    "lowerface": {
+     "video": 0.4147,
+     "reference": 0.4147,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 192
+    }
+   },
+   "jerk": {
+    "mouth": {
+     "video": 0.2911,
+     "reference": 0.2911,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 192
+    },
+    "upper": {
+     "video": 0.2436,
+     "reference": 0.2436,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 192
+    },
+    "lowerface": {
+     "video": 0.4424,
+     "reference": 0.4424,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 192
+    }
+   },
+   "resid": {
+    "mouth": {
+     "video": 0.9964,
+     "reference": 0.9964,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 192
+    },
+    "upper": {
+     "video": 1.2628,
+     "reference": 1.2628,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 192
+    },
+    "lowerface": {
+     "video": 1.8291,
+     "reference": 1.8291,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 192
+    }
+   },
+   "acc": {
+    "mouth": {
+     "video": 2.131,
+     "reference": 2.131,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 192
+    },
+    "upper": {
+     "video": 3.1723,
+     "reference": 3.1723,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 192
+    },
+    "lowerface": {
+     "video": 5.3198,
+     "reference": 5.3198,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 192
+    }
+   },
+   "d1": {
+    "mouth": {
+     "video": 1.6493,
+     "reference": 1.6493,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 192
+    },
+    "upper": {
+     "video": 2.4014,
+     "reference": 2.4014,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 192
+    },
+    "lowerface": {
+     "video": 4.0612,
+     "reference": 4.0612,
+     "ratio": 1.0,
+     "p95_ratio": 1.0,
+     "frames": 192
+    }
+   },
+   "twitch_index": {
+    "mouth": {
+     "video": 1.0573,
+     "reference": 1.0573,
+     "ratio": 1.0
+    },
+    "lowerface": {
+     "video": 1.0668,
+     "reference": 1.0668,
+     "ratio": 1.0
+    },
+    "upper": {
+     "video": 1.0707,
+     "reference": 1.0707,
+     "ratio": 1.0
+    }
+   },
+   "impulse_index": {
+    "mouth": {
+     "video": 1.2921,
+     "reference": 1.2921,
+     "ratio": 1.0
+    },
+    "lowerface": {
+     "video": 1.3099,
+     "reference": 1.3099,
+     "ratio": 1.0
+    },
+    "upper": {
+     "video": 1.321,
+     "reference": 1.321,
+     "ratio": 1.0
+    }
+   },
+   "pop_rate_vs_reference": {
+    "mouth": {
+     "d1_above_ref_p98": 1.04,
+     "acc_above_ref_p98": 1.04
+    },
+    "lowerface": {
+     "d1_above_ref_p98": 1.04,
+     "acc_above_ref_p98": 1.04
+    },
+    "upper": {
+     "d1_above_ref_p98": 1.04,
+     "acc_above_ref_p98": 1.04
+    }
+   }
+  }
+ },
+ "latentsync_window_boundaries": {
+  "window_frames": 16,
+  "d1": {
+   "video": {
+    "by_phase": [
+     2.9448,
+     3.042,
+     2.9844,
+     2.9882,
+     2.8407,
+     3.1976,
+     3.1584,
+     3.0124,
+     3.0603,
+     3.1301,
+     3.0524,
+     2.9726,
+     3.1062,
+     3.1006,
+     2.8485,
+     2.8673
+    ],
+    "phase0_over_inner": 0.965
+   },
+   "reference": {
+    "by_phase": [
+     2.9448,
+     3.042,
+     2.9844,
+     2.9882,
+     2.8407,
+     3.1976,
+     3.1584,
+     3.0124,
+     3.0603,
+     3.1301,
+     3.0524,
+     2.9726,
+     3.1062,
+     3.1006,
+     2.8485,
+     2.8673
+    ],
+    "phase0_over_inner": 0.965
+   }
+  },
+  "resid": {
+   "video": {
+    "by_phase": [
+     1.3501,
+     1.3539,
+     1.3509,
+     1.3732,
+     1.3267,
+     1.386,
+     1.4171,
+     1.3693,
+     1.3396,
+     1.3612,
+     1.3833,
+     1.3512,
+     1.3681,
+     1.3965,
+     1.3336,
+     1.3458
+    ],
+    "phase0_over_inner": 0.986
+   },
+   "reference": {
+    "by_phase": [
+     1.3501,
+     1.3539,
+     1.3509,
+     1.3732,
+     1.3267,
+     1.386,
+     1.4171,
+     1.3693,
+     1.3396,
+     1.3612,
+     1.3833,
+     1.3512,
+     1.3681,
+     1.3965,
+     1.3336,
+     1.3458
+    ],
+    "phase0_over_inner": 0.986
+   }
+  },
+  "vel": {
+   "video": {
+    "by_phase": [
+     0.8233,
+     0.8477,
+     0.8278,
+     0.8068,
+     0.7892,
+     0.948,
+     0.9609,
+     0.8384,
+     0.8775,
+     0.8634,
+     0.8665,
+     0.8414,
+     0.8667,
+     0.8751,
+     0.8142,
+     0.7918
+    ],
+    "phase0_over_inner": 0.953
+   },
+   "reference": {
+    "by_phase": [
+     0.8233,
+     0.8477,
+     0.8278,
+     0.8068,
+     0.7892,
+     0.948,
+     0.9609,
+     0.8384,
+     0.8775,
+     0.8634,
+     0.8665,
+     0.8414,
+     0.8667,
+     0.8751,
+     0.8142,
+     0.7918
+    ],
+    "phase0_over_inner": 0.953
+   }
+  },
+  "jerk": {
+   "video": {
+    "by_phase": [
+     0.9336,
+     0.9247,
+     0.9027,
+     0.8736,
+     1.0338,
+     1.0225,
+     0.9669,
+     0.9625,
+     0.9519,
+     0.8904,
+     0.9786,
+     0.8732,
+     0.9171,
+     0.9064,
+     0.9748,
+     0.9232
+    ],
+    "phase0_over_inner": 0.993
+   },
+   "reference": {
+    "by_phase": [
+     0.9336,
+     0.9247,
+     0.9027,
+     0.8736,
+     1.0338,
+     1.0225,
+     0.9669,
+     0.9625,
+     0.9519,
+     0.8904,
+     0.9786,
+     0.8732,
+     0.9171,
+     0.9064,
+     0.9748,
+     0.9232
+    ],
+    "phase0_over_inner": 0.993
+   }
+  },
+  "boundary_d1_jump": {
+   "video": {
+    "boundaries": 124,
+    "median": 0.995,
+    "p75": 1.294,
+    "share_gt_1_5": 0.169,
+    "share_gt_2": 0.089
+   },
+   "reference": {
+    "boundaries": 124,
+    "median": 0.995,
+    "p75": 1.294,
+    "share_gt_1_5": 0.169,
+    "share_gt_2": 0.089
+   }
+  }
+ },
+ "switch_frames": [
+  76,
+  1114,
+  1151,
+  1406,
+  1474,
+  2061,
+  2091,
+  2236
+ ],
+ "worst_windows": [
+  {
+   "frame": 1308,
+   "t": 52.32,
+   "mouth_jerk_vs_reference_median": 3.71
+  },
+  {
+   "frame": 1200,
+   "t": 48.0,
+   "mouth_jerk_vs_reference_median": 3.2
+  },
+  {
+   "frame": 1872,
+   "t": 74.88,
+   "mouth_jerk_vs_reference_median": 2.96
+  },
+  {
+   "frame": 1512,
+   "t": 60.48,
+   "mouth_jerk_vs_reference_median": 2.79
+  },
+  {
+   "frame": 1152,
+   "t": 46.08,
+   "mouth_jerk_vs_reference_median": 2.75
+  },
+  {
+   "frame": 1632,
+   "t": 65.28,
+   "mouth_jerk_vs_reference_median": 2.75
+  },
+  {
+   "frame": 1764,
+   "t": 70.56,
+   "mouth_jerk_vs_reference_median": 2.74
+  },
+  {
+   "frame": 396,
+   "t": 15.84,
+   "mouth_jerk_vs_reference_median": 2.73
+  }
+ ],
+ "seconds": 198.7
+}

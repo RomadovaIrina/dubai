@@ -1,0 +1,22 @@
+{
+ "source": {
+  "w": 464,
+  "h": 848,
+  "fps": 29.924,
+  "frames": 1567,
+  "duration": 52.367
+ },
+ "output": {
+  "w": 464,
+  "h": 848,
+  "fps": 29.942,
+  "frames": 1567,
+  "duration": 52.366
+ },
+ "resolution_equal": true,
+ "fps_equal": true,
+ "frames_equal": true,
+ "duration_delta_s": -0.001,
+ "audio_md5_identical_to_baseline": true,
+ "pass": true
+}

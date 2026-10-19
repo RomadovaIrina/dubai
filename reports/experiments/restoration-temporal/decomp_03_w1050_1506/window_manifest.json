@@ -1,0 +1,105 @@
+{
+ "source_manifest": "/workspace/dub/artifacts/baseline/03/final/03_final.manifest.json",
+ "window": [
+  1050,
+  1506
+ ],
+ "fps": 25,
+ "pieces": [
+  {
+   "run_index": 1,
+   "start": 1052,
+   "end": 1114,
+   "full": false,
+   "xf_in": 0,
+   "xf_out": 4
+  },
+  {
+   "run_index": 3,
+   "start": 1151,
+   "end": 1406,
+   "full": true,
+   "xf_in": 4,
+   "xf_out": 4
+  },
+  {
+   "run_index": 5,
+   "start": 1474,
+   "end": 1506,
+   "full": false,
+   "xf_in": 4,
+   "xf_out": 0
+  }
+ ],
+ "times": {
+  "ls_load": 24.9,
+  "latentsync": 84.05,
+  "codeformer": 11.49,
+  "write": 13.67,
+  "total": 147.15
+ },
+ "settings": {
+  "ls_landmark_smooth": 2,
+  "mask_smooth": 3,
+  "mask_top": 0.52,
+  "mask_feather": 0.08,
+  "codeformer_w": 1.0,
+  "latentsync": {
+   "window_batch_size": 2,
+   "deepcache": true,
+   "deepcache_interval": 5,
+   "compile_backend": "none",
+   "sdpa_backend": "auto",
+   "steps": 20,
+   "guidance": 1.5,
+   "seed": 1247,
+   "fp16": true,
+   "stage2_512": true
+  }
+ },
+ "repro_vs_run_output_full_segments": {
+  "frames": 255,
+  "mean_abs_diff": 1.52,
+  "note": "run output is libx264 crf 13 yuv420p, stages are lossless: ~1-2 levels = encoder noise"
+ },
+ "lipsync": {
+  "segments": [
+   {
+    "index": 0,
+    "action": "PASS_THROUGH",
+    "start_frame": 0,
+    "end_frame": 2
+   },
+   {
+    "index": 1,
+    "action": "LATENT_SYNC",
+    "start_frame": 2,
+    "end_frame": 64
+   },
+   {
+    "index": 2,
+    "action": "PASS_THROUGH",
+    "start_frame": 64,
+    "end_frame": 101
+   },
+   {
+    "index": 3,
+    "action": "LATENT_SYNC",
+    "start_frame": 101,
+    "end_frame": 356
+   },
+   {
+    "index": 4,
+    "action": "PASS_THROUGH",
+    "start_frame": 356,
+    "end_frame": 424
+   },
+   {
+    "index": 5,
+    "action": "LATENT_SYNC",
+    "start_frame": 424,
+    "end_frame": 456
+   }
+  ]
+ }
+}

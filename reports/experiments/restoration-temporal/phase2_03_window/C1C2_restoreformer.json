@@ -1,0 +1,59 @@
+{
+ "tag": "C1C2_restoreformer",
+ "args": {
+  "dir": "/workspace/dub/artifacts/restoration-temporal/decomp_03/w1050_1506",
+  "tag": "C1C2_restoreformer",
+  "base": "S0_ls_raw",
+  "detail": "S1_restoreformer",
+  "boundary": "on",
+  "detail_filter": "on",
+  "alpha": 0.5,
+  "change_thr": 10.0,
+  "gain": 1.3,
+  "lm_smooth": 2,
+  "mask_smooth": 3,
+  "margin": 12
+ },
+ "pieces": [
+  {
+   "piece": [
+    1052,
+    1114
+   ],
+   "roi": [
+    408,
+    676,
+    92,
+    419
+   ],
+   "boundaries_interpolated": 3
+  },
+  {
+   "piece": [
+    1151,
+    1406
+   ],
+   "roi": [
+    397,
+    670,
+    87,
+    426
+   ],
+   "boundaries_interpolated": 15
+  },
+  {
+   "piece": [
+    1474,
+    1506
+   ],
+   "roi": [
+    401,
+    661,
+    104,
+    421
+   ],
+   "boundaries_interpolated": 1
+  }
+ ],
+ "seconds": 19.9
+}

@@ -1,0 +1,367 @@
+{
+ "duration_s": 90.333333,
+ "original": {
+  "speech_s": 60.7,
+  "segments": 27,
+  "pauses": 26,
+  "pause_total_s": 25.2,
+  "median": 0.8,
+  "p90": 1.8,
+  "max": 3.4,
+  "gt_0_3": 22,
+  "gt_0_5": 17,
+  "gt_1_0": 10,
+  "hist_s": {
+   "0-0.15": 3,
+   "0.15-0.3": 1,
+   "0.3-0.5": 3,
+   "0.5-0.8": 7,
+   "0.8-1.2": 2,
+   "1.2-2.0": 8,
+   "2.0-99": 2
+  }
+ },
+ "dub": {
+  "speech_s": 51.7,
+  "segments": 32,
+  "pauses": 31,
+  "pause_total_s": 34.0,
+  "median": 1.1,
+  "p90": 2.0,
+  "max": 3.2,
+  "gt_0_3": 24,
+  "gt_0_5": 20,
+  "gt_1_0": 16,
+  "hist_s": {
+   "0-0.15": 3,
+   "0.15-0.3": 4,
+   "0.3-0.5": 3,
+   "0.5-0.8": 4,
+   "0.8-1.2": 2,
+   "1.2-2.0": 10,
+   "2.0-99": 5
+  }
+ },
+ "vad_iou": 0.79,
+ "source_without_dub_s": 11.1,
+ "dub_without_source_s": 2.1,
+ "source_without_dub_events": [
+  {
+   "t": 7.7,
+   "seconds": 0.5,
+   "cause": "inner_gap",
+   "unit": 1
+  },
+  {
+   "t": 21.0,
+   "seconds": 0.4,
+   "cause": "inner_gap",
+   "unit": 3
+  },
+  {
+   "t": 24.5,
+   "seconds": 0.5,
+   "cause": "inner_gap",
+   "unit": 3
+  },
+  {
+   "t": 27.8,
+   "seconds": 0.8,
+   "cause": "short_fill",
+   "unit": 3
+  },
+  {
+   "t": 34.3,
+   "seconds": 1.2,
+   "cause": "inner_gap",
+   "unit": 4
+  },
+  {
+   "t": 37.5,
+   "seconds": 1.0,
+   "cause": "inner_gap",
+   "unit": 4
+  },
+  {
+   "t": 49.7,
+   "seconds": 1.1,
+   "cause": "inner_gap",
+   "unit": 5
+  },
+  {
+   "t": 66.1,
+   "seconds": 2.0,
+   "cause": "short_fill",
+   "unit": 6
+  },
+  {
+   "t": 76.2,
+   "seconds": 0.6,
+   "cause": "inner_gap",
+   "unit": 8
+  },
+  {
+   "t": 78.8,
+   "seconds": 0.5,
+   "cause": "short_fill",
+   "unit": 8
+  },
+  {
+   "t": 81.8,
+   "seconds": 0.4,
+   "cause": "inner_gap",
+   "unit": 9
+  },
+  {
+   "t": 86.4,
+   "seconds": 0.4,
+   "cause": "inner_gap",
+   "unit": 9
+  }
+ ],
+ "source_without_dub_by_cause_s": {
+  "inner_gap": 6.1,
+  "short_fill": 3.3
+ },
+ "dub_without_source_events": [
+  {
+   "t": 5.5,
+   "seconds": 0.5,
+   "cause": "inside_slot_pause",
+   "unit": 1
+  },
+  {
+   "t": 12.4,
+   "seconds": 0.4,
+   "cause": "inside_slot_pause",
+   "unit": 2
+  }
+ ],
+ "dub_without_source_by_cause_s": {
+  "inside_slot_pause": 0.9
+ },
+ "intra_sentence_pauses": [
+  {
+   "unit": 1,
+   "t": 5.99,
+   "gap_s": 0.71,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "I will record",
+   "after": "the first video as"
+  },
+  {
+   "unit": 1,
+   "t": 7.67,
+   "gap_s": 0.73,
+   "source_silent_frac": 0.27,
+   "kind": "inserted",
+   "weak_boundary": true,
+   "before": "the first video as",
+   "after": "an introductory one to get"
+  },
+  {
+   "unit": 1,
+   "t": 9.87,
+   "gap_s": 0.43,
+   "source_silent_frac": 0.91,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "an introductory one to get",
+   "after": "to know each other."
+  },
+  {
+   "unit": 2,
+   "t": 12.73,
+   "gap_s": 1.57,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "Probably more in general",
+   "after": "what I want to say is that I am gla"
+  },
+  {
+   "unit": 2,
+   "t": 17.19,
+   "gap_s": 0.51,
+   "source_silent_frac": 0.96,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "that I am glad to meet you and glad",
+   "after": "to cooperate."
+  },
+  {
+   "unit": 3,
+   "t": 20.94,
+   "gap_s": 1.36,
+   "source_silent_frac": 0.66,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "Today is Friday, August 28th,",
+   "after": "and we will consider this"
+  },
+  {
+   "unit": 3,
+   "t": 24.4,
+   "gap_s": 1.1,
+   "source_silent_frac": 0.45,
+   "kind": "inserted",
+   "weak_boundary": false,
+   "before": "the start",
+   "after": "of our cooperation."
+  },
+  {
+   "unit": 4,
+   "t": 29.18,
+   "gap_s": 1.32,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "Let's hope",
+   "after": "that this cooperation will be smoot"
+  },
+  {
+   "unit": 4,
+   "t": 34.22,
+   "gap_s": 1.68,
+   "source_silent_frac": 0.24,
+   "kind": "inserted",
+   "weak_boundary": false,
+   "before": "smooth, bringing us all the desired",
+   "after": "result that we wished for,"
+  },
+  {
+   "unit": 4,
+   "t": 37.42,
+   "gap_s": 1.88,
+   "source_silent_frac": 0.42,
+   "kind": "inserted",
+   "weak_boundary": false,
+   "before": "result that we wished for,",
+   "after": "so that on our path,"
+  },
+  {
+   "unit": 4,
+   "t": 40.91,
+   "gap_s": 1.49,
+   "source_silent_frac": 0.87,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "so that on our path,",
+   "after": "no obstacles arise."
+  },
+  {
+   "unit": 5,
+   "t": 44.3,
+   "gap_s": 2.0,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "I hope",
+   "after": "everything will be well,"
+  },
+  {
+   "unit": 5,
+   "t": 47.99,
+   "gap_s": 0.21,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "everything will be well,",
+   "after": "for the actions we are taking"
+  },
+  {
+   "unit": 5,
+   "t": 49.63,
+   "gap_s": 1.77,
+   "source_silent_frac": 0.34,
+   "kind": "inserted",
+   "weak_boundary": false,
+   "before": "for the actions we are taking",
+   "after": "with you and in general with the pr"
+  },
+  {
+   "unit": 6,
+   "t": 55.87,
+   "gap_s": 3.33,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "Next,",
+   "after": "I will send a few more videos recor"
+  },
+  {
+   "unit": 7,
+   "t": 68.48,
+   "gap_s": 1.56,
+   "source_silent_frac": 0.99,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "Well,",
+   "after": "and basically that's it."
+  },
+  {
+   "unit": 8,
+   "t": 72.49,
+   "gap_s": 1.31,
+   "source_silent_frac": 0.98,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "I will send it to our chat",
+   "after": "so that we can all express our wish"
+  },
+  {
+   "unit": 8,
+   "t": 76.09,
+   "gap_s": 0.81,
+   "source_silent_frac": 0.12,
+   "kind": "inserted",
+   "weak_boundary": true,
+   "before": "t we can all express our wishes for",
+   "after": "success to each other."
+  },
+  {
+   "unit": 9,
+   "t": 82.06,
+   "gap_s": 1.84,
+   "source_silent_frac": 0.92,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "Our interaction will be smooth",
+   "after": "and will bring us"
+  },
+  {
+   "unit": 9,
+   "t": 84.78,
+   "gap_s": 0.42,
+   "source_silent_frac": 0.95,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "and will bring us",
+   "after": "the result we desire. Forward"
+  },
+  {
+   "unit": 9,
+   "t": 87.29,
+   "gap_s": 1.21,
+   "source_silent_frac": 0.99,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "the result we desire. Forward",
+   "after": "we go."
+  }
+ ],
+ "intra_inserted": 6,
+ "intra_preserved": 15,
+ "intra_inserted_gt_0_3": 6,
+ "weak_boundary_pauses_gt_0_3": 2,
+ "weak_boundary_pauses_gt_0_8": 1,
+ "weak_boundary_pause_s": 1.54,
+ "atempo": {
+  "max": 1.15,
+  "gt_1_15": 0,
+  "lt_1": 24
+ },
+ "timeline_png": "/workspace/dub/artifacts/baseline/03/pauses/03_cand5_timeline.png"
+}

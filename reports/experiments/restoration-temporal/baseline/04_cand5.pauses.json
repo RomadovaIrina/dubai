@@ -1,0 +1,263 @@
+{
+ "duration_s": 53.9,
+ "original": {
+  "speech_s": 29.5,
+  "segments": 15,
+  "pauses": 14,
+  "pause_total_s": 20.8,
+  "median": 1.55,
+  "p90": 2.18,
+  "max": 3.2,
+  "gt_0_3": 14,
+  "gt_0_5": 13,
+  "gt_1_0": 9,
+  "hist_s": {
+   "0-0.15": 0,
+   "0.15-0.3": 0,
+   "0.3-0.5": 0,
+   "0.5-0.8": 3,
+   "0.8-1.2": 3,
+   "1.2-2.0": 6,
+   "2.0-99": 2
+  }
+ },
+ "dub": {
+  "speech_s": 25.1,
+  "segments": 19,
+  "pauses": 18,
+  "pause_total_s": 25.2,
+  "median": 1.4,
+  "p90": 2.32,
+  "max": 3.1,
+  "gt_0_3": 16,
+  "gt_0_5": 15,
+  "gt_1_0": 12,
+  "hist_s": {
+   "0-0.15": 0,
+   "0.15-0.3": 2,
+   "0.3-0.5": 1,
+   "0.5-0.8": 2,
+   "0.8-1.2": 2,
+   "1.2-2.0": 6,
+   "2.0-99": 5
+  }
+ },
+ "vad_iou": 0.75,
+ "source_without_dub_s": 6.1,
+ "dub_without_source_s": 1.7,
+ "source_without_dub_events": [
+  {
+   "t": 5.8,
+   "seconds": 0.3,
+   "cause": "inner_gap",
+   "unit": 1
+  },
+  {
+   "t": 10.7,
+   "seconds": 0.4,
+   "cause": "short_fill",
+   "unit": 1
+  },
+  {
+   "t": 18.9,
+   "seconds": 0.8,
+   "cause": "inner_gap",
+   "unit": 2
+  },
+  {
+   "t": 26.3,
+   "seconds": 1.0,
+   "cause": "short_fill",
+   "unit": 2
+  },
+  {
+   "t": 31.1,
+   "seconds": 0.3,
+   "cause": "inner_gap",
+   "unit": 3
+  },
+  {
+   "t": 34.9,
+   "seconds": 0.9,
+   "cause": "inner_gap",
+   "unit": 3
+  },
+  {
+   "t": 37.0,
+   "seconds": 0.6,
+   "cause": "inner_gap",
+   "unit": 3
+  },
+  {
+   "t": 51.6,
+   "seconds": 0.4,
+   "cause": "inner_gap",
+   "unit": 5
+  }
+ ],
+ "source_without_dub_by_cause_s": {
+  "inner_gap": 3.3,
+  "short_fill": 1.4
+ },
+ "dub_without_source_events": [
+  {
+   "t": 11.4,
+   "seconds": 0.6,
+   "cause": "inside_slot_pause",
+   "unit": 2
+  },
+  {
+   "t": 27.6,
+   "seconds": 0.4,
+   "cause": "inside_slot_pause",
+   "unit": 3
+  }
+ ],
+ "dub_without_source_by_cause_s": {
+  "inside_slot_pause": 1.0
+ },
+ "intra_sentence_pauses": [
+  {
+   "unit": 1,
+   "t": 5.68,
+   "gap_s": 0.92,
+   "source_silent_frac": 0.54,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "Once more,",
+   "after": "we will test"
+  },
+  {
+   "unit": 1,
+   "t": 7.26,
+   "gap_s": 1.14,
+   "source_silent_frac": 0.78,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "we will test",
+   "after": "how our application will react to a"
+  },
+  {
+   "unit": 2,
+   "t": 11.95,
+   "gap_s": 2.65,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "Sochi city",
+   "after": "today,"
+  },
+  {
+   "unit": 2,
+   "t": 15.18,
+   "gap_s": 2.32,
+   "source_silent_frac": 0.82,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "today,",
+   "after": "August 28,"
+  },
+  {
+   "unit": 2,
+   "t": 18.9,
+   "gap_s": 3.1,
+   "source_silent_frac": 0.74,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "August 28,",
+   "after": "and we are starting the working pro"
+  },
+  {
+   "unit": 3,
+   "t": 27.95,
+   "gap_s": 1.35,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "which will make",
+   "after": "life easier for people whom I hope"
+  },
+  {
+   "unit": 3,
+   "t": 31.03,
+   "gap_s": 2.07,
+   "source_silent_frac": 0.82,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "life easier for people whom I hope",
+   "after": "will be popular with"
+  },
+  {
+   "unit": 3,
+   "t": 34.84,
+   "gap_s": 1.56,
+   "source_silent_frac": 0.38,
+   "kind": "inserted",
+   "weak_boundary": true,
+   "before": "will be popular with",
+   "after": "bloggers"
+  },
+  {
+   "unit": 3,
+   "t": 36.88,
+   "gap_s": 1.62,
+   "source_silent_frac": 0.56,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "bloggers",
+   "after": "from all over the world"
+  },
+  {
+   "unit": 3,
+   "t": 39.69,
+   "gap_s": 1.51,
+   "source_silent_frac": 0.73,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "from all over the world",
+   "after": "and not just bloggers"
+  },
+  {
+   "unit": 4,
+   "t": 42.86,
+   "gap_s": 1.64,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "Therefore,",
+   "after": "here is a video"
+  },
+  {
+   "unit": 4,
+   "t": 45.22,
+   "gap_s": 1.38,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "here is a video",
+   "after": "that is quite wonderful."
+  },
+  {
+   "unit": 5,
+   "t": 49.7,
+   "gap_s": 1.9,
+   "source_silent_frac": 1.0,
+   "kind": "preserved",
+   "weak_boundary": false,
+   "before": "e weather is really nice, isn't it?",
+   "after": "That's great."
+  }
+ ],
+ "intra_inserted": 1,
+ "intra_preserved": 12,
+ "intra_inserted_gt_0_3": 1,
+ "weak_boundary_pauses_gt_0_3": 1,
+ "weak_boundary_pauses_gt_0_8": 1,
+ "weak_boundary_pause_s": 1.56,
+ "atempo": {
+  "max": 1.025,
+  "gt_1_15": 0,
+  "lt_1": 11
+ },
+ "timeline_png": "/workspace/dub/artifacts/baseline/04/pauses/04_cand5_timeline.png"
+}

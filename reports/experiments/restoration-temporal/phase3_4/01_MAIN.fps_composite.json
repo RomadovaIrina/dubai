@@ -1,0 +1,52 @@
+{
+ "input": "/workspace/dub/inputs/test_videos_raw/01.MP4",
+ "output": "/workspace/dub/artifacts/restoration-temporal/phase4/01_MAIN.mp4",
+ "source_frames": 2542,
+ "source_fps_avg": 25.003278688524592,
+ "master_frames": 2542,
+ "ls_touched_frames": 260,
+ "fallback_frames": 0,
+ "fallback_fraction": 0.0,
+ "boundaries_interpolated": 16,
+ "edge_px_target": 12.0,
+ "edge_px_measured": {
+  "median": 11.465,
+  "min": 11.44,
+  "max": 11.53,
+  "n": 6
+ },
+ "silent_master_frames": 0,
+ "args": {
+  "manifest": "/workspace/dub/artifacts/restoration-temporal/clean0/01_clean0.manifest.json",
+  "ls_raw": "/workspace/dub/artifacts/restoration-temporal/cdecomp/01/S0_ls_raw.mp4",
+  "out": "/workspace/dub/artifacts/restoration-temporal/phase4/01_MAIN.mp4",
+  "boundary": "on",
+  "skin_texture": "source",
+  "lip_texture": "on",
+  "tex_sigma": 1.5,
+  "tex_tau": 12.0,
+  "lip_dilate": 0.12,
+  "silence": "none",
+  "silence_min_s": 0.3,
+  "silence_ramp": 6,
+  "gaps": null,
+  "retime": "nearest_rigid",
+  "ls_sharpen": 1.5,
+  "ls_sharpen_sigma": 1.2,
+  "ls_sharpen_scope": "all",
+  "ls_sharpen_lips": 1.5,
+  "edge_px": 12.0,
+  "threads": 12,
+  "crf": 13,
+  "max_fallback": 0.02
+ },
+ "seconds": {
+  "decode_source": 21.51,
+  "decode_ls": 9.8,
+  "c2_boundaries": 6.92,
+  "composite": 1.76,
+  "encode_mux": 47.6,
+  "total": 107.22
+ },
+ "s_per_video_min": 63.3
+}

@@ -1,0 +1,1560 @@
+{
+ "manifest": "/workspace/dub/artifacts/baseline/02/final/02_final.manifest.json",
+ "duration_s": 110.866667,
+ "dub_voice_p90_db": -18.3,
+ "placed_parts": 37,
+ "counts": {
+  "click": 2,
+  "bed_step": 28,
+  "extra_voice": 4,
+  "hot_edge": 4
+ },
+ "clicks": {
+  "dub_voice": 0,
+  "final_mix": 2,
+  "mp4": 1
+ },
+ "bed": {
+  "bed_rms_db": -48.4,
+  "dub_voice_p90_db": -18.3,
+  "bed_speech_intervals": 0,
+  "bed_speech_seconds": 0,
+  "bed_file": "/workspace/dub/artifacts/baseline/02/audio_stages/02_cand5_bed.wav"
+ },
+ "events": [
+  {
+   "type": "click",
+   "stage": "final_mix_only",
+   "t": 5.251,
+   "x_local": 11.1,
+   "peak": 0.0114,
+   "trace": {
+    "original": -48.2,
+    "dub_voice": -28.2,
+    "final_mix": -25.1,
+    "mp4": -25.2,
+    "raw_tts_t": 2.808,
+    "raw_tts": -28.2,
+    "part": -28.2,
+    "unit": 0,
+    "part_k": 1,
+    "atempo": 1.0
+   },
+   "first_stage": "final_mix only (bed / mix)"
+  },
+  {
+   "type": "bed_step",
+   "t": 9.05,
+   "step_db": 9.3,
+   "bed_db": -61.5,
+   "trace": {
+    "original": -46.8,
+    "dub_voice": -52.8,
+    "final_mix": -49.2,
+    "mp4": -49.3,
+    "raw_tts_t": 1.7,
+    "raw_tts": -52.8,
+    "part": -52.8,
+    "unit": 1,
+    "part_k": 0,
+    "atempo": 1.0
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 12.18,
+   "step_db": -8.8,
+   "bed_db": -56.9,
+   "trace": {
+    "original": -30.1,
+    "dub_voice": -53.2,
+    "final_mix": -49.5,
+    "mp4": -49.6
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "extra_voice",
+   "t": 17.388,
+   "seconds": 0.089,
+   "rel_db": -11.3,
+   "unit": 3,
+   "k": 1,
+   "raw_span": [
+    1.73,
+    1.81
+   ],
+   "text": "things we have here:",
+   "trace": {
+    "original": -20.7,
+    "dub_voice": -25.2,
+    "final_mix": -22.1,
+    "mp4": -22.2,
+    "raw_tts_t": 1.73,
+    "raw_tts": -24.6,
+    "part": -24.6,
+    "unit": 3,
+    "part_k": 1,
+    "atempo": 0.9
+   },
+   "first_stage": "raw_tts (carried into the part by the cut)"
+  },
+  {
+   "type": "hot_edge",
+   "edge": "head",
+   "t": 24.0,
+   "rel_db": -5.7,
+   "unit": 3,
+   "k": 3,
+   "text": "longues.",
+   "trace": {
+    "original": -54.2,
+    "dub_voice": -28.5,
+    "final_mix": -25.5,
+    "mp4": -25.5,
+    "raw_tts_t": 4.469,
+    "raw_tts": -26.7,
+    "part": -25.5,
+    "unit": 3,
+    "part_k": 3,
+    "atempo": 0.9
+   },
+   "first_stage": "cut (raw TTS still voiced at the cut)"
+  },
+  {
+   "type": "bed_step",
+   "t": 30.02,
+   "step_db": 9.9,
+   "bed_db": -69.0,
+   "trace": {
+    "original": -18.9,
+    "dub_voice": -180.0,
+    "final_mix": -52.9,
+    "mp4": -53.0
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 30.32,
+   "step_db": -12.4,
+   "bed_db": -63.4,
+   "trace": {
+    "original": -34.5,
+    "dub_voice": -180.0,
+    "final_mix": -53.7,
+    "mp4": -53.8
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "extra_voice",
+   "t": 30.85,
+   "seconds": 0.17,
+   "rel_db": -7.7,
+   "unit": 5,
+   "k": 0,
+   "raw_span": [
+    0.43,
+    0.6
+   ],
+   "text": "I will",
+   "trace": {
+    "original": -29.6,
+    "dub_voice": -26.3,
+    "final_mix": -23.3,
+    "mp4": -23.4,
+    "raw_tts_t": 0.43,
+    "raw_tts": -26.3,
+    "part": -26.3,
+    "unit": 5,
+    "part_k": 0,
+    "atempo": 1.0
+   },
+   "first_stage": "raw_tts (carried into the part by the cut)"
+  },
+  {
+   "type": "bed_step",
+   "t": 33.85,
+   "step_db": 9.2,
+   "bed_db": -64.9,
+   "trace": {
+    "original": -53.5,
+    "dub_voice": -180.0,
+    "final_mix": -53.7,
+    "mp4": -53.8
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 34.78,
+   "step_db": 8.6,
+   "bed_db": -59.2,
+   "trace": {
+    "original": -52.1,
+    "dub_voice": -180.0,
+    "final_mix": -54.0,
+    "mp4": -54.1
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 36.81,
+   "step_db": 13.6,
+   "bed_db": -60.4,
+   "trace": {
+    "original": -23.4,
+    "dub_voice": -180.0,
+    "final_mix": -34.8,
+    "mp4": -34.9
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 37.46,
+   "step_db": -8.3,
+   "bed_db": -58.0,
+   "trace": {
+    "original": -47.3,
+    "dub_voice": -180.0,
+    "final_mix": -55.1,
+    "mp4": -55.2
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 40.06,
+   "step_db": 8.3,
+   "bed_db": -55.0,
+   "trace": {
+    "original": -39.2,
+    "dub_voice": -180.0,
+    "final_mix": -52.8,
+    "mp4": -52.9
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "click",
+   "stage": "final_mix_only",
+   "t": 41.608,
+   "x_local": 10.6,
+   "peak": 0.0106,
+   "trace": {
+    "original": -53.9,
+    "dub_voice": -24.4,
+    "final_mix": -21.4,
+    "mp4": -21.4,
+    "raw_tts_t": 0.148,
+    "raw_tts": -24.4,
+    "part": -24.2,
+    "unit": 6,
+    "part_k": 0,
+    "atempo": 1.0
+   },
+   "first_stage": "final_mix only (bed / mix)"
+  },
+  {
+   "type": "hot_edge",
+   "edge": "head",
+   "t": 43.2,
+   "rel_db": -11.2,
+   "unit": 6,
+   "k": 1,
+   "text": "bath should have a stove burning wood.",
+   "trace": {
+    "original": -30.0,
+    "dub_voice": -20.0,
+    "final_mix": -17.0,
+    "mp4": -17.0,
+    "raw_tts_t": 0.543,
+    "raw_tts": -19.0,
+    "part": -17.2,
+    "unit": 6,
+    "part_k": 1,
+    "atempo": 0.9
+   },
+   "first_stage": "cut (raw TTS still voiced at the cut)"
+  },
+  {
+   "type": "bed_step",
+   "t": 45.07,
+   "step_db": 9.1,
+   "bed_db": -64.9,
+   "trace": {
+    "original": -22.0,
+    "dub_voice": -180.0,
+    "final_mix": -56.5,
+    "mp4": -56.6
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 47.97,
+   "step_db": 12.7,
+   "bed_db": -71.7,
+   "trace": {
+    "original": -61.1,
+    "dub_voice": -32.2,
+    "final_mix": -29.2,
+    "mp4": -29.2,
+    "raw_tts_t": 0.02,
+    "raw_tts": -30.0,
+    "part": -29.6,
+    "unit": 8,
+    "part_k": 0,
+    "atempo": 1.0
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 49.24,
+   "step_db": -9.1,
+   "bed_db": -58.4,
+   "trace": {
+    "original": -60.1,
+    "dub_voice": -180.0,
+    "final_mix": -56.0,
+    "mp4": -56.0
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 49.58,
+   "step_db": 18.6,
+   "bed_db": -78.0,
+   "trace": {
+    "original": -60.9,
+    "dub_voice": -36.0,
+    "final_mix": -33.0,
+    "mp4": -33.0,
+    "raw_tts_t": 0.882,
+    "raw_tts": -34.3,
+    "part": -31.8,
+    "unit": 8,
+    "part_k": 1,
+    "atempo": 0.9
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 50.77,
+   "step_db": 11.1,
+   "bed_db": -63.8,
+   "trace": {
+    "original": -52.8,
+    "dub_voice": -180.0,
+    "final_mix": -57.6,
+    "mp4": -57.6
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 54.98,
+   "step_db": 12.7,
+   "bed_db": -62.0,
+   "trace": {
+    "original": -54.5,
+    "dub_voice": -180.0,
+    "final_mix": -55.9,
+    "mp4": -55.9
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 55.98,
+   "step_db": 9.5,
+   "bed_db": -60.2,
+   "trace": {
+    "original": -47.9,
+    "dub_voice": -180.0,
+    "final_mix": -28.6,
+    "mp4": -28.7
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 56.98,
+   "step_db": -8.5,
+   "bed_db": -54.5,
+   "trace": {
+    "original": -55.9,
+    "dub_voice": -180.0,
+    "final_mix": -53.1,
+    "mp4": -53.2
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 57.82,
+   "step_db": -11.4,
+   "bed_db": -58.5,
+   "trace": {
+    "original": -51.6,
+    "dub_voice": -78.3,
+    "final_mix": -54.9,
+    "mp4": -54.9
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 62.34,
+   "step_db": 9.5,
+   "bed_db": -49.6,
+   "trace": {
+    "original": -21.4,
+    "dub_voice": -180.0,
+    "final_mix": -45.2,
+    "mp4": -45.2
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 64.4,
+   "step_db": 8.1,
+   "bed_db": -52.3,
+   "trace": {
+    "original": -52.9,
+    "dub_voice": -180.0,
+    "final_mix": -48.5,
+    "mp4": -48.5
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 64.75,
+   "step_db": -8.2,
+   "bed_db": -55.4,
+   "trace": {
+    "original": -57.2,
+    "dub_voice": -180.0,
+    "final_mix": -52.6,
+    "mp4": -52.7
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 65.45,
+   "step_db": -9.4,
+   "bed_db": -60.5,
+   "trace": {
+    "original": -22.2,
+    "dub_voice": -65.2,
+    "final_mix": -54.3,
+    "mp4": -54.4
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 69.86,
+   "step_db": 21.5,
+   "bed_db": -76.0,
+   "trace": {
+    "original": -56.0,
+    "dub_voice": -180.0,
+    "final_mix": -51.4,
+    "mp4": -51.4
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 70.3,
+   "step_db": 8.3,
+   "bed_db": -66.9,
+   "trace": {
+    "original": -56.5,
+    "dub_voice": -34.1,
+    "final_mix": -31.1,
+    "mp4": -31.1
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "hot_edge",
+   "edge": "head",
+   "t": 77.6,
+   "rel_db": -10.8,
+   "unit": 11,
+   "k": 1,
+   "text": "this definitely won't break the bank.",
+   "trace": {
+    "original": -56.0,
+    "dub_voice": -27.7,
+    "final_mix": -24.7,
+    "mp4": -24.7,
+    "raw_tts_t": 0.252,
+    "raw_tts": -21.3,
+    "part": -24.2,
+    "unit": 11,
+    "part_k": 1,
+    "atempo": 1.118
+   },
+   "first_stage": "cut (raw TTS still voiced at the cut)"
+  },
+  {
+   "type": "bed_step",
+   "t": 81.54,
+   "step_db": 9.2,
+   "bed_db": -61.7,
+   "trace": {
+    "original": -60.2,
+    "dub_voice": -57.4,
+    "final_mix": -52.0,
+    "mp4": -52.1,
+    "raw_tts_t": 2.71,
+    "raw_tts": -56.9,
+    "part": -56.9,
+    "unit": 12,
+    "part_k": 0,
+    "atempo": 1.067
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "bed_step",
+   "t": 81.86,
+   "step_db": -10.1,
+   "bed_db": -61.0,
+   "trace": {
+    "original": -65.7,
+    "dub_voice": -54.5,
+    "final_mix": -49.5,
+    "mp4": -49.5,
+    "raw_tts_t": 3.052,
+    "raw_tts": -54.3,
+    "part": -54.6,
+    "unit": 12,
+    "part_k": 0,
+    "atempo": 1.067
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "extra_voice",
+   "t": 83.469,
+   "seconds": 0.088,
+   "rel_db": 0.3,
+   "unit": 13,
+   "k": 0,
+   "raw_span": [
+    0.03,
+    0.12
+   ],
+   "text": "And the hamam is also available here.",
+   "trace": {
+    "original": -60.0,
+    "dub_voice": -23.7,
+    "final_mix": -20.7,
+    "mp4": -20.8,
+    "raw_tts_t": 0.03,
+    "raw_tts": -22.2,
+    "part": -22.2,
+    "unit": 13,
+    "part_k": 0,
+    "atempo": 1.024
+   },
+   "first_stage": "raw_tts (carried into the part by the cut)"
+  },
+  {
+   "type": "bed_step",
+   "t": 85.78,
+   "step_db": 12.7,
+   "bed_db": -51.9,
+   "trace": {
+    "original": -61.0,
+    "dub_voice": -40.7,
+    "final_mix": -37.5,
+    "mp4": -37.5,
+    "raw_tts_t": 2.396,
+    "raw_tts": -41.8,
+    "part": -40.1,
+    "unit": 13,
+    "part_k": 0,
+    "atempo": 1.024
+   },
+   "first_stage": "final_mix (background bed)"
+  },
+  {
+   "type": "hot_edge",
+   "edge": "head",
+   "t": 88.2,
+   "rel_db": -11.9,
+   "unit": 14,
+   "k": 1,
+   "text": "room has a mini fridge,",
+   "trace": {
+    "original": -40.6,
+    "dub_voice": -22.3,
+    "final_mix": -19.3,
+    "mp4": -19.3,
+    "raw_tts_t": 0.538,
+    "raw_tts": -21.8,
+    "part": -19.3,
+    "unit": 14,
+    "part_k": 1,
+    "atempo": 0.987
+   },
+   "first_stage": "cut (raw TTS still voiced at the cut)"
+  },
+  {
+   "type": "extra_voice",
+   "t": 104.03,
+   "seconds": 0.12,
+   "rel_db": -9.9,
+   "unit": 15,
+   "k": 0,
+   "raw_span": [
+    0.99,
+    1.11
+   ],
+   "text": "Here's our interesting sauna",
+   "trace": {
+    "original": -49.9,
+    "dub_voice": -26.6,
+    "final_mix": -23.5,
+    "mp4": -23.5,
+    "raw_tts_t": 0.99,
+    "raw_tts": -26.6,
+    "part": -26.6,
+    "unit": 15,
+    "part_k": 0,
+    "atempo": 1.0
+   },
+   "first_stage": "raw_tts (carried into the part by the cut)"
+  },
+  {
+   "type": "bed_step",
+   "t": 109.88,
+   "step_db": 12.1,
+   "bed_db": -69.4,
+   "trace": {
+    "original": -23.4,
+    "dub_voice": -180.0,
+    "final_mix": -53.6,
+    "mp4": -53.5
+   },
+   "first_stage": "final_mix (background bed)"
+  }
+ ],
+ "edges": [
+  {
+   "unit": 0,
+   "k": 0,
+   "t0": 1.0,
+   "t1": 3.657,
+   "head_rel_db": -37.2,
+   "tail_rel_db": -28.9,
+   "tail_profile_db_-100..+100ms": [
+    -36.3,
+    -36.0,
+    -38.5,
+    -40.5,
+    -41.2,
+    -51.6,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "Also on our premises, there is a bath complex",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 0,
+   "k": 1,
+   "t0": 5.1,
+   "t1": 6.21,
+   "head_rel_db": -25.6,
+   "tail_rel_db": -26.6,
+   "tail_profile_db_-100..+100ms": [
+    -38.1,
+    -37.6,
+    -38.6,
+    -41.0,
+    -41.2,
+    -50.3,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "that is ready for the first",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 0,
+   "k": 2,
+   "t0": 6.568,
+   "t1": 7.36,
+   "head_rel_db": -26.8,
+   "tail_rel_db": -33.6,
+   "tail_profile_db_-100..+100ms": [
+    -44.3,
+    -46.9,
+    -44.3,
+    -47.3,
+    -51.8,
+    -56.3,
+    -73.7,
+    -53.7,
+    -28.5,
+    -23.4,
+    -24.4
+   ],
+   "text": "steam room sessions.",
+   "atempo": 1.15,
+   "cut_at_slot_end_s": 0.015
+  },
+  {
+   "unit": 1,
+   "k": 0,
+   "t0": 7.38,
+   "t1": 10.893,
+   "head_rel_db": -47.4,
+   "tail_rel_db": -27.2,
+   "tail_profile_db_-100..+100ms": [
+    -16.6,
+    -26.2,
+    -31.2,
+    -32.5,
+    -33.4,
+    -59.7,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "Within 3-4 days, the floating will start",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 1,
+   "k": 1,
+   "t0": 11.5,
+   "t1": 12.107,
+   "head_rel_db": -23.1,
+   "tail_rel_db": -31.5,
+   "tail_profile_db_-100..+100ms": [
+    -33.3,
+    -40.9,
+    -41.4,
+    -41.2,
+    -42.2,
+    -49.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "right here.",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 2,
+   "k": 0,
+   "t0": 12.36,
+   "t1": 13.052,
+   "head_rel_db": -51.5,
+   "tail_rel_db": -25.4,
+   "tail_profile_db_-100..+100ms": [
+    -27.3,
+    -31.9,
+    -35.2,
+    -37.7,
+    -38.0,
+    -51.6,
+    -180.0,
+    -180.0,
+    -54.9,
+    -29.5,
+    -25.2
+   ],
+   "text": "Right now,",
+   "atempo": 1.053,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 2,
+   "k": 1,
+   "t0": 13.112,
+   "t1": 14.913,
+   "head_rel_db": -15.4,
+   "tail_rel_db": -74.9,
+   "tail_profile_db_-100..+100ms": [
+    -40.6,
+    -42.3,
+    -44.3,
+    -52.1,
+    -82.4,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "I am going to demonstrate the swimming pool.",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 3,
+   "k": 0,
+   "t0": 15.08,
+   "t1": 15.921,
+   "head_rel_db": -44.9,
+   "tail_rel_db": -32.4,
+   "tail_profile_db_-100..+100ms": [
+    -20.8,
+    -26.1,
+    -29.5,
+    -31.3,
+    -32.8,
+    -58.4,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "Here are the various",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 3,
+   "k": 1,
+   "t0": 16.4,
+   "t1": 17.734,
+   "head_rel_db": -20.6,
+   "tail_rel_db": -38.3,
+   "tail_profile_db_-100..+100ms": [
+    -48.8,
+    -51.1,
+    -52.4,
+    -51.2,
+    -54.2,
+    -73.4,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "things we have here:",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 3,
+   "k": 2,
+   "t0": 19.0,
+   "t1": 21.671,
+   "head_rel_db": -34.1,
+   "tail_rel_db": -25.9,
+   "tail_profile_db_-100..+100ms": [
+    -22.9,
+    -25.5,
+    -30.5,
+    -36.6,
+    -38.2,
+    -47.2,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "a zone for changing clothes, and some chaise",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 3,
+   "k": 3,
+   "t0": 24.0,
+   "t1": 24.352,
+   "head_rel_db": -5.7,
+   "tail_rel_db": -23.7,
+   "tail_profile_db_-100..+100ms": [
+    -45.1,
+    -45.3,
+    -45.6,
+    -45.2,
+    -45.4,
+    -59.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "longues.",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 4,
+   "k": 0,
+   "t0": 26.36,
+   "t1": 27.318,
+   "head_rel_db": -55.3,
+   "tail_rel_db": -39.9,
+   "tail_profile_db_-100..+100ms": [
+    -49.5,
+    -48.1,
+    -50.3,
+    -52.1,
+    -52.1,
+    -66.5,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "In this place,",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 4,
+   "k": 1,
+   "t0": 28.7,
+   "t1": 29.752,
+   "head_rel_db": -39.9,
+   "tail_rel_db": -24.8,
+   "tail_profile_db_-100..+100ms": [
+    -31.7,
+    -36.3,
+    -38.9,
+    -43.5,
+    -44.1,
+    -49.5,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "we have a Finnish sauna.",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 5,
+   "k": 0,
+   "t0": 30.42,
+   "t1": 31.225,
+   "head_rel_db": -34.7,
+   "tail_rel_db": -38.7,
+   "tail_profile_db_-100..+100ms": [
+    -46.2,
+    -50.3,
+    -50.0,
+    -51.4,
+    -52.8,
+    -64.6,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "I will",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 5,
+   "k": 1,
+   "t0": 40.3,
+   "t1": 41.49,
+   "head_rel_db": -38.0,
+   "tail_rel_db": -18.6,
+   "tail_profile_db_-100..+100ms": [
+    -21.3,
+    -23.1,
+    -25.7,
+    -30.2,
+    -34.4,
+    -45.7,
+    -180.0,
+    -49.2,
+    -41.2,
+    -38.7,
+    -32.2
+   ],
+   "text": "show the Russian sauna.",
+   "atempo": 0.942,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 6,
+   "k": 0,
+   "t0": 41.52,
+   "t1": 42.003,
+   "head_rel_db": -32.1,
+   "tail_rel_db": -23.7,
+   "tail_profile_db_-100..+100ms": [
+    -21.6,
+    -20.5,
+    -21.8,
+    -23.3,
+    -28.4,
+    -46.3,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "The Russian",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 6,
+   "k": 1,
+   "t0": 43.2,
+   "t1": 44.745,
+   "head_rel_db": -11.2,
+   "tail_rel_db": -24.2,
+   "tail_profile_db_-100..+100ms": [
+    -38.3,
+    -39.6,
+    -43.5,
+    -43.0,
+    -43.7,
+    -49.2,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "bath should have a stove burning wood.",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 7,
+   "k": 0,
+   "t0": 45.72,
+   "t1": 46.537,
+   "head_rel_db": -57.7,
+   "tail_rel_db": -25.8,
+   "tail_profile_db_-100..+100ms": [
+    -30.4,
+    -33.8,
+    -32.5,
+    -34.0,
+    -37.1,
+    -47.7,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "So it all looks",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 7,
+   "k": 1,
+   "t0": 47.3,
+   "t1": 47.924,
+   "head_rel_db": -26.0,
+   "tail_rel_db": -31.1,
+   "tail_profile_db_-100..+100ms": [
+    -42.7,
+    -40.8,
+    -42.1,
+    -43.6,
+    -46.4,
+    -55.2,
+    -180.0,
+    -82.6,
+    -51.4,
+    -37.2,
+    -36.5
+   ],
+   "text": "like this.",
+   "atempo": 0.934,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 8,
+   "k": 0,
+   "t0": 47.96,
+   "t1": 48.85,
+   "head_rel_db": -62.9,
+   "tail_rel_db": -30.9,
+   "tail_profile_db_-100..+100ms": [
+    -30.5,
+    -35.0,
+    -33.5,
+    -36.3,
+    -38.1,
+    -57.8,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "What is such a nice",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 8,
+   "k": 1,
+   "t0": 49.6,
+   "t1": 50.443,
+   "head_rel_db": -20.3,
+   "tail_rel_db": -28.2,
+   "tail_profile_db_-100..+100ms": [
+    -42.5,
+    -45.6,
+    -46.8,
+    -50.1,
+    -52.3,
+    -54.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "smell here?",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 9,
+   "k": 0,
+   "t0": 57.9,
+   "t1": 60.239,
+   "head_rel_db": -61.4,
+   "tail_rel_db": -43.7,
+   "tail_profile_db_-100..+100ms": [
+    -55.7,
+    -57.8,
+    -56.7,
+    -57.8,
+    -58.1,
+    -66.4,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "There is also our second floor,",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 9,
+   "k": 1,
+   "t0": 65.5,
+   "t1": 68.439,
+   "head_rel_db": -45.0,
+   "tail_rel_db": -29.2,
+   "tail_profile_db_-100..+100ms": [
+    -45.5,
+    -44.2,
+    -40.7,
+    -42.7,
+    -43.0,
+    -49.9,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "this also all falls into the infrastructure of the complex.",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 10,
+   "k": 0,
+   "t0": 70.38,
+   "t1": 74.415,
+   "head_rel_db": -28.2,
+   "tail_rel_db": -71.4,
+   "tail_profile_db_-100..+100ms": [
+    -43.7,
+    -43.1,
+    -42.3,
+    -43.7,
+    -52.7,
+    -99.8,
+    -180.0,
+    -58.8,
+    -40.2,
+    -25.5,
+    -22.5
+   ],
+   "text": "Of course, for the bath complex for these procedures, you will need to pay.",
+   "atempo": 1.104,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 11,
+   "k": 0,
+   "t0": 74.44,
+   "t1": 74.688,
+   "head_rel_db": -46.0,
+   "tail_rel_db": -19.8,
+   "tail_profile_db_-100..+100ms": [
+    -18.8,
+    -17.9,
+    -19.8,
+    -19.6,
+    -22.2,
+    -48.8,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "Well,",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 11,
+   "k": 1,
+   "t0": 77.6,
+   "t1": 78.98,
+   "head_rel_db": -10.8,
+   "tail_rel_db": -27.5,
+   "tail_profile_db_-100..+100ms": [
+    -38.0,
+    -41.5,
+    -43.2,
+    -44.5,
+    -45.3,
+    -52.2,
+    -101.1,
+    -46.9,
+    -44.0,
+    -53.8,
+    -31.0
+   ],
+   "text": "this definitely won't break the bank.",
+   "atempo": 1.118,
+   "cut_at_slot_end_s": 0.011
+  },
+  {
+   "unit": 12,
+   "k": 0,
+   "t0": 79.0,
+   "t1": 83.42,
+   "head_rel_db": -70.0,
+   "tail_rel_db": -27.9,
+   "tail_profile_db_-100..+100ms": [
+    -39.2,
+    -39.7,
+    -41.8,
+    -44.9,
+    -44.3,
+    -54.0,
+    -79.4,
+    -38.2,
+    -21.3,
+    -21.0,
+    -20.2
+   ],
+   "text": "That is, we all go to the sauna, and we all pay money for it.",
+   "atempo": 1.067,
+   "cut_at_slot_end_s": 0.015
+  },
+  {
+   "unit": 13,
+   "k": 0,
+   "t0": 83.44,
+   "t1": 85.78,
+   "head_rel_db": -47.5,
+   "tail_rel_db": -23.6,
+   "tail_profile_db_-100..+100ms": [
+    -34.3,
+    -37.9,
+    -38.6,
+    -44.0,
+    -41.4,
+    -43.6,
+    -84.9,
+    -51.0,
+    -41.1,
+    -44.7,
+    -34.0
+   ],
+   "text": "And the hamam is also available here.",
+   "atempo": 1.024,
+   "cut_at_slot_end_s": 0.008
+  },
+  {
+   "unit": 14,
+   "k": 0,
+   "t0": 85.8,
+   "t1": 86.328,
+   "head_rel_db": -59.8,
+   "tail_rel_db": -24.1,
+   "tail_profile_db_-100..+100ms": [
+    -23.6,
+    -27.1,
+    -31.9,
+    -28.5,
+    -30.6,
+    -46.1,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "The massage",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 14,
+   "k": 1,
+   "t0": 88.2,
+   "t1": 89.492,
+   "head_rel_db": -11.9,
+   "tail_rel_db": -43.2,
+   "tail_profile_db_-100..+100ms": [
+    -55.8,
+    -60.8,
+    -60.3,
+    -61.6,
+    -59.6,
+    -67.5,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "room has a mini fridge,",
+   "atempo": 0.987,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 14,
+   "k": 2,
+   "t0": 94.2,
+   "t1": 97.323,
+   "head_rel_db": -40.7,
+   "tail_rel_db": -41.7,
+   "tail_profile_db_-100..+100ms": [
+    -50.7,
+    -52.1,
+    -52.7,
+    -56.2,
+    -56.4,
+    -68.1,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "and here is a spot for drinking tea or mineral water.",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 14,
+   "k": 3,
+   "t0": 99.0,
+   "t1": 100.648,
+   "head_rel_db": -44.5,
+   "tail_rel_db": -33.1,
+   "tail_profile_db_-100..+100ms": [
+    -20.8,
+    -20.4,
+    -22.6,
+    -25.2,
+    -32.1,
+    -55.7,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "There is also a relaxation",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 14,
+   "k": 4,
+   "t0": 101.6,
+   "t1": 102.8,
+   "head_rel_db": -17.9,
+   "tail_rel_db": -32.3,
+   "tail_profile_db_-100..+100ms": [
+    -44.2,
+    -46.7,
+    -49.3,
+    -48.0,
+    -49.8,
+    -62.1,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "zone with loungers.",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 15,
+   "k": 0,
+   "t0": 103.04,
+   "t1": 105.067,
+   "head_rel_db": -65.3,
+   "tail_rel_db": -24.9,
+   "tail_profile_db_-100..+100ms": [
+    -20.1,
+    -19.7,
+    -20.9,
+    -27.6,
+    -32.7,
+    -56.4,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "Here's our interesting sauna",
+   "atempo": 1.0,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 15,
+   "k": 1,
+   "t0": 106.0,
+   "t1": 106.424,
+   "head_rel_db": -13.3,
+   "tail_rel_db": -30.3,
+   "tail_profile_db_-100..+100ms": [
+    -46.1,
+    -45.6,
+    -48.9,
+    -50.7,
+    -50.5,
+    -64.7,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "bath.",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 16,
+   "k": 0,
+   "t0": 106.76,
+   "t1": 107.466,
+   "head_rel_db": -35.4,
+   "tail_rel_db": -40.1,
+   "tail_profile_db_-100..+100ms": [
+    -50.0,
+    -48.8,
+    -51.7,
+    -53.2,
+    -55.7,
+    -63.1,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "Hamam",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  },
+  {
+   "unit": 16,
+   "k": 1,
+   "t0": 108.3,
+   "t1": 109.189,
+   "head_rel_db": -44.7,
+   "tail_rel_db": -25.4,
+   "tail_profile_db_-100..+100ms": [
+    -33.1,
+    -35.7,
+    -38.8,
+    -38.8,
+    -39.4,
+    -51.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0,
+    -180.0
+   ],
+   "text": "and all this space.",
+   "atempo": 0.9,
+   "cut_at_slot_end_s": 0.0
+  }
+ ],
+ "sheets": [
+  "/workspace/dub/artifacts/baseline/02/audio_stages/02_cand5_ev_extra_voice_0083.47.png",
+  "/workspace/dub/artifacts/baseline/02/audio_stages/02_cand5_ev_click_0005.25.png",
+  "/workspace/dub/artifacts/baseline/02/audio_stages/02_cand5_ev_click_0041.61.png",
+  "/workspace/dub/artifacts/baseline/02/audio_stages/02_cand5_ev_extra_voice_0030.85.png",
+  "/workspace/dub/artifacts/baseline/02/audio_stages/02_cand5_ev_extra_voice_0104.03.png",
+  "/workspace/dub/artifacts/baseline/02/audio_stages/02_cand5_ev_extra_voice_0017.39.png",
+  "/workspace/dub/artifacts/baseline/02/audio_stages/02_cand5_ev_bed_step_0009.05.png",
+  "/workspace/dub/artifacts/baseline/02/audio_stages/02_cand5_ev_bed_step_0012.18.png",
+  "/workspace/dub/artifacts/baseline/02/audio_stages/02_cand5_ev_bed_step_0030.02.png",
+  "/workspace/dub/artifacts/baseline/02/audio_stages/02_cand5_ev_bed_step_0030.32.png"
+ ]
+}
