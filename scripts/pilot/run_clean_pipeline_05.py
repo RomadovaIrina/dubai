@@ -131,19 +131,45 @@ def free_cuda(*objs) -> None:
     torch.cuda.empty_cache()
 
 
+def stage_log(rec: dict) -> None:
+    """r3 D GPU audit: DUB_STAGE_LOG=<file.jsonl> -> one JSON line per timed stage / model load (wall clock, torch CUDA peak). Off = no-op."""
+    p = os.environ.get("DUB_STAGE_LOG")
+    if not p: return
+    with open(p, "a") as f: f.write(json.dumps({"pid": os.getpid(), "job": os.environ.get("DUB_STAGE_JOB"), **rec}) + "\n")
+
+
+def _cuda_peak_reset():
+    t = sys.modules.get("torch")
+    if os.environ.get("DUB_STAGE_LOG") and t is not None and t.cuda.is_available() and t.cuda.is_initialized():
+        t.cuda.reset_peak_memory_stats(); return True
+    return False
+
+
+def _cuda_peak():
+    t = sys.modules.get("torch")
+    if t is None or not t.cuda.is_available() or not t.cuda.is_initialized(): return None
+    return {"torch_peak_alloc_mib": round(t.cuda.max_memory_allocated() / 2**20), "torch_alloc_mib": round(t.cuda.memory_allocated() / 2**20),
+            "torch_reserved_mib": round(t.cuda.memory_reserved() / 2**20)}
+
+
 def timed(times: dict, name: str):
     class _T:
         def __enter__(self):
-            self.t0 = time.perf_counter(); return self
+            self.reset = _cuda_peak_reset(); self.w0 = time.time(); self.t0 = time.perf_counter(); return self
 
         def __exit__(self, *exc):
-            times[name] = round(time.perf_counter() - self.t0, 3); return False
+            times[name] = round(time.perf_counter() - self.t0, 3)
+            stage_log({"kind": "stage", "name": name, "t0": self.w0, "t1": time.time(), "wall_s": times[name], "peak_since_stage_start": self.reset, **(_cuda_peak() or {})})
+            return False
     return _T()
 
 
 # --------------------------------------------------------------------------------------------------------------
 # audio stages
 # --------------------------------------------------------------------------------------------------------------
+VAD_DEVICE = os.environ.get("DUB_VAD_DEVICE", "cpu")   # --vad-device
+
+
 def run_vad(wav16: pathlib.Path) -> list[dict]:
     import torch
     from silero_vad import get_speech_timestamps, load_silero_vad, read_audio
@@ -151,6 +177,8 @@ def run_vad(wav16: pathlib.Path) -> list[dict]:
     import model_cache
     model = model_cache.get("silero_vad", load_silero_vad)
     audio = read_audio(str(wav16), sampling_rate=16000)
+    if VAD_DEVICE == "cuda":   # r3 D GPU audit: --vad-device cuda (Silero JIT on the GPU; same model / thresholds)
+        model = model.to("cuda"); audio = audio.to("cuda")
     ts = get_speech_timestamps(audio, model, sampling_rate=16000, return_seconds=True)
     return [{"start": round(float(t["start"]), 3), "end": round(float(t["end"]), 3)} for t in ts]
 
@@ -784,6 +812,7 @@ def main() -> int:
     ap.add_argument("--fit-down-short-words", type=int, default=4, help="phrase mode: concise rewrite also for 4-5-word sentences when they overflow their window by > --fit-down-short-overflow-s at the hard cap (previous rule: >= 6 words only)")
     ap.add_argument("--fit-down-short-overflow-s", type=float, default=0.3)
     ap.add_argument("--phrase-min-part-words", type=int, default=1); ap.add_argument("--phrase-soft-part-words", type=int, default=2)
+    ap.add_argument("--vad-device", choices=["cpu", "cuda"], default=None, help="Silero VAD device (default cpu; r3 D GPU audit). Also env DUB_VAD_DEVICE")
     ap.add_argument("--qwen-resident", choices=["on", "off"], default="off", help="keep Qwen loaded until the end of the run (with --qwen-gpu-layers -1: "
                     "all models + Qwen resident on the GPU at the LatentSync peak = the pilot 0.4 question); off = released before LatentSync")
     ap.add_argument("--qwen-gpu-layers", type=int, default=0, help="Qwen layers offloaded to the GPU (-1 = all); 0 = frozen CPU baseline. Needs a CUDA llama-cpp-python build "
@@ -853,8 +882,9 @@ def main() -> int:
     audio_policy = apply_audio_policy(a, sys.argv[1:])
     if a.background == "on" and a.bed_separator == "hdemucs" and os.environ.get("DUB_ALLOW_NC_BED") != "1":
         print("--bed-separator hdemucs: the HDEMUCS weights have no licence (non-commercial reference only); set DUB_ALLOW_NC_BED=1 for a reference run", file=sys.stderr); return 2
-    global QWEN_GPU_LAYERS
+    global QWEN_GPU_LAYERS, VAD_DEVICE
     QWEN_GPU_LAYERS = a.qwen_gpu_layers
+    if a.vad_device: VAD_DEVICE = a.vad_device
     if a.qwen_gpu_layers:
         import llama_cpp
         if not llama_cpp.llama_supports_gpu_offload():

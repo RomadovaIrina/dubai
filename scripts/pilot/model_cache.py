@@ -27,10 +27,23 @@ def _name(key) -> str:
 def get(key, factory):
     keys = set(os.environ.get("DUB_RESIDENT_KEYS", DEFAULT_KEYS).split(","))
     if not resident() or _name(key) not in keys:
-        return factory()
+        return _load(key, factory, cached_=False)
     if key not in _CACHE:
-        _CACHE[key] = factory()
+        _CACHE[key] = _load(key, factory, cached_=True)
     return _CACHE[key]
+
+
+def _load(key, factory, cached_):
+    """factory() + (r3 D GPU audit, DUB_STAGE_LOG set) one JSON line: model, load wall s, torch CUDA allocation before / after."""
+    if not os.environ.get("DUB_STAGE_LOG"): return factory()
+    import json, sys, time
+    t = sys.modules.get("torch"); cu = t is not None and t.cuda.is_available()
+    a0 = t.cuda.memory_allocated() if cu else 0; w0 = time.time(); obj = factory(); w1 = time.time()
+    a1 = t.cuda.memory_allocated() if cu else 0
+    with open(os.environ["DUB_STAGE_LOG"], "a") as f:
+        f.write(json.dumps({"pid": os.getpid(), "job": os.environ.get("DUB_STAGE_JOB"), "kind": "load", "name": _name(key), "t0": w0, "t1": w1, "wall_s": round(w1 - w0, 3), "resident": cached_,
+                            "torch_alloc_delta_mib": round((a1 - a0) / 2**20)}) + "\n")
+    return obj
 
 
 def cached(name: str) -> bool:
