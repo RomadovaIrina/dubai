@@ -9,6 +9,8 @@ CLEAN0="--mux final_mix --gate-merge-gap-s 1.2 --mouth-only-pasteback on --mask-
 case $arm in
   clean0) X="";;
   r2m) X="--anchor-filter flow:4 --anchor-round off --affine-precision fp32 --mask-track head --dump-ls-raw on";;
+  r3nb*) X="--anchor-filter flow:4 --anchor-round off --affine-precision fp32 --mask-track head --dump-ls-raw on --master-timing-mode fps --guidance 2.0 --max-ls-frames 400";;   # A R3 without bridges
+  r3g15*) X="--anchor-filter flow:4 --anchor-round off --affine-precision fp32 --mask-track head --dump-ls-raw on --master-timing-mode fps --max-ls-frames 400";;   # r2best + fps master + cap (no guidance 2.0, no bridge)
   r3cand*|r3final*) X="--anchor-filter flow:4 --anchor-round off --affine-precision fp32 --mask-track head --dump-ls-raw on --master-timing-mode fps --guidance 2.0 --bridge-len 8 --bridge-steps 4 --max-ls-frames 400";;   # A R3 generator + B fps master
   clean0a*) X="";;   # clean0 on another audio (same-audio A/B)
   r3F*) X="--anchor-filter flow:4 --anchor-round off --affine-precision fp32 --mask-track head --dump-ls-raw on --master-timing-mode fps";;   # + B's fps master

@@ -115,6 +115,9 @@ def main() -> int:
     ap.add_argument("--tex-sigma", type=float, default=1.5); ap.add_argument("--tex-tau", type=float, default=12.0); ap.add_argument("--lip-dilate", type=float, default=0.12)
     ap.add_argument("--silence", choices=["none", "still", "orig"], default="none"); ap.add_argument("--silence-min-s", type=float, default=0.3); ap.add_argument("--silence-ramp", type=int, default=6)
     ap.add_argument("--gaps", default=None, help="residual-gap JSON (temporal_mouth_stabilize.load_gaps; e.g. track C's list); default: computed from the manifest")
+    ap.add_argument("--sanitize-layer", type=float, default=0.0, help="r3 D (user: 'washed-out pink lips / torn lips'): raw LatentSync frames whose lip-box "
+                    "texture collapses (min(lip Laplacian, lip contrast) / median of the frames 2..6 away < this, e.g. 0.83) are replaced, in runs of <= 4, by a "
+                    "flow interpolation between the nearest good frames; 0 = off")
     ap.add_argument("--face-clip", choices=["on", "off"], default="off", help="r3 D (user: 'the background beside the cheek wobbles'): the paste weight "
                     "is capped by the distance INSIDE the source frame's MediaPipe face contour (0 on / outside it, 1 at --edge-px inside): nothing outside "
                     "the face is pasted / warped / colour-matched")
@@ -185,7 +188,32 @@ def main() -> int:
     sil_w = tms.ramp(silent, a.silence_ramp)
     mp_ls = np.load(cfs.run_mediapipe(pathlib.Path(a.ls_raw), pathlib.Path(a.ls_raw).with_suffix(".mediapipe.npz")))["lm"][:nm] if (a.skin_texture == "source" or a.ls_sharpen_scope == "lips" or a.ls_sharpen_lips > 0 or a.sharpen_auto > 0 or a.lip_guard == "on") else None
     # C2 on the LatentSync layer (master grid): two frames around every 16-frame window boundary of every LATENT_SYNC segment
-    fl0 = tms.Flow(); nbnd = 0
+    fl0 = tms.Flow(); nbnd = 0; nsan = 0; san_frames = []
+    if a.sanitize_layer > 0 and mp_ls is not None:   # r3 D: generator outliers (pink blob: the lip line vanishes for 1-3 frames) out of the layer first
+        t0 = time.perf_counter(); hf = np.full(nm, np.nan); ct = np.full(nm, np.nan)
+        for m_ in range(nm):
+            if wm[m_] <= 0 or not np.isfinite(mp_ls[m_][tms.LIPS_OUTER]).all(): continue
+            q = mp_ls[m_][tms.LIPS_OUTER, :2]; w_ = q[:, 0].max() - q[:, 0].min(); x0, y0 = (q.min(0) - 0.1 * w_).astype(int); x1, y1 = (q.max(0) + 0.1 * w_).astype(int)
+            g_ = cv2.cvtColor(L[m_][max(0, y0):y1, max(0, x0):x1], cv2.COLOR_BGR2GRAY).astype(np.float32)
+            if g_.size < 50: continue
+            hf[m_] = float(np.abs(cv2.Laplacian(g_, cv2.CV_32F, ksize=3)).mean()); ct[m_] = float(g_.std())
+        bad = np.zeros(nm, bool)
+        for m_ in range(nm):
+            if not np.isfinite(hf[m_]): continue
+            nb = [i for i in range(max(0, m_ - 6), min(nm, m_ + 7)) if abs(i - m_) >= 2 and np.isfinite(hf[i])]
+            if len(nb) >= 4 and min(hf[m_] / np.median(hf[nb]), ct[m_] / np.median(ct[nb])) < a.sanitize_layer: bad[m_] = True
+        m_ = 0
+        while m_ < nm:
+            if not bad[m_]: m_ += 1; continue
+            e_ = m_
+            while e_ < nm and bad[e_]: e_ += 1
+            lo_, hi_ = m_ - 1, e_
+            if e_ - m_ <= 4 and lo_ >= 0 and hi_ < nm and wm[lo_] > 0 and wm[hi_] > 0:
+                y_, z_ = L[lo_].astype(np.float32), L[hi_].astype(np.float32)
+                for i_ in range(m_, e_): L[i_] = np.clip(interp_safe(fl0, y_, z_, (i_ - lo_) / (hi_ - lo_), a.safe_d, a.safe_cons, a.safe_scale)[0], 0, 255).astype(np.uint8); nsan += 1; san_frames.append(int(i_))
+            m_ = e_
+        times["sanitize_layer"] = {"seconds": round(time.perf_counter() - t0, 2), "flagged": int(bad.sum()), "replaced": nsan, "frames": san_frames[:200]}
+        print(f"  sanitize-layer: {int(bad.sum())} flagged, {nsan} replaced", flush=True)
     nseam = 0
     if a.seam_lf > 0:   # r3: window-joint appearance steps -> ramps
         t0 = time.perf_counter(); N = a.seam_lf; dis_s = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
