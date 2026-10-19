@@ -23,9 +23,10 @@ def cand5_report(id_):
 def audio_events(id_, man=None):
     """C's audio_stages detector: clicks in the muxed audio + hot unit edges (joints) + bed steps. cand5 audio = canonical JSON."""
     p = CANON / id_ / "audio_stages" / f"{id_}_cand5.audio_stages.json"
-    if man is not None and man.get("audio_dir"):
-        q = pathlib.Path(man["audio_dir"]) / f"{id_}.audio_stages.json"
-        p = q if q.exists() else None
+    dd = man and (man.get("audio_dir") or (man.get("candidate") or {}).get("dubbed_dir"))
+    if dd and "/canonical/" not in dd and "/artifacts/baseline/" not in dd:   # another audio than cand5's: its own detector JSON only
+        q = sorted(pathlib.Path(dd).glob("*audio_stages*.json"))
+        p = q[0] if q else None
     if p is None or not p.exists(): return None
     d = json.loads(p.read_text()); c = d.get("counts", {})
     return {"clicks_mp4": d.get("clicks", {}).get("mp4"), "clicks_dub_voice": d.get("clicks", {}).get("dub_voice"), "hot_edges": c.get("hot_edge", 0),
