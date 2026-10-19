@@ -29,7 +29,7 @@ def run_eval(base: pathlib.Path, parts=("sync", "syncpf", "slide", "v4")) -> dic
                            text=True, capture_output=True).stdout.strip())
     work = base.parent / f"work_{base.name}"   # the arm's own work dir (window runs: drive_16k.wav)
     base_work = pathlib.Path(f"/workspace/dub/artifacts/baseline/{vid}/work/work_{vid}")
-    drv = (work / "drive_16k.wav") if win else (base_work / "dubbed_16k.wav")
+    drv = (work / "drive_16k.wav") if win else pathlib.Path(man["dubbed_track"]["wav16k"])   # the run's OWN driving dub track (audio-r2 runs: track C's)
     src16 = base_work / "own_audio_16k.wav"
     dub = pathlib.Path(str(base) + "_dubonly.mp4")
     if not dub.exists():
