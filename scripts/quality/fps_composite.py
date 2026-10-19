@@ -81,11 +81,12 @@ def edge_width_px(alpha: np.ndarray) -> float | None:
     return round(band / per, 2) if per > 0 else None
 
 
-def interp_safe(fl, y, z, t, d0=4.0, c0=0.92):
+def interp_safe(fl, y, z, t, d0=3.5, c0=0.95, sc=2.0):
     """tms.interp + a confidence: on the pixels that change between the two LatentSync frames (|grey diff| > 10), D = mean |w0 - w1| (the two
     warped candidates disagree -> averaging them gives the double / torn lip contour the user saw) and the forward-backward flow consistency.
     conf = clip(1 - max((D - d0) / 3, (c0 - cons) / 0.1), 0, 1); output = conf * interpolation + (1 - conf) * the NEAREST real frame.
-    Calibrated on 04 r3cand (flash frames: D median 7.8, cons 0.82; others D median 2.3, p90 4.7, cons 0.98)."""
+    Calibrated on 04 r3cand (flash frames: D median 7.8, cons 0.82; others D median 2.3, p90 4.7, cons 0.98); d0 3.5 / sc 2 / c0 0.95:
+    mean confidence 0.08 on the flash frames, 0.82 elsewhere (frame 670: D 4.4, cons 0.946 -> 0.55)."""
     gy_, gz_ = tms.gray(y), tms.gray(z); F01, F10 = fl.calc(gy_, gz_), fl.calc(gz_, gy_)
     Ft0 = -(1 - t) * t * F01 + t * t * F10; Ft1 = (1 - t) ** 2 * F01 - t * (1 - t) * F10
     w0 = fl.warp(y, Ft0); w1 = fl.warp(z, Ft1)
@@ -95,7 +96,7 @@ def interp_safe(fl, y, z, t, d0=4.0, c0=0.92):
     mov = np.abs(gy_.astype(np.float32) - gz_.astype(np.float32)) > 10
     if mov.sum() < 20: return it, 1.0
     D = float(np.abs(w0 - w1).mean(2)[mov].mean()); cons = float(c01[mov].mean())
-    conf = float(np.clip(1 - max((D - d0) / 3.0, (c0 - cons) / 0.1), 0, 1))
+    conf = float(np.clip(1 - max((D - d0) / sc, (c0 - cons) / 0.1), 0, 1))
     if conf >= 1: return it, 1.0
     near = y if t < 0.5 else z
     return conf * it + (1 - conf) * near, conf
@@ -113,8 +114,10 @@ def main() -> int:
     ap.add_argument("--tex-sigma", type=float, default=1.5); ap.add_argument("--tex-tau", type=float, default=12.0); ap.add_argument("--lip-dilate", type=float, default=0.12)
     ap.add_argument("--silence", choices=["none", "still", "orig"], default="none"); ap.add_argument("--silence-min-s", type=float, default=0.3); ap.add_argument("--silence-ramp", type=int, default=6)
     ap.add_argument("--gaps", default=None, help="residual-gap JSON (temporal_mouth_stabilize.load_gaps; e.g. track C's list); default: computed from the manifest")
-    ap.add_argument("--safe-d", type=float, default=4.0, help="r3 D flow_safe: warp disagreement (grey levels, moving pixels) where the confidence starts to drop (-> 0 at +3)")
-    ap.add_argument("--safe-cons", type=float, default=0.92, help="r3 D flow_safe: forward-backward consistency of the moving pixels where the confidence starts to drop (-> 0 at -0.1)")
+    ap.add_argument("--only-frames", default=None, help="debug a:b: composite only these OUTPUT frames, the rest is the source frame (fast A/B of a window)")
+    ap.add_argument("--safe-scale", type=float, default=2.0, help="r3 D flow_safe: grey levels over --safe-d at which the confidence reaches 0")
+    ap.add_argument("--safe-d", type=float, default=3.5, help="r3 D flow_safe: warp disagreement (grey levels, moving pixels) where the confidence starts to drop (-> 0 at +3)")
+    ap.add_argument("--safe-cons", type=float, default=0.95, help="r3 D flow_safe: forward-backward consistency of the moving pixels where the confidence starts to drop (-> 0 at -0.1)")
     ap.add_argument("--retime", choices=["flow", "flow_safe", "nearest", "nearest_rigid"], default="flow", help="LatentSync layer at a source timestamp: flow interpolation between the two master "
                     "frames, or the nearest master frame (exact LatentSync shapes, the mouth repeats one frame in six for a 30 fps source); nearest_rigid = the "
                     "nearest frame moved by the head's similarity motion (MediaPipe eyes / nose bridge, master -> source time): exact shapes at the right position")
@@ -308,7 +311,9 @@ def main() -> int:
         m0 = int(np.clip(math.floor(m), 0, nm - 1)); m1 = min(m0 + 1, nm - 1); al = float(m - math.floor(m))
         return (1 - al) * lm_f[jj[m0]] + al * lm_f[jj[m1]]
     edge_meas = []; lip_cov = []
+    only = tuple(int(x) for x in a.only_frames.split(":")) if a.only_frames else None
     def one(k):
+        if only and not (only[0] <= k < only[1]): return S[k], 0, None
         m = mpos[k]; m0 = int(np.clip(math.floor(m), 0, nm - 1)); m1 = min(m0 + 1, nm - 1); al = float(m - math.floor(m)); mu = float(mu_arr[k])
         w = float((1 - al) * wm[m0] + al * wm[m1])
         if w <= 0: return S[k], 0, None
@@ -340,7 +345,7 @@ def main() -> int:
         elif al < 0.04 or m1 == m0 or wm[m1] <= 0: Lk = L[m0][ya:yb, xa:xb].astype(np.float32)
         elif al > 0.96 or wm[m0] <= 0: Lk = L[m1][ya:yb, xa:xb].astype(np.float32)
         elif a.retime == "flow_safe":   # r3 D (user defect "torn / whitish lips on single 30 fps frames"): confidence-checked interpolation
-            Lk, conf_k = interp_safe(f, L[m0][ya:yb, xa:xb].astype(np.float32), L[m1][ya:yb, xa:xb].astype(np.float32), al, a.safe_d, a.safe_cons)
+            Lk, conf_k = interp_safe(f, L[m0][ya:yb, xa:xb].astype(np.float32), L[m1][ya:yb, xa:xb].astype(np.float32), al, a.safe_d, a.safe_cons, a.safe_scale)
         else: Lk = tms.interp(f, L[m0][ya:yb, xa:xb].astype(np.float32), L[m1][ya:yb, xa:xb].astype(np.float32), al)
         if a.register != "off":
             mn_ = m0 if (al < 0.5 or wm[m1] <= 0) else m1

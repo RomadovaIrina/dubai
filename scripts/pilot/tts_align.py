@@ -9,6 +9,7 @@ source speech bursts without ever cutting inside a word and without a separate C
 """
 from __future__ import annotations
 
+import os
 import numpy as np
 
 SR16 = 16000
@@ -97,7 +98,13 @@ def cut_points(spans: list[dict], counts: list[int], y: np.ndarray, sr: int) -> 
     for c in counts[:-1]:
         i += c
         e_prev, s_next = spans[i - 1]["end"], spans[i]["start"]
-        cuts.append(_rms_min_point(y, sr, e_prev, s_next) if s_next - e_prev >= 0.03 else 0.5 * (e_prev + s_next))
+        if os.environ.get("DUB_CUT_SNAP", "1") == "1":   # r3 D (user: "abrupt phrase cuts"): CTC word ends are early -> a gap < 30 ms used to be cut at
+            # its midpoint, i.e. inside the still-voiced end of the previous word. Search the energy minimum over a wider window that reaches past
+            # the CTC end of the previous word (+60 ms) but stays out of the next word's body (its first 20 ms at most).
+            lo = e_prev - 0.01; hi = max(s_next + 0.02, e_prev + 0.06)
+            cuts.append(_rms_min_point(y, sr, lo, hi))
+        else:
+            cuts.append(_rms_min_point(y, sr, e_prev, s_next) if s_next - e_prev >= 0.03 else 0.5 * (e_prev + s_next))
     return cuts
 
 

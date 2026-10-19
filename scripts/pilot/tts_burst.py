@@ -95,6 +95,7 @@ def edge_fade(seg: np.ndarray, sr: int, in_ms: float, out_ms: float) -> np.ndarr
         k = min(len(seg) // 2, int(ms / 1000 * sr))
         if k > 0:
             ramp = np.linspace(0.0, 1.0, k, dtype=np.float32)
+            if os.environ.get("DUB_EQPOWER_FADE", "1") == "1": ramp = np.sin(0.5 * np.pi * ramp).astype(np.float32)   # r3 D: equal-power (sin) shape
             if head: seg[:k] *= ramp
             else: seg[-k:] *= ramp[::-1]
     return seg
@@ -124,6 +125,10 @@ def adaptive_fade_ms(y: np.ndarray, sr: int, a: float, b: float, inner_head: boo
     def lvl(t0, t1):
         i0, i1 = max(0, int(t0 * sr)), min(len(y), int(t1 * sr))
         return 20 * np.log10(np.sqrt(np.mean(y[i0:i1] ** 2)) + 1e-9) if i1 > i0 else -120.0
+    if os.environ.get("DUB_CUT_SNAP", "1") == "1":   # r3 D: every INNER part edge gets >= 12 ms (equal-power); voiced edges 30 ms out / 15 ms in
+        fin = (15.0 if lvl(a, a + 0.01) > ref_db - 20 else 12.0) if inner_head else 10.0    # unit (sentence) edges: 10 / 12 ms, equal-power
+        fout = (30.0 if lvl(b - 0.01, b) > ref_db - 20 else 15.0) if inner_tail else 12.0
+        return fin, fout
     fin = 8.0 if inner_head and lvl(a, a + 0.01) > ref_db - 20 else 5.0
     fout = 25.0 if inner_tail and lvl(b - 0.01, b) > ref_db - 20 else 5.0
     return fin, fout
