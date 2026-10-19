@@ -147,3 +147,6 @@ Base: `experiment/r2-audio` @ a1fd764. Round-2 log: `reports/quality/audio_timin
   - rare-word onsets ("Hamam");
   - TTS repetition at a sentence end (01 u07 "floor to floor");
   - the `r2_deliver --redeclick` re-mix is slow (680 s on 02; Silero frame loop in `bed_speech_runs`).
+
+## 11. audio-r3b: final-mix loudness (-16 LUFS, TP <= -1 dBTP), handed off to A / B / D
+`scripts/quality/loudness.py` (two-pass ffmpeg loudnorm, I -16, TP -1.5, linear where possible). AAC after: -15.9..-16.1 LUFS, TP -1.2..-2.7 dBTP (was -12.9..-20.4 LUFS, TP up to -0.2). Dynamic mode on 02 / 03 / 05 (02 LRA 11.5 -> 9.4). Dub voice stems untouched. Listen mp4: `/workspace/dub/c/outbox/<id>_dub-audio-r3b_*.mp4`.
