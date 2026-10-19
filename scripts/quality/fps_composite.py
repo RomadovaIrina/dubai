@@ -104,6 +104,7 @@ def main() -> int:
     ap.add_argument("--max-fallback", type=float, default=0.02)
     ap.add_argument("--lip-guard", choices=["on", "off"], default="off", help="r3: mask = max(ellipse, hull of the source + layer lips dilated 2.6 sigma and "
                     "feathered with the same edge): the lips always sit at alpha >= 0.98 (small faces: the 12 px ramp otherwise reaches them)")
+    ap.add_argument("--encoder", choices=["x264", "nvenc"], default="x264", help="r3: final H.264 encode on the CPU (libx264 crf --crf) or the GPU's NVENC (cq --crf + 3, p7 / hq)")
     ap.add_argument("--master-fps", type=float, default=25.0, help="r3 experiment: frame rate of the master / LatentSync layer (30 = LatentSync run on the source frames)")
     ap.add_argument("--master-timing", default=None, help="r2: <id>_master_timing.json (master frame m shows source time tau[m], NOT m/25: ffmpeg -r 25 lags ~60 ms on 30 fps "
                     "sources). Given: mask / landmarks / registration target follow the TRUE time of each source frame (mu = tau^-1(t_k)); the mouth stays audio-synced (25 t_k)")
@@ -450,8 +451,10 @@ def main() -> int:
     # encode with the source time base / pts, then copy the run's own final audio stream in
     import av
     t0 = time.perf_counter(); outp = pathlib.Path(a.out); outp.parent.mkdir(parents=True, exist_ok=True); vtmp = outp.with_name(".v_" + outp.name)
-    c = av.open(str(vtmp), "w"); st = c.add_stream("libx264", rate=rate); st.width, st.height = W, H; st.pix_fmt = "yuv420p"; st.time_base = tb
-    st.options = {"crf": str(a.crf), "preset": "medium"}; st.codec_context.time_base = tb
+    enc = "h264_nvenc" if a.encoder == "nvenc" else "libx264"
+    c = av.open(str(vtmp), "w"); st = c.add_stream(enc, rate=rate); st.width, st.height = W, H; st.pix_fmt = "yuv420p"; st.time_base = tb
+    st.options = {"crf": str(a.crf), "preset": "medium"} if enc == "libx264" else {"preset": "p7", "tune": "hq", "rc": "vbr", "cq": str(a.crf + 3), "b": "0", "profile": "high"}
+    st.codec_context.time_base = tb
     for k, o in enumerate(out):
         fr = av.VideoFrame.from_ndarray(o, format="bgr24"); fr.pts = int(pts[k]); fr.time_base = tb
         for p in st.encode(fr): c.mux(p)
