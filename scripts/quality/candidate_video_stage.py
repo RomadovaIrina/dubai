@@ -28,7 +28,10 @@ class MouthOnlyRunner:
         self.calls = inner.calls
         self.steps, self.guidance, self.seed, self.load_s = inner.steps, inner.guidance, inner.seed, inner.load_s; self.masked_frames = 0; self._boxes = None
 
+    raw: dict | None = None   # round 3 (--dump-raw): {segment start frame: raw LatentSync frames (BGR)} for track B's source-fps composite
+
     def set_segment(self, start, n):
+        self._seg_start = start
         if hasattr(self.inner, "set_segment"): self.inner.set_segment(start, n)
 
     def boxes(self, detections, n):
@@ -60,6 +63,7 @@ class MouthOnlyRunner:
         """outs / originals: same-length sequences of HxWx3 frames (same channel order); returns outs composited into originals."""
         import numpy as np
         boxes = boxes if boxes is not None else self._boxes; res = []
+        if self.raw is not None and getattr(self, "_seg_start", None) is not None: self.raw[self._seg_start] = [np.array(o, copy=True) for o in outs]
         for i, o in enumerate(outs):
             bb = boxes[i] if boxes is not None and i < len(boxes) else None
             if bb is None or i >= len(originals): res.append(o); continue
@@ -115,6 +119,8 @@ def main() -> int:
     ap.add_argument("--affine-precision", choices=["fp16", "fp32"], default="fp16", help="fp32: LatentSync AlignRestore in float32 (ls_geometry.py)")
     ap.add_argument("--anchor-round", choices=["on", "off"], default="on", help="off: sub-pixel affine anchors (ls_geometry.py)")
     ap.add_argument("--codeformer-precision", choices=["fp32", "parse16", "fp16"], default="fp16", help="fp32 = upstream numerics; parse16 = ParseNet under fp16 autocast; fp16 = CodeFormer net + ParseNet under autocast")
+    ap.add_argument("--dump-raw", action="store_true", help="round 3: also write <out>_lsraw.mp4 = master frames with the RAW LatentSync frames (before the mouth composite / crossfade) "
+                    "in the LATENT_SYNC segments, lossless libx264rgb crf 0, master frame count (track B fps_composite --ls-raw)")
     ap.add_argument("--silence-mix", type=float, default=0.0, help="round 3: dub-silent mouth, whisper conditioning moved toward the SOURCE speech by this amount where the source talks and no dub part sounds (r3_lipsync.py)")
     ap.add_argument("--silence-ramp", type=int, default=6); ap.add_argument("--silence-min-s", type=float, default=0.3); ap.add_argument("--gaps", default=None, help="residual-gap JSON (track C) instead of the manifest stretches")
     a = ap.parse_args()
@@ -182,6 +188,7 @@ def main() -> int:
             from ls_window_ab import make_box_recorder
             Mo = rec_cls = make_box_recorder(MouthOnlyRunner, prep.frames)
         runner = Mo(runner, a.mask_top, a.mask_feather, a.mask_smooth, defer=a.codeformer_scope == "mouth")
+        if a.dump_raw: runner.raw = {}
     cf_runner = None
     if a.codeformer == "optimized":
         from codeformer_accel import CodeFormerAccel
@@ -195,6 +202,15 @@ def main() -> int:
             for k, b in enumerate(bxs):
                 if b is not None: fr_.append(st + k); bx_.append(b)
         np.savez_compressed(out.with_name(out.stem + "_maskboxes.npz"), frames=np.array(fr_, int), boxes=np.array(bx_, np.float64))
+    if a.dump_raw and getattr(runner, "raw", None):
+        import cv2, imageio, face_aware_latentsync as fa_
+        rawp = out.with_name(out.stem + "_lsraw.mp4"); w_ = imageio.get_writer(str(rawp), fps=25, codec="libx264rgb", macro_block_size=None, pixelformat="rgb24",
+                                                                              ffmpeg_params=["-crf", "0", "-preset", "veryfast"], ffmpeg_log_level="error")
+        mf = fa_.read_frames(work / "master_25fps.mp4"); sub = {}
+        for st, frs in runner.raw.items():
+            for k, f in enumerate(frs): sub[st + k] = f
+        for i, f in enumerate(mf): w_.append_data(cv2.cvtColor(sub.get(i, f), cv2.COLOR_BGR2RGB))
+        w_.close(); man["ls_raw"] = {"path": str(rawp), "frames": len(mf), "ls_frames": len(sub)}; del mf, sub
     rep["backend"] = "optimized"; man["lipsync"] = rep; man["codeformer"] = "DISABLED (not invoked)" if a.codeformer == "off" else {"mode": a.codeformer, "w": a.codeformer_w, "batch": a.codeformer_batch, "landmarks": a.codeformer_landmarks, "precision": a.codeformer_precision}
     if cf_runner is not None: cf_runner.close()
     rp.free_cuda(runner, cf_runner)

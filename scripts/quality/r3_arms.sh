@@ -24,6 +24,11 @@ for arm in "$@"; do
     br16k4) X="--bridge-len 16 --bridge-steps 4";;
     br16k8) X="--bridge-len 16 --bridge-steps 8";;
     src) X="--audio src";;
+    sm03) X="--silence-mix 0.3";;
+    sm05) X="--silence-mix 0.5";;
+    sm07) X="--silence-mix 0.7";;
+    sm10) X="--silence-mix 1.0";;
+    refcsm05) X="--ref-mode fixed --ref-select calm_closed --silence-mix 0.5";;
     *) echo "unknown arm $arm"; continue;;
   esac
   tag=${w}_$arm
