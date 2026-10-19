@@ -29,3 +29,12 @@ Nothing new. Spleeter 2stems (MIT code, MIT release weights) set up in `/workspa
 | LatentSync s/video-min | 315 | 298 | 288 | – | – | 281 |
 | video stage s/video-min | 410 | 417 | 409 | – | – | 414 |
 04 FIX30 (r2m): 0 fallback frames, edge 11.4 px, +105 s/video-min (CPU, 12 threads).
+
+## CUDA llama-cpp-python (Qwen on the GPU) — recipe (for C too)
+Same version as the env (0.3.35), CUDA 13.2 nvcc, sm_120 (RTX 5090), installed into `third_party/llama_cuda` so `/venv/dabai` stays CPU:
+```bash
+JOBS=8 bash scripts/setup_llama_cuda.sh        # CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=120", uv pip --target third_party/llama_cuda; ~15 min with 8 jobs
+PYTHONPATH=third_party/llama_cuda:$PYTHONPATH python scripts/pilot/run_clean_pipeline_05.py ... --qwen-gpu-layers -1 [--qwen-resident on]
+```
+Check: `PYTHONPATH=third_party/llama_cuda python -c "import llama_cpp; print(llama_cpp.llama_supports_gpu_offload())"` → True.
+For a separate venv instead: `CMAKE_ARGS=... FORCE_CMAKE=1 uv pip install --python <venv>/bin/python --no-cache llama-cpp-python==0.3.35`.
