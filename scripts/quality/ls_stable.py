@@ -38,7 +38,7 @@ class StableLatentSync(AccelLatentSync):
     def __init__(self, pipe, *, stride: int | None = None, ref_mode: str = "same", mode: str = "ls", overlap: str = "fuse", window_len: int | None = None,
                  bridge_len: int = 0, bridge_steps: int = 0, **kw):
         super().__init__(pipe, **kw)
-        assert mode in ("ls", "wrapper", "vae") and ref_mode in ("same", "fixed") and overlap in ("fuse", "continue")
+        assert mode in ("ls", "wrapper", "vae") and (ref_mode in ("same", "fixed") or ref_mode.startswith("shift")) and overlap in ("fuse", "continue")
         self.stride, self.ref_mode, self.mode, self.overlap = stride, ref_mode, mode, overlap
         self.bridge_len, self.bridge_steps = int(bridge_len), int(bridge_steps)
         if window_len:
@@ -74,6 +74,7 @@ class StableLatentSync(AccelLatentSync):
             ref_faces = self._ref_crops(ip) if (self.ref_mode == "fixed" and self.mode == "ls") else None
             t0 = time.perf_counter()
             feat = pipe.audio_encoder.audio2feat(str(audio_path)); chunks = pipe.audio_encoder.feature2chunks(feature_array=feat, fps=video_fps)
+            if self.chunk_hook is not None: chunks = self.chunk_hook(pipe.audio_encoder, chunks)
             t_pre = time.perf_counter() - t0; t0 = time.perf_counter()
             real = ip.face_detector; replay = None
             if detections is not None:
@@ -116,6 +117,10 @@ class StableLatentSync(AccelLatentSync):
                     ref_lat = torch.cat(r_l, 2)
                 else:   # reference clip tiled so that every window sees the R reference frames in order
                     R = ref_lat16.shape[2]; ref_lat = ref_lat16[:, :, [k % R for k in range(n)]]
+                if self.ref_mode.startswith("shift"):   # round 3: reference = the same segment S frames away (training-like: another time, same pose / light)
+                    S = int(self.ref_mode[5:] or 16)
+                    idx = [i + S if i + S < n else (i - S if i - S >= 0 else (i + n // 2) % n) for i in range(n)]
+                    ref_lat = ref_lat[:, :, idx]
                 t_vae += time.perf_counter() - t0
                 audio_all = torch.stack(chunks).to(device, dtype=weight_dtype)                                    # (n, 50, 384)
                 L = min(nf, n)
@@ -266,6 +271,11 @@ class StableRunner:
                        "steps": steps, "guidance": guidance, "seed": seed, "fp16": True, "stage2_512": True, "stride": stride, "ref_mode": ref_mode, "mode": mode,
                        "overlap": overlap, "window_len": window_len or 16, "bridge_len": bridge_len, "bridge_steps": bridge_steps}
         self.calls: list[dict] = []
+
+    silence_mix = None   # round 3: r3_lipsync.SilenceMix (dub-silent mouth), hooked per segment
+
+    def set_segment(self, start: int, n: int):
+        self.acc.chunk_hook = self.silence_mix.hook(start, n) if self.silence_mix is not None else None
 
     def run_frames(self, frames_rgb, audio_wav, detections=None):
         t0 = time.perf_counter(); frames = self.acc.run_frames(frames_rgb, str(audio_wav), detections); dt = round(time.perf_counter() - t0, 2)

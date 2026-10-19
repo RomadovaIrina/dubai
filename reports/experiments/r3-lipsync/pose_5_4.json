@@ -1,0 +1,69 @@
+{
+ "01": {
+  "frames": 2542,
+  "face_frames": 260,
+  "face_share": 0.102,
+  "yaw_p50": 1.5,
+  "yaw_p99": 3.4,
+  "yaw_max": 4.1,
+  "share_yaw_gt30": 0.0,
+  "share_pitch_gt30": 0.0,
+  "share_yaw_gt20": 0.0,
+  "precheck_fires": false,
+  "gate30_frames": 0,
+  "gate20_frames": 0,
+  "longest_gt30_s": 0.0
+ },
+ "02": {
+  "frames": 2773,
+  "face_frames": 0,
+  "face_share": 0.0,
+  "precheck_fires": null,
+  "note": "no face -> spec 5.4 'no face' branch (voice-only / abort per product rule)"
+ },
+ "03": {
+  "frames": 2260,
+  "face_frames": 2260,
+  "face_share": 1.0,
+  "yaw_p50": 0.6,
+  "yaw_p99": 5.3,
+  "yaw_max": 8.2,
+  "share_yaw_gt30": 0.0,
+  "share_pitch_gt30": 0.0,
+  "share_yaw_gt20": 0.0,
+  "precheck_fires": false,
+  "gate30_frames": 0,
+  "gate20_frames": 0,
+  "longest_gt30_s": 0.0
+ },
+ "04": {
+  "frames": 1349,
+  "face_frames": 1349,
+  "face_share": 1.0,
+  "yaw_p50": 4.7,
+  "yaw_p99": 20.7,
+  "yaw_max": 23.4,
+  "share_yaw_gt30": 0.0,
+  "share_pitch_gt30": 0.0,
+  "share_yaw_gt20": 0.0156,
+  "precheck_fires": false,
+  "gate30_frames": 0,
+  "gate20_frames": 21,
+  "longest_gt30_s": 0.0
+ },
+ "05": {
+  "frames": 1311,
+  "face_frames": 1265,
+  "face_share": 0.965,
+  "yaw_p50": 7.2,
+  "yaw_p99": 54.4,
+  "yaw_max": 62.5,
+  "share_yaw_gt30": 0.064,
+  "share_pitch_gt30": 0.0,
+  "share_yaw_gt20": 0.1257,
+  "precheck_fires": false,
+  "gate30_frames": 81,
+  "gate20_frames": 159,
+  "longest_gt30_s": 1.52
+ }
+}
