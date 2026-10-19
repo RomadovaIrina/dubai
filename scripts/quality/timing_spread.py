@@ -14,6 +14,7 @@ modes: off | centre (head + tail only) | pauses (head + internal pauses + tail)
 """
 from __future__ import annotations
 import math, re
+import os
 import numpy as np
 
 PREPOSITIONS = frozenset("about above across after against along among around before behind below beneath beside between beyond during except inside like near "
@@ -113,15 +114,20 @@ def spread_unit(u: dict, track: np.ndarray, sr: int, y_raw: np.ndarray, cfg: dic
         else:
             head, pauses, tail, n = allocate(L, [], cfg["ok"], head_cap)
         # render: head offset, then the part split at the chosen boundaries with silences in between
-        pieces = []; prev = 0
+        pieces = []; prev = 0; snap = os.environ.get("DUB_CUT_SNAP", "1") == "1"
         for c in chosen:
-            p = int(round(pos_of(c) * sr)); pieces.append(seg[prev:p]); prev = p
+            p = int(round(pos_of(c) * sr))
+            if snap:   # r3 D ("abrupt phrase cuts", 04 42.93 s): the mapped boundary can land in voiced sound -> split at the 5 ms energy minimum within +-40 ms
+                h = max(1, int(0.005 * sr)); lo_, hi_ = max(prev + h, p - int(0.04 * sr)), min(len(seg) - h, p + int(0.04 * sr))
+                if hi_ - lo_ > 2 * h:
+                    e = [float(np.mean(seg[q:q + h] ** 2)) for q in range(lo_, hi_ - h, h // 2 or 1)]; p = lo_ + int(np.argmin(e)) * (h // 2 or 1) + h // 2
+            pieces.append(seg[prev:p]); prev = p
         pieces.append(seg[prev:])
-        out = []
+        out = []; fi, fo = (max(1, int(0.012 * sr)), max(1, int(0.020 * sr))) if snap else (fade, fade)
         for i, pc in enumerate(pieces):
             pc = pc.copy()
-            if i > 0 and len(pc) > 2 * fade: pc[:fade] *= np.linspace(0, 1, fade, dtype=np.float32)
-            if i + 1 < len(pieces) and len(pc) > 2 * fade: pc[-fade:] *= np.linspace(1, 0, fade, dtype=np.float32)
+            if i > 0 and len(pc) > 2 * fi: pc[:fi] *= np.sin(0.5 * np.pi * np.linspace(0, 1, fi, dtype=np.float32)) if snap else np.linspace(0, 1, fi, dtype=np.float32)
+            if i + 1 < len(pieces) and len(pc) > 2 * fo: pc[-fo:] *= np.sin(0.5 * np.pi * np.linspace(1, 0, fo, dtype=np.float32)) if snap else np.linspace(1, 0, fo, dtype=np.float32)
             out.append(pc)
             if i < len(pauses) and i + 1 < len(pieces): out.append(np.zeros(int(round(pauses[i] * sr)), np.float32))
         y = np.concatenate(out); s0 = a0 + int(round(head * sr)); e0 = min(len(new), s0 + len(y)); new[s0:e0] += y[: e0 - s0]
