@@ -9,7 +9,7 @@ CLEAN0="--mux final_mix --gate-merge-gap-s 1.2 --mouth-only-pasteback on --mask-
 case $arm in
   clean0) X="";;
   r2m) X="--anchor-filter flow:4 --anchor-round off --affine-precision fp32 --mask-track head --dump-ls-raw on";;
-  r3F*) X="--anchor-filter flow:4 --anchor-round off --affine-precision fp32 --mask-track head --dump-ls-raw on --master-timing-mode fps";;   # + B's fps master
+  r3F*|r3cand*) X="--anchor-filter flow:4 --anchor-round off --affine-precision fp32 --mask-track head --dump-ls-raw on --master-timing-mode fps";;   # + B's fps master
   *) X=${ARM_FLAGS:?unknown arm: set ARM_FLAGS};;
 esac
 for id in "$@"; do

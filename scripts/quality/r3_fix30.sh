@@ -10,8 +10,12 @@ M=$1; suf=${2:-fix30}; stem=${M%.manifest.json}; out=${stem}_$suf.mp4
 MODE=${FIX30_MODE:-r2}
 src=$(python -c "import json;print(json.load(open('$M'))['input'])"); id=$(basename ${src%.*}); TD=/workspace/dub/artifacts/r3d/timing
 WM=$(python -c "import json;print(json.load(open('$M'))['work_dir'])")/master_25fps.mp4
-if [ $MODE = r3F ]; then
-  FIX30_ARGS=${FIX30_ARGS:-"--register sim_ring --ring-region upper --edge-px 12 --colour-match upper --seam-lf 4 --sharpen-auto 1.0"}
+if [ $MODE = r3F ] || [ $MODE = r3cand ]; then
+  if [ $MODE = r3cand ]; then   # B's final R3 recipe (r3-face e9c3f58): + lip guard (8.4 on small faces), closed-loop sharpen to 0.95 + source skin texture
+    FIX30_ARGS=${FIX30_ARGS:-"--register sim_ring --ring-region upper --edge-px 12 --colour-match upper --seam-lf 4 --sharpen-auto 0.95 --skin-texture source --lip-guard on"}
+  else
+    FIX30_ARGS=${FIX30_ARGS:-"--register sim_ring --ring-region upper --edge-px 12 --colour-match upper --seam-lf 4 --sharpen-auto 1.0"}
+  fi
   T=$TD/${id}_master_timing_F.json; SL=$TD/${id}_source_lm_F.npz
   [ -f $T ] || python scripts/quality/r3_master_timing.py --src $src --master $WM --vf fps=25 --out $T
   [ -f $SL ] || python scripts/quality/r3_source_lm.py --src $src --timing $T --out $SL
