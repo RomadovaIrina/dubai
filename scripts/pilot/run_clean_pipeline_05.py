@@ -923,7 +923,7 @@ def main() -> int:
     if a.codeformer is None:
         a.codeformer = "off"          # CLEAN-ONLY default (2026-10-16): CodeFormer is S-Lab non-commercial
     import clean_face_stack as cfs   # refuses NC settings unless DUB_ALLOW_NC=1, then blocks every NC loader in this process
-    cfs.enforce_clean(a.face_stack, a.codeformer, a.video_backend, what="run_clean_pipeline_05", background=a.background)
+    cfs.enforce_clean(a.face_stack, a.codeformer, a.video_backend, what="run_clean_pipeline_05", background=(a.background if a.bed_separator == "hdemucs" else "off"))   # r3 D: the Spleeter bed (MIT) is clean; only HDEMUCS is NC
     if a.no_codeformer and a.codeformer != "off":
         print("--no-codeformer contradicts --codeformer optimized", file=sys.stderr); return 2
     if a.codeformer != "off" and a.video_backend != "optimized":
