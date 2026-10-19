@@ -81,6 +81,26 @@ def edge_width_px(alpha: np.ndarray) -> float | None:
     return round(band / per, 2) if per > 0 else None
 
 
+def interp_safe(fl, y, z, t, d0=4.0, c0=0.92):
+    """tms.interp + a confidence: on the pixels that change between the two LatentSync frames (|grey diff| > 10), D = mean |w0 - w1| (the two
+    warped candidates disagree -> averaging them gives the double / torn lip contour the user saw) and the forward-backward flow consistency.
+    conf = clip(1 - max((D - d0) / 3, (c0 - cons) / 0.1), 0, 1); output = conf * interpolation + (1 - conf) * the NEAREST real frame.
+    Calibrated on 04 r3cand (flash frames: D median 7.8, cons 0.82; others D median 2.3, p90 4.7, cons 0.98)."""
+    gy_, gz_ = tms.gray(y), tms.gray(z); F01, F10 = fl.calc(gy_, gz_), fl.calc(gz_, gy_)
+    Ft0 = -(1 - t) * t * F01 + t * t * F10; Ft1 = (1 - t) ** 2 * F01 - t * (1 - t) * F10
+    w0 = fl.warp(y, Ft0); w1 = fl.warp(z, Ft1)
+    c01 = fl.consistent(F01, F10); v0 = fl.warp(c01.astype(np.float32), Ft0); v1 = fl.warp(fl.consistent(F10, F01).astype(np.float32), Ft1)
+    a0, a1 = (1 - t) * v0, t * v1; s_ = a0 + a1
+    it = np.where((s_ > 1e-3)[..., None], (a0[..., None] * w0 + a1[..., None] * w1) / np.maximum(s_, 1e-3)[..., None], (1 - t) * y + t * z)
+    mov = np.abs(gy_.astype(np.float32) - gz_.astype(np.float32)) > 10
+    if mov.sum() < 20: return it, 1.0
+    D = float(np.abs(w0 - w1).mean(2)[mov].mean()); cons = float(c01[mov].mean())
+    conf = float(np.clip(1 - max((D - d0) / 3.0, (c0 - cons) / 0.1), 0, 1))
+    if conf >= 1: return it, 1.0
+    near = y if t < 0.5 else z
+    return conf * it + (1 - conf) * near, conf
+
+
 def main() -> int:
     import cv2
     import clean_face_stack as cfs, face_aware_latentsync_accel as faa
@@ -93,7 +113,9 @@ def main() -> int:
     ap.add_argument("--tex-sigma", type=float, default=1.5); ap.add_argument("--tex-tau", type=float, default=12.0); ap.add_argument("--lip-dilate", type=float, default=0.12)
     ap.add_argument("--silence", choices=["none", "still", "orig"], default="none"); ap.add_argument("--silence-min-s", type=float, default=0.3); ap.add_argument("--silence-ramp", type=int, default=6)
     ap.add_argument("--gaps", default=None, help="residual-gap JSON (temporal_mouth_stabilize.load_gaps; e.g. track C's list); default: computed from the manifest")
-    ap.add_argument("--retime", choices=["flow", "nearest", "nearest_rigid"], default="flow", help="LatentSync layer at a source timestamp: flow interpolation between the two master "
+    ap.add_argument("--safe-d", type=float, default=4.0, help="r3 D flow_safe: warp disagreement (grey levels, moving pixels) where the confidence starts to drop (-> 0 at +3)")
+    ap.add_argument("--safe-cons", type=float, default=0.92, help="r3 D flow_safe: forward-backward consistency of the moving pixels where the confidence starts to drop (-> 0 at -0.1)")
+    ap.add_argument("--retime", choices=["flow", "flow_safe", "nearest", "nearest_rigid"], default="flow", help="LatentSync layer at a source timestamp: flow interpolation between the two master "
                     "frames, or the nearest master frame (exact LatentSync shapes, the mouth repeats one frame in six for a 30 fps source); nearest_rigid = the "
                     "nearest frame moved by the head's similarity motion (MediaPipe eyes / nose bridge, master -> source time): exact shapes at the right position")
     ap.add_argument("--ls-sharpen", type=float, default=0.0, help="unsharp-mask amount on the LatentSync layer (0 = off), radius --ls-sharpen-sigma")
@@ -301,6 +323,7 @@ def main() -> int:
                 gm_ = cv2.GaussianBlur(tms.poly_mask(hull, roi, 2.6 * sg_, 0), (0, 0), sg_)
                 alpha = np.maximum(alpha, gm_)
         ya, yb, xa, xb = roi; f = flow(); roi_r = roi
+        conf_k = 1.0
         if a.register != "off":   # build the LatentSync layer on a larger box: it moves by up to head speed x 60 ms before the roi is cut
             pad = int(0.25 * (box[2] - box[0])); ya, yb, xa, xb = max(0, ya - pad), min(H, yb + pad), max(0, xa - pad), min(W, xb + pad)
         if a.retime in ("nearest", "nearest_rigid"):
@@ -316,6 +339,8 @@ def main() -> int:
                 Lk = L[mn][ya:yb, xa:xb].astype(np.float32)
         elif al < 0.04 or m1 == m0 or wm[m1] <= 0: Lk = L[m0][ya:yb, xa:xb].astype(np.float32)
         elif al > 0.96 or wm[m0] <= 0: Lk = L[m1][ya:yb, xa:xb].astype(np.float32)
+        elif a.retime == "flow_safe":   # r3 D (user defect "torn / whitish lips on single 30 fps frames"): confidence-checked interpolation
+            Lk, conf_k = interp_safe(f, L[m0][ya:yb, xa:xb].astype(np.float32), L[m1][ya:yb, xa:xb].astype(np.float32), al, a.safe_d, a.safe_cons)
         else: Lk = tms.interp(f, L[m0][ya:yb, xa:xb].astype(np.float32), L[m1][ya:yb, xa:xb].astype(np.float32), al)
         if a.register != "off":
             mn_ = m0 if (al < 0.5 or wm[m1] <= 0) else m1
@@ -380,7 +405,7 @@ def main() -> int:
             if a.ls_sharpen_lips > 0:
                 lm_l2 = lerp(mp_ls, m) if mp_ls is not None else lerp(mp, m); mw2 = tms.mouth_width(lm_l2)   # LatentSync layer's own lips (its pose)
                 amt = amt + a.ls_sharpen_lips * tms.poly_mask(lm_l2[tms.LIPS_OUTER], roi, 0.08 * mw2, 0.08 * mw2)
-            Lk = Lk + amt[..., None] * det
+            Lk = Lk + (amt * conf_k)[..., None] * det   # r3 D: a low-confidence (partly nearest-frame) layer is never sharpened more than a real one
         if a.skin_texture == "source":
             Lk = tms.skin_texture_transfer(f, [Lk], [sk], [ex], a.tex_sigma, a.tex_tau)[0]
         aw = alpha * w
