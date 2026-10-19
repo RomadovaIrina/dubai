@@ -20,6 +20,7 @@ import soundfile as sf
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent / "quality"))
 from e1_burst_align import SR16, burst_fit_ratios, ff, vad_intervals  # noqa: E402
+from pilot_common import dev, empty_cache, tts_dtypes  # noqa: E402
 
 TTS_SR = 24000
 REWRITE_SYSTEM = "You are a professional dubbing script adapter. You answer with the rewritten phrase only, without quotes or explanations."
@@ -274,7 +275,7 @@ def run_tts_burst(units: list, plans: list, refs: dict, tgt_lang: str, work: pat
     if tgt_lang not in SUPPORTED_LANGUAGES:
         raise RuntimeError(f"target language {tgt_lang!r} not supported by Chatterbox")
     fit = fit or {"enabled": False}; qa_cfg = qa_cfg or {"enabled": False}
-    t0 = time.perf_counter(); m = ChatterboxMultilingualTTS.from_local(pathlib.Path(__file__).resolve().parents[2] / "models" / "chatterbox", "cuda", t3_model="v3")
+    t0 = time.perf_counter(); m = ChatterboxMultilingualTTS.from_local(pathlib.Path(__file__).resolve().parents[2] / "models" / "chatterbox", dev(), t3_model="v3")
     builtin = m.conds; guard = install_speech_token_guard(m); times["tts_load"] = round(time.perf_counter() - t0, 3)
     prev_end_of = {u["id"]: plans[i - 1]["slot"][1] for i, u in enumerate(units) if i > 0}    # dry-run estimate of the previous speech end (the aligner uses the real one)
     qa = None
@@ -287,7 +288,7 @@ def run_tts_burst(units: list, plans: list, refs: dict, tgt_lang: str, work: pat
         for mod in (m.t3, m.s3gen, m.ve):
             mod.to(dtype)
         if m.conds is not None:
-            m.conds = m.conds.to(device="cuda")
+            m.conds = m.conds.to(device=dev())
 
     def gen_part(u, k: int, text: str, dtype, salt: int = 0) -> dict:
         """One TTS part with the QA retry ladder: attempt 1 production settings, 2 new seed, 3 new seed + lower temperature. Keeps the best attempt."""
@@ -298,7 +299,7 @@ def run_tts_burst(units: list, plans: list, refs: dict, tgt_lang: str, work: pat
             s = base + 7919 * soff
             torch.manual_seed(s)
             tg = time.perf_counter()
-            with torch.autocast("cuda", dtype=dtype, enabled=dtype != torch.float32):
+            with torch.autocast(dev(), dtype=dtype, enabled=dtype != torch.float32):
                 wav = m.generate(text, language_id=tgt_lang, temperature=temp)
             wav = wav.detach().float().cpu()
             if not torch.isfinite(wav).all() or wav.abs().max() < 1e-4:
@@ -333,9 +334,9 @@ def run_tts_burst(units: list, plans: list, refs: dict, tgt_lang: str, work: pat
             by_spk.setdefault(u["speaker"], []).append((u, p))
         for spk, ups in by_spk.items():
             ref = refs[spk]["file"]
-            with torch.autocast("cuda", dtype=dtype, enabled=dtype != torch.float32):
+            with torch.autocast(dev(), dtype=dtype, enabled=dtype != torch.float32):
                 if ref: m.prepare_conditionals(ref)
-                else: m.conds = builtin.to(device="cuda"); guard.use_builtin()
+                else: m.conds = builtin.to(device=dev()); guard.use_builtin()
             for u, p in ups:
                 u["parts_original"] = list(u["parts"]); u["tts_parts"] = []; u["fit"] = []
                 for k, text in enumerate(u["parts"]):
@@ -384,7 +385,7 @@ def run_tts_burst(units: list, plans: list, refs: dict, tgt_lang: str, work: pat
 
     used = None
     t0 = time.perf_counter()
-    for dtype in (torch.float16, torch.float32):
+    for dtype in tts_dtypes(torch):
         try:
             for k_ in stats:
                 stats[k_] = 0 if not isinstance(stats[k_], float) else 0.0
@@ -398,7 +399,7 @@ def run_tts_burst(units: list, plans: list, refs: dict, tgt_lang: str, work: pat
     del m
     if qa is not None:
         qa.close()
-    torch.cuda.empty_cache()
+    empty_cache()
     stats["gen_seconds"] = round(stats["gen_seconds"], 2); stats["qa_seconds"] = round(stats["qa_seconds"], 2)
     stats["retry_success_rate"] = round(stats["retry_success"] / stats["retried_parts"], 3) if stats["retried_parts"] else None
     return {"model": "ChatterboxMultilingualTTS t3=v3 (models/chatterbox)", "sr": sr, "dtype": str(used).replace("torch.", ""), "language_id": tgt_lang,
@@ -586,7 +587,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
     fit = fit or {"enabled": False}; qa_cfg = qa_cfg or {"enabled": False}; fit_up = fit_up or {"enabled": False}
     import model_cache
     def _load_tts():
-        m_ = ChatterboxMultilingualTTS.from_local(pathlib.Path(__file__).resolve().parents[2] / "models" / "chatterbox", "cuda", t3_model="v3")
+        m_ = ChatterboxMultilingualTTS.from_local(pathlib.Path(__file__).resolve().parents[2] / "models" / "chatterbox", dev(), t3_model="v3")
         return m_, m_.conds
     t0 = time.perf_counter(); m, builtin = model_cache.get("chatterbox_v3", _load_tts)
     guard = install_speech_token_guard(m); times["tts_load"] = round(time.perf_counter() - t0, 3)
@@ -607,7 +608,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
         for mod in (m.t3, m.s3gen, m.ve):
             mod.to(dtype)
         if m.conds is not None:
-            m.conds = m.conds.to(device="cuda")
+            m.conds = m.conds.to(device=dev())
 
     def gen_sentence(u, text: str, dtype, salt: int = 0) -> tuple:
         """One whole-sentence generation with the QA retry ladder of run_tts_burst (same seed rule, part index 0). Returns (wav float32 1-D, record)."""
@@ -616,7 +617,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
         attempts, best = [], None
         for ai, (soff, temp) in enumerate(ladder):
             s = base + 7919 * soff; torch.manual_seed(s); tg = time.perf_counter()
-            with torch.autocast("cuda", dtype=dtype, enabled=dtype != torch.float32):
+            with torch.autocast(dev(), dtype=dtype, enabled=dtype != torch.float32):
                 wav = m.generate(text, language_id=tgt_lang, temperature=temp)
             wav = wav.detach().float().cpu()
             if not torch.isfinite(wav).all() or wav.abs().max() < 1e-4:
@@ -667,9 +668,9 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
             by_spk.setdefault(u["speaker"], []).append((u, p))
         for spk, ups in by_spk.items():
             ref = refs[spk]["file"]
-            with torch.autocast("cuda", dtype=dtype, enabled=dtype != torch.float32):
+            with torch.autocast(dev(), dtype=dtype, enabled=dtype != torch.float32):
                 if ref: m.prepare_conditionals(ref)
-                else: m.conds = builtin.to(device="cuda"); guard.use_builtin()
+                else: m.conds = builtin.to(device=dev()); guard.use_builtin()
             for u, p in ups:
                 text = u["translation"]; u["parts_original"] = [text]; u["fit"] = []; u["fit_up"] = []
                 y, rec = gen_sentence(u, text, dtype); spans = align(y, text); sp_s = speech_seconds(y, spans)
@@ -840,7 +841,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                     (f" retried ({len(rec['attempts'])} attempts)" if len(rec["attempts"]) > 1 else "") + (" QA-BAD" if rec["qa_bad_final"] else "") + (f" span-merges {merged_spans}" if merged_spans else ""))
 
     used = None; t0 = time.perf_counter()
-    for dtype in (torch.float16, torch.float32):
+    for dtype in tts_dtypes(torch):
         try:
             for k_ in stats:
                 stats[k_] = 0 if not isinstance(stats[k_], float) else 0.0
@@ -853,7 +854,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
     times["tts"] = round(time.perf_counter() - t0, 3); sr = m.sr; del m
     if qa_obj is not None and not model_cache.cached("tts_qa"):
         qa_obj.close()
-    torch.cuda.empty_cache()
+    empty_cache()
     stats["judge_calls"] = JUDGE_STATS["calls"]; stats["judge_seconds"] = JUDGE_STATS["seconds"]; stats["pause_marks_seconds"] = round(JUDGE_STATS.pop("pause_marks_s", 0.0), 2)
     for k_ in ("gen_seconds", "qa_seconds", "align_seconds", "fitup_qwen_seconds", "fitdown_qwen_seconds", "fitup_gen_qa_seconds", "judge_seconds", "gap_qa_seconds"):
         if k_ not in stats: continue

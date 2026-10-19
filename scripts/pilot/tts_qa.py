@@ -110,12 +110,14 @@ def lost_words(expected: str, *recognized: str, min_len: int = 4, thr: float = 0
 
 
 class TtsQA:
-    def __init__(self, device: str = "cuda", whisper_dir: str | pathlib.Path | None = None, w2v_dir: str | pathlib.Path | None = None):
+    def __init__(self, device: str | None = None, whisper_dir: str | pathlib.Path | None = None, w2v_dir: str | pathlib.Path | None = None):
         import torch
         from faster_whisper import WhisperModel
         from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
+        from pilot_common import dev, whisper_compute
+        device = device or dev()
         self.torch, self.device = torch, device
-        self.wh = WhisperModel(str(whisper_dir or MODELS / "whisper-large-v3"), device=device, compute_type="float16")
+        self.wh = WhisperModel(str(whisper_dir or MODELS / "whisper-large-v3"), device=device, compute_type=whisper_compute("float16"))
         p = str(w2v_dir or MODELS / "wav2vec2-base-960h")
         self.proc = Wav2Vec2Processor.from_pretrained(p)
         self.w2v = Wav2Vec2ForCTC.from_pretrained(p).to(device).eval()
@@ -160,4 +162,5 @@ class TtsQA:
     def close(self):
         import gc
         del self.wh, self.w2v
-        gc.collect(); self.torch.cuda.empty_cache()
+        gc.collect()
+        if self.device == "cuda": self.torch.cuda.empty_cache()

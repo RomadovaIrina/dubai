@@ -68,7 +68,7 @@ import time
 
 os.environ.setdefault("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", "1")   # pyannote 3.x checkpoints, as in scripts/check_pyannote.py
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from pilot_common import MODELS, QWEN_THREADS, ROOT, THREADS, gpu_info, write_json  # noqa: E402
+from pilot_common import MODELS, QWEN_THREADS, ROOT, THREADS, dev, empty_cache, gpu_info, tts_dtypes, whisper_compute, write_json  # noqa: E402
 from measure_stages import build_timeline, ff, probe                  # noqa: E402
 from benchmark_09_qwen_quant import SYSTEM_PROMPT                     # noqa: E402
 
@@ -128,7 +128,7 @@ def free_cuda(*objs) -> None:
     for o in objs:
         del o
     gc.collect()
-    torch.cuda.empty_cache()
+    empty_cache()
 
 
 def timed(times: dict, name: str):
@@ -159,7 +159,7 @@ def run_asr(wav16: pathlib.Path, language: str | None) -> tuple[list[dict], dict
     import torch  # noqa: F401  maps libcublas before ctranslate2 loads (scripts/check_whisper.py)
     from faster_whisper import WhisperModel
     import model_cache
-    m = model_cache.get("whisper_asr", lambda: WhisperModel(str(MODELS / "whisper-large-v3"), device="cuda", compute_type="int8_float16"))
+    m = model_cache.get("whisper_asr", lambda: WhisperModel(str(MODELS / "whisper-large-v3"), device=dev(), compute_type=whisper_compute("int8_float16")))
     segs, info = m.transcribe(str(wav16), word_timestamps=True, beam_size=5, vad_filter=False, language=language)
     out = []
     for s in segs:
@@ -212,7 +212,7 @@ def run_diarization(wav16: pathlib.Path) -> list[dict]:
     def _load():
         p_ = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1", use_auth_token=tok)
         if p_ is not None:
-            p_.to(torch.device("cuda"))
+            p_.to(torch.device(dev()))
         return p_
     pipe = model_cache.get("pyannote", _load)
     if pipe is None:
@@ -439,7 +439,7 @@ def run_tts(units: list[dict], refs: dict, tgt_lang: str, work: pathlib.Path, se
     if tgt_lang not in SUPPORTED_LANGUAGES:
         raise Blocker(f"target language {tgt_lang!r} not supported by Chatterbox: {sorted(SUPPORTED_LANGUAGES)}")
     with timed(times, "tts_load"):
-        m = ChatterboxMultilingualTTS.from_local(MODELS / "chatterbox", "cuda", t3_model="v3")
+        m = ChatterboxMultilingualTTS.from_local(MODELS / "chatterbox", dev(), t3_model="v3")
     builtin = m.conds
     guard = install_speech_token_guard(m)   # keeps the speech-token ids int64 under the fp16 cast (chatterbox_fp16.py: fp16 corrupted them -> unintelligible speech)
 
@@ -447,7 +447,7 @@ def run_tts(units: list[dict], refs: dict, tgt_lang: str, work: pathlib.Path, se
         for mod in (m.t3, m.s3gen, m.ve):
             mod.to(dtype)
         if m.conds is not None:
-            m.conds = m.conds.to(device="cuda")
+            m.conds = m.conds.to(device=dev())
 
     def synth_all(dtype) -> None:
         cast(dtype)
@@ -456,17 +456,17 @@ def run_tts(units: list[dict], refs: dict, tgt_lang: str, work: pathlib.Path, se
             by_spk.setdefault(u["speaker"], []).append(u)
         for spk, us in by_spk.items():
             ref = refs[spk]["file"]
-            with torch.autocast("cuda", dtype=dtype, enabled=dtype != torch.float32):
+            with torch.autocast(dev(), dtype=dtype, enabled=dtype != torch.float32):
                 if ref:
                     m.prepare_conditionals(ref)
                 else:
-                    m.conds = builtin.to(device="cuda"); guard.use_builtin()
+                    m.conds = builtin.to(device=dev()); guard.use_builtin()
             for u in us:
                 if "parts" in u:   # --alignment burst: one clip per part (seed per part), keeps the slot-mode path below byte-identical
                     u["tts_parts"] = []
                     for k, text in enumerate(u["parts"]):
                         torch.manual_seed(seed + 100 * u["id"] + k)
-                        with torch.autocast("cuda", dtype=dtype, enabled=dtype != torch.float32):
+                        with torch.autocast(dev(), dtype=dtype, enabled=dtype != torch.float32):
                             wav = m.generate(text, language_id=tgt_lang)
                         wav = wav.detach().float().cpu()
                         if not torch.isfinite(wav).all() or wav.abs().max() < 1e-4:
@@ -478,7 +478,7 @@ def run_tts(units: list[dict], refs: dict, tgt_lang: str, work: pathlib.Path, se
                     print(f"  [tts] u{u['id']:02d} {spk} {len(u['parts'])} parts {u['tts']['seconds']:.2f}s", flush=True)
                     continue
                 torch.manual_seed(seed + u["id"])
-                with torch.autocast("cuda", dtype=dtype, enabled=dtype != torch.float32):
+                with torch.autocast(dev(), dtype=dtype, enabled=dtype != torch.float32):
                     wav = m.generate(u["translation"], language_id=tgt_lang)
                 wav = wav.detach().float().cpu()
                 if not torch.isfinite(wav).all() or wav.abs().max() < 1e-4:
@@ -490,7 +490,7 @@ def run_tts(units: list[dict], refs: dict, tgt_lang: str, work: pathlib.Path, se
 
     used = None
     with timed(times, "tts"):
-        for dtype in (torch.float16, torch.float32):
+        for dtype in tts_dtypes(torch):
             try:
                 synth_all(dtype); used = dtype; break
             except Exception as e:  # same fallback ladder as scripts/check_chatterbox.py
