@@ -249,8 +249,9 @@ def main() -> int:
         for nm_ in ("lips", "skin"):
             if not res[nm_]: auto[nm_] = 0.0; continue
             r_ = np.median(np.array(res[nm_]), 0); auto[nm_] = float(np.interp(a.sharpen_auto, r_, amts)) if r_[0] < a.sharpen_auto else 0.0
+            auto[nm_ + "_slope"] = float(max(np.interp(auto[nm_] + 0.5, amts, r_) - np.interp(auto[nm_], amts, r_), 0.01) / 0.5)
             auto[nm_ + "_ratio_before"] = round(float(r_[0]), 3)
-        a.ls_sharpen = 0.0 if a.skin_texture == "source" else round(auto["skin"], 3); a.ls_sharpen_lips = round(max(0.0, auto["lips"] - a.ls_sharpen), 3)
+        a.ls_sharpen = round(auto["skin"], 3); a.ls_sharpen_lips = round(max(0.0, auto["lips"] - a.ls_sharpen), 3)
         times["sharpen_auto"] = round(time.perf_counter() - t0, 2); times["sharpen_auto_amounts"] = {**auto, "ls_sharpen": a.ls_sharpen, "ls_sharpen_lips": a.ls_sharpen_lips}
         print("  sharpen-auto:", times["sharpen_auto_amounts"], flush=True)
     lm_f = None; jj = None
@@ -384,6 +385,33 @@ def main() -> int:
             aw = aw * (1.0 - ((1 - al) * sil_w[m0] + al * sil_w[m1]))
         o = S[k].copy(); o[ya:yb, xa:xb] = np.clip(sk + aw[..., None] * (Lk - sk), 0, 255).round().astype(np.uint8)
         return o, 1, (alpha if k % 50 == 0 else None)
+    if a.sharpen_auto > 0:   # closed loop: composite sample frames, measure OUTPUT vs source sharpness (lips / lower-face skin), correct twice
+        t0 = time.perf_counter(); ks_ = [k for k in range(len(S)) if wm[int(np.clip(round(mpos[k]), 0, nm - 1))] >= 1 and np.isfinite(lm_at(k, mu_arr[k])).all()]
+        ks_ = ks_[:: max(1, len(ks_) // 40)][:40]; hist = []
+        def meas():
+            rl, rs = [], []
+            for k in ks_:
+                o, t_, _ = one(k)
+                if not t_: continue
+                lk = lm_at(k, mu_arr[k]); box = bb_s[k] if lm_f is not None else lerp(bb, mu_arr[k]); al_, roi_ = ellipse_alpha(box, H, W, a.edge_px)
+                if al_ is None: continue
+                ya, yb, xa, xb = roi_; lw = tms.mouth_width(lk)
+                lip_ = tms.poly_mask(lk[tms.LIPS_OUTER], roi_, 0.08 * lw, 0) > 0.5; skin_ = (al_ > 0.9) & ~(tms.poly_mask(lk[tms.LIPS_OUTER], roi_, 0.25 * lw, 0) > 0.5)
+                go = np.abs(cv2.Laplacian(cv2.cvtColor(o[ya:yb, xa:xb], cv2.COLOR_BGR2GRAY).astype(np.float32), cv2.CV_32F))
+                gs = np.abs(cv2.Laplacian(cv2.cvtColor(S[k][ya:yb, xa:xb], cv2.COLOR_BGR2GRAY).astype(np.float32), cv2.CV_32F))
+                if lip_.sum() > 30: rl.append(go[lip_].mean() / max(gs[lip_].mean(), 1e-3))
+                if skin_.sum() > 30: rs.append(go[skin_].mean() / max(gs[skin_].mean(), 1e-3))
+            return float(np.median(rl)) if rl else None, float(np.median(rs)) if rs else None
+        for it in range(3):
+            rl, rs = meas(); hist.append({"ls_sharpen": a.ls_sharpen, "ls_sharpen_lips": a.ls_sharpen_lips, "out_ratio_lips": rl, "out_ratio_skin": rs})
+            if it == 2: break
+            if rs is not None: a.ls_sharpen = round(float(np.clip(a.ls_sharpen + (a.sharpen_auto - rs) / auto["skin_slope"], 0, 8)), 3)
+            if rl is not None:
+                tot = float(np.clip(a.ls_sharpen + a.ls_sharpen_lips + (a.sharpen_auto - rl) / auto["lips_slope"] if it == 0 else a.ls_sharpen + a.ls_sharpen_lips + (a.sharpen_auto - rl) / auto["lips_slope"], 0, 10))
+                a.ls_sharpen_lips = round(max(0.0, tot - a.ls_sharpen), 3)
+        best = min(hist, key=lambda h: abs((h["out_ratio_lips"] or a.sharpen_auto) - a.sharpen_auto) + abs((h["out_ratio_skin"] or a.sharpen_auto) - a.sharpen_auto))
+        a.ls_sharpen, a.ls_sharpen_lips = best["ls_sharpen"], best["ls_sharpen_lips"]
+        times["sharpen_closed_loop"] = {"iterations": hist, "chosen": best, "seconds": round(time.perf_counter() - t0, 2)}; print("  sharpen closed loop:", best, flush=True)
     t0 = time.perf_counter(); out = [None] * len(S); fails = 0; touched = 0
     with cf.ThreadPoolExecutor(max_workers=a.threads) as ex:
         futs = {ex.submit(one, k): k for k in range(len(S))}

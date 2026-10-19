@@ -8,6 +8,6 @@ import numpy as np, json
 z=dict(np.load('$T/${id}_source_lm.npz')); tm=json.load(open('$T/${id}_master_timing_F.json')); tau=np.array(tm['tau_s'])
 z['mu']=np.interp(z['t'],tau,np.arange(len(tau),dtype=float)); z['j']=np.array(tm['j']); np.savez_compressed('$T/${id}_source_lm_F.npz',**z)"
 [ -e $T/${id}_source_lm_F_rigid.npz ] || { [ -f $T/${id}_source_lm_rigid.npz ] && ln -sf ${id}_source_lm_rigid.npz $T/${id}_source_lm_F_rigid.npz; }
-$PY scripts/quality/fps_composite.py --manifest $R/gen/${id}_genF.manifest.json --ls-raw $R/gen/${id}_genF_ls_raw.mp4 --out $R/comp/${id}_$tag.mp4 \
+$PY scripts/quality/fps_composite.py --manifest $R/gen/${id}_${GEN:-genF}.manifest.json --ls-raw $R/gen/${id}_${GEN:-genF}_ls_raw.mp4 --out $R/comp/${id}_$tag.mp4 \
   --master-timing $T/${id}_master_timing_F.json --register sim_ring --source-lm $T/${id}_source_lm_F.npz --threads 12 "$@" | tail -1
-bash scripts/quality/r3_eval.sh $id $tag $R/comp/${id}_$tag.mp4 $R/gen/${id}_genF.manifest.json
+bash scripts/quality/r3_eval.sh $id $tag $R/comp/${id}_$tag.mp4 $R/gen/${id}_${GEN:-genF}.manifest.json
