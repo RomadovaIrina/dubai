@@ -94,7 +94,7 @@ class AccelRunner:
 
     def run_frames(self, frames_rgb: np.ndarray, audio_wav: pathlib.Path, detections: list | None = None) -> tuple[np.ndarray, float]:
         t0 = time.perf_counter()
-        frames = self.acc.run_frames(frames_rgb, str(audio_wav), detections)
+        frames = self.acc.run_frames(frames_rgb, str(audio_wav), detections, video_fps=FPS)
         dt = round(time.perf_counter() - t0, 2); self._record(self.acc.last_stats, dt)
         return frames, dt
 

@@ -102,6 +102,7 @@ def main() -> int:
     ap.add_argument("--ls-sharpen-lips", type=float, default=0.0, help="EXTRA unsharp amount inside the outer lip contour of the LatentSync frame (on top of --ls-sharpen)")
     ap.add_argument("--edge-px", type=float, default=12.0); ap.add_argument("--threads", type=int, default=12); ap.add_argument("--crf", type=int, default=13)
     ap.add_argument("--max-fallback", type=float, default=0.02)
+    ap.add_argument("--master-fps", type=float, default=25.0, help="r3 experiment: frame rate of the master / LatentSync layer (30 = LatentSync run on the source frames)")
     ap.add_argument("--master-timing", default=None, help="r2: <id>_master_timing.json (master frame m shows source time tau[m], NOT m/25: ffmpeg -r 25 lags ~60 ms on 30 fps "
                     "sources). Given: mask / landmarks / registration target follow the TRUE time of each source frame (mu = tau^-1(t_k)); the mouth stays audio-synced (25 t_k)")
     ap.add_argument("--register", choices=["off", "rigid", "sim", "sim_ring"], default="off", help="r2: move the LatentSync layer from its own head pose to the shown source frame's: "
@@ -134,6 +135,7 @@ def main() -> int:
                     "mean (clean0 recipe at the source rate); head = box locked to the rigid head motion (anchor_filters.head_locked_boxes: sides / top "
                     "smoothed in head-stabilised coordinates, chin edge sigma 1)")
     a = ap.parse_args()
+    global FPS_M; FPS_M = float(a.master_fps)
     t_all = time.perf_counter(); times = {}
     man = json.loads(pathlib.Path(a.manifest).read_text()); work = pathlib.Path(man["work_dir"]); src = man["input"]
     t0 = time.perf_counter(); S, pts, tb, rate = decode_source(src); times["decode_source"] = round(time.perf_counter() - t0, 2)

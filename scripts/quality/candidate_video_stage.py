@@ -116,8 +116,11 @@ def main() -> int:
                     "generator frames spliced in at its master indices; lossless) for fps_composite.py --ls-raw; needs --mouth-only-pasteback on + --codeformer-scope mouth")
     ap.add_argument("--master-timing-mode", choices=["r25", "fps"], default="r25", help="r3 B: how the 25 fps master is made: r25 = `-r 25` (default, lags the "
                     "clock ~60 ms on 30 fps sources), fps = `-vf fps=25` (nearest source frame, mean clock error 0); sets DUB_MASTER_TIMING")
+    ap.add_argument("--ls-fps", type=int, default=25, help="r3 B experiment: frame rate of the master / gate / LatentSync (30 = the 30 fps source frames "
+                    "themselves with --master-timing-mode fps; LatentSync's audio windows follow via video_fps)")
     a = ap.parse_args()
     os.environ["DUB_MASTER_TIMING"] = a.master_timing_mode
+    if a.ls_fps != 25: os.environ["DUB_LS_FPS"] = str(a.ls_fps)
     import clean_face_stack as cfs
     cfs.enforce_clean(a.face_stack, a.codeformer, "optimized", what="candidate_video_stage")
     import run_clean_pipeline_05 as rp
