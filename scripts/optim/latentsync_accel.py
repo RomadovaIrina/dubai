@@ -116,6 +116,7 @@ class AccelLatentSync:
             self.compile_s = round(time.perf_counter() - t0, 3)
         self._image_processor = None
         self.last_stats: dict = {}
+        self.chunk_hook = None   # round 3: optional fn(audio_encoder, whisper_chunks) -> chunks, set per segment by the runner (r3_lipsync.SilenceMix)
 
     # ---------------------------------------------------------------------------------------------------------
     def image_processor(self):
@@ -154,6 +155,7 @@ class AccelLatentSync:
             t0 = time.perf_counter()
             whisper_feature = pipe.audio_encoder.audio2feat(str(audio_path))
             whisper_chunks = pipe.audio_encoder.feature2chunks(feature_array=whisper_feature, fps=video_fps)
+            if self.chunk_hook is not None: whisper_chunks = self.chunk_hook(pipe.audio_encoder, whisper_chunks)
             t_pre = time.perf_counter() - t0
 
             t0 = time.perf_counter()

@@ -74,6 +74,7 @@ class StableLatentSync(AccelLatentSync):
             ref_faces = self._ref_crops(ip) if (self.ref_mode == "fixed" and self.mode == "ls") else None
             t0 = time.perf_counter()
             feat = pipe.audio_encoder.audio2feat(str(audio_path)); chunks = pipe.audio_encoder.feature2chunks(feature_array=feat, fps=video_fps)
+            if self.chunk_hook is not None: chunks = self.chunk_hook(pipe.audio_encoder, chunks)
             t_pre = time.perf_counter() - t0; t0 = time.perf_counter()
             real = ip.face_detector; replay = None
             if detections is not None:
@@ -266,6 +267,11 @@ class StableRunner:
                        "steps": steps, "guidance": guidance, "seed": seed, "fp16": True, "stage2_512": True, "stride": stride, "ref_mode": ref_mode, "mode": mode,
                        "overlap": overlap, "window_len": window_len or 16, "bridge_len": bridge_len, "bridge_steps": bridge_steps}
         self.calls: list[dict] = []
+
+    silence_mix = None   # round 3: r3_lipsync.SilenceMix (dub-silent mouth), hooked per segment
+
+    def set_segment(self, start: int, n: int):
+        self.acc.chunk_hook = self.silence_mix.hook(start, n) if self.silence_mix is not None else None
 
     def run_frames(self, frames_rgb, audio_wav, detections=None):
         t0 = time.perf_counter(); frames = self.acc.run_frames(frames_rgb, str(audio_wav), detections); dt = round(time.perf_counter() - t0, 2)

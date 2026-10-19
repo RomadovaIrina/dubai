@@ -28,6 +28,9 @@ class MouthOnlyRunner:
         self.calls = inner.calls
         self.steps, self.guidance, self.seed, self.load_s = inner.steps, inner.guidance, inner.seed, inner.load_s; self.masked_frames = 0; self._boxes = None
 
+    def set_segment(self, start, n):
+        if hasattr(self.inner, "set_segment"): self.inner.set_segment(start, n)
+
     def boxes(self, detections, n):
         import numpy as np
         bb = [np.asarray(detections[i][0], np.float64) if i < len(detections) and detections[i][0] is not None else None for i in range(n)]
@@ -112,6 +115,8 @@ def main() -> int:
     ap.add_argument("--affine-precision", choices=["fp16", "fp32"], default="fp16", help="fp32: LatentSync AlignRestore in float32 (ls_geometry.py)")
     ap.add_argument("--anchor-round", choices=["on", "off"], default="on", help="off: sub-pixel affine anchors (ls_geometry.py)")
     ap.add_argument("--codeformer-precision", choices=["fp32", "parse16", "fp16"], default="fp16", help="fp32 = upstream numerics; parse16 = ParseNet under fp16 autocast; fp16 = CodeFormer net + ParseNet under autocast")
+    ap.add_argument("--silence-mix", type=float, default=0.0, help="round 3: dub-silent mouth, whisper conditioning moved toward the SOURCE speech by this amount where the source talks and no dub part sounds (r3_lipsync.py)")
+    ap.add_argument("--silence-ramp", type=int, default=6); ap.add_argument("--silence-min-s", type=float, default=0.3); ap.add_argument("--gaps", default=None, help="residual-gap JSON (track C) instead of the manifest stretches")
     a = ap.parse_args()
     import clean_face_stack as cfs
     cfs.enforce_clean(a.face_stack, a.codeformer, "optimized", what="candidate_video_stage")
@@ -165,6 +170,11 @@ def main() -> int:
     else:
         with rp.timed(times, "face_router_load"): router = faa.make_router("retinaface", a.face_min_w, a.face_min_h, a.retina_conf)
     with rp.timed(times, "latentsync_load"): runner = faa.AccelRunner(a.window_batch_size, not a.no_deepcache, "none", "auto", steps=a.steps, guidance=a.guidance, deepcache_interval=a.deepcache_interval)
+    if a.silence_mix > 0:   # round 3: dub-silent mouth (r3_lipsync.SilenceMix), stretches in absolute master frames
+        import r3_lipsync as r3
+        N_all = man["lipsync"]["master_frames"]; sm = r3.silent_mask(man, N_all, a.silence_min_s, gaps=r3.load_gaps(a.gaps) if a.gaps else None)
+        runner.silence_mix = r3.SilenceMix(base_work / "own_audio_16k.wav", r3.ramp(sm, a.silence_ramp), a.silence_mix)
+        man["silence_mix"] = {"lam": a.silence_mix, "ramp": a.silence_ramp, "min_s": a.silence_min_s, "gaps": a.gaps, "frames": int(sm.sum())}
     rec_cls = None
     if a.mouth_only_pasteback == "on":
         Mo = MouthOnlyRunner

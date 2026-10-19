@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+"""nothp CMD [ARGS...]: run CMD with transparent huge pages disabled for it and all its children (prctl PR_SET_THP_DISABLE, kept across
+exec / fork) and numpy's MADV_HUGEPAGE hint off. Round 3 (2026-10-19): on a host with fragmented memory every THP fault does direct
+compaction; numpy / torch madvise large buffers -> page faults at ~2 MB/s, the 25 fps video stage ran ~5-10x slower (512 MB touch:
+>100 s with THP, 0.3 s without)."""
+import ctypes, os, sys
+if ctypes.CDLL(None, use_errno=True).prctl(41, 1, 0, 0, 0) != 0:
+    sys.stderr.write(f"nothp: prctl(PR_SET_THP_DISABLE) failed errno {ctypes.get_errno()}\n")
+os.environ["NUMPY_MADVISE_HUGEPAGE"] = "0"
+os.execvp(sys.argv[1], sys.argv[1:])

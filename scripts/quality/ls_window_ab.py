@@ -196,6 +196,8 @@ def main() -> int:
     ap.add_argument("--anchor-round", choices=["on", "off"], default="on", help="off: LatentSync's affine uses the sub-pixel anchors (upstream np.round removed)")
     ap.add_argument("--affine-precision", choices=["fp16", "fp32"], default="fp16", help="fp32: LatentSync's AlignRestore (crop warp, paste-back warp and "
                     "its inverse matrix) in float32 instead of the upstream float16 default (translations of ~500 px are quantised to 0.25-0.5 px in fp16)")
+    ap.add_argument("--silence-mix", type=float, default=0.0, help="round 3: dub-silent mouth, whisper conditioning moved toward the SOURCE speech by this amount where the source talks and no dub part sounds (r3_lipsync.py)")
+    ap.add_argument("--silence-ramp", type=int, default=6); ap.add_argument("--silence-min-s", type=float, default=0.3); ap.add_argument("--gaps", default=None, help="residual-gap JSON (track C) instead of the manifest stretches")
     ap.add_argument("--outbox", default=None, help="hardlink the viewable clips into this dir (e.g. /workspace/dub/outbox/p2-03win-L3)")
     a = ap.parse_args()
     import clean_face_stack as cfs
@@ -266,6 +268,12 @@ def main() -> int:
         runner = StableRunner(a.window_batch_size, not a.no_deepcache, a.steps, a.guidance, 1247, a.deepcache_interval, stride=a.stride, ref_mode=a.ref_mode, mode=a.mode,
                               overlap=a.overlap, window_len=a.window_len, bridge_len=a.bridge_len, bridge_steps=a.bridge_steps)
     times["latentsync_load"] = round(time.perf_counter() - t, 3)
+    silence_info = None
+    if a.silence_mix > 0 and not a.precomputed:
+        import r3_lipsync as r3
+        N_all = man["lipsync"]["master_frames"]; sm = r3.silent_mask(man, N_all, a.silence_min_s, gaps=r3.load_gaps(a.gaps) if a.gaps else None)
+        runner.silence_mix = r3.SilenceMix(work_b / "own_audio_16k.wav", r3.ramp(sm, a.silence_ramp), a.silence_mix, frame_offset=f0)
+        silence_info = {"lam": a.silence_mix, "ramp": a.silence_ramp, "min_s": a.silence_min_s, "gaps": a.gaps, "window_frames": int(sm[f0:f1].sum())}
     ref_info = None
     if a.ref_mode == "fixed" and not a.precomputed:
         lm_npz = pathlib.Path(a.ref_lm) if a.ref_lm else None
@@ -327,7 +335,7 @@ def main() -> int:
     times["total"] = round(time.perf_counter() - t_all, 3)
     wm = {k: man[k] for k in ("input", "work_dir", "source", "dubbed_track", "speech_intervals")}
     wm.update({"face_stack": a.face_stack, "output": str(clip), "output_dubonly": str(dubonly), "stage_clips": stage_clips, "window": {"t0": round(t0s, 3), "t1": round(f1 / FPS, 3), "f0": f0, "f1": f1},
-               "variant": {"tag": a.tag, "mode": a.mode, "audio": a.audio, "stride": a.stride, "ref_mode": a.ref_mode, "reference": ref_info,
+               "variant": {"tag": a.tag, "silence_mix": silence_info, "mode": a.mode, "audio": a.audio, "stride": a.stride, "ref_mode": a.ref_mode, "reference": ref_info,
                            "video_params": {k: v for k, v in vars(a).items() if k not in ("manifest", "out", "tag")}},
                "speech_gate": {"intervals_window": gate, "source": "baseline manifest"}, "lipsync": rep, "stage_seconds": times,
                "peak_vram_mib_torch": peak, "gpu": gpu_info(), "mux_audio": str(mux_src), "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
