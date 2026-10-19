@@ -9,7 +9,7 @@ import numpy as np
 # runner stage -> (pipeline step, device of its model). Stages not listed are CPU / IO glue.
 DEVICE = {"vad": "Silero VAD", "asr": "faster-whisper large-v3", "diarization": "pyannote 3.1", "segmentation": "Qwen2.5-7B (segmentation)",
           "translation_load": "Qwen2.5-7B load", "translation": "Qwen2.5-7B (translation)", "tts_load": "Chatterbox load", "qa_load": "TTS QA load (Whisper + wav2vec2)",
-          "tts": "Chatterbox TTS + QA + fit (Qwen refit)", "background_sep": "Spleeter 2stems (CPU, TF venv)", "background_mix": "bed mix",
+          "tts": "Chatterbox TTS + QA + fit (Qwen refit)", "background_sep": "Spleeter 2stems (torch port, GPU; DUB_SPLEETER_BACKEND=tf = CPU)", "background_mix": "bed mix",
           "speech_gate": "Silero VAD (dub)", "face_stack_mediapipe": "MediaPipe face stack (CPU)", "latentsync_load": "LatentSync load",
           "latentsync": "LatentSync 1.6", "final_assembly": "composite + mux (25 fps)"}
 
