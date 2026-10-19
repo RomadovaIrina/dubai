@@ -2,6 +2,8 @@
 
 Columns: one per reference run. Cell = verdict + numbers per video (01 / 02 / 03 / 04 / 05). cand5: the canonical baseline reports (its mp4s are gone and cannot be re-rendered without the non-commercial models), so its video items are NOT MEASURED unless the report has them.
 
+Audio per column: cand5 = its own (HDEMUCS bed, reference numbers only); **clean0** = cand5 canonical (HDEMUCS bed: control only); **r2m25** = cand5 canonical (HDEMUCS bed: control only); **r2mfix30** = –
+
 | spec | item | cand5 | clean0 | r2m25 | r2mfix30 |
 |---|---|---|---|---|---|
 | 9.4 / 5.6 | fps, resolution, frames, duration, H.264 vs source | **FAIL** (25 fps CFR master muxed; coordinator gap table 17.10) | **FAIL** 01: 25fps 2542/2542f 480x848 Δ+0.01s h264 / 02: 25fps 2773/3324f 464x848 Δ+0.05s h264 / 03: 25fps 2260/2710f 464x848 Δ+0.07s h264 / 04: 25fps 1349/1617f 464x848 Δ+0.06s h264 | **FAIL** 04: 25fps 1349/1617f 464x848 Δ+0.06s h264 | NOT MEASURED |

@@ -188,6 +188,14 @@ def cmd_score(a):
     return 0
 
 
+def audio_source(man):
+    """which audio a run muxes: the canonical cand5 track (HDEMUCS bed: video-only CONTROL, not a candidate) or a delivered clean track."""
+    dd = (man.get("candidate") or {}).get("dubbed_dir") or man.get("audio_dir") or man.get("work_dir") or ""
+    if "/handoff/in/C/" in dd or "audio-r" in dd: return "C " + pathlib.Path(dd).parent.name + " (Spleeter bed, clean)"
+    if "/artifacts/baseline/" in dd or "/canonical/" in dd: return "cand5 canonical (HDEMUCS bed: control only)"
+    return "own run: " + dd
+
+
 def fmt(x, nd=2):
     if x is None: return "–"
     if isinstance(x, bool): return "✓" if x else "✗"
@@ -211,6 +219,7 @@ def cmd_table(a):
                 except Exception: cells.append("–")
         L.append(f"| {name} | " + " | ".join(cells) + " |")
     L.append("| metric | " + " | ".join(f"{i} {lab}" for i in ids for lab in a.label) + " |"); L.append("|---|" + "---:|" * (len(ids) * len(a.label)))
+    line("audio source", lambda r: audio_source(json.loads(pathlib.Path(r["manifest"]).read_text())))
     line("9.4 pass (res / fps / frames / H.264 / dur)", lambda r: r["spec_9_4"]["pass"])
     line("output fps (source)", lambda r: f"{r['output']['fps']:g} ({r['source']['fps']:g})")
     line("frames out / source", lambda r: f"{r['output']['frames']}/{r['source']['frames']}")

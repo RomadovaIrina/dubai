@@ -6,7 +6,7 @@ JSON of the audio actually muxed, and for cand5 (no mp4 left: video NOT MEASURED
 from __future__ import annotations
 import argparse, json, pathlib, re, sys
 import numpy as np
-HERE = pathlib.Path(__file__).resolve().parent; sys.path.insert(0, str(HERE.parent / "pilot"))
+HERE = pathlib.Path(__file__).resolve().parent; sys.path.insert(0, str(HERE.parent / "pilot")); sys.path.insert(0, str(HERE))
 CANON = pathlib.Path("/workspace/dub/canonical/artifacts/baseline"); IDS = ["01", "02", "03", "04", "05"]
 
 
@@ -80,6 +80,13 @@ def main() -> int:
     L = ["# Spec status (round 3, Agent D)", "",
          "Columns: one per reference run. Cell = verdict + numbers per video (01 / 02 / 03 / 04 / 05). cand5: the canonical baseline reports "
          "(its mp4s are gone and cannot be re-rendered without the non-commercial models), so its video items are NOT MEASURED unless the report has them.", ""]
+    import r3_scorecard as sc
+    def src_of(lab):
+        for i in IDS:
+            x = data[lab][i]
+            if x: return sc.audio_source(json.loads(pathlib.Path(x["score"]["manifest"]).read_text()))
+        return "–"
+    L += ["Audio per column: cand5 = its own (HDEMUCS bed, reference numbers only); " + "; ".join(f"**{lab}** = {src_of(lab)}" for lab in a.label), ""]
     hdr = "| spec | item | cand5 | " + " | ".join(a.label) + " |"; L += [hdr, "|---|---|" + "---|" * (len(a.label) + 1)]
 
     def row(spec, item, c5cell, fn):
