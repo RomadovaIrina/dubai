@@ -149,7 +149,17 @@ def _cuda_peak():
     t = sys.modules.get("torch")
     if t is None or not t.cuda.is_available() or not t.cuda.is_initialized(): return None
     return {"torch_peak_alloc_mib": round(t.cuda.max_memory_allocated() / 2**20), "torch_alloc_mib": round(t.cuda.memory_allocated() / 2**20),
-            "torch_reserved_mib": round(t.cuda.memory_reserved() / 2**20)}
+            "torch_reserved_mib": round(t.cuda.memory_reserved() / 2**20), "torch_peak_reserved_mib": round(t.cuda.max_memory_reserved() / 2**20)}
+
+
+def _dev_used():
+    """device-wide used MiB right now (nvidia-smi; sees llama.cpp, which torch does not). Only with DUB_STAGE_LOG."""
+    if not os.environ.get("DUB_STAGE_LOG"): return {}
+    try:
+        o = subprocess.run(["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits"], capture_output=True, text=True, timeout=5).stdout.split()
+        return {"dev_used_end_mib": int(o[0])}
+    except Exception:
+        return {}
 
 
 def timed(times: dict, name: str):
@@ -159,7 +169,9 @@ def timed(times: dict, name: str):
 
         def __exit__(self, *exc):
             times[name] = round(time.perf_counter() - self.t0, 3)
-            stage_log({"kind": "stage", "name": name, "t0": self.w0, "t1": time.time(), "wall_s": times[name], "peak_since_stage_start": self.reset, **(_cuda_peak() or {})})
+            if os.environ.get("DUB_STAGE_LOG") and "torch" in sys.modules and sys.modules["torch"].cuda.is_available() and sys.modules["torch"].cuda.is_initialized():
+                sys.modules["torch"].cuda.synchronize()
+            stage_log({"kind": "stage", "name": name, "t0": self.w0, "t1": time.time(), "wall_s": times[name], "peak_since_stage_start": self.reset, **(_cuda_peak() or {}), **_dev_used()})
             return False
     return _T()
 
@@ -1041,8 +1053,11 @@ def main() -> int:
                                            log=lambda m_: print(m_, flush=True))
             if a.qwen_resident == "on":   # residency measurement (pilot 0.4 with Qwen on the GPU): keep Qwen loaded through the video stage
                 resident_qwen = llm
+            if a.qwen_resident != "on" and llm is not None and hasattr(llm, "close"):
+                llm.close()    # r3 D: free the llama.cpp CUDA buffers explicitly (do not rely on __del__ / refcounts)
             llm = tr = None    # release Qwen (the translation tuple also holds a reference)
             gc.collect()       # --qwen-gpu-layers: frees the llama.cpp CUDA buffers before LatentSync
+            stage_log({"kind": "mark", "name": "qwen_released", "t0": time.time(), "t1": time.time(), "wall_s": 0, **(_cuda_peak() or {}), **_dev_used()})
         else:
             man["tts"] = run_tts(units, refs, tgt, work, a.seed, times)
 
