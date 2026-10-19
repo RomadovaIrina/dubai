@@ -16,7 +16,7 @@ DUB_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"; export DUB_ROOT; . 
 arg=$1; O=${2:-/workspace/dub/artifacts/r3d/e2e_v5}; mkdir -p "$O"
 if [ -f "$arg" ]; then in=$arg; id=$(basename "${arg%.*}"); else id=$arg; in=$(ls /workspace/dub/inputs/test_videos_raw/${id}.* | head -1); fi
 TAG=${TAG:-e2e_v5}; W=$O/work_$id; rm -rf "$W"; mkdir -p "$W"; LOG=$O/${id}_${TAG}.log; : > "$LOG"
-FLOW_GAP=${SENTENCE_FLOW_GAP:-0.2}
+FLOW_GAP=${SENTENCE_FLOW_GAP:-1.0}   # generic default (03 / 04 A/B: joins inside sentences 15 / 10 -> 7 / 7, source-speaks-dub-silent +1.8 / +2.2 s; 3.0 would add +6-7.5 s)
 export PYTHONPATH=third_party/llama_cuda${PYTHONPATH:+:$PYTHONPATH} PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True DUB_CUT_SNAP=1 DUB_EQPOWER_FADE=1 DUB_MERGE_VOICED_CUTS=1
 nvidia-smi --query-gpu=timestamp,memory.used,utilization.gpu --format=csv,noheader,nounits -lms 500 > "$W/nvsmi.csv" 2>/dev/null & NV=$!
 trap 'kill $NV 2>/dev/null' EXIT
