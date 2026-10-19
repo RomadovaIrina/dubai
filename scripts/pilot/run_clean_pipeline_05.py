@@ -969,6 +969,9 @@ def main() -> int:
         with timed(times, "asr"):
             segments, asr_meta = run_asr(wav16, a.source_lang)
         src_lang = a.source_lang or asr_meta["language"]
+        # r3: diarization BEFORE Qwen is loaded (pyannote ~2.8 GB + Qwen Q8 on all GPU layers 8.3 GB = 11.2 GB peak on the shared GPU); output unchanged
+        with timed(times, "diarization"):
+            turns = run_diarization(wav16)
         llm = None; man["segmentation"] = {"mode": "whisper"}
         if a.alignment == "burst" and a.segmentation == "sentence":
             from sentence_units import sentence_units
@@ -988,8 +991,6 @@ def main() -> int:
         if src_lang == tgt:
             print(f"  [warn] source language equals target language ({tgt}); translation is an identity direction", flush=True)
 
-        with timed(times, "diarization"):
-            turns = run_diarization(wav16)
         assign_speakers(units, turns)
         man["diarization"] = {"model": "pyannote/speaker-diarization-3.1", "turns": turns, "speakers": sorted({t["speaker"] for t in turns})}
         print(f"  [diarization] {len(turns)} turns, speakers={man['diarization']['speakers']}", flush=True)
@@ -1024,7 +1025,7 @@ def main() -> int:
             if a.qwen_tts_gpu_layers is not None and a.qwen_tts_gpu_layers != QWEN_GPU_LAYERS:
                 # r3 shared GPU: Qwen ran fully on the GPU for segmentation + translation (nothing else loaded); for the TTS session (fit rewrites next to
                 # Chatterbox + QA) it is reloaded with fewer GPU layers so the stage stays <= ~10 GB (Q8_0: 14 layers = 4.7 GB)
-                del llm; gc.collect(); g = QWEN_GPU_LAYERS; QWEN_GPU_LAYERS = a.qwen_tts_gpu_layers
+                llm.close(); del llm, tr; gc.collect(); g = QWEN_GPU_LAYERS; QWEN_GPU_LAYERS = a.qwen_tts_gpu_layers   # close(): the tuple `tr` still referenced it -> both copies were on the GPU (01: 15.5 GB)
                 tl = {}; llm, _ = load_llm(tl); QWEN_GPU_LAYERS = g
                 man["translation"]["tts_session_gpu_layers"] = a.qwen_tts_gpu_layers; times["qwen_reload"] = tl.get("translation_load")
         else:

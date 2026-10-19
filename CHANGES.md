@@ -63,3 +63,4 @@ For a separate venv instead: `CMAKE_ARGS=... FORCE_CMAKE=1 uv pip install --pyth
 Generator: r2best (`--anchor-filter flow:4 --anchor-round off --affine-precision fp32 --mask-track head`) + `--guidance 2.0 --bridge-len 8
 --bridge-steps 4 --max-ls-frames 400` + B's fps master (`--master-timing-mode fps`). Composite: `r3_fix30.sh` mode r3cand
 (`--register sim_ring --source-lm --colour-match upper --seam-lf 4 --sharpen-auto 0.95 --skin-texture source --lip-guard on --edge-px 12`).
+| 8 | `r3-audio` 5ef9cbf (C r3: loudness normalisation -16 LUFS / TP <= -1, TTS lexicon, Qwen reload fix, peak-safe declick) | CHANGES.md: C's kept as reports/experiments/r3-audio/CHANGES_C.md |
