@@ -362,6 +362,9 @@ def process(src: pathlib.Path, out_dir: pathlib.Path, runner: LatentSyncRunner |
 
 
 def main() -> int:
+    import os
+    if os.environ.get("DUB_ALLOW_NC", "0") != "1":   # CLEAN-ONLY (2026-10-16)
+        raise SystemExit("face_aware_latentsync.py CLI loads non-commercial face models (InsightFace classification); use candidate_video_stage.py / run_clean_pipeline_05.py (clean defaults), or DUB_ALLOW_NC=1 for a research-only run")
     ap = argparse.ArgumentParser()
     ap.add_argument("videos", nargs="+")
     ap.add_argument("--out-dir", default="/tmp/dabai_pilot_08fa")

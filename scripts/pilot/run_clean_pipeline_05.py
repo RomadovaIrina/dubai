@@ -675,7 +675,7 @@ def main() -> int:
     ap.add_argument("--target-lang", required=True, help="Chatterbox language id (en, de, ru, ...)")
     ap.add_argument("--no-codeformer", action="store_true", help="pilot 0.5 contract: the clean pipeline without CodeFormer (= --codeformer off)")
     ap.add_argument("--codeformer", choices=["off", "optimized"], default=None,
-                    help="off = frozen baseline (never invoked); optimized = week-2 in-memory CodeFormer on LATENT_SYNC frames (optimized backend only)")
+                    help="off = default (CLEAN-ONLY 2026-10-16); optimized = week-2 in-memory CodeFormer on LATENT_SYNC frames (non-commercial: needs DUB_ALLOW_NC=1)")
     ap.add_argument("--codeformer-w", type=float, default=1.0, help="CodeFormer fidelity weight w (optimized mode); 1.0 = week-2 A/B choice on 04 (smallest SyncNet drop, AV offset 0)")
     ap.add_argument("--codeformer-batch", type=int, default=8, help="faces per CodeFormer batch (optimized mode); 8 = week-2 choice (5 GB alone, no E2E peak increase)")
     ap.add_argument("--codeformer-landmarks", choices=["insightface", "retinaface"], default="insightface",
@@ -742,9 +742,9 @@ def main() -> int:
                     "all models + Qwen resident on the GPU at the LatentSync peak = the pilot 0.4 question); off = released before LatentSync")
     ap.add_argument("--qwen-gpu-layers", type=int, default=0, help="Qwen layers offloaded to the GPU (-1 = all); 0 = frozen CPU baseline. Needs a CUDA llama-cpp-python build "
                                                                    "(A/B 2026-10-12: translation 18x faster, outputs not identical to the CPU)")
-    ap.add_argument("--background", choices=["on", "off"], default="on",
+    ap.add_argument("--background", choices=["on", "off"], default="off",
                     help="final mix: on = source background bed (Hybrid Demucs accompaniment, original voice/bed balance, ducked under the dub) under the dubbed voice; "
-                         "off = dubbed voice over digital silence (previous behaviour). LatentSync / speech gate always use the clean dubbed voice. Default on since 2026-10-12 (dead air 16-54 s -> 0-6 s, WER unchanged)")
+                         "off = dubbed voice over digital silence (previous behaviour). LatentSync / speech gate always use the clean dubbed voice. Was default on 2026-10-12..16 (dead air 16-54 s -> 0-6 s); default OFF since 2026-10-16: the HDemucs MUSDB18-HQ weights are non-commercial (needs DUB_ALLOW_NC=1) until a clean bed exists")
     ap.add_argument("--bg-duck-db", type=float, default=-6.0, help="--background on: bed attenuation while the dub speaks (dB)")
     ap.add_argument("--bg-src-duck-db", type=float, default=0.0, help="--background on: extra bed attenuation where the source speaks and the dub is silent (Demucs voice residue); 0 = off")
     ap.add_argument("--bg-offset-db", type=float, default=0.0, help="--background on: bed level relative to the original voice/background balance (dB)")
@@ -752,7 +752,7 @@ def main() -> int:
     ap.add_argument("--min-ls-frames", type=int, default=25, help="VALID_FACE runs shorter than this are passed through")
     ap.add_argument("--max-verify-depth", type=int, default=3)
     ap.add_argument("--seed", type=int, default=1247)
-    ap.add_argument("--video-backend", choices=["baseline", "optimized"], default="baseline",
+    ap.add_argument("--video-backend", choices=["baseline", "optimized"], default="optimized",
                     help="baseline = face_aware_latentsync.py functions (insightface classification, sequential windows); "
                          "optimized = face_aware_latentsync_accel.py (RetinaFace router, batched windows, SDPA/compile options)")
     ap.add_argument("--face-router", choices=["retinaface", "insightface"], default=OPTIMIZED_DEFAULTS["face_router"], help="optimized backend only")
@@ -778,10 +778,13 @@ def main() -> int:
                     help="with --mouth-only-pasteback: face = CodeFormer on the composited frame (re-renders eyes / brows, previous behaviour); mouth = CodeFormer on the raw "
                          "LatentSync frame, then the mouth-only composite (eyes / brows stay the source; 2026-10-13 'мимика дергается')")
     ap.add_argument("--ls-landmark-smooth", type=int, default=0, help="optimized backend: centred moving average (+-N frames) of the landmarks replayed into LatentSync's affine crop")
-    ap.add_argument("--face-stack", choices=["insightface", "mediapipe"], default="insightface",
+    ap.add_argument("--face-stack", choices=["insightface", "mediapipe"], default="mediapipe",
                     help="optimized backend: mediapipe = clean face stack (scripts/pilot/clean_face_stack.py, Apache-2.0 MediaPipe Face Landmarker in /venv/mediapipe) "
                          "for the router, LatentSync's crop / verify detections and the mouth-mask landmarks; InsightFace / RetinaFace loaders are blocked. "
-                         "insightface = previous stack (non-commercial weights). Use with --codeformer off for the clean pipeline (clean0)")
+                         "insightface = previous stack (non-commercial weights, needs DUB_ALLOW_NC=1). Default since 2026-10-16 (CLEAN-ONLY)")
+    ap.add_argument("--max-faces", type=int, default=2, help="spec 8.2: faces tracked per frame; with >= 2 faces only the active speaker's face (diarization <-> mouth motion) is lip-synced")
+    ap.add_argument("--pose-precheck", choices=["on", "off"], default="on", help="spec 5.4: > 30 %% of face frames with |yaw| > 30 deg -> voice-only result (no lip-sync), flagged")
+    ap.add_argument("--pose-gate-deg", type=float, default=0.0, help="spec 5.5 test: frames with |yaw| above this go to pass-through (held +-3 frames, eased by the crossfade); 0 = off")
     ap.add_argument("--mp-anchor-calib", choices=["on", "off"], default="on", help="--face-stack mediapipe: constant anchor correction to LatentSync's training alignment")
     ap.add_argument("--video-prep", choices=["sequential", "parallel"], default="sequential",
                     help="optimized backend: parallel = master decode + router / LatentSync face detection of every frame in a thread during the audio stage, "
@@ -795,9 +798,9 @@ def main() -> int:
         if not llama_cpp.llama_supports_gpu_offload():
             print(f"--qwen-gpu-layers {a.qwen_gpu_layers}: the imported llama_cpp ({llama_cpp.__file__}) is a CPU build", file=sys.stderr); return 2
     if a.codeformer is None:
-        a.codeformer = "off" if a.no_codeformer else None
-    if a.codeformer is None:
-        print("CodeFormer mode not chosen: pass --no-codeformer (= --codeformer off, pilot baseline) or --codeformer optimized", file=sys.stderr); return 2
+        a.codeformer = "off"          # CLEAN-ONLY default (2026-10-16): CodeFormer is S-Lab non-commercial
+    import clean_face_stack as cfs   # refuses NC settings unless DUB_ALLOW_NC=1, then blocks every NC loader in this process
+    cfs.enforce_clean(a.face_stack, a.codeformer, a.video_backend, what="run_clean_pipeline_05", background=a.background)
     if a.no_codeformer and a.codeformer != "off":
         print("--no-codeformer contradicts --codeformer optimized", file=sys.stderr); return 2
     if a.codeformer != "off" and a.video_backend != "optimized":
@@ -980,11 +983,25 @@ def main() -> int:
                 import clean_face_stack as cfs
                 cfs.guard_nc()
                 with timed(times, "face_stack_mediapipe"):
-                    prep = cfs.CleanPrep(src, work, a.face_min_w, a.face_min_h, calib=a.mp_anchor_calib == "on")
-                man["face_stack"] = {**prep.info, "times": prep.times}
+                    prep = cfs.CleanPrep(src, work, a.face_min_w, a.face_min_h, calib=a.mp_anchor_calib == "on", pose_precheck=a.pose_precheck == "on", pose_gate_deg=a.pose_gate_deg,
+                                     max_faces=a.max_faces, turns=(man.get("diarization") or {}).get("turns"))
+                man["face_stack"] = {**prep.info, "times": prep.times}; man["frame_map"] = prep.frame_map
+                if prep.voice_only:
+                    flag = "voice_only_face_stack_failed" if prep.face_stack_failed else "voice_only_pose_precheck"
+                    man["result_flags"] = sorted(set(man.get("result_flags", [])) | {flag})
+                    print(f"  [face-stack] VOICE-ONLY ({flag}): " + (prep.failure or f"{prep.pose_info['precheck']['fraction_over']:.0%} of face frames |yaw| > 30 deg (spec 5.4)") + " -> no lip-sync", flush=True)
                 print(f"  [face-stack] mediapipe {prep.info['face_frames']}/{prep.info['frames']} face frames, {prep.info['ls_detections']} LatentSync detections {prep.times}", flush=True)
             man["lipsync"] = run_lipsync_optimized(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), mux_aac, out, a, times,
                                                    speech_gate=speech_gate, prep=prep)
+            if a.face_stack == "mediapipe":   # spec 11: degraded frames (held landmarks, LatentSync failures) vs the 2 % SUCCESS / PARTIAL_SUCCESS rule
+                lsr = man["lipsync"]; elig = int(lsr["frame_classes"].get("VALID_FACE", 0))
+                failed = int((lsr["by_action"].get("PASS_THROUGH_LS_FAILED") or {}).get("frames", 0)); held = int(man["face_stack"].get("held_landmark_frames", 0))
+                ratio = (held + failed) / max(elig, 1)
+                status = "PARTIAL_SUCCESS" if (prep.voice_only or ratio > 0.02) else "SUCCESS"
+                man["video_status"] = {"status": status, "eligible_lipsync_frames": elig, "held_landmark_frames": held, "latentsync_failed_frames": failed,
+                                       "degraded_ratio": round(ratio, 4), "rule": "SUCCESS if degraded <= 2 % of eligible frames; voice-only fallback = PARTIAL_SUCCESS",
+                                       "flags": man.get("result_flags", [])}
+                print(f"  [status] {status}: degraded {held + failed}/{elig} ({ratio:.2%}) flags {man.get('result_flags', [])}", flush=True)
         else:
             man["lipsync"] = run_lipsync(src, work, pathlib.Path(man["dubbed_track"]["wav16k"]), mux_aac,
                                          out, a.min_ls_frames, a.max_verify_depth, times)

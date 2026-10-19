@@ -10,6 +10,25 @@ Legend: **YES** = code and weights licences both allow commercial use; **NO** = 
 that may run here only as a diagnostic upper bound.
 
 
+## FINAL LICENCE RULE (user decision 2026-10-16, supersedes the stricter CLEAN-ONLY "YES* is not enough" line)
+
+**The licence of the FILES decides.** Allowed: code and weights under MIT / Apache-2.0 / BSD / ISC / OpenRAIL (honour the use restrictions).
+Not allowed: non-commercial / research-only licences, and weights with NO licence statement. Training-data provenance is recorded for a later
+legal review and no longer blocks.
+
+| component | file licence (code / weights) | verdict | note |
+|---|---|---|---|
+| LatentSync 1.6 | Apache-2.0 / OpenRAIL++ | **allowed** | honour the Open RAIL++-M use restrictions in our ToS; trained on VoxCeleb2 + HDTF (+ undisclosed) -> recorded |
+| MediaPipe Face Landmarker | Apache-2.0 / Apache-2.0 (model cards) | **allowed** | the clean face stack |
+| Whisper tiny, sd-vae-ft-mse, Silero VAD, DeepCache, kornia | MIT / MIT / MIT / Apache-2.0 / Apache-2.0 | **allowed** | |
+| TBDub (+ Wan2.2 VAE, HuBERT-large) | Apache-2.0 / Apache-2.0 | **allowed** | proprietary + X-Dub-inherited data -> recorded |
+| MuseTalk 1.5 code + UNet weights | MIT / "available for any purpose, even commercially" | **allowed** | |
+| MuseTalk's BiSeNet face parser `79999_iter.pth` (zllrunning/face-parsing.PyTorch) | MIT repo, weights file distributed via Google Drive without its own licence statement | **NO** (no weights licence, same pattern as RetinaFace R50) | MuseTalk only with this parser replaced (e.g. our mouth ellipse / MediaPipe lip polygon); CelebAMask-HQ data recorded |
+| InsightFace buffalo_l, CodeFormer + ParseNet, Wav2Lip weights, VideoReTalking NC parts, KEEP | non-commercial / research-only | **NO** | quarantined (buffalo_l, CodeFormer, ParseNet) |
+| RetinaFace R50 (facexlib), HDemucs MUSDB18-HQ | no weights licence | **NO** | quarantined |
+| pyannote 3.1 + segmentation-3.0 + wespeaker | MIT | allowed (audio side, coordinator) | MSDWild / VoxCeleb data recorded |
+| YuNet (common metric), SyncNet + S3FD | MIT / research / none | EVAL_ONLY | never imported by the product path |
+
 ## 0. CLEAN-ONLY status (user decision 2026-10-16 ~21:00 UTC) — clean face stack, quarantine, eval-only tools
 
 Rule: only components with verdict YES (code + weights + every pretrained sub-model) may run in a product-path run.
@@ -21,6 +40,16 @@ Rule: only components with verdict YES (code + weights + every pretrained sub-mo
 | LatentSync 1.6 UNet (`openrail++`), Whisper tiny (MIT), sd-vae-ft-mse (MIT), DeepCache / kornia (Apache-2.0), Silero VAD (MIT) | see §1 | YES (LatentSync: Open RAIL++-M use restrictions must flow into our ToS — false information to harm, defamation, harassment, impersonation without consent, …) |
 | the 106-point index table + anchor correction in `scripts/pilot/clean_face_stack.py` (`MAP106`, `clean_face_stack_calib.json`) | our code; derived offline from cached evaluation landmarks of the baseline masters (no InsightFace model runs in the product path) | YES |
 | CodeFormer / ParseNet / RetinaFace R50 / InsightFace buffalo_l | NC | **quarantined** in `/workspace/dub/quarantine_nc/` (README with sha256 + reason); `guard_nc()` makes their loaders raise in clean runs; `download_models.sh` fetches them only with `DUB_ALLOW_NC=1` |
+
+**Training data of the generators (coordinator request 2026-10-16, for the generator decision):**
+* **LatentSync 1.5 / 1.6 was TRAINED on VoxCeleb2 + HDTF** (paper arXiv 2412.09262: "a mixture of VoxCeleb2 and HDTF"), plus undisclosed
+  "Chinese data" (1.5 changelog) and undisclosed 512² video (1.6 card). VoxCeleb2 / HDTF are research datasets of YouTube videos -> LatentSync
+  is in the **YES\* (permissive weights, NC / research-only training data)** class, like pyannote. The weights licence itself (Open RAIL++-M) allows commercial use.
+* **TBDub**: proprietary studio green-screen + livestream footage (3:1, per its paper via the desk sub-survey, not re-verified), and its DiT
+  starts from X-Dub (Kling: "600 h" of unnamed internet video) on a Wan2.2 base -> **YES\*** (permissive weights, undisclosed / unnamed data provenance; no
+  dataset is named as non-commercial).
+* MediaPipe Face Landmarker: consented, Google-collected images (model cards) -> YES.
+* Background bed: HDemucs MUSDB18-HQ -> **NO**, quarantined 2026-10-16 (`--background` now defaults to off, loader blocked by `guard_nc()`).
 
 EVAL_ONLY (never imported by the product path): SyncNet `syncnet_v2.model` + S3FD `sfd_face.pth` (SyncNet scoring),
 YuNet `face_detection_yunet_2023mar.onnx` (common metric `mouth_jitter_hr.py`; MIT file, WIDER FACE data), MediaPipe in IMAGE mode for

@@ -42,7 +42,7 @@ def main() -> int:
     for k, vid in enumerate(a.ids):
         inp = sorted(glob.glob(str(src_dir / f"{vid}.*")))[0]; out = root / "final" / f"{vid}_final.mp4"
         sys.argv = ["run_clean_pipeline_05.py", "--input", inp, "--output", str(out), "--target-lang", a.target_lang, "--alignment", "burst",
-                    "--video-backend", "optimized", "--codeformer", "optimized", "--work-dir", str(root / "work")] + extra
+                    "--video-backend", "optimized", "--codeformer", "off", "--work-dir", str(root / "work")] + extra
         print(f"===== worker job {k + 1}/{len(a.ids)} {vid} start {time.strftime('%H:%M:%S')} (loaded: {model_cache.loaded()})", flush=True)
         vs.take(); t0 = time.perf_counter(); rc = rp.main(); wall = round(time.perf_counter() - t0, 2); peak = vs.take()
         jobs.append({"id": vid, "rc": rc, "wall_s": wall, "warm": k > 0, "peak_vram_mib": peak, "models_cached_after": model_cache.loaded()})

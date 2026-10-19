@@ -1,54 +1,67 @@
-# Track A — lip-sync / temporal generation (`experiment/lipsync-temporal`) — STATUS
+# Track A — lip-sync / temporal generation (`experiment/lipsync-temporal`) — STATUS (PAUSED 2026-10-16 ~23:20 UTC, user decision)
 
-Research question: is LatentSync itself the main source of the visible mouth / face jitter, or is it what is around it (crop / affine,
-landmarks, mask, paste-back, speech gate, LS<->original switches)? Then: a more stable lip-sync backend, or a way to stabilise the current one.
+Research question: is LatentSync itself the main source of the visible mouth / face jitter, or what is around it? Answer so far:
+**both, in two separable parts** — (1) CodeFormer's per-frame re-synthesis of the mouth (around the generator; removed in clean0) and
+(2) LatentSync's independent 16-frame windows (a jump every 0.64 s; inside the generator; fixable by per-step fusion, budget version open).
 
-| phase | state | report |
+## Done (all pushed)
+
+| item | where | SHA |
 |---|---|---|
-| 0 reproduce baseline (cand5) | **done**: 5/5 PASS, metrics saved | `PHASE0.md`, `baseline/` |
-| 1 prior work, diagnosis plan, shortlist, licenses | **done** (coordinator pre-approved continuing) | `PHASE1_PLAN.md`, `LICENSES.md`, `research/` |
-| CLEAN-ONLY (user decision ~21:00 UTC) | **clean0 delivered**: `--face-stack mediapipe --codeformer off`, validated on 03 vs cand5; NC weights quarantined | `CLEAN0.md`, `clean0/`, `LICENSES.md` §0 |
-| 2 cheapest A/B on a 03 window | cand5-stack arms L0-L3 + S1 on 40-58 s done before the directive (diagnostic only); continues on the clean base | – |
-| 3 refine winner | – | – |
-| 4 E2E regression 01/03/04/05 (+02) | – | – |
-| 5 FINAL.md | – | – |
+| Phase 0: cand5 reproduced on server A, 5/5 PASS, metrics | `PHASE0.md`, `baseline/` | 1088a73 |
+| Phase 1: prior work, diagnosis, candidate shortlist, licence audit | `PHASE1_PLAN.md`, `LICENSES.md`, `research/` | 73f0578 |
+| jitter-by-situation metric (`lipsync_jitter.py`, v3 = MediaPipe landmarks), seam bookkeeping | `scripts/quality/` | d4d1c94, db440fd |
+| **clean0** = cand5 audio + LatentSync 1.6 on the MediaPipe face stack, no restorer (accepted, = branch clean-base) | `CLEAN0.md` | 326e807 |
+| clean by default (`--face-stack mediapipe`, `--codeformer off`, `--background off`, `guard_nc()`, tripwires, clean smoke tests) | | 05dae5c, 65ff44c |
+| NC weights quarantined (buffalo_l, CodeFormer, ParseNet, RetinaFace R50, HDemucs) | `/workspace/dub/quarantine_nc/README.md` | – |
+| frame map source <-> 25 fps master (spec 9.4) + composite note | `FRAME_MAP.md`, `scripts/pilot/frame_map.py` | db440fd |
+| head pose + voice-only pre-check (spec 5.4/5.5), robustness / 2 % status (spec 11) | `scripts/pilot/clean_face_stack.py` | de61988 |
+| two faces: tracking + diarization-speaker -> face (spec 8.2) | same | 396835d |
+| seam A/B on the clean base + fusion ceiling + bridge mode | `SEAMS.md`, `seams_table_v2.md` | 44e5d70, 6a8e214, this commit |
+| speed notes (MediaPipe subsampling / GPU delegate) | `SPEED_NOTES.md` | 6a8e214 |
 
-## Server A (2026-10-16)
+## Key numbers
 
-```text
-host         vast.ai container 01d9e6967bbe (Denmark), unprivileged Docker, /workspace NOT a volume (nothing survives recycle/destroy)
-GPU          NVIDIA GeForce RTX 5090, 32607 MiB, compute capability 12.0, driver 590.48.01 (CUDA 13.1 driver)
-CUDA         toolkit nvcc 13.0 (V13.0.88, image); project torch 2.7.1+cu128 (wheel CUDA 12.8), onnxruntime-gpu 1.26.0 (CUDA EP + TensorRT EP)
-CPU          AMD EPYC 7R32 48-Core (host 96 threads visible), cgroup quota 2304000/100000 = 23.0 vCPU; DUB_THREADS stays 16 (production)
-RAM          cgroup limit 75.4 GiB (host 157 GiB)
-disk         120 GB overlay, 88 GB free after env + weights (33 GB used)
-Python       /venv/dabai = Python 3.11.17 (conda), torch 2.7.1+cu128, diffusers 0.32.2, transformers 4.48.0, insightface 0.7.3
-repo         RomadovaIrina/dubai @ tts-intelligibility-fix HEAD 559d700e0bf14ffa5692d855e5eae10a42eadd11 (= the coordinator's SHA)
-branch       experiment/lipsync-temporal created from 559d700, pushed; fetch refspecs limited to tts-intelligibility-fix + this branch
-third_party  latentsync a229c3948406bc2cf6eaf4873e662e70c6a04746, CodeFormer b33cc7d639d6545bfcccc7e0bc6ae51f24e79c2b (= reports/third_party-commits.txt)
-setup        scripts/setup_dabai.sh stages 0-9 exit 0 (2 min 28 s); pip drift vs reports/pip-freeze.lock.txt = unpinned packages only
-             (aiohttp, lmdb 2->3, multidict 6->7, pydantic, ...; torch / CUDA / transformers / diffusers / numpy pins unchanged);
-             freeze + diff kept in /workspace/dub/artifacts/lipsync-temporal/env/, the committed lock files are left unchanged
-weights      scripts/download_models.sh exit 0 (3 min 56 s, 20 GB); latentsync_unet.pt sha256 0a478e89...316d3 = HF LFS sha256
-             (one read timeout was retried by huggingface_hub). LatentSync's insightface buffalo_l pack is auto-downloaded on first use
-             into third_party/latentsync/checkpoints/auxiliary/models/buffalo_l (det_10g, 2d106det, ...) -> license note in LICENSES.md
-smoke        scripts/run_smoke.sh 11/11 PASS (10 min 41 s; latentsync 280 s, codeformer 164 s)
-inputs       /workspace/dub/inputs/test_videos_raw/{01.MP4,02..05.mp4}, sha256 -c OK on all five (05.zip sha256 9e50559e44c2a006...),
-             symlinked per file into test_videos/ (git-excluded via .git/info/exclude)
-formats      01 480x848 avg 25.0 fps (r 30), 02 464x848 29.98, 03 464x848 30.0 CFR, 04 464x848 30.0 CFR, 05 464x848 29.9;
-             the pipeline works on a 25 fps master -> on 30 fps sources every 6th frame is dropped in the whole output
-```
+03, clean0 vs cand5 (same audio, full video): mouth unexplained appearance change 1.29 -> **1.02** of the source (human-marked 24-25 s +
+35-36 s: 1.24 -> 0.96), SyncNet dub-only 5.73 -> 5.70 (AV 0), crop jitter -26 %, mask-box jitter -46 %, mouth sharpness 0.98 -> 0.71
+(no restorer), audio bit-identical. 04 full E2E clean0: PASS, LatentSync 255 s/video-min, MediaPipe pass 44 s/video-min.
 
-## Cost so far
+Seam A/B, 03 window B (21.6-37.6 s, phase-aligned, contains the human-marked moments) — seam jump = mouth d1 at the recorded seam / local
+median (source at the same frames in brackets); full table `seams_table_v2.md` (window A in `seams_table_v1.md`):
 
-GPU: baseline 5 videos 3725 s wall (LatentSync 1023 s, CodeFormer 129 s) + smoke 10.7 min + metrics (SyncNet, face_temporal,
-lipsync_jitter) ≈ 30 min. No candidate model installed, no experiment GPU time yet.
+| arm | LatentSync cost vs clean0 | seam jump median | seams > 1.5x | mouth resid / twitch | human-marked resid | SyncNet dub-only |
+|---|---|---|---|---|---|---|
+| clean0 (16-frame windows) | – | 1.71 (0.83) | 67 % (8 %) | 0.99 / 1.08 | 0.94 | 5.64 |
+| 24-frame windows | +1 % | 1.74 | 56 % | 0.99 / 1.08 | 0.91 | 5.94 |
+| 24f + 1-frame continuation | +7 % | 1.71 | 59 % | 0.99 / 1.08 | 0.92 | 6.18 |
+| 24f + 2-frame continuation | +12 % | 1.66 | 53 % | 0.98 / 1.08 | 0.89 | 6.09 |
+| 16f + 4-frame continuation | +29 % | 1.51 | 53 % | 1.00 / 1.06 | 0.92 | 5.80 |
+| **per-step fusion, stride 8, no DeepCache (ceiling)** | **+322 %** | **0.96 (0.87)** | **8 % (6 %)** | **0.89 / 1.05** | **0.82** | 5.88 |
+| **bridge 8 frames x last 4 steps (budget design)** | **+10 %** | **1.28** | **29 %** | **0.94 / 1.05** | **0.89** | 5.62 |
 
-## Phase 2 notes (live)
+Reading: continuation / longer windows do not fix the seam; per-step fusion does (seams at source level, mouth calmer, SyncNet up) but
+costs 4.2x LatentSync. **The budget design works at exactly the +10 % budget**: bridge 8 frames x last 4 DDIM steps
+(`--bridge-len 8 --bridge-steps 4`: low-noise re-denoise of a short window centred on each seam, blended back) halves the jumpy seams
+(67 % -> 29 %, median jump 1.71 -> 1.28), gives the lowest twitch index of the budget arms (1.05, = fusion ceiling) and the lowest
+human-marked twitch (1.07), SyncNet unchanged (5.62). Only window B measured; larger bridges (16x4 / 16x8) and window A not run.
 
-* L0 (no generation: crop -> inverse warp -> CodeFormer -> mouth composite) on 03 40-58 s, metric v2 (native resolution): mouth
-  warping error vs source = 0.96 BEFORE CodeFormer, **1.29 after CodeFormer** (upper face 0.96 -> 1.31 before the mouth composite).
-  CodeFormer's per-frame re-synthesis alone adds ~33 % unexplained mouth texture change with no lip-sync at all -> relevant for track B;
-  CodeFormer stays fixed in this track's A/Bs, every arm is measured at three stages (raw LatentSync / after CodeFormer / composite).
-* CLEAN-ONLY directive: the cand5-stack window chain was stopped (S2/S3 and window B never ran); InsightFace-based metrics retired
-  (`face_temporal.py`; `lipsync_jitter.py` v3 uses MediaPipe IMAGE mode). clean0 results: `CLEAN0.md`.
+## Not done / in progress at the pause
+
+* TBDub (Apache-2.0, fully allowed) is installed (`/venv/tbdub`, student weights) but **not run** (was next in the queue). Input clips
+  and dub audio for both 03 windows are prepared (`artifacts/lipsync-temporal/p2c_seams/ref_{A,B}.mp4`, `work_03_*_C0/drive_16k.wav`).
+* 05 per-frame pose-gate A/B (off / 30 / 20 deg) and the two-face render + "right face untouched" check: scripts ready
+  (`artifacts/lipsync-temporal/pose05/run.sh`, `twoface/run.sh`), **not run**. Two-face speaker mapping verified offline (r 0.50 vs -0.05).
+* Bridge arms 16x4 / 16x8, the window-A bridges, sbs clips of the bridge arm (no new renders at the pause): not run. The BR8k4 window clip is in `outbox/p2c-03winB-BR8k4/`.
+
+## Next steps I would take
+
+1. Bridge 8x4 on window A + bridges 16x4 / 16x8 on both windows; take the best within ~+10-20 % to full 03 and
+   decide with a human look (sbs at 24-25 / 35-36 s and a long speech stretch).
+2. TBDub student vs clean0 on both 03 windows (same gate / composite), with s/video-min against the 300 s/min norm.
+3. 05 pose gate, two-face render, then a clean0 + seam-fix E2E regression on 01 / 03 / 04 / 05 (+ 02) on the canonical work dirs.
+4. Speed phase: MediaPipe in parallel with the audio stage / every 2nd-3rd frame; seam fix cost compensation.
+
+## Viewable outputs (laptop sync)
+
+`/workspace/dub/outbox/`: clean0-03 (full 03), clean0-e2e-04, p2-03win-* (cand5-stack diagnostics before CLEAN-ONLY), p2c-03winA/B-*
+(clean-base seam arms incl. F8nodc fusion ceiling). Side-by-side clips: `/workspace/dub/artifacts/lipsync-temporal/sbs/` (index.md).
