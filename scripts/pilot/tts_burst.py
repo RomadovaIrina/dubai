@@ -862,6 +862,25 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                         pieces = None; method = f"align_cut_failed: {type(e).__name__}"
                 if pieces is None:
                     pieces = fallback_cut(y, counts); method = (method + "; " if method else "") + "silero_valley_fallback"; stats["align_fallback"] += 1
+                # ---- r3 D (user: "abrupt phrase cuts"): an inner cut that still lands in voiced sound (10 ms on either side within 20 dB of the
+                # clip's speech level: words run together, no gap to cut in) is not cut at all: the two parts are placed as one span (fewer,
+                # longer parts), exactly like the atempo merge below (union of the two bursts / groups).
+                if os.environ.get("DUB_MERGE_VOICED_CUTS", "1") == "1" and len(pieces) > 1:
+                    _f = 20 * np.log10(np.sqrt(np.mean(y[: len(y) // 240 * 240].reshape(-1, 240) ** 2, axis=1)) + 1e-9) if len(y) >= 240 else np.array([-60.0])
+                    _ref = float(np.percentile(_f[_f > -60], 90)) if (_f > -60).any() else -20.0
+                    def _lv(t0, t1):
+                        i0, i1 = max(0, int(t0 * m.sr)), min(len(y), int(t1 * m.sr))
+                        return 20 * np.log10(np.sqrt(np.mean(y[i0:i1] ** 2)) + 1e-9) if i1 > i0 else -120.0
+                    k = 0; vmerged = 0
+                    while k < len(pieces) - 1:
+                        e_, s_ = pieces[k][1], pieces[k + 1][0]
+                        if max(_lv(e_ - 0.01, e_), _lv(s_, s_ + 0.01)) > _ref - 20:
+                            pieces[k:k + 2] = [(pieces[k][0], pieces[k + 1][1])]; parts[k:k + 2] = [parts[k] + " " + parts[k + 1]]
+                            p["bursts"][k:k + 2] = [(p["bursts"][k][0], p["bursts"][k + 1][1])]; p["groups"][k:k + 2] = [p["groups"][k] + " " + p["groups"][k + 1]]
+                            p["group_counts"][k:k + 2] = [p["group_counts"][k] + p["group_counts"][k + 1]]; vmerged += 1
+                        else:
+                            k += 1
+                    stats["voiced_cut_merges"] = stats.get("voiced_cut_merges", 0) + vmerged
                 # ---- a span that still needs more than atempo_cap takes its neighbour's burst too (union window, no re-synthesis)
                 def chunks_of(pcs):
                     return [y[int(a * m.sr):int(b * m.sr)] for a, b in pcs]
