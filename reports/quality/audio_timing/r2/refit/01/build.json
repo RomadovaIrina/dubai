@@ -1,0 +1,42 @@
+{
+ "candidates": [
+  14,
+  23
+ ],
+ "accepted": [
+  23
+ ],
+ "decisions": {
+  "14": {
+   "before": {
+    "residual_s": 0.6,
+    "max_gap": 0.6,
+    "atempo_max": 1.0,
+    "ls_frames": 0
+   },
+   "after": {
+    "residual_s": 0.9,
+    "max_gap": 0.9,
+    "atempo_max": 1.0,
+    "ls_frames": 0
+   },
+   "accepted": false
+  },
+  "23": {
+   "before": {
+    "residual_s": 0.6,
+    "max_gap": 0.6,
+    "atempo_max": 1.0,
+    "ls_frames": 0
+   },
+   "after": {
+    "residual_s": 0,
+    "max_gap": 0.2,
+    "atempo_max": 1.0,
+    "ls_frames": 0
+   },
+   "accepted": true
+  }
+ },
+ "final_manifest": "/workspace/dub/runs/refit/01/recut_final/recut.manifest.json"
+}

@@ -1,0 +1,549 @@
+{
+ "video": "04",
+ "policy": "cand5",
+ "flags": "cand5 (--phrase-cut acoustic --long-pause-func 1.2 --cut-fade adaptive; fill-slowdown 0.9)",
+ "fps": 25,
+ "frames_are": "master_25fps.mp4 frame indices, [f0, f1)",
+ "manifest": "/workspace/dub/artifacts/audio-timing/baseline/04/04_final.manifest.json",
+ "dub_track": "/workspace/dub/artifacts/audio-timing/ab/04_ref/dubbed_16k.wav",
+ "definition": "source Silero VAD speaking AND dub Silero VAD (min speech 60 ms) silent, 10 ms grid; natural = shorter than 0.35 s",
+ "summary": {
+  "gaps": 14,
+  "residual": 6,
+  "residual_s": 4.1,
+  "residual_in_latentsync": 6,
+  "residual_ls_frames": 106,
+  "residual_without_asr_words": 0,
+  "residual_layer3_candidates": 6,
+  "longest_s": 1.0
+ },
+ "gaps": [
+  {
+   "id": "04-g00",
+   "t0": 4.8,
+   "t1": 5.0,
+   "seconds": 0.2,
+   "frames": [
+    120,
+    125
+   ],
+   "ls_frames": 5,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    4.8,
+    6.1
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "посмотрим",
+   "cause": "short_fill",
+   "unit": 0,
+   "sentence_src": "Сделаем видео с очками посмотрим.",
+   "sentence_dub": "Let's make a video with glasses and watch it.",
+   "prev_dub": {
+    "unit": 0,
+    "text": "Let's make a video with glasses and watch it.",
+    "end": 4.296,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 1,
+    "text": "Once more,",
+    "start": 4.98,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "04-g01",
+   "t0": 5.8,
+   "t1": 6.1,
+   "seconds": 0.3,
+   "frames": [
+    145,
+    153
+   ],
+   "ls_frames": 8,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    4.8,
+    6.1
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "потестируем",
+   "cause": "inner_gap",
+   "unit": 1,
+   "sentence_src": "Опять же потестируем как наше приложение будет на это все реагировать.",
+   "sentence_dub": "Once more, we will test how our application will react to all of this.",
+   "prev_dub": {
+    "unit": 1,
+    "text": "Once more,",
+    "end": 5.68,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 1,
+    "text": "we will test",
+    "start": 6.6,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "accepted_still_short",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "04-g02",
+   "t0": 7.3,
+   "t1": 7.5,
+   "seconds": 0.2,
+   "frames": [
+    182,
+    188
+   ],
+   "ls_frames": 6,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    6.6,
+    7.5
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "как",
+   "cause": "inner_gap",
+   "unit": 1,
+   "sentence_src": "Опять же потестируем как наше приложение будет на это все реагировать.",
+   "sentence_dub": "Once more, we will test how our application will react to all of this.",
+   "prev_dub": {
+    "unit": 1,
+    "text": "we will test",
+    "end": 7.256,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 1,
+    "text": "how our application will react to all of this.",
+    "start": 8.4,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "accepted_still_short",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "04-g03",
+   "t0": 10.7,
+   "t1": 11.1,
+   "seconds": 0.4,
+   "frames": [
+    267,
+    278
+   ],
+   "ls_frames": 11,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "inner",
+   "source_burst": [
+    8.4,
+    11.4
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "реагировать",
+   "cause": "short_fill",
+   "unit": 1,
+   "sentence_src": "Опять же потестируем как наше приложение будет на это все реагировать.",
+   "sentence_dub": "Once more, we will test how our application will react to all of this.",
+   "prev_dub": {
+    "unit": 1,
+    "text": "how our application will react to all of this.",
+    "end": 10.69,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 2,
+    "text": "Sochi city",
+    "start": 11.08,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "accepted_still_short",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "04-g04",
+   "t0": 15.3,
+   "t1": 15.6,
+   "seconds": 0.3,
+   "frames": [
+    382,
+    390
+   ],
+   "ls_frames": 8,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    14.6,
+    15.6
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "28",
+   "cause": "inner_gap",
+   "unit": 2,
+   "sentence_src": "город сочи 28 августа сегодня и мы начинаем рабочие процессы по созданию нашего магического приложения",
+   "sentence_dub": "Sochi city today, August 28, and we are starting the working processes for creating our magical application.",
+   "prev_dub": {
+    "unit": 2,
+    "text": "today,",
+    "end": 15.178,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 2,
+    "text": "August 28,",
+    "start": 17.5,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "rejected: identical",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "04-g05",
+   "t0": 18.9,
+   "t1": 19.7,
+   "seconds": 0.8,
+   "frames": [
+    472,
+    493
+   ],
+   "ls_frames": 21,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    17.5,
+    19.7
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "сегодня и",
+   "cause": "inner_gap",
+   "unit": 2,
+   "sentence_src": "город сочи 28 августа сегодня и мы начинаем рабочие процессы по созданию нашего магического приложения",
+   "sentence_dub": "Sochi city today, August 28, and we are starting the working processes for creating our magical application.",
+   "prev_dub": {
+    "unit": 2,
+    "text": "August 28,",
+    "end": 18.902,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 2,
+    "text": "and we are starting the working processes for creating our m",
+    "start": 22.0,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "rejected: identical",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "04-g06",
+   "t0": 26.3,
+   "t1": 27.3,
+   "seconds": 1.0,
+   "frames": [
+    657,
+    683
+   ],
+   "ls_frames": 26,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "inner",
+   "source_burst": [
+    22.0,
+    27.6
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "приложения",
+   "cause": "short_fill",
+   "unit": 2,
+   "sentence_src": "город сочи 28 августа сегодня и мы начинаем рабочие процессы по созданию нашего магического приложения",
+   "sentence_dub": "Sochi city today, August 28, and we are starting the working processes for creating our magical application.",
+   "prev_dub": {
+    "unit": 2,
+    "text": " the working processes for creating our magical application.",
+    "end": 26.305,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 3,
+    "text": "life easier for people whom I hope",
+    "start": 29.3,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "rejected: identical",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "04-g07",
+   "t0": 31.1,
+   "t1": 31.4,
+   "seconds": 0.3,
+   "frames": [
+    777,
+    785
+   ],
+   "ls_frames": 8,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    29.3,
+    31.4
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "которая",
+   "cause": "inner_gap",
+   "unit": 3,
+   "sentence_src": "которое облегчит жизнь людям которая я надеюсь будет пользоваться популярностью блогеров всего мира и не только блогеров",
+   "sentence_dub": "which will make life easier for people whom I hope will be popular with bloggers from all over the world and not just bloggers",
+   "prev_dub": {
+    "unit": 3,
+    "text": "life easier for people whom I hope",
+    "end": 31.033,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 3,
+    "text": "will be popular with",
+    "start": 33.1,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "rejected: rejected (not closer)",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "04-g08",
+   "t0": 34.4,
+   "t1": 34.6,
+   "seconds": 0.2,
+   "frames": [
+    860,
+    865
+   ],
+   "ls_frames": 5,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "inner",
+   "source_burst": [
+    33.1,
+    35.8
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "будет",
+   "cause": "inner_gap",
+   "unit": 3,
+   "sentence_src": "которое облегчит жизнь людям которая я надеюсь будет пользоваться популярностью блогеров всего мира и не только блогеров",
+   "sentence_dub": "which will make life easier for people whom I hope will be popular with bloggers from all over the world and not just bloggers",
+   "prev_dub": {
+    "unit": 3,
+    "text": "life easier for people whom I hope",
+    "end": 31.033,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 3,
+    "text": "bloggers",
+    "start": 36.4,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "rejected: rejected (not closer)",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "04-g09",
+   "t0": 34.9,
+   "t1": 35.8,
+   "seconds": 0.9,
+   "frames": [
+    872,
+    895
+   ],
+   "ls_frames": 23,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    33.1,
+    35.8
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "пользоваться популярностью",
+   "cause": "inner_gap",
+   "unit": 3,
+   "sentence_src": "которое облегчит жизнь людям которая я надеюсь будет пользоваться популярностью блогеров всего мира и не только блогеров",
+   "sentence_dub": "which will make life easier for people whom I hope will be popular with bloggers from all over the world and not just bloggers",
+   "prev_dub": {
+    "unit": 3,
+    "text": "will be popular with",
+    "end": 34.844,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 3,
+    "text": "bloggers",
+    "start": 36.4,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "rejected: rejected (not closer)",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "04-g10",
+   "t0": 37.0,
+   "t1": 37.6,
+   "seconds": 0.6,
+   "frames": [
+    925,
+    940
+   ],
+   "ls_frames": 15,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    36.4,
+    37.6
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "популярностью блогеров",
+   "cause": "inner_gap",
+   "unit": 3,
+   "sentence_src": "которое облегчит жизнь людям которая я надеюсь будет пользоваться популярностью блогеров всего мира и не только блогеров",
+   "sentence_dub": "which will make life easier for people whom I hope will be popular with bloggers from all over the world and not just bloggers",
+   "prev_dub": {
+    "unit": 3,
+    "text": "bloggers",
+    "end": 36.881,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 3,
+    "text": "from all over the world",
+    "start": 38.5,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "rejected: rejected (not closer)",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "04-g11",
+   "t0": 39.8,
+   "t1": 40.1,
+   "seconds": 0.3,
+   "frames": [
+    994,
+    1003
+   ],
+   "ls_frames": 9,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    38.5,
+    40.1
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "и",
+   "cause": "inner_gap",
+   "unit": 3,
+   "sentence_src": "которое облегчит жизнь людям которая я надеюсь будет пользоваться популярностью блогеров всего мира и не только блогеров",
+   "sentence_dub": "which will make life easier for people whom I hope will be popular with bloggers from all over the world and not just bloggers",
+   "prev_dub": {
+    "unit": 3,
+    "text": "from all over the world",
+    "end": 39.693,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 3,
+    "text": "and not just bloggers",
+    "start": 41.2,
+    "atempo": 1.025
+   },
+   "unit_fit_up": "rejected: rejected (not closer)",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "04-g12",
+   "t0": 48.0,
+   "t1": 48.2,
+   "seconds": 0.2,
+   "frames": [
+    1200,
+    1205
+   ],
+   "ls_frames": 5,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "inner",
+   "source_burst": [
+    46.6,
+    49.7
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "видео",
+   "cause": "short_fill",
+   "unit": 4,
+   "sentence_src": "Поэтому вот такое вот прекрасное видео.",
+   "sentence_dub": "Therefore, here is a video that is quite wonderful.",
+   "prev_dub": {
+    "unit": 4,
+    "text": "that is quite wonderful.",
+    "end": 47.896,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 5,
+    "text": "The weather is really nice, isn't it?",
+    "start": 48.2,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "04-g13",
+   "t0": 51.6,
+   "t1": 52.0,
+   "seconds": 0.4,
+   "frames": [
+    1290,
+    1300
+   ],
+   "ls_frames": 10,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "head",
+   "source_burst": [
+    51.6,
+    52.6
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "что вперед",
+   "cause": "inner_gap",
+   "unit": 5,
+   "sentence_src": "Классная погода что вперед.",
+   "sentence_dub": "The weather is really nice, isn't it? That's great.",
+   "prev_dub": {
+    "unit": 5,
+    "text": "The weather is really nice, isn't it?",
+    "end": 49.703,
+    "atempo": 1.0
+   },
+   "next_dub": null,
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": true
+  }
+ ]
+}

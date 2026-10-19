@@ -20,7 +20,7 @@ Outputs <out>/<id>_<tag>.audio_stages.json and spectrogram sheets (rows = stages
     python scripts/quality/audio_stages.py --manifest RUN/final/03_final.manifest.json --out RUN/audio_stages --tag reviewed
 """
 from __future__ import annotations
-import argparse, json, pathlib, subprocess, sys, tempfile
+import argparse, json, pathlib, shutil, subprocess, sys, tempfile
 import numpy as np, soundfile as sf
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "pilot"))
@@ -158,12 +158,20 @@ def main() -> int:
         from background_bed import _envelope, _mask
         import run_clean_pipeline_05 as rp
         mx = bg["mix"]; dvad = [(v["start"], v["end"]) for v in rp.run_vad(W / "dubbed_16k.wav")]
-        bgy = load(bg["separation"]["bg"]); n_ = len(bgy)
-        env = _envelope(_mask(dvad, n_, SR), SR, mx["attack_s"], mx["release_s"])
-        bed = bgy * (10 ** (mx["bg_gain_db"] / 20)) * (10 ** (mx["duck_db"] * env / 20)) * mx.get("peak_norm", 1.0)
-        if mx.get("src_duck_db"):
-            so = _mask([(v["start"], v["end"]) for v in man["speech_intervals"]], n_, SR) & ~_mask(dvad, n_, SR)
-            bed = bed * (10 ** (mx["src_duck_db"] * _envelope(so, SR, mx["attack_s"], mx["release_s"]) * (1.0 - env) / 20))
+        if pathlib.Path(bg["separation"].get("bg", "")).exists() and not (mx.get("residue_duck") or {}).get("enabled"):
+            bgy = load(bg["separation"]["bg"]); n_ = len(bgy)
+            env = _envelope(_mask(dvad, n_, SR), SR, mx["attack_s"], mx["release_s"])
+            bed = bgy * (10 ** (mx["bg_gain_db"] / 20)) * (10 ** (mx["duck_db"] * env / 20)) * mx.get("peak_norm", 1.0)
+            if mx.get("src_duck_db"):
+                so = _mask([(v["start"], v["end"]) for v in man["speech_intervals"]], n_, SR) & ~_mask(dvad, n_, SR)
+                bed = bed * (10 ** (mx["src_duck_db"] * _envelope(so, SR, mx["attack_s"], mx["release_s"]) * (1.0 - env) / 20))
+        else:   # r2: the bed AS HEARD = final mix - peak_norm x dub voice (stems not kept; covers residue duck / room fill / any later mix option)
+            # at 44.1 kHz with the mixer's own ffmpeg conversion of the dub voice (a 24 kHz subtraction leaves the dub in at about -11 dB)
+            td = pathlib.Path(tempfile.mkdtemp())
+            subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(W / "dubbed_24k.wav"), "-ar", "44100", "-ac", "1", "-c:a", "pcm_f32le", str(td / "d44.wav")], check=True)
+            m44, _ = sf.read(str(W / "final_mix_44k.wav"), dtype="float32"); d44, _ = sf.read(str(td / "d44.wav"), dtype="float32")
+            n44 = min(len(m44), len(d44)); b44 = m44[:n44].mean(1) - mx.get("peak_norm", 1.0) * d44[:n44]
+            sf.write(str(td / "b44.wav"), b44, 44100, subtype="FLOAT"); bed = load(td / "b44.wav"); n_ = len(bed); shutil.rmtree(td)
         b16 = out / f"{stem}_bed16k.wav"; sf.write(str(b16), bed, SR); y16 = load(b16, 16000); sf.write(str(b16), y16, 16000)
         import torch
         from silero_vad import get_speech_timestamps, load_silero_vad

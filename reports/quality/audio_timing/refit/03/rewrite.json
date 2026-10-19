@@ -1,0 +1,269 @@
+{
+ "qwen": "qwen2.5-7b-instruct-q8_0-00001-of-00003.gguf",
+ "threads": 6,
+ "load_s": 0.5,
+ "units": [
+  {
+   "unit": 3,
+   "accepted": true,
+   "pieces": [
+    "Today is Friday, August 28th,",
+    "and we will consider this the start",
+    "of our collaborative relationship."
+   ],
+   "text": "Today is Friday, August 28th, and we will consider this the start of our collaborative relationship.",
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "Today is Friday, August 28th,",
+      "and we will consider this the start",
+      "of our partnership."
+     ],
+     "raw": "{\"3\": \"of our partnership.\"}",
+     "result": "piece 3 is not longer (3 words); it needs about 5 words"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "Today is Friday, August 28th,",
+      "and we will consider this the start",
+      "of our collaborative relationship."
+     ],
+     "raw": "{\"3\": \"of our collaborative relationship.\"}",
+     "result": "accepted"
+    }
+   ],
+   "seconds": 25.7
+  },
+  {
+   "unit": 4,
+   "accepted": true,
+   "pieces": [
+    "Let's hope",
+    "that this cooperation will be easy, bringing us all the desired outcome",
+    "that we wished for and hoped for",
+    "so that on our path,",
+    "no obstacles arise."
+   ],
+   "text": "Let's hope that this cooperation will be easy, bringing us all the desired outcome that we wished for and hoped for so that on our path, no obstacles arise.",
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "Let's hope",
+      "that this cooperation will be easy and bring us all the desired outcome",
+      "that we wished for and hoped would",
+      "so that on our path,",
+      "no obstacles arise."
+     ],
+     "raw": "{\"2\": \"that this cooperation will be easy and bring us all the desired outcome\"}, {\"3\": \"that we wished for and hoped would\"}",
+     "result": "not fluent: The sentence is overly complex and contains unnecessary phrases that make it difficult to understand. It would be more natural to break it into shorter sentences or rephrase it for clarity."
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "Let's hope",
+      "that this cooperation will be easy, bringing us all the desired outcome",
+      "that we wished for and hoped for",
+      "so that on our path,",
+      "no obstacles arise."
+     ],
+     "raw": "{\"2\": \"that this cooperation will be easy, bringing us all the desired outcome\"}, {\"3\": \"that we wished for and hoped for\"}",
+     "result": "accepted"
+    }
+   ],
+   "seconds": 108.1
+  },
+  {
+   "unit": 5,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "I hope",
+      "everything will be well,",
+      "for the actions we are performing with you and generally with",
+      "with you and in general with the product we are assembling and making today."
+     ],
+     "raw": "{\"3\": \"for the actions we are performing with you and generally with\"}",
+     "result": "pieces 3 and 4 repeat the words 'with you and'"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "I hope",
+      "everything will be well,",
+      "for the actions we are performing with you and in regard to",
+      "with you and in general with the product we are assembling and making today."
+     ],
+     "raw": "{\"3\": \"for the actions we are performing with you and in regard to\"}",
+     "result": "piece 3 is too long (12 words); it needs about 9 words"
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "I hope",
+      "everything will be well,",
+      "for the actions we are performing with you and regarding",
+      "with you and in general with the product we are assembling and making today."
+     ],
+     "raw": "{\"3\": \"for the actions we are performing with you and regarding\"}",
+     "result": "pieces 3 and 4 repeat the words 'with you and'"
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "I hope",
+      "everything will be well,",
+      "for the actions we are performing with you and concerning",
+      "with you and in general with the product we are assembling and making today."
+     ],
+     "raw": "{\"3\": \"for the actions we are performing with you and concerning\"}",
+     "result": "pieces 3 and 4 repeat the words 'with you and'"
+    }
+   ],
+   "seconds": 36.3
+  },
+  {
+   "unit": 6,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "Next,",
+      "I will send a few more videos, recorded in various formats, both with and without glasses, to see how our system will function."
+     ],
+     "raw": "{\"2\": \"I will send a few more videos, recorded in various formats, both with and without glasses, to see how our system will function.\"}",
+     "result": "piece 2 is not longer (23 words); it needs about 28 words"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "Next,",
+      "I will send a few more videos, recorded in different formats, both with and without glasses, to see how our system will operate."
+     ],
+     "raw": "{\"2\": \"I will send a few more videos, recorded in different formats, both with and without glasses, to see how our system will operate.\"}",
+     "result": "piece 2 is not longer (23 words); it needs about 28 words"
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "Next,",
+      "I will send a few more videos, recorded in various formats, both with and without glasses, to see how our system will perform."
+     ],
+     "raw": "{\"2\": \"I will send a few more videos, recorded in various formats, both with and without glasses, to see how our system will perform.\"}",
+     "result": "piece 2 is not longer (23 words); it needs about 28 words"
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "Next,",
+      "I will send a few more videos, recorded in different formats, both with and without glasses, to see how our system will function properly."
+     ],
+     "raw": "{\"2\": \"I will send a few more videos, recorded in different formats, both with and without glasses, to see how our system will function properly.\"}",
+     "result": "added information: function properly"
+    }
+   ],
+   "seconds": 107.1
+  },
+  {
+   "unit": 8,
+   "accepted": true,
+   "pieces": [
+    "I will send it to our chat so that",
+    "we can all express our wishes for success to each other and I wish"
+   ],
+   "text": "I will send it to our chat so that we can all express our wishes for success to each other and I wish",
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "I will send it to our chat so",
+      "that we may all express our wishes for success to one another I wish"
+     ],
+     "raw": "{\"1\": \"I will send it to our chat so\"}, {\"2\": \"that we may all express our wishes for success to one another I wish\"}",
+     "result": "appended clause 'one another i wish' (translate the Russian words of the SHORT piece instead of adding a clause)"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "I will send it to our chat so that",
+      "we can all express our wishes for success to each other I wish"
+     ],
+     "raw": "{\"1\": \"I will send it to our chat so that\"}, {\"2\": \"we can all express our wishes for success to each other I wish\"}",
+     "result": "piece 2 is not longer (13 words); it needs about 15 words"
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "I will send it to our chat so that",
+      "we can all express our wishes for success to each other and I wish"
+     ],
+     "raw": "{\"1\": \"I will send it to our chat so that\"}, {\"2\": \"we can all express our wishes for success to each other and I wish\"}",
+     "result": "accepted"
+    }
+   ],
+   "seconds": 54.9
+  },
+  {
+   "unit": 9,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "Our interaction will be smooth",
+      "will bring it to us",
+      "the result we desire. Forward",
+      "we go."
+     ],
+     "raw": "{\"2\": \"will bring it to us\"}",
+     "result": "not fluent: The sentence structure is awkward and the meaning is unclear. It should be revised for clarity and fluency."
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "Our interaction will be smooth",
+      "will bring us that",
+      "the result we desire. Forward",
+      "we go."
+     ],
+     "raw": "{\"2\": \"will bring us that\"}",
+     "result": "piece 2 is not longer (4 words); it needs about 5 words"
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "Our interaction will be smooth",
+      "will bring us the result",
+      "the result we desire. Forward",
+      "we go."
+     ],
+     "raw": "{\"2\": \"will bring us the result\"}",
+     "result": "not fluent: The sentence is grammatically correct but it sounds awkward and repetitive. It would be better to say: 'Our interaction will be smooth and bring us the result we desire. Forward we go.'"
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "Our interaction will be smooth",
+      "will bring us the result",
+      "the result we desire. Forward",
+      "we go."
+     ],
+     "raw": "{\"2\": \"will bring us the result\"}",
+     "result": "not fluent: The sentence is grammatically correct but it sounds awkward and repetitive. It would be better to say: 'Our interaction will be smooth and bring us the result we desire. Forward we go.'"
+    }
+   ],
+   "seconds": 76.8
+  }
+ ]
+}

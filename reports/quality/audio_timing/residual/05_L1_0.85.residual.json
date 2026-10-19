@@ -1,0 +1,658 @@
+{
+ "video": "05",
+ "policy": "L1+0.85",
+ "flags": "cand5 + --sentence-flow-gap 0.2 --spread pauses --fill-slowdown 0.85",
+ "fps": 25,
+ "frames_are": "master_25fps.mp4 frame indices, [f0, f1)",
+ "manifest": "/workspace/dub/artifacts/audio-timing/ab/05_flow02_sp_p_f085/recut.manifest.json",
+ "dub_track": "/workspace/dub/artifacts/audio-timing/ab/05_flow02_sp_p_f085/dubbed_16k.wav",
+ "definition": "source Silero VAD speaking AND dub Silero VAD (min speech 60 ms) silent, 10 ms grid; natural = shorter than 0.35 s",
+ "summary": {
+  "gaps": 17,
+  "residual": 7,
+  "residual_s": 4.7,
+  "residual_in_latentsync": 7,
+  "residual_ls_frames": 120,
+  "residual_without_asr_words": 1,
+  "residual_layer3_candidates": 4,
+  "longest_s": 1.1
+ },
+ "gaps": [
+  {
+   "id": "05-g00",
+   "t0": 1.8,
+   "t1": 1.9,
+   "seconds": 0.1,
+   "frames": [
+    45,
+    48
+   ],
+   "ls_frames": 3,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    1.8,
+    4.0
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "inner_gap",
+   "unit": 0,
+   "sentence_src": "Давайте протестируем еще вот такой формат съемки видео.",
+   "sentence_dub": "Let's test another format of video shooting to see how it works.",
+   "prev_dub": null,
+   "next_dub": {
+    "unit": 0,
+    "text": "to see how it works.",
+    "start": 4.8,
+    "atempo": 0.862
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "05-g01",
+   "t0": 7.4,
+   "t1": 7.6,
+   "seconds": 0.2,
+   "frames": [
+    185,
+    190
+   ],
+   "ls_frames": 5,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    7.4,
+    9.5
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "-таки",
+   "cause": "inner_gap",
+   "unit": 1,
+   "sentence_src": "Все -таки современные телефоны уже позволяют это делать.",
+   "sentence_dub": "After all, modern phones already allow this.",
+   "prev_dub": {
+    "unit": 1,
+    "text": "After all,",
+    "end": 6.607,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 1,
+    "text": "modern phones",
+    "start": 7.6,
+    "atempo": 0.85
+   },
+   "unit_fit_up": "rejected: rejected (not closer)",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "05-g02",
+   "t0": 8.4,
+   "t1": 9.5,
+   "seconds": 1.1,
+   "frames": [
+    210,
+    238
+   ],
+   "ls_frames": 28,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    7.4,
+    9.5
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "телефоны уже позволяют",
+   "cause": "inner_gap",
+   "unit": 1,
+   "sentence_src": "Все -таки современные телефоны уже позволяют это делать.",
+   "sentence_dub": "After all, modern phones already allow this.",
+   "prev_dub": {
+    "unit": 1,
+    "text": "modern phones",
+    "end": 8.329,
+    "atempo": 0.85
+   },
+   "next_dub": {
+    "unit": 1,
+    "text": "already allow this.",
+    "start": 10.9,
+    "atempo": 0.85
+   },
+   "unit_fit_up": "rejected: rejected (not closer)",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "05-g03",
+   "t0": 13.7,
+   "t1": 13.9,
+   "seconds": 0.2,
+   "frames": [
+    342,
+    348
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    13.7,
+    15.8
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "inner_gap",
+   "unit": 2,
+   "sentence_src": "И такая функция добавляет, конечно же, у нас популярности и возможностей.",
+   "sentence_dub": "And such a function, of course, adds to our popularity and possible opportunities.",
+   "prev_dub": {
+    "unit": 2,
+    "text": "And such a function,",
+    "end": 12.772,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 2,
+    "text": "of course, adds to our popularity",
+    "start": 13.877,
+    "atempo": 0.85
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "05-g04",
+   "t0": 15.7,
+   "t1": 15.8,
+   "seconds": 0.1,
+   "frames": [
+    392,
+    395
+   ],
+   "ls_frames": 3,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    13.7,
+    15.8
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "inner_gap",
+   "unit": 2,
+   "sentence_src": "И такая функция добавляет, конечно же, у нас популярности и возможностей.",
+   "sentence_dub": "And such a function, of course, adds to our popularity and possible opportunities.",
+   "prev_dub": {
+    "unit": 2,
+    "text": "of course, adds to our popularity",
+    "end": 15.623,
+    "atempo": 0.85
+   },
+   "next_dub": {
+    "unit": 2,
+    "text": "and possible",
+    "start": 17.0,
+    "atempo": 0.85
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "05-g05",
+   "t0": 19.6,
+   "t1": 19.8,
+   "seconds": 0.2,
+   "frames": [
+    490,
+    495
+   ],
+   "ls_frames": 5,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    19.6,
+    21.5
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "популярности",
+   "cause": "inner_gap",
+   "unit": 2,
+   "sentence_src": "И такая функция добавляет, конечно же, у нас популярности и возможностей.",
+   "sentence_dub": "And such a function, of course, adds to our popularity and possible opportunities.",
+   "prev_dub": {
+    "unit": 2,
+    "text": "and possible",
+    "end": 17.566,
+    "atempo": 0.85
+   },
+   "next_dub": {
+    "unit": 2,
+    "text": "opportunities.",
+    "start": 19.8,
+    "atempo": 0.85
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "05-g06",
+   "t0": 20.6,
+   "t1": 21.2,
+   "seconds": 0.6,
+   "frames": [
+    515,
+    530
+   ],
+   "ls_frames": 15,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "inner",
+   "source_burst": [
+    19.6,
+    21.5
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "возможностей",
+   "cause": "short_fill",
+   "unit": 2,
+   "sentence_src": "И такая функция добавляет, конечно же, у нас популярности и возможностей.",
+   "sentence_dub": "And such a function, of course, adds to our popularity and possible opportunities.",
+   "prev_dub": {
+    "unit": 2,
+    "text": "opportunities.",
+    "end": 20.532,
+    "atempo": 0.85
+   },
+   "next_dub": {
+    "unit": 3,
+    "text": "Here,",
+    "start": 21.24,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "05-g07",
+   "t0": 22.9,
+   "t1": 23.1,
+   "seconds": 0.2,
+   "frames": [
+    572,
+    578
+   ],
+   "ls_frames": 6,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    22.9,
+    24.6
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "inner_gap",
+   "unit": 3,
+   "sentence_src": "Вот, хочется просто посмотреть, как справится наше приложение в таком формате.",
+   "sentence_dub": "Here, we just want to see how our application will manage in this format.",
+   "prev_dub": {
+    "unit": 3,
+    "text": "Here,",
+    "end": 21.62,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 3,
+    "text": "we just want to see",
+    "start": 23.1,
+    "atempo": 0.85
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "05-g08",
+   "t0": 24.0,
+   "t1": 24.6,
+   "seconds": 0.6,
+   "frames": [
+    600,
+    615
+   ],
+   "ls_frames": 15,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    22.9,
+    24.6
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "посмотреть, как",
+   "cause": "inner_gap",
+   "unit": 3,
+   "sentence_src": "Вот, хочется просто посмотреть, как справится наше приложение в таком формате.",
+   "sentence_dub": "Here, we just want to see how our application will manage in this format.",
+   "prev_dub": {
+    "unit": 3,
+    "text": "we just want to see",
+    "end": 23.889,
+    "atempo": 0.85
+   },
+   "next_dub": {
+    "unit": 3,
+    "text": "how our application will manage in this format.",
+    "start": 26.2,
+    "atempo": 0.85
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "05-g09",
+   "t0": 28.7,
+   "t1": 29.2,
+   "seconds": 0.5,
+   "frames": [
+    717,
+    730
+   ],
+   "ls_frames": 13,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    26.2,
+    29.2
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "формате",
+   "cause": "between_units",
+   "unit": null,
+   "sentence_src": null,
+   "sentence_dub": null,
+   "prev_dub": {
+    "unit": 3,
+    "text": "how our application will manage in this format.",
+    "end": 28.63,
+    "atempo": 0.85
+   },
+   "next_dub": {
+    "unit": 4,
+    "text": "I just come here, go, take off and start saying",
+    "start": 30.4,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "no_unit",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "05-g10",
+   "t0": 33.5,
+   "t1": 34.0,
+   "seconds": 0.5,
+   "frames": [
+    837,
+    850
+   ],
+   "ls_frames": 13,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    32.9,
+    34.0
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "between_units",
+   "unit": null,
+   "sentence_src": null,
+   "sentence_dub": null,
+   "prev_dub": {
+    "unit": 4,
+    "text": "something.",
+    "end": 33.387,
+    "atempo": 0.85
+   },
+   "next_dub": {
+    "unit": 5,
+    "text": "So let such a video",
+    "start": 36.3,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "no_unit",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "05-g11",
+   "t0": 40.3,
+   "t1": 40.5,
+   "seconds": 0.2,
+   "frames": [
+    1007,
+    1013
+   ],
+   "ls_frames": 6,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    40.3,
+    41.9
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "лишним",
+   "cause": "inner_gap",
+   "unit": 5,
+   "sentence_src": "Так что пускай будет такое видео, лишним оно точно не будет.",
+   "sentence_dub": "So let such a video be made; it certainly won't be unnecessary.",
+   "prev_dub": {
+    "unit": 5,
+    "text": "be made; it certainly won't",
+    "end": 39.862,
+    "atempo": 0.85
+   },
+   "next_dub": {
+    "unit": 6,
+    "text": "We will thoroughly",
+    "start": 41.58,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "05-g12",
+   "t0": 41.4,
+   "t1": 41.6,
+   "seconds": 0.2,
+   "frames": [
+    1035,
+    1040
+   ],
+   "ls_frames": 5,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "inner",
+   "source_burst": [
+    40.3,
+    41.9
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "будет",
+   "cause": "short_fill",
+   "unit": 5,
+   "sentence_src": "Так что пускай будет такое видео, лишним оно точно не будет.",
+   "sentence_dub": "So let such a video be made; it certainly won't be unnecessary.",
+   "prev_dub": {
+    "unit": 5,
+    "text": "be unnecessary.",
+    "end": 41.397,
+    "atempo": 0.85
+   },
+   "next_dub": {
+    "unit": 6,
+    "text": "We will thoroughly",
+    "start": 41.58,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "05-g13",
+   "t0": 42.8,
+   "t1": 43.0,
+   "seconds": 0.2,
+   "frames": [
+    1070,
+    1075
+   ],
+   "ls_frames": 5,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    42.8,
+    44.8
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "Тестим",
+   "cause": "inner_gap",
+   "unit": 6,
+   "sentence_src": "Тестим полностью все варианты, которые возможно придумать.",
+   "sentence_dub": "We will thoroughly test all variants that can possibly be imagined.",
+   "prev_dub": {
+    "unit": 6,
+    "text": "We will thoroughly",
+    "end": 42.4,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 6,
+    "text": "test all variants",
+    "start": 43.0,
+    "atempo": 0.85
+   },
+   "unit_fit_up": "accepted_still_short",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "05-g14",
+   "t0": 43.9,
+   "t1": 44.8,
+   "seconds": 0.9,
+   "frames": [
+    1097,
+    1120
+   ],
+   "ls_frames": 23,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    42.8,
+    44.8
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "варианты, которые",
+   "cause": "inner_gap",
+   "unit": 6,
+   "sentence_src": "Тестим полностью все варианты, которые возможно придумать.",
+   "sentence_dub": "We will thoroughly test all variants that can possibly be imagined.",
+   "prev_dub": {
+    "unit": 6,
+    "text": "test all variants",
+    "end": 43.91,
+    "atempo": 0.85
+   },
+   "next_dub": {
+    "unit": 6,
+    "text": "that can possibly",
+    "start": 46.0,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "accepted_still_short",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "05-g15",
+   "t0": 47.6,
+   "t1": 47.8,
+   "seconds": 0.2,
+   "frames": [
+    1190,
+    1195
+   ],
+   "ls_frames": 5,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    47.6,
+    49.1
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "возможно",
+   "cause": "inner_gap",
+   "unit": 6,
+   "sentence_src": "Тестим полностью все варианты, которые возможно придумать.",
+   "sentence_dub": "We will thoroughly test all variants that can possibly be imagined.",
+   "prev_dub": {
+    "unit": 6,
+    "text": "that can possibly",
+    "end": 46.764,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 6,
+    "text": "be imagined.",
+    "start": 47.8,
+    "atempo": 0.85
+   },
+   "unit_fit_up": "accepted_still_short",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "05-g16",
+   "t0": 48.6,
+   "t1": 49.1,
+   "seconds": 0.5,
+   "frames": [
+    1215,
+    1228
+   ],
+   "ls_frames": 13,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    47.6,
+    49.1
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "придумать",
+   "cause": "between_units",
+   "unit": null,
+   "sentence_src": null,
+   "sentence_dub": null,
+   "prev_dub": {
+    "unit": 6,
+    "text": "be imagined.",
+    "end": 48.534,
+    "atempo": 0.85
+   },
+   "next_dub": null,
+   "unit_fit_up": "no_unit",
+   "layer3_could_fill": false
+  }
+ ]
+}

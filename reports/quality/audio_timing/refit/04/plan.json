@@ -1,0 +1,160 @@
+{
+ "vid": "04",
+ "l1": "/workspace/dub/artifacts/audio-timing/ab/04_flow02_sp_p_f0875/recut.manifest.json",
+ "residual": "/workspace/dub/artifacts/audio-timing/residual/04_L1_0.875.residual.json",
+ "units": [
+  {
+   "unit": 2,
+   "source": "город сочи 28 августа сегодня и мы начинаем рабочие процессы по созданию нашего магического приложения",
+   "text": "Sochi city today, August 28, and we are starting the working processes for creating our magical application.",
+   "rate_wps": 2.65,
+   "pieces": [
+    "Sochi city",
+    "today,",
+    "August 28,",
+    "and we are starting the working processes for creating our magical application."
+   ],
+   "ru": [
+    "город",
+    "сочи 28",
+    "августа сегодня и",
+    "мы начинаем рабочие процессы по созданию нашего магического приложения"
+   ],
+   "bursts": [
+    [
+     11.08,
+     11.4
+    ],
+    [
+     14.6,
+     15.6
+    ],
+    [
+     17.5,
+     19.7
+    ],
+    [
+     22.0,
+     27.24
+    ]
+   ],
+   "short": {
+    "1": {
+     "words_now": 1,
+     "shortfall_s": 0.6,
+     "budget": 3
+    },
+    "3": {
+     "words_now": 12,
+     "shortfall_s": 0.6,
+     "budget": 14
+    }
+   },
+   "gaps": [
+    "04-g08",
+    "04-g10"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 3,
+   "source": "которое облегчит жизнь людям которая я надеюсь будет пользоваться популярностью блогеров всего мира и не только блогеров",
+   "text": "which will make life easier for people whom I hope will be popular with bloggers from all over the world and not just bloggers",
+   "rate_wps": 3.82,
+   "pieces": [
+    "which will make",
+    "life easier for people whom I hope",
+    "will be popular with",
+    "bloggers",
+    "from all over the world",
+    "and not just bloggers"
+   ],
+   "ru": [
+    "которое",
+    "облегчит жизнь людям которая",
+    "я надеюсь будет пользоваться популярностью",
+    "блогеров",
+    "всего мира и",
+    "не только блогеров"
+   ],
+   "bursts": [
+    [
+     27.26,
+     27.6
+    ],
+    [
+     29.3,
+     31.4
+    ],
+    [
+     33.1,
+     35.8
+    ],
+    [
+     36.4,
+     37.6
+    ],
+    [
+     38.5,
+     40.1
+    ],
+    [
+     41.2,
+     42.26
+    ]
+   ],
+   "short": {
+    "2": {
+     "words_now": 4,
+     "shortfall_s": 0.6,
+     "budget": 6
+    },
+    "3": {
+     "words_now": 1,
+     "shortfall_s": 0.4,
+     "budget": 3
+    }
+   },
+   "gaps": [
+    "04-g15",
+    "04-g17"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 5,
+   "source": "Классная погода что вперед.",
+   "text": "The weather is really nice, isn't it? That's great.",
+   "rate_wps": 3.89,
+   "pieces": [
+    "The weather is really nice, isn't it?",
+    "That's great."
+   ],
+   "ru": [
+    "классная погода что",
+    "вперед"
+   ],
+   "bursts": [
+    [
+     48.2,
+     49.7
+    ],
+    [
+     51.6,
+     52.34
+    ]
+   ],
+   "short": {
+    "0": {
+     "words_now": 7,
+     "shortfall_s": 0.4,
+     "budget": 9
+    }
+   },
+   "gaps": [
+    "04-g21"
+   ],
+   "speaker": "SPEAKER_00"
+  }
+ ]
+}

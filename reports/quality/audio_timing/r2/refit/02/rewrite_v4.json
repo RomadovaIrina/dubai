@@ -1,0 +1,781 @@
+{
+ "version": "v4",
+ "qwen": "qwen2.5-7b-instruct-q8_0-00001-of-00003.gguf",
+ "gpu_layers": -1,
+ "load_s": 1.2,
+ "calls": 69,
+ "units": [
+  {
+   "unit": 2,
+   "accepted": true,
+   "pieces": [
+    "I will now show you the stunning swimming pool."
+   ],
+   "text": "I will now show you the stunning swimming pool.",
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "I will now show you the swimming pool, which is absolutely stunning."
+     ],
+     "result": "appended clause 'which is absolutely stunning' (translate the Russian words of the SHORT piece instead of adding a clause)"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "I will now show you the swimming pool, which is right over here."
+     ],
+     "result": "piece 1 is too long (13 words); it needs about 10 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "I will now show you the swimming pool, which is one of the highlights of this place."
+     ],
+     "result": "piece 1 is too long (17 words); it needs about 10 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "I will now show you the swimming pool, which is just a few steps away."
+     ],
+     "result": "piece 1 is too long (15 words); it needs about 10 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "I will now show you the swimming pool, which is right behind me."
+     ],
+     "result": "piece 1 is too long (13 words); it needs about 10 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "I will now show you the swimming pool."
+     ],
+     "result": "piece 1 is not longer (8 words); it needs about 10 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "I will now show you the beautiful swimming pool."
+     ],
+     "result": "added information: beautiful"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "I will now show you the stunning swimming pool."
+     ],
+     "result": "accepted"
+    }
+   ],
+   "seconds": 4.0
+  },
+  {
+   "unit": 3,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "Here are the various",
+      "things we have here, including",
+      "a zone for changing clothes, and some chaise",
+      "chaise lounges"
+     ],
+     "result": "piece 4 must end the sentence like \"longues.\" does (with a full stop / ? / !)"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Here are the various",
+      "things we have here, such as",
+      "a zone for changing clothes, and some chaise",
+      "chaise lounges for relaxing"
+     ],
+     "result": "piece 4 must end the sentence like \"longues.\" does (with a full stop / ? / !)"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Here are the various",
+      "things we have here, like",
+      "a zone for changing clothes, and some chaise",
+      "chaise lounges for sunbathing"
+     ],
+     "result": "piece 4 must end the sentence like \"longues.\" does (with a full stop / ? / !)"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Here are the various",
+      "things we have here, including",
+      "a zone for changing clothes, and some chaise",
+      "chaise lounges for enjoying the view"
+     ],
+     "result": "piece 4 must end the sentence like \"longues.\" does (with a full stop / ? / !)"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Here are the various",
+      "things we have here, such as",
+      "a zone for changing clothes, and some chaise",
+      "chaise lounges for a comfortable stay"
+     ],
+     "result": "piece 4 must end the sentence like \"longues.\" does (with a full stop / ? / !)"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Here are the various",
+      "things we have here, such as",
+      "a zone for changing clothes, and some chaise",
+      "chaise longues."
+     ],
+     "result": "not natural: The phrase 'chaise chaise longues' is redundant and unnatural. It should be simply 'chaise longues'."
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Here are the various",
+      "things we have here, such as",
+      "a zone for changing clothes, and some chaise",
+      "chaise longues."
+     ],
+     "result": "not natural: The phrase 'chaise chaise longues' is redundant and unnatural. It should be simply 'chaise longues'."
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Here are the various",
+      "things we have here, including",
+      "a zone for changing clothes, and some chaise",
+      "chaise longues."
+     ],
+     "result": "not natural: The phrase 'chaise chaise longues' is redundant and unnatural. It should be simply 'chaise longues'."
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Here are the various",
+      "things we have here, such as",
+      "a zone for changing clothes, and some chaise",
+      "chaise longues."
+     ],
+     "result": "not natural: The phrase 'chaise chaise longues' is redundant and unnatural. It should be simply 'chaise longues'."
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Here are the various",
+      "things we have here, such as",
+      "a zone for changing clothes, and some chaise",
+      "chaise longues."
+     ],
+     "result": "not natural: The phrase 'chaise chaise longues' is redundant and unnatural. It should be simply 'chaise longues'."
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Here are the various",
+      "things we have here, including",
+      "a zone for changing clothes, and some chaise",
+      "chaise longues."
+     ],
+     "result": "not natural: The phrase 'chaise chaise longues' is redundant and unnatural. It should be simply 'chaise longues'."
+    }
+   ],
+   "seconds": 8.6
+  },
+  {
+   "unit": 4,
+   "accepted": true,
+   "pieces": [
+    "In this place,",
+    "we have a Finnish sauna right here."
+   ],
+   "text": "In this place, we have a Finnish sauna right here.",
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "In this place,",
+      "we have a Finnish sauna that you can enjoy here."
+     ],
+     "result": "piece 2 is too long (10 words); it needs about 7 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "In this place,",
+      "we have a Finnish sauna that's right here for you."
+     ],
+     "result": "piece 2 is too long (10 words); it needs about 7 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "In this place,",
+      "we have a Finnish sauna in this very place."
+     ],
+     "result": "not natural: The phrase 'in this very place' is somewhat formal and not typically used in natural spoken English. A more natural phrasing might be 'right here' or 'in this s"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "In this place,",
+      "we have a Finnish sauna available here."
+     ],
+     "result": "not natural: The sentence is grammatically correct but could be more natural in spoken English. A native speaker might say 'We have a Finnish sauna available here in this pl"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "In this place,",
+      "we have a Finnish sauna right here."
+     ],
+     "result": "accepted"
+    }
+   ],
+   "seconds": 2.5
+  },
+  {
+   "unit": 5,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "I will give you a look at",
+      "show the Russian banya."
+     ],
+     "result": "piece 1 is too long (7 words); it needs about 3 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "I will reveal the Russian banya",
+      "show the Russian banya."
+     ],
+     "result": "piece 1 is too long (6 words); it needs about 3 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "I will present the Russian banya",
+      "show the Russian banya."
+     ],
+     "result": "piece 1 is too long (6 words); it needs about 3 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "I will definitely show",
+      "show the Russian banya."
+     ],
+     "result": "not natural: The word 'show' is doubled without a meaningful pause or distinction between them, which is unnatural in spoken English."
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "I will show you",
+      "show the Russian banya."
+     ],
+     "result": "not natural: Doubled 'show' and unnatural phrasing"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "I will show the Russian banya",
+      "show the Russian banya."
+     ],
+     "result": "piece 1 is too long (6 words); it needs about 3 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "I will give you a Russian banya",
+      "show the Russian banya."
+     ],
+     "result": "piece 1 is too long (7 words); it needs about 3 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "I will show you the Russian banya",
+      "show the Russian banya."
+     ],
+     "result": "piece 1 is too long (7 words); it needs about 3 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "I will display the Russian banya",
+      "show the Russian banya."
+     ],
+     "result": "piece 1 is too long (6 words); it needs about 3 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "I will reveal the Russian banya",
+      "show the Russian banya."
+     ],
+     "result": "piece 1 is too long (6 words); it needs about 3 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "I'll show the Russian banya.",
+      "show the Russian banya."
+     ],
+     "result": "pieces 1 and 2 repeat the words 'show the russian banya'"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "I'll give you a Russian banya.",
+      "show the Russian banya."
+     ],
+     "result": "piece 1 is too long (6 words); it needs about 3 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "I'll show you the banya.",
+      "show the Russian banya."
+     ],
+     "result": "piece 1 must not end the sentence: the sentence continues with piece 2"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "I'll display the Russian banya.",
+      "show the Russian banya."
+     ],
+     "result": "piece 1 must not end the sentence: the sentence continues with piece 2"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "I'll reveal the Russian banya.",
+      "show the Russian banya."
+     ],
+     "result": "piece 1 must not end the sentence: the sentence continues with piece 2"
+    }
+   ],
+   "seconds": 4.9
+  },
+  {
+   "unit": 8,
+   "accepted": true,
+   "pieces": [
+    "What is such a nice",
+    "what a nice smell here?"
+   ],
+   "text": "What is such a nice what a nice smell here?",
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "What is such a nice",
+      "what such a pleasant smell here?"
+     ],
+     "result": "not natural: The sentence is grammatically incorrect and contains a repetition of 'what' which is not natural in spoken English."
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "What is such a nice",
+      "what a nice smell here?"
+     ],
+     "result": "accepted"
+    }
+   ],
+   "seconds": 1.7
+  },
+  {
+   "unit": 9,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "There is also our second floor,",
+      "this also all falls into the infrastructure of the complex, which includes the second floor."
+     ],
+     "result": "piece 2 is too long (15 words); it needs about 12 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "There is also our second floor,",
+      "this also all falls into the infrastructure of the complex, encompassing the second floor as well."
+     ],
+     "result": "piece 2 is too long (16 words); it needs about 12 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "There is also our second floor,",
+      "this also all falls into the infrastructure of the complex, which comprises the second floor."
+     ],
+     "result": "piece 2 is too long (15 words); it needs about 12 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "There is also our second floor,",
+      "this also all falls into the infrastructure of the complex, including the second floor among its features."
+     ],
+     "result": "piece 2 is too long (17 words); it needs about 12 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "There is also our second floor,",
+      "this also all falls into the infrastructure of the complex, which features the second floor."
+     ],
+     "result": "piece 2 is too long (15 words); it needs about 12 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "There is also our second floor,",
+      "this also all falls into the infrastructure of the complex, which has the second floor."
+     ],
+     "result": "piece 2 is too long (15 words); it needs about 12 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "There is also our second floor,",
+      "this also all falls into the infrastructure of the complex, which includes the second floor area."
+     ],
+     "result": "piece 2 is too long (16 words); it needs about 12 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "There is also our second floor,",
+      "this also all falls into the infrastructure of the complex, with the second floor included."
+     ],
+     "result": "piece 2 is too long (15 words); it needs about 12 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "There is also our second floor,",
+      "this also all falls into the infrastructure of the complex, including the second floor."
+     ],
+     "result": "not natural: The sentence is a bit redundant and could be simplified for natural spoken English. For example, 'There is also the second floor, which is part of the complex’s"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "There is also our second floor,",
+      "this also all falls into the infrastructure of the complex, featuring the second floor."
+     ],
+     "result": "not natural: The sentence is a bit cumbersome and could be simplified for natural spoken English. For example, 'There is also the second floor, which is part of the complex’"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "There is also our second floor,",
+      "this also includes the second floor in the complex’s infrastructure."
+     ],
+     "result": "piece 2 is not longer (10 words); it needs about 12 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "There is also our second floor,",
+      "this also means the second floor is part of the complex’s infrastructure."
+     ],
+     "result": "not natural: The sentence is a bit stiff and formal. A more natural way to say it might be: 'There’s also our second floor, which means it’s part of the complex’s infrastruc"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "There is also our second floor,",
+      "this also falls under the complex’s infrastructure, which includes the second floor."
+     ],
+     "result": "added information: which includes the second floor"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "There is also our second floor,",
+      "this also means the second floor is part of our complex’s infrastructure."
+     ],
+     "result": "not natural: The sentence is a bit stiff and formal, and it could be simplified for natural spoken English. For example, 'There’s also our second floor, which is part of our"
+    }
+   ],
+   "seconds": 10.1
+  },
+  {
+   "unit": 14,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a relaxation zone with loungers, where you can comfortably recline and enjoy a cup of tea or a bottle of mineral water."
+     ],
+     "result": "piece 4 is too long (25 words); it needs about 10 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a relaxation zone with loungers, offering a cozy spot for sipping tea or a refreshing bottle of mineral water."
+     ],
+     "result": "piece 4 is too long (22 words); it needs about 10 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a relaxation zone with loungers, where you can relax and enjoy a cup of tea or a bottle of mineral water."
+     ],
+     "result": "piece 4 is too long (24 words); it needs about 10 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a relaxation zone with loungers, providing a comfortable spot for drinking tea or a bottle of mineral water."
+     ],
+     "result": "piece 4 is too long (21 words); it needs about 10 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a relaxation zone with loungers, where you can unwind and enjoy a cup of tea or a bottle of mineral water."
+     ],
+     "result": "piece 4 is too long (24 words); it needs about 10 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a relaxation zone with loungers for enjoying tea or mineral water."
+     ],
+     "result": "piece 4 is too long (14 words); it needs about 10 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a relaxation zone with loungers for sipping tea or mineral water."
+     ],
+     "result": "piece 4 is too long (14 words); it needs about 10 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a relaxation zone with loungers for drinking tea or mineral water."
+     ],
+     "result": "piece 4 is too long (14 words); it needs about 10 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a relaxation zone with loungers where you can drink tea or mineral water."
+     ],
+     "result": "piece 4 is too long (16 words); it needs about 10 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a relaxation zone with loungers for enjoying a cup of tea or mineral water."
+     ],
+     "result": "piece 4 is too long (17 words); it needs about 10 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a relaxation zone with loungers for tea or mineral water."
+     ],
+     "result": "piece 4 is too long (13 words); it needs about 10 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a relaxation zone with loungers for drinking tea or water."
+     ],
+     "result": "piece 4 is too long (13 words); it needs about 10 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a relaxation zone with loungers for tea or mineral water."
+     ],
+     "result": "piece 4 is too long (13 words); it needs about 10 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a relaxation zone with loungers for sipping tea or water."
+     ],
+     "result": "piece 4 is too long (13 words); it needs about 10 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a relaxation zone with loungers for tea or water."
+     ],
+     "result": "not natural: The sentence is a bit stiff and could benefit from a more natural flow. For example, it could be split into two or more sentences for better readability and nat"
+    }
+   ],
+   "seconds": 8.8
+  },
+  {
+   "unit": 16,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "Hamam",
+      "and all this expansive space."
+     ],
+     "result": "added information: expansive"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Hamam",
+      "and all this vast space."
+     ],
+     "result": "added information: vast"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Hamam",
+      "and all this ample space."
+     ],
+     "result": "added information: ample"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Hamam",
+      "and all this room."
+     ],
+     "result": "piece 2 is not longer (4 words); it needs about 5 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Hamam",
+      "and all this area."
+     ],
+     "result": "piece 2 is not longer (4 words); it needs about 5 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Hamam",
+      "and all this space."
+     ],
+     "result": "piece 2 is not longer (4 words); it needs about 5 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Hamam",
+      "and all this place."
+     ],
+     "result": "piece 2 is not longer (4 words); it needs about 5 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Hamam",
+      "and all this open space."
+     ],
+     "result": "added information: open"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Hamam",
+      "and all this entire space."
+     ],
+     "result": "not natural: The phrase 'all this entire space' sounds redundant and unnatural. A native speaker might say 'Hamam and all of this space' or simply 'Hamam and this space'."
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Hamam",
+      "and all this full space."
+     ],
+     "result": "not natural: The phrase 'Hamam and all this full space' is not a natural spoken English sentence. It lacks a verb and the phrase 'Hamam' seems out of context without additio"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Hamam",
+      "and all this total space."
+     ],
+     "result": "not natural: The phrase 'Hamam and all this total space' sounds unnatural and could be simplified to 'Hamam and all this space' or 'Hamam, this total space' for better flow."
+    }
+   ],
+   "seconds": 5.1
+  }
+ ]
+}

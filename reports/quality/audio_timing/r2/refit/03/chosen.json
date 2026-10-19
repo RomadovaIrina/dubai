@@ -1,0 +1,121 @@
+{
+ "load_s": 3.1,
+ "qa_s": 1.6,
+ "peak_vram_gib": 0.46,
+ "units": {
+  "3": {
+   "file": "/workspace/dub/runs/refit/03/tts_u03_refit_raw.wav",
+   "take": 0,
+   "seed": 6001727,
+   "temperature": 0.8,
+   "bad": false,
+   "score": 0.018,
+   "spans": [
+    {
+     "word": "today",
+     "start": 0.0,
+     "end": 0.281,
+     "score": 0.998
+    },
+    {
+     "word": "is",
+     "start": 0.462,
+     "end": 0.522,
+     "score": 1.0
+    },
+    {
+     "word": "friday",
+     "start": 0.662,
+     "end": 1.024,
+     "score": 0.996
+    },
+    {
+     "word": "august",
+     "start": 1.204,
+     "end": 1.425,
+     "score": 0.997
+    },
+    {
+     "word": "twenty",
+     "start": 1.465,
+     "end": 1.746,
+     "score": 0.976
+    },
+    {
+     "word": "eightth",
+     "start": 1.847,
+     "end": 2.027,
+     "score": 0.689
+    },
+    {
+     "word": "and",
+     "start": 2.168,
+     "end": 2.248,
+     "score": 0.988
+    },
+    {
+     "word": "we",
+     "start": 2.288,
+     "end": 2.369,
+     "score": 1.0
+    },
+    {
+     "word": "will",
+     "start": 2.409,
+     "end": 2.569,
+     "score": 0.994
+    },
+    {
+     "word": "consider",
+     "start": 2.609,
+     "end": 2.971,
+     "score": 0.977
+    },
+    {
+     "word": "this",
+     "start": 3.071,
+     "end": 3.252,
+     "score": 0.979
+    },
+    {
+     "word": "the",
+     "start": 3.412,
+     "end": 3.513,
+     "score": 0.914
+    },
+    {
+     "word": "start",
+     "start": 3.553,
+     "end": 3.814,
+     "score": 0.995
+    },
+    {
+     "word": "of",
+     "start": 3.934,
+     "end": 3.974,
+     "score": 1.0
+    },
+    {
+     "word": "our",
+     "start": 4.115,
+     "end": 4.195,
+     "score": 1.0
+    },
+    {
+     "word": "working",
+     "start": 4.255,
+     "end": 4.557,
+     "score": 0.999
+    },
+    {
+     "word": "relationship",
+     "start": 4.617,
+     "end": 5.179,
+     "score": 0.966
+    }
+   ],
+   "gap_voice_s": 0,
+   "whisper": "Today is Friday, August 28, and we will consider this the start of our working relationship."
+  }
+ }
+}

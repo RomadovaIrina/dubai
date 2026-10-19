@@ -1,0 +1,371 @@
+{
+ "version": "v4",
+ "qwen": "qwen2.5-7b-instruct-q8_0-00001-of-00003.gguf",
+ "gpu_layers": -1,
+ "load_s": 1.2,
+ "calls": 20,
+ "units": [
+  {
+   "unit": 1,
+   "accepted": true,
+   "pieces": [
+    "We'd like to take a more thorough look at what the developer's repair work includes."
+   ],
+   "text": "We'd like to take a more thorough look at what the developer's repair work includes.",
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "Let's really take a look at what the developer's repair work entails, including all the details."
+     ],
+     "result": "piece 1 is too long (16 words); it needs about 13 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "We'd like to take a closer look at what the developer's repair work entails, ensuring we cover all aspects."
+     ],
+     "result": "piece 1 is too long (19 words); it needs about 13 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Let's thoroughly examine what the developer's repair work entails, making sure we don't miss anything."
+     ],
+     "result": "appended clause 'making sure we don't miss anything' (translate the Russian words of the SHORT piece instead of adding a clause)"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "We should take a detailed look at what the developer's repair work entails, ensuring we understand every component."
+     ],
+     "result": "piece 1 is too long (18 words); it needs about 13 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Let's carefully examine what the developer's repair work entails, making sure we cover all the necessary elements."
+     ],
+     "result": "piece 1 is too long (17 words); it needs about 13 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Let's examine what the developer's repair work entails."
+     ],
+     "result": "piece 1 is not longer (8 words); it needs about 13 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Let's carefully review what the developer's repair work entails."
+     ],
+     "result": "piece 1 is not longer (9 words); it needs about 13 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "We'd like to take a more thorough look at what the developer's repair work includes."
+     ],
+     "result": "accepted"
+    }
+   ],
+   "seconds": 5.0
+  },
+  {
+   "unit": 12,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "Interior doors... A concise panel made of high-density MDF with a premium finish, crafted to perfection..."
+     ],
+     "result": "appended clause 'crafted to perfection' (translate the Russian words of the SHORT piece instead of adding a clause)"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Interior doors... A concise panel made of high-density MDF with a premium finish, designed for both style and durability..."
+     ],
+     "result": "piece 1 is too long (19 words); it needs about 16 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Interior doors... A concise panel made of high-density MDF with a premium finish, offering a seamless blend of elegance and functionality..."
+     ],
+     "result": "piece 1 is too long (21 words); it needs about 16 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Interior doors... A concise panel made of high-density MDF with a premium finish, ensuring a luxurious and modern look..."
+     ],
+     "result": "piece 1 is too long (19 words); it needs about 16 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Interior doors... A concise panel made of high-density MDF with a premium finish, providing a sophisticated and contemporary aesthetic..."
+     ],
+     "result": "piece 1 is too long (19 words); it needs about 16 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Interior doors... A concise panel made of high-density MDF with a premium finish..."
+     ],
+     "result": "piece 1 is not longer (13 words); it needs about 16 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Interior doors... A concise panel made of high-density MDF, featuring a premium finish..."
+     ],
+     "result": "piece 1 is not longer (13 words); it needs about 16 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Interior doors... A panel made of high-density MDF with a premium finish..."
+     ],
+     "result": "piece 1 is not longer (12 words); it needs about 16 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Interior doors... A concise panel crafted from high-density MDF with a premium finish..."
+     ],
+     "result": "piece 1 is not longer (13 words); it needs about 16 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Interior doors... A concise panel made of high-density MDF with a premium, high-quality finish..."
+     ],
+     "result": "added information: high-quality"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Interior doors... A concise panel made of high-density MDF with a premium finish..."
+     ],
+     "result": "piece 1 is not longer (13 words); it needs about 16 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Interior doors... A concise panel made of MDF with a premium, high-density finish..."
+     ],
+     "result": "piece 1 is not longer (13 words); it needs about 16 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Interior doors... A concise panel made of high-density MDF, featuring a premium finish..."
+     ],
+     "result": "piece 1 is not longer (13 words); it needs about 16 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Interior doors... A panel made of high-density MDF with a premium finish..."
+     ],
+     "result": "piece 1 is not longer (12 words); it needs about 16 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Interior doors... A concise panel crafted from high-density MDF with a premium finish..."
+     ],
+     "result": "piece 1 is not longer (13 words); it needs about 16 words"
+    }
+   ],
+   "seconds": 8.2
+  },
+  {
+   "unit": 14,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "With moisture absorption less than 0.5%, we want to ensure the material remains dry."
+     ],
+     "result": "piece 1 is too long (14 words); it needs about 7 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "With moisture absorption less than 0.5%, we need to keep the product completely dry."
+     ],
+     "result": "piece 1 is too long (14 words); it needs about 7 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "With moisture absorption less than 0.5%, we aim to maintain the material's dryness."
+     ],
+     "result": "piece 1 is too long (13 words); it needs about 7 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "With moisture absorption less than 0.5%, we strive to prevent any moisture from affecting the product."
+     ],
+     "result": "piece 1 is too long (16 words); it needs about 7 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "With moisture absorption less than 0.5%, we must guarantee the material stays completely dry."
+     ],
+     "result": "piece 1 is too long (14 words); it needs about 7 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "With moisture absorption less than 0.5%, we ensure dryness."
+     ],
+     "result": "appended clause 'we ensure dryness' (translate the Russian words of the SHORT piece instead of adding a clause)"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "With moisture absorption less than 0.5%, we keep it dry."
+     ],
+     "result": "piece 1 is too long (10 words); it needs about 7 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "With moisture absorption less than 0.5%, we maintain dryness."
+     ],
+     "result": "appended clause 'we maintain dryness' (translate the Russian words of the SHORT piece instead of adding a clause)"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "With moisture absorption less than 0.5%, we stay dry."
+     ],
+     "result": "appended clause 'we stay dry' (translate the Russian words of the SHORT piece instead of adding a clause)"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "With moisture absorption less than 0.5%, we prevent moisture."
+     ],
+     "result": "added information: we prevent moisture"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "With moisture absorption less than 0.5%, the material stays dry."
+     ],
+     "result": "piece 1 is too long (10 words); it needs about 7 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "With moisture absorption less than 0.5%, the product remains dry."
+     ],
+     "result": "piece 1 is too long (10 words); it needs about 7 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "With moisture absorption less than 0.5%, the material stays completely dry."
+     ],
+     "result": "piece 1 is too long (11 words); it needs about 7 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "With moisture absorption less than 0.5%, the product stays dry."
+     ],
+     "result": "piece 1 is too long (10 words); it needs about 7 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "With moisture absorption less than 0.5%, the material remains dry."
+     ],
+     "result": "piece 1 is too long (10 words); it needs about 7 words"
+    }
+   ],
+   "seconds": 7.2
+  },
+  {
+   "unit": 23,
+   "accepted": true,
+   "pieces": [
+    "Waterproof paints can offer up to 10 years of service."
+   ],
+   "text": "Waterproof paints can offer up to 10 years of service.",
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "Waterproof paints, which are built to last, can serve up to 10 years."
+     ],
+     "result": "piece 1 is too long (13 words); it needs about 10 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Waterproof paints, formulated to provide long-lasting protection, can serve up to 10 years."
+     ],
+     "result": "piece 1 is too long (13 words); it needs about 10 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Waterproof paints, which are highly durable, can serve up to 10 years."
+     ],
+     "result": "added information: which are highly durable"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Waterproof paints, designed to withstand moisture, can serve up to 10 years."
+     ],
+     "result": "added information: designed to withstand moisture"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Waterproof paints, known for their longevity, can serve up to 10 years."
+     ],
+     "result": "added information: known for their longevity"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Waterproof paints can last up to 10 years."
+     ],
+     "result": "piece 1 is not longer (8 words); it needs about 10 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Waterproof paints can provide up to 10 years of protection."
+     ],
+     "result": "added information: of protection"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Waterproof paints can offer up to 10 years of service."
+     ],
+     "result": "accepted"
+    }
+   ],
+   "seconds": 5.0
+  }
+ ]
+}

@@ -99,6 +99,26 @@ class Blocker(RuntimeError):
     """A real component cannot run; the runner must stop instead of faking the stage."""
 
 
+# --audio-policy (2026-10-17, Agent C r2): flag bundles of the audio stage. A flag passed explicitly on the command line always wins over the bundle.
+#   legacy = the argparse defaults below (pre-cand5 behaviour); cand5 = the 2026-10-13 production-candidate audio flags;
+#   r2     = cand5 + layer-1 timing (flow 0.2 + spread pauses) + slow-down floor 0.875 (reports/quality/audio_timing/p1_timing_ab.md, r2/CHANGES.md)
+AUDIO_POLICY_CAND5 = {"phrase_cut": "acoustic", "long_pause_func": 1.2, "cut_fade": "adaptive", "tts_gap_qa": "on"}
+AUDIO_POLICIES = {"legacy": {}, "cand5": dict(AUDIO_POLICY_CAND5),
+                  "r2": {**AUDIO_POLICY_CAND5, "sentence_flow_gap": 0.2, "spread": "pauses", "fill_slowdown": 0.875}}
+
+
+def apply_audio_policy(a, argv: list[str]) -> dict:
+    """Set the policy's values on every option NOT given explicitly in argv; returns the record for the manifest."""
+    explicit = {}; applied = {}
+    for k, v in AUDIO_POLICIES[a.audio_policy].items():
+        flag = "--" + k.replace("_", "-")
+        if any(x == flag or x.startswith(flag + "=") for x in argv):
+            explicit[k] = getattr(a, k)
+        else:
+            setattr(a, k, v); applied[k] = v
+    return {"name": a.audio_policy, "applied": applied, "explicit_overrides": explicit}
+
+
 def lang_name(code: str) -> str:
     return LANG_NAMES.get(code.lower(), code)
 
@@ -519,6 +539,11 @@ def align_units_burst(units: list[dict], plans: list[dict], work: pathlib.Path, 
     import soundfile as sf
     from e1_burst_align import SR16, TTS_SR as E1_SR, burst_fit_ratios, place_groups, place_slot_fallback, placement_summary, vad_intervals
     report = []; n_fallback = 0; prev_end = None
+    spread_cfg = getattr(opts, "spread", None); spread_cfg = spread_cfg if spread_cfg and spread_cfg.get("mode", "off") != "off" else None; spread_log = []
+    if spread_cfg:   # --spread (2026-10-16, Agent C): leftover silence of a part shorter than its source burst -> late start + pauses at phrase boundaries
+        import timing_spread
+        from tts_burst import CUT_FUNC_WORDS, FIXED_PHRASES
+        from tts_qa import norm as tts_norm
     for u, p in zip(units, plans):
         chunks = []
         for k, t in enumerate(u["tts_parts"]):
@@ -547,13 +572,23 @@ def align_units_burst(units: list[dict], plans: list[dict], work: pathlib.Path, 
                           "placements": placements, "aligned_seconds": round(len(track) / E1_SR, 3), "file": str(aligned),
                           "track_start": next((pl["track_start"] for pl in placements if "track_start" in pl), round(slot_s, 3))}
         placed_ends = [pl["placed"][1] for pl in placements if pl.get("placed")]
-        prev_end = max(placed_ends) if placed_ends else prev_end
+        prev_end = max(placed_ends) if placed_ends else prev_end      # before --spread: the next unit's lead room is that of the plain placement
+        if spread_cfg and u.get("tts_raw_file") and (u.get("tts") or {}).get("word_spans"):
+            y_raw, _ = sf.read(u["tts_raw_file"], dtype="float32")
+            track2, lg = timing_spread.spread_unit(u, track, E1_SR, y_raw, spread_cfg, tts_norm, CUT_FUNC_WORDS, FIXED_PHRASES)
+            if lg:
+                sf.write(str(aligned), track2, E1_SR, subtype="PCM_16"); spread_log += lg
         report.append({"id": u["id"], "placements": placements})
-    return {"mode": "burst", "min_burst_s": getattr(opts, "min_burst_s", None), "spill": opts.spill, "atempo_cap": opts.atempo_cap, "hard_cap": opts.hard_cap,
-            "fill_slowdown": opts.fill_slowdown, "fallback_frac": getattr(opts, "fallback_frac", 0.5), "units_slot_fallback": n_fallback, "summary": placement_summary(report)}
+    out = {"mode": "burst", "min_burst_s": getattr(opts, "min_burst_s", None), "spill": opts.spill, "atempo_cap": opts.atempo_cap, "hard_cap": opts.hard_cap,
+           "fill_slowdown": opts.fill_slowdown, "fallback_frac": getattr(opts, "fallback_frac", 0.5), "units_slot_fallback": n_fallback, "summary": placement_summary(report)}
+    if spread_cfg:
+        out["spread"] = {"cfg": {k: v for k, v in spread_cfg.items() if k != "src_ivs"}, "parts_spread": len(spread_log), "pauses": sum(len(x["pauses"]) for x in spread_log),
+                         "pause_s": round(sum(q["s"] for x in spread_log for q in x["pauses"]), 2), "head_s": round(sum(x["head_s"] for x in spread_log), 2), "log": spread_log}
+        print(f"  [spread] {out['spread']['parts_spread']} parts, {out['spread']['pauses']} inner pauses ({out['spread']['pause_s']} s), late start {out['spread']['head_s']} s", flush=True)
+    return out
 
 
-def build_dubbed_track(units: list[dict], duration: float, work: pathlib.Path) -> dict:
+def build_dubbed_track(units: list[dict], duration: float, work: pathlib.Path, declick: bool = False) -> dict:
     import numpy as np
     import soundfile as sf
     n = int(round(duration * TTS_SR)); track = np.zeros(n, dtype=np.float32)
@@ -565,11 +600,15 @@ def build_dubbed_track(units: list[dict], duration: float, work: pathlib.Path) -
     if peak > 0.99:
         track *= 0.99 / peak
     wav24 = work / "dubbed_24k.wav"; sf.write(str(wav24), track, TTS_SR, subtype="PCM_16")
+    dc = None
+    if declick:   # r2 2026-10-17: isolated vocoder / atempo clicks in the dub voice, repaired in +-1.5 ms (declick.py)
+        from declick import declick_file
+        dc = declick_file(str(wav24))
     wav16 = work / "dubbed_16k.wav"; ff(["-i", str(wav24), "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", str(wav16)])
     m4a = work / "dubbed_aac.m4a"; ff(["-i", str(wav24), "-c:a", "aac", "-b:a", "192k", str(m4a)])
     return {"wav24k": str(wav24), "wav16k": str(wav16), "aac": str(m4a), "seconds": round(n / TTS_SR, 3), "sr": TTS_SR,
             "peak_before_norm": round(peak, 4), "speech_seconds": round(sum(u["slot"]["seconds"] for u in units), 3),
-            "non_speech": "silence (original timing preserved)"}
+            "non_speech": "silence (original timing preserved)", "declick": dc}
 
 
 # --------------------------------------------------------------------------------------------------------------
@@ -732,6 +771,13 @@ def main() -> int:
                     "is QA-bad -> retry ladder (04 \"Sochi\" -> \"Salkis\", 05 \"Just here\" -> \"This year\"; the sentence CER hid them)")
     ap.add_argument("--pause-marks", choices=["off", "qwen"], default="off", help="with --long-pause-func: qwen = Qwen marks the natural pause points of every multi-burst "
                     "sentence; a long source pause is free only there (function-word list otherwise / on a malformed answer)")
+    ap.add_argument("--spread", choices=["off", "centre", "pauses"], default="off", help="burst + phrase mode (2026-10-16, Agent C P1): where the leftover silence of a part "
+                    "shorter than its source burst goes: off = one tail gap (dub silent while the speaker still talks); centre = late start <= --spread-head-max + tail; pauses = + "
+                    "pauses <= --spread-pause-max at phrase boundaries inside the part (offline 01/03/04/05: LatentSync frames in gaps >= 0.35 s 525 -> 382, gaps > 1 s 6 -> 3)")
+    ap.add_argument("--spread-ok", type=float, default=0.3, help="--spread: tail gaps up to this many s are left alone / the target")
+    ap.add_argument("--spread-head-max", type=float, default=0.2); ap.add_argument("--spread-pause-max", type=float, default=0.25)
+    ap.add_argument("--spread-pause-total-max", type=float, default=0.35, help="--spread: max silence at one boundary = the TTS's own pause + the inserted one")
+    ap.add_argument("--spread-min-seg", type=float, default=0.5, help="--spread: min s of speech between two inserted pauses / a pause and the part edge")
     ap.add_argument("--cut-fade", choices=["fixed", "adaptive"], default="fixed", help="--phrase-cut acoustic: fixed = 5 ms declick fades; adaptive = 25 ms fade-out / 8 ms fade-in on inner cuts that are still voiced")
     ap.add_argument("--fit-up-guard", choices=["on", "off"], default="off", help="phrase mode: reject fit-up rewrites that append a clause / end on a dangling auxiliary before the Qwen judge "
                                                                                   "(deterministic; 2026-10-12 candidate, fewer judge calls)")
@@ -742,11 +788,24 @@ def main() -> int:
                     "all models + Qwen resident on the GPU at the LatentSync peak = the pilot 0.4 question); off = released before LatentSync")
     ap.add_argument("--qwen-gpu-layers", type=int, default=0, help="Qwen layers offloaded to the GPU (-1 = all); 0 = frozen CPU baseline. Needs a CUDA llama-cpp-python build "
                                                                    "(A/B 2026-10-12: translation 18x faster, outputs not identical to the CPU)")
-    ap.add_argument("--background", choices=["on", "off"], default="off",
-                    help="final mix: on = source background bed (Hybrid Demucs accompaniment, original voice/bed balance, ducked under the dub) under the dubbed voice; "
-                         "off = dubbed voice over digital silence (previous behaviour). LatentSync / speech gate always use the clean dubbed voice. Was default on 2026-10-12..16 (dead air 16-54 s -> 0-6 s); default OFF since 2026-10-16: the HDemucs MUSDB18-HQ weights are non-commercial (needs DUB_ALLOW_NC=1) until a clean bed exists")
-    ap.add_argument("--bg-duck-db", type=float, default=-6.0, help="--background on: bed attenuation while the dub speaks (dB)")
+    ap.add_argument("--audio-policy", choices=sorted(AUDIO_POLICIES), default="r2", help="audio-stage flag bundle (explicit flags win): r2 (default since 2026-10-17) = cand5 + "
+                    "--sentence-flow-gap 0.2 --spread pauses --fill-slowdown 0.875; cand5 = --phrase-cut acoustic --long-pause-func 1.2 --cut-fade adaptive --tts-gap-qa on; legacy = the plain flag defaults")
+    ap.add_argument("--declick", choices=["on", "off"], default="on", help="repair isolated impulsive clicks of the assembled dub voice in +-1.5 ms (declick.py; r2 2026-10-17: "
+                    "Chatterbox vocoder clicks 01 / 05, atempo splice clicks 01)")
+    ap.add_argument("--bed-separator", choices=["spleeter", "hdemucs"], default="spleeter", help="--background on: stem separator of the bed. spleeter = Deezer Spleeter 2stems (MIT code, "
+                    "weights = MIT repo release asset; own TF venv, scripts/setup_spleeter.sh; default since 2026-10-17); hdemucs = torchaudio HDEMUCS_HIGH_MUSDB_PLUS, weights WITHOUT a licence: "
+                    "reference only, refused unless DUB_ALLOW_NC_BED=1")
+    ap.add_argument("--background", choices=["on", "off"], default="on",
+                    help="final mix: on = source background bed (--bed-separator accompaniment stem, original voice/bed balance, ducked under the dub) under the dubbed voice; "
+                         "off = dubbed voice over digital silence (previous behaviour). LatentSync / speech gate always use the clean dubbed voice. Default on since 2026-10-12 (dead air 16-54 s -> 0-6 s, WER unchanged)")
+    ap.add_argument("--bg-duck-db", type=float, default=-4.0, help="--background on: bed attenuation while the dub speaks (dB). r2 2026-10-17: -4 (was -6): with the clean Spleeter bed "
+                    "the duck only keeps the dub in front; -6 made the bed 'breathe' 7-8 dB between dub phrases (Whisper WER on the mix unchanged at -4)")
+    ap.add_argument("--bg-duck-attack-s", type=float, default=0.25, help="--background on: duck ramp before a dub onset (r2: 0.25, was 0.08: the fast ramp made 8-10 dB bed steps "
+                    "in the pause right before each phrase, 03: 9 -> 1)")
+    ap.add_argument("--bg-duck-release-s", type=float, default=0.6, help="--background on: duck release after a dub offset (r2: 0.6, was 0.35)")
     ap.add_argument("--bg-src-duck-db", type=float, default=0.0, help="--background on: extra bed attenuation where the source speaks and the dub is silent (Demucs voice residue); 0 = off")
+    ap.add_argument("--bg-residue-duck-db", type=float, default=-15.0, help="--background on: bed attenuation where the BED itself sounds like speech (Silero on the "
+                    "separated stem) while the source speaks and the dub is silent = voice leak of the separator (r2 2026-10-17: Spleeter 02 39.0-39.4 s); 0 = off")
     ap.add_argument("--bg-offset-db", type=float, default=0.0, help="--background on: bed level relative to the original voice/background balance (dB)")
     ap.add_argument("--stop-after", choices=["none", "audio"], default="none", help="audio = stop after the dubbed track (audio-only candidate: manifest + dubbed_24k/16k.wav, no LatentSync)")
     ap.add_argument("--min-ls-frames", type=int, default=25, help="VALID_FACE runs shorter than this are passed through")
@@ -791,6 +850,9 @@ def main() -> int:
                          "replayed by the video stage (same calls, same results; 2026-10-13 speed lever)")
     ap.add_argument("--segment-files", action="store_true", help="optimized backend: legacy per-segment mp4 path instead of in-memory segments")
     a = ap.parse_args()
+    audio_policy = apply_audio_policy(a, sys.argv[1:])
+    if a.background == "on" and a.bed_separator == "hdemucs" and os.environ.get("DUB_ALLOW_NC_BED") != "1":
+        print("--bed-separator hdemucs: the HDEMUCS weights have no licence (non-commercial reference only); set DUB_ALLOW_NC_BED=1 for a reference run", file=sys.stderr); return 2
     global QWEN_GPU_LAYERS
     QWEN_GPU_LAYERS = a.qwen_gpu_layers
     if a.qwen_gpu_layers:
@@ -819,7 +881,8 @@ def main() -> int:
     man: dict = {"task": "0.5-runner", "input": str(src), "output": str(out), "target_lang": tgt, "alignment_mode": a.alignment,
                  "tts_mode": a.tts_mode if a.alignment == "burst" else "slot", "segmentation_mode": a.segmentation if a.alignment == "burst" else "whisper",
                  "codeformer": "DISABLED (not invoked)" if a.codeformer == "off" else {"mode": a.codeformer, "w": a.codeformer_w, "batch": a.codeformer_batch, "landmarks": a.codeformer_landmarks, "precision": a.codeformer_precision},
-                 "work_dir": str(work), "config": {"seed": a.seed, "max_unit_s": a.max_unit_s, "threads": THREADS}}
+                 "work_dir": str(work), "config": {"seed": a.seed, "max_unit_s": a.max_unit_s, "threads": THREADS},
+                 "audio_policy": {**audio_policy, "resolved": {k: getattr(a, k) for k in AUDIO_POLICIES["r2"]}}}
     try:
         source = probe(src); man["source"] = source; duration = source["duration_s"]
         if duration <= 0 or not source["has_audio"]:
@@ -887,6 +950,8 @@ def main() -> int:
             sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
             from e1_burst_align import PlaceOpts
             burst_opts = PlaceOpts(a.atempo_cap, a.hard_cap, True, 0.06, a.fill_slowdown, spill=a.burst_spill == "on", max_lead=a.burst_max_lead); burst_opts.min_burst_s = a.burst_min_s; burst_opts.fallback_frac = a.burst_fallback_frac
+            burst_opts.spread = {"mode": a.spread, "ok": a.spread_ok, "head_max": a.spread_head_max, "pause_max": a.spread_pause_max, "pause_total_max": a.spread_pause_total_max,
+                                 "min_seg": a.spread_min_seg, "src_ivs": [(v["start"], v["end"]) for v in speech]}
         phrase_mode = a.alignment == "burst" and a.tts_mode == "phrase"
         tr = run_translation(units, src_lang, tgt, times, plans=plans, split_retries=a.split_retries,
                              min_part_words=a.min_part_words, soft_part_words=a.soft_part_words, part_max_words=a.part_max_words,
@@ -932,17 +997,18 @@ def main() -> int:
             else:
                 align_units(units, duration, work); man["alignment"] = {"mode": "slot"}
         with timed(times, "dubbed_track"):
-            man["dubbed_track"] = build_dubbed_track(units, duration, work)
+            man["dubbed_track"] = build_dubbed_track(units, duration, work, declick=a.declick == "on")
         man["units"] = units
         mux_aac = pathlib.Path(man["dubbed_track"]["aac"]); man["background"] = {"enabled": False}
         if a.background == "on":   # only the MUXED audio changes; dubbed_16k (LatentSync, speech gate) stays the clean voice
             from background_bed import mix_background, separate_background
             with timed(times, "background_sep"):
-                sep = separate_background(src, work)
+                sep = separate_background(src, work, separator=a.bed_separator)
             with timed(times, "background_mix"):
                 dub_vad = run_vad(pathlib.Path(man["dubbed_track"]["wav16k"]))
                 mix = mix_background(sep, pathlib.Path(man["dubbed_track"]["wav24k"]), [(v["start"], v["end"]) for v in speech], [(v["start"], v["end"]) for v in dub_vad],
-                                     duration, work, bg_offset_db=a.bg_offset_db, duck_db=a.bg_duck_db, src_duck_db=a.bg_src_duck_db)
+                                     duration, work, bg_offset_db=a.bg_offset_db, duck_db=a.bg_duck_db, src_duck_db=a.bg_src_duck_db,
+                                     residue_duck_db=a.bg_residue_duck_db, attack_s=a.bg_duck_attack_s, release_s=a.bg_duck_release_s)
             man["background"] = {"enabled": True, "separation": sep, "mix": mix}; mux_aac = pathlib.Path(mix["aac"])
             print(f"  [background] bed gain {mix['bg_gain_db']:+.1f} dB, duck {mix['duck_db']} dB, separation {sep['separate_s']}s (+load {sep['load_s']}s), bed in dub pauses {mix['bed_db_in_dub_pauses']} dBFS", flush=True)
         print(f"  [align] ratios tts/slot: " + " ".join(f"{u['alignment']['ratio_tts_to_slot']:.2f}" for u in units), flush=True)

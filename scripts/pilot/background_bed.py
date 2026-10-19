@@ -2,8 +2,13 @@
 and then there is nothing"). Before this module the muxed audio was the dubbed voice ONLY: every non-speech moment of the video (room tone,
 ambience, music, steps, water ...) was digital silence, so each pause between dubbed phrases sounded like a drop-out.
 
-    separate_background()  Hybrid Demucs (torchaudio HDEMUCS_HIGH_MUSDB_PLUS, no new dependency) splits the source audio into
-                           vocals + accompaniment; the background bed = drums + bass + other (44.1 kHz stereo). ~1-2 s GPU per video minute.
+    separate_background()  splits the source audio into vocals + accompaniment (44.1 kHz stereo); the accompaniment is the bed.
+                           separator="spleeter" (default since 2026-10-17, Agent C r2): Deezer Spleeter 2stems, MIT code, weights = release
+                           asset of the MIT repo (reports/quality/audio_timing/LICENSES.md), run in its own TensorFlow venv on the CPU
+                           (scripts/setup_spleeter.sh; ~8 s per 90 s video). 03 A/B (bed_p1.md): no detectable voice residue in dub pauses,
+                           ambience level continuous under the source speech (-0.1 dB vs HDEMUCS -3.0 dB).
+                           separator="hdemucs": torchaudio HDEMUCS_HIGH_MUSDB_PLUS (bg = drums + bass + other), weights WITHOUT a licence:
+                           non-commercial reference only, refused unless DUB_ALLOW_NC_BED=1.
     mix_background()       final = dubbed voice + background bed. The bed keeps its ORIGINAL balance against the voice (bed gain = dubbed voice
                            level - original vocal level, both measured inside their own speech), is ducked softly while the dub speaks
                            (masks residual source-voice leakage, keeps the dub in front) and is never gated, so pauses keep the real ambience.
@@ -15,6 +20,7 @@ Only the MUXED audio changes: LatentSync, the speech gate, the TTS QA and the du
 """
 from __future__ import annotations
 
+import os
 import pathlib
 import subprocess
 import time
@@ -26,6 +32,16 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 DEMUCS_WEIGHTS = ROOT / "models" / "demucs" / "hdemucs_high_trained.pt"   # scripts/download_models.sh; else torchaudio downloads it to the torch hub cache
 SEP_SR = 44100
 SOURCES = ["drums", "bass", "other", "vocals"]
+SPLEETER_PY = pathlib.Path(os.environ.get("DUB_SPLEETER_PY", "/workspace/dub/venv-spleeter/bin/python"))   # scripts/setup_spleeter.sh
+SPLEETER_MODELS = ROOT / "models" / "spleeter" / "pretrained_models"                                            # 2stems/ (sha256-checked release asset)
+SPLEETER_CODE = r"""
+import os, sys, time, numpy as np, soundfile as sf, tensorflow as tf
+n = int(os.environ.get("DUB_THREADS", "8")); tf.config.threading.set_intra_op_parallelism_threads(n); tf.config.threading.set_inter_op_parallelism_threads(1)
+from spleeter.separator import Separator
+y, sr = sf.read(sys.argv[1], dtype="float32"); assert sr == 44100
+t0 = time.perf_counter(); sep = Separator("spleeter:2stems", multiprocess=False); s = sep.separate(y); t1 = time.perf_counter()
+sf.write(sys.argv[2], s["accompaniment"], sr, subtype="FLOAT"); sf.write(sys.argv[3], s["vocals"], sr, subtype="FLOAT"); print("SEPARATE_S", round(t1 - t0, 3))
+"""
 
 
 def ff(args: list[str]) -> None:
@@ -81,11 +97,35 @@ def _separate(model, mix, device: str, seg_s: float = 10.0, overlap: float = 0.1
     return out * sd + mu
 
 
-def separate_background(src: pathlib.Path, work: pathlib.Path, device: str = "cuda") -> dict:
-    """Source audio -> bg_44k.wav (drums+bass+other, stereo) and vocals_44k.wav (stereo). Returns paths + timings + levels."""
-    import torch
+def separate_spleeter(wav: pathlib.Path, work: pathlib.Path, t0: float) -> dict:
+    """Spleeter 2stems in its own venv (CPU, TensorFlow): bg = accompaniment, vocals = vocals."""
+    if not SPLEETER_PY.exists() or not (SPLEETER_MODELS / "2stems" / "model.index").exists():
+        raise RuntimeError(f"Spleeter not set up ({SPLEETER_PY}, {SPLEETER_MODELS}/2stems): run scripts/setup_spleeter.sh")
+    p_bg, p_voc = work / "bg_44k.wav", work / "vocals_44k.wav"
+    env = {**os.environ, "MODEL_PATH": str(SPLEETER_MODELS), "CUDA_VISIBLE_DEVICES": "", "TF_CPP_MIN_LOG_LEVEL": "2"}
+    for k in ("PYTHONPATH", "VIRTUAL_ENV", "PYTHONHOME"): env.pop(k, None)
+    r = subprocess.run([str(SPLEETER_PY), "-I", "-c", SPLEETER_CODE, str(wav), str(p_bg), str(p_voc)], env=env, cwd=str(work), capture_output=True, text=True)
+    if r.returncode != 0:
+        raise RuntimeError(f"Spleeter failed (rc {r.returncode}): {r.stderr[-800:]}")
+    sep_s = float(next((ln.split()[1] for ln in r.stdout.splitlines() if ln.startswith("SEPARATE_S")), "nan"))
+    y, _ = sf.read(str(wav), dtype="float32"); bg, _ = sf.read(str(p_bg), dtype="float32"); voc, _ = sf.read(str(p_voc), dtype="float32"); wav.unlink()
+    total = time.perf_counter() - t0
+    return {"model": "Spleeter 2stems v1.4.0 (bg = accompaniment; MIT code, weights = MIT repo release asset)", "weights": str(SPLEETER_MODELS / "2stems"),
+            "bg": str(p_bg), "vocals": str(p_voc), "seconds": round(len(y) / SEP_SR, 3), "load_s": round(max(0.0, total - sep_s), 3), "separate_s": round(sep_s, 3),
+            "total_s": round(total, 3), "source_db": round(_db(y.mean(1)), 2), "vocals_db": round(_db(voc.mean(1)), 2), "bg_db": round(_db(bg.mean(1)), 2)}
+
+
+def separate_background(src: pathlib.Path, work: pathlib.Path, device: str = "cuda", separator: str = "spleeter") -> dict:
+    """Source audio -> bg_44k.wav (accompaniment, stereo) and vocals_44k.wav (stereo). Returns paths + timings + levels."""
     t0 = time.perf_counter()
     wav = work / "source_44k.wav"; ff(["-i", str(src), "-vn", "-ac", "2", "-ar", str(SEP_SR), "-c:a", "pcm_f32le", str(wav)])
+    if separator == "spleeter":
+        return separate_spleeter(wav, work, t0)
+    if separator != "hdemucs":
+        raise ValueError(f"unknown separator {separator}")
+    if os.environ.get("DUB_ALLOW_NC_BED") != "1":
+        raise RuntimeError("HDEMUCS weights have no licence (non-commercial reference only): set DUB_ALLOW_NC_BED=1 for a reference run")
+    import torch
     y, sr = sf.read(str(wav), dtype="float32"); assert sr == SEP_SR
     import model_cache
     t1 = time.perf_counter(); model = model_cache.get(("demucs", device), lambda: load_demucs(device)); t_load = time.perf_counter() - t1
@@ -155,9 +195,31 @@ def room_tone(bed: np.ndarray, source_speech: list, sr: int, n_out: int, frame_s
     return out[:n_out], floor
 
 
+def bed_speech_runs(bg: np.ndarray, sr: int, thr: float = 0.5, min_s: float = 0.06, pad_s: float = 0.05) -> list:
+    """Where the separated bed itself sounds like speech (Silero on the bed stem, 32 ms frames): the separator left part of the original voice in
+    the accompaniment (r2 2026-10-17, Spleeter: 02 39.0-39.4 s a vocal sound p 0.99, 03 59.3 s a consonant onset). Returns padded (start, end) s."""
+    import torch
+    from silero_vad import load_silero_vad
+    import scipy.signal as ss
+    y16 = ss.resample_poly(bg.mean(1) if bg.ndim > 1 else bg, 160, 441).astype(np.float32); m = load_silero_vad(); w = 512; hop = w / 16000; p = []
+    with torch.no_grad():
+        for i in range(0, len(y16) - w, w):
+            p.append(float(m(torch.from_numpy(y16[i:i + w].copy()), 16000)))
+    on = np.array(p) > thr; out = []; i = 0
+    while i < len(on):
+        if on[i]:
+            j = i
+            while j < len(on) and on[j]: j += 1
+            if (j - i) * hop >= min_s: out.append((max(0.0, i * hop - pad_s), j * hop + pad_s))
+            i = j
+        else:
+            i += 1
+    return out
+
+
 def mix_background(sep: dict, dubbed24k: pathlib.Path, source_speech: list, dub_speech: list, duration: float, work: pathlib.Path,
                    bg_offset_db: float = 0.0, duck_db: float = -6.0, max_bg_gain_db: float = 12.0, attack_s: float = 0.08, release_s: float = 0.35,
-                   room_fill: bool = True, src_duck_db: float = 0.0) -> dict:
+                   room_fill: bool = True, src_duck_db: float = 0.0, residue_duck_db: float = 0.0) -> dict:
     """final_mix_44k.wav (stereo) + final_mix_aac.m4a = dub voice (unchanged level, both channels) + background bed.
     Bed gain = (dub voice level in dub speech) - (original vocal level in source speech) + bg_offset_db, clamped to +-max_bg_gain_db, i.e. the
     original voice/background balance is reproduced; the bed is ducked by duck_db while the dub speaks (soft attack / release).
@@ -190,12 +252,22 @@ def mix_background(sep: dict, dubbed24k: pathlib.Path, source_speech: list, dub_
         src_only = _mask(source_speech, n, SEP_SR) & ~_mask(dub_speech, n, SEP_SR)
         env_s = _envelope(src_only, SEP_SR, attack_s, release_s) * (1.0 - env)          # never on top of the dub duck
         g = g * (10 ** (src_duck_db * env_s / 20))
+    residue = {"enabled": bool(residue_duck_db), "runs": [], "seconds": 0.0}
+    if residue_duck_db:   # r2: duck the bed only where IT sounds like speech, the source speaks and the dub is silent (voice leak of the separator)
+        runs = [(a_, b_) for a_, b_ in bed_speech_runs(bg, SEP_SR)]
+        rm = _mask(runs, n, SEP_SR) & _mask(source_speech, n, SEP_SR) & ~_mask(dub_speech, n, SEP_SR)
+        if rm.any():
+            env_r = _envelope(rm, SEP_SR, 0.04, 0.12) * (1.0 - env)
+            g = g * (10 ** (residue_duck_db * env_r / 20))
+        d_ = np.diff(np.concatenate([[0], rm.astype(np.int8), [0]])); on_, off_ = np.flatnonzero(d_ == 1), np.flatnonzero(d_ == -1)
+        residue = {"enabled": True, "duck_db": residue_duck_db, "runs": [[round(a_ / SEP_SR, 2), round(b_ / SEP_SR, 2)] for a_, b_ in zip(on_, off_)],
+                   "seconds": round(float(rm.sum() / SEP_SR), 2)}
     bed = bg * g[:, None]; mix = bed + dub[:, None]
     peak = float(np.abs(mix).max()) if n else 0.0; norm = 0.98 / peak if peak > 0.98 else 1.0; mix *= norm
     out = work / "final_mix_44k.wav"; sf.write(str(out), mix, SEP_SR, subtype="PCM_16")
     aac = work / "final_mix_aac.m4a"; ff(["-i", str(out), "-c:a", "aac", "-b:a", "192k", str(aac)])
     pause = ~_mask(dub_speech, n, SEP_SR)
-    return {"wav": str(out), "aac": str(aac), "room_fill": fill, "bg_gain_db": round(gain_db, 2), "duck_db": duck_db, "src_duck_db": src_duck_db, "attack_s": attack_s, "release_s": release_s, "bg_offset_db": bg_offset_db,
+    return {"wav": str(out), "aac": str(aac), "room_fill": fill, "residue_duck": residue, "bg_gain_db": round(gain_db, 2), "duck_db": duck_db, "src_duck_db": src_duck_db, "attack_s": attack_s, "release_s": release_s, "bg_offset_db": bg_offset_db,
             "dub_voice_db": round(voice_db, 2), "orig_vocals_db": round(orig_voice_db, 2), "peak_norm": round(norm, 4),
             "bed_db_in_dub_pauses": round(_db(bed.mean(1)[pause]), 2) if pause.any() else None,
             "mix_db_in_dub_pauses": round(_db(mix.mean(1)[pause]), 2) if pause.any() else None,

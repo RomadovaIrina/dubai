@@ -1,0 +1,311 @@
+{
+ "vid": "02",
+ "l1": "/workspace/dub/runs/e2e_r2/final/02_final.manifest.json",
+ "residual": "/workspace/dub/runs/metrics_s2/residual/02_r2.residual.json",
+ "units": [
+  {
+   "unit": 2,
+   "source": "Сейчас покажу бассейн.",
+   "text": "I will now show you the swimming pool.",
+   "rate_wps": 4.31,
+   "pieces": [
+    "I will now show you the swimming pool."
+   ],
+   "ru": [
+    "сейчас покажу бассейн"
+   ],
+   "bursts": [
+    [
+     12.36,
+     14.4
+    ]
+   ],
+   "short": {
+    "0": {
+     "words_now": 8,
+     "shortfall_s": 0.5,
+     "budget": 10
+    }
+   },
+   "gaps": [
+    "02-g03"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 3,
+   "source": "Вот такие вот у нас тут разные штуки зона для переодевания бочки шезлонги.",
+   "text": "Here are the various things we have here: a zone for changing clothes, and some chaise longues.",
+   "rate_wps": 3.68,
+   "pieces": [
+    "Here are the various",
+    "things we have here:",
+    "a zone for changing clothes, and some chaise",
+    "longues."
+   ],
+   "ru": [
+    "вот",
+    "такие вот у нас тут разные",
+    "штуки зона для переодевания бочки",
+    "шезлонги"
+   ],
+   "bursts": [
+    [
+     15.08,
+     15.6
+    ],
+    [
+     16.4,
+     18.0
+    ],
+    [
+     19.0,
+     22.0
+    ],
+    [
+     24.0,
+     24.9
+    ]
+   ],
+   "short": {
+    "1": {
+     "words_now": 4,
+     "shortfall_s": 0.4,
+     "budget": 5
+    },
+    "3": {
+     "words_now": 1,
+     "shortfall_s": 0.8,
+     "budget": 4
+    }
+   },
+   "gaps": [
+    "02-g05",
+    "02-g09"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 4,
+   "source": "Здесь у нас финская сауна.",
+   "text": "In this place, we have a Finnish sauna.",
+   "rate_wps": 4.51,
+   "pieces": [
+    "In this place,",
+    "we have a Finnish sauna."
+   ],
+   "ru": [
+    "здесь",
+    "у нас финская сауна"
+   ],
+   "bursts": [
+    [
+     26.36,
+     26.8
+    ],
+    [
+     28.7,
+     30.4
+    ]
+   ],
+   "short": {
+    "1": {
+     "words_now": 5,
+     "shortfall_s": 0.4,
+     "budget": 7
+    }
+   },
+   "gaps": [
+    "02-g11"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 5,
+   "source": "Покажу русскую баню.",
+   "text": "I will show the Russian banya.",
+   "rate_wps": 2.78,
+   "pieces": [
+    "I will",
+    "show the Russian banya."
+   ],
+   "ru": [
+    "покажу",
+    "русскую баню"
+   ],
+   "bursts": [
+    [
+     30.42,
+     30.8
+    ],
+    [
+     40.3,
+     41.5
+    ]
+   ],
+   "short": {
+    "0": {
+     "words_now": 2,
+     "shortfall_s": 0.5,
+     "budget": 3
+    }
+   },
+   "gaps": [
+    "02-g12"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 8,
+   "source": "Какой запах здесь хороший.",
+   "text": "What is such a nice smell here?",
+   "rate_wps": 4.62,
+   "pieces": [
+    "What is such a nice",
+    "smell here?"
+   ],
+   "ru": [
+    "какой",
+    "запах здесь хороший"
+   ],
+   "bursts": [
+    [
+     47.96,
+     48.3
+    ],
+    [
+     49.6,
+     51.46
+    ]
+   ],
+   "short": {
+    "1": {
+     "words_now": 2,
+     "shortfall_s": 0.6,
+     "budget": 5
+    }
+   },
+   "gaps": [
+    "02-g16"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 9,
+   "source": "Есть еще у нас второй этаж это также все входит в инфраструктуру комплекса.",
+   "text": "There is also our second floor, this also all falls into the infrastructure of the complex.",
+   "rate_wps": 3.31,
+   "pieces": [
+    "There is also our second floor,",
+    "this also all falls into the infrastructure of the complex."
+   ],
+   "ru": [
+    "есть еще у нас второй этаж это",
+    "также все входит в инфраструктуру комплекса"
+   ],
+   "bursts": [
+    [
+     57.9,
+     59.8
+    ],
+    [
+     65.5,
+     68.9
+    ]
+   ],
+   "short": {
+    "1": {
+     "words_now": 10,
+     "shortfall_s": 0.5,
+     "budget": 12
+    }
+   },
+   "gaps": [
+    "02-g19"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 14,
+   "source": "Массажная комната холодильничек и вот здесь такое место для распития чая или минералочки зона отдыха также лежечки.",
+   "text": "The massage room has a mini fridge, and here is a spot for drinking tea or mineral water. There is also a relaxation zone with loungers.",
+   "rate_wps": 3.55,
+   "pieces": [
+    "The massage",
+    "room has a mini fridge,",
+    "and here is a spot for drinking tea or mineral water.",
+    "There is also a relaxation zone with loungers."
+   ],
+   "ru": [
+    "массажная",
+    "комната",
+    "холодильничек и вот здесь такое место для",
+    "распития чая или минералочки зона отдыха также лежечки"
+   ],
+   "bursts": [
+    [
+     85.8,
+     86.0
+    ],
+    [
+     88.2,
+     89.5
+    ],
+    [
+     94.2,
+     97.1
+    ],
+    [
+     99.0,
+     103.02
+    ]
+   ],
+   "short": {
+    "3": {
+     "words_now": 8,
+     "shortfall_s": 0.7,
+     "budget": 10
+    }
+   },
+   "gaps": [
+    "02-g26"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 16,
+   "source": "Хамам ну и все это пространство.",
+   "text": "Hamam and all this space.",
+   "rate_wps": 3.64,
+   "pieces": [
+    "Hamam",
+    "and all this space."
+   ],
+   "ru": [
+    "хамам ну",
+    "и все это пространство"
+   ],
+   "bursts": [
+    [
+     106.76,
+     107.5
+    ],
+    [
+     108.3,
+     109.56
+    ]
+   ],
+   "short": {
+    "1": {
+     "words_now": 4,
+     "shortfall_s": 0.4,
+     "budget": 5
+    }
+   },
+   "gaps": [
+    "02-g32"
+   ],
+   "speaker": "SPEAKER_00"
+  }
+ ]
+}

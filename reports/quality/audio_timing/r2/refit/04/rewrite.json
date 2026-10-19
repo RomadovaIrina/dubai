@@ -1,0 +1,99 @@
+{
+ "version": "selection of v3 / v4 after review",
+ "units": [
+  {
+   "unit": 2,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "review": "no candidate passed guards + judges + Agent C meaning review",
+   "log": []
+  },
+  {
+   "unit": 3,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "review": "no candidate passed guards + judges + Agent C meaning review",
+   "log": []
+  },
+  {
+   "unit": 5,
+   "accepted": true,
+   "pieces": [
+    "The weather is really quite nice, isn't it?",
+    "That's great."
+   ],
+   "text": "The weather is really quite nice, isn't it? That's great.",
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "The really nice weather, isn't it?",
+      "That's great."
+     ],
+     "result": "piece 1 is not longer (6 words); it needs about 9 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "The weather is so nice, isn't it?",
+      "That's great."
+     ],
+     "result": "piece 1 is not longer (7 words); it needs about 9 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "The weather is absolutely lovely, isn't it?",
+      "That's great."
+     ],
+     "result": "piece 1 is not longer (7 words); it needs about 9 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "The weather is truly delightful, isn't it?",
+      "That's great."
+     ],
+     "result": "piece 1 is not longer (7 words); it needs about 9 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "The weather is really pleasant, isn't it?",
+      "That's great."
+     ],
+     "result": "piece 1 is not longer (7 words); it needs about 9 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "The weather is absolutely delightful, isn't it?",
+      "That's great."
+     ],
+     "result": "piece 1 is not longer (7 words); it needs about 9 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "The weather is truly wonderful, isn't it?",
+      "That's great."
+     ],
+     "result": "piece 1 is not longer (7 words); it needs about 9 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "The weather is really quite nice, isn't it?",
+      "That's great."
+     ],
+     "result": "accepted"
+    }
+   ],
+   "seconds": 6.1,
+   "version": "v4",
+   "review": "accepted by Agent C meaning review: faithful; small fill ('really quite nice')"
+  }
+ ]
+}

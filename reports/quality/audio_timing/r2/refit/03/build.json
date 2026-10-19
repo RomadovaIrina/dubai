@@ -1,0 +1,24 @@
+{
+ "candidates": [
+  3
+ ],
+ "accepted": [],
+ "decisions": {
+  "3": {
+   "before": {
+    "residual_s": 0.8,
+    "max_gap": 0.8,
+    "atempo_max": 1.0,
+    "ls_frames": 20
+   },
+   "after": {
+    "residual_s": 1.2,
+    "max_gap": 0.8,
+    "atempo_max": 1.0,
+    "ls_frames": 30
+   },
+   "accepted": false
+  }
+ },
+ "final_manifest": "/workspace/dub/runs/refit/03/recut_final/recut.manifest.json"
+}

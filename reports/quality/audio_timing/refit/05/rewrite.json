@@ -1,0 +1,195 @@
+{
+ "qwen": "qwen2.5-7b-instruct-q8_0-00001-of-00003.gguf",
+ "threads": 6,
+ "load_s": 0.5,
+ "units": [
+  {
+   "unit": 1,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "After all,",
+      "indeed, modern phones already do",
+      "already allow this."
+     ],
+     "raw": "{\"2\": \"indeed, modern phones already do\"}",
+     "result": "not fluent: Redundant use of 'already'"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "After all,",
+      "indeed, modern phones already",
+      "already allow this."
+     ],
+     "raw": "{\"2\": \"indeed, modern phones already\"}",
+     "result": "not fluent: The sentence contains unnecessary repetition with 'already already'."
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "After all,",
+      "indeed, modern phones already",
+      "already allow this."
+     ],
+     "raw": "{\"2\": \"indeed, modern phones already\"}",
+     "result": "not fluent: The sentence contains unnecessary repetition with 'already already'."
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "After all,",
+      "indeed, modern phones allow",
+      "already allow this."
+     ],
+     "raw": "{\"2\": \"indeed, modern phones allow\"}",
+     "result": "not fluent: Redundant use of 'indeed' and 'already'"
+    }
+   ],
+   "seconds": 80.2
+  },
+  {
+   "unit": 2,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "And such a function,",
+      "of course, adds to our popularity",
+      "and possible",
+      "and the possibilities."
+     ],
+     "raw": "{\"4\": \"and the possibilities.\"}",
+     "result": "added information: possibilities"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "And such a function,",
+      "of course, adds to our popularity",
+      "and possible",
+      "and the possibilities."
+     ],
+     "raw": "{\"4\": \"and the possibilities.\"}",
+     "result": "added information: possibilities"
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "And such a function,",
+      "of course, adds to our popularity",
+      "and possible",
+      "and the possibilities."
+     ],
+     "raw": "{\"4\": \"and the possibilities.\"}",
+     "result": "added information: possibilities"
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "And such a function,",
+      "of course, adds to our popularity",
+      "and possible",
+      "and the possibilities."
+     ],
+     "raw": "{\"4\": \"and the possibilities.\"}",
+     "result": "added information: possibilities"
+    }
+   ],
+   "seconds": 61.4
+  },
+  {
+   "unit": 3,
+   "accepted": true,
+   "pieces": [
+    "Here,",
+    "we simply wish to observe how",
+    "our application will manage to function in this format"
+   ],
+   "text": "Here, we simply wish to observe how our application will manage to function in this format",
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "Here,",
+      "we simply wish to observe how",
+      "our application will cope within this format"
+     ],
+     "raw": "{\"2\": \"we simply wish to observe how\", \"3\": \"our application will cope within this format\"}",
+     "result": "piece 3 is not longer (7 words); it needs about 11 words"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "Here,",
+      "we simply wish to observe how",
+      "our application will manage to function in this format"
+     ],
+     "raw": "{\"2\": \"we simply wish to observe how\", \"3\": \"our application will manage to function in this format\"}",
+     "result": "accepted"
+    }
+   ],
+   "seconds": 26.7
+  },
+  {
+   "unit": 6,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "We will thoroughly",
+      "thoroughly examine every possible variant, which",
+      "that can possibly",
+      "be imagined."
+     ],
+     "raw": "{\"2\": \"thoroughly examine every possible variant, which\"}",
+     "result": "added information: every possible"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "We will thoroughly",
+      "thoroughly all variants, which",
+      "that can possibly",
+      "be imagined."
+     ],
+     "raw": "{\"2\": \"thoroughly all variants, which\"}",
+     "result": "not fluent: Doubled words 'thoroughly thoroughly' and unnecessary 'which that'"
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "We will thoroughly",
+      "thoroughly test all variants that",
+      "that can possibly",
+      "be imagined."
+     ],
+     "raw": "{\"2\": \"thoroughly test all variants that\"}",
+     "result": "not fluent: Doubled words 'thoroughly thoroughly' and 'all variants that that'"
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "We will thoroughly",
+      "thoroughly test all variants which",
+      "that can possibly",
+      "be imagined."
+     ],
+     "raw": "{\"2\": \"thoroughly test all variants which\"}",
+     "result": "added information: thoroughly"
+    }
+   ],
+   "seconds": 77.5
+  }
+ ]
+}

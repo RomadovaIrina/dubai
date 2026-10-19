@@ -1,0 +1,105 @@
+{
+ "version": "selection of v3 / v4 after review",
+ "units": [
+  {
+   "unit": 3,
+   "accepted": true,
+   "pieces": [
+    "Today is Friday, August 28th,",
+    "and we will consider this the start",
+    "of our working relationship."
+   ],
+   "text": "Today is Friday, August 28th, and we will consider this the start of our working relationship.",
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "Today is Friday, August 28th,",
+      "and we will consider this the start",
+      "of our cooperation."
+     ],
+     "result": "piece 3 is not longer (3 words); it needs about 5 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Today is Friday, August 28th,",
+      "and we will consider this the start",
+      "of our partnership."
+     ],
+     "result": "piece 3 is not longer (3 words); it needs about 5 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Today is Friday, August 28th,",
+      "and we will consider this the start",
+      "of our collaboration."
+     ],
+     "result": "piece 3 is not longer (3 words); it needs about 5 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Today is Friday, August 28th,",
+      "and we will consider this the start",
+      "of our joint venture."
+     ],
+     "result": "added information: joint venture"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Today is Friday, August 28th,",
+      "and we will consider this the start",
+      "of our working relationship."
+     ],
+     "result": "accepted"
+    }
+   ],
+   "seconds": 1.4,
+   "version": "v4",
+   "review": "accepted by Agent C meaning review: faithful; 'working relationship' = сотрудничество"
+  },
+  {
+   "unit": 4,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "review": "no candidate passed guards + judges + Agent C meaning review",
+   "log": []
+  },
+  {
+   "unit": 5,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "review": "no candidate passed guards + judges + Agent C meaning review",
+   "log": []
+  },
+  {
+   "unit": 6,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "review": "no candidate passed guards + judges + Agent C meaning review",
+   "log": []
+  },
+  {
+   "unit": 8,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "review": "no candidate passed guards + judges + Agent C meaning review",
+   "log": []
+  },
+  {
+   "unit": 9,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "review": "no candidate passed guards + judges + Agent C meaning review",
+   "log": []
+  }
+ ]
+}

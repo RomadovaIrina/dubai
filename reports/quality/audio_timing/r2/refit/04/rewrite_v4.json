@@ -1,0 +1,433 @@
+{
+ "version": "v4",
+ "qwen": "qwen2.5-7b-instruct-q8_0-00001-of-00003.gguf",
+ "gpu_layers": -1,
+ "load_s": 1.8,
+ "calls": 12,
+ "units": [
+  {
+   "unit": 2,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "Sochi city",
+      "today, August 28",
+      "August 28,",
+      "and we are initiating the development processes for our magical application."
+     ],
+     "result": "piece 4 is not longer (11 words); it needs about 14 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Sochi city",
+      "today, August 28th",
+      "August 28,",
+      "and we are beginning the creation processes for our magical application."
+     ],
+     "result": "piece 4 is not longer (11 words); it needs about 14 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Sochi city",
+      "today, August 28",
+      "August 28,",
+      "and we are starting the development processes for our magical application."
+     ],
+     "result": "piece 4 is not longer (11 words); it needs about 14 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Sochi city",
+      "today, August 28",
+      "August 28,",
+      "and we are initiating the creation processes for our magical application."
+     ],
+     "result": "piece 4 is not longer (11 words); it needs about 14 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "Sochi city",
+      "today, August 28",
+      "August 28,",
+      "and we are beginning the development processes for our magical application."
+     ],
+     "result": "piece 4 is not longer (11 words); it needs about 14 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Sochi city",
+      "today, August 28",
+      "August 28,",
+      "and we are starting the development processes for creating our magical application."
+     ],
+     "result": "piece 4 is not longer (12 words); it needs about 14 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Sochi city",
+      "today, August 28",
+      "August 28,",
+      "and we are beginning the creation processes for our magical application."
+     ],
+     "result": "piece 4 is not longer (11 words); it needs about 14 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Sochi city",
+      "today, August 28",
+      "August 28,",
+      "and we are initiating the development processes for creating our magical application."
+     ],
+     "result": "piece 4 is not longer (12 words); it needs about 14 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Sochi city",
+      "today, August 28",
+      "August 28,",
+      "and we are beginning the development processes for our magical application."
+     ],
+     "result": "piece 4 is not longer (11 words); it needs about 14 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "Sochi city",
+      "today, August 28",
+      "August 28,",
+      "and we are starting the creation processes for our magical application."
+     ],
+     "result": "piece 4 is not longer (11 words); it needs about 14 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Sochi city",
+      "today, August 28",
+      "August 28,",
+      "and we are starting the development processes for our magical app."
+     ],
+     "result": "piece 4 is not longer (11 words); it needs about 14 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Sochi city",
+      "today, August 28",
+      "August 28,",
+      "and we are initiating the creation processes for our magical app."
+     ],
+     "result": "piece 4 is not longer (11 words); it needs about 14 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Sochi city",
+      "today, August 28",
+      "August 28,",
+      "and we are beginning the development processes for our magical app."
+     ],
+     "result": "piece 4 is not longer (11 words); it needs about 14 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Sochi city",
+      "today, August 28",
+      "August 28,",
+      "and we are starting the creation processes for our magical app."
+     ],
+     "result": "piece 4 is not longer (11 words); it needs about 14 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "Sochi city",
+      "today, August 28",
+      "August 28,",
+      "and we are initiating the development processes for our magical app."
+     ],
+     "result": "piece 4 is not longer (11 words); it needs about 14 words"
+    }
+   ],
+   "seconds": 14.9
+  },
+  {
+   "unit": 3,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "will gain traction among",
+      "vloggers",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "result": "piece 3 is not longer (4 words); it needs about 6 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "will resonate with",
+      "influencers",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "result": "piece 3 is not longer (3 words); it needs about 6 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "will find a receptive audience among",
+      "creators",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "result": "piece 4 is not longer (1 words); it needs about 3 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "will be well-received by",
+      "the community",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "result": "piece 3 is not longer (4 words); it needs about 6 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "will be widely embraced by",
+      "content creators",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "result": "added information: widely embraced"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "will be embraced by",
+      "creators",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "result": "piece 3 is not longer (4 words); it needs about 6 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "will resonate with",
+      "vloggers",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "result": "piece 3 is not longer (3 words); it needs about 6 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "will find an audience among",
+      "bloggers",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "result": "piece 4 is not longer (1 words); it needs about 3 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "will be popular with",
+      "the community",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "result": "piece 3 is not longer (4 words); it needs about 6 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "will be well-received by",
+      "creators and",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "result": "piece 3 is not longer (4 words); it needs about 6 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "will be appreciated by",
+      "creators and",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "result": "piece 3 is not longer (4 words); it needs about 6 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "will be embraced by",
+      "the community",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "result": "piece 3 is not longer (4 words); it needs about 6 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "will be well-received by",
+      "vloggers and",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "result": "piece 3 is not longer (4 words); it needs about 6 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "will resonate with",
+      "content creators",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "result": "piece 3 is not longer (3 words); it needs about 6 words"
+    },
+    {
+     "round": 3,
+     "pieces": [
+      "which will make",
+      "life easier for people whom I hope",
+      "will find an audience among",
+      "the influencers",
+      "from all over the world",
+      "and not just bloggers"
+     ],
+     "result": "added information: influencers"
+    }
+   ],
+   "seconds": 9.9
+  },
+  {
+   "unit": 5,
+   "accepted": true,
+   "pieces": [
+    "The weather is really quite nice, isn't it?",
+    "That's great."
+   ],
+   "text": "The weather is really quite nice, isn't it? That's great.",
+   "log": [
+    {
+     "round": 1,
+     "pieces": [
+      "The really nice weather, isn't it?",
+      "That's great."
+     ],
+     "result": "piece 1 is not longer (6 words); it needs about 9 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "The weather is so nice, isn't it?",
+      "That's great."
+     ],
+     "result": "piece 1 is not longer (7 words); it needs about 9 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "The weather is absolutely lovely, isn't it?",
+      "That's great."
+     ],
+     "result": "piece 1 is not longer (7 words); it needs about 9 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "The weather is truly delightful, isn't it?",
+      "That's great."
+     ],
+     "result": "piece 1 is not longer (7 words); it needs about 9 words"
+    },
+    {
+     "round": 1,
+     "pieces": [
+      "The weather is really pleasant, isn't it?",
+      "That's great."
+     ],
+     "result": "piece 1 is not longer (7 words); it needs about 9 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "The weather is absolutely delightful, isn't it?",
+      "That's great."
+     ],
+     "result": "piece 1 is not longer (7 words); it needs about 9 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "The weather is truly wonderful, isn't it?",
+      "That's great."
+     ],
+     "result": "piece 1 is not longer (7 words); it needs about 9 words"
+    },
+    {
+     "round": 2,
+     "pieces": [
+      "The weather is really quite nice, isn't it?",
+      "That's great."
+     ],
+     "result": "accepted"
+    }
+   ],
+   "seconds": 6.1
+  }
+ ]
+}

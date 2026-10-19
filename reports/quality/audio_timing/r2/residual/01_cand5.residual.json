@@ -1,0 +1,848 @@
+{
+ "video": "01",
+ "policy": "cand5",
+ "flags": "--audio-policy cand5",
+ "fps": 25,
+ "frames_are": "master_25fps.mp4 frame indices, [f0, f1)",
+ "manifest": "/workspace/dub/runs/e2e_cand5/final/01_final.manifest.json",
+ "dub_track": "/workspace/dub/runs/e2e_cand5/work/work_01/dubbed_16k.wav",
+ "definition": "source Silero VAD speaking AND dub Silero VAD (min speech 60 ms) silent, 10 ms grid; natural = shorter than 0.35 s",
+ "summary": {
+  "gaps": 22,
+  "residual": 8,
+  "residual_s": 5.5,
+  "residual_in_latentsync": 1,
+  "residual_ls_frames": 15,
+  "residual_without_asr_words": 1,
+  "residual_layer3_candidates": 7,
+  "longest_s": 1.7
+ },
+ "gaps": [
+  {
+   "id": "01-g00",
+   "t0": 0.0,
+   "t1": 0.1,
+   "seconds": 0.1,
+   "frames": [
+    0,
+    3
+   ],
+   "ls_frames": 3,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    0.0,
+    1.7
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "inner_gap",
+   "unit": 0,
+   "sentence_src": "Отделка Prime от Neometria..",
+   "sentence_dub": "Prime finishing from Neometria..",
+   "prev_dub": null,
+   "next_dub": {
+    "unit": 1,
+    "text": "Let's",
+    "start": 1.52,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "01-g01",
+   "t0": 4.8,
+   "t1": 5.4,
+   "seconds": 0.6,
+   "frames": [
+    120,
+    135
+   ],
+   "ls_frames": 15,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "inner",
+   "source_burst": [
+    1.9,
+    9.8
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "застройщиком.",
+   "cause": "short_fill",
+   "unit": 1,
+   "sentence_src": "Давайте посмотрим, что включает в себя ремонт, предлагаемый застройщиком..",
+   "sentence_dub": "Let's take a look at what the developer's repair work entails.",
+   "prev_dub": {
+    "unit": 1,
+    "text": "take a look at what the developer's repair work entails.",
+    "end": 4.799,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 2,
+    "text": "You can order it at the time of purchasing an apartment in o",
+    "start": 5.38,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "accepted_still_short",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "01-g02",
+   "t0": 9.9,
+   "t1": 10.2,
+   "seconds": 0.3,
+   "frames": [
+    247,
+    255
+   ],
+   "ls_frames": 8,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    9.9,
+    14.3
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "Flora.",
+   "cause": "short_fill",
+   "unit": 2,
+   "sentence_src": "Его вы можете заказать на момент покупки квартиры в нашем жилом комплексе Flora..",
+   "sentence_dub": "You can order it at the time of purchasing an apartment in our Flora residential complex....",
+   "prev_dub": {
+    "unit": 2,
+    "text": "purchasing an apartment in our Flora residential complex....",
+    "end": 9.818,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 3,
+    "text": "The ceiling is a stretched, white, matte type of ceiling.",
+    "start": 10.24,
+    "atempo": 1.033
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "01-g03",
+   "t0": 14.1,
+   "t1": 14.3,
+   "seconds": 0.2,
+   "frames": [
+    352,
+    358
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    9.9,
+    14.3
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "срок",
+   "cause": "inner_gap",
+   "unit": 4,
+   "sentence_src": "В каждой комнате срок службы более 10 лет..",
+   "sentence_dub": "In each room, the service life is more than 10 years.",
+   "prev_dub": {
+    "unit": 3,
+    "text": "The ceiling is a stretched, white, matte type of ceiling.",
+    "end": 13.14,
+    "atempo": 1.033
+   },
+   "next_dub": {
+    "unit": 4,
+    "text": "the service life is more than 10 years.",
+    "start": 14.4,
+    "atempo": 0.915
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "01-g04",
+   "t0": 16.6,
+   "t1": 16.8,
+   "seconds": 0.2,
+   "frames": [
+    415,
+    420
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    14.4,
+    16.8
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "between_units",
+   "unit": null,
+   "sentence_src": null,
+   "sentence_dub": null,
+   "prev_dub": {
+    "unit": 4,
+    "text": "the service life is more than 10 years.",
+    "end": 16.549,
+    "atempo": 0.915
+   },
+   "next_dub": {
+    "unit": 5,
+    "text": "Walls...",
+    "start": 17.2,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "no_unit",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "01-g05",
+   "t0": 17.7,
+   "t1": 17.9,
+   "seconds": 0.2,
+   "frames": [
+    442,
+    448
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    17.2,
+    17.9
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "Обои",
+   "cause": "inner_gap",
+   "unit": 5,
+   "sentence_src": "Стены.. Обои под покраску на флизелиновой основе..",
+   "sentence_dub": "Walls... Wallpaper on a fiber-based substrate for painting...",
+   "prev_dub": {
+    "unit": 5,
+    "text": "Walls...",
+    "end": 17.621,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 5,
+    "text": "Wallpaper on a fiber-based substrate for painting...",
+    "start": 18.1,
+    "atempo": 0.955
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "01-g06",
+   "t0": 26.2,
+   "t1": 26.7,
+   "seconds": 0.5,
+   "frames": [
+    655,
+    668
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "residual",
+   "position_in_burst": "inner",
+   "source_burst": [
+    18.1,
+    26.9
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "поверхности.",
+   "cause": "short_fill",
+   "unit": 6,
+   "sentence_src": "Рельефная текстура с рисунком вертикальная струна создает необходимую глубину и объем поверхности..",
+   "sentence_dub": "The relief texture with a vertical stripe pattern creates the necessary depth and volume on the surface..",
+   "prev_dub": {
+    "unit": 6,
+    "text": "tern creates the necessary depth and volume on the surface..",
+    "end": 26.12,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 7,
+    "text": "wallpapers withstand up to 10 repaintings.. Floor..",
+    "start": 27.2,
+    "atempo": 0.933
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "01-g07",
+   "t0": 30.4,
+   "t1": 30.7,
+   "seconds": 0.3,
+   "frames": [
+    760,
+    768
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    30.4,
+    33.0
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "short_fill",
+   "unit": 7,
+   "sentence_src": "Такие обои выдерживают до 10 окрашиваний.. Пол..",
+   "sentence_dub": "Such wallpapers withstand up to 10 repaintings.. Floor..",
+   "prev_dub": {
+    "unit": 7,
+    "text": "wallpapers withstand up to 10 repaintings.. Floor..",
+    "end": 30.189,
+    "atempo": 0.933
+   },
+   "next_dub": {
+    "unit": 9,
+    "text": "Egger with a substrate..",
+    "start": 33.3,
+    "atempo": 1.143
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "01-g08",
+   "t0": 37.0,
+   "t1": 37.1,
+   "seconds": 0.1,
+   "frames": [
+    925,
+    928
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "inner",
+   "source_burst": [
+    36.2,
+    37.7
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "inner_gap",
+   "unit": 10,
+   "sentence_src": "Имеет высокую стебель тепла, влага и звукоизоляции..",
+   "sentence_dub": "It has a high stem of heat, moisture, and sound insulation.",
+   "prev_dub": {
+    "unit": 10,
+    "text": "a high stem of heat,",
+    "end": 36.132,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 10,
+    "text": "sound insulation.",
+    "start": 37.8,
+    "atempo": 1.139
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "01-g09",
+   "t0": 37.3,
+   "t1": 37.7,
+   "seconds": 0.4,
+   "frames": [
+    932,
+    943
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    36.2,
+    37.7
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "влага и",
+   "cause": "inner_gap",
+   "unit": 10,
+   "sentence_src": "Имеет высокую стебель тепла, влага и звукоизоляции..",
+   "sentence_dub": "It has a high stem of heat, moisture, and sound insulation.",
+   "prev_dub": {
+    "unit": 10,
+    "text": "moisture, and",
+    "end": 37.298,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 10,
+    "text": "sound insulation.",
+    "start": 37.8,
+    "atempo": 1.139
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "01-g10",
+   "t0": 42.9,
+   "t1": 43.4,
+   "seconds": 0.5,
+   "frames": [
+    1072,
+    1085
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    40.7,
+    43.4
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "between_units",
+   "unit": null,
+   "sentence_src": null,
+   "sentence_dub": null,
+   "prev_dub": {
+    "unit": 11,
+    "text": "And is designed for 20-25 years of active use.",
+    "end": 42.86,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 12,
+    "text": "Interior doors... A concise panel made of high-density MDF w",
+    "start": 43.6,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "no_unit",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "01-g11",
+   "t0": 48.7,
+   "t1": 50.4,
+   "seconds": 1.7,
+   "frames": [
+    1217,
+    1260
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    43.6,
+    50.4
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "премиальным финишным покрытием.",
+   "cause": "short_fill",
+   "unit": 12,
+   "sentence_src": "Межкомнатные двери.. Лаконичное полотно из МДФ высокой плотности с премиальным финишным покрытием..",
+   "sentence_dub": "Interior doors... A concise panel made of high-density MDF with a premium finish...",
+   "prev_dub": {
+    "unit": 12,
+    "text": "cise panel made of high-density MDF with a premium finish...",
+    "end": 48.674,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 13,
+    "text": "Bathroom...",
+    "start": 50.8,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "rejected: not longer (12 <= 14 words)",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "01-g12",
+   "t0": 51.5,
+   "t1": 51.6,
+   "seconds": 0.1,
+   "frames": [
+    1287,
+    1290
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    50.8,
+    51.6
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "inner_gap",
+   "unit": 13,
+   "sentence_src": "Ванная.. Матовый широкоформатный керамогранит 600х600 толщиной 9 мм..",
+   "sentence_dub": "Bathroom... Matte wide-format ceramic tile 600x600 with a thickness of 9 mm....",
+   "prev_dub": {
+    "unit": 12,
+    "text": "cise panel made of high-density MDF with a premium finish...",
+    "end": 48.674,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 13,
+    "text": "Matte wide-format ceramic tile 600x600 with a thickness of 9",
+    "start": 51.8,
+    "atempo": 1.059
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "01-g13",
+   "t0": 58.2,
+   "t1": 58.4,
+   "seconds": 0.2,
+   "frames": [
+    1455,
+    1460
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "inner",
+   "source_burst": [
+    57.7,
+    61.5
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "влагопоглощением",
+   "cause": "inner_gap",
+   "unit": 14,
+   "sentence_src": "С влагопоглощением менее 0 ,5%..",
+   "sentence_dub": "With moisture absorption less than 0.5%.",
+   "prev_dub": {
+    "unit": 13,
+    "text": "ide-format ceramic tile 600x600 with a thickness of 9 mm....",
+    "end": 56.584,
+    "atempo": 1.059
+   },
+   "next_dub": {
+    "unit": 15,
+    "text": "Which means, sufficiently strong...",
+    "start": 61.1,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "rejected: added information: ensuring minimal moisture",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "01-g14",
+   "t0": 60.4,
+   "t1": 61.1,
+   "seconds": 0.7,
+   "frames": [
+    1510,
+    1528
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "residual",
+   "position_in_burst": "inner",
+   "source_burst": [
+    57.7,
+    61.5
+   ],
+   "asr_words_in_gap": true,
+   "source_words": ",5%.",
+   "cause": "short_fill",
+   "unit": 14,
+   "sentence_src": "С влагопоглощением менее 0 ,5%..",
+   "sentence_dub": "With moisture absorption less than 0.5%.",
+   "prev_dub": {
+    "unit": 14,
+    "text": "With moisture absorption less than 0.5%.",
+    "end": 60.421,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 15,
+    "text": "Which means, sufficiently strong...",
+    "start": 61.1,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "rejected: added information: ensuring minimal moisture",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "01-g15",
+   "t0": 63.5,
+   "t1": 63.7,
+   "seconds": 0.2,
+   "frames": [
+    1587,
+    1593
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "inner",
+   "source_burst": [
+    61.8,
+    63.9
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "прочный.",
+   "cause": "short_fill",
+   "unit": 15,
+   "sentence_src": "А значит, достаточно прочный..",
+   "sentence_dub": "Which means, sufficiently strong...",
+   "prev_dub": {
+    "unit": 15,
+    "text": "Which means, sufficiently strong...",
+    "end": 63.483,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 16,
+    "text": "All necessary plumbing, including a",
+    "start": 63.7,
+    "atempo": 0.917
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "01-g16",
+   "t0": 75.4,
+   "t1": 75.6,
+   "seconds": 0.2,
+   "frames": [
+    1885,
+    1890
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "inner",
+   "source_burst": [
+    74.6,
+    78.6
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "Покрытие",
+   "cause": "inner_gap",
+   "unit": 19,
+   "sentence_src": "Балкон.. Покрытие потолка и стен в зоне остекленного балкона..",
+   "sentence_dub": "Balcony... Coating of the ceiling and walls in the glazed balcony area...",
+   "prev_dub": {
+    "unit": 18,
+    "text": "A cabinet features a high-strength brass mixer.",
+    "end": 74.297,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 20,
+    "text": "The plaster has a white, matte, water-resistant paint finish",
+    "start": 78.36,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "01-g17",
+   "t0": 78.2,
+   "t1": 78.4,
+   "seconds": 0.2,
+   "frames": [
+    1955,
+    1961
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "inner",
+   "source_burst": [
+    74.6,
+    78.6
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "between_units",
+   "unit": null,
+   "sentence_src": null,
+   "sentence_dub": null,
+   "prev_dub": {
+    "unit": 19,
+    "text": "ating of the ceiling and walls in the glazed balcony area...",
+    "end": 78.211,
+    "atempo": 0.988
+   },
+   "next_dub": {
+    "unit": 21,
+    "text": "Such a coating is resistant to water vapor and high humidity",
+    "start": 81.8,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "no_unit",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "01-g18",
+   "t0": 81.3,
+   "t1": 81.5,
+   "seconds": 0.2,
+   "frames": [
+    2032,
+    2038
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    78.8,
+    81.5
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "late_start",
+   "unit": 21,
+   "sentence_src": "Такое покрытие устойчиво к водяному пару и высокой влажности..",
+   "sentence_dub": "Such a coating is resistant to water vapor and high humidity.",
+   "prev_dub": {
+    "unit": 20,
+    "text": "he plaster has a white, matte, water-resistant paint finish.",
+    "end": 81.217,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 21,
+    "text": "Such a coating is resistant to water vapor and high humidity",
+    "start": 81.8,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "rejected: added information: levels",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "01-g19",
+   "t0": 84.8,
+   "t1": 85.2,
+   "seconds": 0.4,
+   "frames": [
+    2120,
+    2130
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "residual",
+   "position_in_burst": "inner",
+   "source_burst": [
+    81.8,
+    89.7
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "влажности.",
+   "cause": "short_fill",
+   "unit": 21,
+   "sentence_src": "Такое покрытие устойчиво к водяному пару и высокой влажности..",
+   "sentence_dub": "Such a coating is resistant to water vapor and high humidity.",
+   "prev_dub": {
+    "unit": 21,
+    "text": "uch a coating is resistant to water vapor and high humidity.",
+    "end": 84.741,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 22,
+    "text": "When used correctly, it is.",
+    "start": 85.18,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "rejected: added information: levels",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "01-g20",
+   "t0": 89.0,
+   "t1": 89.7,
+   "seconds": 0.7,
+   "frames": [
+    2225,
+    2243
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    81.8,
+    89.7
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "лет.",
+   "cause": "short_fill",
+   "unit": 23,
+   "sentence_src": "Влагостойкие краски могут прослужить до 10 лет..",
+   "sentence_dub": "Waterproof paints can serve up to 10 years.",
+   "prev_dub": {
+    "unit": 23,
+    "text": "Waterproof paints can serve up to 10 years.",
+    "end": 88.971,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 24,
+    "text": "You will find more details and information about the Prime d",
+    "start": 89.9,
+    "atempo": 1.121
+   },
+   "unit_fit_up": "rejected: number lost",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "01-g21",
+   "t0": 96.9,
+   "t1": 97.1,
+   "seconds": 0.2,
+   "frames": [
+    2422,
+    2428
+   ],
+   "ls_frames": 0,
+   "in_latentsync": false,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    89.9,
+    97.1
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "between_units",
+   "unit": null,
+   "sentence_src": null,
+   "sentence_dub": null,
+   "prev_dub": {
+    "unit": 25,
+    "text": " showroom and see the quality of the finishing for yourself.",
+    "end": 96.837,
+    "atempo": 1.0
+   },
+   "next_dub": null,
+   "unit_fit_up": "no_unit",
+   "layer3_could_fill": false
+  }
+ ]
+}

@@ -1,0 +1,277 @@
+{
+ "vid": "03",
+ "l1": "/workspace/dub/runs/e2e_r2/final/03_final.manifest.json",
+ "residual": "/workspace/dub/runs/metrics_s2/residual/03_r2.residual.json",
+ "units": [
+  {
+   "unit": 3,
+   "source": "Сегодня пятница 28 августа будем считать что это начало нашего сотрудничества.",
+   "text": "Today is Friday, August 28th, and we will consider this the start of our cooperation.",
+   "rate_wps": 2.94,
+   "pieces": [
+    "Today is Friday, August 28th,",
+    "and we will consider this the start",
+    "of our cooperation."
+   ],
+   "ru": [
+    "сегодня пятница 28 августа будем",
+    "считать что это начало",
+    "нашего сотрудничества"
+   ],
+   "bursts": [
+    [
+     18.66,
+     21.4
+    ],
+    [
+     22.3,
+     25.0
+    ],
+    [
+     25.5,
+     26.8
+    ]
+   ],
+   "short": {
+    "2": {
+     "words_now": 3,
+     "shortfall_s": 0.8,
+     "budget": 5
+    }
+   },
+   "gaps": [
+    "03-g08"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 4,
+   "source": "Что хочется сказать пусть это сотрудничество будет легким принесет нам всем тот желаемый результат который мы загадали чтобы на пути у нас никаких преград не возникало.",
+   "text": "Let's hope that this cooperation will be smooth, bringing us all the desired result that we wished for, so that on our path, no obstacles arise.",
+   "rate_wps": 3.32,
+   "pieces": [
+    "Let's hope",
+    "that this cooperation will be smooth, bringing us all the desired",
+    "result that we wished for,",
+    "so that on our path,",
+    "no obstacles arise."
+   ],
+   "ru": [
+    "что",
+    "хочется сказать пусть это сотрудничество будет легким принесет нам всем тот",
+    "желаемый результат который мы загадали чтобы",
+    "на пути у нас никаких",
+    "преград не возникало"
+   ],
+   "bursts": [
+    [
+     28.58,
+     28.9
+    ],
+    [
+     30.5,
+     35.5
+    ],
+    [
+     35.9,
+     38.5
+    ],
+    [
+     39.3,
+     41.1
+    ],
+    [
+     42.4,
+     43.9
+    ]
+   ],
+   "short": {
+    "1": {
+     "words_now": 11,
+     "shortfall_s": 0.9,
+     "budget": 14
+    },
+    "2": {
+     "words_now": 5,
+     "shortfall_s": 0.5,
+     "budget": 7
+    }
+   },
+   "gaps": [
+    "03-g11",
+    "03-g14"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 5,
+   "source": "Надеюсь все будет хорошо ибо взимные действия с вами и в целом с тем продуктом который мы сегодня собираем и делаем.",
+   "text": "I hope everything will be well, for the actions we are taking with you and in general with the product we are assembling and making today.",
+   "rate_wps": 3.77,
+   "pieces": [
+    "I hope",
+    "everything will be well,",
+    "for the actions we are taking",
+    "with you and in general with the product we are assembling and making today."
+   ],
+   "ru": [
+    "надеюсь",
+    "все будет хорошо ибо",
+    "взимные действия с вами и в целом с",
+    "тем продуктом который мы сегодня собираем и делаем"
+   ],
+   "bursts": [
+    [
+     43.92,
+     44.3
+    ],
+    [
+     46.3,
+     47.6
+    ],
+    [
+     48.2,
+     50.8
+    ],
+    [
+     51.4,
+     55.52
+    ]
+   ],
+   "short": {
+    "2": {
+     "words_now": 6,
+     "shortfall_s": 0.8,
+     "budget": 9
+    }
+   },
+   "gaps": [
+    "03-g19"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 6,
+   "source": "Дальше отправлю еще несколько видео запишу различных форматах в очках без очков посмотрим как будет работать наша система.",
+   "text": "Next, I will send a few more videos recorded in different formats, both with and without glasses, to see how our system will work.",
+   "rate_wps": 3.79,
+   "pieces": [
+    "Next,",
+    "I will send a few more videos recorded in different formats, both with and without glasses, to see how our system will work."
+   ],
+   "ru": [
+    "дальше",
+    "отправлю еще несколько видео запишу различных форматах в очках без очков посмотрим как будет работать наша система"
+   ],
+   "bursts": [
+    [
+     55.54,
+     55.8
+    ],
+    [
+     59.2,
+     68.12
+    ]
+   ],
+   "short": {
+    "1": {
+     "words_now": 23,
+     "shortfall_s": 1.3,
+     "budget": 28
+    }
+   },
+   "gaps": [
+    "03-g23"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 8,
+   "source": "Отправлю в наш чат так что давайте ребят всем нам успеха я хочу пожелать пусть.",
+   "text": "I will send it to our chat so that we can all express our wishes for success to each other.",
+   "rate_wps": 4.59,
+   "pieces": [
+    "I will send it to our chat",
+    "so that we can all express our wishes for success to each other."
+   ],
+   "ru": [
+    "отправлю в наш чат так",
+    "что давайте ребят всем нам успеха я хочу пожелать пусть"
+   ],
+   "bursts": [
+    [
+     71.14,
+     72.5
+    ],
+    [
+     73.8,
+     78.0
+    ]
+   ],
+   "short": {
+    "0": {
+     "words_now": 7,
+     "shortfall_s": 0.4,
+     "budget": 9
+    },
+    "1": {
+     "words_now": 13,
+     "shortfall_s": 0.5,
+     "budget": 15
+    }
+   },
+   "gaps": [
+    "03-g25",
+    "03-g26"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 9,
+   "source": "Наше взаимодействие будет легким и принесет нам тот результат который мы желаем. Все вперед.",
+   "text": "Our interaction will be smooth and will bring us the result we desire. Forward we go.",
+   "rate_wps": 3.18,
+   "pieces": [
+    "Our interaction will be smooth",
+    "and will bring us",
+    "the result we desire. Forward",
+    "we go."
+   ],
+   "ru": [
+    "наше взаимодействие будет легким и",
+    "принесет нам",
+    "тот результат который мы желаем все",
+    "вперед"
+   ],
+   "bursts": [
+    [
+     79.9,
+     82.2
+    ],
+    [
+     83.9,
+     84.8
+    ],
+    [
+     85.2,
+     87.3
+    ],
+    [
+     88.5,
+     88.98
+    ]
+   ],
+   "short": {
+    "1": {
+     "words_now": 4,
+     "shortfall_s": 0.4,
+     "budget": 5
+    }
+   },
+   "gaps": [
+    "03-g28"
+   ],
+   "speaker": "SPEAKER_00"
+  }
+ ]
+}

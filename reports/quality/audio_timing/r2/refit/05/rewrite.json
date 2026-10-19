@@ -1,0 +1,29 @@
+{
+ "version": "selection of v3 / v4 after review",
+ "units": [
+  {
+   "unit": 1,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "review": "no candidate passed guards + judges + Agent C meaning review",
+   "log": []
+  },
+  {
+   "unit": 2,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "review": "no candidate passed guards + judges + Agent C meaning review",
+   "log": []
+  },
+  {
+   "unit": 3,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "review": "no candidate passed guards + judges + Agent C meaning review",
+   "log": []
+  }
+ ]
+}

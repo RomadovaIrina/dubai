@@ -1,0 +1,601 @@
+{
+ "qwen": "qwen2.5-7b-instruct-q8_0-00001-of-00003.gguf",
+ "threads": 16,
+ "load_s": 2.0,
+ "units": [
+  {
+   "unit": 2,
+   "accepted": true,
+   "pieces": [
+    "I will now proceed to show you the swimming pool."
+   ],
+   "text": "I will now proceed to show you the swimming pool.",
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "I will now proceed to show you the swimming pool."
+     ],
+     "raw": "{\"1\": \"I will now proceed to show you the swimming pool.\"}",
+     "result": "accepted"
+    }
+   ],
+   "seconds": 0.4
+  },
+  {
+   "unit": 3,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "Here are the various",
+      "these various things we have:",
+      "a zone for changing clothes, and some chaise",
+      "chairs by the water"
+     ],
+     "raw": "{\"2\": \"these various things we have:\",\"4\": \"chairs by the water\"}",
+     "result": "piece 4 must end the sentence like \"longues.\" does (with a full stop / ? / !)"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "Here are the various",
+      "these various things we have:",
+      "a zone for changing clothes, and some chaise",
+      "chaise longues."
+     ],
+     "raw": "{\"2\": \"these various things we have:\", \"4\": \"chaise longues.\"}",
+     "result": "not fluent: Redundant use of 'these various' and 'chaise chaise'"
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "Here are the various",
+      "these various items:",
+      "a zone for changing clothes, and some chaise",
+      "chaise longues."
+     ],
+     "raw": "{\"2\": \"these various items:\", \"4\": \"chaise longues.\"}",
+     "result": "piece 2 is not longer (3 words); it needs about 5 words"
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "Here are the various",
+      "these various items we have:",
+      "a zone for changing clothes, and some chaise",
+      "chaise longues."
+     ],
+     "raw": "{\"2\": \"these various items we have:\", \"4\": \"chaise longues.\"}",
+     "result": "not fluent: Redundant use of 'these various' and missing comma for clarity"
+    },
+    {
+     "attempt": 5,
+     "pieces": [
+      "Here are the various",
+      "these various things we have:",
+      "a zone for changing clothes, and some chaise",
+      "chairs commonly called"
+     ],
+     "raw": "{\"2\": \"these various things we have:\",\"4\": \"chairs commonly called\"}",
+     "result": "piece 4 must end the sentence like \"longues.\" does (with a full stop / ? / !)"
+    },
+    {
+     "attempt": 6,
+     "pieces": [
+      "Here are the various",
+      "these various things we have:",
+      "a zone for changing clothes, and some chaise",
+      "chairs and"
+     ],
+     "raw": "{\"2\": \"these various things we have:\" ,\"4\": \"chairs and\"}",
+     "result": "piece 4 must end the sentence like \"longues.\" does (with a full stop / ? / !)"
+    },
+    {
+     "attempt": 7,
+     "pieces": [
+      "Here are the various",
+      "these various things we have:",
+      "a zone for changing clothes, and some chaise",
+      "chairs known as"
+     ],
+     "raw": "{\"2\": \"these various things we have:\",\"4\": \"chairs known as\"}",
+     "result": "piece 4 must end the sentence like \"longues.\" does (with a full stop / ? / !)"
+    },
+    {
+     "attempt": 8,
+     "pieces": [
+      "Here are the various",
+      "these various things we have:",
+      "a zone for changing clothes, and some chaise",
+      "chairs by the water"
+     ],
+     "raw": "{\"2\": \"these various things we have:\",\"4\": \"chairs by the water\"}",
+     "result": "piece 4 must end the sentence like \"longues.\" does (with a full stop / ? / !)"
+    }
+   ],
+   "seconds": 1.6
+  },
+  {
+   "unit": 4,
+   "accepted": true,
+   "pieces": [
+    "In this place,",
+    "We have a Finnish sauna available."
+   ],
+   "text": "In this place, We have a Finnish sauna available.",
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "In this place,",
+      "We have a Finnish sauna here."
+     ],
+     "raw": "{\"2\": \"We have a Finnish sauna here.\"}",
+     "result": "not fluent: The sentence should be 'In this place, we have a Finnish sauna here.' or more naturally, 'In this place, we have a Finnish sauna.'"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "In this place,",
+      "In this place, we have a Finnish sauna."
+     ],
+     "raw": "{\"2\": \"In this place, we have a Finnish sauna.\"}",
+     "result": "pieces 1 and 2 repeat the words 'in this place'"
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "In this place,",
+      "Here, we have a Finnish sauna."
+     ],
+     "raw": "{\"2\": \"Here, we have a Finnish sauna.\"}",
+     "result": "not fluent: The sentence should be split into two for better flow and clarity: 'In this place, here, we have a Finnish sauna.'"
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "In this place,",
+      "Here, we have a Finnish sauna."
+     ],
+     "raw": "{\"2\": \"Here, we have a Finnish sauna.\"}",
+     "result": "not fluent: The sentence should be split into two for better flow and clarity: 'In this place, here, we have a Finnish sauna.'"
+    },
+    {
+     "attempt": 5,
+     "pieces": [
+      "In this place,",
+      "We have a Finnish sauna available."
+     ],
+     "raw": "{\"2\": \"We have a Finnish sauna available.\"}",
+     "result": "accepted"
+    }
+   ],
+   "seconds": 1.6
+  },
+  {
+   "unit": 5,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "I will definitely show",
+      "show the Russian banya."
+     ],
+     "raw": "{\"1\": \"I will definitely show\"}",
+     "result": "not fluent: Doubled 'show'"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "I will go on to show",
+      "show the Russian banya."
+     ],
+     "raw": "{\"1\": \"I will go on to show\"}",
+     "result": "piece 1 is too long (6 words); it needs about 3 words"
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "I will proceed to show",
+      "show the Russian banya."
+     ],
+     "raw": "{\"1\": \"I will proceed to show\"}",
+     "result": "not fluent: Doubled 'show'"
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "I will continue to show",
+      "show the Russian banya."
+     ],
+     "raw": "{\"1\": \"I will continue to show\"}",
+     "result": "added information: continue"
+    },
+    {
+     "attempt": 5,
+     "pieces": [
+      "I will definitely show",
+      "show the Russian banya."
+     ],
+     "raw": "{\"1\": \"I will definitely show\"}",
+     "result": "not fluent: Doubled 'show'"
+    },
+    {
+     "attempt": 6,
+     "pieces": [
+      "I will certainly show",
+      "show the Russian banya."
+     ],
+     "raw": "{\"1\": \"I will certainly show\"}",
+     "result": "not fluent: Doubled 'show'"
+    },
+    {
+     "attempt": 7,
+     "pieces": [
+      "I will definitely show",
+      "show the Russian banya."
+     ],
+     "raw": "{\"1\": \"I will definitely show\"}",
+     "result": "not fluent: Doubled 'show'"
+    },
+    {
+     "attempt": 8,
+     "pieces": [
+      "I will definitely show",
+      "show the Russian banya."
+     ],
+     "raw": "{\"1\": \"I will definitely show\"}",
+     "result": "not fluent: Doubled 'show'"
+    }
+   ],
+   "seconds": 1.9
+  },
+  {
+   "unit": 8,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "What is such a nice",
+      "what a nice smell here"
+     ],
+     "raw": "{\"2\": \"what a nice smell here\"}",
+     "result": "piece 2 must end the sentence like \"smell here?\" does (with a full stop / ? / !)"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "What is such a nice",
+      "what nice smell here?"
+     ],
+     "raw": "{\"2\": \"what nice smell here?\"}",
+     "result": "not fluent: The sentence is grammatically incorrect and repetitive. It should be 'What is this nice smell?'"
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "What is such a nice",
+      "What is this nice smell?"
+     ],
+     "raw": "{\"2\": \"What is this nice smell?\"}",
+     "result": "not fluent: The sentence is grammatically incorrect and should be split into two sentences: 'What is this nice smell?' or 'What is nice about this smell?'}"
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "What is such a nice",
+      "What is this nice smell?"
+     ],
+     "raw": "{\"2\": \"What is this nice smell?\"}",
+     "result": "not fluent: The sentence is grammatically incorrect and should be split into two sentences: 'What is this nice smell?' or 'What is nice about this smell?'}"
+    },
+    {
+     "attempt": 5,
+     "pieces": [
+      "What is such a nice",
+      "what a nice smell here"
+     ],
+     "raw": "{\"2\": \"what a nice smell here\"}",
+     "result": "piece 2 must end the sentence like \"smell here?\" does (with a full stop / ? / !)"
+    },
+    {
+     "attempt": 6,
+     "pieces": [
+      "What is such a nice",
+      "what a pleasant smell"
+     ],
+     "raw": "{\"2\": \"what a pleasant smell\"}",
+     "result": "piece 2 must end the sentence like \"smell here?\" does (with a full stop / ? / !)"
+    },
+    {
+     "attempt": 7,
+     "pieces": [
+      "What is such a nice",
+      "the pleasant smell here?"
+     ],
+     "raw": "{\"2\": \"the pleasant smell here?\"}",
+     "result": "not fluent: Missing word 'of' between 'nice' and 'smell'"
+    },
+    {
+     "attempt": 8,
+     "pieces": [
+      "What is such a nice",
+      "what a nice smell here"
+     ],
+     "raw": "{\"2\": \"what a nice smell here\"}",
+     "result": "piece 2 must end the sentence like \"smell here?\" does (with a full stop / ? / !)"
+    }
+   ],
+   "seconds": 1.9
+  },
+  {
+   "unit": 9,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "There is also our second floor,",
+      "this also fully encompasses the complex's infrastructure."
+     ],
+     "raw": "{\"2\": \"this also fully encompasses the complex's infrastructure.\"}",
+     "result": "piece 2 is not longer (7 words); it needs about 12 words"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "There is also our second floor,",
+      "this also completely falls into the complex's infrastructure."
+     ],
+     "raw": "{\"2\": \"this also completely falls into the complex's infrastructure.\"}",
+     "result": "piece 2 is not longer (8 words); it needs about 12 words"
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "There is also our second floor,",
+      "this also fully and completely falls into the complex's infrastructure."
+     ],
+     "raw": "{\"2\": \"this also fully and completely falls into the complex's infrastructure.\"}",
+     "result": "piece 2 is not longer (10 words); it needs about 12 words"
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "There is also our second floor,",
+      "this also fully and entirely falls into the complex's infrastructure."
+     ],
+     "raw": "{\"2\": \"this also fully and entirely falls into the complex's infrastructure.\"}",
+     "result": "piece 2 is not longer (10 words); it needs about 12 words"
+    },
+    {
+     "attempt": 5,
+     "pieces": [
+      "There is also our second floor,",
+      "this as well is included in the complex's infrastructure."
+     ],
+     "raw": "{\"2\": \"this as well is included in the complex's infrastructure.\"}",
+     "result": "piece 2 is not longer (9 words); it needs about 12 words"
+    },
+    {
+     "attempt": 6,
+     "pieces": [
+      "There is also our second floor,",
+      "this also entirely constitutes the complex's infrastructure."
+     ],
+     "raw": "{\"2\": \"this also entirely constitutes the complex's infrastructure.\"}",
+     "result": "piece 2 is not longer (7 words); it needs about 12 words"
+    },
+    {
+     "attempt": 7,
+     "pieces": [
+      "There is also our second floor,",
+      "this also completely belongs to the complex's infrastructure."
+     ],
+     "raw": "{\"2\": \"this also completely belongs to the complex's infrastructure.\"}",
+     "result": "piece 2 is not longer (8 words); it needs about 12 words"
+    },
+    {
+     "attempt": 8,
+     "pieces": [
+      "There is also our second floor,",
+      "this as well is included in the complex's infrastructure."
+     ],
+     "raw": "{\"2\": \"this as well is included in the complex's infrastructure.\"}",
+     "result": "piece 2 is not longer (9 words); it needs about 12 words"
+    }
+   ],
+   "seconds": 0.9
+  },
+  {
+   "unit": 14,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a zone for drinking tea or mineral water relaxation with loungers."
+     ],
+     "raw": "{\"4\": \"There is also a zone for drinking tea or mineral water relaxation with loungers.\"}",
+     "result": "piece 4 is too long (14 words); it needs about 10 words"
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a zone for drinking tea or mineral water, relaxation with loungers."
+     ],
+     "raw": "{\"4\": \"There is also a zone for drinking tea or mineral water, relaxation with loungers.\"}",
+     "result": "piece 4 is too long (14 words); it needs about 10 words"
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a zone for drinking tea or mineral water, relaxation with loungers."
+     ],
+     "raw": "{\"4\": \"There is also a zone for drinking tea or mineral water, relaxation with loungers.\"}",
+     "result": "piece 4 is too long (14 words); it needs about 10 words"
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a zone for drinking tea or mineral water, relaxation with loungers."
+     ],
+     "raw": "{\"4\": \"There is also a zone for drinking tea or mineral water, relaxation with loungers.\"}",
+     "result": "piece 4 is too long (14 words); it needs about 10 words"
+    },
+    {
+     "attempt": 5,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a zone for drinking tea or mineral water relaxation and loungers."
+     ],
+     "raw": "{\"4\": \"There is also a zone for drinking tea or mineral water relaxation and loungers.\"}",
+     "result": "piece 4 is too long (14 words); it needs about 10 words"
+    },
+    {
+     "attempt": 6,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a zone for drinking tea or mineral water relaxation loungers."
+     ],
+     "raw": "{\"4\": \"There is also a zone for drinking tea or mineral water relaxation loungers.\"}",
+     "result": "piece 4 is too long (13 words); it needs about 10 words"
+    },
+    {
+     "attempt": 7,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a zone for drinking tea or mineral water relaxation loungers."
+     ],
+     "raw": "{\"4\": \"There is also a zone for drinking tea or mineral water relaxation loungers.\"}",
+     "result": "piece 4 is too long (13 words); it needs about 10 words"
+    },
+    {
+     "attempt": 8,
+     "pieces": [
+      "The massage",
+      "room has a mini fridge,",
+      "and here is a spot for drinking tea or mineral water.",
+      "There is also a zone for drinking tea or mineral water relaxation with loungers."
+     ],
+     "raw": "{\"4\": \"There is also a zone for drinking tea or mineral water relaxation with loungers.\"}",
+     "result": "piece 4 is too long (14 words); it needs about 10 words"
+    }
+   ],
+   "seconds": 1.2
+  },
+  {
+   "unit": 16,
+   "accepted": false,
+   "pieces": null,
+   "text": null,
+   "log": [
+    {
+     "attempt": 1,
+     "pieces": [
+      "Hamam",
+      "and all this entire space."
+     ],
+     "raw": "{\"2\": \"and all this entire space.\"}",
+     "result": "not fluent: The sentence should be 'Hamam and all of this entire space' or simply 'Hamam and this entire space' for better fluency."
+    },
+    {
+     "attempt": 2,
+     "pieces": [
+      "Hamam",
+      "and all of this entire space."
+     ],
+     "raw": "{\"2\": \"and all of this entire space.\"}",
+     "result": "added information: entire"
+    },
+    {
+     "attempt": 3,
+     "pieces": [
+      "Hamam",
+      "and all of this space."
+     ],
+     "raw": "{\"2\": \"and all of this space.\"}",
+     "result": "not fluent: The sentence is missing an article before 'Hamam' and could benefit from a conjunction to improve fluency."
+    },
+    {
+     "attempt": 4,
+     "pieces": [
+      "Hamam",
+      "and all this space."
+     ],
+     "raw": "{\"2\": \"and all this space.\"}",
+     "result": "piece 2 is not longer (4 words); it needs about 5 words"
+    },
+    {
+     "attempt": 5,
+     "pieces": [
+      "Hamam",
+      "and all this entire space."
+     ],
+     "raw": "{\"2\": \"and all this entire space.\"}",
+     "result": "not fluent: The sentence should be 'Hamam and all of this entire space' or simply 'Hamam and this entire space' for better fluency."
+    },
+    {
+     "attempt": 6,
+     "pieces": [
+      "Hamam",
+      "and all of this expansive space."
+     ],
+     "raw": "{\"2\": \"and all of this expansive space.\"}",
+     "result": "added information: expansive"
+    },
+    {
+     "attempt": 7,
+     "pieces": [
+      "Hamam",
+      "and all of this expansive space."
+     ],
+     "raw": "{\"2\": \"and all of this expansive space.\"}",
+     "result": "added information: expansive"
+    },
+    {
+     "attempt": 8,
+     "pieces": [
+      "Hamam",
+      "and all this entire space."
+     ],
+     "raw": "{\"2\": \"and all this entire space.\"}",
+     "result": "not fluent: The sentence should be 'Hamam and all of this entire space' or simply 'Hamam and this entire space' for better fluency."
+    }
+   ],
+   "seconds": 2.1
+  }
+ ]
+}

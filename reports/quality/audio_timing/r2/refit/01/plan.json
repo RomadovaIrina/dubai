@@ -1,0 +1,123 @@
+{
+ "vid": "01",
+ "l1": "/workspace/dub/runs/e2e_r2/final/01_final.manifest.json",
+ "residual": "/workspace/dub/runs/metrics_s2/residual/01_r2.residual.json",
+ "units": [
+  {
+   "unit": 1,
+   "source": "Давайте посмотрим, что включает в себя ремонт, предлагаемый застройщиком..",
+   "text": "Let's take a look at what the developer's repair work entails.",
+   "rate_wps": 4.02,
+   "pieces": [
+    "Let's take a look at what the developer's repair work entails."
+   ],
+   "ru": [
+    "Давайте посмотрим, что включает в себя ремонт, предлагаемый застройщиком."
+   ],
+   "bursts": [
+    [
+     1.52,
+     5.24
+    ]
+   ],
+   "short": {
+    "0": {
+     "words_now": 11,
+     "shortfall_s": 0.5,
+     "budget": 13
+    }
+   },
+   "gaps": [
+    "01-g01"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 12,
+   "source": "Межкомнатные двери.. Лаконичное полотно из МДФ высокой плотности с премиальным финишным покрытием..",
+   "text": "Interior doors... A concise panel made of high-density MDF with a premium finish...",
+   "rate_wps": 2.92,
+   "pieces": [
+    "Interior doors... A concise panel made of high-density MDF with a premium finish..."
+   ],
+   "ru": [
+    "Межкомнатные двери. Лаконичное полотно из МДФ высокой плотности с премиальным финишным покрытием."
+   ],
+   "bursts": [
+    [
+     43.6,
+     50.24
+    ]
+   ],
+   "short": {
+    "0": {
+     "words_now": 13,
+     "shortfall_s": 1.1,
+     "budget": 16
+    }
+   },
+   "gaps": [
+    "01-g16"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 14,
+   "source": "С влагопоглощением менее 0 ,5%..",
+   "text": "With moisture absorption less than 0.5%.",
+   "rate_wps": 1.84,
+   "pieces": [
+    "With moisture absorption less than 0.5%."
+   ],
+   "ru": [
+    "С влагопоглощением менее 0 ,5%."
+   ],
+   "bursts": [
+    [
+     56.66,
+     61.08
+    ]
+   ],
+   "short": {
+    "0": {
+     "words_now": 6,
+     "shortfall_s": 0.6,
+     "budget": 7
+    }
+   },
+   "gaps": [
+    "01-g20"
+   ],
+   "speaker": "SPEAKER_00"
+  },
+  {
+   "unit": 23,
+   "source": "Влагостойкие краски могут прослужить до 10 лет..",
+   "text": "Waterproof paints can serve up to 10 years.",
+   "rate_wps": 4.09,
+   "pieces": [
+    "Waterproof paints can serve up to 10 years."
+   ],
+   "ru": [
+    "Влагостойкие краски могут прослужить до 10 лет."
+   ],
+   "bursts": [
+    [
+     86.66,
+     89.42
+    ]
+   ],
+   "short": {
+    "0": {
+     "words_now": 8,
+     "shortfall_s": 0.6,
+     "budget": 10
+    }
+   },
+   "gaps": [
+    "01-g26"
+   ],
+   "speaker": "SPEAKER_00"
+  }
+ ]
+}

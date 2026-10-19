@@ -1,0 +1,815 @@
+{
+ "video": "03",
+ "policy": "cand5",
+ "flags": "cand5 (--phrase-cut acoustic --long-pause-func 1.2 --cut-fade adaptive; fill-slowdown 0.9)",
+ "fps": 25,
+ "frames_are": "master_25fps.mp4 frame indices, [f0, f1)",
+ "manifest": "/workspace/dub/artifacts/audio-timing/baseline/03/03_final.manifest.json",
+ "dub_track": "/workspace/dub/artifacts/audio-timing/ab/03_ref/dubbed_16k.wav",
+ "definition": "source Silero VAD speaking AND dub Silero VAD (min speech 60 ms) silent, 10 ms grid; natural = shorter than 0.35 s",
+ "summary": {
+  "gaps": 21,
+  "residual": 12,
+  "residual_s": 9.4,
+  "residual_in_latentsync": 12,
+  "residual_ls_frames": 240,
+  "residual_without_asr_words": 0,
+  "residual_layer3_candidates": 12,
+  "longest_s": 2.0
+ },
+ "gaps": [
+  {
+   "id": "03-g00",
+   "t0": 4.9,
+   "t1": 5.1,
+   "seconds": 0.2,
+   "frames": [
+    122,
+    128
+   ],
+   "ls_frames": 6,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "inner",
+   "source_burst": [
+    4.2,
+    5.5
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "привет",
+   "cause": "short_fill",
+   "unit": 0,
+   "sentence_src": "Друзья ну что всем привет.",
+   "sentence_dub": "Friends, hey everyone, greetings.",
+   "prev_dub": {
+    "unit": 0,
+    "text": "greetings.",
+    "end": 4.781,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 1,
+    "text": "I will record",
+    "start": 5.1,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "03-g01",
+   "t0": 7.7,
+   "t1": 8.2,
+   "seconds": 0.5,
+   "frames": [
+    192,
+    205
+   ],
+   "ls_frames": 13,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    6.7,
+    8.2
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "такое",
+   "cause": "inner_gap",
+   "unit": 1,
+   "sentence_src": "Запишу первое видео такое ознакомительно целью познакомиться.",
+   "sentence_dub": "I will record the first video as an introductory one to get to know each other.",
+   "prev_dub": {
+    "unit": 1,
+    "text": "the first video as",
+    "end": 7.668,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 1,
+    "text": "an introductory one to get",
+    "start": 8.4,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "03-g02",
+   "t0": 11.3,
+   "t1": 11.4,
+   "seconds": 0.1,
+   "frames": [
+    282,
+    285
+   ],
+   "ls_frames": 3,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "inner",
+   "source_burst": [
+    10.3,
+    12.4
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "short_fill",
+   "unit": 1,
+   "sentence_src": "Запишу первое видео такое ознакомительно целью познакомиться.",
+   "sentence_dub": "I will record the first video as an introductory one to get to know each other.",
+   "prev_dub": {
+    "unit": 1,
+    "text": "to know each other.",
+    "end": 11.213,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 2,
+    "text": "what I want to say is that I am glad to meet you and glad",
+    "start": 14.3,
+    "atempo": 0.95
+   },
+   "unit_fit_up": "accepted",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "03-g03",
+   "t0": 18.5,
+   "t1": 18.7,
+   "seconds": 0.2,
+   "frames": [
+    462,
+    468
+   ],
+   "ls_frames": 6,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "inner",
+   "source_burst": [
+    17.7,
+    21.4
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "сотрудничеству",
+   "cause": "short_fill",
+   "unit": 2,
+   "sentence_src": "Наверно больше в общем что хочу сказать рад знакомству с вами рад сотрудничеству.",
+   "sentence_dub": "Probably more in general what I want to say is that I am glad to meet you and glad to cooperate.",
+   "prev_dub": {
+    "unit": 2,
+    "text": "what I want to say is that I am glad to meet you and glad",
+    "end": 17.187,
+    "atempo": 0.95
+   },
+   "next_dub": {
+    "unit": 3,
+    "text": "and we will consider this",
+    "start": 22.3,
+    "atempo": 0.977
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "03-g04",
+   "t0": 21.0,
+   "t1": 21.4,
+   "seconds": 0.4,
+   "frames": [
+    525,
+    535
+   ],
+   "ls_frames": 10,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    17.7,
+    21.4
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "будем",
+   "cause": "inner_gap",
+   "unit": 3,
+   "sentence_src": "Сегодня пятница 28 августа будем считать что это начало нашего сотрудничества.",
+   "sentence_dub": "Today is Friday, August 28th, and we will consider this the start of our cooperation.",
+   "prev_dub": {
+    "unit": 3,
+    "text": "Today is Friday, August 28th,",
+    "end": 20.937,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 3,
+    "text": "and we will consider this",
+    "start": 22.3,
+    "atempo": 0.977
+   },
+   "unit_fit_up": "accepted_still_short",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "03-g05",
+   "t0": 24.5,
+   "t1": 25.0,
+   "seconds": 0.5,
+   "frames": [
+    612,
+    625
+   ],
+   "ls_frames": 13,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    23.9,
+    25.0
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "начало",
+   "cause": "inner_gap",
+   "unit": 3,
+   "sentence_src": "Сегодня пятница 28 августа будем считать что это начало нашего сотрудничества.",
+   "sentence_dub": "Today is Friday, August 28th, and we will consider this the start of our cooperation.",
+   "prev_dub": {
+    "unit": 3,
+    "text": "the start",
+    "end": 24.401,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 3,
+    "text": "of our cooperation.",
+    "start": 25.5,
+    "atempo": 0.932
+   },
+   "unit_fit_up": "accepted_still_short",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "03-g06",
+   "t0": 27.8,
+   "t1": 28.6,
+   "seconds": 0.8,
+   "frames": [
+    695,
+    715
+   ],
+   "ls_frames": 20,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "head",
+   "source_burst": [
+    27.8,
+    28.9
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "сотрудничества",
+   "cause": "short_fill",
+   "unit": 3,
+   "sentence_src": "Сегодня пятница 28 августа будем считать что это начало нашего сотрудничества.",
+   "sentence_dub": "Today is Friday, August 28th, and we will consider this the start of our cooperation.",
+   "prev_dub": {
+    "unit": 3,
+    "text": "of our cooperation.",
+    "end": 26.79,
+    "atempo": 0.932
+   },
+   "next_dub": {
+    "unit": 4,
+    "text": "Let's hope",
+    "start": 28.58,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "accepted_still_short",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "03-g07",
+   "t0": 32.6,
+   "t1": 32.7,
+   "seconds": 0.1,
+   "frames": [
+    815,
+    818
+   ],
+   "ls_frames": 3,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "inner",
+   "source_burst": [
+    30.5,
+    35.5
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "inner_gap",
+   "unit": 4,
+   "sentence_src": "Что хочется сказать пусть это сотрудничество будет легким принесет нам всем тот желаемый результат который мы загадали чтобы на пути у нас никаких преград не возникало.",
+   "sentence_dub": "Let's hope that this cooperation will be smooth, bringing us all the desired result that we wished for, so that on our path, no obstacles arise.",
+   "prev_dub": {
+    "unit": 4,
+    "text": "Let's hope",
+    "end": 29.184,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 4,
+    "text": "result that we wished for,",
+    "start": 35.9,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "rejected: added information: ensuring a seamless journey and fulfillme",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "03-g08",
+   "t0": 34.3,
+   "t1": 35.5,
+   "seconds": 1.2,
+   "frames": [
+    857,
+    888
+   ],
+   "ls_frames": 31,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    30.5,
+    35.5
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "принесет нам всем тот",
+   "cause": "inner_gap",
+   "unit": 4,
+   "sentence_src": "Что хочется сказать пусть это сотрудничество будет легким принесет нам всем тот желаемый результат который мы загадали чтобы на пути у нас никаких преград не возникало.",
+   "sentence_dub": "Let's hope that this cooperation will be smooth, bringing us all the desired result that we wished for, so that on our path, no obstacles arise.",
+   "prev_dub": {
+    "unit": 4,
+    "text": "this cooperation will be smooth, bringing us all the desired",
+    "end": 34.219,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 4,
+    "text": "result that we wished for,",
+    "start": 35.9,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "rejected: added information: ensuring a seamless journey and fulfillme",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "03-g09",
+   "t0": 37.5,
+   "t1": 38.5,
+   "seconds": 1.0,
+   "frames": [
+    937,
+    963
+   ],
+   "ls_frames": 26,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    35.9,
+    38.5
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "мы загадали чтобы",
+   "cause": "inner_gap",
+   "unit": 4,
+   "sentence_src": "Что хочется сказать пусть это сотрудничество будет легким принесет нам всем тот желаемый результат который мы загадали чтобы на пути у нас никаких преград не возникало.",
+   "sentence_dub": "Let's hope that this cooperation will be smooth, bringing us all the desired result that we wished for, so that on our path, no obstacles arise.",
+   "prev_dub": {
+    "unit": 4,
+    "text": "result that we wished for,",
+    "end": 37.418,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 4,
+    "text": "so that on our path,",
+    "start": 39.3,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "rejected: added information: ensuring a seamless journey and fulfillme",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "03-g10",
+   "t0": 39.3,
+   "t1": 39.6,
+   "seconds": 0.3,
+   "frames": [
+    982,
+    990
+   ],
+   "ls_frames": 8,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "head",
+   "source_burst": [
+    39.3,
+    41.1
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "чтобы",
+   "cause": "inner_gap",
+   "unit": 4,
+   "sentence_src": "Что хочется сказать пусть это сотрудничество будет легким принесет нам всем тот желаемый результат который мы загадали чтобы на пути у нас никаких преград не возникало.",
+   "sentence_dub": "Let's hope that this cooperation will be smooth, bringing us all the desired result that we wished for, so that on our path, no obstacles arise.",
+   "prev_dub": {
+    "unit": 4,
+    "text": "result that we wished for,",
+    "end": 37.418,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 4,
+    "text": "no obstacles arise.",
+    "start": 42.4,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "rejected: added information: ensuring a seamless journey and fulfillme",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "03-g11",
+   "t0": 40.9,
+   "t1": 41.1,
+   "seconds": 0.2,
+   "frames": [
+    1022,
+    1028
+   ],
+   "ls_frames": 6,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    39.3,
+    41.1
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "никаких",
+   "cause": "inner_gap",
+   "unit": 4,
+   "sentence_src": "Что хочется сказать пусть это сотрудничество будет легким принесет нам всем тот желаемый результат который мы загадали чтобы на пути у нас никаких преград не возникало.",
+   "sentence_dub": "Let's hope that this cooperation will be smooth, bringing us all the desired result that we wished for, so that on our path, no obstacles arise.",
+   "prev_dub": {
+    "unit": 4,
+    "text": "so that on our path,",
+    "end": 40.907,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 4,
+    "text": "no obstacles arise.",
+    "start": 42.4,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "rejected: added information: ensuring a seamless journey and fulfillme",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "03-g12",
+   "t0": 43.8,
+   "t1": 43.9,
+   "seconds": 0.1,
+   "frames": [
+    1095,
+    1098
+   ],
+   "ls_frames": 3,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "inner",
+   "source_burst": [
+    42.4,
+    44.3
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "short_fill",
+   "unit": 4,
+   "sentence_src": "Что хочется сказать пусть это сотрудничество будет легким принесет нам всем тот желаемый результат который мы загадали чтобы на пути у нас никаких преград не возникало.",
+   "sentence_dub": "Let's hope that this cooperation will be smooth, bringing us all the desired result that we wished for, so that on our path, no obstacles arise.",
+   "prev_dub": {
+    "unit": 4,
+    "text": "no obstacles arise.",
+    "end": 43.74,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 5,
+    "text": "I hope",
+    "start": 43.92,
+    "atempo": 0.997
+   },
+   "unit_fit_up": "rejected: added information: ensuring a seamless journey and fulfillme",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "03-g13",
+   "t0": 49.7,
+   "t1": 50.8,
+   "seconds": 1.1,
+   "frames": [
+    1242,
+    1270
+   ],
+   "ls_frames": 28,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    48.2,
+    50.8
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "в целом с",
+   "cause": "inner_gap",
+   "unit": 5,
+   "sentence_src": "Надеюсь все будет хорошо ибо взимные действия с вами и в целом с тем продуктом который мы сегодня собираем и делаем.",
+   "sentence_dub": "I hope everything will be well, for the actions we are taking with you and in general with the product we are assembling and making today.",
+   "prev_dub": {
+    "unit": 5,
+    "text": "for the actions we are taking",
+    "end": 49.635,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 5,
+    "text": "with you and in general with the product we are assembling a",
+    "start": 51.4,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "03-g14",
+   "t0": 64.2,
+   "t1": 64.5,
+   "seconds": 0.3,
+   "frames": [
+    1605,
+    1613
+   ],
+   "ls_frames": 8,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "inner",
+   "source_burst": [
+    59.2,
+    68.5
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "очках",
+   "cause": "inner_gap",
+   "unit": 6,
+   "sentence_src": "Дальше отправлю еще несколько видео запишу различных форматах в очках без очков посмотрим как будет работать наша система.",
+   "sentence_dub": "Next, I will send a few more videos recorded in different formats, both with and without glasses, to see how our system will work.",
+   "prev_dub": {
+    "unit": 6,
+    "text": "Next,",
+    "end": 55.869,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 7,
+    "text": "Well,",
+    "start": 68.14,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "rejected: identical",
+   "layer3_could_fill": false
+  },
+  {
+   "id": "03-g15",
+   "t0": 66.1,
+   "t1": 68.1,
+   "seconds": 2.0,
+   "frames": [
+    1652,
+    1703
+   ],
+   "ls_frames": 51,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "inner",
+   "source_burst": [
+    59.2,
+    68.5
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "будет работать наша система",
+   "cause": "short_fill",
+   "unit": 6,
+   "sentence_src": "Дальше отправлю еще несколько видео запишу различных форматах в очках без очков посмотрим как будет работать наша система.",
+   "sentence_dub": "Next, I will send a few more videos recorded in different formats, both with and without glasses, to see how our system will work.",
+   "prev_dub": {
+    "unit": 6,
+    "text": "h with and without glasses, to see how our system will work.",
+    "end": 66.054,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 7,
+    "text": "Well,",
+    "start": 68.14,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "rejected: identical",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "03-g16",
+   "t0": 76.2,
+   "t1": 76.8,
+   "seconds": 0.6,
+   "frames": [
+    1905,
+    1920
+   ],
+   "ls_frames": 15,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    73.8,
+    76.8
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "успеха я",
+   "cause": "inner_gap",
+   "unit": 8,
+   "sentence_src": "Отправлю в наш чат так что давайте ребят всем нам успеха я хочу пожелать пусть.",
+   "sentence_dub": "I will send it to our chat so that we can all express our wishes for success to each other.",
+   "prev_dub": {
+    "unit": 8,
+    "text": "so that we can all express our wishes for",
+    "end": 76.088,
+    "atempo": 0.9
+   },
+   "next_dub": {
+    "unit": 8,
+    "text": "success to each other.",
+    "start": 76.9,
+    "atempo": 1.0
+   },
+   "unit_fit_up": "accepted_still_short",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "03-g17",
+   "t0": 78.8,
+   "t1": 79.3,
+   "seconds": 0.5,
+   "frames": [
+    1970,
+    1983
+   ],
+   "ls_frames": 13,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "whole",
+   "source_burst": [
+    78.8,
+    79.3
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "пусть",
+   "cause": "short_fill",
+   "unit": 8,
+   "sentence_src": "Отправлю в наш чат так что давайте ребят всем нам успеха я хочу пожелать пусть.",
+   "sentence_dub": "I will send it to our chat so that we can all express our wishes for success to each other.",
+   "prev_dub": {
+    "unit": 8,
+    "text": "success to each other.",
+    "end": 78.021,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 9,
+    "text": "Our interaction will be smooth",
+    "start": 79.9,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "accepted_still_short",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "03-g18",
+   "t0": 81.8,
+   "t1": 82.2,
+   "seconds": 0.4,
+   "frames": [
+    2045,
+    2055
+   ],
+   "ls_frames": 10,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "tail",
+   "source_burst": [
+    79.9,
+    82.2
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "легким и",
+   "cause": "inner_gap",
+   "unit": 9,
+   "sentence_src": "Наше взаимодействие будет легким и принесет нам тот результат который мы желаем. Все вперед.",
+   "sentence_dub": "Our interaction will be smooth and will bring us the result we desire. Forward we go.",
+   "prev_dub": {
+    "unit": 8,
+    "text": "success to each other.",
+    "end": 78.021,
+    "atempo": 1.0
+   },
+   "next_dub": {
+    "unit": 9,
+    "text": "and will bring us",
+    "start": 83.9,
+    "atempo": 0.918
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "03-g19",
+   "t0": 86.4,
+   "t1": 86.8,
+   "seconds": 0.4,
+   "frames": [
+    2160,
+    2170
+   ],
+   "ls_frames": 10,
+   "in_latentsync": true,
+   "class": "residual",
+   "position_in_burst": "inner",
+   "source_burst": [
+    85.2,
+    87.3
+   ],
+   "asr_words_in_gap": true,
+   "source_words": "мы",
+   "cause": "inner_gap",
+   "unit": 9,
+   "sentence_src": "Наше взаимодействие будет легким и принесет нам тот результат который мы желаем. Все вперед.",
+   "sentence_dub": "Our interaction will be smooth and will bring us the result we desire. Forward we go.",
+   "prev_dub": {
+    "unit": 9,
+    "text": "and will bring us",
+    "end": 84.782,
+    "atempo": 0.918
+   },
+   "next_dub": {
+    "unit": 9,
+    "text": "we go.",
+    "start": 88.5,
+    "atempo": 0.9
+   },
+   "unit_fit_up": "not_triggered",
+   "layer3_could_fill": true
+  },
+  {
+   "id": "03-g20",
+   "t0": 89.0,
+   "t1": 89.2,
+   "seconds": 0.2,
+   "frames": [
+    2225,
+    2230
+   ],
+   "ls_frames": 5,
+   "in_latentsync": true,
+   "class": "natural",
+   "position_in_burst": "tail",
+   "source_burst": [
+    88.5,
+    89.2
+   ],
+   "asr_words_in_gap": false,
+   "source_words": "",
+   "cause": "between_units",
+   "unit": null,
+   "sentence_src": null,
+   "sentence_dub": null,
+   "prev_dub": {
+    "unit": 9,
+    "text": "we go.",
+    "end": 88.948,
+    "atempo": 0.9
+   },
+   "next_dub": null,
+   "unit_fit_up": "no_unit",
+   "layer3_could_fill": false
+  }
+ ]
+}
