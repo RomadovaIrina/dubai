@@ -351,6 +351,31 @@ class _BlockedFaceDetector:
         raise RuntimeError("clean face stack: LatentSync's InsightFace FaceDetector is disabled; detections must be replayed (CleanPrep.ls_dets)")
 
 
+# BANNED weight files (user licence rule 19.10). Their mere presence is an error: loaders could pick them up silently.
+BANNED_WEIGHTS = ["hdemucs_high_trained.pt", "hdemucs_high_musdbhq_only.pt", "codeformer.pth", "parsing_parsenet.pth", "detection_Resnet50_Final.pth",
+                  "det_10g.onnx", "2d106det.onnx", "w600k_r50.onnx", "genderage.onnx", "1k3d68.onnx", "buffalo_l.zip"]
+
+
+def banned_files() -> list:
+    """BANNED weight files under the repo (models/, third_party/), the torch hub cache and ~/.insightface (symlinks count)."""
+    import glob
+    roots = [ROOT / "models", ROOT / "third_party", pathlib.Path.home() / ".cache" / "torch" / "hub", pathlib.Path.home() / ".insightface"]
+    hits = []
+    for r in roots:
+        if not r.exists(): continue
+        for name in BANNED_WEIGHTS:
+            hits += [p for p in glob.glob(str(r / "**" / name), recursive=True) if os.path.lexists(p)]
+    return sorted(set(hits))
+
+
+def assert_clean_tree() -> None:
+    """Fail LOUDLY when a banned weight file is reachable (r3 D, 19.10: download_models.sh had re-fetched HDEMUCS on this server)."""
+    hits = banned_files()
+    if hits:
+        raise SystemExit("LICENCE GUARD: banned (non-commercial / unlicensed) weight files present, move them to /workspace/dub/quarantine_nc/:\n  "
+                         + "\n  ".join(hits))
+
+
 def guard_nc():
     """Make every non-commercial face model of this repo impossible to load in this process (they would silently auto-download):
     InsightFace FaceAnalysis, LatentSync FaceDetector, facexlib detection / parsing, CodeFormer (basicsr arch)."""
@@ -414,7 +439,9 @@ def install_tripwires() -> list:
 
 def enforce_clean(face_stack: str | None = "mediapipe", codeformer: str | None = "off", video_backend: str | None = "optimized", what: str = "run",
                   background: str | None = "off"):
-    """Refuse non-commercial settings unless DUB_ALLOW_NC=1, then block every NC loader in this process (guard_nc) and arm the tripwires."""
+    """Refuse non-commercial settings unless DUB_ALLOW_NC=1, then block every NC loader in this process (guard_nc) and arm the tripwires.
+    r3 D (19.10): first of all, banned weight FILES reachable in the tree fail the run (assert_clean_tree), DUB_ALLOW_NC or not."""
+    assert_clean_tree()
     if nc_allowed():
         print(f"[clean] DUB_ALLOW_NC=1: non-commercial components allowed for this {what} (NOT a product-path run)", flush=True)
         return False

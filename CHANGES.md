@@ -38,3 +38,12 @@ PYTHONPATH=third_party/llama_cuda:$PYTHONPATH python scripts/pilot/run_clean_pip
 ```
 Check: `PYTHONPATH=third_party/llama_cuda python -c "import llama_cpp; print(llama_cpp.llama_supports_gpu_offload())"` → True.
 For a separate venv instead: `CMAKE_ARGS=... FORCE_CMAKE=1 uv pip install --python <venv>/bin/python --no-cache llama-cpp-python==0.3.35`.
+
+## Licence guard (coordinator 19.10)
+- `download_models.sh` never fetches HDEMUCS, CodeFormer, ParseNet, RetinaFace R50 or buffalo_l any more (the `DUB_ALLOW_NC=1` branches are
+  gone); it ends with the tripwire check and exits 3 if a banned file is present. HDEMUCS had been re-fetched on this server: the coordinator
+  quarantined it (`/workspace/dub/quarantine_nc/demucs/`).
+- `clean_face_stack.assert_clean_tree()` (called first in `enforce_clean`, i.e. by `run_clean_pipeline_05.py`, `candidate_video_stage.py`,
+  `ls_window_ab.py`): any banned weight file under `models/`, `third_party/`, the torch hub cache or `~/.insightface` stops the run with the list.
+- cand5 is a reference only (numbers from the round-1/2 reports, never re-rendered). Candidates use C's clean audio (Spleeter bed); runs on the
+  canonical cand5 audio are video-only controls. Scorecard / spec status label the audio source per row.
