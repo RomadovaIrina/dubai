@@ -110,13 +110,16 @@ def main() -> int:
                     "flow:S = rigid head motion from DIS flow, noise smoothed around it); forces --ls-landmark-smooth 0 --mask-smooth 0")
     ap.add_argument("--prep-only", action="store_true", help="r3 D: run only the CPU face-stack prep (master, MediaPipe, rigid motion) into --work-out and exit: "
                     "the caches are reused by the real run, so a queue can prep the next video while the GPU renders the current one")
-    ap.add_argument("--dump-ls-raw", choices=["on", "off"], default="off", help="r3 D: also write <out>_ls_raw.mp4 = the RAW LatentSync frames on the 25 fps master "
+    ap.add_argument("--dump-ls-raw", default="off", help="r3 D (B: or a PATH): also write <out>_ls_raw.mp4 (or PATH) = the RAW LatentSync frames on the 25 fps master "
                     "(master frames elsewhere, lossless): the --ls-raw input of fps_composite.py (FIX30) from the same run; needs --mouth-only-pasteback on --codeformer-scope mouth")
     ap.add_argument("--mask-track", choices=["dets", "head"], default="dets", help="head: mouth-mask boxes locked to the rigid head motion (needs the rigid pass)")
     ap.add_argument("--affine-precision", choices=["fp16", "fp32"], default="fp16", help="fp32: LatentSync AlignRestore in float32 (ls_geometry.py)")
     ap.add_argument("--anchor-round", choices=["on", "off"], default="on", help="off: sub-pixel affine anchors (ls_geometry.py)")
     ap.add_argument("--codeformer-precision", choices=["fp32", "parse16", "fp16"], default="fp16", help="fp32 = upstream numerics; parse16 = ParseNet under fp16 autocast; fp16 = CodeFormer net + ParseNet under autocast")
+    ap.add_argument("--master-timing-mode", choices=["r25", "fps"], default="r25", help="r3 B: how the 25 fps master is made: r25 = `-r 25` (default, lags the "
+                    "clock ~60 ms on 30 fps sources), fps = `-vf fps=25` (nearest source frame, mean clock error 0); sets DUB_MASTER_TIMING")
     a = ap.parse_args()
+    os.environ["DUB_MASTER_TIMING"] = a.master_timing_mode
     import clean_face_stack as cfs
     cfs.enforce_clean(a.face_stack, a.codeformer, "optimized", what="candidate_video_stage")
     import run_clean_pipeline_05 as rp
@@ -179,8 +182,8 @@ def main() -> int:
             Mo = rec_cls = make_box_recorder(MouthOnlyRunner, prep.frames)
         runner = Mo(runner, a.mask_top, a.mask_feather, a.mask_smooth, defer=a.codeformer_scope == "mouth")
     raw_ls = {}
-    if a.dump_ls_raw == "on":   # r3 D: keep the raw LatentSync frames (BGR, before the mouth-only composite) per master frame
-        if not getattr(runner, "deferred", False): raise SystemExit("--dump-ls-raw on needs --mouth-only-pasteback on --codeformer-scope mouth")
+    if a.dump_ls_raw != "off":   # r3 D: keep the raw LatentSync frames (BGR, before the mouth-only composite) per master frame
+        if not getattr(runner, "deferred", False): raise SystemExit("--dump-ls-raw needs --mouth-only-pasteback on --codeformer-scope mouth")
         import hashlib, numpy as np
         import face_aware_latentsync as _fa
         _mf = prep.frames if prep is not None else _fa.read_frames(work / "master_25fps.mp4")
@@ -206,10 +209,10 @@ def main() -> int:
             for k, b in enumerate(bxs):
                 if b is not None: fr_.append(st + k); bx_.append(b)
         np.savez_compressed(out.with_name(out.stem + "_maskboxes.npz"), frames=np.array(fr_, int), boxes=np.array(bx_, np.float64))
-    if a.dump_ls_raw == "on":
+    if a.dump_ls_raw != "off":
         import imageio.v2 as iio
         with rp.timed(times, "dump_ls_raw"):
-            raw_path = out.with_name(out.stem + "_ls_raw.mp4"); w = iio.get_writer(str(raw_path), fps=25, codec="libx264rgb", macro_block_size=None, pixelformat="rgb24",
+            raw_path = out.with_name(out.stem + "_ls_raw.mp4") if a.dump_ls_raw == "on" else pathlib.Path(a.dump_ls_raw); w = iio.get_writer(str(raw_path), fps=25, codec="libx264rgb", macro_block_size=None, pixelformat="rgb24",
                                                                                 ffmpeg_params=["-crf", "0", "-preset", "veryfast"], ffmpeg_log_level="error")
             for i, f in enumerate(_mf): w.append_data((raw_ls.get(i, f))[:, :, ::-1])
             w.close()

@@ -114,6 +114,25 @@ def main() -> int:
                     "(chin / jaw included: pulls the generated jaw towards the SOURCE jaw, which articulates the original speech); upper = only above the "
                     "mouth-corner line (cheeks, nasolabial, upper-lip skin), faded out over 0.1 IOD below it")
     ap.add_argument("--small-face-iod", type=float, default=80.0, help="r2: below this inter-ocular distance the registration flow runs at full resolution")
+    ap.add_argument("--source-lm", default=None, help="r3: MediaPipe landmarks of every SOURCE frame (r3_source_lm.py npz). Mask, registration target and the layer's "
+                    "pose come from the source frames (the master is a subset of them: master m = source j[m]) instead of master landmarks interpolated "
+                    "at mu (wrong on the source frames the master dropped: head shake is not linear). Needs --master-timing (j)")
+    ap.add_argument("--seam-lf", type=int, default=0, help="r3: LatentSync 16-frame window joints: the EXCESS low-frequency appearance step at every window start "
+                    "(motion-compensated residual, Gaussian --seam-lf-sigma x box width, minus the mean of the neighbouring frames' residuals) is spread "
+                    "linearly over +-N master frames, moved with the head (landmark similarity); 0 = off. Runs before --boundary")
+    ap.add_argument("--seam-lf-sigma", type=float, default=0.06)
+    ap.add_argument("--colour-match", choices=["off", "band", "upper"], default="off", help="r3: per output frame, low-frequency colour / brightness correction of the "
+                    "LatentSync layer towards the source frame, estimated in the mask border band above the mouth-corner line (lips excluded; normalised "
+                    "Gaussian, sigma --colour-sigma x mouth width) and extended over the whole pasted region; upper = estimated on ALL mask skin above the "
+                    "mouth-corner line (alpha > 0.05: nose base, cheeks, upper-lip skin), not only the band")
+    ap.add_argument("--colour-sigma", type=float, default=0.6); ap.add_argument("--colour-max", type=float, default=20.0)
+    ap.add_argument("--sharpen-auto", type=float, default=0.0, help="r3: per-VIDEO unsharp amounts (constant -> no flicker) so that the LatentSync layer's sharpness "
+                    "(mean |Laplacian|) reaches TARGET x the source's, calibrated on 48 LatentSync frames against the source frame each was generated from "
+                    "(same pose): lips (outer contour, dilated) -> --ls-sharpen-lips, skin in the mask -> --ls-sharpen (0 when --skin-texture source); 0 = off")
+    ap.add_argument("--src-anchor", default="flow:4", help="r3, with --source-lm: landmark filter around the source-rate rigid head motion (anchor_filters spec)")
+    ap.add_argument("--mask-track", choices=["dets", "head"], default="dets", help="r3, with --source-lm: dets = LatentSync box of the filtered landmarks, +-3 frame "
+                    "mean (clean0 recipe at the source rate); head = box locked to the rigid head motion (anchor_filters.head_locked_boxes: sides / top "
+                    "smoothed in head-stabilised coordinates, chin edge sigma 1)")
     a = ap.parse_args()
     t_all = time.perf_counter(); times = {}
     man = json.loads(pathlib.Path(a.manifest).read_text()); work = pathlib.Path(man["work_dir"]); src = man["input"]
@@ -131,9 +150,43 @@ def main() -> int:
         bb[:, k] = sm
     silent = tms.silent_stretches(man, nm, 0, a.silence_min_s, gaps=tms.load_gaps(a.gaps) if a.gaps else None) if a.silence != "none" else np.zeros(nm, bool)
     sil_w = tms.ramp(silent, a.silence_ramp)
-    mp_ls = np.load(cfs.run_mediapipe(pathlib.Path(a.ls_raw), pathlib.Path(a.ls_raw).with_suffix(".mediapipe.npz")))["lm"][:nm] if (a.skin_texture == "source" or a.ls_sharpen_scope == "lips" or a.ls_sharpen_lips > 0) else None
+    mp_ls = np.load(cfs.run_mediapipe(pathlib.Path(a.ls_raw), pathlib.Path(a.ls_raw).with_suffix(".mediapipe.npz")))["lm"][:nm] if (a.skin_texture == "source" or a.ls_sharpen_scope == "lips" or a.ls_sharpen_lips > 0 or a.sharpen_auto > 0) else None
     # C2 on the LatentSync layer (master grid): two frames around every 16-frame window boundary of every LATENT_SYNC segment
     fl0 = tms.Flow(); nbnd = 0
+    nseam = 0
+    if a.seam_lf > 0:   # r3: window-joint appearance steps -> ramps
+        t0 = time.perf_counter(); N = a.seam_lf; dis_s = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
+        STAB = [33, 133, 362, 263, 168, 6, 197, 4, 98, 327, 2, 50, 280]
+        def lf_resid(m, roi, sig):
+            ya, yb, xa, xb = roi; a_ = L[m - 1][ya:yb, xa:xb].astype(np.float32); b_ = L[m][ya:yb, xa:xb].astype(np.float32)
+            F = dis_s.calc(cv2.cvtColor(L[m][ya:yb, xa:xb], cv2.COLOR_BGR2GRAY), cv2.cvtColor(L[m - 1][ya:yb, xa:xb], cv2.COLOR_BGR2GRAY), None)
+            yy, xx = np.mgrid[0:yb - ya, 0:xb - xa].astype(np.float32)
+            wa = cv2.remap(a_, xx + F[..., 0], yy + F[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+            return cv2.GaussianBlur(b_ - wa, (0, 0), sig)
+        corr = {}
+        for s_ in man["lipsync"]["segments"]:
+            if s_["action"] != "LATENT_SYNC": continue
+            lo, hi = s_["start_frame"], min(s_["end_frame"], nm)
+            for b in range(lo + P, hi, P):
+                if b + 1 >= hi or not np.isfinite(bb[b]).all() or not np.isfinite(mp[b][STAB]).all(): continue
+                x1, y1, x2, y2 = bb[b]; w_ = x2 - x1; pad = 0.3 * w_
+                roi = (int(max(0, y1 - pad)), int(min(H, y2 + pad)), int(max(0, x1 - pad)), int(min(W, x2 + pad))); sig = a.seam_lf_sigma * w_
+                D = lf_resid(b, roi, sig) - 0.5 * (lf_resid(b - 1, roi, sig) + lf_resid(b + 1, roi, sig)); off = np.array([roi[2], roi[0]], np.float64)
+                for m_ in range(max(lo + 1, b - N), min(hi, b + N)):
+                    r_ = (m_ - (b - N) + 0.5) / (2 * N); c_ = r_ if m_ < b else -(1 - r_)
+                    Dm = D
+                    if m_ != b and np.isfinite(mp[m_][STAB]).all():
+                        Mr, _ = cv2.estimateAffinePartial2D(mp[b][STAB].astype(np.float32), mp[m_][STAB].astype(np.float32))
+                        if Mr is not None:
+                            Mr = np.concatenate([Mr[:, :2], (Mr[:, :2] @ off + Mr[:, 2] - off)[:, None]], 1)
+                            Dm = cv2.warpAffine(D, Mr, (roi[3] - roi[2], roi[1] - roi[0]), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+                    corr.setdefault(m_, []).append((roi, c_ * Dm))
+                nseam += 1
+        for m_, lst in corr.items():
+            f_ = L[m_].astype(np.float32)
+            for (ya, yb, xa, xb), C in lst: f_[ya:yb, xa:xb] += C
+            L[m_] = np.clip(f_ + 0.5, 0, 255).astype(np.uint8)
+        times["seam_lf"] = round(time.perf_counter() - t0, 2)
     if a.boundary == "on":
         t0 = time.perf_counter()
         for s in man["lipsync"]["segments"]:
@@ -178,12 +231,61 @@ def main() -> int:
     def flow():
         if not hasattr(local, "f"): local.f = tms.Flow()
         return local.f
+    if a.sharpen_auto > 0:   # r3: calibrate the unsharp amounts once per video
+        t0 = time.perf_counter(); sig_ = a.ls_sharpen_sigma; js_ = jsrc if a.master_timing else np.round(np.arange(nm) * float(rate) / FPS_M).astype(int)
+        cand = [m for m in range(nm) if wm[m] >= 1 and np.isfinite(mp[m]).all() and np.isfinite(bb[m]).all() and 0 <= js_[m] < len(S)]
+        pick = cand[:: max(1, len(cand) // 48)][:48]; amts = np.array([0, 0.5, 1, 1.5, 2, 3, 4, 6], np.float32); res = {"lips": [], "skin": []}
+        for m in pick:
+            x1, y1, x2, y2 = bb[m]; al_, roi_ = ellipse_alpha(bb[m], H, W, a.edge_px)
+            if al_ is None: continue
+            ya, yb, xa, xb = roi_; lw = tms.mouth_width(mp[m]); lip_ = tms.poly_mask(mp[m][tms.LIPS_OUTER], roi_, 0.08 * lw, 0) > 0.5
+            skin_ = (al_ > 0.9) & ~(tms.poly_mask(mp[m][tms.LIPS_OUTER], roi_, 0.25 * lw, 0) > 0.5)
+            gl = cv2.cvtColor(L[m][ya:yb, xa:xb], cv2.COLOR_BGR2GRAY).astype(np.float32); gs = cv2.cvtColor(S[js_[m]][ya:yb, xa:xb], cv2.COLOR_BGR2GRAY).astype(np.float32)
+            ls_ = np.abs(cv2.Laplacian(gs, cv2.CV_32F)); det = gl - cv2.GaussianBlur(gl, (0, 0), sig_)
+            for nm_, rg in (("lips", lip_), ("skin", skin_)):
+                if rg.sum() < 30: continue
+                res[nm_].append([float(np.abs(cv2.Laplacian(gl + A_ * det, cv2.CV_32F))[rg].mean() / max(ls_[rg].mean(), 1e-3)) for A_ in amts])
+        auto = {}
+        for nm_ in ("lips", "skin"):
+            if not res[nm_]: auto[nm_] = 0.0; continue
+            r_ = np.median(np.array(res[nm_]), 0); auto[nm_] = float(np.interp(a.sharpen_auto, r_, amts)) if r_[0] < a.sharpen_auto else 0.0
+            auto[nm_ + "_ratio_before"] = round(float(r_[0]), 3)
+        a.ls_sharpen = 0.0 if a.skin_texture == "source" else round(auto["skin"], 3); a.ls_sharpen_lips = round(max(0.0, auto["lips"] - a.ls_sharpen), 3)
+        times["sharpen_auto"] = round(time.perf_counter() - t0, 2); times["sharpen_auto_amounts"] = {**auto, "ls_sharpen": a.ls_sharpen, "ls_sharpen_lips": a.ls_sharpen_lips}
+        print("  sharpen-auto:", times["sharpen_auto_amounts"], flush=True)
+    lm_f = None; jj = None
+    if a.source_lm:   # r3: geometry from the source frames themselves
+        if not a.master_timing: raise SystemExit("--source-lm needs --master-timing")
+        t0 = time.perf_counter(); lm_s = np.load(a.source_lm)["lm"][:len(S)].astype(np.float64)
+        if len(lm_s) != len(S): raise SystemExit(f"--source-lm has {len(lm_s)} frames, source {len(S)}")
+        rp = pathlib.Path(a.source_lm).with_name(pathlib.Path(a.source_lm).stem + "_rigid.npz")
+        if rp.exists() and len(np.load(rp)["H"]) == len(S): Hs = np.load(rp)["H"]
+        else: Hs = af.rigid_motion(S, lm_s); np.savez_compressed(rp, H=Hs)
+        times["source_rigid_motion"] = round(time.perf_counter() - t0, 2)
+        lm_f = af.filter_landmarks(lm_s, Hs, a.src_anchor) if a.src_anchor != "raw" else lm_s
+        jj = np.clip(jsrc, 0, len(S) - 1)
+        dets_s = cfs.ls_detections(lm_f.astype(np.float32), W, H, calib=True)
+        if a.mask_track == "head":
+            l106 = np.stack([d[1] if d[1] is not None else np.full((106, 2), np.nan, np.float32) for d in dets_s]).astype(np.float64)
+            hb = af.head_locked_boxes(l106, Hs); bb_s = np.array([hb[i] if d[0] is not None else (np.nan,) * 4 for i, d in enumerate(dets_s)], np.float64)
+        else:
+            bb_s = np.array([af.ls_bbox_float(d[1].astype(np.float64)) if d[0] is not None else (np.nan,) * 4 for d in dets_s], np.float64)
+            for c_ in range(4):
+                col = bb_s[:, c_].copy()
+                for i in np.flatnonzero(np.isfinite(col)): bb_s[i, c_] = np.nanmean(col[max(0, i - 3):i + 4])
+        times["source_geometry"] = round(time.perf_counter() - t0, 2)
+    def lm_at(k, mu):   # landmarks of the SHOWN frame
+        return lm_f[k] if lm_f is not None else lerp(mp, mu)
+    def lm_layer(m):    # landmarks of the head pose the LatentSync layer at master position m was generated from
+        if lm_f is None: return lerp(mp, m)
+        m0 = int(np.clip(math.floor(m), 0, nm - 1)); m1 = min(m0 + 1, nm - 1); al = float(m - math.floor(m))
+        return (1 - al) * lm_f[jj[m0]] + al * lm_f[jj[m1]]
     edge_meas = []
     def one(k):
         m = mpos[k]; m0 = int(np.clip(math.floor(m), 0, nm - 1)); m1 = min(m0 + 1, nm - 1); al = float(m - math.floor(m)); mu = float(mu_arr[k])
         w = float((1 - al) * wm[m0] + al * wm[m1])
         if w <= 0: return S[k], 0, None
-        box = lerp(bb, mu)
+        box = lerp(bb, mu) if lm_f is None else bb_s[k]
         if not np.isfinite(box).all(): return S[k], 0, None
         alpha, roi = ellipse_alpha(box, H, W, a.edge_px)
         if alpha is None: return S[k], 0, None
@@ -205,13 +307,14 @@ def main() -> int:
         elif al > 0.96 or wm[m0] <= 0: Lk = L[m1][ya:yb, xa:xb].astype(np.float32)
         else: Lk = tms.interp(f, L[m0][ya:yb, xa:xb].astype(np.float32), L[m1][ya:yb, xa:xb].astype(np.float32), al)
         if a.register != "off":
-            pose_l = mp[m0 if (al < 0.5 or wm[m1] <= 0) else m1] if a.retime == "nearest" else lerp(mp, m); pose_t = lerp(mp, mu)
+            mn_ = m0 if (al < 0.5 or wm[m1] <= 0) else m1
+            pose_l = (mp[mn_] if lm_f is None else lm_f[jj[mn_]]) if a.retime == "nearest" else lm_layer(m); pose_t = lm_at(k, mu)
             if np.isfinite(pose_l[RIG_POSE]).all() and np.isfinite(pose_t[RIG_POSE]).all():
                 off = np.array([xa, ya], np.float64); Mr = None
                 if a.register_prior == "image":   # layer pose = source frame(s) jsrc[m0] / jsrc[m1]; blend the two similarities by the retime weight
-                    if a.retime == "nearest": Mr = src_rigid(int(jsrc[m0 if (al < 0.5 or wm[m1] <= 0) else m1]), k, pose_l)
+                    if a.retime == "nearest": Mr = src_rigid(int(jsrc[mn_]), k, pose_l)
                     else:
-                        M0 = src_rigid(int(jsrc[m0]), k, mp[m0]); M1 = src_rigid(int(jsrc[m1]), k, mp[m1]) if al >= 0.04 else M0
+                        M0 = src_rigid(int(jsrc[m0]), k, mp[m0] if lm_f is None else lm_f[jj[m0]]); M1 = (src_rigid(int(jsrc[m1]), k, mp[m1] if lm_f is None else lm_f[jj[m1]]) if al >= 0.04 else M0)
                         Mr = None if (M0 is None or M1 is None) else (1 - al) * M0 + al * M1
                     if Mr is not None: Mr = np.concatenate([Mr[:, :2], (Mr[:, :2] @ off + Mr[:, 2] - off)[:, None]], 1)   # -> crop coords
                 if Mr is None: Mr, _ = cv2.estimateAffinePartial2D((pose_l[RIG_POSE] - off).astype(np.float32), (pose_t[RIG_POSE] - off).astype(np.float32), method=cv2.LMEDS)
@@ -242,9 +345,21 @@ def main() -> int:
                         Lk = cv2.remap(Lk, xx + Fs[..., 0], yy + Fs[..., 1], cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
             Lk = Lk[roi_r[0] - ya:roi_r[1] - ya, roi_r[2] - xa:roi_r[3] - xa].astype(np.float32); ya, yb, xa, xb = roi_r
         sk = S[k][ya:yb, xa:xb].astype(np.float32)
+        if a.colour_match != "off":   # r3: low-frequency colour match to the source, estimated in the upper border band
+            lm_c = lm_at(k, mu)
+            if np.isfinite(lm_c[[61, 291, 13]]).all():
+                mwc = tms.mouth_width(lm_c); ymc = float((lm_c[61, 1] + lm_c[291, 1]) / 2) - ya
+                lipm = tms.poly_mask(lm_c[tms.LIPS_OUTER], (ya, yb, xa, xb), 0.25 * mwc, 0)
+                yy_ = np.arange(yb - ya, dtype=np.float32)[:, None]
+                wgt = ((alpha > 0.05) & ((alpha < 0.95) | (a.colour_match == "upper"))).astype(np.float32) * (yy_ < ymc + 0.1 * mwc) * (1 - lipm)
+                if wgt.sum() > 50:
+                    sg_ = a.colour_sigma * mwc; d_ = sk - Lk
+                    num = cv2.GaussianBlur(d_ * wgt[..., None], (0, 0), sg_); den = cv2.GaussianBlur(wgt, (0, 0), sg_)
+                    gm = (d_ * wgt[..., None]).sum((0, 1)) / wgt.sum(); eps = 0.05
+                    Lk = Lk + np.clip((num + eps * gm) / (den[..., None] + eps), -a.colour_max, a.colour_max)
         ex = None
         if a.skin_texture == "source" or (a.ls_sharpen > 0 and a.ls_sharpen_scope == "lips"):
-            lm_s = lerp(mp, mu); lm_l = lerp(mp_ls, m) if mp_ls is not None else None; mw_ = tms.mouth_width(lm_s)
+            lm_s = lm_at(k, mu); lm_l = lerp(mp_ls, m) if mp_ls is not None else None; mw_ = tms.mouth_width(lm_s)
             idx = tms.LIPS_INNER if a.lip_texture == "on" else tms.LIPS_OUTER
             ex = tms.poly_mask(lm_l[idx] if lm_l is not None else None, roi, a.lip_dilate * mw_, 0.08 * mw_)
             if a.lip_texture == "off": ex = np.maximum(ex, tms.poly_mask(lm_s[idx], roi, a.lip_dilate * mw_, 0.08 * mw_))
@@ -259,7 +374,7 @@ def main() -> int:
             Lk = tms.skin_texture_transfer(f, [Lk], [sk], [ex], a.tex_sigma, a.tex_tau)[0]
         aw = alpha * w
         if a.silence == "still" and (sil_w[m0] > 0 or sil_w[m1] > 0):
-            g = (1 - al) * sil_w[m0] + al * sil_w[m1]; lm_s = lerp(mp, mu)
+            g = (1 - al) * sil_w[m0] + al * sil_w[m1]; lm_s = lm_at(k, mu)
             if np.isfinite(lm_s).all():
                 oval = lm_s[tms.FACE_OVAL, :2]; ny = float(lm_s[tms.NOSE_BASE, 1].mean()); low = oval[oval[:, 1] >= ny - 1]
                 hull = cv2.convexHull(np.concatenate([low, [[oval[:, 0].min(), ny], [oval[:, 0].max(), ny]]]).astype(np.float32))[:, 0]
@@ -299,7 +414,7 @@ def main() -> int:
     dur = float(tk[-1] - tk[0] + (tk[-1] - tk[-2] if len(tk) > 1 else 0))
     em = [e for e in edge_meas if e]
     rep = {"input": src, "output": str(outp), "source_frames": len(S), "source_fps_avg": float(rate), "master_frames": nm, "ls_touched_frames": touched,
-           "fallback_frames": fails, "fallback_fraction": round(fails / max(len(S), 1), 5), "boundaries_interpolated": nbnd, "edge_px_target": a.edge_px,
+           "fallback_frames": fails, "fallback_fraction": round(fails / max(len(S), 1), 5), "boundaries_interpolated": nbnd, "seam_lf_boundaries": nseam, "edge_px_target": a.edge_px,
            "edge_px_measured": {"median": float(np.median(em)) if em else None, "min": min(em) if em else None, "max": max(em) if em else None, "n": len(em)},
            "silent_master_frames": int(silent.sum()), "args": vars(a), "seconds": times, "s_per_video_min": round(times["total"] / (dur / 60), 1)}
     outp.with_suffix(".fps_composite.json").write_text(json.dumps(rep, indent=1)); print(json.dumps({k: rep[k] for k in ("source_frames", "ls_touched_frames", "fallback_frames", "edge_px_measured", "s_per_video_min")}))
