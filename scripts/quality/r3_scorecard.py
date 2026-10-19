@@ -151,7 +151,7 @@ def cmd_score(a):
     if not a.skip_sync and r["coverage"]["ls_frames"]:
         dub = man["dubbed_track"]["aac"]
         dub_voice = str(pathlib.Path(dub).with_name("dubbed_aac.m4a")) if pathlib.Path(dub).name.startswith("final_mix") else dub
-        p = subprocess.run(["flock", "/workspace/dub/gpu.lock", PY, str(HERE / "syncnet_fps.py"), str(video), "--dub", dub_voice], capture_output=True, text=True)
+        p = subprocess.run([PY, str(HERE / "syncnet_fps.py"), str(video), "--dub", dub_voice], capture_output=True, text=True)
         try: r["syncnet"] = json.loads([l for l in p.stdout.splitlines() if l.startswith("{")][-1])
         except Exception: r["syncnet"] = {"error": p.stderr[-400:]}
     if not a.skip_face:
