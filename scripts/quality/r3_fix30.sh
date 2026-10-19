@@ -12,7 +12,7 @@ src=$(python -c "import json;print(json.load(open('$M'))['input'])"); id=$(basen
 WM=$(python -c "import json;print(json.load(open('$M'))['work_dir'])")/master_25fps.mp4
 if [ $MODE = r3F ] || [ $MODE = r3cand ] || [ $MODE = r3fix ]; then
   if [ $MODE = r3fix ]; then   # r3cand + confidence-checked 25->30 retime (no torn / ghosted lips on interpolated frames, flash detector r3_flash.py)
-    FIX30_ARGS=${FIX30_ARGS:-"--register sim_ring --ring-region upper --edge-px 12 --colour-match upper --seam-lf 4 --sharpen-auto 0.95 --skin-texture source --lip-guard on --retime flow_safe --face-clip on --sanitize-layer 0.83 --sharpen-lips-max 0.8"}
+    FIX30_ARGS=${FIX30_ARGS:-"--register sim_ring --ring-region upper --edge-px 12 --colour-match upper --seam-lf 4 --sharpen-auto 0.95 --skin-texture source --lip-guard on --retime flow_safe --face-clip on --sanitize-layer 0.83 --sanitize-mode texture --sanitize-sigma 8 --sharpen-lips-max 0.8"}
   elif [ $MODE = r3cand ]; then   # B's final R3 recipe (r3-face e9c3f58): + lip guard (8.4 on small faces), closed-loop sharpen to 0.95 + source skin texture
     FIX30_ARGS=${FIX30_ARGS:-"--register sim_ring --ring-region upper --edge-px 12 --colour-match upper --seam-lf 4 --sharpen-auto 0.95 --skin-texture source --lip-guard on"}
   else

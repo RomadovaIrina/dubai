@@ -120,6 +120,10 @@ def main() -> int:
     ap.add_argument("--sanitize-layer", type=float, default=0.0, help="r3 D (user: 'washed-out pink lips / torn lips'): raw LatentSync frames whose lip-box "
                     "texture collapses (min(lip Laplacian, lip contrast) / median of the frames 2..6 away < this, e.g. 0.83) are replaced, in runs of <= 4, by a "
                     "flow interpolation between the nearest good frames; 0 = off")
+    ap.add_argument("--sanitize-mode", choices=["replace", "texture"], default="replace", help="r3 D: replace = the flagged frame becomes the interpolation of "
+                    "its good neighbours; texture = keep the flagged frame's own low frequencies (mouth opening / shape = the lip-sync) and take only the "
+                    "high-frequency detail (lip line, texture) from that interpolation (Gaussian split at --sanitize-sigma px)")
+    ap.add_argument("--sanitize-sigma", type=float, default=2.0)
     ap.add_argument("--face-clip", choices=["on", "off"], default="off", help="r3 D (user: 'the background beside the cheek wobbles'): the paste weight "
                     "is capped by the distance INSIDE the source frame's MediaPipe face contour (0 on / outside it, 1 at --edge-px inside): nothing outside "
                     "the face is pasted / warped / colour-matched")
@@ -212,7 +216,12 @@ def main() -> int:
             lo_, hi_ = m_ - 1, e_
             if e_ - m_ <= 4 and lo_ >= 0 and hi_ < nm and wm[lo_] > 0 and wm[hi_] > 0:
                 y_, z_ = L[lo_].astype(np.float32), L[hi_].astype(np.float32)
-                for i_ in range(m_, e_): L[i_] = np.clip(interp_safe(fl0, y_, z_, (i_ - lo_) / (hi_ - lo_), a.safe_d, a.safe_cons, a.safe_scale)[0], 0, 255).astype(np.uint8); nsan += 1; san_frames.append(int(i_))
+                for i_ in range(m_, e_):
+                    it_ = interp_safe(fl0, y_, z_, (i_ - lo_) / (hi_ - lo_), a.safe_d, a.safe_cons, a.safe_scale)[0]
+                    if a.sanitize_mode == "texture":   # own low frequencies (shape, opening) + the neighbours' high frequencies (lip line)
+                        own = L[i_].astype(np.float32); sg = a.sanitize_sigma
+                        it_ = cv2.GaussianBlur(own, (0, 0), sg) + (it_ - cv2.GaussianBlur(it_, (0, 0), sg))
+                    L[i_] = np.clip(it_, 0, 255).astype(np.uint8); nsan += 1; san_frames.append(int(i_))
             m_ = e_
         times["sanitize_layer"] = {"seconds": round(time.perf_counter() - t0, 2), "flagged": int(bad.sum()), "replaced": nsan, "frames": san_frames[:200]}
         print(f"  sanitize-layer: {int(bad.sum())} flagged, {nsan} replaced", flush=True)
