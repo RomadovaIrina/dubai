@@ -112,6 +112,8 @@ def main() -> int:
     ap.add_argument("--affine-precision", choices=["fp16", "fp32"], default="fp16", help="fp32: LatentSync AlignRestore in float32 (ls_geometry.py)")
     ap.add_argument("--anchor-round", choices=["on", "off"], default="on", help="off: sub-pixel affine anchors (ls_geometry.py)")
     ap.add_argument("--codeformer-precision", choices=["fp32", "parse16", "fp16"], default="fp16", help="fp32 = upstream numerics; parse16 = ParseNet under fp16 autocast; fp16 = CodeFormer net + ParseNet under autocast")
+    ap.add_argument("--dump-ls-raw", default=None, help="r3 B: write the RAW LatentSync layer of the whole video (master frames, every LATENT_SYNC segment's raw "
+                    "generator frames spliced in at its master indices; lossless) for fps_composite.py --ls-raw; needs --mouth-only-pasteback on + --codeformer-scope mouth")
     a = ap.parse_args()
     import clean_face_stack as cfs
     cfs.enforce_clean(a.face_stack, a.codeformer, "optimized", what="candidate_video_stage")
@@ -171,6 +173,19 @@ def main() -> int:
         if prep is not None:   # round 2: record the composite mask boxes per master frame (slide_metric.py --boxes)
             from ls_window_ab import make_box_recorder
             Mo = rec_cls = make_box_recorder(MouthOnlyRunner, prep.frames)
+        if a.dump_ls_raw:   # r3 B: keep each segment's raw generator frames (the deferred composite receives them with the master slice)
+            if a.codeformer_scope != "mouth": raise SystemExit("--dump-ls-raw needs --codeformer-scope mouth (deferred composite)")
+            import hashlib, numpy as _np
+            src_frames = prep.frames if prep is not None else None
+            if src_frames is None: raise SystemExit("--dump-ls-raw needs --face-stack mediapipe")
+            _idx = {hashlib.md5(_np.ascontiguousarray(f).tobytes()).hexdigest(): i for i, f in enumerate(src_frames)}; raw_rec = {}
+            class _Dump(Mo):
+                def composite(self, outs, originals, boxes=None):
+                    st = _idx.get(hashlib.md5(_np.ascontiguousarray(originals[0]).tobytes()).hexdigest()) if len(originals) else None
+                    if st is None: raise RuntimeError("--dump-ls-raw: segment start not found among the master frames")
+                    raw_rec[st] = [_np.array(o, copy=True) for o in outs[:len(originals)]]
+                    return super().composite(outs, originals, boxes)
+            Mo = _Dump
         runner = Mo(runner, a.mask_top, a.mask_feather, a.mask_smooth, defer=a.codeformer_scope == "mouth")
     cf_runner = None
     if a.codeformer == "optimized":
@@ -185,6 +200,14 @@ def main() -> int:
             for k, b in enumerate(bxs):
                 if b is not None: fr_.append(st + k); bx_.append(b)
         np.savez_compressed(out.with_name(out.stem + "_maskboxes.npz"), frames=np.array(fr_, int), boxes=np.array(bx_, np.float64))
+    if a.dump_ls_raw:
+        import composite_register as _cr
+        full = list(prep.frames); spliced = 0
+        for st, fl in raw_rec.items():
+            for k, f in enumerate(fl):
+                if st + k < len(full): full[st + k] = f; spliced += 1
+        _cr.write_video(a.dump_ls_raw, full); rep["ls_raw_dump"] = {"path": a.dump_ls_raw, "segments": len(raw_rec), "frames_spliced": spliced}
+        print(f"  [dump] LatentSync raw layer: {len(raw_rec)} segments, {spliced} frames -> {a.dump_ls_raw}", flush=True)
     rep["backend"] = "optimized"; man["lipsync"] = rep; man["codeformer"] = "DISABLED (not invoked)" if a.codeformer == "off" else {"mode": a.codeformer, "w": a.codeformer_w, "batch": a.codeformer_batch, "landmarks": a.codeformer_landmarks, "precision": a.codeformer_precision}
     if cf_runner is not None: cf_runner.close()
     rp.free_cuda(runner, cf_runner)
