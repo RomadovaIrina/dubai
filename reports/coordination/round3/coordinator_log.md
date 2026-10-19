@@ -158,3 +158,11 @@ deploy key `~/.ssh/id_ed25519_dubai` + `Host github.com` block, github host keys
   pipeline 460–510 s/min (norm 300 FAIL); peak grows with LS segment length → cap ~400 frames. r3F (audio-r2) vs clean0: slide
   0.05–0.13 px (vs 0.17–0.24), 9.4 + 8.4 PASS all, WER 1–4 %; SyncNet 05 −0.86 / 04 −0.34 (different audio → A/B needed);
   audio TP −0.2..−0.4 dBTP, LUFS −12.9..−20 → C. audio-r3 relayed to A, B, D (15:26). A/B/C resumed on medium.
+- 19.10 evening: USER saw (1) a one-frame lip "flash" in 04 ~22–23 s and 03, (2) abrupt phrase cuts in the voice of 03/04.
+  Coordinator diagnosis: (1) FIX30 25→30 flow-interpolated frames tear the lips (04 frames 670/675/680; ls_raw and the 25 fps composite
+  are clean); (2) hard on/offsets at TTS part joins (04: 5.71/6.59/17.70/44.50/45.22/46.59 s; 03: 8.40/14.30/37.30/53.24/70.04 s).
+  Servers B (56682102) and A (56682077) DESTROYED after all videos + C listen clips were pulled. D kept: USER → fix both on D (agent D,
+  medium) and remake the finals.
+- 19.10 late: r3final_fixed v4 (904c5d2) for 01–05. USER: 'much better overall'; still some twitching and some choppy moments in the voice.
+- USER: improve the E2E PIPELINE, not individual videos. D told: r3final stack → generic defaults of the one-command E2E runner, auto thresholds, built-in QA gates (flash, hard-cut, bgring, fps) with auto-remediation; generic fixes for residual twitching and TTS part prosody jumps; validate one command on all 5 → <id>_e2e_v5.mp4.
+- 20.10 ~00:15: USER verdict on v5: 'all crap, redo'. Everything pushed: experiment/r3-integration 32a3605 (v5 one-command E2E + QA gates). Agent D idle; its E2E batch (05, 03 re-run) still running on server D.
