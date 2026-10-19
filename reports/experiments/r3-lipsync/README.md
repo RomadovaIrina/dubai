@@ -39,6 +39,20 @@ SyncNet) but the generated lower face then follows the reference's pose a little
 seams). Higher guidance raises sync AND articulation without moving the face. Bridges fix the joints independently. -> R3 candidate =
 r2best + guidance 2.0 + bridge 8x4 (+ the 400-frame LatentSync call cap), rendered on audio-r3.
 
+## 2b. R3 candidate vs r2best, full videos, SAME audio (track C audio-r3), 400-frame LatentSync cap in both
+
+R3 = r2best + guidance 2.0 + bridge 8x4. Full table: `table_r3cand_audio-r3.md`.
+
+| video | SyncNet dub r2best -> R3 | mix | per-s conf p10 | lip-dub r | joints > 1.5x (source) | nose slide | mouth resid |
+|---|---|---|---|---|---|---|---|
+| 01 | 8.38 -> **9.12** | 8.20 -> 8.68 | 7.33 -> 7.67 | 0.20 -> 0.28 | 0.62 -> **0.25** (0.12) | 0.068 -> 0.084 | 1.01 -> 1.11 |
+| 03 | 5.74 -> **6.42** | 5.40 -> 5.92 | 4.74 -> 5.68 | 0.44 -> 0.50 | 0.62 -> **0.25** (0.17) | 0.079 -> 0.082 | 1.01 -> 1.09 |
+| 04 | 3.57 -> **4.33** | 3.39 -> 3.98 | 3.14 -> 4.19 | 0.36 -> 0.45 | 0.65 -> **0.19** (0.14) | 0.127 -> 0.127 | 0.90 -> 0.94 |
+| 05 | 3.08 -> **3.66** | 2.66 -> 3.21 | 3.12 -> 3.71 | 0.18 -> 0.30 | 0.52 -> **0.27** (0.19) | 0.059 -> 0.059 | 0.88 -> 0.91 |
+
+LatentSync s per LS frame: 0.24-0.29 both (bridges ~+10 % hidden in GPU-sharing noise). Outbox: `<id>_A_audio-C-r3_25fps.mp4` (R3, muxed
+with audio-r3b), `<id>_<t0>-<t1>s_orig-clean0-r2best-R3_audioC-r3b{,_half,_zoom2x_half}.mp4` (03, 05). Watch: mouth texture change +5-10 %.
+
 ## 3. Dub-silent mouth (task 3) — 03 window 21.6-37.6 s, audio-r2
 
 | arm | silent-second frozen_mouth (v4) | SyncNet dub | lip-dub r |
@@ -69,4 +83,5 @@ The 2 % rule counts held frames and failed segments; long gaps split the segment
 **8.5 joints**: see §2 (bridge 8x4: share of joints > 1.5x 0.59 -> 0.23, source 0.23). LatentSync call cap 400 frames (D's VRAM audit): the cap
 falls on a 16-frame window seam; measured on 03 (capped vs uncapped, audio-r3) — pending.
 
-**8.2 two faces**: synthetic 03 | 04 clip, speaker left / right — pending (first attempt failed on an env var, re-queued).
+**8.2 two faces** (synthetic 03 | 04 side by side, audio-r3 of one of them, r2best): speaker LEFT -> left half changed in 189 frames
+(0.30 % px > 12), right half in 0 frames (0.007 %, encode noise); speaker RIGHT -> right 260 frames, left 0. Two-face probe share 1.0. PASS.
