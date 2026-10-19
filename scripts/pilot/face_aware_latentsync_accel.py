@@ -290,7 +290,7 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
                   router, runner: AccelRunner | None, min_ls_frames: int = 25, max_verify_depth: int = 3, codeformer: str = "off",
                   times: dict | None = None, log=print, speech_gate: list | None = None,
                   crossfade_frames: int = GATE_DEFAULTS["crossfade_frames"], router_stride: int = 1, in_memory: bool = True,
-                  cf_runner=None, lm_smooth: int = 0, prep: "VideoPrep | None" = None) -> dict:
+                  cf_runner=None, lm_smooth: int = 0, prep: "VideoPrep | None" = None, max_ls_frames: int = 0) -> dict:
     """Face-aware LatentSync on `src` driven by `audio16k` (the dubbed track); `audio_mux` (AAC of the same track) is muxed.
     `speech_gate`: list of (start_s, end_s) intervals (build_speech_gate); frames outside them are passed through.
     `codeformer`: "off" (frozen baseline) or "optimized" (`cf_runner` = codeformer_accel.CodeFormerAccel, applied to the
@@ -327,6 +327,18 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
             apply_gate_to_rows(frames, gate)
     times["face_classify"] = round(time.perf_counter() - t0, 3)
     segs = fa.segment(frames, min_ls_frames)
+    if max_ls_frames and max_ls_frames > 0:   # round 3 (D's VRAM audit): LATENT_SYNC segments cut into pieces of <= max_ls_frames (a multiple of 16 -> the cut is a window seam)
+        cap = max(16, (int(max_ls_frames) // 16) * 16); out_ = []
+        for s in segs:
+            if s["action"] != "LATENT_SYNC" or s["frames"] <= cap: out_.append(s); continue
+            a_ = s["start_frame"]
+            while a_ < s["end_frame"]:
+                b_ = min(s["end_frame"], a_ + cap)
+                if 0 < s["end_frame"] - b_ < min_ls_frames: b_ = s["end_frame"] if s["end_frame"] - a_ <= cap + min_ls_frames else b_ - min_ls_frames
+                out_.append({**s, "start_frame": a_, "end_frame": b_, "frames": b_ - a_, "start_s": round(a_ / FPS, 3), "end_s": round(b_ / FPS, 3), "capped_from": [s["start_frame"], s["end_frame"]]})
+                a_ = b_
+        for k, s in enumerate(out_): s["index"] = k
+        segs = out_
     classes = ("VALID_FACE", "SMALL_FACE", "NO_FACE", "NO_SPEECH")
     counts = {c: sum(1 for f in frames if f["cls"] == c) for c in classes}
     reasons: dict = {}

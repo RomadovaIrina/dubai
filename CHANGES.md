@@ -57,3 +57,9 @@ For a separate venv instead: `CMAKE_ARGS=... FORCE_CMAKE=1 uv pip install --pyth
 - Fixes used: `--prep-only` (prep outside the GPU lock), SIGSTOP / SIGCONT of side jobs while the critical run preps. Proposal for the worker:
   a CPU budget per stage (FIX30 threads ≤ 8, one prep at a time), the face-stack prep in parallel with the audio stage (it only needs the master).
 | 6 | `r3-face` e9c3f58 (B r3 final: `--lip-guard on`, `--sharpen-auto 0.95 --skin-texture source`, dub-silent chains; carries A r3 eaaaaea: `--ref-mode`, bridges, `--dump-raw`, spec-11 2 % status) | `candidate_video_stage.py` raw dumps: D's `--dump-ls-raw` (on / PATH) + A's `--dump-raw` kept, B's duplicate block dropped; `r3_sbs.sh` = A's, D's side-by-side tool renamed `r3d_sbs.sh` |
+| 7 | `r3-lipsync` ad7ada1 (A r3: `--guidance`, `--bridge-len/--bridge-steps`, `--max-ls-frames` call cap, README) | clean |
+
+## r3cand (coordinator 19.10): A's R3 generator + B's final composite, rendered on C audio-r3, muxed with audio-r3b
+Generator: r2best (`--anchor-filter flow:4 --anchor-round off --affine-precision fp32 --mask-track head`) + `--guidance 2.0 --bridge-len 8
+--bridge-steps 4 --max-ls-frames 400` + B's fps master (`--master-timing-mode fps`). Composite: `r3_fix30.sh` mode r3cand
+(`--register sim_ring --source-lm --colour-match upper --seam-lf 4 --sharpen-auto 0.95 --skin-texture source --lip-guard on --edge-px 12`).
