@@ -92,9 +92,14 @@ class AccelRunner:
         dt = round(time.perf_counter() - t0, 2); self._record(st, dt)
         return dt
 
+    silence_mix = None   # round 3: r3_lipsync.SilenceMix (dub-silent mouth), hooked per segment
+
+    def set_segment(self, start: int, n: int):
+        self.acc.chunk_hook = self.silence_mix.hook(start, n) if self.silence_mix is not None else None
+
     def run_frames(self, frames_rgb: np.ndarray, audio_wav: pathlib.Path, detections: list | None = None) -> tuple[np.ndarray, float]:
         t0 = time.perf_counter()
-        frames = self.acc.run_frames(frames_rgb, str(audio_wav), detections)
+        frames = self.acc.run_frames(frames_rgb, str(audio_wav), detections, video_fps=FPS)
         dt = round(time.perf_counter() - t0, 2); self._record(self.acc.last_stats, dt)
         return frames, dt
 
@@ -381,6 +386,7 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
                         wav.unlink(missing_ok=True); continue
                 if lm_smooth > 0 and dets is not None:   # stable LatentSync crop: centred moving average of the replayed landmarks / bbox (2026-10-13)
                     dets = smooth_detections(dets, lm_smooth)
+                if hasattr(runner, "set_segment"): runner.set_segment(s["start_frame"], s["frames"])   # round 3: per-segment conditioning hooks
                 frs_rgb, dt = runner.run_frames(seg_rgb, wav, dets)
                 frs = [cv2.cvtColor(f, cv2.COLOR_RGB2BGR) for f in frs_rgb]
                 wav.unlink(missing_ok=True); del seg_rgb, frs_rgb

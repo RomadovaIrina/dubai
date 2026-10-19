@@ -1,14 +1,20 @@
 #!/bin/bash
-# Round 3 D: labelled side by side, any frame rates (every panel resampled to the first panel's fps, nearest frame), audio from AUDIO_PANEL (default last).
-#   bash scripts/quality/r3_sbs.sh <out.mp4> [-ss T -t D] LABEL=file LABEL=file ...      HALF=1 -> also <out>_half.mp4 (0.5x, audio dropped)
-set -u
-out=$1; shift; trim=""; if [ "${1:-}" = "-ss" ]; then trim="-ss $2 -t $4"; shift 4; fi
-F=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf; ins=(); fil=""; n=0; labs=()
-fps=$(ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate -of csv=p=0 "${1#*=}")
-for p in "$@"; do lab=${p%%=*}; f=${p#*=}; ins+=($trim -i "$f")
-  fil+="[$n:v]fps=$fps,scale=-2:848,setsar=1,drawtext=fontfile=$F:text='$lab':x=10:y=10:fontsize=26:fontcolor=yellow:box=1:boxcolor=black@0.6[v$n];"; n=$((n+1)); done
-st=""; for i in $(seq 0 $((n-1))); do st+="[v$i]"; done
-ap=${AUDIO_PANEL:-$((n-1))}
-ffmpeg -loglevel error -y "${ins[@]}" -filter_complex "${fil}${st}hstack=inputs=$n[v]" -map "[v]" -map $ap:a:0 -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a aac -b:a 160k -shortest "$out"
-[ "${HALF:-0}" = 1 ] && ffmpeg -loglevel error -y -i "$out" -vf "setpts=2*PTS" -an -c:v libx264 -crf 18 -pix_fmt yuv420p "${out%.mp4}_half.mp4"
-echo "$out"
+# Round 3 (track A): full-video side-by-sides for the user.  r3_sbs.sh <id> <t0> <t1> <name> LABEL=run_tag ...
+#   panels: ORIGINAL (25 fps master) + each LABEL=<artifacts/r3/runs/<id>_<tag>.mp4>; audio = the LAST panel's (its final mix)
+#   -> outbox/<id>_<t0>-<t1>s_<name>.mp4, _half (0.5x), _zoom2x_half (2x mouth / nose crop at half speed)
+set -eu
+cd /workspace/dub/dubai
+id=$1; t0=$2; t1=$3; name=$4; shift 4
+R=/workspace/dub/artifacts/r3; M=$R/masters/$id; OUT=/workspace/dub/outbox; dur=$(python3 -c "print(round($t1-$t0,2))")
+P=(--panel ORIGINAL=$M/master_25fps.mp4@0); n=1
+for kv in "$@"; do P+=(--panel "${kv%%=*}=$R/runs/${id}_${kv#*=}.mp4@0"); n=$((n+1)); done
+Z=$(/venv/dabai/bin/python -c "
+import numpy as np; lm=np.load('$M/master_mediapipe.npz')['lm'][int($t0*25):int($t1*25)]; L=np.nanmedian(lm,0); iod=np.linalg.norm(L[33]-L[263])
+cx,cy=L[[4,13]].mean(0); w=1.4*iod; h=1.4*iod
+print(f'{int(cx-w/2)},{int(cy-h/2)},{int(cx+w/2)},{int(cy+h/2)}')")
+b=$OUT/${id}_${t0}-${t1}s_$name
+PY="scripts/nothp /venv/dabai/bin/python"
+$PY scripts/quality/make_sbs.py --out $b.mp4 --start $t0 --dur $dur "${P[@]}" --audio-from $((n-1)) --title "$id ${t0}-${t1}s 25fps, audio = track C audio-r2 (final mix)"
+$PY scripts/quality/make_sbs.py --out ${b}_zoom2x.mp4 --start $t0 --dur $dur "${P[@]}" --audio-from $((n-1)) --zoom $Z --title "$id mouth 2x"
+for v in $b.mp4 ${b}_zoom2x.mp4; do scripts/nothp ffmpeg -loglevel error -y -nostdin -i $v -filter:v "setpts=2.0*PTS" -filter:a "atempo=0.5" -c:v libx264 -crf 18 ${v%.mp4}_half.mp4; done
+rm -f ${b}_zoom2x.mp4; ls -la $b*

@@ -8,11 +8,12 @@ import argparse, json, pathlib
 import numpy as np, cv2, av
 ap = argparse.ArgumentParser(); ap.add_argument("--video", required=True); ap.add_argument("--manifest", required=True); ap.add_argument("--lm", required=True)
 ap.add_argument("--ref-master", default=None, help="the video is on the master grid (25 fps): frame i = master i, landmarks lm[j[i]]"); ap.add_argument("--out", required=True)
+ap.add_argument("--master-fps", type=float, default=25.0, help="frame rate of the master the manifest segments count in (30 for a 30 fps LatentSync run)")
 a = ap.parse_args()
 z = np.load(a.lm); lm = z["lm"]; man = json.loads(pathlib.Path(a.manifest).read_text())
 if a.ref_master:
     j = np.array(json.loads(pathlib.Path(a.ref_master).read_text())["j"]); lm = lm[np.clip(j, 0, len(lm) - 1)]; mpos = np.arange(len(lm), dtype=float)
-else: mpos = z["t"] * 25.0
+else: mpos = z["t"] * a.master_fps
 segs = [s for s in man["lipsync"]["segments"] if s["action"] == "LATENT_SYNC"]
 def seg_of(m):
     for s in segs:

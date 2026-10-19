@@ -26,7 +26,7 @@ from pilot_common import PILOT, THIRD_PARTY, gpu_info, write_json, sh
 from benchmark_06_codeformer import probe
 
 LS = THIRD_PARTY / "latentsync"
-FPS = 25
+FPS = int(os.environ.get("DUB_LS_FPS", "25"))   # r3 B experiment: DUB_LS_FPS=30 runs the whole video stage (master, gate, LatentSync) at 30 fps
 # LatentSync filter is w>=50, h>=80, 0.2<w/h<1.5, score>=0.5 (latentsync/utils/face_detector.py). We use exactly
 # these thresholds for classification; robustness against re-encode flips comes from verify_segment(): every cut
 # segment is re-checked with LatentSync's FaceDetector on the exact frames LatentSync will read, and split at any

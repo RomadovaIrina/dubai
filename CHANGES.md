@@ -56,3 +56,4 @@ For a separate venv instead: `CMAKE_ARGS=... FORCE_CMAKE=1 uv pip install --pyth
   the GPU sat at 0 % and the prep of the run holding the GPU lock took > 10 min (normally ~2 min).
 - Fixes used: `--prep-only` (prep outside the GPU lock), SIGSTOP / SIGCONT of side jobs while the critical run preps. Proposal for the worker:
   a CPU budget per stage (FIX30 threads ≤ 8, one prep at a time), the face-stack prep in parallel with the audio stage (it only needs the master).
+| 6 | `r3-face` e9c3f58 (B r3 final: `--lip-guard on`, `--sharpen-auto 0.95 --skin-texture source`, dub-silent chains; carries A r3 eaaaaea: `--ref-mode`, bridges, `--dump-raw`, spec-11 2 % status) | `candidate_video_stage.py` raw dumps: D's `--dump-ls-raw` (on / PATH) + A's `--dump-raw` kept, B's duplicate block dropped; `r3_sbs.sh` = A's, D's side-by-side tool renamed `r3d_sbs.sh` |
