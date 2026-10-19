@@ -62,9 +62,10 @@ def wer(ref, hyp):
 
 
 def unit_text(u):
+    """the English text actually synthesised (tts_parts after fit / refit), else the unit translation."""
+    if u.get("tts_parts"): return " ".join(p.get("text", "") if isinstance(p, dict) else str(p) for p in u["tts_parts"])
     t = u.get("translation")
     if isinstance(t, dict): t = t.get("text") or t.get("en") or ""
-    if not t and u.get("tts_parts"): t = " ".join(p.get("text", "") if isinstance(p, dict) else str(p) for p in u["tts_parts"])
     return t or ""
 
 
