@@ -59,7 +59,11 @@ def ffprobe_frames(p: pathlib.Path) -> int:
 def make_master(src: pathlib.Path, work: pathlib.Path) -> tuple[pathlib.Path, pathlib.Path]:
     master = work / "master_25fps.mp4"; wav = work / "own_audio_16k.wav"
     if not master.exists():
-        run(["ffmpeg", "-loglevel", "error", "-y", "-nostdin", "-i", str(src), "-r", str(FPS), "-crf", "18", "-an", str(master)])
+        # DUB_MASTER_TIMING=fps (round 3): `-vf fps=25` picks the source frame NEAREST to m/25 (clock error <= half a source frame, mean 0);
+        # the default `-r 25` drops frames on a schedule that lags m/25 by ~60 ms on 30 fps sources (the generated lower face then inherits
+        # a 60 ms old jaw / head pose)
+        tm = ["-vf", f"fps={FPS}"] if os.environ.get("DUB_MASTER_TIMING", "r25") == "fps" else ["-r", str(FPS)]
+        run(["ffmpeg", "-loglevel", "error", "-y", "-nostdin", "-i", str(src)] + tm + ["-crf", "18", "-an", str(master)])
     if not wav.exists():
         run(["ffmpeg", "-loglevel", "error", "-y", "-nostdin", "-i", str(src), "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", str(wav)])
     return master, wav

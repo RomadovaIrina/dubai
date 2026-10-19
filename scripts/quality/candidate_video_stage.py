@@ -114,7 +114,10 @@ def main() -> int:
     ap.add_argument("--codeformer-precision", choices=["fp32", "parse16", "fp16"], default="fp16", help="fp32 = upstream numerics; parse16 = ParseNet under fp16 autocast; fp16 = CodeFormer net + ParseNet under autocast")
     ap.add_argument("--dump-ls-raw", default=None, help="r3 B: write the RAW LatentSync layer of the whole video (master frames, every LATENT_SYNC segment's raw "
                     "generator frames spliced in at its master indices; lossless) for fps_composite.py --ls-raw; needs --mouth-only-pasteback on + --codeformer-scope mouth")
+    ap.add_argument("--master-timing-mode", choices=["r25", "fps"], default="r25", help="r3 B: how the 25 fps master is made: r25 = `-r 25` (default, lags the "
+                    "clock ~60 ms on 30 fps sources), fps = `-vf fps=25` (nearest source frame, mean clock error 0); sets DUB_MASTER_TIMING")
     a = ap.parse_args()
+    os.environ["DUB_MASTER_TIMING"] = a.master_timing_mode
     import clean_face_stack as cfs
     cfs.enforce_clean(a.face_stack, a.codeformer, "optimized", what="candidate_video_stage")
     import run_clean_pipeline_05 as rp

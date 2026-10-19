@@ -17,6 +17,7 @@ NB = 14; BS = 24
 def main():
     import av, cv2
     ap = argparse.ArgumentParser(); ap.add_argument("--src", required=True); ap.add_argument("--master", required=True); ap.add_argument("--out", required=True)
+    ap.add_argument("--vf", default=None, help="test another master command: ffmpeg -i SRC -vf VF (instead of -r 25)")
     a = ap.parse_args()
     c = av.open(a.src); s = c.streams.video[0]; tb = s.time_base; rate = s.average_rate; pts = []; grays = []
     for fr in c.decode(s):
@@ -34,7 +35,7 @@ def main():
             for p in st.encode(f): o.mux(p)
         for p in st.encode(): o.mux(p)
         o.close()
-        subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-nostdin", "-i", str(idx), "-r", "25", "-crf", "18", "-an", str(out)], check=True)   # = make_master
+        subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-nostdin", "-i", str(idx)] + (["-vf", a.vf] if a.vf else ["-r", "25"]) + ["-crf", "18", "-an", str(out)], check=True)   # = make_master
         c = av.open(str(out)); j = []
         for fr in c.decode(video=0):
             g = fr.to_ndarray(format="gray")
