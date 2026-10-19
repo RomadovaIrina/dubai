@@ -15,8 +15,9 @@ for id in "$@"; do
   C=/workspace/dub/canonical/artifacts/baseline/$id; D=/workspace/dub/artifacts/baseline/$id/work/work_$id; mkdir -p $D
   for f in $C/work/work_$id/*; do ln -sfn $f $D/; done
   DD=""; [ -n "${DUBBED_DIR_TPL:-}" ] && DD="--dubbed-dir ${DUBBED_DIR_TPL//\{id\}/$id}"
+  MAN=$C/final/${id}_final.manifest.json; [ -n "${MANIFEST_TPL:-}" ] && MAN=${MANIFEST_TPL//\{id\}/$id}   # e.g. C's delivered <id>_r2.manifest.json (its units / text)
   s=$(date +%s)
-  flock /workspace/dub/gpu.lock python scripts/quality/candidate_video_stage.py --id $id --tag $arm --manifest $C/final/${id}_final.manifest.json --out $O --work-out $O/work_${id}_$arm \
+  flock /workspace/dub/gpu.lock python scripts/quality/candidate_video_stage.py --id $id --tag $arm --manifest $MAN --out $O --work-out $O/work_${id}_$arm \
      $DD $CLEAN0 $X > $O/${id}_$arm.log 2>&1 || echo "FAIL $id $arm (see $O/${id}_$arm.log)"
   echo "$(grep '^== ' $O/${id}_$arm.log | cut -c1-200)  wall $(( $(date +%s) - s )) s"
 done
