@@ -5,7 +5,9 @@ set -u
 cd /workspace/dub/dubai; export DUB_ROOT=/workspace/dub/dubai
 id=$1; t0=$2; t1=$3; w=$4; shift 4
 O=/workspace/dub/artifacts/r3/win; M=/workspace/dub/artifacts/r3/masters/$id; mkdir -p $O
-MAN=/workspace/dub/canonical/artifacts/baseline/$id/final/${id}_final.manifest.json; WB=/workspace/dub/artifacts/baseline/$id/work/work_$id
+# audio: track C audio-r2 (default, user rule for round-3 deliverables; window tags get the prefix "a2") or R3_AUDIO=cand5 (canonical, research only)
+if [ "${R3_AUDIO:-a2}" = cand5 ]; then MAN=/workspace/dub/canonical/artifacts/baseline/$id/final/${id}_final.manifest.json; WB=/workspace/dub/artifacts/baseline/$id/work/work_$id; AP=""
+else MAN=/workspace/dub/artifacts/r3/audio-r2/$id.manifest.json; WB=/workspace/dub/artifacts/r3/audio-r2/work_$id; AP="a2"; fi
 for f in master_mediapipe.npz master_rigid.npz; do [ -f $M/$f ] && ln -sfn $M/$f $WB/$f; done
 f0=$(python3 -c "print(int(round($t0*25)))"); f1=$(python3 -c "print(int(round($t1*25)))")
 G="--window-batch-size 1 --anchor-filter flow:4 --anchor-round off --affine-precision fp32 --mask-track head --rigid $M/master_rigid.npz --dump-stages"
@@ -31,7 +33,7 @@ for arm in "$@"; do
     refcsm05) X="--ref-mode fixed --ref-select calm_closed --silence-mix 0.5";;
     *) echo "unknown arm $arm"; continue;;
   esac
-  tag=${w}_$arm
+  tag=${AP}${w}_$arm
   [ -f $O/${id}_$tag.manifest.json ] || DUB_CPUS=${DUB_CPUS:-0-7} scripts/nothp /venv/dabai/bin/python scripts/quality/ls_window_ab.py --manifest $MAN --t0 $t0 --t1 $t1 --tag $tag --out $O $G $X > $O/${id}_$tag.log 2>&1 || echo "FAIL $id $tag"
   grep "^== " $O/${id}_$tag.log
 done

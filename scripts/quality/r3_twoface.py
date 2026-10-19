@@ -27,7 +27,10 @@ def build(a):
     run(["ffmpeg", "-loglevel", "error", "-y", "-nostdin", "-ss", L[1], "-t", str(dur), "-i", str(src_of(L[0])), "-ss", R[1], "-t", str(dur), "-i", str(src_of(R[0])),
          "-filter_complex", "[0:v]fps=30,setpts=PTS-STARTPTS[a];[1:v]fps=30,setpts=PTS-STARTPTS[b];[a][b]hstack=inputs=2[v]", "-map", "[v]",
          "-map", f"{0 if a.speaker == 'left' else 1}:a:0", "-c:v", "libx264", "-crf", "12", "-c:a", "aac", "-b:a", "192k", "-shortest", str(clip)])
-    man = json.loads((CAN / v / "final" / f"{v}_final.manifest.json").read_text()); W = CAN / v / "work" / f"work_{v}"
+    if a.audio == "a2":   # track C audio-r2 (round-3 rule): manifest (speech intervals, diarization) + dub / mix of that track
+        A2 = pathlib.Path("/workspace/dub/artifacts/r3/audio-r2"); man = json.loads((A2 / f"{v}.manifest.json").read_text()); W = A2 / f"work_{v}"
+    else:
+        man = json.loads((CAN / v / "final" / f"{v}_final.manifest.json").read_text()); W = CAN / v / "work" / f"work_{v}"
     for name, srcf in (("own_audio_16k.wav", W / "own_audio_16k.wav"), ("dubbed_16k.wav", W / "dubbed_16k.wav"), ("final_mix_44k.wav", W / "final_mix_44k.wav")):
         run(["ffmpeg", "-loglevel", "error", "-y", "-nostdin", "-ss", str(t0), "-t", str(dur), "-i", str(srcf), str(work / name)])
     for name, srcf in (("dubbed_16k.wav", "dubbed_aac.m4a"), ("final_mix_44k.wav", "final_mix_aac.m4a")):
@@ -39,7 +42,7 @@ def build(a):
           "source": {"duration_s": dur, "video": {"width": pr["width"], "height": pr["height"], "avg_fps": int(n) / int(d)}},
           "speech_intervals": sh(man["speech_intervals"]), "diarization": {"turns": sh(man["diarization"]["turns"])}, "units": [],
           "dubbed_track": {"wav16k": str(work / "dubbed_16k.wav"), "aac": str(work / "dubbed_aac.m4a")},
-          "twoface": {"left": a.left, "right": a.right, "speaker": a.speaker, "half_width": pr["width"] // 2}}
+          "twoface": {"audio": a.audio, "left": a.left, "right": a.right, "speaker": a.speaker, "half_width": pr["width"] // 2}}
     (out / "twoface.manifest.json").write_text(json.dumps(m2, indent=1)); print(out / "twoface.manifest.json")
 
 
@@ -64,6 +67,6 @@ def check(a):
 
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(); ap.add_argument("cmd", choices=["build", "check"]); ap.add_argument("--left"); ap.add_argument("--right"); ap.add_argument("--speaker", default="left")
+    ap = argparse.ArgumentParser(); ap.add_argument("cmd", choices=["build", "check"]); ap.add_argument("--left"); ap.add_argument("--right"); ap.add_argument("--speaker", default="left"); ap.add_argument("--audio", choices=["a2", "cand5"], default="a2")
     ap.add_argument("--out", required=True); ap.add_argument("--video"); a = ap.parse_args()
     build(a) if a.cmd == "build" else check(a)

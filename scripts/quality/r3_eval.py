@@ -43,7 +43,7 @@ def run_eval(base: pathlib.Path, parts=("sync", "syncpf", "slide", "v4")) -> dic
     if "sync" in parts and "sync" not in ev:
         from syncnet_common import eval_syncnet
         ev["sync"] = {}
-        for k, p in (("dub_only", dub), ("mix", mp4)):
+        for k, p in (("mix", mp4),):   # dub-only global conf / offset comes from sync_perframe (same detector / crop / model, one pass less of CPU)
             try: x = eval_syncnet(p); ev["sync"][k] = {"conf": x["confidence"], "av_offset": x["av_offset_frames"]}
             except Exception as e: ev["sync"][k] = {"error": str(e)[-200:]}
     if "syncpf" in parts and "syncpf" not in ev:
@@ -64,7 +64,8 @@ def run_eval(base: pathlib.Path, parts=("sync", "syncpf", "slide", "v4")) -> dic
         sh([PY, str(HERE / "sync_perframe.py"), "--video", str(mp4), "--audio", str(drv), "--out", str(sj)] + src_arg + (["--mp-npz", str(mpz)] if mpz else []),
            check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if sj.exists():
-            d = json.loads(sj.read_text()); ev["syncpf"] = {"global": d["global"], "lip_env_r": d.get("lip_env_r_global"), "lip_env_r_by_lag": d.get("lip_env_r_by_lag"), "t0": f0 / 25}
+            d = json.loads(sj.read_text()); ev.setdefault("sync", {}).setdefault("dub_only", {"conf": d["global"]["conf"], "av_offset": d["global"]["av_offset"], "via": "sync_perframe"})
+            ev["syncpf"] = {"global": d["global"], "lip_env_r": d.get("lip_env_r_global"), "lip_env_r_by_lag": d.get("lip_env_r_by_lag"), "t0": f0 / 25}
     if "slide" in parts and "slide" not in ev:
         sj = base.with_suffix(".slide.json")
         cmd = [PY, str(HERE / "slide_metric.py"), "--video", str(mp4), "--master", str(M / "master_25fps.mp4"), "--npz", str(M / "master_mediapipe.npz"),
