@@ -10,7 +10,8 @@ for id in "${ids[@]}"; do
   C=/workspace/dub/canonical/artifacts/baseline/$id/work/work_$id; D=/workspace/dub/artifacts/baseline/$id/work/work_$id; mkdir -p $D
   for f in $C/*; do ln -sfn $f $D/; done   # the manifest's own work-dir path -> canonical audio stages
   [ -f $O/${id}_$tag.manifest.json ] && { echo "skip $id $tag"; continue; }
-  /venv/dabai/bin/python scripts/quality/candidate_video_stage.py --id $id --tag $tag --manifest /workspace/dub/canonical/artifacts/baseline/$id/final/${id}_final.manifest.json \
+  MANF=/workspace/dub/canonical/artifacts/baseline/$id/final/${id}_final.manifest.json; [ -n "${MAN_DIR:-}" ] && MANF=$MAN_DIR/$id.manifest.json   # MAN_DIR: e.g. C's audio-r2 manifests (r3b_audio_dirs.sh)
+  /venv/dabai/bin/python scripts/quality/candidate_video_stage.py --id $id --tag $tag --manifest $MANF \
     --out $O --work-out $O/work_${id}_$tag --mux final_mix --gate-merge-gap-s 1.2 --mouth-only-pasteback on --mask-smooth 3 --ls-landmark-smooth 2 \
     --codeformer-scope mouth --codeformer off --face-stack mediapipe --dump-ls-raw $O/${id}_${tag}_ls_raw.mp4 "$@" > $O/${id}_$tag.log 2>&1 || echo "FAIL $id $tag"
   grep "^== \|\[dump\]" $O/${id}_$tag.log
