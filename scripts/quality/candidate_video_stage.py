@@ -121,6 +121,7 @@ def main() -> int:
     ap.add_argument("--codeformer-precision", choices=["fp32", "parse16", "fp16"], default="fp16", help="fp32 = upstream numerics; parse16 = ParseNet under fp16 autocast; fp16 = CodeFormer net + ParseNet under autocast")
     ap.add_argument("--dump-raw", action="store_true", help="round 3: also write <out>_lsraw.mp4 = master frames with the RAW LatentSync frames (before the mouth composite / crossfade) "
                     "in the LATENT_SYNC segments, lossless libx264rgb crf 0, master frame count (track B fps_composite --ls-raw)")
+    ap.add_argument("--inject-ls-error", default=None, help="round 3 spec-11 test: comma list of LatentSync call numbers (1-based) that raise RuntimeError -> PASS_THROUGH_LS_FAILED")
     ap.add_argument("--silence-mix", type=float, default=0.0, help="round 3: dub-silent mouth, whisper conditioning moved toward the SOURCE speech by this amount where the source talks and no dub part sounds (r3_lipsync.py)")
     ap.add_argument("--silence-ramp", type=int, default=6); ap.add_argument("--silence-min-s", type=float, default=0.3); ap.add_argument("--gaps", default=None, help="residual-gap JSON (track C) instead of the manifest stretches")
     a = ap.parse_args()
@@ -178,9 +179,16 @@ def main() -> int:
     with rp.timed(times, "latentsync_load"): runner = faa.AccelRunner(a.window_batch_size, not a.no_deepcache, "none", "auto", steps=a.steps, guidance=a.guidance, deepcache_interval=a.deepcache_interval)
     if a.silence_mix > 0:   # round 3: dub-silent mouth (r3_lipsync.SilenceMix), stretches in absolute master frames
         import r3_lipsync as r3
-        N_all = man["lipsync"]["master_frames"]; sm = r3.silent_mask(man, N_all, a.silence_min_s, gaps=r3.load_gaps(a.gaps) if a.gaps else None)
+        N_all = (man.get("lipsync") or {}).get("master_frames") or int(round(man["source"]["duration_s"] * 25)) + 2; sm = r3.silent_mask(man, N_all, a.silence_min_s, gaps=r3.load_gaps(a.gaps) if a.gaps else None)
         runner.silence_mix = r3.SilenceMix(base_work / "own_audio_16k.wav", r3.ramp(sm, a.silence_ramp), a.silence_mix)
         man["silence_mix"] = {"lam": a.silence_mix, "ramp": a.silence_ramp, "min_s": a.silence_min_s, "gaps": a.gaps, "frames": int(sm.sum())}
+    if a.inject_ls_error:   # spec 11 fault injection: a model error must not crash the worker (segment passes through, counted)
+        bad = {int(x) for x in a.inject_ls_error.split(",")}; inner_run = runner.run_frames; ncall = [0]
+        def failing(frames_rgb, audio_wav, detections=None):
+            ncall[0] += 1
+            if ncall[0] in bad: raise RuntimeError(f"injected fault (call {ncall[0]})")
+            return inner_run(frames_rgb, audio_wav, detections)
+        runner.run_frames = failing
     rec_cls = None
     if a.mouth_only_pasteback == "on":
         Mo = MouthOnlyRunner
@@ -211,7 +219,13 @@ def main() -> int:
             for k, f in enumerate(frs): sub[st + k] = f
         for i, f in enumerate(mf): w_.append_data(cv2.cvtColor(sub.get(i, f), cv2.COLOR_BGR2RGB))
         w_.close(); man["ls_raw"] = {"path": str(rawp), "frames": len(mf), "ls_frames": len(sub)}; del mf, sub
-    rep["backend"] = "optimized"; man["lipsync"] = rep; man["codeformer"] = "DISABLED (not invoked)" if a.codeformer == "off" else {"mode": a.codeformer, "w": a.codeformer_w, "batch": a.codeformer_batch, "landmarks": a.codeformer_landmarks, "precision": a.codeformer_precision}
+    rep["backend"] = "optimized"; man["lipsync"] = rep
+    if prep is not None:   # spec 11: degraded frames (held landmarks, LatentSync failures) vs the 2 % SUCCESS / PARTIAL_SUCCESS rule (same rule as run_clean_pipeline_05)
+        elig = int(rep["frame_classes"].get("VALID_FACE", 0)); failed = int((rep["by_action"].get("PASS_THROUGH_LS_FAILED") or {}).get("frames", 0))
+        held = int(man["face_stack"].get("held_landmark_frames", 0)); ratio = (held + failed) / max(elig, 1)
+        man["video_status"] = {"status": "PARTIAL_SUCCESS" if (prep.voice_only or ratio > 0.02) else "SUCCESS", "eligible_lipsync_frames": elig, "held_landmark_frames": held,
+                               "latentsync_failed_frames": failed, "degraded_ratio": round(ratio, 4), "voice_only": bool(prep.voice_only),
+                               "rule": "SUCCESS if degraded <= 2 % of eligible frames; voice-only fallback = PARTIAL_SUCCESS"}; man["codeformer"] = "DISABLED (not invoked)" if a.codeformer == "off" else {"mode": a.codeformer, "w": a.codeformer_w, "batch": a.codeformer_batch, "landmarks": a.codeformer_landmarks, "precision": a.codeformer_precision}
     if cf_runner is not None: cf_runner.close()
     rp.free_cuda(runner, cf_runner)
     times["total"] = round(time.perf_counter() - t_all, 3); op = probe(out); fps = man["source"]["video"].get("avg_fps") or 25.0; tol = max(0.15, 2.0 / fps); delta = round(op["duration_s"] - duration, 4)

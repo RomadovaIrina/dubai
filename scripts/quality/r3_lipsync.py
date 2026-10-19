@@ -19,7 +19,9 @@ def load_gaps(path) -> list:
     """[start_s, end_s] list, or {"gaps"|"residual_gaps": [...]} with [s, e] / {start, end} / {start_s, end_s} items (track B's format)."""
     d = json.loads(pathlib.Path(path).read_text()); items = d.get("gaps", d.get("residual_gaps", d)) if isinstance(d, dict) else d; out = []
     for it in items:
-        if isinstance(it, dict): out.append((float(it.get("start", it.get("start_s"))), float(it.get("end", it.get("end_s")))))
+        if isinstance(it, dict):
+            if it.get("class") == "natural": continue   # track C residual.json: "natural" = shorter than 0.35 s, not a residual gap
+            out.append((float(it.get("start", it.get("start_s", it.get("t0")))), float(it.get("end", it.get("end_s", it.get("t1"))))))
         else: out.append((float(it[0]), float(it[1])))
     return sorted(out)
 

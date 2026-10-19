@@ -8,7 +8,7 @@ O=/workspace/dub/artifacts/r3/win; M=/workspace/dub/artifacts/r3/masters/$id; mk
 MAN=/workspace/dub/canonical/artifacts/baseline/$id/final/${id}_final.manifest.json; WB=/workspace/dub/artifacts/baseline/$id/work/work_$id
 for f in master_mediapipe.npz master_rigid.npz; do [ -f $M/$f ] && ln -sfn $M/$f $WB/$f; done
 f0=$(python3 -c "print(int(round($t0*25)))"); f1=$(python3 -c "print(int(round($t1*25)))")
-G="--anchor-filter flow:4 --anchor-round off --affine-precision fp32 --mask-track head --rigid $M/master_rigid.npz --dump-stages"
+G="--window-batch-size 1 --anchor-filter flow:4 --anchor-round off --affine-precision fp32 --mask-track head --rigid $M/master_rigid.npz --dump-stages"
 for arm in "$@"; do
   case $arm in
     base) X="";;

@@ -271,7 +271,7 @@ def main() -> int:
     silence_info = None
     if a.silence_mix > 0 and not a.precomputed:
         import r3_lipsync as r3
-        N_all = man["lipsync"]["master_frames"]; sm = r3.silent_mask(man, N_all, a.silence_min_s, gaps=r3.load_gaps(a.gaps) if a.gaps else None)
+        N_all = (man.get("lipsync") or {}).get("master_frames") or int(round(man["source"]["duration_s"] * 25)) + 2; sm = r3.silent_mask(man, N_all, a.silence_min_s, gaps=r3.load_gaps(a.gaps) if a.gaps else None)
         runner.silence_mix = r3.SilenceMix(work_b / "own_audio_16k.wav", r3.ramp(sm, a.silence_ramp), a.silence_mix, frame_offset=f0)
         silence_info = {"lam": a.silence_mix, "ramp": a.silence_ramp, "min_s": a.silence_min_s, "gaps": a.gaps, "window_frames": int(sm[f0:f1].sum())}
     ref_info = None

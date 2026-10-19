@@ -46,7 +46,7 @@ def syncnet_dists(video: pathlib.Path, audio: pathlib.Path | None, device="cuda"
             starts[pathlib.Path(cropfile).name] = int(track["frame"][0]); return orig_crop(track, cropfile, *a, **k)
         det.crop_video = crop_video
         det(video_path=str(v), min_track=50)
-        net = SyncNetEval(device=device); net.loadParameters(str(LS / "checkpoints/auxiliary/syncnet_v2.model")); S = net._SyncNetEval__S__; S.eval()
+        net = SyncNetEval(device=device); net.loadParameters(str(LS / "checkpoints/auxiliary/syncnet_v2.model")); S = getattr(net, "__S__"); S.eval()
         tracks = []
         for cf in sorted((work / "detect_results/crop").glob("*.mp4")):
             cap = cv2.VideoCapture(str(cf)); ims = []
