@@ -362,6 +362,19 @@ def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict
                 u["translation_number_retry"] = {"missing": miss, "first": txt, "second": t2, "fixed": bool(t2) and not missing_numbers(u["text"], t2)}
                 if t2 and len(missing_numbers(u["text"], t2)) < len(miss):
                     txt = t2
+            if tgt_lang == "en":   # r3: Qwen drift guard (foreign script / bracketed asides) -> one strict retry, then strip as the last resort
+                from tts_text import script_defects, strip_defects
+                bad = script_defects(txt)
+                if bad:
+                    r3 = llm.create_chat_completion(msgs[:1] + [{"role": "user", "content": f"Translate from {src_name} to {tgt_name}. Write only {tgt_name} words in the Latin alphabet, "
+                                                                 f"no brackets, no notes, no other languages:\n{u['text']}"}], max_tokens=512, temperature=0.0)
+                    t3 = " ".join(r3["choices"][0]["message"]["content"].split()).strip().strip("\"«“»”")
+                    for k in usage:
+                        usage[k] += int(r3["usage"].get(k, 0))
+                    ok = bool(t3) and not script_defects(t3) and len(missing_numbers(u["text"], t3)) <= len(missing_numbers(u["text"], txt))
+                    u["translation_script_retry"] = {"defects": bad, "first": txt, "second": t3, "used": "second" if ok else "stripped"}
+                    txt = t3 if ok else strip_defects(txt)
+                    print(f"  [translate] u{u['id']:02d} drift guard {bad} -> {u['translation_script_retry']['used']}", flush=True)
             u["translation"] = txt
             for k in usage:
                 usage[k] += int(r["usage"].get(k, 0))
@@ -789,6 +802,7 @@ def main() -> int:
     ap.add_argument("--qwen-quant", choices=["q8_0", "q5_k_m"], default="q8_0", help="Qwen2.5-7B-Instruct GGUF quant (same Apache-2.0 repo). r3 2026-10-19: q5_k_m (5.1 GiB) fits fully on a shared GPU next to Chatterbox + QA within ~10 GB; q8_0 = pilot 0.9 production quant")
     ap.add_argument("--tts-text-norm", choices=["on", "off"], default="off", help="phrase mode: numbers / units / '..' -> speakable English words before Chatterbox, QA and alignment (tts_text.py; r3 2026-10-19: 01 '600x600 ... 9 mm' was heard as '600 x 67')")
     ap.add_argument("--qa-whisper-compute", choices=["float16", "int8_float16"], default="float16", help="faster-whisper compute type of the TTS QA (r3: int8_float16 saves 1.8 GB VRAM on a shared GPU)")
+    ap.add_argument("--qwen-tts-gpu-layers", type=int, default=None, help="r3: reload Qwen with this many GPU layers for the TTS session (fit rewrites run next to Chatterbox + QA); default = --qwen-gpu-layers. 14 keeps Q8_0 at 4.7 GB")
     ap.add_argument("--qwen-gpu-layers", type=int, default=0, help="Qwen layers offloaded to the GPU (-1 = all); 0 = frozen CPU baseline. Needs a CUDA llama-cpp-python build "
                                                                    "(A/B 2026-10-12: translation 18x faster, outputs not identical to the CPU)")
     ap.add_argument("--audio-policy", choices=sorted(AUDIO_POLICIES), default="r2", help="audio-stage flag bundle (explicit flags win): r2 (default since 2026-10-17) = cand5 + "
@@ -883,7 +897,7 @@ def main() -> int:
     man: dict = {"task": "0.5-runner", "input": str(src), "output": str(out), "target_lang": tgt, "alignment_mode": a.alignment,
                  "tts_mode": a.tts_mode if a.alignment == "burst" else "slot", "segmentation_mode": a.segmentation if a.alignment == "burst" else "whisper",
                  "codeformer": "DISABLED (not invoked)" if a.codeformer == "off" else {"mode": a.codeformer, "w": a.codeformer_w, "batch": a.codeformer_batch, "landmarks": a.codeformer_landmarks, "precision": a.codeformer_precision},
-                 "work_dir": str(work), "config": {"seed": a.seed, "max_unit_s": a.max_unit_s, "threads": THREADS, "qwen_quant": a.qwen_quant, "qwen_gpu_layers": a.qwen_gpu_layers, "qa_whisper_compute": a.qa_whisper_compute, "tts_text_norm": a.tts_text_norm},
+                 "work_dir": str(work), "config": {"seed": a.seed, "max_unit_s": a.max_unit_s, "threads": THREADS, "qwen_quant": a.qwen_quant, "qwen_gpu_layers": a.qwen_gpu_layers, "qwen_tts_gpu_layers": a.qwen_tts_gpu_layers, "qa_whisper_compute": a.qa_whisper_compute, "tts_text_norm": a.tts_text_norm},
                  "audio_policy": {**audio_policy, "resolved": {k: getattr(a, k) for k in AUDIO_POLICIES["r2"]}}}
     try:
         source = probe(src); man["source"] = source; duration = source["duration_s"]
@@ -962,6 +976,12 @@ def main() -> int:
         llm = None
         if isinstance(tr, tuple):
             man["translation"], llm, src_name, tgt_name = tr
+            if a.qwen_tts_gpu_layers is not None and a.qwen_tts_gpu_layers != QWEN_GPU_LAYERS:
+                # r3 shared GPU: Qwen ran fully on the GPU for segmentation + translation (nothing else loaded); for the TTS session (fit rewrites next to
+                # Chatterbox + QA) it is reloaded with fewer GPU layers so the stage stays <= ~10 GB (Q8_0: 14 layers = 4.7 GB)
+                del llm; gc.collect(); g = QWEN_GPU_LAYERS; QWEN_GPU_LAYERS = a.qwen_tts_gpu_layers
+                tl = {}; llm, _ = load_llm(tl); QWEN_GPU_LAYERS = g
+                man["translation"]["tts_session_gpu_layers"] = a.qwen_tts_gpu_layers; times["qwen_reload"] = tl.get("translation_load")
         else:
             man["translation"] = tr
 

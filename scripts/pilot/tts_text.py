@@ -76,6 +76,26 @@ def speakable(text: str) -> str:
     return re.sub(r"\s+", " ", t).strip()
 
 
+_FOREIGN = re.compile(r"[\u0400-\u04ff\u0590-\u06ff\u0e00-\u0e7f\u1100-\u11ff\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af\uf900-\ufaff\uff00-\uffef]")
+_BRACKET = re.compile(r"\[[^\]]*\]|\([^)]*\)|\{[^}]*\}|<[^>]*>")
+
+
+def script_defects(text: str) -> list[str]:
+    """Qwen drift in an ENGLISH output (r3 2026-10-19, Q5_K_M on 03: "...will proceed顺利地", "...getting to know [it better]"; pilot 0.9:
+    Q8_0 switched to Chinese mid-sentence on a long input): characters of another script, bracketed asides. [] -> clean."""
+    out = []
+    f = _FOREIGN.findall(text)
+    if f: out.append("foreign script: " + "".join(f)[:20])
+    b = _BRACKET.findall(text)
+    if b: out.append("bracketed: " + " ".join(b)[:40])
+    return out
+
+
+def strip_defects(text: str) -> str:
+    t = _BRACKET.sub(" ", text); t = _FOREIGN.sub("", t)
+    return re.sub(r"\s+([,.!?;:])", r"\1", re.sub(r"\s+", " ", t)).strip()
+
+
 if __name__ == "__main__":
     for s in ["Bathroom... Matte wide-format ceramic tile 600x600 with a thickness of 9 mm..", "Such wallpapers withstand up to 10 repaintings.. Floor..",
               "Today is Friday, August 28th; area 45 m2, 0.5 % moisture, 1 m, built in 2019, price 3,500,000 rubles, 10-15 minutes, $20, room #5."]:

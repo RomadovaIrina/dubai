@@ -22,12 +22,17 @@ sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent / "quality"))
 from e1_burst_align import SR16, burst_fit_ratios, ff, vad_intervals  # noqa: E402
 from pilot_common import dev, empty_cache, tts_dtypes  # noqa: E402
 import os                                                                    # noqa: E402
-from tts_text import speakable                                               # noqa: E402
+from tts_text import script_defects, speakable                               # noqa: E402
 
 
 def _spk(text: str) -> str:
     """--tts-text-norm on (r3): numbers / units / ".." -> speakable words before synthesis (tts_text.py); off = text unchanged."""
     return speakable(text) if os.environ.get("DUB_TTS_TEXT_NORM") == "on" else text
+
+
+def _rw(text):
+    """A Qwen rewrite with foreign script / bracketed asides is rejected (r3 drift guard); else _spk()."""
+    return None if not text or script_defects(text) else _spk(text)
 
 
 def _oom_backoff(obj, name: str, tries: int = 20, wait_s: float = 15.0) -> None:
@@ -722,7 +727,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                     if llm is None or r <= opts.hard_cap + 0.05 or (nw < 6 and not short_ok) or tgt_w >= nw:
                         recf.update(action="kept", result="short phrase or marginal overflow: lead / spill / moderate atempo instead"); u["fit"].append(recf); break
                     tq = time.perf_counter(); new = concise_rewrite(llm, src_name, tgt_name, src_words, text, tgt_w, sp_s / r); stats["fitdown_qwen_seconds"] += time.perf_counter() - tq
-                    new = _spk(new) if new else new
+                    new = _rw(new)
                     if new is None:
                         recf["result"] = "rewrite_rejected"; stats["fit_rewrite_rejected"] += 1; u["fit"].append(recf); break
                     y2, rec2 = gen_sentence(u, new, dtype, salt=10 + rnd); sp2 = align(y2, new); s2 = speech_seconds(y2, sp2)
@@ -738,7 +743,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                         tgt_w = max(words_of(text) + 1, int(round(rate * target * fit_up.get("aim", 1.0)))); lo_w = max(words_of(text) + 1, int(round(rate * target * fit_up.get("min_ratio", 0.85)))); stats["fit_up_rounds"] += 1
                         recu = {"round": rnd + 1, "ratio_before": round(ratio, 3), "old": text, "target_words": tgt_w, "min_words": lo_w, "source_seconds": round(target, 3), "tts_seconds_before": round(sp_s, 3)}
                         tq = time.perf_counter(); new, why = fuller_rewrite(llm, src_name, tgt_name, src_words, text, tgt_w, target, sp_s, min_words=lo_w, guard=fit_up.get("guard", False)); stats["fitup_qwen_seconds"] += time.perf_counter() - tq
-                        new = _spk(new) if new else new
+                        new = _rw(new)
                         if new is None:
                             recu["result"] = "rewrite_rejected"; recu["reason"] = why; stats["fit_up_rejected"] += 1; u["fit_up"].append(recu)
                             if rnd + 1 < fit_up.get("rounds", 2) and "too long" in why:   # ask once more with a smaller budget

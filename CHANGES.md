@@ -76,3 +76,28 @@ Base: `experiment/r2-audio` @ a1fd764. Round-2 log: `reports/quality/audio_timin
 - **`speakable()`:** numbers, ordinals, years, decimals, N×N, unit symbols, currencies and ".." become spoken words.
   - It runs before TTS, QA, alignment and the part split. The spoken text is kept as `translation_fitted` (recut / refit / eval stay consistent).
   - Opt-in for now; it goes into the r3 policy after the A/B.
+
+## 6. Recipe: CUDA llama-cpp-python for Qwen on the RTX 5090 (for D and the coordinator)
+- **Box:** nvcc 13.2.86 at `/usr/local/cuda`, gcc 13.3, cmake 3.28, driver 595.84, sm_120. The shared `/venv/dabai` has the CPU build of llama-cpp-python 0.3.35.
+- **Build** (2 min 49 s, 399 MB, into a side dir so the shared env is untouched):
+  ```bash
+  CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=120 -DLLAMA_CURL=off" CMAKE_BUILD_PARALLEL_LEVEL=24 \
+  CUDACXX=/usr/local/cuda/bin/nvcc PATH=/usr/local/cuda/bin:$PATH \
+  uv pip install --python /venv/dabai/bin/python --target /workspace/dub/c/pylib-llama-cuda \
+     --no-deps --no-cache --no-binary llama-cpp-python "llama-cpp-python==0.3.35"
+  ```
+  - cmake maps `120` to `120a`.
+  - `--no-deps` keeps numpy and jinja2 from the shared env.
+- **Use:** `PYTHONPATH=/workspace/dub/c/pylib-llama-cuda python …`. Then `llama_cpp.llama_supports_gpu_offload()` is True; runner flag `--qwen-gpu-layers -1` (`r3_audio_run.sh` does both).
+- **Measured on the shared GPU** (`qwen_gpu_check.py`; replays the stored ASR of the Q8 CPU audio-r2 runs):
+  - Q8_0, all layers: load 2.4–2.8 s, peak 8.34 GB.
+  - Segmentation 03 76 → 6.9 s, 01 121 → 14.2 s, 04 11.7 → 4.5 s.
+  - Translation 03 55 → 4.8 s, 01 31 → 8.2 s, 04 29 → 1.5 s.
+  - Segmentation chunk outputs are **identical** to CPU on 01 / 03 / 04.
+  - Translations identical on 8/10, 23/25 and 6/6 units. The rest differ in wording only (float reduction order, as the pilot saw between CPU thread counts).
+  - Partial offload, 14 layers: 4.7 GB, segmentation 17.7 s / translation 15.1 s on 03, segmentation still identical.
+- **Not used:** Q5_K_M (drift on 03, entry 4).
+
+## 7. Qwen drift guard + TTS-session reload (`--qwen-tts-gpu-layers`)
+- **Drift guard:** an English translation with foreign-script characters or a bracketed aside (`tts_text.script_defects`) gets one strict retry. If that also fails, the text is stripped. Qwen rewrites with such defects are rejected.
+- **Reload:** Qwen Q8 runs on all GPU layers for segmentation and translation (nothing else is loaded then). It is reloaded with 14 layers for the TTS session, where the fit rewrites run next to Chatterbox and QA, so the audio stage stays ≤ ~10 GB.
