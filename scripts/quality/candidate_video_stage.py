@@ -125,6 +125,7 @@ def main() -> int:
                     "(upstream); fixed = a calm 16-frame clip of the same video (--ref-select); shiftS = the same segment S frames away")
     ap.add_argument("--ref-select", choices=["calm_any", "calm_closed"], default="calm_closed")
     ap.add_argument("--bridge-len", type=int, default=0); ap.add_argument("--bridge-steps", type=int, default=0, help="round 3 (spec 8.5): low-noise bridge windows over every 16-frame seam (ls_stable.py)")
+    ap.add_argument("--max-ls-frames", type=int, default=0, help="round 3 (D's VRAM audit): LatentSync calls of at most this many frames (rounded down to 16k; 400 -> 400)")
     ap.add_argument("--inject-ls-error", default=None, help="round 3 spec-11 test: comma list of LatentSync call numbers (1-based) that raise RuntimeError -> PASS_THROUGH_LS_FAILED")
     ap.add_argument("--silence-mix", type=float, default=0.0, help="round 3: dub-silent mouth, whisper conditioning moved toward the SOURCE speech by this amount where the source talks and no dub part sounds (r3_lipsync.py)")
     ap.add_argument("--silence-ramp", type=int, default=6); ap.add_argument("--silence-min-s", type=float, default=0.3); ap.add_argument("--gaps", default=None, help="residual-gap JSON (track C) instead of the manifest stretches")
@@ -220,7 +221,7 @@ def main() -> int:
         from codeformer_accel import CodeFormerAccel
         with rp.timed(times, "codeformer_load"): cf_runner = CodeFormerAccel(fidelity_weight=a.codeformer_w, batch_size=a.codeformer_batch, empty_cache_per_face=a.codeformer_empty_cache, landmark_source=a.codeformer_landmarks, autocast=a.codeformer_precision == "fp16", parse_autocast=a.codeformer_precision != "fp32")
     rep = faa.process_video(src, work, dub16, dub_aac, out, router=router, runner=runner, min_ls_frames=a.min_ls_frames, max_verify_depth=a.max_verify_depth, codeformer=a.codeformer, times=times,
-                            log=lambda m: print(m, flush=True), speech_gate=gate, crossfade_frames=a.crossfade_frames, router_stride=a.router_stride, in_memory=True, cf_runner=cf_runner, lm_smooth=a.ls_landmark_smooth, prep=prep)
+                            log=lambda m: print(m, flush=True), speech_gate=gate, crossfade_frames=a.crossfade_frames, router_stride=a.router_stride, in_memory=True, cf_runner=cf_runner, lm_smooth=a.ls_landmark_smooth, prep=prep, max_ls_frames=a.max_ls_frames)
     if rec_cls is not None and rec_cls.rec:
         import numpy as np
         fr_, bx_ = [], []
