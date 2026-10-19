@@ -69,6 +69,7 @@ def unit_text(u):
 
 
 def back_transcribe(p, man):
+    import torch  # noqa: F401  maps libcublas before ctranslate2 loads (as run_clean_pipeline_05.py)
     import faster_whisper
     root = pathlib.Path(__file__).resolve().parents[2]
     cand = [root / "models" / "faster-whisper-large-v3", root / "models" / "whisper-large-v3"]
@@ -133,7 +134,9 @@ def slide_windows(id_, video, ref_video, ref_fps_is_source, master_timing, out_d
 def cmd_score(a):
     out = pathlib.Path(a.out); out.mkdir(parents=True, exist_ok=True); t_start = time.perf_counter()
     man = json.loads(pathlib.Path(a.manifest).read_text()); video = pathlib.Path(a.video); src = src_of(a.id)
-    r = {"id": a.id, "label": a.label, "video": str(video), "manifest": str(a.manifest), "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+    prev = out / f"{a.id}_{a.label}.score.json"
+    r = json.loads(prev.read_text()) if a.update and prev.exists() else {}
+    r |= {"id": a.id, "label": a.label, "video": str(video), "manifest": str(a.manifest), "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
     ps, po = probe(src), probe(video); r["source"], r["output"] = ps, po
     r["spec_9_4"] = {"resolution_equal": (ps["w"], ps["h"]) == (po["w"], po["h"]), "fps_equal": abs(ps["fps"] - po["fps"]) < 0.05,
                      "frames_equal": ps["frames"] == po["frames"], "duration_delta_s": round(po["duration"] - ps["duration"], 3), "h264": po["codec"] == "h264"}
@@ -152,7 +155,7 @@ def cmd_score(a):
         except Exception: r["syncnet"] = {"error": p.stderr[-400:]}
     if not a.skip_face:
         j = out / f"{a.id}_{a.label}.mjhr.json"
-        p = subprocess.run([PY, str(HERE / "mouth_jitter_hr.py"), "--video", str(video), "--reference", str(src), "--manifest", str(a.manifest), "--out", str(j), "--tag", f"{a.id}_{a.label}"],
+        p = None if (a.update and j.exists()) else subprocess.run([PY, str(HERE / "mouth_jitter_hr.py"), "--video", str(video), "--reference", str(src), "--manifest", str(a.manifest), "--out", str(j), "--tag", f"{a.id}_{a.label}"],
                            capture_output=True, text=True)
         if j.exists():
             d = json.loads(j.read_text()); A = d["all"]; cl = d.get("classes", {}); wb = d.get("latentsync_window_boundaries") or {}
@@ -162,9 +165,9 @@ def cmd_score(a):
             r["face_v4"] = {"resid_mouth_ls_core": g(core["resid"]["mouth"]), "twitch_mouth_ls_core": g((core.get("twitch_index") or {}).get("mouth")),
                             "shear95_lowerface_ls_core": g(core.get("shear95", {}).get("lowerface")), "sharp_mouth_ls_core": g(core.get("sharp", {}).get("mouth")),
                             "jerk_upper_all": g(A["jerk"]["upper"]), "frozen_mouth_p95_per_s": round(float(np.percentile(fm, 95)), 3) if fm else None,
-                            "frozen_mouth_secs_gt2": int(sum(1 for x in fm if x > 2.0)), "window_boundaries": {k: v for k, v in wb.items() if not isinstance(v, (list, dict))} | {
-                                k: v for k, v in wb.items() if isinstance(v, dict) and len(json.dumps(v)) < 400}}
-        else: r["face_v4"] = {"error": p.stderr[-400:]}
+                            "frozen_mouth_secs_gt2": int(sum(1 for x in fm if x > 2.0)), "window_boundaries": wb.get("boundary_d1_jump"),
+                            "window_phase0_over_inner_d1": (wb.get("d1") or {}).get("video", {}).get("phase0_over_inner")}
+        else: r["face_v4"] = {"error": p.stderr[-400:] if p else "no mjhr json"}
     if not a.skip_slide:
         same = abs(po["fps"] - ps["fps"]) < 0.05
         ref = src if same else pathlib.Path(man["work_dir"]) / "master_25fps.mp4"
@@ -216,8 +219,8 @@ def cmd_table(a):
     line("v4 resid mouth (LS core, src=1)", lambda r: r["face_v4"]["resid_mouth_ls_core"]); line("v4 twitch mouth", lambda r: r["face_v4"]["twitch_mouth_ls_core"])
     line("v4 shear95 lower face", lambda r: r["face_v4"]["shear95_lowerface_ls_core"]); line("v4 sharpness mouth", lambda r: r["face_v4"]["sharp_mouth_ls_core"])
     line("v4 frozen mouth p95 / s", lambda r: r["face_v4"]["frozen_mouth_p95_per_s"])
-    line("8.5 window starts > 1.5x jump", lambda r: r["face_v4"]["window_boundaries"].get("share_starts_jump_gt_1.5x") or r["face_v4"]["window_boundaries"].get("share_gt_1.5"))
-    line("slide nose-base mean px (shaky win)", lambda r: np.mean([w["nosebase"]["slide"]["mean"] for w in r["slide"]]), 3)
+    line("8.5 window starts > 1.5x mouth jump (source)", lambda r: f"{r['face_v4']['window_boundaries']['video']['share_gt_1_5']:.2f} ({r['face_v4']['window_boundaries']['reference']['share_gt_1_5']:.2f})")
+    line("slide nose-base mean px (shaky win)", lambda r: np.mean([w["nosebase"]["slide_px"]["mean"] for w in r["slide"]]), 3)
     line("8.4 feather 10-90 px", lambda r: r["feather"].get("edge_10_90_px"), 1)
     line("WER final mix (Whisper)", lambda r: r["asr"]["wer_final_mix"], 3)
     line("loudness LUFS", lambda r: r["loudness"]["integrated_lufs"], 1); line("true peak dBTP", lambda r: r["loudness"]["true_peak_dbtp"], 1)
@@ -234,6 +237,7 @@ def main():
     s = sp.add_parser("score"); s.add_argument("--id", required=True); s.add_argument("--label", required=True); s.add_argument("--video", required=True)
     s.add_argument("--manifest", required=True); s.add_argument("--out", required=True); s.add_argument("--extra-stage", action="append")
     for k in ("sync", "face", "slide", "wer"): s.add_argument(f"--skip-{k}", action="store_true")
+    s.add_argument("--update", action="store_true", help="keep the parts of an existing score JSON that are skipped this time")
     t = sp.add_parser("table"); t.add_argument("--label", action="append", required=True); t.add_argument("--dir", action="append", required=True)
     t.add_argument("--out", required=True); t.add_argument("--json", default=None)
     a = ap.parse_args()
