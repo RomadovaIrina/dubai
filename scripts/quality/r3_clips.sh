@@ -10,7 +10,7 @@ FPS=$(ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate -
 for w in $($PY -c "
 import json; d=json.load(open('/workspace/dub/common/shaky_windows.json'))['videos'].get('$id',{}).get('windows_s',[])
 for a,b in d: print(f'{a}:{b}')"); do
-  t0=${w%:*}; t1=${w#*:}; dur=$(python3 -c "print(round($t1-$t0,2))"); b=${id}_${t0}-${t1}s_B
+  t0=${w%:*}; t1=${w#*:}; dur=$(python3 -c "print(round($t1-$t0,2))"); b=${id}_${t0}-${t1}s_B${AUD:+_audio-$AUD}
   SBS_FPS=$FPS bash scripts/quality/r2_sbs.sh $R/sbs/${b}_ORIG-CLEAN0-R2-$lab $t0 $dur none ORIGINAL=$SRC "CLEAN0 25fps=$R/gen/${id}_$c0.mp4" "R2 FIX30=$R/comp/${id}_$r2.mp4" "$lab=$R/comp/${id}_$r3.mp4" > /dev/null 2>&1
   K=$($PY -c "
 import numpy as np; z=np.load('$R/timing/${id}_source_lm.npz'); t=z['t']; k=np.flatnonzero((t>=$t0)&(t<$t1)); print(f'{k.min()}:{k.max()+1}')")

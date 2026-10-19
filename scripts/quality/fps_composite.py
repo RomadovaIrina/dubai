@@ -102,6 +102,8 @@ def main() -> int:
     ap.add_argument("--ls-sharpen-lips", type=float, default=0.0, help="EXTRA unsharp amount inside the outer lip contour of the LatentSync frame (on top of --ls-sharpen)")
     ap.add_argument("--edge-px", type=float, default=12.0); ap.add_argument("--threads", type=int, default=12); ap.add_argument("--crf", type=int, default=13)
     ap.add_argument("--max-fallback", type=float, default=0.02)
+    ap.add_argument("--lip-guard", choices=["on", "off"], default="off", help="r3: mask = max(ellipse, hull of the source + layer lips dilated 2.6 sigma and "
+                    "feathered with the same edge): the lips always sit at alpha >= 0.98 (small faces: the 12 px ramp otherwise reaches them)")
     ap.add_argument("--master-fps", type=float, default=25.0, help="r3 experiment: frame rate of the master / LatentSync layer (30 = LatentSync run on the source frames)")
     ap.add_argument("--master-timing", default=None, help="r2: <id>_master_timing.json (master frame m shows source time tau[m], NOT m/25: ffmpeg -r 25 lags ~60 ms on 30 fps "
                     "sources). Given: mask / landmarks / registration target follow the TRUE time of each source frame (mu = tau^-1(t_k)); the mouth stays audio-synced (25 t_k)")
@@ -152,7 +154,7 @@ def main() -> int:
         bb[:, k] = sm
     silent = tms.silent_stretches(man, nm, 0, a.silence_min_s, gaps=tms.load_gaps(a.gaps) if a.gaps else None) if a.silence != "none" else np.zeros(nm, bool)
     sil_w = tms.ramp(silent, a.silence_ramp)
-    mp_ls = np.load(cfs.run_mediapipe(pathlib.Path(a.ls_raw), pathlib.Path(a.ls_raw).with_suffix(".mediapipe.npz")))["lm"][:nm] if (a.skin_texture == "source" or a.ls_sharpen_scope == "lips" or a.ls_sharpen_lips > 0 or a.sharpen_auto > 0) else None
+    mp_ls = np.load(cfs.run_mediapipe(pathlib.Path(a.ls_raw), pathlib.Path(a.ls_raw).with_suffix(".mediapipe.npz")))["lm"][:nm] if (a.skin_texture == "source" or a.ls_sharpen_scope == "lips" or a.ls_sharpen_lips > 0 or a.sharpen_auto > 0 or a.lip_guard == "on") else None
     # C2 on the LatentSync layer (master grid): two frames around every 16-frame window boundary of every LATENT_SYNC segment
     fl0 = tms.Flow(); nbnd = 0
     nseam = 0
@@ -283,7 +285,7 @@ def main() -> int:
         if lm_f is None: return lerp(mp, m)
         m0 = int(np.clip(math.floor(m), 0, nm - 1)); m1 = min(m0 + 1, nm - 1); al = float(m - math.floor(m))
         return (1 - al) * lm_f[jj[m0]] + al * lm_f[jj[m1]]
-    edge_meas = []
+    edge_meas = []; lip_cov = []
     def one(k):
         m = mpos[k]; m0 = int(np.clip(math.floor(m), 0, nm - 1)); m1 = min(m0 + 1, nm - 1); al = float(m - math.floor(m)); mu = float(mu_arr[k])
         w = float((1 - al) * wm[m0] + al * wm[m1])
@@ -292,6 +294,12 @@ def main() -> int:
         if not np.isfinite(box).all(): return S[k], 0, None
         alpha, roi = ellipse_alpha(box, H, W, a.edge_px)
         if alpha is None: return S[k], 0, None
+        if a.lip_guard == "on":   # spec 8.4 on small faces: keep the 10-15 px ramp OUTSIDE the lips (source lips + the layer's own lips)
+            pts_ = [q[tms.LIPS_OUTER] for q in (lm_at(k, mu), lerp(mp_ls, m) if mp_ls is not None else None) if q is not None and np.isfinite(q[tms.LIPS_OUTER]).all()]
+            if pts_:
+                hull = cv2.convexHull(np.concatenate(pts_).astype(np.float32))[:, 0]; sg_ = a.edge_px / 2.563
+                gm_ = cv2.GaussianBlur(tms.poly_mask(hull, roi, 2.6 * sg_, 0), (0, 0), sg_)
+                alpha = np.maximum(alpha, gm_)
         ya, yb, xa, xb = roi; f = flow(); roi_r = roi
         if a.register != "off":   # build the LatentSync layer on a larger box: it moves by up to head speed x 60 ms before the roi is cut
             pad = int(0.25 * (box[2] - box[0])); ya, yb, xa, xb = max(0, ya - pad), min(H, yb + pad), max(0, xa - pad), min(W, xb + pad)
@@ -386,6 +394,16 @@ def main() -> int:
         if a.silence == "orig" and (sil_w[m0] > 0 or sil_w[m1] > 0):
             aw = aw * (1.0 - ((1 - al) * sil_w[m0] + al * sil_w[m1]))
         o = S[k].copy(); o[ya:yb, xa:xb] = np.clip(sk + aw[..., None] * (Lk - sk), 0, 255).round().astype(np.uint8)
+        if w >= 1:   # spec 8.4 on small faces: the feather ramp must not reach the lips (source lips and the layer's own lips)
+            lm_q = lm_at(k, mu); lips_ = [lm_q] + ([lerp(mp_ls, m)] if mp_ls is not None else [])
+            cov = []
+            for lq in lips_:
+                if np.isfinite(lq[tms.LIPS_OUTER]).all():
+                    lpm = tms.poly_mask(lq[tms.LIPS_OUTER], (ya, yb, xa, xb), 0, 0) > 0.5
+                    if lpm.any():
+                        inner = cv2.distanceTransform((alpha >= 0.9).astype(np.uint8), cv2.DIST_L2, 3)   # px from the 0.9 contour, inside
+                        cov.append((float(alpha[lpm].min()), float(inner[lpm].min())))
+            if cov: lip_cov.append((min(c[0] for c in cov), min(c[1] for c in cov), float(np.linalg.norm(lm_q[33] - lm_q[263])) if np.isfinite(lm_q[[33, 263]]).all() else np.nan))
         return o, 1, (alpha if k % 50 == 0 else None)
     if a.sharpen_auto > 0:   # closed loop: composite sample frames, measure OUTPUT vs source sharpness (lips / lower-face skin), correct twice
         t0 = time.perf_counter(); ks_ = [k for k in range(len(S)) if wm[int(np.clip(round(mpos[k]), 0, nm - 1))] >= 1 and np.isfinite(lm_at(k, mu_arr[k])).all()]
@@ -414,6 +432,7 @@ def main() -> int:
         best = min(hist, key=lambda h: abs((h["out_ratio_lips"] or a.sharpen_auto) - a.sharpen_auto) + abs((h["out_ratio_skin"] or a.sharpen_auto) - a.sharpen_auto))
         a.ls_sharpen, a.ls_sharpen_lips = best["ls_sharpen"], best["ls_sharpen_lips"]
         times["sharpen_closed_loop"] = {"iterations": hist, "chosen": best, "seconds": round(time.perf_counter() - t0, 2)}; print("  sharpen closed loop:", best, flush=True)
+    lip_cov.clear(); edge_meas.clear()   # calibration calls of one() do not count
     t0 = time.perf_counter(); out = [None] * len(S); fails = 0; touched = 0
     with cf.ThreadPoolExecutor(max_workers=a.threads) as ex:
         futs = {ex.submit(one, k): k for k in range(len(S))}
@@ -446,8 +465,11 @@ def main() -> int:
     rep = {"input": src, "output": str(outp), "source_frames": len(S), "source_fps_avg": float(rate), "master_frames": nm, "ls_touched_frames": touched,
            "fallback_frames": fails, "fallback_fraction": round(fails / max(len(S), 1), 5), "boundaries_interpolated": nbnd, "seam_lf_boundaries": nseam, "edge_px_target": a.edge_px,
            "edge_px_measured": {"median": float(np.median(em)) if em else None, "min": min(em) if em else None, "max": max(em) if em else None, "n": len(em)},
-           "silent_master_frames": int(silent.sum()), "args": vars(a), "seconds": times, "s_per_video_min": round(times["total"] / (dur / 60), 1)}
-    outp.with_suffix(".fps_composite.json").write_text(json.dumps(rep, indent=1)); print(json.dumps({k: rep[k] for k in ("source_frames", "ls_touched_frames", "fallback_frames", "edge_px_measured", "s_per_video_min")}))
+           "silent_master_frames": int(silent.sum()),
+           "lip_coverage": (lambda c: {"frames": len(c), "alpha_min_p1": round(float(np.percentile(c[:, 0], 1)), 4), "alpha_min_min": round(float(c[:, 0].min()), 4),
+                                       "frames_alpha_below_0_98": int((c[:, 0] < 0.98).sum()), "lips_to_ramp_px_p1": round(float(np.percentile(c[:, 1], 1)), 2),
+                                       "lips_to_ramp_px_min": round(float(c[:, 1].min()), 2), "iod_median": round(float(np.nanmedian(c[:, 2])), 1)} if len(c) else None)(np.array(lip_cov, np.float64).reshape(-1, 3)), "args": vars(a), "seconds": times, "s_per_video_min": round(times["total"] / (dur / 60), 1)}
+    outp.with_suffix(".fps_composite.json").write_text(json.dumps(rep, indent=1)); print(json.dumps({k: rep[k] for k in ("source_frames", "ls_touched_frames", "fallback_frames", "edge_px_measured", "lip_coverage", "s_per_video_min")}))
     return 3 if rep["fallback_fraction"] > a.max_fallback else 0
 
 
