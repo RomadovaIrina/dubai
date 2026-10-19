@@ -8,7 +8,7 @@ M=$1; suf=${2:-fix30}; stem=${M%.manifest.json}; out=${stem}_$suf.mp4
 # FIX30_MODE=r2 (default): B round 2 T3u on a `-r 25` master.  FIX30_MODE=r3F: B round 3 (28491dd) on an fps master (arm r3F):
 #   exact timing of THIS master (-vf fps=25), MediaPipe on every source frame, --source-lm + --colour-match upper --seam-lf 4 --sharpen-auto 1.0
 MODE=${FIX30_MODE:-r2}
-src=$(python -c "import json;print(json.load(open('$M'))['input'])"); id=$(basename ${src%.*}); TD=/workspace/dub/artifacts/r3d/timing
+src=$(python -c "import json;print(json.load(open('$M'))['input'])"); id=$(basename ${src%.*}); TD=${FIX30_TD:-/workspace/dub/artifacts/r3d/timing}; mkdir -p $TD
 WM=$(python -c "import json;print(json.load(open('$M'))['work_dir'])")/master_25fps.mp4
 if [ $MODE = r3F ] || [ $MODE = r3cand ] || [ $MODE = r3fix ]; then
   if [ $MODE = r3fix ]; then   # r3cand + confidence-checked 25->30 retime (no torn / ghosted lips on interpolated frames, flash detector r3_flash.py)
