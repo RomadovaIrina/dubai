@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Round 3 track B: one markdown table row per (video, variant) from the metrics dir (r3_eval.sh outputs, syncnet json, composite json).
-    python scripts/quality/r3_table.py 04:T3 04:F_Sdets 03:F_Sdets ... [--md out.md]"""
+    python scripts/quality/r3b_table.py 04:T3 04:F_Sdets 03:F_Sdets ... [--md out.md]"""
 import argparse, glob, json, pathlib
 import numpy as np
 R = pathlib.Path("/workspace/dub/artifacts/r3-face")
