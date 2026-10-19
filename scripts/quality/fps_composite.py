@@ -124,6 +124,8 @@ def main() -> int:
                     "its good neighbours; texture = keep the flagged frame's own low frequencies (mouth opening / shape = the lip-sync) and take only the "
                     "high-frequency detail (lip line, texture) from that interpolation (Gaussian split at --sanitize-sigma px)")
     ap.add_argument("--sanitize-sigma", type=float, default=2.0)
+    ap.add_argument("--sanitize-colour", choices=["on", "off"], default="off", help="r3 D, texture mode: inside the flagged frame's lip box also match the "
+                    "LUMINANCE mean / contrast (gain 0.7-1.6) of its low frequencies to the neighbours' interpolation (pale lips); per-channel matching over-saturated")
     ap.add_argument("--face-clip", choices=["on", "off"], default="off", help="r3 D (user: 'the background beside the cheek wobbles'): the paste weight "
                     "is capped by the distance INSIDE the source frame's MediaPipe face contour (0 on / outside it, 1 at --edge-px inside): nothing outside "
                     "the face is pasted / warped / colour-matched")
@@ -219,8 +221,18 @@ def main() -> int:
                 for i_ in range(m_, e_):
                     it_ = interp_safe(fl0, y_, z_, (i_ - lo_) / (hi_ - lo_), a.safe_d, a.safe_cons, a.safe_scale)[0]
                     if a.sanitize_mode == "texture":   # own low frequencies (shape, opening) + the neighbours' high frequencies (lip line)
-                        own = L[i_].astype(np.float32); sg = a.sanitize_sigma
-                        it_ = cv2.GaussianBlur(own, (0, 0), sg) + (it_ - cv2.GaussianBlur(it_, (0, 0), sg))
+                        own = L[i_].astype(np.float32); sg = a.sanitize_sigma; lo_own = cv2.GaussianBlur(own, (0, 0), sg); lo_it = cv2.GaussianBlur(it_, (0, 0), sg)
+                        if a.sanitize_colour == "on" and np.isfinite(mp_ls[i_][tms.LIPS_OUTER]).all():
+                            q = mp_ls[i_][tms.LIPS_OUTER, :2]; w_ = q[:, 0].max() - q[:, 0].min()
+                            bx0, by0 = np.maximum((q.min(0) - 0.15 * w_).astype(int), 0); bx1, by1 = (q.max(0) + 0.15 * w_).astype(int)
+                            ro, ri = lo_own[by0:by1, bx0:bx1], lo_it[by0:by1, bx0:bx1]
+                            if ro.size > 30:
+                                yo = ro @ np.array([0.114, 0.587, 0.299], np.float32); yi = ri @ np.array([0.114, 0.587, 0.299], np.float32)   # BGR -> luma
+                                gain = float(np.clip((yi.std() + 1e-3) / (yo.std() + 1e-3), 0.7, 1.6))
+                                fix = ro + ((yo - yo.mean()) * gain + yi.mean() - yo)[..., None]   # luminance only: darkness / lip-line contrast, no chroma push
+                                fw = tms.poly_mask(q, (by0, by1, bx0, bx1), 0.15 * w_, 0.1 * w_)[..., None] if hasattr(tms, "poly_mask") else 1.0
+                                lo_own[by0:by1, bx0:bx1] = ro + fw * (fix - ro)
+                        it_ = lo_own + (it_ - lo_it)
                     L[i_] = np.clip(it_, 0, 255).astype(np.uint8); nsan += 1; san_frames.append(int(i_))
             m_ = e_
         times["sanitize_layer"] = {"seconds": round(time.perf_counter() - t0, 2), "flagged": int(bad.sum()), "replaced": nsan, "frames": san_frames[:200]}

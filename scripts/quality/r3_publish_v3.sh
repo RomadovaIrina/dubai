@@ -5,9 +5,9 @@ set -u
 DUB_ROOT=/workspace/dub/dubai; . $DUB_ROOT/scripts/env.sh >/dev/null; cd $DUB_ROOT
 V=/workspace/dub/artifacts/r3d/video; OB=/workspace/dub/outbox; A4B=/workspace/dub/artifacts/r3d/audio-r4b; F=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf
 for id in "$@"; do
-  f=$V/${id}_r3final_v3.mp4; [ -f $f ] || { echo "skip $id"; continue; }
-  ffmpeg -loglevel error -y -i $f -i $A4B/$id/final_mix_aac.m4a -map 0:v:0 -map 1:a:0 -c copy -shortest $V/${id}_r3finalv3b.mp4
-  python - $V/${id}_r3final_v3.manifest.json $V/${id}_r3finalv3b.mp4 $A4B/$id <<'PY'
+  VER=${VER:-v3}; f=$V/${id}_r3final_$VER.mp4; [ -f $f ] || { echo "skip $id"; continue; }
+  ffmpeg -loglevel error -y -i $f -i $A4B/$id/final_mix_aac.m4a -map 0:v:0 -map 1:a:0 -c copy -shortest $V/${id}_r3final${VER}b.mp4
+  python - $V/${id}_r3final_$VER.manifest.json $V/${id}_r3final${VER}b.mp4 $A4B/$id <<'PY'
 import json, pathlib, sys
 m = json.loads(pathlib.Path(sys.argv[1]).read_text()); out, d = sys.argv[2], sys.argv[3]
 m["output_pre_remux"] = m["output"]; m["output"] = out; m["audio_dir"] = d
@@ -15,7 +15,7 @@ m["candidate"] = {**(m.get("candidate") or {}), "dubbed_dir": d, "muxed_audio": 
 m["dubbed_track"] = {**m["dubbed_track"], "aac": str(pathlib.Path(d) / "final_mix_aac.m4a")}
 pathlib.Path(out).with_suffix(".manifest.json").write_text(json.dumps(m, indent=1))
 PY
-  cp $V/${id}_r3finalv3b.mp4 $OB/${id}_r3final_fixed.mp4; echo "== $id -> $OB/${id}_r3final_fixed.mp4"
+  cp $V/${id}_r3final${VER}b.mp4 $OB/${id}_r3final_fixed.mp4; echo "== $id -> $OB/${id}_r3final_fixed.mp4"
 done
 lab() { echo "drawtext=fontfile=$F:text='$1':x=10:y=10:fontsize=24:fontcolor=yellow:box=1:boxcolor=black@0.6"; }
 clip() {   # id t0 t1 [crop: full | jaw]
