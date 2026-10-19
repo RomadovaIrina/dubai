@@ -74,3 +74,25 @@ Reference SyncNet for A's 25 fps output on the same audio (mix / dub-only): 04 3
   * costs 396 s/video-min of video stage (vs ~265): over budget.
 * **SyncNet at 30 fps:** every 30 fps output scores ~0.2 below A's 25 fps output, including the native 30 fps generation. Not separated yet: 25 fps re-sampling of real 30 fps content vs content.
 * **Composite cost:** ~20 s/video-min with 12 threads, mostly decode / encode (profile: ~14 ms/frame of single-thread work). The s/min columns above were measured with the CPU shared and are upper bounds.
+
+## Final R3 on A's recipe (window batch 1, C's manifest / gate, on-time master), C audio-r2
+| video | slide mean / p95 | colour flicker | mouth sharpness | edge px | SyncNet mix / dub: R3 30 fps | A's 25 fps output |
+|---|---|---|---|---|---|---|
+| 01 | 0.09 / 0.23 | 0.41 | 0.97 | 11.5 | 7.37 / 7.64 | 7.95 / 8.27 |
+| 03 | 0.06 / 0.18 | 0.15 | 0.89 | 11.4 | 5.33 / 5.66 | 5.55 / 5.89 |
+| 04 | 0.12 / 0.28 | 0.18 | 0.91 | 11.4 | 3.46 / 3.68 | 3.69 / 3.91 |
+| 05 | 0.05 / 0.13 | 0.38 | 0.96 | 11.5 | 2.44 / 3.07 | 2.62 / 3.16 |
+
+## Task 3: generator bridges (A) vs post-side joints (B), 05, joint / inner residual (low-frequency, share > 1.5x)
+| | A's 25 fps output | after R3 composite | SyncNet dub-only (R3) | video stage s |
+|---|---|---|---|---|
+| no bridge | 1.36 (1.62, 61 %) | 0.94 (0.92, 15 %) | 3.07 | 72 |
+| bridge 8 / 4 steps | 0.98 (0.97, 18 %) | 0.92 (0.89, 16 %) | 2.87 | 78 |
+| bridge 16 / 4 steps | 1.00 (1.02, 19 %) | 0.93 (0.90, 13 %) | 3.17 | – |
+The post-side fix alone already brings joints below the inner-frame level; bridges add nothing measurable on top (bridge 8 costs SyncNet).
+
+## Worst 10 lip-synced seconds per video (r3_flicker score, final R3)
+All are 0.1–0.5 grey levels above the encoder floor (pass-through seconds: 0.0–0.28). Causes:
+* 04 (all ten) and 03 / 01 (most): jaw band at camera shake. The source frames carry motion blur that the generated layer, from a neighbouring frame, does not.
+* 05 24 s: a fast camera pan, with the source's own exposure / white balance changing.
+No mask-border crawl or window-joint second is in any top 10.
