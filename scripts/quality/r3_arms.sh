@@ -24,6 +24,9 @@ for arm in "$@"; do
     refs16) X="--ref-mode shift16";;
     refs32) X="--ref-mode shift32";;
     refs16g2) X="--ref-mode shift16 --guidance 2.0";;
+    refs16br) X="--ref-mode shift16 --bridge-len 8 --bridge-steps 4";;
+    refs16br16) X="--ref-mode shift16 --bridge-len 16 --bridge-steps 4";;
+    refs16sm05) X="--ref-mode shift16 --silence-mix 0.5";;
     refcg2) X="--ref-mode fixed --ref-select calm_closed --guidance 2.0";;
     br8k4) X="--bridge-len 8 --bridge-steps 4";;
     br16k4) X="--bridge-len 16 --bridge-steps 4";;
