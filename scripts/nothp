@@ -7,4 +7,11 @@ import ctypes, os, sys
 if ctypes.CDLL(None, use_errno=True).prctl(41, 1, 0, 0, 0) != 0:
     sys.stderr.write(f"nothp: prctl(PR_SET_THP_DISABLE) failed errno {ctypes.get_errno()}\n")
 os.environ["NUMPY_MADVISE_HUGEPAGE"] = "0"
+# CPU cap (coordinator 2026-10-19: the container quota is ~31 cores shared with track C): DUB_CPUS="a-b" pins this job (and its children)
+# to those CPUs; thread pools default to 8.
+for k in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS", "DUB_THREADS"):
+    os.environ.setdefault(k, "8")
+if os.environ.get("DUB_CPUS"):
+    a, b = (os.environ["DUB_CPUS"].split("-") + [None])[:2]
+    os.sched_setaffinity(0, set(range(int(a), int(b or a) + 1)))
 os.execvp(sys.argv[1], sys.argv[1:])

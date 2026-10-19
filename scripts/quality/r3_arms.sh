@@ -32,6 +32,6 @@ for arm in "$@"; do
     *) echo "unknown arm $arm"; continue;;
   esac
   tag=${w}_$arm
-  [ -f $O/${id}_$tag.manifest.json ] || scripts/nothp /venv/dabai/bin/python scripts/quality/ls_window_ab.py --manifest $MAN --t0 $t0 --t1 $t1 --tag $tag --out $O $G $X > $O/${id}_$tag.log 2>&1 || echo "FAIL $id $tag"
+  [ -f $O/${id}_$tag.manifest.json ] || DUB_CPUS=${DUB_CPUS:-0-7} scripts/nothp /venv/dabai/bin/python scripts/quality/ls_window_ab.py --manifest $MAN --t0 $t0 --t1 $t1 --tag $tag --out $O $G $X > $O/${id}_$tag.log 2>&1 || echo "FAIL $id $tag"
   grep "^== " $O/${id}_$tag.log
 done
