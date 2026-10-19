@@ -110,3 +110,17 @@ Base: `experiment/r2-audio` @ a1fd764. Round-2 log: `reports/quality/audio_timin
   - The final unit text is converted once, before the part split.
 - **First 03 r3a numbers** (before these fixes): 231 s = 153 s/video-min; TTS-stage VRAM 8.4–8.9 GB; WER 0.016 (audio-r2: 0.008, CPU eval).
 - **Batch:** `scripts/quality/r3a_batch.sh` runs the audio-r3 candidate one video at a time.
+
+## 9. Licences of everything new in r3 (user rule: the licence of the files decides)
+
+| file / package | where | licence | note |
+|---|---|---|---|
+| Spleeter 2stems weights (`2stems.tar.gz`, deezer/spleeter release v1.4.0) | `models/spleeter/pretrained_models/2stems/` | MIT (repo release asset) | sha256-checked by `setup_spleeter.sh`; same file as r2 |
+| `2stems_tf_vars.npz` | `models/spleeter/` | MIT (same weights) | **converted, not retrained**: the TF checkpoint tensors saved as numpy (`spleeter_torch.py convert`), bit-identical values. Not committed |
+| `spleeter_torch.py` | repo | ours | re-implementation of the MIT Spleeter inference graph. Bed SNR vs TF 118–119 dB on 03; listen A/B in `/workspace/dub/c/outbox/listen/bed_spleeter_AB_video03_*` |
+| spleeter 2.3.2 + tensorflow 2.9.3 (TF venv, now only for `convert` and the `tf` fallback) | `/workspace/dub/c/venv-spleeter` | MIT / Apache-2.0 | |
+| llama-cpp-python 0.3.35 CUDA build (ggml / llama.cpp) | `/workspace/dub/c/pylib-llama-cuda` | MIT | links the system CUDA 13.2 runtime / cuBLAS dynamically (NVIDIA CUDA EULA; nothing is redistributed) |
+| Qwen2.5-7B-Instruct GGUF Q5_K_M | `/workspace/dub/c/models/qwen2.5-7b-instruct-gguf-q5` | Apache-2.0 (LICENSE in the folder, same official repo as Q8_0) | tested, **not adopted** (drift) |
+
+- HDEMUCS: there are no weights on this server. A `find /` turns up only torchaudio's model *code* (`_hdemucs.py`, BSD).
+- `--bed-separator hdemucs` stays refused without `DUB_ALLOW_NC_BED`, which is never set.
