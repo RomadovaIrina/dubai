@@ -256,6 +256,22 @@ def faithful_check(llm, src_name: str, tgt_name: str, source_text: str, old_text
         return False, [f"judge answer unparsable: {txt[:120]}"]
 
 
+_TR = dict(zip("абвгдеёжзийклмнопрстуфхцчшщъыьэюя", ["a", "b", "v", "g", "d", "e", "e", "zh", "z", "i", "y", "k", "l", "m", "n", "o", "p", "r", "s", "t", "u", "f",
+                                                        "h", "ts", "ch", "sh", "sch", "", "y", "", "e", "yu", "ya"]))
+
+
+def dropped_words(old: str, new: str, source: str = "") -> list[str]:
+    """r3 2026-10-19: words of the current English text that are TRANSLITERATIONS of a source word (names, brands, loanwords: Hamam, Egger,
+    Neometria, sauna) and are missing from the rewrite. 02 u17 "Hamam and all this space." -> "All this space, indeed, that is everything."
+    passed Qwen's own faithfulness judge. Paraphrase of ordinary words stays allowed (a plain content-word rule rejected 17 good rewrites)."""
+    import difflib
+    w = lambda t: re.findall(r"[a-z']+", t.lower())
+    src = ["".join(_TR.get(c, c) for c in x) for x in re.findall(r"[а-яё]+", source.lower()) if len(x) >= 4]
+    nw = set(w(new))
+    return [x for x in dict.fromkeys(w(old)) if len(x) >= 4 and x not in nw and x + "s" not in nw and x.rstrip("s") not in nw
+            and any(difflib.SequenceMatcher(None, x, t).ratio() >= 0.75 for t in src)]
+
+
 def fuller_rewrite(llm, src_name: str, tgt_name: str, source_text: str, text: str, target_words: int, source_seconds: float, tts_seconds: float, min_words: int | None = None, attempts: int = 3,
                    guard: bool = False) -> tuple[str | None, str]:
     """Fit-UP (2026-10-02): ask Qwen for a FULLER natural spoken version of ONE sentence whose synthesized speech is much shorter than the source speech.
@@ -278,6 +294,7 @@ def fuller_rewrite(llm, src_name: str, tgt_name: str, source_text: str, text: st
         elif nw_new <= nw_old: why = f"not longer ({nw_new} <= {nw_old} words)"
         elif nw_new > hi + 2: why = f"too long ({nw_new} > {hi + 2} words)"
         elif missing_numbers(text, new) or missing_numbers(source_text, new): why = "number lost"
+        elif dropped_words(text, new, source_text): why = f"dropped name / loanword {dropped_words(text, new, source_text)} (keep it)"
         elif FILLER.search(new): why = f"filler word '{FILLER.search(new).group(0)}'"
         elif guard and appended_clause(text, new): why = appended_clause(text, new) + " (translate the source fully instead of adding a clause at the end)"
         else:

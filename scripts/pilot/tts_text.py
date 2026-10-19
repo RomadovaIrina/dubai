@@ -55,8 +55,15 @@ def _decimal(intpart: str, frac: str) -> str:
 _UNIT_RE = "|".join(sorted((re.escape(k) for k in UNITS), key=len, reverse=True))
 
 
+# Respellings of rare loanwords / names that Chatterbox reads wrongly (r3 2026-10-19, audio-r3 02 1m46s: "Hamam and all this space" was heard
+# as "Our mom and all these spaces": the Russian transliteration "Hamam" loses its onset; the English spelling "hammam" is a dictionary word).
+LEXICON = {r"\bhamams?\b": lambda m: ("Hammam" if m.group(0)[0].isupper() else "hammam") + ("s" if m.group(0).lower().endswith("s") else "")}
+
+
 def speakable(text: str) -> str:
     t = text
+    for pat, rep in LEXICON.items():
+        t = re.sub(pat, rep, t, flags=re.I)
     t = re.sub(r"(?<!\.)\.\.(?!\.)", ".", t)                                                   # ".." (LLM / ASR artefact) -> "."
     t = re.sub(r"(\d)[  ](?=\d{3}\b)", r"\1", t)                                           # 10 000 -> 10000
     t = re.sub(r"(\d),(?=\d{3}\b)", r"\1", t)                                                   # 10,000 -> 10000

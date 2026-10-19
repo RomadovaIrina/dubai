@@ -150,3 +150,10 @@ Base: `experiment/r2-audio` @ a1fd764. Round-2 log: `reports/quality/audio_timin
 
 ## 11. audio-r3b: final-mix loudness (-16 LUFS, TP <= -1 dBTP), handed off to A / B / D
 `scripts/quality/loudness.py` (two-pass ffmpeg loudnorm, I -16, TP -1.5, linear where possible). AAC after: -15.9..-16.1 LUFS, TP -1.2..-2.7 dBTP (was -12.9..-20.4 LUFS, TP up to -0.2). Dynamic mode on 02 / 03 / 05 (02 LRA 11.5 -> 9.4). Dub voice stems untouched. Listen mp4: `/workspace/dub/c/outbox/<id>_dub-audio-r3b_*.mp4`.
+
+## 12. 02 "Hamam": TTS lexicon + fit-up guard for names / loanwords
+- **`tts_text.LEXICON`:** the transliteration "Hamam" is spoken as "hammam" (an English dictionary word). audio-r3 02 1m46s "Hamam and all this space" was heard as "Our mom…".
+- **`tts_burst.dropped_words` guard:** a fit-up rewrite may not drop a word that is a transliteration of a source word (names, brands, loanwords).
+  - Seen on 02 u17: the rewrite turned "Hamam and all this space." into "All this space, indeed, that is everything." Qwen's own faithfulness judge passed it.
+  - A plain content-word rule would have rejected 17 legitimate paraphrases. This guard flags only the real case among the 38 accepted rewrites of 01–05.
+- **02 rerun:** WER 0.075 → **0.022** (audio-r2 0.060). Both hammam units are heard exactly. u17 is now "The hammam and all this space, indeed."
