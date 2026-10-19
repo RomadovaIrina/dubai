@@ -1096,6 +1096,8 @@ def main() -> int:
             return 0 if man["validation"]["pass"] else 4
 
         man["video_backend"] = a.video_backend
+        gc.collect(); empty_cache()   # r3 D GPU audit: the audio stages (Spleeter torch bed, TTS) left ~4.2 GiB of torch-reserved cache that LatentSync stacked on
+        stage_log({"kind": "mark", "name": "audio_cache_released", "t0": time.time(), "t1": time.time(), "wall_s": 0, **(_cuda_peak() or {}), **_dev_used()})
         if a.video_backend == "optimized":
             speech_gate = None
             if a.speech_gate == "on":

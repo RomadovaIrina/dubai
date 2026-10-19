@@ -23,8 +23,10 @@ if [ -n "${AUDIO_DIR:-}" ]; then
   AM=${BASE_MANIFEST:-/workspace/dub/canonical/artifacts/baseline/$id/final/${id}_final.manifest.json}; DUBDIR="--dubbed-dir $AUDIO_DIR"; echo "audio: delivered $AUDIO_DIR (stages of $AM)" | tee -a "$LOG"
 else
   AM=$O/${id}_${TAG}_audio.manifest.json; DUBDIR=""
+  # Qwen on the GPU (CUDA llama-cpp-python in third_party/llama_cuda, gpu_audit.md §5: audio stage 561 -> 122 s/video-min); QWEN_GPU=0 = CPU
+  QG=""; if [ "${QWEN_GPU:-1}" = 1 ] && [ -f third_party/llama_cuda/llama_cpp/__init__.py ]; then export PYTHONPATH=third_party/llama_cuda${PYTHONPATH:+:$PYTHONPATH}; QG="--qwen-gpu-layers -1"; fi
   python scripts/pilot/run_clean_pipeline_05.py --input "$in" --output "$O/${id}_${TAG}_audio.mp4" --target-lang en --alignment burst --video-backend optimized \
-     --codeformer off --face-stack mediapipe --work-dir "$W" --stop-after audio --audio-policy r2 \
+     --codeformer off --face-stack mediapipe --work-dir "$W" --stop-after audio --audio-policy r2 $QG \
      ${AUDIO_ARGS:-} >> "$LOG" 2>&1 || { echo "FAIL audio $id (see $LOG)"; exit 2; }
   [ -f "$AM" ] || AM=$(ls -t $O/${id}_${TAG}_audio*.manifest.json 2>/dev/null | head -1)
 fi
