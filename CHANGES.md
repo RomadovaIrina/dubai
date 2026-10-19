@@ -19,3 +19,13 @@ Branch `experiment/r3-integration` from `clean-base` 326e807. Server: RTX 5090, 
 
 ## Licences
 Nothing new. Spleeter 2stems (MIT code, MIT release weights) set up in `/workspace/dub/venv-spleeter` via `scripts/setup_spleeter.sh`.
+- `r3_fix30.sh <manifest>`: FIX30 (`fps_composite.py --master-timing --register sim_ring --ring-region upper --edge-px 12`) on a run with a raw layer.
+- `r3_sbs.sh`: labelled side by side for mixed frame rates (+ half speed). `r3_scorer_loop.sh` / `r3_queue_q3.sh`: the queue used on this server.
+
+## First numbers (canonical cand5 audio; speed contaminated by concurrent CPU jobs)
+| | 03 clean0 | 04 clean0 | 05 clean0 | 01 clean0 | 02 clean0 | 04 r2m |
+|---|---:|---:|---:|---:|---:|---:|
+| LS frames | 2025 | 1074 | 1025 (cand5 949) | 260 | 0 (no face) | 1074 |
+| LatentSync s/video-min | 315 | 298 | 288 | – | – | 281 |
+| video stage s/video-min | 410 | 417 | 409 | – | – | 414 |
+04 FIX30 (r2m): 0 fallback frames, edge 11.4 px, +105 s/video-min (CPU, 12 threads).
