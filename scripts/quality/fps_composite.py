@@ -115,6 +115,9 @@ def main() -> int:
     ap.add_argument("--tex-sigma", type=float, default=1.5); ap.add_argument("--tex-tau", type=float, default=12.0); ap.add_argument("--lip-dilate", type=float, default=0.12)
     ap.add_argument("--silence", choices=["none", "still", "orig"], default="none"); ap.add_argument("--silence-min-s", type=float, default=0.3); ap.add_argument("--silence-ramp", type=int, default=6)
     ap.add_argument("--gaps", default=None, help="residual-gap JSON (temporal_mouth_stabilize.load_gaps; e.g. track C's list); default: computed from the manifest")
+    ap.add_argument("--face-clip", choices=["on", "off"], default="off", help="r3 D (user: 'the background beside the cheek wobbles'): the paste weight "
+                    "is capped by the distance INSIDE the source frame's MediaPipe face contour (0 on / outside it, 1 at --edge-px inside): nothing outside "
+                    "the face is pasted / warped / colour-matched")
     ap.add_argument("--only-frames", default=None, help="debug a:b: composite only these OUTPUT frames, the rest is the source frame (fast A/B of a window)")
     ap.add_argument("--safe-scale", type=float, default=2.0, help="r3 D flow_safe: grey levels over --safe-d at which the confidence reaches 0")
     ap.add_argument("--safe-d", type=float, default=3.5, help="r3 D flow_safe: warp disagreement (grey levels, moving pixels) where the confidence starts to drop (-> 0 at +3)")
@@ -424,6 +427,11 @@ def main() -> int:
                 aw = np.maximum(aw, gm)
         if a.silence == "orig" and (sil_w[m0] > 0 or sil_w[m1] > 0):
             aw = aw * (1.0 - ((1 - al) * sil_w[m0] + al * sil_w[m1]))
+        if a.face_clip == "on":
+            lm_fc = lm_at(k, mu)
+            if lm_fc is not None and np.isfinite(lm_fc[tms.FACE_OVAL]).all():
+                fm = np.zeros(aw.shape[:2], np.uint8); cv2.fillPoly(fm, [np.round(lm_fc[tms.FACE_OVAL, :2] - [xa, ya]).astype(np.int32)], 1)
+                aw = np.minimum(aw, np.clip(cv2.distanceTransform(fm, cv2.DIST_L2, 3) / max(a.edge_px, 1.0), 0, 1).astype(aw.dtype))
         o = S[k].copy(); o[ya:yb, xa:xb] = np.clip(sk + aw[..., None] * (Lk - sk), 0, 255).round().astype(np.uint8)
         if w >= 1:   # spec 8.4 on small faces: the feather ramp must not reach the lips (source lips and the layer's own lips)
             lm_q = lm_at(k, mu); lips_ = [lm_q] + ([lerp(mp_ls, m)] if mp_ls is not None else [])
