@@ -19,6 +19,33 @@ PILOT.mkdir(parents=True, exist_ok=True)
 THREADS = int(os.environ.get("DUB_THREADS", "16"))
 
 
+# r3 (2026-10-19, Agent C on server A's CPU): torch device of the audio models. DUB_DEVICE overrides; default cuda when visible, else cpu
+# (CUDA_VISIBLE_DEVICES="" -> cpu). On the CPU Chatterbox runs fp32 only (fp16 autocast is a GPU speed path) and Whisper int8.
+_DEV = None
+def dev() -> str:
+    global _DEV
+    if _DEV is None:
+        _DEV = os.environ.get("DUB_DEVICE") or ""
+        if not _DEV:
+            import torch
+            _DEV = "cuda" if torch.cuda.is_available() else "cpu"
+    return _DEV
+
+
+def tts_dtypes(torch) -> tuple:
+    return (torch.float16, torch.float32) if dev() == "cuda" else (torch.float32,)
+
+
+def whisper_compute(gpu_type: str) -> str:
+    return gpu_type if dev() == "cuda" else "int8"
+
+
+def empty_cache() -> None:
+    if dev() == "cuda":
+        import torch
+        torch.cuda.empty_cache()
+
+
 def _cgroup_cpus() -> float | None:
     try:
         q, per = open("/sys/fs/cgroup/cpu.max").read().split()[:2]

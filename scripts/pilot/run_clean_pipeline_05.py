@@ -68,7 +68,7 @@ import time
 
 os.environ.setdefault("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", "1")   # pyannote 3.x checkpoints, as in scripts/check_pyannote.py
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from pilot_common import MODELS, QWEN_THREADS, ROOT, THREADS, gpu_info, write_json  # noqa: E402
+from pilot_common import MODELS, QWEN_THREADS, ROOT, THREADS, dev, empty_cache, gpu_info, tts_dtypes, whisper_compute, write_json  # noqa: E402
 from measure_stages import build_timeline, ff, probe                  # noqa: E402
 from benchmark_09_qwen_quant import SYSTEM_PROMPT                     # noqa: E402
 
@@ -128,7 +128,7 @@ def free_cuda(*objs) -> None:
     for o in objs:
         del o
     gc.collect()
-    torch.cuda.empty_cache()
+    empty_cache()
 
 
 def stage_log(rec: dict) -> None:
@@ -187,7 +187,7 @@ def run_asr(wav16: pathlib.Path, language: str | None) -> tuple[list[dict], dict
     import torch  # noqa: F401  maps libcublas before ctranslate2 loads (scripts/check_whisper.py)
     from faster_whisper import WhisperModel
     import model_cache
-    m = model_cache.get("whisper_asr", lambda: WhisperModel(str(MODELS / "whisper-large-v3"), device="cuda", compute_type="int8_float16"))
+    m = model_cache.get("whisper_asr", lambda: WhisperModel(str(MODELS / "whisper-large-v3"), device=dev(), compute_type=whisper_compute("int8_float16")))
     segs, info = m.transcribe(str(wav16), word_timestamps=True, beam_size=5, vad_filter=False, language=language)
     out = []
     for s in segs:
@@ -240,7 +240,7 @@ def run_diarization(wav16: pathlib.Path) -> list[dict]:
     def _load():
         p_ = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1", use_auth_token=tok)
         if p_ is not None:
-            p_.to(torch.device("cuda"))
+            p_.to(torch.device(dev()))
         return p_
     pipe = model_cache.get("pyannote", _load)
     if pipe is None:
@@ -390,6 +390,19 @@ def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict
                 u["translation_number_retry"] = {"missing": miss, "first": txt, "second": t2, "fixed": bool(t2) and not missing_numbers(u["text"], t2)}
                 if t2 and len(missing_numbers(u["text"], t2)) < len(miss):
                     txt = t2
+            if tgt_lang == "en":   # r3: Qwen drift guard (foreign script / bracketed asides) -> one strict retry, then strip as the last resort
+                from tts_text import script_defects, strip_defects
+                bad = script_defects(txt)
+                if bad:
+                    r3 = llm.create_chat_completion(msgs[:1] + [{"role": "user", "content": f"Translate from {src_name} to {tgt_name}. Write only {tgt_name} words in the Latin alphabet, "
+                                                                 f"no brackets, no notes, no other languages:\n{u['text']}"}], max_tokens=512, temperature=0.0)
+                    t3 = " ".join(r3["choices"][0]["message"]["content"].split()).strip().strip("\"«“»”")
+                    for k in usage:
+                        usage[k] += int(r3["usage"].get(k, 0))
+                    ok = bool(t3) and not script_defects(t3) and len(missing_numbers(u["text"], t3)) <= len(missing_numbers(u["text"], txt))
+                    u["translation_script_retry"] = {"defects": bad, "first": txt, "second": t3, "used": "second" if ok else "stripped"}
+                    txt = t3 if ok else strip_defects(txt)
+                    print(f"  [translate] u{u['id']:02d} drift guard {bad} -> {u['translation_script_retry']['used']}", flush=True)
             u["translation"] = txt
             for k in usage:
                 usage[k] += int(r["usage"].get(k, 0))
@@ -467,7 +480,7 @@ def run_tts(units: list[dict], refs: dict, tgt_lang: str, work: pathlib.Path, se
     if tgt_lang not in SUPPORTED_LANGUAGES:
         raise Blocker(f"target language {tgt_lang!r} not supported by Chatterbox: {sorted(SUPPORTED_LANGUAGES)}")
     with timed(times, "tts_load"):
-        m = ChatterboxMultilingualTTS.from_local(MODELS / "chatterbox", "cuda", t3_model="v3")
+        m = ChatterboxMultilingualTTS.from_local(MODELS / "chatterbox", dev(), t3_model="v3")
     builtin = m.conds
     guard = install_speech_token_guard(m)   # keeps the speech-token ids int64 under the fp16 cast (chatterbox_fp16.py: fp16 corrupted them -> unintelligible speech)
 
@@ -475,7 +488,7 @@ def run_tts(units: list[dict], refs: dict, tgt_lang: str, work: pathlib.Path, se
         for mod in (m.t3, m.s3gen, m.ve):
             mod.to(dtype)
         if m.conds is not None:
-            m.conds = m.conds.to(device="cuda")
+            m.conds = m.conds.to(device=dev())
 
     def synth_all(dtype) -> None:
         cast(dtype)
@@ -484,17 +497,17 @@ def run_tts(units: list[dict], refs: dict, tgt_lang: str, work: pathlib.Path, se
             by_spk.setdefault(u["speaker"], []).append(u)
         for spk, us in by_spk.items():
             ref = refs[spk]["file"]
-            with torch.autocast("cuda", dtype=dtype, enabled=dtype != torch.float32):
+            with torch.autocast(dev(), dtype=dtype, enabled=dtype != torch.float32):
                 if ref:
                     m.prepare_conditionals(ref)
                 else:
-                    m.conds = builtin.to(device="cuda"); guard.use_builtin()
+                    m.conds = builtin.to(device=dev()); guard.use_builtin()
             for u in us:
                 if "parts" in u:   # --alignment burst: one clip per part (seed per part), keeps the slot-mode path below byte-identical
                     u["tts_parts"] = []
                     for k, text in enumerate(u["parts"]):
                         torch.manual_seed(seed + 100 * u["id"] + k)
-                        with torch.autocast("cuda", dtype=dtype, enabled=dtype != torch.float32):
+                        with torch.autocast(dev(), dtype=dtype, enabled=dtype != torch.float32):
                             wav = m.generate(text, language_id=tgt_lang)
                         wav = wav.detach().float().cpu()
                         if not torch.isfinite(wav).all() or wav.abs().max() < 1e-4:
@@ -506,7 +519,7 @@ def run_tts(units: list[dict], refs: dict, tgt_lang: str, work: pathlib.Path, se
                     print(f"  [tts] u{u['id']:02d} {spk} {len(u['parts'])} parts {u['tts']['seconds']:.2f}s", flush=True)
                     continue
                 torch.manual_seed(seed + u["id"])
-                with torch.autocast("cuda", dtype=dtype, enabled=dtype != torch.float32):
+                with torch.autocast(dev(), dtype=dtype, enabled=dtype != torch.float32):
                     wav = m.generate(u["translation"], language_id=tgt_lang)
                 wav = wav.detach().float().cpu()
                 if not torch.isfinite(wav).all() or wav.abs().max() < 1e-4:
@@ -518,7 +531,7 @@ def run_tts(units: list[dict], refs: dict, tgt_lang: str, work: pathlib.Path, se
 
     used = None
     with timed(times, "tts"):
-        for dtype in (torch.float16, torch.float32):
+        for dtype in tts_dtypes(torch):
             try:
                 synth_all(dtype); used = dtype; break
             except Exception as e:  # same fallback ladder as scripts/check_chatterbox.py
@@ -815,6 +828,10 @@ def main() -> int:
     ap.add_argument("--vad-device", choices=["cpu", "cuda"], default=None, help="Silero VAD device (default cpu; r3 D GPU audit). Also env DUB_VAD_DEVICE")
     ap.add_argument("--qwen-resident", choices=["on", "off"], default="off", help="keep Qwen loaded until the end of the run (with --qwen-gpu-layers -1: "
                     "all models + Qwen resident on the GPU at the LatentSync peak = the pilot 0.4 question); off = released before LatentSync")
+    ap.add_argument("--qwen-quant", choices=["q8_0", "q5_k_m"], default="q8_0", help="Qwen2.5-7B-Instruct GGUF quant (same Apache-2.0 repo). r3 2026-10-19: q5_k_m (5.1 GiB) fits fully on a shared GPU next to Chatterbox + QA within ~10 GB; q8_0 = pilot 0.9 production quant")
+    ap.add_argument("--tts-text-norm", choices=["on", "off"], default="off", help="phrase mode: numbers / units / '..' -> speakable English words before Chatterbox, QA and alignment (tts_text.py; r3 2026-10-19: 01 '600x600 ... 9 mm' was heard as '600 x 67')")
+    ap.add_argument("--qa-whisper-compute", choices=["float16", "int8_float16"], default="float16", help="faster-whisper compute type of the TTS QA (r3: int8_float16 saves 1.8 GB VRAM on a shared GPU)")
+    ap.add_argument("--qwen-tts-gpu-layers", type=int, default=None, help="r3: reload Qwen with this many GPU layers for the TTS session (fit rewrites run next to Chatterbox + QA); default = --qwen-gpu-layers. 14 keeps Q8_0 at 4.7 GB")
     ap.add_argument("--qwen-gpu-layers", type=int, default=0, help="Qwen layers offloaded to the GPU (-1 = all); 0 = frozen CPU baseline. Needs a CUDA llama-cpp-python build "
                                                                    "(A/B 2026-10-12: translation 18x faster, outputs not identical to the CPU)")
     ap.add_argument("--audio-policy", choices=sorted(AUDIO_POLICIES), default="r2", help="audio-stage flag bundle (explicit flags win): r2 (default since 2026-10-17) = cand5 + "
@@ -882,9 +899,11 @@ def main() -> int:
     audio_policy = apply_audio_policy(a, sys.argv[1:])
     if a.background == "on" and a.bed_separator == "hdemucs" and os.environ.get("DUB_ALLOW_NC_BED") != "1":
         print("--bed-separator hdemucs: the HDEMUCS weights have no licence (non-commercial reference only); set DUB_ALLOW_NC_BED=1 for a reference run", file=sys.stderr); return 2
-    global QWEN_GPU_LAYERS, VAD_DEVICE
-    QWEN_GPU_LAYERS = a.qwen_gpu_layers
+    global QWEN_GPU_LAYERS, QWEN_QUANT, VAD_DEVICE
+    QWEN_GPU_LAYERS = a.qwen_gpu_layers; QWEN_QUANT = a.qwen_quant
     if a.vad_device: VAD_DEVICE = a.vad_device
+    os.environ["DUB_QA_WHISPER_COMPUTE"] = a.qa_whisper_compute
+    os.environ["DUB_TTS_TEXT_NORM"] = a.tts_text_norm
     if a.qwen_gpu_layers:
         import llama_cpp
         if not llama_cpp.llama_supports_gpu_offload():
@@ -911,7 +930,7 @@ def main() -> int:
     man: dict = {"task": "0.5-runner", "input": str(src), "output": str(out), "target_lang": tgt, "alignment_mode": a.alignment,
                  "tts_mode": a.tts_mode if a.alignment == "burst" else "slot", "segmentation_mode": a.segmentation if a.alignment == "burst" else "whisper",
                  "codeformer": "DISABLED (not invoked)" if a.codeformer == "off" else {"mode": a.codeformer, "w": a.codeformer_w, "batch": a.codeformer_batch, "landmarks": a.codeformer_landmarks, "precision": a.codeformer_precision},
-                 "work_dir": str(work), "config": {"seed": a.seed, "max_unit_s": a.max_unit_s, "threads": THREADS},
+                 "work_dir": str(work), "config": {"seed": a.seed, "max_unit_s": a.max_unit_s, "threads": THREADS, "qwen_quant": a.qwen_quant, "qwen_gpu_layers": a.qwen_gpu_layers, "qwen_tts_gpu_layers": a.qwen_tts_gpu_layers, "qa_whisper_compute": a.qa_whisper_compute, "tts_text_norm": a.tts_text_norm},
                  "audio_policy": {**audio_policy, "resolved": {k: getattr(a, k) for k in AUDIO_POLICIES["r2"]}}}
     try:
         source = probe(src); man["source"] = source; duration = source["duration_s"]
@@ -990,6 +1009,12 @@ def main() -> int:
         llm = None
         if isinstance(tr, tuple):
             man["translation"], llm, src_name, tgt_name = tr
+            if a.qwen_tts_gpu_layers is not None and a.qwen_tts_gpu_layers != QWEN_GPU_LAYERS:
+                # r3 shared GPU: Qwen ran fully on the GPU for segmentation + translation (nothing else loaded); for the TTS session (fit rewrites next to
+                # Chatterbox + QA) it is reloaded with fewer GPU layers so the stage stays <= ~10 GB (Q8_0: 14 layers = 4.7 GB)
+                del llm; gc.collect(); g = QWEN_GPU_LAYERS; QWEN_GPU_LAYERS = a.qwen_tts_gpu_layers
+                tl = {}; llm, _ = load_llm(tl); QWEN_GPU_LAYERS = g
+                man["translation"]["tts_session_gpu_layers"] = a.qwen_tts_gpu_layers; times["qwen_reload"] = tl.get("translation_load")
         else:
             man["translation"] = tr
 

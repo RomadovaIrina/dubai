@@ -47,3 +47,5 @@ For a separate venv instead: `CMAKE_ARGS=... FORCE_CMAKE=1 uv pip install --pyth
   `ls_window_ab.py`): any banned weight file under `models/`, `third_party/`, the torch hub cache or `~/.insightface` stops the run with the list.
 - cand5 is a reference only (numbers from the round-1/2 reports, never re-rendered). Candidates use C's clean audio (Spleeter bed); runs on the
   canonical cand5 audio are video-only controls. Scorecard / spec status label the audio source per row.
+| 4 | `r3-face` 28491dd (B r3) | see 1a30201: `--dump-ls-raw` kept D's (accepts B's PATH form), B's `--master-timing-mode` kept |
+| 5 | `r3-audio` 49e8002 (C r3: device-agnostic audio stage, Spleeter torch port on the GPU, `--qwen-quant`, `--qa-whisper-compute`, OOM backoff, `--tts-text-norm`) | runner `main()` globals: D's `VAD_DEVICE` + C's `QWEN_QUANT` / env flags combined; C's changelog kept as `reports/experiments/r3-audio/CHANGES_C.md` |

@@ -16,3 +16,6 @@ if [ ! -f "$M/2stems/model.index" ]; then
   tar -xzf "$tmp/2stems.tar.gz" -C "$M/2stems"; rm -rf "$tmp"
 fi
 "$VENV/bin/python" -I -c "import spleeter, tensorflow as tf; print('spleeter ok, tf', tf.__version__)" 2>&1 | tail -1
+# r3: the same weights as npz for the PyTorch port (scripts/pilot/spleeter_torch.py, default backend of background_bed.py)
+[ -f "${DUB_ROOT}/models/spleeter/2stems_tf_vars.npz" ] || CUDA_VISIBLE_DEVICES= TF_CPP_MIN_LOG_LEVEL=3 "$VENV/bin/python" -I "${DUB_ROOT}/scripts/pilot/spleeter_torch.py" convert \
+    --ckpt "$M/2stems/model" --out "${DUB_ROOT}/models/spleeter/2stems_tf_vars.npz"

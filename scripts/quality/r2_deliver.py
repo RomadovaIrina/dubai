@@ -56,9 +56,16 @@ def main() -> int:
     # 2. clean bed: Spleeter 2stems + residue duck (runner defaults)
     dur = man["source"]["duration_s"]; src = [(v["start"], v["end"]) for v in man["speech_intervals"]]
     dub = [(v["start"], v["end"]) for v in rp.run_vad(out / "dubbed_16k.wav")]
-    sep = bb.separate_background(pathlib.Path(man["input"]), out, separator="spleeter")
-    mix = bb.mix_background(sep, out / "dubbed_24k.wav", src, dub, dur, out, residue_duck_db=a.residue_duck_db, duck_db=a.duck_db, attack_s=a.attack_s, release_s=a.release_s)
-    for f in ("bg_44k.wav", "vocals_44k.wav"): (out / f).unlink()   # stems: regenerable (Spleeter, deterministic), not needed downstream
+    bg0 = man.get("background") or {}; mix0 = bg0.get("mix") or {}
+    same = (mix0.get("residue_duck") or {}).get("duck_db") == a.residue_duck_db and (mix0.get("duck_db"), mix0.get("attack_s"), mix0.get("release_s")) == (a.duck_db, a.attack_s, a.release_s)
+    if same and "Spleeter" in (bg0.get("separation") or {}).get("model", "") and (W / "final_mix_44k.wav").exists() and (man.get("dubbed_track") or {}).get("declick"):
+        # r3: the runner (r2 defaults) already mixed this exact bed over this exact declicked dub voice -> reuse it, no second Spleeter pass
+        for f in ("final_mix_44k.wav", "final_mix_aac.m4a"): shutil.copy(W / f, out / f)
+        mix = {**mix0, "wav": str(out / "final_mix_44k.wav"), "aac": str(out / "final_mix_aac.m4a"), "reused_from_run": True}; sep = bg0["separation"]
+    else:
+        sep = bb.separate_background(pathlib.Path(man["input"]), out, separator="spleeter")
+        mix = bb.mix_background(sep, out / "dubbed_24k.wav", src, dub, dur, out, residue_duck_db=a.residue_duck_db, duck_db=a.duck_db, attack_s=a.attack_s, release_s=a.release_s)
+        for f in ("bg_44k.wav", "vocals_44k.wav"): (out / f).unlink()   # stems: regenerable (Spleeter, deterministic), not needed downstream
     man["background"] = {"enabled": True, "separation": {k: v for k, v in sep.items() if k not in ("bg", "vocals")}, "mix": mix}
     # 3. speech gate exactly as the optimized video backend builds it (source VAD u dub VAD, margin 0.24 s, merge 0.6 s)
     gate = build_speech_gate([man["speech_intervals"], [{"start": s, "end": e} for s, e in dub]], dur, 0.24, 0.6)
