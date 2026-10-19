@@ -121,6 +121,10 @@ def main() -> int:
     ap.add_argument("--codeformer-precision", choices=["fp32", "parse16", "fp16"], default="fp16", help="fp32 = upstream numerics; parse16 = ParseNet under fp16 autocast; fp16 = CodeFormer net + ParseNet under autocast")
     ap.add_argument("--dump-raw", action="store_true", help="round 3: also write <out>_lsraw.mp4 = master frames with the RAW LatentSync frames (before the mouth composite / crossfade) "
                     "in the LATENT_SYNC segments, lossless libx264rgb crf 0, master frame count (track B fps_composite --ls-raw)")
+    ap.add_argument("--ref-mode", choices=["same", "fixed", "shift8", "shift16", "shift32"], default="same", help="round 3: LatentSync UNet reference (ls_stable.py): same = current frames "
+                    "(upstream); fixed = a calm 16-frame clip of the same video (--ref-select); shiftS = the same segment S frames away")
+    ap.add_argument("--ref-select", choices=["calm_any", "calm_closed"], default="calm_closed")
+    ap.add_argument("--bridge-len", type=int, default=0); ap.add_argument("--bridge-steps", type=int, default=0, help="round 3 (spec 8.5): low-noise bridge windows over every 16-frame seam (ls_stable.py)")
     ap.add_argument("--inject-ls-error", default=None, help="round 3 spec-11 test: comma list of LatentSync call numbers (1-based) that raise RuntimeError -> PASS_THROUGH_LS_FAILED")
     ap.add_argument("--silence-mix", type=float, default=0.0, help="round 3: dub-silent mouth, whisper conditioning moved toward the SOURCE speech by this amount where the source talks and no dub part sounds (r3_lipsync.py)")
     ap.add_argument("--silence-ramp", type=int, default=6); ap.add_argument("--silence-min-s", type=float, default=0.3); ap.add_argument("--gaps", default=None, help="residual-gap JSON (track C) instead of the manifest stretches")
@@ -176,7 +180,21 @@ def main() -> int:
         router = prep.router; man["face_stack"] = {**prep.info, "times": prep.times, "ls_geometry": geom}; man["frame_map"] = prep.frame_map
     else:
         with rp.timed(times, "face_router_load"): router = faa.make_router("retinaface", a.face_min_w, a.face_min_h, a.retina_conf)
-    with rp.timed(times, "latentsync_load"): runner = faa.AccelRunner(a.window_batch_size, not a.no_deepcache, "none", "auto", steps=a.steps, guidance=a.guidance, deepcache_interval=a.deepcache_interval)
+    if a.ref_mode != "same" or a.bridge_len:   # round 3: generator variants (ls_stable.StableLatentSync; same call interface)
+        from ls_stable import StableRunner
+        with rp.timed(times, "latentsync_load"): runner = StableRunner(a.window_batch_size, not a.no_deepcache, a.steps, a.guidance, 1247, a.deepcache_interval, ref_mode=a.ref_mode,
+                                                                       bridge_len=a.bridge_len, bridge_steps=a.bridge_steps)
+        if a.ref_mode == "fixed":
+            if prep is None: raise SystemExit("--ref-mode fixed needs the clean face stack")
+            import cv2, numpy as np
+            from ls_window_ab import pick_reference
+            LM = np.stack([np.asarray(d[1], np.float32) if d[0] is not None else np.full((106, 2), np.nan, np.float32) for d in prep.ls_dets]); ok = np.isfinite(LM[:, 0, 0])
+            cost, rs = pick_reference(LM, ok, a.ref_select, 16)
+            runner.acc.set_reference(np.stack([cv2.cvtColor(f, cv2.COLOR_BGR2RGB) for f in prep.frames[rs:rs + 16]]), list(prep.ls_dets[rs:rs + 16]))
+            man["reference"] = {"select": a.ref_select, "start_frame": int(rs), "t": round(rs / 25, 2), "cost": round(cost, 4)}
+            print(f"  [ref] fixed reference frames {rs}-{rs + 16} ({rs / 25:.2f}s)", flush=True)
+    else:
+        with rp.timed(times, "latentsync_load"): runner = faa.AccelRunner(a.window_batch_size, not a.no_deepcache, "none", "auto", steps=a.steps, guidance=a.guidance, deepcache_interval=a.deepcache_interval)
     if a.silence_mix > 0:   # round 3: dub-silent mouth (r3_lipsync.SilenceMix), stretches in absolute master frames
         import r3_lipsync as r3
         N_all = (man.get("lipsync") or {}).get("master_frames") or int(round(man["source"]["duration_s"] * 25)) + 2; sm = r3.silent_mask(man, N_all, a.silence_min_s, gaps=r3.load_gaps(a.gaps) if a.gaps else None)
