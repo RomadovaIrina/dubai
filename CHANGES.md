@@ -64,3 +64,21 @@ Generator: r2best (`--anchor-filter flow:4 --anchor-round off --affine-precision
 --bridge-steps 4 --max-ls-frames 400` + B's fps master (`--master-timing-mode fps`). Composite: `r3_fix30.sh` mode r3cand
 (`--register sim_ring --source-lm --colour-match upper --seam-lf 4 --sharpen-auto 0.95 --skin-texture source --lip-guard on --edge-px 12`).
 | 8 | `r3-audio` 5ef9cbf (C r3: loudness normalisation -16 LUFS / TP <= -1, TTS lexicon, Qwen reload fix, peak-safe declick) | CHANGES.md: C's kept as reports/experiments/r3-audio/CHANGES_C.md |
+
+## r3final (19.10 evening): the three user defects fixed; finals `outbox/<id>_r3final_fixed.mp4` (v4)
+Pipeline: audio-r4 (C r3 settings + phrase-cut fix) -> A's R3 generator (guidance 2.0, bridge 8x4, 400-frame cap) on B's fps master ->
+`fps_composite.py` (B's final composite + D fixes: `--retime flow_safe`, `--sanitize-layer 0.83 --sanitize-mode texture --sanitize-sigma 8`,
+`--sharpen-lips-max 0.8`, `--face-clip on`) -> remux audio-r4b (bed remix + static loudness). Scripts: `r3_audio_r4.sh`, `r3_remix.py`,
+`r3_fix30.sh` (mode r3fix), `r3_publish_v3.sh` (VER=v4).
+
+| defect | cause | fix | numbers |
+|---|---|---|---|
+| torn / ghosted lips on single 30 fps frames | 25->30 flow interpolation averaged two disagreeing warps | `flow_safe`: low confidence -> the nearer frame alone, warped to t | 04 frames 670 / 675 / 680 clean |
+| pale "pink blob" lips (1-3 frames) | in the RAW LatentSync layer (A R3 11.4 % of LS frames, r2best 8.4 %, no-bridge 11.8 %) | sanitize: flagged frames keep their own low frequencies (opening) + the neighbours' lip-line detail | 04 SyncNet dub 4.27 -> 4.17 (full replace: 3.77); 03 6.15 (replace 5.38) |
+| background beside the cheek / jaw moves | paste ellipse / ring reached outside the face | paste weight capped inside the source face contour | ring excess 04 1.99 -> -0.10, 03 2.13 -> 0.06, 05 0.43 -> -0.14 (clean0 0.70 / -0.42 / -0.46) |
+| abrupt phrase cuts | CTC word ends early -> cuts mid-voice, 5 ms linear fades | cut snap + merge voiced cuts + equal-power fades | hard cuts 36 -> 7 (01-05), voiced inner cuts 03 6 -> 0 |
+| bed "breathing" | ffmpeg loudnorm dynamic mode (AGC) on 02 / 03 / 05 | static gain + oversampled limiter, duck -2 dB / 0.4 / 0.8 s | bed gain jitter p95 03 7.83 -> 3.11 dB (cand5 3.35), swing 0.9-1.9 dB, -16 LUFS, TP <= -1.3 |
+
+Generator A/B on 04 (audio-r4, 25 fps, SyncNet dub / mix): A R3 4.51 / 4.20 (123 blob frames), without bridge 4.48 / 4.17 (128), r2best
+3.81 / 3.58 (91) -> A R3 kept (the sanitizer handles its blobs). Rejected: full-replace sanitize (-0.5 SyncNet), per-channel colour match
+(over-saturated), luminance match (-0.24 SyncNet on 03 for little visible change).

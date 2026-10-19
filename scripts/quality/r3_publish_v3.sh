@@ -6,7 +6,7 @@ DUB_ROOT=/workspace/dub/dubai; . $DUB_ROOT/scripts/env.sh >/dev/null; cd $DUB_RO
 V=/workspace/dub/artifacts/r3d/video; OB=/workspace/dub/outbox; A4B=/workspace/dub/artifacts/r3d/audio-r4b; F=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf
 for id in "$@"; do
   VER=${VER:-v3}; f=$V/${id}_r3final_$VER.mp4; [ -f $f ] || { echo "skip $id"; continue; }
-  ffmpeg -loglevel error -y -i $f -i $A4B/$id/final_mix_aac.m4a -map 0:v:0 -map 1:a:0 -c copy -shortest $V/${id}_r3final${VER}b.mp4
+  ffmpeg -loglevel error -y -i $f -i $A4B/$id/final_mix_aac.m4a -map 0:v:0 -map 1:a:0 -c copy $V/${id}_r3final${VER}b.mp4
   python - $V/${id}_r3final_$VER.manifest.json $V/${id}_r3final${VER}b.mp4 $A4B/$id <<'PY'
 import json, pathlib, sys
 m = json.loads(pathlib.Path(sys.argv[1]).read_text()); out, d = sys.argv[2], sys.argv[3]
