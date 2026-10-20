@@ -1,3 +1,15 @@
+# r4-merged (built on the audio server while the video server is down)
+`scripts/r4/r4_merged.sh`: m2 = r4_video_v1 stack (v4 generator + r3fix composite minus seam-LF) on audio pb1, v4repro = full v4 stack on this
+server's v4 audio reproduction (gate PREV), r4_gate.py scores. m2 is published as a WATCH candidate (not gate-passing): `<id>_r4_merged_m2_WATCH[_sbs].mp4`.
+- 04 gate: lip flashes 11 vs 18 (better), jaw / colour / sharpness / SyncNet on dub-speech seconds within tolerance; FAIL slide 0.181 vs 0.154, window
+  joints 0.975 vs 0.923 (LF 0.974 vs 0.887), audio hard cuts 2 vs 1 (info), s/video-min (two renders shared the GPU).
+- Not the composite: the full v4 composite (seam-LF on) on m2's raw layer scores the same (slide 0.184, joints identical; joints are measured on the
+  generator layer).
+- Root cause = pb1 timing: m2's LatentSync segments are cut only by the 400-frame cap (04: 2.0-18.0, 18.0-34.0 s) because pb1's merged phrases leave
+  long DUB silences while the speaker keeps talking (04 21.4-27.3 s, 5.9 s); the speech gate keeps lip-sync on (the source talks) and LatentSync paints
+  a quiet mouth over a talking face for 6 s. 3 of the 6 worst joints (23.8 / 25.1 / 27.0 s) and the worse slide window (25-31.6 s) are inside it.
+  v4repro's segments break at its dub pauses (14.4 / 17.2 / 21.8 s ...). Fix = the pb2 audio rule (no dub gap longer than the source's own pause there).
+
 # r4-audio (Agent A audio, round 4) — changelog
 
 Branch `experiment/r4-audio` from v4 `904c5d2`. Server: RTX 5090 (alone). One command: `bash scripts/r4_audio.sh <tag>` (all five videos from the raw input,
