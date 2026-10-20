@@ -814,6 +814,8 @@ def main() -> int:
                     help="burst mode: phrase = ONE Chatterbox generation per unit, CTC word alignment, cuts between words distributed over the source bursts (2026-10-02); parts = one generation per burst part (previous behaviour)")
     ap.add_argument("--fit-up", choices=["on", "off"], default="on", help="phrase mode: fuller Qwen re-translation when the synthesized speech is shorter than --fit-up-ratio x the unit's source speech (accepted only if closer and not less intelligible)")
     ap.add_argument("--fit-up-ratio", type=float, default=0.8, help="phrase mode: fit-up when synthesized speech / source speech of the unit is below this"); ap.add_argument("--fit-up-rounds", type=int, default=3)
+    ap.add_argument("--fit-up-persist", type=float, default=0.0, help="r4: units with synthesized / source speech below this keep trying after a rejected fuller rewrite "
+                    "(up to 4 rounds, length goal -15 %% per round; the faithfulness judge unchanged). 0 = v4")
     ap.add_argument("--fit-up-aim", type=float, default=1.0, help="phrase mode: the fuller rewrite targets aim x the source speech duration")
     ap.add_argument("--phrase-split", choices=["timing", "qwen"], default="timing", help="phrase mode: timing = distribute the aligned TTS words over the source bursts by duration (cuts between words, at punctuation / pauses when near); qwen = semantic JSON split with lossless fallbacks")
     ap.add_argument("--phrase-cut", choices=["syntax", "acoustic", "timing"], default="timing",
@@ -1061,7 +1063,7 @@ def main() -> int:
                                             fit={"enabled": llm is not None and a.fit_retranslate == "on", "rounds": a.fit_rounds, "target_ratio": a.fit_target_ratio,
                                                  "short_min_words": a.fit_down_short_words, "short_overflow_s": a.fit_down_short_overflow_s},
                                             qa_cfg={"enabled": qa_on, "retries": a.tts_retries, "low_temp": a.qa_temp},
-                                            fit_up={"enabled": a.fit_up == "on" and llm is not None, "ratio": a.fit_up_ratio, "rounds": a.fit_up_rounds, "aim": a.fit_up_aim, "guard": a.fit_up_guard == "on"},
+                                            fit_up={"enabled": a.fit_up == "on" and llm is not None, "ratio": a.fit_up_ratio, "rounds": a.fit_up_rounds, "aim": a.fit_up_aim, "guard": a.fit_up_guard == "on", "persist": a.fit_up_persist},
                                             split_retries=a.split_retries, min_part_words=a.phrase_min_part_words, soft_part_words=a.phrase_soft_part_words, part_max_words=a.part_max_words,
                                             phrase_split=a.phrase_split, phrase_cut=a.phrase_cut, long_pause_func=a.long_pause_func, long_pause_grow=a.long_pause_grow, cut_fade=a.cut_fade, gap_qa=a.tts_gap_qa == "on", pause_mark_mode=a.pause_marks, sentence_flow_gap=a.sentence_flow_gap, log=lambda m_: print(m_, flush=True))
             else:

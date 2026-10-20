@@ -773,9 +773,10 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                 # (6 of 14 ordered sentences, 2026-10-13) and turned 04 "Nice weather, | onward." into "The weather is really nice | what in front."
                 if fit_up.get("enabled") and llm is not None and target > 0.5 and words_of(text) >= 3 and sp_s / target < fit_up.get("ratio", 0.65) and not u.get("ordered_pieces"):
                     stats["fit_up_candidates"] += 1
-                    for rnd in range(fit_up.get("rounds", 2)):
+                    persist = sp_s / target < fit_up.get("persist", 0.0); shrink = 1.0   # r4: worst units: a rejected rewrite -> retry with a 15 % smaller length goal
+                    for rnd in range(max(fit_up.get("rounds", 2), 4 if persist else 0)):
                         ratio = sp_s / target; rate = words_of(text) / sp_s
-                        tgt_w = max(words_of(text) + 1, int(round(rate * target * fit_up.get("aim", 1.0)))); lo_w = max(words_of(text) + 1, int(round(rate * target * fit_up.get("min_ratio", 0.85)))); stats["fit_up_rounds"] += 1
+                        tgt_w = max(words_of(text) + 1, int(round(rate * target * fit_up.get("aim", 1.0) * shrink))); lo_w = max(words_of(text) + 1, int(round(rate * target * fit_up.get("min_ratio", 0.85) * shrink))); stats["fit_up_rounds"] += 1
                         recu = {"round": rnd + 1, "ratio_before": round(ratio, 3), "old": text, "target_words": tgt_w, "min_words": lo_w, "source_seconds": round(target, 3), "tts_seconds_before": round(sp_s, 3)}
                         tq = time.perf_counter(); new, why = fuller_rewrite(llm, src_name, tgt_name, src_words, text, tgt_w, target, sp_s, min_words=lo_w, guard=fit_up.get("guard", False)); stats["fitup_qwen_seconds"] += time.perf_counter() - tq
                         new = _rw(new)
@@ -783,6 +784,8 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                             recu["result"] = "rewrite_rejected"; recu["reason"] = why; stats["fit_up_rejected"] += 1; u["fit_up"].append(recu)
                             if rnd + 1 < fit_up.get("rounds", 2) and "too long" in why:   # ask once more with a smaller budget
                                 continue
+                            if persist and lo_w > words_of(text) + 1:
+                                shrink *= 0.85; continue
                             break
                         tq = time.perf_counter(); y2, rec2 = gen_sentence(u, new, dtype, salt=20 + rnd); sp2 = align(y2, new); s2 = speech_seconds(y2, sp2); r2 = s2 / target
                         stats["fitup_gen_qa_seconds"] += time.perf_counter() - tq
