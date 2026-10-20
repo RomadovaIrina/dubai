@@ -119,7 +119,9 @@ def extract(llm, units: list, log=print) -> dict:
         stats["candidates"] += 1
         if not u or not eng or not _words(eng) or not re.search(r"\b" + re.escape(eng) + r"\b", u.get("translation", ""), re.I): continue
         if not re.search(r"[Ѐ-ӿ]", src) or src.lower() not in u.get("text", "").lower(): continue
-        e = {"source": src, "english": eng, "respell": str(it.get("respell", "")).strip()}; e["respellings"] = respellings(e)
+        gw = guard_words(eng, u.get("translation", ""))
+        if not gw: log(f"  [ne] u{u['id']:02d} {src} -> {eng}: no rare capitalised word, not guarded"); continue
+        e = {"source": src, "english": eng, "guard": gw, "respell": str(it.get("respell", "")).strip()}; e["respellings"] = respellings(e)
         u.setdefault("ne", []).append(e); stats["kept"] += 1; stats["entities"].append({"unit": u["id"], **e})
         log(f"  [ne] u{u['id']:02d} {src} -> {eng} respell {e['respellings']}")
     return stats
