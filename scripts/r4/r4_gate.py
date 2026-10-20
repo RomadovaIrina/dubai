@@ -69,8 +69,9 @@ def score_one(id_, label, d, man_p, force=False):
     subprocess.run([PY, str(Q / "r3_flash.py"), "--video", str(video), "--src", str(src), "--lm", str(lm), "--out", str(fl)], capture_output=True, text=True)
     full = json.loads(fl.read_text()) if fl.exists() else {"flash_list": []}
     r["flash_strong"] = sum(1 for e in full["flash_list"] if (e.get("mc_ratio") or 0) >= 2.0 and (e.get("mc_vs_src") or 0) >= 2.0)
-    jj = d / f"{id_}_{label}.joints.json"
-    j = run_json([PY, str(Q / "r3_joints.py"), "--video", str(video), "--manifest", str(man_p), "--lm", str(lm), "--out", str(jj)])
+    jj = d / f"{id_}_{label}.joints.json"; mfps = float((man.get("lipsync") or {}).get("master_fps") or 25)
+    jlm = TIMING / f"{id_}_source_lm_F{int(mfps)}.npz" if mfps != 25 else lm   # a 30 fps LatentSync run counts its segments in 30 fps master frames
+    j = run_json([PY, str(Q / "r3_joints.py"), "--video", str(video), "--manifest", str(man_p), "--lm", str(jlm), "--master-fps", str(mfps), "--out", str(jj)])
     jd = json.loads(jj.read_text()) if jj.exists() else j
     r["joints"] = {"ratio": jd.get("joint_over_inner") or jd.get("ratio") or (jd.get("all") or {}).get("joint_over_inner"), "raw": {k: v for k, v in jd.items() if not isinstance(v, list)}}
     r["r4face"] = run_json([PY, str(HERE / "r4_face_metrics.py"), "--video", str(video), "--src", str(src), "--src-lm", str(lm), "--out", str(d / f"{id_}_{label}.r4face.json")])

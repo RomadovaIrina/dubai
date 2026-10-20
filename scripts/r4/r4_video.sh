@@ -13,12 +13,13 @@ nvidia-smi --query-gpu=timestamp,memory.used,utilization.gpu --format=csv,nohead
 trap 'kill $NV 2>/dev/null' EXIT
 t0=$(date +%s.%N)
 GEN=${GEN_ARGS:-"--anchor-filter flow:4 --anchor-round off --affine-precision fp32 --mask-track head --master-timing-mode fps --guidance 2.0 --bridge-len 8 --bridge-steps 4 --max-ls-frames 400"}
+[ -n "${LS_FPS:-}" ] && GEN="$GEN --ls-fps $LS_FPS"   # LatentSync on a master at LS_FPS (30 = the source frames; the composite then needs no retime)
 flock /workspace/dub/gpu.lock python scripts/quality/candidate_video_stage.py --id $id --tag ${TAG}_25fps --manifest "$AM" --dubbed-dir "$AD" --out "$W" --work-out "$W/video" \
    --mux final_mix --gate-merge-gap-s 1.2 --mouth-only-pasteback on --mask-smooth 3 --ls-landmark-smooth 2 --codeformer-scope mouth --codeformer off \
    --face-stack mediapipe --dump-ls-raw on $GEN ${VIDEO_ARGS:-} >> "$LOG" 2>&1 || { echo "FAIL video $id (see $LOG)"; exit 4; }
 VM=$W/${id}_${TAG}_25fps.manifest.json; t1=$(date +%s.%N)
 mkdir -p "$O/timing"
-FIX30_TD=$O/timing FIX30_MODE=r3fix FIX30_THREADS=${FIX30_THREADS:-16} bash scripts/quality/r3_fix30.sh "$VM" final >> "$LOG" 2>&1
+FIX30_MASTER_FPS=${LS_FPS:-25} FIX30_TD=$O/timing FIX30_MODE=r3fix FIX30_THREADS=${FIX30_THREADS:-16} bash scripts/quality/r3_fix30.sh "$VM" final >> "$LOG" 2>&1
 F=$W/${id}_${TAG}_25fps_final.mp4; FM=$W/${id}_${TAG}_25fps_final.manifest.json
 [ -f "$F" ] || { echo "FAIL composite $id (see $LOG)"; exit 5; }
 if [ -n "${MUX_AAC:-}" ]; then ffmpeg -loglevel error -y -i "$F" -i "$MUX_AAC" -map 0:v:0 -map 1:a:0 -c copy "$O/${id}_${TAG}.mp4"; else cp "$F" "$O/${id}_${TAG}.mp4"; fi

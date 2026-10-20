@@ -19,7 +19,8 @@ if [ $MODE = r3F ] || [ $MODE = r3cand ] || [ $MODE = r3fix ]; then
     FIX30_ARGS=${FIX30_ARGS:-"--register sim_ring --ring-region upper --edge-px 12 --colour-match upper --seam-lf 4 --sharpen-auto 1.0"}
   fi
   T=$TD/${id}_master_timing_F.json; SL=$TD/${id}_source_lm_F.npz
-  [ -f $T ] || python scripts/quality/r3_master_timing.py --src $src --master $WM --vf fps=25 --out $T
+  MF=${FIX30_MASTER_FPS:-25}; [ $MF = 25 ] || { T=$TD/${id}_master_timing_F$MF.json; SL=$TD/${id}_source_lm_F$MF.npz; FIX30_ARGS="$FIX30_ARGS --master-fps $MF"; }   # r4 V: LatentSync at the source rate
+  [ -f $T ] || python scripts/quality/r3_master_timing.py --src $src --master $WM --vf fps=$MF --out $T
   [ -f $SL ] || python scripts/quality/r3_source_lm.py --src $src --timing $T --out $SL
   FIX30_ARGS="$FIX30_ARGS --source-lm $SL"
 else
