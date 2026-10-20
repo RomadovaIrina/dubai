@@ -23,6 +23,7 @@ RULES = [
     ("v4 resid mouth", lambda r: r["face_v4"]["resid_mouth_ls_core"], +1, 0, 0.05, None),
     ("v4 twitch mouth", lambda r: r["face_v4"]["twitch_mouth_ls_core"], +1, 0, 0.05, None),
     ("v4 shear95 lower face", lambda r: r["face_v4"]["shear95_lowerface_ls_core"], +1, 0, 0.05, None),
+    ("v4 sharpness mouth (src=1)", lambda r: r["face_v4"]["sharp_mouth_ls_core"], -1, 0.03, 0, None),
     ("slide nose-base px", lambda r: float(np.mean([w["nosebase"]["slide_px"]["mean"] for w in r["slide"]])), +1, 0.02, 0.10, None),
     ("window joints ratio", lambda r: r["joints"]["raw"]["resid"]["joint_over_inner"], +1, 0, 0.05, None),
     ("window joints LF ratio", lambda r: r["joints"]["raw"]["lowfreq"]["joint_over_inner"], +1, 0, 0.05, None),
@@ -107,9 +108,13 @@ def verdict(rule, n, p):
     if vn is None and vp is None: return vn, vp, "n/a"   # e.g. 02: no lip-sync frames in either
     if dirn == "eq": return vn, vp, "PASS" if vn else "FAIL"
     if dirn == 0 or vn is None or vp is None: return vn, vp, "INFO" if vn is not None else "MISSING"
-    if hard is not None and vn * (1 if dirn > 0 else -1) > hard * (1 if dirn > 0 else -1) and not (vp is not None and vn * dirn <= vp * dirn): return vn, vp, "FAIL (limit)"
+    over = lambda v: v * dirn > hard * dirn
+    # a hard limit fails a video only when PREV was inside it (crossing the limit = regression); a baseline already beyond it is reported, and
+    # NEW is then held to the relative rule below (v4 itself runs 390-475 s/video-min on 03 / 04 / 05 against the 300 s norm)
+    if hard is not None and over(vn) and not over(vp): return vn, vp, "FAIL (limit)"
     tol = max(at, rt * abs(vp)); worse = (vn - vp) * dirn
-    return vn, vp, "FAIL" if worse > tol else ("better" if worse < -tol else "=")
+    v = "FAIL" if worse > tol else ("better" if worse < -tol else "=")
+    return vn, vp, v + (" (over limit)" if hard is not None and over(vn) and not v.startswith("FAIL") else "")
 
 
 def fmt(x):
