@@ -25,6 +25,8 @@ RULES = [
     ("v4 resid mouth", lambda r: r["face_v4"]["resid_mouth_ls_core"], +1, 0, 0.05, None),
     ("v4 twitch mouth", lambda r: r["face_v4"]["twitch_mouth_ls_core"], +1, 0, 0.05, None),
     ("v4 shear95 lower face", lambda r: r["face_v4"]["shear95_lowerface_ls_core"], +1, 0, 0.05, None),
+    ("v4 resid mouth, own frames (info)", lambda r: (r.get("face_v4_own") or r["face_v4"])["resid_mouth_ls_core"], 0, 0, 0, None),
+    ("v4 common lip-synced seconds (info)", lambda r: r["face_v4"].get("frames_common_s"), 0, 0, 0, None),
     ("v4 sharpness mouth (src=1)", lambda r: r["face_v4"]["sharp_mouth_ls_core"], -1, 0.03, 0, None),
     ("slide nose-base px", lambda r: float(np.mean([w["nosebase"]["slide_px"]["mean"] for w in r["slide"]])), +1, 0.02, 0.10, None),
     ("window joints ratio", lambda r: r["joints"]["raw"]["resid"]["joint_over_inner"], +1, 0, 0.05, None),
@@ -145,13 +147,47 @@ def fmt(x):
     return str(x)
 
 
+def face_same_frames(id_, sn, sp, cache):
+    """r4 (coordinator 20.10): per-frame video metrics on the SAME frame set for NEW and PREV = the intersection of the frames lip-synced in both.
+    A NEW run that lip-syncs fewer frames (e.g. dub-gated segments) would otherwise be averaged over a different (speech-only) frame set: 04 m2g
+    'v4 resid mouth' 1.106 vs 0.999 on own frames, 1.106 vs m2 1.110 on identical frames. Returns {label: face_v4 dict} (cached)."""
+    if cache.exists(): return json.loads(cache.read_text())
+    mn, mp = (json.loads(pathlib.Path(x["manifest"]).read_text()) for x in (sn, sp))
+    seg = lambda m: [(s["start_frame"], s["end_frame"]) for s in (m.get("lipsync") or {}).get("segments", []) if s.get("action") == "LATENT_SYNC"]
+    inter = [(max(a0, b0), min(a1, b1)) for a0, a1 in seg(mn) for b0, b1 in seg(mp) if min(a1, b1) - max(a0, b0) >= 16]
+    if not inter: cache.write_text("{}"); return {}
+    tmpl = json.loads(json.dumps(mn)); segs = [s for s in tmpl["lipsync"]["segments"] if s.get("action") == "LATENT_SYNC"][:1]
+    tmpl["lipsync"]["segments"] = [{**segs[0], "start_frame": a0, "end_frame": a1, "action": "LATENT_SYNC"} for a0, a1 in inter]
+    mpath = cache.with_suffix(".manifest.json"); mpath.write_text(json.dumps(tmpl))
+    src = next(pathlib.Path("/workspace/dub/inputs/test_videos_raw").glob(f"{id_}.*")); out = {}
+    for tag, sc in (("new", sn), ("prev", sp)):
+        j = cache.with_name(cache.stem + f"_{tag}.mjhr.json")
+        subprocess.run([PY, str(Q / "mouth_jitter_hr.py"), "--video", sc["video"], "--reference", str(src), "--manifest", str(mpath), "--out", str(j), "--tag", tag], capture_output=True, text=True)
+        if not j.exists(): continue
+        d = json.loads(j.read_text()); core = (d.get("classes") or {}).get("ls_core") or d["all"]; g = lambda x: None if x is None else x.get("ratio")
+        out[tag] = {"resid_mouth_ls_core": g(core["resid"]["mouth"]), "twitch_mouth_ls_core": g((core.get("twitch_index") or {}).get("mouth")),
+                    "shear95_lowerface_ls_core": g(core.get("shear95", {}).get("lowerface")), "sharp_mouth_ls_core": g(core.get("sharp", {}).get("mouth")),
+                    "frames_common_s": round(sum(b - a for a, b in inter) / 25, 1)}
+    cache.write_text(json.dumps(out)); return out
+
+
 def cmd_compare(a):
     nd, nl = a.new.split(":"); pd, pl = a.prev.split(":"); ids = a.ids.split(",")
     L = [f"# Regression gate: NEW `{nl}` vs PREV `{pl}`\n", f"commit {subprocess.run(['git', 'rev-parse', '--short', 'HEAD'], capture_output=True, text=True, cwd=HERE).stdout.strip()}\n",
          "| metric | " + " | ".join(f"{i} new / prev" for i in ids) + " |", "|---|" + "---|" * len(ids)]
     fails = []
     S = {i: (json.loads((pathlib.Path(nd) / f"{i}_{nl}.score.json").read_text()), json.loads((pathlib.Path(pd) / f"{i}_{pl}.score.json").read_text())) for i in ids}
+    for i in ids:   # same-frame face metrics: the gate rows read the intersection values, the own-frame values stay as info
+        sn, sp = S[i]
+        if not ((sn.get("face_v4") or {}).get("resid_mouth_ls_core") is not None and (sp.get("face_v4") or {}).get("resid_mouth_ls_core") is not None): continue
+        fs = face_same_frames(i, sn, sp, pathlib.Path(nd) / f"{i}_{nl}__vs_{pl}.same.json")
+        if "new" in fs and "prev" in fs:
+            for sc, k in ((sn, "new"), (sp, "prev")):
+                sc["face_v4_own"] = dict(sc["face_v4"]); sc["face_v4"] = {**sc["face_v4"], **fs[k]}
+    L.insert(2, "Face rows `v4 *` are computed on the SAME frames for NEW and PREV (intersection of the frames lip-synced in both); own-frame values: info rows.\n")
+    AUDIO = ("WER final mix", "audio hard cuts", "|LUFS + 16|", "true peak dBTP")   # --audio-info: merged gate on the video axes, audio rows reported only
     for rule in RULES:
+        if a.audio_info and rule[0] in AUDIO: rule = (rule[0] + " (audio, info)", rule[1], 0, 0, 0, None)
         cells = []
         for i in ids:
             vn, vp, v = verdict(rule, *S[i]); cells.append(f"{fmt(vn)} / {fmt(vp)} **{v}**" if v.startswith("FAIL") else f"{fmt(vn)} / {fmt(vp)} {v}")
@@ -165,7 +201,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter); sp = ap.add_subparsers(dest="cmd", required=True)
     s = sp.add_parser("score"); s.add_argument("--label", required=True); s.add_argument("--dir", required=True); s.add_argument("--manifest-from", default=None)
     s.add_argument("--ids", default=",".join(IDS)); s.add_argument("--force", action="store_true"); s.add_argument("--asr-from", default=None, help="DIR:LABEL whose WER to reuse (same audio)")
-    c = sp.add_parser("compare"); c.add_argument("--new", required=True); c.add_argument("--prev", required=True); c.add_argument("--out", required=True); c.add_argument("--ids", default=",".join(IDS))
+    c = sp.add_parser("compare"); c.add_argument("--new", required=True); c.add_argument("--prev", required=True); c.add_argument("--out", required=True); c.add_argument("--ids", default=",".join(IDS)); c.add_argument("--audio-info", action="store_true", help="audio rows = info (the merged gate judges video)")
     a = ap.parse_args(); return cmd_score(a) if a.cmd == "score" else cmd_compare(a)
 
 
