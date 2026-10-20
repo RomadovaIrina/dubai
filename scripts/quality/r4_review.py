@@ -24,7 +24,7 @@ def text_of(u):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--id", required=True); ap.add_argument("--prev-series", required=True); ap.add_argument("--new-series", required=True)
     ap.add_argument("--new-manifest", required=True); ap.add_argument("--prev-manifest", default=None); ap.add_argument("--out", required=True); ap.add_argument("--title", default="")
-    a = ap.parse_args()
+    ap.add_argument("--prev-metrics", default=None); ap.add_argument("--new-metrics", default=None); a = ap.parse_args()
     P, N = np.load(a.prev_series), np.load(a.new_series); hop = float(N["hop"]); nf = min(len(P["S"]), len(N["S"]))
     nm = json.loads(pathlib.Path(a.new_manifest).read_text()); pm = json.loads(pathlib.Path(a.prev_manifest).read_text()) if a.prev_manifest else None
     S = N["S"][:nf]; L = [f"# {a.id} review sheet {a.title}", "",
@@ -65,6 +65,21 @@ def main():
         t = f"{int(k * W) // 60}:{int(k * W) % 60:02d}-{int((k + 1) * W) // 60}:{int((k + 1) * W) % 60:02d}"
         L.append(f"| {t}{' **LOOK** (' + ', '.join(flags) + ')' if flags else ''} | {voice} | {'; '.join(bg)} | {pauses} | unchanged | unchanged | {'; '.join(other)} |")
     L += ["", f"{look} of {int(np.ceil(nf * hop / W))} rows marked LOOK."]
+    if a.prev_metrics and a.new_metrics:   # r4 v2: the 5 pauses that changed most (matched by time +-1 s; class = where it falls in the English text)
+        pr = json.loads(pathlib.Path(a.prev_metrics).read_text()).get("pause_rows") or []; nr = json.loads(pathlib.Path(a.new_metrics).read_text()).get("pause_rows") or []
+        used, ch = set(), []
+        for p_ in pr:
+            j = min((k for k in range(len(nr)) if k not in used and abs(nr[k]["t"] - p_["t"]) <= 1.0), key=lambda k: abs(nr[k]["t"] - p_["t"]), default=None)
+            if j is None: ch.append((p_["gap_s"], p_["t"], f"REMOVED {p_['gap_s']:.2f} s pause ({p_['class']}) ...{p_['before']} | {p_['after']}..."))
+            else:
+                used.add(j); q = nr[j]
+                ch.append((abs(q["gap_s"] - p_["gap_s"]), q["t"], f"{p_['gap_s']:.2f} -> {q['gap_s']:.2f} s ({p_['class']} -> {q['class']}) ...{q['before']} | {q['after']}..."))
+        for k, q in enumerate(nr):
+            if k not in used: ch.append((q["gap_s"], q["t"], f"NEW {q['gap_s']:.2f} s pause ({q['class']}) ...{q['before']} | {q['after']}..."))
+        L += ["", "## The 5 pauses that changed most (PREVIOUS -> NEW; INSIDE = inside an English phrase)", "", "| time | change |", "|---|---|"]
+        L += [f"| {int(t) // 60}:{t % 60:04.1f} | {d} |" for _, t, d in sorted(ch, key=lambda x: -x[0])[:5]]
+        pi = sum(1 for r in pr if r["class"] == "INSIDE"); ni = sum(1 for r in nr if r["class"] == "INSIDE")
+        L += ["", f"Pauses inside an English phrase: {pi} -> {ni}."]
     pathlib.Path(a.out).write_text("\n".join(L) + "\n"); print(a.out, look)
 
 

@@ -128,7 +128,7 @@ def score(mix_p, src_p, sep: pathlib.Path, run: pathlib.Path | None = None, mani
         if mp.exists():
             r["joins"] = {k: v for k, v in rj.analyse(mp).items() if k not in ("rows", "manifest")}
             import r4_pause_logic as pl   # r4 v2: pauses inside an English phrase (Whisper words + script punctuation)
-            r["pause_logic"] = {k: v for k, v in pl.analyse(run, json.loads(mp.read_text())).items() if k != "rows"}
+            pl_ = pl.analyse(run, json.loads(mp.read_text())); r["pause_logic"] = {k: v for k, v in pl_.items() if k != "rows"}; r["pause_rows"] = pl_["rows"]
             import r4_unit_continuity as uc
             r["units"] = {k: v for k, v in uc.analyse(mp).items() if k != "rows"}
     if do_wer and manifest:

@@ -17,7 +17,7 @@ for id in 01 02 03 04 05; do
   printf "file '%s'\nfile '%s'\n" $A/$NEW/_prev_$id.mp4 $A/$NEW/${id}_over-original.mp4 > $A/$NEW/_ab_$id.txt
   ffmpeg -loglevel error -y -f concat -safe 0 -i $A/$NEW/_ab_$id.txt -c copy $OB/${id}_r4_audio_${VER}_AB_prev-then-new.mp4; rm -f $A/$NEW/_prev_$id.mp4 $A/$NEW/_ab_$id.txt
   python scripts/quality/r4_review.py --id $id --prev-series $A/$PREV/$id.series.npz --new-series $A/$NEW/$id.series.npz --new-manifest $A/$NEW/$id/${id}_r4b.manifest.json \
-    --prev-manifest $A/$PRUN/$id/${id}_r4b.manifest.json --out $OB/${id}_review.md --title "(r4_audio_$VER, commit $C; PREVIOUS = $(basename $pm), NEW = ${id}_r4_audio_${VER}_over-original.mp4)" > /dev/null
+    --prev-manifest $A/$PRUN/$id/${id}_r4b.manifest.json --prev-metrics $A/$PRUN/$id.metrics.json --new-metrics $A/$NEW/$id.metrics.json --out $OB/${id}_review.md --title "(r4_audio_$VER, commit $C; PREVIOUS = $(basename $pm), NEW = ${id}_r4_audio_${VER}_over-original.mp4)" > /dev/null
   mkdir -p $H/$id; cp $A/$NEW/$id/dubbed_16k.wav $A/$NEW/$id/final_mix_aac.m4a $A/$NEW/$id/${id}_r4b.manifest.json $H/$id/
 done
 cp $REG $OB/; cp $REG $H/; echo "r4_audio_$VER commit $C tag $NEW; per video: dubbed_16k.wav (dub voice), final_mix_aac.m4a (final mix), <id>_r4b.manifest.json" > $H/README.txt
