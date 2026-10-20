@@ -126,6 +126,9 @@ def main() -> int:
     ap.add_argument("--sanitize-sigma", type=float, default=2.0)
     ap.add_argument("--sanitize-colour", choices=["on", "off"], default="off", help="r3 D, texture mode: inside the flagged frame's lip box also match the "
                     "LUMINANCE mean / contrast (gain 0.7-1.6) of its low frequencies to the neighbours' interpolation (pale lips); per-channel matching over-saturated")
+    ap.add_argument("--chin-clip", type=float, default=0.0, help="r4 V (user: 'second / third chin moves like a wave'): with --face-clip, the clip polygon's "
+                    "jaw edge moves up toward the lower lip by this fraction (0 = the jawline, 1 = the lip), so the regenerated chin returns to the source "
+                    "pixels above the jawline; the edge_px feather stays inside the polygon")
     ap.add_argument("--face-clip", choices=["on", "off"], default="off", help="r3 D (user: 'the background beside the cheek wobbles'): the paste weight "
                     "is capped by the distance INSIDE the source frame's MediaPipe face contour (0 on / outside it, 1 at --edge-px inside): nothing outside "
                     "the face is pasted / warped / colour-matched")
@@ -481,7 +484,11 @@ def main() -> int:
         if a.face_clip == "on":
             lm_fc = lm_at(k, mu)
             if lm_fc is not None and np.isfinite(lm_fc[tms.FACE_OVAL]).all():
-                fm = np.zeros(aw.shape[:2], np.uint8); cv2.fillPoly(fm, [np.round(lm_fc[tms.FACE_OVAL, :2] - [xa, ya]).astype(np.int32)], 1)
+                ov = lm_fc[tms.FACE_OVAL, :2].copy()
+                if a.chin_clip > 0 and np.isfinite(lm_fc[17]).all():   # jaw points (below the mouth corners) pulled toward the lower lip
+                    lip_y = lm_fc[17, 1]; low = ov[:, 1] > lip_y
+                    ov[low] = ov[low] + a.chin_clip * (np.stack([ov[low, 0], np.full(low.sum(), lip_y)], 1) - ov[low]) * [0.35, 1.0]
+                fm = np.zeros(aw.shape[:2], np.uint8); cv2.fillPoly(fm, [np.round(ov - [xa, ya]).astype(np.int32)], 1)
                 aw = np.minimum(aw, np.clip(cv2.distanceTransform(fm, cv2.DIST_L2, 3) / max(a.edge_px, 1.0), 0, 1).astype(aw.dtype))
         o = S[k].copy(); o[ya:yb, xa:xb] = np.clip(sk + aw[..., None] * (Lk - sk), 0, 255).round().astype(np.uint8)
         if w >= 1:   # spec 8.4 on small faces: the feather ramp must not reach the lips (source lips and the layer's own lips)

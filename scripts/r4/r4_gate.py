@@ -17,8 +17,10 @@ IDS = ["01", "02", "03", "04", "05"]
 RULES = [
     ("frames == source", lambda r: r["spec_9_4"]["frames_equal"], "eq", 0, 0, None),
     ("duration Δ s", lambda r: abs(r["spec_9_4"]["duration_delta_s"]), +1, 0.02, 0, 0.15),
-    ("SyncNet dub-only", lambda r: r["syncnet"]["dub_only"][0], -1, 0.15, 0, None),
-    ("SyncNet mix", lambda r: r["syncnet"]["mix"][0], -1, 0.15, 0, None),
+    ("SyncNet on dub-speech seconds (conf at 0)", lambda r: r["sync_speech"]["conf_speech"], -1, 0.3, 0, None),
+    ("SyncNet dub-only (whole video, info)", lambda r: r["syncnet"]["dub_only"][0], 0, 0, 0, None),
+    ("SyncNet mix (whole video, info)", lambda r: r["syncnet"]["mix"][0], 0, 0, 0, None),
+    ("dub silent while face tracked, s (audio info)", lambda r: r["sync_speech"]["dub_silent_face_s"], 0, 0, 0, None),
     ("|AV offset| dub", lambda r: abs(r["syncnet"]["dub_only"][1]), +1, 1, 0, None),
     ("v4 resid mouth", lambda r: r["face_v4"]["resid_mouth_ls_core"], +1, 0, 0.05, None),
     ("v4 twitch mouth", lambda r: r["face_v4"]["twitch_mouth_ls_core"], +1, 0, 0.05, None),
@@ -57,11 +59,31 @@ def audio_md5(p):
     return hashlib.md5(r.stdout).hexdigest()
 
 
+def add_sync(r, id_, label, d, video, man):
+    am = pathlib.Path(man["dubbed_track"]["aac"]).parent
+    if "sync_speech" not in r and ((man.get("lipsync") or {}).get("by_action") or {}).get("LATENT_SYNC"):
+        # per-second SyncNet (sync_perframe.py) on a 25 fps rendition with the dub voice: the mean conf at offset 0 over seconds where the dub
+        # speaks. A whole-video score also counts dub-silent seconds (a correctly closed mouth scores ~0), so it moves with the audio placement.
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            v25 = pathlib.Path(td) / "v25.mp4"; sp = d / f"{id_}_{label}.sync_perframe.json"
+            subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(video), "-vf", "fps=25", "-c:v", "libx264", "-crf", "12", "-an", str(v25)], check=True)
+            subprocess.run([PY, str(Q / "sync_perframe.py"), "--video", str(v25), "--audio", str(am / "dubbed_16k.wav"), "--out", str(sp)], capture_output=True, text=True)
+        ps = json.loads(sp.read_text())["per_second"] if sp.exists() else []
+        sp_ = [x["conf_at0"] for x in ps if x.get("conf_at0") is not None and (x.get("dub_act") or 0) >= 0.5]
+        r["sync_speech"] = {"conf_speech": round(float(np.mean(sp_)), 3) if sp_ else None, "speech_seconds": len(sp_),
+                            "dub_silent_face_s": sum(1 for x in ps if x.get("conf_at0") is not None and (x.get("dub_act") or 0) < 0.1)}
+    return r
+
+
 def score_one(id_, label, d, man_p, force=False, asr_from=None):
     d = pathlib.Path(d); video = d / f"{id_}_{label}.mp4"; sj = d / f"{id_}_{label}.score.json"
     if sj.exists() and not force:
         r = json.loads(sj.read_text())
-        if "r4face" in r: return r
+        if "r4face" in r:
+            if "sync_speech" not in r:
+                add_sync(r, id_, label, d, video, json.loads(pathlib.Path(man_p).read_text())); sj.write_text(json.dumps(r, indent=1))
+            return r
     src = next(pathlib.Path("/workspace/dub/inputs/test_videos_raw").glob(f"{id_}.*")); lm = TIMING / f"{id_}_source_lm_F.npz"
     subprocess.run([PY, str(Q / "r3_scorecard.py"), "score", "--id", id_, "--label", label, "--video", str(video), "--manifest", str(man_p), "--out", str(d)] + (["--skip-wer"] if asr_from else []),
                    capture_output=True, text=True)
@@ -84,6 +106,7 @@ def score_one(id_, label, d, man_p, force=False, asr_from=None):
     if dub.exists():
         ev = hc.events(dub); cuts = [(e1, e2) for e1, e2 in zip(ev, ev[1:]) if e1[0] == "OFF" and e2[0] == "ON" and e2[1] - e1[1] <= 0.6]
         r["audio_gate"] = {"audio_hard_cuts": {"cuts_stop_restart": len(cuts), "cut_times": [round(c[0][1], 3) for c in cuts]}}
+    add_sync(r, id_, label, d, video, man)
     r["manifest_r4v"] = man.get("r4v") or {"s_per_video_min": {"total": None}, "peak_vram_mib": None}
     r["audio_md5"] = audio_md5(video)
     sj.write_text(json.dumps(r, indent=1)); return r

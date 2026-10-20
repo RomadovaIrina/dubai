@@ -9,7 +9,9 @@ VM=$RD/work_${id}_$RT/${id}_${RT}_25fps.manifest.json; [ -f $VM ] || { echo "no 
 FULL="--register sim_ring --ring-region upper --edge-px 12 --colour-match upper --seam-lf 4 --sharpen-auto 0.95 --skin-texture source --lip-guard on --retime flow_safe --face-clip on --sanitize-layer 0.83 --sanitize-mode texture --sanitize-sigma 8 --sharpen-lips-max 0.8"
 declare -A DROP=( [no_retime]="--retime flow_safe=>--retime nearest" [no_sanitize]="--sanitize-layer 0.83 --sanitize-mode texture --sanitize-sigma 8=>" [no_sharpen]="--sharpen-auto 0.95=>|--sharpen-lips-max 0.8=>"
   [no_colour]="--colour-match upper=>" [no_skin]="--skin-texture source=>" [no_faceclip]="--face-clip on=>" [no_seamlf]="--seam-lf 4=>" [no_lipguard]="--lip-guard on=>"
-  [v1]="--seam-lf 4=>" )   # r4 video v1 = v4 minus seam-LF, the one layer neutral on every gate axis incl. mouth sharpness (lip sharpen is not: -5..-10 %)
+  [v1]="--seam-lf 4=>"   # r4 video v1 = v4 minus seam-LF, the one layer neutral on every gate axis incl. mouth sharpness (lip sharpen is not: -5..-10 %)
+  [chin3]="--seam-lf 4=>|--face-clip on=>--face-clip on --chin-clip 0.3" [chin5]="--seam-lf 4=>|--face-clip on=>--face-clip on --chin-clip 0.5"   # task 5 on v1
+  [v5colour]="--sanitize-sigma 8=>--sanitize-sigma 8 --sanitize-colour on" )   # task 4 check: v5's sanitize-colour on the v4 stack
 for arm in ${*:-no_retime no_sanitize no_sharpen no_colour no_skin no_faceclip no_seamlf no_lipguard}; do
   args=$FULL; IFS='|' read -ra subs <<< "${DROP[$arm]}"
   for s in "${subs[@]}"; do args=${args/"${s%%=>*}"/"${s#*=>}"}; done

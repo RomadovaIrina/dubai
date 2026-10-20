@@ -13,6 +13,7 @@ import numpy as np
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "pilot"))
 FACE_OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93,
              234, 127, 162, 21, 54, 103, 67, 109]
+CHIN = [17, 314, 405, 321, 375, 291, 287, 432, 434, 430, 394, 379, 378, 400, 377, 152, 148, 176, 149, 150, 169, 210, 214, 212, 57, 61, 146, 91, 181, 84]   # lower lip -> jaw
 JAW = [132, 58, 172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365, 397, 288, 361]
 NOSE_BRIDGE, NOSE_TIP, EYE_L, EYE_R = 168, 1, 33, 263
 
@@ -41,7 +42,7 @@ def main():
     lm = np.load(a.src_lm)["lm"]; T = len(lm)
     f0, f1 = (map(int, a.frames.split(":")) if a.frames else (0, T))
     cv, cs = av.open(a.video), av.open(a.src); fps = float(cs.streams.video[0].average_rate)
-    rows = []
+    rows = []; prev = None
     for k, (fo, fs) in enumerate(zip(cv.decode(video=0), cs.decode(video=0))):
         if k >= f1: break
         if k < f0 or not np.isfinite(lm[k, :, :2]).all(): rows.append(None); continue
@@ -59,6 +60,13 @@ def main():
         iod = np.linalg.norm(q[EYE_L] - q[EYE_R]); jaw = np.round(q[JAW]).astype(np.int32)
         band = np.zeros_like(face); cv2.fillPoly(band, [np.concatenate([jaw, (jaw + [0, int(0.3 * iod)])[::-1]])], 1); band &= (1 - face)
         r["below_jaw"] = float(np.abs(oc.astype(np.float32) - sc.astype(np.float32)).mean(2)[band.astype(bool)].mean()) if band.sum() > 50 else None
+        # chin flicker: frame-to-frame |change| in the chin area (below the lower lip, inside the jaw) of OUT vs the same for the SOURCE
+        # (head motion is in both; a regenerated chin that "waves" adds its own change)
+        cm = np.zeros(s.shape[:2], np.uint8); cv2.fillPoly(cm, [np.round(p[CHIN]).astype(np.int32)], 1)   # full-frame coordinates (the crop moves)
+        go, gs = cv2.cvtColor(o, cv2.COLOR_BGR2GRAY).astype(np.float32), cv2.cvtColor(s, cv2.COLOR_BGR2GRAY).astype(np.float32)
+        if prev is not None and prev[0] == k - 1 and prev[1].shape == go.shape and cm.sum() > 50:
+            b = cm.astype(bool); r["chin_dt"] = [float(np.abs(go - prev[1])[b].mean()), float(np.abs(gs - prev[2])[b].mean())]
+        prev = (k, go, gs)
         rows.append(r)
     cv.close(); cs.close()
     ok = [r for r in rows if r]; res = {"video": a.video, "src": a.src, "frames": [f0, f1], "frames_with_face": len(ok)}
@@ -70,6 +78,10 @@ def main():
                                  "frames_abs_dL_gt6": int(np.nansum(np.abs(dL) > 6)), "mean_dL": round(float(np.nanmean(dL)), 2) if np.isfinite(dL).any() else None}
     bj = np.array([r["below_jaw"] if r and r.get("below_jaw") is not None else np.nan for r in rows])
     res["below_jaw"] = {"mean": round(float(np.nanmean(bj)), 3), "p95": round(float(np.nanpercentile(bj, 95)), 3), "worst_1s": round(rolling_max(bj, w) or 0, 3)}
+    cd = np.array([r["chin_dt"] if r and r.get("chin_dt") else [np.nan, np.nan] for r in rows])
+    rat = cd[:, 0] / np.maximum(cd[:, 1], 0.3)
+    res["chin_flicker"] = {"ratio_out_over_src": round(float(np.nanmean(cd[:, 0]) / max(np.nanmean(cd[:, 1]), 1e-6)), 3) if np.isfinite(cd).any() else None,
+                           "worst_1s_ratio": round(rolling_max(rat, w) or 0, 3), "p95_frame_ratio": round(float(np.nanpercentile(rat, 95)), 3) if np.isfinite(rat).any() else None}
     res["colour_worst_1s_abs_dL"] = max(res["colour_left"]["worst_1s_abs_dL"], res["colour_right"]["worst_1s_abs_dL"])
     if not a.no_jaw_lm:
         import clean_face_stack as cfs
@@ -79,6 +91,9 @@ def main():
         res["jaw_jitter"] = {"ratio_out_over_src": round(float(ao[ok].mean() / max(as_[ok].mean(), 1e-9)), 3) if ok.any() else None,
                              "out_mean": round(float(ao[ok].mean()), 5) if ok.any() else None, "src_mean": round(float(as_[ok].mean()), 5) if ok.any() else None,
                              "worst_1s_excess": round(rolling_max(np.where(ok, ao - as_, np.nan), w) or 0, 5), "frames": int(ok.sum())}
+    per = {"below_jaw": bj, "chin_dt_out": cd[:, 0], "chin_dt_src": cd[:, 1], **{f"dL_{n}": np.array([r[n][0] if r and r.get(n) else np.nan for r in rows]) for n in ("left", "right")}}
+    if not a.no_jaw_lm: per.update(jaw_acc_out=ao, jaw_acc_src=as_)
+    np.savez_compressed(pathlib.Path(a.out).with_suffix(".perframe.npz"), **per)   # per-frame series (review sheets, LS vs pass-through checks)
     pathlib.Path(a.out).write_text(json.dumps(res, indent=1))
     print(json.dumps({k: v for k, v in res.items() if k not in ("video", "src")}))
 
