@@ -78,6 +78,25 @@ Setup on a fresh RTX 5090:
 | 01 / 02 | rendering at handover | |
 
 ## 5. Open problems, in priority order (each needs a GENERIC fix)
+
+**#0, THE BLOCKER (the user's final verdict on round 4):** "the face still twitches, and that moment simply kills it." The
+user and the reviewer Max judge the whole result by face stability. Lip-sync gains count for nothing while the lower face / face
+twitches.
+
+Treat face twitching as the single top priority of round 5, above every other item below.
+
+1. **Find every twitch automatically.** Build a whole-video "face twitch" detector:
+   - the frame-to-frame motion of the pasted region relative to the rigid head, minus the source's own motion;
+   - spikes at segment switches, window joints and retime frames;
+   - rank them by visibility.
+2. **Fix the twitches generically.** Candidates:
+   - eased crossfades at every LatentSync segment start / end and at closed-mouth ↔ lip-sync switches;
+   - no segment boundaries during fast head motion;
+   - temporal smoothing of the pasted-region pose against the rigid head;
+   - fewer and longer segments where the dub allows.
+3. **Accept only when** the twitch detector is at or below v4 on all 5 videos, AND a human check of the top-20 twitch moments
+   (a contact sheet plus 2-s clips at half speed) shows none visible.
+
 1. **Face twitch at 23–24 s in m3** (the user, most likely 04; it falls inside the pb1 dub silence 21.4–27.3 s).
    - Suspect: the closed-mouth ↔ lip-sync segment switch, or a LatentSync window joint, over a moving jaw.
    - Diagnose with per-frame slide / jaw / joint values plus a contact sheet. Fix with eased crossfades at the segment switches, and
