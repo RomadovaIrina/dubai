@@ -113,7 +113,7 @@ def spread_unit(u: dict, track: np.ndarray, sr: int, y_raw: np.ndarray, cfg: dic
             order = sorted(range(n), key=lambda i: pos_of(chosen[i])); chosen = [chosen[i] for i in order]; pauses = [pauses[i] for i in order]
         else:
             head, pauses, tail, n = allocate(L, [], cfg["ok"], head_cap)
-        if os.environ.get("DUB_SPREAD_OVERLAP", "0") == "1" and L > 1.0 and cfg.get("src_ivs"):
+        if os.environ.get("DUB_SPREAD_OVERLAP", "0") == "1" and k == 0 and L > 1.0 and cfg.get("src_ivs"):   # first part only: never lengthens a pause inside the sentence
             # r4 (05 u5 / u6: a short English phrase on a window of 3-4 merged source bursts sat at the window start, the speaker talked 5 s with no dub):
             # slide the whole part inside its window to the offset with the most overlap with the source speech (keep the plan when the gain < 0.5 s)
             d_ = len(seg) / sr + sum(pauses)
