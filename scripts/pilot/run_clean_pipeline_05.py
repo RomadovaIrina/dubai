@@ -865,6 +865,8 @@ def main() -> int:
     ap.add_argument("--bg-residue-duck-db", type=float, default=-15.0, help="--background on: bed attenuation where the BED itself sounds like speech (Silero on the "
                     "separated stem) while the source speaks and the dub is silent = voice leak of the separator (r2 2026-10-17: Spleeter 02 39.0-39.4 s); 0 = off")
     ap.add_argument("--bg-offset-db", type=float, default=0.0, help="--background on: bed level relative to the original voice/background balance (dB)")
+    ap.add_argument("--ne-guard", choices=["on", "off"], default="off", help="r4: named-entity guard (ne_guard.py): Qwen lists proper nouns, TTS gets phonetic respellings on retry, "
+                    "the TTS QA's Whisper decode must contain every entity (04: 'Sochi' was said 'Soky')")
     ap.add_argument("--stop-after", choices=["none", "audio"], default="none", help="audio = stop after the dubbed track (audio-only candidate: manifest + dubbed_24k/16k.wav, no LatentSync)")
     ap.add_argument("--min-ls-frames", type=int, default=25, help="VALID_FACE runs shorter than this are passed through")
     ap.add_argument("--max-verify-depth", type=int, default=3)
@@ -942,7 +944,7 @@ def main() -> int:
     man: dict = {"task": "0.5-runner", "input": str(src), "output": str(out), "target_lang": tgt, "alignment_mode": a.alignment,
                  "tts_mode": a.tts_mode if a.alignment == "burst" else "slot", "segmentation_mode": a.segmentation if a.alignment == "burst" else "whisper",
                  "codeformer": "DISABLED (not invoked)" if a.codeformer == "off" else {"mode": a.codeformer, "w": a.codeformer_w, "batch": a.codeformer_batch, "landmarks": a.codeformer_landmarks, "precision": a.codeformer_precision},
-                 "work_dir": str(work), "config": {"seed": a.seed, "max_unit_s": a.max_unit_s, "threads": THREADS, "qwen_quant": a.qwen_quant, "qwen_gpu_layers": a.qwen_gpu_layers, "qwen_tts_gpu_layers": a.qwen_tts_gpu_layers, "qa_whisper_compute": a.qa_whisper_compute, "tts_text_norm": a.tts_text_norm},
+                 "work_dir": str(work), "config": {"seed": a.seed, "max_unit_s": a.max_unit_s, "threads": THREADS, "qwen_quant": a.qwen_quant, "qwen_gpu_layers": a.qwen_gpu_layers, "qwen_tts_gpu_layers": a.qwen_tts_gpu_layers, "qa_whisper_compute": a.qa_whisper_compute, "tts_text_norm": a.tts_text_norm, "ne_guard": a.ne_guard},
                  "audio_policy": {**audio_policy, "resolved": {k: getattr(a, k) for k in AUDIO_POLICIES["r2"]}}}
     try:
         source = probe(src); man["source"] = source; duration = source["duration_s"]
@@ -1031,6 +1033,8 @@ def main() -> int:
         else:
             man["translation"] = tr
 
+        if a.ne_guard == "on" and llm is not None:   # r4: proper nouns kept transliterated + respelled for TTS + verified by the TTS QA (ne_guard.py)
+            import ne_guard; tn = time.perf_counter(); man["ne_guard"] = ne_guard.extract(llm, units, log=lambda m_: print(m_, flush=True)); times["ne_extract"] = round(time.perf_counter() - tn, 2)
         refs = speaker_references(units, turns, wav16, work)
         if a.alignment == "burst":
             from tts_burst import run_tts_burst

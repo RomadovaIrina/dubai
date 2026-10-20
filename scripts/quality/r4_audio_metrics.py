@@ -75,7 +75,7 @@ def pause_stats(g):
             "gt_1s": int((g > 1.0).sum()), "total_s": round(float(g.sum()), 2)}
 
 
-def score(mix_p, src_p, sep: pathlib.Path, run: pathlib.Path | None = None, manifest=None, do_wer=False):
+def score(mix_p, src_p, sep: pathlib.Path, run: pathlib.Path | None = None, manifest=None, do_wer=False, ne_from=None):
     bg_p, voc_p = separation(src_p, sep)
     mix = load(mix_p); src = load(src_p); bg = sf.read(str(bg_p), dtype="float32")[0].mean(1); voc = sf.read(str(voc_p), dtype="float32")[0].mean(1)
     n = min(len(mix), len(bg)); m_, b_ = frames(mix[:n]), frames(bg[:n]); nf = len(m_)
@@ -121,16 +121,23 @@ def score(mix_p, src_p, sep: pathlib.Path, run: pathlib.Path | None = None, mani
     if run is not None and (run / "dubbed_24k.wav").exists():
         import r3_hardcut as hc
         ev = hc.events(run / "dubbed_24k.wav"); r["hard_cuts"] = sum(1 for e1, e2 in zip(ev, ev[1:]) if e1[0] == "OFF" and e2[0] == "ON" and e2[1] - e1[1] <= 0.6)
+    if run is not None and manifest and (run / "dubbed_24k.wav").exists():
+        import r3_joins as rj
+        mp = run / pathlib.Path(manifest).name
+        if mp.exists(): r["joins"] = {k: v for k, v in rj.analyse(mp).items() if k not in ("rows", "manifest")}
     if do_wer and manifest:
         r["asr"] = {k: v for k, v in sc.back_transcribe(mix_p, json.loads(pathlib.Path(manifest).read_text())).items()}
+        import ne_guard   # named entities misheard in the final mix (entity list of this run, or --ne-from another run of the same source)
+        units = json.loads(pathlib.Path(ne_from or manifest).read_text())["units"]
+        if any(u.get("ne") for u in units): r["ne"] = ne_guard.misheard(units, r["asr"]["hyp"])
     return r
 
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--mix", required=True); ap.add_argument("--src", required=True); ap.add_argument("--sep", required=True)
     ap.add_argument("--run", default=None); ap.add_argument("--manifest", default=None); ap.add_argument("--wer", action="store_true"); ap.add_argument("--json", default=None)
-    a = ap.parse_args()
-    r = score(a.mix, a.src, pathlib.Path(a.sep), pathlib.Path(a.run) if a.run else None, a.manifest, a.wer)
+    ap.add_argument("--ne-from", default=None, help="take the named-entity list from this manifest (score an older version on the same entities)"); a = ap.parse_args()
+    r = score(a.mix, a.src, pathlib.Path(a.sep), pathlib.Path(a.run) if a.run else None, a.manifest, a.wer, a.ne_from)
     s = json.dumps(r, indent=1, ensure_ascii=False)
     if a.json: pathlib.Path(a.json).write_text(s)
     print(json.dumps({k: v for k, v in r.items() if not isinstance(v, dict) or k == "loudness"}))

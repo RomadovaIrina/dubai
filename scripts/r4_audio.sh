@@ -10,7 +10,7 @@ set -u
 DUB_ROOT=/workspace/dub/dubai; export DUB_ROOT; . $DUB_ROOT/scripts/env.sh >/dev/null; cd $DUB_ROOT
 TAG=$1; shift; IDS=${*:-01 02 03 04 05}; A=/workspace/dub/artifacts/r4a; O=$A/$TAG; mkdir -p $O/runs $O/mix_src $A/sep
 export PYTHONPATH=third_party/llama_cuda${PYTHONPATH:+:$PYTHONPATH} PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True DUB_CUT_SNAP=1 DUB_EQPOWER_FADE=1
-echo "r4_audio $TAG commit $(git rev-parse --short HEAD) AUDIO_EXTRA='${AUDIO_EXTRA:-}' REMIX_ARGS='${REMIX_ARGS:-}' REUSE='${REUSE:-}'" > $O/README.txt
+echo "r4_audio $TAG commit $(git rev-parse --short HEAD) AUDIO_EXTRA='${AUDIO_EXTRA:-}' REMIX_ARGS='${REMIX_ARGS:-}' REUSE='${REUSE:-}'" >> $O/README.txt
 one() {
   id=$1; src=$(ls /workspace/dub/inputs/test_videos_raw/$id.* | head -1); s=$(date +%s)
   if [ -n "${REUSE:-}" ]; then W=$(readlink -f $A/$REUSE/mix_src/$id); else
@@ -27,6 +27,6 @@ one() {
   echo "== $id $TAG $(( $(date +%s) - s )) s"
 }
 nvidia-smi --query-gpu=timestamp,memory.used,utilization.gpu --format=csv,noheader,nounits -lms 1000 > $O/nvsmi.csv 2>/dev/null & NV=$!
-i=0; for id in $IDS; do one $id & i=$((i+1)); [ $((i % ${PAR:-2})) -eq 0 ] && wait; done; wait
+P=(); for id in $IDS; do one $id & P+=($!); [ ${#P[@]} -ge ${PAR:-2} ] && { wait ${P[0]}; P=("${P[@]:1}"); }; done; for p in "${P[@]}"; do wait $p; done
 kill $NV 2>/dev/null; echo "peak VRAM MiB $(awk -F, '{if($2>m)m=$2}END{print m}' $O/nvsmi.csv)" | tee -a $O/README.txt
 echo R4_AUDIO_DONE $TAG

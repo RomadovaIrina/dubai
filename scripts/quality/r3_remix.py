@@ -8,6 +8,7 @@ Writes <out>/<id>/ = symlinks of the run's work dir + new final_mix_44k.wav / fi
     python scripts/quality/r3_remix.py --src /workspace/dub/artifacts/r3d/audio-r4 --out /workspace/dub/artifacts/r3d/audio-r4b 03 04 ..."""
 from __future__ import annotations
 import argparse, json, pathlib, re, subprocess, sys
+import soundfile as sf
 HERE = pathlib.Path(__file__).resolve().parent; sys.path.insert(0, str(HERE.parent / "pilot")); sys.path.insert(0, str(HERE))
 
 
@@ -27,13 +28,18 @@ def static_loudness(wav: pathlib.Path, aac: pathlib.Path, target: float, tp: flo
         gain += target - m["lufs"]
     tmp.replace(wav)
     subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(wav), "-c:a", "aac", "-b:a", "192k", str(aac)], check=True)
+    for _ in range(3):   # r4: the AAC encode can overshoot the limiter (v4repro 03: -0.9 dBTP) -> lower the whole wav by the overshoot and re-encode
+        tp_aac = measure(aac)["true_peak_dbtp"]
+        if tp_aac is None or tp_aac <= -1.1: break
+        y, sr = sf.read(str(wav), dtype="float32"); sf.write(str(wav), y * 10 ** ((-1.2 - tp_aac) / 20), sr, subtype="FLOAT"); hist.append({"aac_tp_trim_db": round(-1.2 - tp_aac, 2)})
+        subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(wav), "-c:a", "aac", "-b:a", "192k", str(aac)], check=True)
     return {"mode": "static gain + oversampled limiter", "target_lufs": target, "limiter_dbfs": tp, "before": before, "passes": hist, "after_wav": measure(wav), "after_aac": measure(aac)}
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(); ap.add_argument("--src", required=True); ap.add_argument("--out", required=True); ap.add_argument("ids", nargs="+")
     ap.add_argument("--duck-db", type=float, default=-2.0); ap.add_argument("--attack", type=float, default=0.4); ap.add_argument("--release", type=float, default=0.8)
-    ap.add_argument("--residue-db", type=float, default=-6.0); ap.add_argument("--target", type=float, default=-16.0); ap.add_argument("--tp", type=float, default=-1.5)
+    ap.add_argument("--residue-db", type=float, default=-6.0); ap.add_argument("--src-duck-db", type=float, default=0.0); ap.add_argument("--target", type=float, default=-16.0); ap.add_argument("--tp", type=float, default=-1.5)
     a = ap.parse_args()
     import background_bed as bb, run_clean_pipeline_05 as rp, r3_bedswing  # noqa: F401
     for id_ in a.ids:
@@ -45,7 +51,7 @@ def main() -> int:
         sep = {"bg": str(W / "bg_44k.wav"), "vocals": str(W / "vocals_44k.wav")}
         speech = [(s["start"], s["end"]) for s in man["speech_intervals"]]; dub_speech = [(s["start"], s["end"]) for s in rp.run_vad(W / "dubbed_16k.wav")]
         mix = bb.mix_background(sep, W / "dubbed_24k.wav", speech, dub_speech, man["source"]["duration_s"], O, duck_db=a.duck_db, attack_s=a.attack,
-                                release_s=a.release, residue_duck_db=a.residue_db)
+                                release_s=a.release, residue_duck_db=a.residue_db, src_duck_db=a.src_duck_db)
         loud = static_loudness(O / "final_mix_44k.wav", O / "final_mix_aac.m4a", a.target, a.tp)
         man["background"] = {**man.get("background", {}), "mix": mix, "loudness": loud, "remix": "r3 D r3_remix.py (bed duck -2 dB / 0.4 / 0.8 s, residue -6 dB, static loudness)"}
         man["dubbed_track"] = {**man["dubbed_track"], "aac": str(O / "final_mix_aac.m4a")}

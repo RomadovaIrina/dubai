@@ -22,6 +22,7 @@ sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent / "quality"))
 from e1_burst_align import SR16, burst_fit_ratios, ff, vad_intervals  # noqa: E402
 from pilot_common import dev, empty_cache, tts_dtypes  # noqa: E402
 import os                                                                    # noqa: E402
+import ne_guard                                                           # noqa: E402
 from tts_text import script_defects, speakable                               # noqa: E402
 
 
@@ -673,19 +674,26 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
         text = _spk(text)   # r3: Chatterbox + QA hear / judge the speakable form; Qwen and its number checks keep the written one
         base = seed + 100 * u["id"] + 100003 * salt
         ladder = [(0, 0.8)] + ([(1, 0.8), (2, qa_cfg.get("low_temp", 0.6))][: qa_cfg.get("retries", 2)] if qa is not None else [])
+        ents = [e for e in (u.get("ne") or []) if re.search(r"\b" + re.escape(e["english"]) + r"\b", text, re.I)] if qa is not None else []
+        if ents: ladder = ladder + [(3, 0.8)]   # r4 NE guard: attempt 1 = written form, then the respellings in turn
         attempts, best = [], None
         for ai, (soff, temp) in enumerate(ladder):
             s = base + 7919 * soff; torch.manual_seed(s); tg = time.perf_counter()
+            say = ne_guard.apply(text, ents, ai - 1) if ents else text
             with torch.autocast(dev(), dtype=dtype, enabled=dtype != torch.float32):
-                wav = m.generate(text, language_id=tgt_lang, temperature=temp)
+                wav = m.generate(say, language_id=tgt_lang, temperature=temp)
             wav = wav.detach().float().cpu()
             if not torch.isfinite(wav).all() or wav.abs().max() < 1e-4:
                 raise RuntimeError(f"non-finite or silent TTS for unit {u['id']}")
             stats["gen_seconds"] += time.perf_counter() - tg; stats["attempts"] += 1
             rec = {"attempt": ai + 1, "seed": s, "temperature": temp, "seconds": round(wav.shape[-1] / m.sr, 3)}
             if qa is not None:
-                tq = time.perf_counter(); r = qa.assess(text, wav[0].numpy(), m.sr, tgt_lang); stats["qa_seconds"] += time.perf_counter() - tq
+                tq = time.perf_counter(); r = qa.assess(say, wav[0].numpy(), m.sr, tgt_lang); stats["qa_seconds"] += time.perf_counter() - tq
                 rec.update({"score": r["score"], "bad": r["bad"], "reasons": r["reasons"], "ctc": r["ctc"][:160], "whisper": r["whisper"][:160], "lost_words": r.get("lost_words", [])})
+                if ents:
+                    miss = [e["english"] for e in ents if not ne_guard.heard(e["english"], r["whisper"])]
+                    rec.update({"said": say, "ne_misheard": miss})
+                    if miss: rec["bad"] = True; rec["reasons"] = list(rec["reasons"]) + [f"named entity not heard: {', '.join(miss)}"]; stats["ne_misheard_attempts"] = stats.get("ne_misheard_attempts", 0) + 1
             attempts.append(rec)
             if best is None or (qa is not None and (rec["bad"], rec["score"]) < (best[1]["bad"], best[1]["score"])):
                 best = (wav, rec)
