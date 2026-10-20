@@ -10,7 +10,10 @@ set -u
 DUB_ROOT=/workspace/dub/dubai; . $DUB_ROOT/scripts/env.sh >/dev/null; cd $DUB_ROOT
 B=/workspace/dub/artifacts/r4m; AU=/workspace/dub/artifacts/r4a; TAG=${TAG:-m3}; AT=${TAG}a; mkdir -p $B/$TAG
 AUDIO_FLAGS="--ne-guard on --pause-boundary-only on"; REMIX="--src-duck-db -6"
-GATE="--gate-sources dub --gate-merge-gap-s 0.4"
+# user rule (05 m2 WATCH): while the face is visible the mouth follows the DUB: lip-sync on dub speech AND on dub-silent stretches where the source
+# talks (silent conditioning -> closed mouth, never the talking source mouth), small faces too; segments split inside dub silences >= 1 s (re-anchor,
+# the m2g seam benefit), 400-frame cap cuts at the quietest dub frame
+GATE="--gate-sources both --face-min-h 60 --ls-split-dub-silence 1.0 --cap-align on"
 V1="--register sim_ring --ring-region upper --edge-px 12 --colour-match upper --sharpen-auto 0.95 --skin-texture source --lip-guard on --retime flow_safe --face-clip on --sanitize-layer 0.83 --sanitize-mode texture --sanitize-sigma 8 --sharpen-lips-max 0.8"
 for id in ${*:-04 03 05 01 02}; do
   t0=$(date +%s)

@@ -91,6 +91,9 @@ def main() -> int:
     ap.add_argument("--dubbed-dir", default=None, help="dir with dubbed_16k.wav + dubbed_aac.m4a (+ aligned_u*.wav); default = baseline work dir")
     ap.add_argument("--out", default=str(Q / "candidates")); ap.add_argument("--work-out", default=None)
     ap.add_argument("--manifest", default=None, help="manifest of a finished E2E run (overrides --run-dir / --work-dir)")
+    ap.add_argument("--ls-split-dub-silence", type=float, default=0.0, help="r4 merged: split LatentSync segments inside dub silences >= this many s (0.12 s after the dub "
+                    "stops / before it restarts); 0 = off")
+    ap.add_argument("--cap-align", choices=["on", "off"], default="off", help="r4 merged: --max-ls-frames cuts at the quietest dub frame of their last 6 s")
     ap.add_argument("--gate-sources", choices=["both", "dub"], default="both", help="r4 merged: speech gate from source + dub speech (default) or the dub speech only")
     ap.add_argument("--mux", choices=["dub", "final_mix"], default="final_mix", help="audio muxed into the candidate mp4: final_mix (dub + background bed, when present) or the dub voice only")
     ap.add_argument("--speech-gate", choices=["on", "off"], default="on"); ap.add_argument("--gate-margin-s", type=float, default=0.24); ap.add_argument("--gate-merge-gap-s", type=float, default=0.6)
@@ -173,7 +176,16 @@ def main() -> int:
                 if r: u["alignment"] = {**u["alignment"], "mode": f"e1_{rep['mode']}", "atempo": r["max_atempo"], "e1_placements": r["placements"], "file": r["file"]}
             man["e1_summary"] = rep["summary"]
         man["dubbed_track"] = {**man["dubbed_track"], "wav16k": str(dub16), "aac": str(dub_aac), "wav24k": str(dd / "dubbed_24k.wav")}
-    speech = man["speech_intervals"]; gate = None
+    speech = man["speech_intervals"]; gate = None; split_frames = None; cut_energy = None
+    if a.ls_split_dub_silence > 0 or a.cap_align == "on":   # r4 merged: dub-silence split points / dub energy per master frame
+        import numpy as np, soundfile as _sf
+        _y, _sr = _sf.read(str(dub16), dtype="float32"); _y = _y if _y.ndim == 1 else _y.mean(1); _h = int(_sr / faa.FPS)
+        cut_energy = np.sqrt((_y[: len(_y) // _h * _h].reshape(-1, _h) ** 2).mean(1))
+        if a.ls_split_dub_silence > 0:
+            _ds = rp.run_vad(dub16); split_frames = []
+            for (s0, e0), (s1, e1) in zip([(v["start"], v["end"]) for v in _ds], [(v["start"], v["end"]) for v in _ds][1:]):
+                if s1 - e0 >= a.ls_split_dub_silence: split_frames += [int(round((e0 + 0.12) * faa.FPS)), int(round((s1 - 0.12) * faa.FPS))]
+            man["ls_split"] = {"min_silence_s": a.ls_split_dub_silence, "split_frames": split_frames}
     if a.speech_gate == "on":
         with rp.timed(times, "speech_gate"):
             dub_speech = rp.run_vad(dub16)
@@ -252,7 +264,7 @@ def main() -> int:
         from codeformer_accel import CodeFormerAccel
         with rp.timed(times, "codeformer_load"): cf_runner = CodeFormerAccel(fidelity_weight=a.codeformer_w, batch_size=a.codeformer_batch, empty_cache_per_face=a.codeformer_empty_cache, landmark_source=a.codeformer_landmarks, autocast=a.codeformer_precision == "fp16", parse_autocast=a.codeformer_precision != "fp32")
     rep = faa.process_video(src, work, dub16, dub_aac, out, router=router, runner=runner, min_ls_frames=a.min_ls_frames, max_verify_depth=a.max_verify_depth, codeformer=a.codeformer, times=times,
-                            log=lambda m: print(m, flush=True), speech_gate=gate, crossfade_frames=a.crossfade_frames, router_stride=a.router_stride, in_memory=True, cf_runner=cf_runner, lm_smooth=a.ls_landmark_smooth, prep=prep, max_ls_frames=a.max_ls_frames)
+                            log=lambda m: print(m, flush=True), speech_gate=gate, crossfade_frames=a.crossfade_frames, router_stride=a.router_stride, in_memory=True, cf_runner=cf_runner, lm_smooth=a.ls_landmark_smooth, prep=prep, max_ls_frames=a.max_ls_frames, split_frames=split_frames, cut_energy=cut_energy)
     if rec_cls is not None and rec_cls.rec:
         import numpy as np
         fr_, bx_ = [], []

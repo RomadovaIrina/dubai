@@ -290,7 +290,8 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
                   router, runner: AccelRunner | None, min_ls_frames: int = 25, max_verify_depth: int = 3, codeformer: str = "off",
                   times: dict | None = None, log=print, speech_gate: list | None = None,
                   crossfade_frames: int = GATE_DEFAULTS["crossfade_frames"], router_stride: int = 1, in_memory: bool = True,
-                  cf_runner=None, lm_smooth: int = 0, prep: "VideoPrep | None" = None, max_ls_frames: int = 0) -> dict:
+                  cf_runner=None, lm_smooth: int = 0, prep: "VideoPrep | None" = None, max_ls_frames: int = 0,
+                  split_frames: list | None = None, cut_energy=None) -> dict:
     """Face-aware LatentSync on `src` driven by `audio16k` (the dubbed track); `audio_mux` (AAC of the same track) is muxed.
     `speech_gate`: list of (start_s, end_s) intervals (build_speech_gate); frames outside them are passed through.
     `codeformer`: "off" (frozen baseline) or "optimized" (`cf_runner` = codeformer_accel.CodeFormerAccel, applied to the
@@ -327,6 +328,16 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
             apply_gate_to_rows(frames, gate)
     times["face_classify"] = round(time.perf_counter() - t0, 3)
     segs = fa.segment(frames, min_ls_frames)
+    if split_frames:   # r4 merged: LATENT_SYNC segments split inside long DUB silences (each generation starts / ends with a closed mouth, re-anchors)
+        out_ = []
+        for s in segs:
+            cuts = [c for c in sorted(split_frames) if s["action"] == "LATENT_SYNC" and s["start_frame"] + min_ls_frames <= c <= s["end_frame"] - min_ls_frames]
+            a_ = s["start_frame"]
+            for c in cuts + [s["end_frame"]]:
+                if c - a_ < min_ls_frames and c != s["end_frame"]: continue
+                out_.append({**s, "start_frame": a_, "end_frame": c, "frames": c - a_, "start_s": round(a_ / FPS, 3), "end_s": round(c / FPS, 3), **({"split_from": [s["start_frame"], s["end_frame"]]} if cuts else {})}); a_ = c
+        for k, s in enumerate(out_): s["index"] = k
+        segs = out_
     if max_ls_frames and max_ls_frames > 0:   # round 3 (D's VRAM audit): LATENT_SYNC segments cut into pieces of <= max_ls_frames (a multiple of 16 -> the cut is a window seam)
         cap = max(16, (int(max_ls_frames) // 16) * 16); out_ = []
         for s in segs:
@@ -334,6 +345,9 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
             a_ = s["start_frame"]
             while a_ < s["end_frame"]:
                 b_ = min(s["end_frame"], a_ + cap)
+                if cut_energy is not None and b_ < s["end_frame"]:   # r4 merged: the cap cut at the quietest dub frame of its last 6 s (05 m2: a cut at 35.36 s
+                    lo_ = max(a_ + min_ls_frames, b_ - int(6 * FPS))   # inside speech, crossfade 0 -> flash candidates 34-35 s)
+                    if b_ > lo_: b_ = lo_ + int(np.argmin(np.asarray(cut_energy)[lo_:b_]))
                 if 0 < s["end_frame"] - b_ < min_ls_frames: b_ = s["end_frame"] if s["end_frame"] - a_ <= cap + min_ls_frames else b_ - min_ls_frames
                 out_.append({**s, "start_frame": a_, "end_frame": b_, "frames": b_ - a_, "start_s": round(a_ / FPS, 3), "end_s": round(b_ / FPS, 3), "capped_from": [s["start_frame"], s["end_frame"]]})
                 a_ = b_
