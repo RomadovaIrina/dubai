@@ -132,6 +132,10 @@ def main() -> int:
     ap.add_argument("--mouth-region", type=float, default=0.0, help="r4 V task 5 (chin / jaw 'wave': the regenerated chin stubble / skin swims "
                     "frame to frame, 03 68 s): the paste weight is capped to the source lips + the layer's own lips (its jaw drop) dilated by this "
                     "many inter-ocular distances; the edge_px feather stays inside, everything farther (chin, jaw, neck) is the source")
+    ap.add_argument("--deflash", type=float, default=0.0, help="r4 V task 6 (guidance 2.5 doubles the single-frame lip spikes, which the texture "
+                    "sanitizer keeps: it keeps the frame's own shape): raw LatentSync frames whose lip SHAPE (inner opening, mouth width, lower-lip y, in "
+                    "IOD, layer landmarks) jumps away from both neighbours by > this x the local spread (median |2nd difference| over +-8 frames) while "
+                    "the neighbours agree are replaced (runs <= 2) by the flow interpolation of the neighbours, shape included; 0 = off, e.g. 4")
     ap.add_argument("--chin-warp", choices=["on", "off"], default="off", help="r4 V task 5 (with --mouth-region): outside the generated mouth region the "
                     "SOURCE chin is shifted down by the layer's jaw drop (layer lower lip y - source lower lip y, clipped to -0.2..0.5 IOD), full from the lips "
                     "to the chin tip, fading to 0 over 0.25 IOD below the jawline and toward the jaw corners: the dub's jaw motion with the source's skin "
@@ -247,6 +251,38 @@ def main() -> int:
             m_ = e_
         times["sanitize_layer"] = {"seconds": round(time.perf_counter() - t0, 2), "flagged": int(bad.sum()), "replaced": nsan, "frames": san_frames[:200]}
         print(f"  sanitize-layer: {int(bad.sum())} flagged, {nsan} replaced", flush=True)
+    if a.deflash > 0 and mp_ls is not None:   # r4 V: single-frame lip-shape spikes of the generator, replaced shape and all
+        t0 = time.perf_counter(); F = np.full((nm, 3), np.nan)
+        for m_ in range(nm):
+            q = mp_ls[m_]
+            if wm[m_] <= 0 or not np.isfinite(q[[13, 14, 61, 291, 17, 33, 263]]).all(): continue
+            iod_ = float(np.linalg.norm(q[33, :2] - q[263, :2]))
+            if iod_ < 1: continue
+            F[m_] = [(q[14, 1] - q[13, 1]) / iod_, (q[291, 0] - q[61, 0]) / iod_, (q[17, 1] - 0.5 * (q[33, 1] + q[263, 1])) / iod_]
+        d2 = np.full((nm, 3), np.nan); d2[1:-1] = F[1:-1] - 0.5 * (F[:-2] + F[2:]); nbd = np.full((nm, 3), np.nan); nbd[1:-1] = np.abs(F[:-2] - F[2:])
+        bad = np.zeros(nm, bool)
+        for m_ in range(1, nm - 1):
+            if not np.isfinite(d2[m_]).all(): continue
+            win = d2[max(1, m_ - 8):min(nm - 1, m_ + 9)]; win = win[np.isfinite(win).all(1)]
+            if len(win) < 6: continue
+            sp = np.maximum(np.median(np.abs(win), 0), [0.004, 0.004, 0.004])
+            z = np.abs(d2[m_]) / sp
+            if z.max() > a.deflash and (np.abs(d2[m_]) > 1.5 * nbd[m_]).any(): bad[m_] = True
+        nde = 0; de_frames = []; m_ = 0
+        while m_ < nm:
+            if not bad[m_]: m_ += 1; continue
+            e_ = m_
+            while e_ < nm and bad[e_]: e_ += 1
+            lo_, hi_ = m_ - 1, e_
+            if e_ - m_ <= 2 and lo_ >= 0 and hi_ < nm and wm[lo_] > 0 and wm[hi_] > 0:
+                y_, z_ = L[lo_].astype(np.float32), L[hi_].astype(np.float32)
+                for i_ in range(m_, e_):
+                    L[i_] = np.clip(interp_safe(fl0, y_, z_, (i_ - lo_) / (hi_ - lo_), a.safe_d, a.safe_cons, a.safe_scale)[0], 0, 255).astype(np.uint8)
+                    mp_ls[i_] = 0.5 * (mp_ls[lo_] + mp_ls[hi_]) if hi_ - lo_ == 2 else mp_ls[lo_] + (mp_ls[hi_] - mp_ls[lo_]) * (i_ - lo_) / (hi_ - lo_)
+                    nde += 1; de_frames.append(int(i_))
+            m_ = e_
+        times["deflash"] = {"seconds": round(time.perf_counter() - t0, 2), "flagged": int(bad.sum()), "replaced": nde, "frames": de_frames[:300]}
+        print(f"  deflash: {int(bad.sum())} flagged, {nde} replaced", flush=True)
     nseam = 0
     if a.seam_lf > 0:   # r3: window-joint appearance steps -> ramps
         t0 = time.perf_counter(); N = a.seam_lf; dis_s = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
