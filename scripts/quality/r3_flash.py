@@ -65,10 +65,50 @@ def spikes(x):
     return s
 
 
+def layer_mode(a) -> int:
+    """output frame k vs the layer frames it was composited from; flag = residual >= layer_ratio x the median of frames 2..6 away and >= layer_floor."""
+    import av, cv2
+    lm = np.load(a.lm)["lm"]; O = decode(a.video); L = decode(a.layer)
+    c = av.open(a.video); s = c.streams.video[0]; tk = np.array([float(f.pts * s.time_base) for f in c.decode(s)]); c.close()
+    dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM); res = np.full(len(O), np.nan); ghost = np.full(len(O), np.nan)
+    def warp_res(g, h):
+        F = dis.calc(g, h, None); hh, ww = F.shape[:2]; gx, gy = np.meshgrid(np.arange(ww, dtype=np.float32), np.arange(hh, dtype=np.float32))
+        return float(np.abs(cv2.remap(h, gx + F[..., 0], gy + F[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE).astype(np.float32) - g).mean())
+    for k in range(len(O)):
+        if k >= len(lm) or not np.isfinite(lm[k][LIPS]).all(): continue
+        m = tk[k] * 25; m0 = int(m); m1 = min(m0 + 1, len(L) - 1)
+        if m0 >= len(L): continue
+        q = lm[k][LIPS, :2]; w = q[:, 0].max() - q[:, 0].min(); x0, y0 = np.maximum((q.min(0) - 0.25 * w).astype(int), 0); x1, y1 = (q.max(0) + 0.25 * w).astype(int)
+        g = cv2.cvtColor(O[k][y0:y1, x0:x1], cv2.COLOR_BGR2GRAY)
+        if g.size < 64: continue
+        if np.abs(O[k][y0:y1, x0:x1].astype(np.int16) - L[m0][y0:y1, x0:x1].astype(np.int16)).mean() < 0.01: continue   # untouched (source) frame
+        g0, g1 = (cv2.cvtColor(L[mm][y0:y1, x0:x1], cv2.COLOR_BGR2GRAY) for mm in (m0, m1)); al = m - m0
+        single = min(warp_res(g, g0), warp_res(g, g1)); dissolve = float(np.abs((1 - al) * g0.astype(np.float32) + al * g1.astype(np.float32) - g).mean())
+        res[k] = single; ghost[k] = single / max(dissolve, 0.5) if 0.15 < al < 0.85 and np.abs(g0.astype(np.float32) - g1).mean() > 3 else np.nan
+    flags = []
+    for k in range(len(O)):
+        nb = [res[j] for j in range(max(0, k - 6), min(len(O), k + 7)) if abs(j - k) >= 2 and np.isfinite(res[j])]
+        if np.isfinite(res[k]) and len(nb) >= 4 and res[k] >= a.layer_ratio * np.median(nb) and res[k] >= a.layer_floor: flags.append(k)
+    gh = [k for k in range(len(O)) if np.isfinite(ghost[k]) and ghost[k] >= a.ghost_ratio]
+    r = {"video": a.video, "mode": "layer", "frames": len(O), "measured": int(np.isfinite(res).sum()), "flash_frames": len(flags), "ghost_frames": len(gh),
+         "ghost_list": [{"frame": k, "t": round(float(tk[k]), 3), "ratio": round(float(ghost[k]), 2)} for k in gh],
+         "flash_list": [{"frame": k, "t": round(float(tk[k]), 3), "resid": round(float(res[k]), 2)} for k in flags[:200]],
+         "resid_median": round(float(np.nanmedian(res)), 3) if np.isfinite(res).any() else None}
+    print(json.dumps({k: r[k] for k in ("video", "mode", "measured", "flash_frames", "ghost_frames", "resid_median")} | {"first": r["flash_list"][:15], "ghosts": [e["frame"] for e in r["ghost_list"][:30]]}))
+    if a.out: pathlib.Path(a.out).write_text(json.dumps(r, indent=1))
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(); ap.add_argument("--video", required=True); ap.add_argument("--src", required=True); ap.add_argument("--lm", default=None)
     ap.add_argument("--out", default=None); ap.add_argument("--frames", default=None); ap.add_argument("--thr", type=float, default=6.0)
+    ap.add_argument("--layer", default=None, help="r3 D: the 25 fps raw LatentSync layer the composite was built from -> layer-referenced mode: a frame flashes when "
+                    "the output mouth matches NEITHER of its two layer frames (m0, m1 at the audio clock; DIS-aligned) and that residual spikes vs frames "
+                    "2..6 away. Articulation the dub really has (mouth opens where the source does not) is in the layer, so it is not flagged")
+    ap.add_argument("--ghost-ratio", type=float, default=0.0); ap.add_argument("--layer-ratio", type=float, default=2.0); ap.add_argument("--layer-floor", type=float, default=4.0)
     a = ap.parse_args()
+    if a.layer:
+        return layer_mode(a)
     import clean_face_stack as cfs
     lmp = a.lm or str(cfs.run_mediapipe(pathlib.Path(a.src), pathlib.Path("/workspace/dub/artifacts/r3d/timing") / (pathlib.Path(a.src).stem + "_src_mediapipe.npz")))
     lm = np.load(lmp)["lm"]
