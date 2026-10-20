@@ -124,6 +124,14 @@ def score(mix_p, src_p, sep: pathlib.Path, run: pathlib.Path | None = None, mani
         runs_ = [(a_ * H / SR, b_ * H / SR) for a_, b_ in zip(on_, off_) if (b_ - a_) * H / SR >= 1.0]
         r["dub_silent_face_visible_s"] = round(sum(b_ - a_ for a_, b_ in runs_), 2); r["dub_silent_face_visible_runs"] = [[round(a_, 2), round(b_, 2)] for a_, b_ in runs_]
     except Exception as e: r["face_visible_error"] = str(e)[:200]
+    # r4 pb2: a dub gap longer than the source's own pause at the same place (pb1 04 0:33: a 7.8 s dub silence over 1.7 / 0.6 / 0.9 s source pauses)
+    d_ = np.diff(np.concatenate([[0], (~D).astype(np.int8), [0]])); exc = []
+    for a_, b_ in zip(np.flatnonzero(d_ == 1), np.flatnonzero(d_ == -1)):
+        if (b_ - a_) * H / SR < 1.0 or a_ == 0 or b_ >= nf: continue
+        s_ = ~S[a_:b_]; dd = np.diff(np.concatenate([[0], s_.astype(np.int8), [0]])); src_p = max(((y_ - x_) for x_, y_ in zip(np.flatnonzero(dd == 1), np.flatnonzero(dd == -1))), default=0) * H / SR
+        exc.append(((b_ - a_) * H / SR - src_p, a_ * H / SR, (b_ - a_) * H / SR, src_p))
+    r["gap_excess_max_s"] = round(max((e[0] for e in exc), default=0.0), 2); r["gaps_excess_gt_1s"] = sum(1 for e in exc if e[0] > 1.0)
+    r["gap_excess_top"] = [[round(t_, 2), round(g_, 2), round(sp_, 2)] for e_, t_, g_, sp_ in sorted(exc, reverse=True)[:5]]
     r["src_speaks_dub_silent_s"] = round(float((S & ~D).sum() * H / SR), 2); r["dub_speaks_src_silent_s"] = round(float((D & ~S).sum() * H / SR), 2)
     import r3_scorecard as sc
     r["loudness"] = sc.loudness(mix_p)

@@ -107,7 +107,11 @@ def spread_unit(u: dict, track: np.ndarray, sr: int, y_raw: np.ndarray, cfg: dic
             pos_of = lambda c: (c["t_raw"] - c0) / eff
             cs = [c for c in candidates(u, k, y_raw, sr, norm_fn, func_words, fixed_phrases) if c0 < c["t_raw"] < c1]
             bo = os.environ.get("DUB_PAUSE_BOUNDARY_ONLY", "0") == "1"   # r4 v2: pause length by boundary strength (punctuation 0.6 s, clause start 0.35 s)
-            for c in cs: c["cap"] = min(cfg["pause_max"], cfg["pause_total_max"] - c["tts_gap"] / eff) if not bo else ((0.6 if c["quality"] == 3 else 0.35) - c["tts_gap"] / eff)
+            # r4 pb2: a part over several merged source bursts (pb1 04 u3: 6.1 s of dub on a 13 s window, then 7.8 s of silence) may pause at its English
+            # boundaries as long as the longest source pause inside the window (<= 2 s)
+            sg = [b_ - a_ for (_, a_), (b_, _) in zip(cfg.get("src_ivs", []), cfg.get("src_ivs", [])[1:]) if a_ >= t0 - 0.05 and b_ <= limit + 0.05]
+            big = min(2.0, max(sg)) if bo and len(sg) >= 1 else 0.0
+            for c in cs: c["cap"] = min(cfg["pause_max"], cfg["pause_total_max"] - c["tts_gap"] / eff) if not bo else (max(big, 0.6 if c["quality"] == 3 else 0.35) - c["tts_gap"] / eff)
             cs = [c for c in pick(cs, len(seg) / sr, pos_of, cfg["min_seg"]) if c["cap"] >= 0.05]
             head, pauses, tail, n = allocate(L, [c["cap"] for c in cs], cfg["ok"], head_cap); chosen = cs[:n]
             order = sorted(range(n), key=lambda i: pos_of(chosen[i])); chosen = [chosen[i] for i in order]; pauses = [pauses[i] for i in order]
