@@ -691,14 +691,17 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                 tq = time.perf_counter(); r = qa.assess(say, wav[0].numpy(), m.sr, tgt_lang); stats["qa_seconds"] += time.perf_counter() - tq
                 rec.update({"score": r["score"], "bad": r["bad"], "reasons": r["reasons"], "ctc": r["ctc"][:160], "whisper": r["whisper"][:160], "lost_words": r.get("lost_words", [])})
                 if ents:
-                    miss = [e["english"] for e in ents if not ne_guard.heard(e["english"], r["whisper"])]
+                    miss = [e["english"] for e in ents if not ne_guard.heard(e, r["whisper"])]
                     rec.update({"said": say, "ne_misheard": miss})
                     if miss: rec["bad"] = True; rec["reasons"] = list(rec["reasons"]) + [f"named entity not heard: {', '.join(miss)}"]; stats["ne_misheard_attempts"] = stats.get("ne_misheard_attempts", 0) + 1
             attempts.append(rec)
+            if ai == 0: first = (wav, rec)
             if best is None or (qa is not None and (rec["bad"], rec["score"]) < (best[1]["bad"], best[1]["score"])):
                 best = (wav, rec)
             if qa is None or not rec["bad"]:
                 break
+        if ents and all(a_.get("ne_misheard") for a_ in attempts) and best[1]["attempt"] != 1:
+            best = first   # r4 NE guard: no respelling was heard either -> keep the written-form attempt (v4 behaviour), never a respelled one on CER alone
         wav, rec = best
         return wav[0].numpy().astype(np.float32), {"text": text, "attempts": attempts, "qa_bad_final": bool(rec.get("bad", False)), "qa_score": rec.get("score"), "seed_used": rec["seed"],
                                                    "temperature_used": rec["temperature"], "seconds": round(len(wav[0]) / m.sr, 3)}

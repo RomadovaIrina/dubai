@@ -37,28 +37,51 @@ def _norm(t: str) -> list[str]:
     return re.findall(r"[a-z]+", t.lower())
 
 
+_TOK = None
+
+
+def rare(word: str) -> bool:
+    """a RARE proper noun = its capitalised form is >= 2 Whisper BPE tokens (Sochi, Krasnodar); frequent names / nationalities / common words are
+    one token (Moscow, Dubai, Finnish, Russian, sauna, class) and Chatterbox / Whisper handle them -> not guarded."""
+    global _TOK
+    if _TOK is None:
+        import pathlib
+        from tokenizers import Tokenizer
+        _TOK = Tokenizer.from_file(str(pathlib.Path(__file__).resolve().parents[2] / "models" / "whisper-large-v3" / "tokenizer.json"))
+    return len(_TOK.encode(" " + word[:1].upper() + word[1:].lower(), add_special_tokens=False).ids) >= 2
+
+
+def guard_words(entity: str, translation: str) -> list[str]:
+    """the entity words that are checked / respelled: capitalised in the translation, >= 3 letters, rare."""
+    return [w for w in re.findall(r"[A-Za-z]+", entity) if len(w) >= 3 and re.search(r"\b" + w[:1].upper() + re.escape(w[1:]) + r"\b", translation) and rare(w)]
+
+
 def _words(entity: str) -> list[str]:
     return [w for w in _norm(entity) if len(w) >= 3]
 
 
-def heard(entity: str, transcript: str, thr: float = 0.8) -> bool:
-    """every entity word (>= 3 letters) has a transcript word (or two joined words) with similarity >= thr."""
+def heard(entity, transcript: str, thr: float = 0.8) -> bool:
+    """every guarded word (entity dict: its 'guard' words; str: all words >= 3 letters) has a transcript word (or two joined words) with similarity >= thr."""
+    ws = [w.lower() for w in entity["guard"]] if isinstance(entity, dict) else _words(entity)
     hw = _norm(transcript); cand = hw + [a + b for a, b in zip(hw, hw[1:])]
-    return all(any(difflib.SequenceMatcher(None, w, h).ratio() >= thr for h in cand) for w in _words(entity))
+    return all(any(difflib.SequenceMatcher(None, w, h).ratio() >= thr for h in cand) for w in ws)
 
 
 def respellings(ent: dict) -> list[str]:
-    """alternative spellings for TTS, in retry order (deduplicated, never the written form itself)."""
-    src = [w for w in re.findall(r"[Ѐ-ӿ]+", ent.get("source", ""))]
-    eng = ent["english"].split(); out = []
-    if src and len(src) == len(eng):   # word-for-word: respell only the words that are transliterations (keep "City", "Park" ...)
-        for hy in (False, True):
-            ws = [ru_phonetic(s, hy) if difflib.SequenceMatcher(None, ru_phonetic(s).lower(), e.lower()).ratio() >= 0.5 else e for s, e in zip(src, eng)]
-            out.append(" ".join(ws))
-    elif src:
-        out += [" ".join(ru_phonetic(s) for s in src), " ".join(ru_phonetic(s, True) for s in src)]
+    """alternative spellings for TTS, in retry order (deduplicated, never the written form itself): every guarded word is replaced by the phonetic
+    respelling of the source word that sounds closest to it (any word order: «город сочи» -> "Sochi city"), plain then hyphenated, then Qwen's."""
+    src = re.findall(r"[\u0400-\u04ff]+", ent.get("source", "")); eng = ent["english"]; out = []
+    best = {}
+    for g in ent.get("guard") or []:
+        sc = [(difflib.SequenceMatcher(None, ru_phonetic(w).lower(), g.lower()).ratio(), w) for w in src]
+        if sc and max(sc)[0] >= 0.4:
+            w = max(sc)[1]
+            while len(w) > 3 and w[-1] in _VOW | {"й"} and g[-1].lower() not in "aeiouy": w = w[:-1]   # case ending (Краснодаре -> Краснодар)
+            best[g] = w
+    for hy in (False, True):
+        if best: out.append(re.sub(r"[A-Za-z]+", lambda m: ru_phonetic(best[m.group(0)], hy) if m.group(0) in best else m.group(0), eng))
     if ent.get("respell"): out.append(ent["respell"])
-    seen, res = {ent["english"].lower()}, []
+    seen, res = {eng.lower()}, []
     for r in out:
         if r and r.lower() not in seen: seen.add(r.lower()); res.append(r)
     return res
@@ -79,7 +102,8 @@ def extract(llm, units: list, log=print) -> dict:
     prompt = ("Below are numbered sentences of a Russian video with their English dubbing translation. List every proper noun (names of people, cities, "
               "districts, streets, companies, brands, products, buildings) that occurs in a sentence. For each give: the sentence number, the Russian words "
               "exactly as written in RU, the English form exactly as written in EN, and a simple English pronunciation respelling of the English form "
-              "(how an English reader should say it, e.g. Sochi -> SOH-chee). Do NOT list common nouns. Answer with a JSON list of objects with the keys "
+              "(how an English reader should say it, e.g. Sochi -> SOH-chee). Do NOT list common nouns, nationalities, languages, or generic objects, rooms, "
+              "services or foods, even when they are foreign words. Answer with a JSON list of objects with the keys "
               '"unit", "source", "english", "respell"; [] if there are none.\n\n' + "\n".join(rows))
     stats = {"candidates": 0, "kept": 0, "entities": []}
     try:
@@ -103,6 +127,6 @@ def extract(llm, units: list, log=print) -> dict:
 
 def misheard(units: list, transcript: str) -> dict:
     """gate metric: entities of the script whose English form is not heard in the back-transcription of the final mix."""
-    ents = [(u["id"], e["english"]) for u in units for e in (u.get("ne") or [])]
-    miss = [f"u{i}:{e}" for i, e in ents if not heard(e, transcript)]
+    ents = [(u["id"], e) for u in units for e in (u.get("ne") or []) if e.get("guard")]
+    miss = [f"u{i}:{e['english']}" for i, e in ents if not heard(e, transcript)]
     return {"entities": len(ents), "misheard": len(miss), "list": miss}
