@@ -511,6 +511,10 @@ FIXED_PHRASES = frozenset([("moving", "forward"), ("go", "ahead"), ("right", "no
 # --phrase-cut acoustic (2026-10-12 offline sweep on the five baseline clips): cuts inside still-voiced sound 14/25 -> 4/8 (> -15 / -20 dB of the
 # speech level), timing deviation 0.132 -> 0.146 s mean, max unchanged 0.55 s; the function-word rule of "syntax" is off (it cost coverage).
 # + w_fill / w_single (cand4): parts < 40 % of their burst 9 -> 6, one-word parts 11 -> 4, timing deviation 0.151 s (cand3: "that" alone on a 0.7 s burst of 05).
+# r4 v2 (user on audio v1: "the pauses are illogical": 11 of 15 pauses on 04 fell inside an English phrase, "working | processes", "the | first"):
+# DUB_PAUSE_BOUNDARY_ONLY=1 -> the sentence is cut (a source pause reproduced) only after punctuation or before a clause word; any other source
+# pause inside the sentence is not reproduced (the bursts merge, the phrase runs through it).
+CLAUSE_START = frozenset("and but so because that which who whom whose where when while if or although though since unless until whether then".split())
 ACOUSTIC_CUT = {"w_func": 0.0, "w_voiced": 1.0, "w_punct": 0.25, "w_tight": 0.0, "w_gap": 0.5, "w_fill": 1.0, "w_single": 0.5}
 
 
@@ -534,7 +538,7 @@ def distribute_words_syntax(spans: list[dict], raw_words: list[str], bursts: lis
     acoustic rule (the syntax mode's global function-word rule moved cuts at every boundary and cost coverage).
     Returns aligned tokens per burst; 0 = merged into the next burst."""
     import functools
-    n = len(spans); M = len(bursts)
+    n = len(spans); M = len(bursts); boundary_only = os.environ.get("DUB_PAUSE_BOUNDARY_ONLY", "0") == "1"
     ends = []; acc = 0; end_raw = {}   # aligned-token index of a cut -> index of the raw word it follows
     for wi, w in enumerate(raw_words):
         t = len(norm_fn(w)); acc += t
@@ -603,6 +607,8 @@ def distribute_words_syntax(spans: list[dict], raw_words: list[str], bursts: lis
         opt = (c + w_merge + 0.3 * min(sp_j, 2.0) + mg, (None,) + rest)
         for k, pu, lw, num in ends:
             if prev < k < n:
+                if boundary_only and not (pu or nxt.get(k, "") in CLAUSE_START):   # r4 v2: a source pause is reproduced only at an English boundary
+                    continue
                 c, rest = best(j + 1, k); c += cut_cost(j, k, pu, lw, num) + part_cost(j, prev, k, pu)
                 if c < opt[0]:
                     opt = (c, (k,) + rest)

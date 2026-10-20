@@ -13,7 +13,7 @@ from the unit's aligned track, so tempo and fades are exactly those of the run; 
 modes: off | centre (head + tail only) | pauses (head + internal pauses + tail)
 """
 from __future__ import annotations
-import math, re
+import math, os, re
 import numpy as np
 
 PREPOSITIONS = frozenset("about above across after against along among around before behind below beneath beside between beyond during except inside like near "
@@ -54,7 +54,7 @@ def candidates(u: dict, k: int, y_raw: np.ndarray, sr: int, norm_fn, func_words,
         # 1 = Chatterbox itself paused after a content word AND a function word follows (a phonological-phrase boundary: "laminate | of",
         # "work | entails" no, "high-density | MDF" no -- adjective + noun / verb + object stay together)
         q = 3 if punct else 2 if nw in CLAUSE_NEXT else 1 if (gap >= 0.12 and (nw in func_words or nw in PREPOSITIONS)) else 0
-        if q == 0: continue
+        if q == 0 or (q == 1 and os.environ.get("DUB_PAUSE_BOUNDARY_ONLY", "0") == "1"): continue   # r4 v2: no pause after a content word without punctuation
         out.append({"t_raw": t, "quality": q, "word": w, "next": raw[i + 1] if i + 1 < len(raw) else "", "tts_gap": round(gap, 3), "cut_rel_db": round(rel, 1)})
     return out
 
