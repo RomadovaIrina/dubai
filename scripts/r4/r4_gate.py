@@ -22,6 +22,7 @@ RULES = [
     ("SyncNet mix (whole video, info)", lambda r: r["syncnet"]["mix"][0], 0, 0, 0, None),
     ("dub silent while face tracked, s (audio info)", lambda r: r["sync_speech"]["dub_silent_face_s"], 0, 0, 0, None),
     ("|AV offset| dub", lambda r: abs(r["syncnet"]["dub_only"][1]), +1, 1, 0, None),
+    ("mouth / dub-audio mismatch s (talking mouth + dub silent, closed mouth + dub speaks)", lambda r: r["mouth_audio"]["mouth_audio_mismatch_s"], +1, 0.5, 0, None),
     ("v4 resid mouth", lambda r: r["face_v4"]["resid_mouth_ls_core"], +1, 0, 0.05, None),
     ("v4 twitch mouth", lambda r: r["face_v4"]["twitch_mouth_ls_core"], +1, 0, 0.05, None),
     ("v4 shear95 lower face", lambda r: r["face_v4"]["shear95_lowerface_ls_core"], +1, 0, 0.05, None),
@@ -78,6 +79,12 @@ def add_sync(r, id_, label, d, video, man):
     return r
 
 
+def add_mouth_audio(r, id_, label, d, video, man):
+    """r4 (user on 05 m2): the visible mouth follows the DUB audio (r4_mouth_audio.py: talking mouth while the dub is silent + closed mouth while it speaks)."""
+    dub = pathlib.Path(man["dubbed_track"].get("wav16k") or pathlib.Path(man["dubbed_track"]["aac"]).with_name("dubbed_16k.wav"))
+    r["mouth_audio"] = run_json([PY, str(HERE / "r4_mouth_audio.py"), "--video", str(video), "--dub", str(dub), "--out", str(pathlib.Path(d) / f"{id_}_{label}.mouthaudio.json")])
+
+
 def score_one(id_, label, d, man_p, force=False, asr_from=None):
     d = pathlib.Path(d); video = d / f"{id_}_{label}.mp4"; sj = d / f"{id_}_{label}.score.json"
     if sj.exists() and not force:
@@ -85,6 +92,7 @@ def score_one(id_, label, d, man_p, force=False, asr_from=None):
         if "r4face" in r:
             if "sync_speech" not in r:
                 add_sync(r, id_, label, d, video, json.loads(pathlib.Path(man_p).read_text())); sj.write_text(json.dumps(r, indent=1))
+            if "mouth_audio" not in r: add_mouth_audio(r, id_, label, d, video, json.loads(pathlib.Path(man_p).read_text())); sj.write_text(json.dumps(r, indent=1))
             return r
     src = next(pathlib.Path("/workspace/dub/inputs/test_videos_raw").glob(f"{id_}.*")); lm = TIMING / f"{id_}_source_lm_F.npz"
     subprocess.run([PY, str(Q / "r3_scorecard.py"), "score", "--id", id_, "--label", label, "--video", str(video), "--manifest", str(man_p), "--out", str(d)] + (["--skip-wer"] if asr_from else []),
@@ -108,7 +116,7 @@ def score_one(id_, label, d, man_p, force=False, asr_from=None):
     if dub.exists():
         ev = hc.events(dub); cuts = [(e1, e2) for e1, e2 in zip(ev, ev[1:]) if e1[0] == "OFF" and e2[0] == "ON" and e2[1] - e1[1] <= 0.6]
         r["audio_gate"] = {"audio_hard_cuts": {"cuts_stop_restart": len(cuts), "cut_times": [round(c[0][1], 3) for c in cuts]}}
-    add_sync(r, id_, label, d, video, man)
+    add_sync(r, id_, label, d, video, man); add_mouth_audio(r, id_, label, d, video, man)
     r["manifest_r4v"] = man.get("r4v") or {"s_per_video_min": {"total": None}, "peak_vram_mib": None}
     r["audio_md5"] = audio_md5(video)
     sj.write_text(json.dumps(r, indent=1)); return r
