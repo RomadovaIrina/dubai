@@ -18,6 +18,7 @@ AX = [("duration - source (s)", lambda m: round(m["duration_s"] - m["source_dura
       ("pause distribution W1 vs source (s)", lambda m: m.get("pauses_w1_s"), "up", 0.1),
       ("dub pauses > 1 s (source in brackets)", lambda m: m["pauses_dub"]["gt_1s"], "up", 1),
       ("source speaks, dub silent (s)", lambda m: m.get("src_speaks_dub_silent_s"), "up", 2.0),
+      ("speaker on screen talks, dub silent, runs >= 1 s (s)", lambda m: m.get("dub_silent_face_visible_s"), "up", 1.0),
       ("dub speaks, source silent (s)", lambda m: m.get("dub_speaks_src_silent_s"), "up", 2.0),
       ("WER final mix", lambda m: (m.get("asr") or {}).get("wer_final_mix"), "up", 0.03),
       ("hard cuts (stop/restart)", lambda m: m.get("hard_cuts"), "up", 0),

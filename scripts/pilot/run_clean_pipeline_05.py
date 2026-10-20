@@ -790,6 +790,8 @@ def main() -> int:
     ap.add_argument("--alignment", choices=["slot", "burst"], default="slot", help="slot = frozen baseline aligner; burst = week-3 burst-aware translation split / TTS / placement")
     ap.add_argument("--pause-boundary-only", choices=["on", "off"], default="off", help="r4 v2: dub pauses inside a sentence only at English boundaries "
                     "(punctuation, before a clause word); other source pauses are not reproduced (DUB_PAUSE_BOUNDARY_ONLY)")
+    ap.add_argument("--spread-overlap", choices=["on", "off"], default="off", help="r4: a part much shorter than its window slides to the offset with the most "
+                    "overlap with the source speech (05 u5 / u6: 5 s of the speaker on screen with no dub) (DUB_SPREAD_OVERLAP)")
     ap.add_argument("--burst-edge-trim", type=float, default=0.0, help="r4: burst mode: drop a head / tail burst shorter than this (s) that is the continuation "
                     "of the neighbouring sentence's speech across the ASR segment boundary (0 = v4)")
     ap.add_argument("--burst-min-s", type=float, default=0.0, help="burst mode: merge source bursts shorter than this into a neighbour")
@@ -935,6 +937,7 @@ def main() -> int:
     os.environ["DUB_QA_WHISPER_COMPUTE"] = a.qa_whisper_compute
     os.environ["DUB_TTS_TEXT_NORM"] = a.tts_text_norm
     if a.pause_boundary_only == "on": os.environ["DUB_PAUSE_BOUNDARY_ONLY"] = "1"
+    if a.spread_overlap == "on": os.environ["DUB_SPREAD_OVERLAP"] = "1"
     if a.qwen_gpu_layers:
         import llama_cpp
         if not llama_cpp.llama_supports_gpu_offload():

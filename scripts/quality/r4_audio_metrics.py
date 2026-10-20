@@ -116,6 +116,14 @@ def score(mix_p, src_p, sep: pathlib.Path, run: pathlib.Path | None = None, mani
     from scipy.stats import wasserstein_distance
     r["pauses_source"], r["pauses_dub"] = pause_stats(gs), pause_stats(gd)
     r["pauses_w1_s"] = round(float(wasserstein_distance(gs, gd)), 3) if gs and gd else None
+    try:   # r4: the speaker talks ON SCREEN (MediaPipe face on the source, cached next to the stems) and the dub is silent, runs >= 1 s
+        import clean_face_stack as cfs
+        lm = np.load(cfs.run_mediapipe(pathlib.Path(src_p), sep / "source_mediapipe.npz"))["lm"]; vis = np.isfinite(lm.reshape(len(lm), -1)).all(1)
+        fps = len(vis) / (len(src) / SR); fv = vis[np.minimum((np.arange(nf) * H / SR * fps).astype(int), len(vis) - 1)]
+        X = S & ~D & fv; d_ = np.diff(np.concatenate([[0], X.astype(np.int8), [0]])); on_, off_ = np.flatnonzero(d_ == 1), np.flatnonzero(d_ == -1)
+        runs_ = [(a_ * H / SR, b_ * H / SR) for a_, b_ in zip(on_, off_) if (b_ - a_) * H / SR >= 1.0]
+        r["dub_silent_face_visible_s"] = round(sum(b_ - a_ for a_, b_ in runs_), 2); r["dub_silent_face_visible_runs"] = [[round(a_, 2), round(b_, 2)] for a_, b_ in runs_]
+    except Exception as e: r["face_visible_error"] = str(e)[:200]
     r["src_speaks_dub_silent_s"] = round(float((S & ~D).sum() * H / SR), 2); r["dub_speaks_src_silent_s"] = round(float((D & ~S).sum() * H / SR), 2)
     import r3_scorecard as sc
     r["loudness"] = sc.loudness(mix_p)
