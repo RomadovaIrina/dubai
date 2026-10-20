@@ -11,6 +11,7 @@ DUB_ROOT=/workspace/dub/dubai; export DUB_ROOT; . $DUB_ROOT/scripts/env.sh >/dev
 TAG=$1; shift; IDS=${*:-01 02 03 04 05}; A=/workspace/dub/artifacts/r4a; O=$A/$TAG; mkdir -p $O/runs $O/mix_src $A/sep
 export PYTHONPATH=third_party/llama_cuda${PYTHONPATH:+:$PYTHONPATH} PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True DUB_CUT_SNAP=1 DUB_EQPOWER_FADE=1
 echo "r4_audio $TAG commit $(git rev-parse --short HEAD) AUDIO_EXTRA='${AUDIO_EXTRA:-}' REMIX_ARGS='${REMIX_ARGS:-}' REUSE='${REUSE:-}'" >> $O/README.txt
+TH=$(( 24 / ${PAR:-2} )); [ $TH -lt 2 ] && TH=2
 one() {
   id=$1; src=$(ls /workspace/dub/inputs/test_videos_raw/$id.* | head -1); s=$(date +%s)
   if [ -n "${REUSE:-}" ]; then W=$(readlink -f $A/$REUSE/mix_src/$id); else
@@ -19,6 +20,7 @@ one() {
       ${AUDIO_EXTRA:-} --work-dir $O/runs/$id > $O/runs/${id}.log 2>&1 || { echo "FAIL audio $id"; return; }
     W=$O/runs/$id/work_$(basename ${src%.*}); cp $O/runs/${id}_r4a.manifest.json $W/${id}_r4a.manifest.json
   fi
+  export OMP_NUM_THREADS=$TH MKL_NUM_THREADS=$TH DUB_THREADS=$TH   # CPU quota ~30: remix / metrics of PAR videos must not oversubscribe (bed A/B hit load 475)
   ln -sfn $W $O/mix_src/$id; [ -d $A/sep/$id ] || { mkdir -p $A/sep/$id; cp $W/bg_44k.wav $W/vocals_44k.wav $A/sep/$id/; }
   python scripts/quality/r3_remix.py --src $O/mix_src --out $O ${REMIX_ARGS:-} $id > $O/runs/${id}.remix.log 2>&1 || { echo "FAIL remix $id"; return; }
   ffmpeg -loglevel error -y -i $src -i $O/$id/final_mix_aac.m4a -map 0:v:0 -map 1:a:0 -c copy -shortest $O/${id}_over-original.mp4
