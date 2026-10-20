@@ -20,6 +20,16 @@ v4 audio-r4 flags + `r3_remix.py` + new audio over the original video + metrics)
 - Voice continuity: v4 is already whole-sentence synthesis (F0 at part joins = the uncut take); sentence-to-sentence level / F0 jumps are at or
   below the source speaker's own variation -> no new layer, gate axis only.
 
+## v2 pauses (user on v1: "the pauses are illogical"; gate vs v1, none published)
+`r4_pause_logic.py`: silent gaps of the dub stem mapped to the script via Whisper words; INSIDE = not after punctuation / before a clause word.
+Totals over 01-05 (inside-phrase pauses / seconds | source-only s | dub-only s | pause W1 sum):
+- v1 (cand2): 58 / 60.0 s | 51.5 | 34.6 | 1.99  (04: 11 of 15 pauses inside a phrase, "working | processes" 2.1 s, "the | first" 1.0 s)
+- pb1 `--pause-boundary-only` (cut only at boundaries, else merge): 36 / 27.4 s | 71.4 | 55.5 | 4.06
+- pb2 (+ cuts may move 1.2 s onto a boundary, merge last resort, pause caps by strength): 39 / 40.7 s | 70.7 | 52.7 | 3.16
+- ord1 `--ordered-translation` (Qwen translates piece by piece in source order): 54 / 56.9 s | 73.1 | 40.8 | 3.62
+The silence is conserved: taking it out of an English phrase puts it where the source talks (Russian word order != English phrase boundaries).
+Logical pauses cost source/dub alignment (~+20 s source-only over 01-05) -> a user decision, not a gate pass.
+
 ## v2 attempts (gate vs v1; none published)
 - `pause_rhythm.py` on v1: "source w/o dub" 51.6 s on 01-05, of which short fill (English shorter than the source sentence) 28.7 s; "dub w/o source" 34.6 s
   mostly dub over source pauses inside the slot. 28 of 67 units start on a < 0.5 s sliver of the previous sentence's speech (Whisper segment starts early).
