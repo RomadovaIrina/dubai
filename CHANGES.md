@@ -20,6 +20,18 @@ v4 audio-r4 flags + `r3_remix.py` + new audio over the original video + metrics)
 - Voice continuity: v4 is already whole-sentence synthesis (F0 at part joins = the uncut take); sentence-to-sentence level / F0 jumps are at or
   below the source speaker's own variation -> no new layer, gate axis only.
 
+## 05 37-48 s "no dub while the speaker is on screen" (video agent, merged candidate)
+- Not a v1 regression: v1's dub there is bit-identical to this server's v4 rebuild (v4repro). The video agent's v4-repro has longer Qwen English
+  (another server), ours: u5 "So let there be such a video, she will definitely not be in it." 2.9 s of speech for an 8 s slot over 4 source bursts,
+  u6 2.2 s for 7.2 s; the split DP merges the bursts and the phrase sat at the slot start (over a sliver of the previous sentence).
+- Gate axis added: "speaker on screen talks, dub silent, runs >= 1 s" (MediaPipe face on the source): v1 05 = 9.2 s, 03 6.7 s, 04 1.6 s.
+- `--spread-overlap on` (a sentence's first part slides inside its window to the most overlap with the source speech, >= 0.5 s gain, >= 0.25 s kept
+  before the next sentence): ov3 vs v1: 05 on-screen silence 9.2 -> 7.3 s, source-only 13.2 -> 11.2, dub-only 10.6 -> 8.6; 04 1.6 -> 0 s; 02 -1.6 s
+  source-only / dub-only; WER unchanged. Gate: NO by the letter (02 inside-phrase count +1, 05 residue under dub +1.6 dB vs 1.5 tol, 04 pause-onset
+  level jump on few samples, 05 inside-phrase +0.9 s); the rest of 05's gap is translation length (u6), not placement.
+- `r4_pause_logic.py` attribution changed to "last word starting before the gap end" (midpoints flipped boundaries); counts moved for every
+  version (01 13 -> 22): the inside-phrase COUNT is +-1 noisy, seconds are the steadier axis.
+
 ## v2 pauses (user on v1: "the pauses are illogical"; gate vs v1, none published)
 `r4_pause_logic.py`: silent gaps of the dub stem mapped to the script via Whisper words; INSIDE = not after punctuation / before a clause word.
 Totals over 01-05 (inside-phrase pauses / seconds | source-only s | dub-only s | pause W1 sum):
