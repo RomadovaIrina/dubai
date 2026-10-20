@@ -51,22 +51,26 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--prev", required=True); ap.add_argument("--prev-run", default=None); ap.add_argument("--new", required=True)
     ap.add_argument("--ids", nargs="+", default=["01", "02", "03", "04", "05"]); ap.add_argument("--out", default=None); ap.add_argument("--title", default="")
     a = ap.parse_args(); L = [f"# Audio regression gate {a.title}: NEW `{a.new}` vs PREVIOUS `{a.prev}`" + (f" (+ stem axes from `{a.prev_run}`)" if a.prev_run else ""), ""]
+    L += ["Tolerance = the fixed per-axis tolerance + |published previous - its reproduction by the same code on this server| (mix axes), i.e. a change is",
+          "\"clearly worse\" only beyond what re-running the previous version itself produces. Stem axes (WER, cuts, joins, continuity, names) compare with the reproduction.", ""]
     rd = A / a.new / "README.txt"
     if rd.exists(): L += ["```", rd.read_text().strip(), "```", ""]
     bad = []
     for id_ in a.ids:
         n, p = load(a.new, id_), load(a.prev, id_); pr = load(a.prev_run, id_) if a.prev_run else None
         if n is None: bad.append(f"{id_}: no NEW metrics"); L += [f"## {id_}: NEW missing", ""]; continue
-        L += [f"## {id_}", "", "| axis | previous | new | verdict |", "|---|---:|---:|---|"]
+        L += [f"## {id_}", "", "| axis | previous | new | previous reproduced | tolerance | verdict |", "|---|---:|---:|---:|---:|---|"]
         for lab, f, kind, tol in AX:
             stem = lab.startswith(("WER", "hard cuts", "joins", "named", "sentence-to"))   # need the run's text / dub stem: from the reproducing run only
             pv = (get(f, pr) if pr else None) if stem else (get(f, p) if p else None)
             nv = get(f, n)
             if lab.startswith("dub pauses"):
                 lab = f"dub pauses > 1 s (source {get(lambda m: m['pauses_source']['gt_1s'], n)})"
-            v = verdict(kind, tol, pv, nv)
+            t_ = tol   # noise-aware: "clearly worse" = beyond tol + the difference between the published PREVIOUS and its own reproduction (same code)
+            if not stem and pr and p and kind == "up" and get(f, pr) is not None and pv is not None: t_ = tol + abs(get(f, pr) - pv)
+            v = verdict(kind, t_, pv, nv)
             if v in ("WORSE", "FAIL"): bad.append(f"{id_}: {lab} {pv} -> {nv}")
-            L.append(f"| {lab} | {'' if pv is None else pv} | {'' if nv is None else nv} | {v} |")
+            L.append(f"| {lab} | {'' if pv is None else pv} | {'' if nv is None else nv} | {'' if (pr is None or stem) else get(f, pr)} | {round(t_, 3) if kind == 'up' else tol} | {v} |")
         L.append("")
     L += ["## Verdict", "", "**PASS: no axis clearly worse on any video.**" if not bad else "**NO PUBLISH:**", ""] + [f"- {b}" for b in bad]
     s = "\n".join(L) + "\n"

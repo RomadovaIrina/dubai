@@ -1034,7 +1034,8 @@ def main() -> int:
             man["translation"] = tr
 
         if a.ne_guard == "on" and llm is not None:   # r4: proper nouns kept transliterated + respelled for TTS + verified by the TTS QA (ne_guard.py)
-            import ne_guard; tn = time.perf_counter(); man["ne_guard"] = ne_guard.extract(llm, units, log=lambda m_: print(m_, flush=True)); times["ne_extract"] = round(time.perf_counter() - tn, 2)
+            import ne_guard; tn = time.perf_counter(); st_ = llm.save_state()   # the extra Qwen call must not shift later greedy rewrites (ne2: 4 other units changed text via the KV cache) -> restore
+            man["ne_guard"] = ne_guard.extract(llm, units, log=lambda m_: print(m_, flush=True)); llm.load_state(st_); del st_; times["ne_extract"] = round(time.perf_counter() - tn, 2)
         refs = speaker_references(units, turns, wav16, work)
         if a.alignment == "burst":
             from tts_burst import run_tts_burst
