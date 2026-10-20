@@ -8,7 +8,7 @@ M=$1; suf=${2:-fix30}; stem=${M%.manifest.json}; out=${stem}_$suf.mp4
 # FIX30_MODE=r2 (default): B round 2 T3u on a `-r 25` master.  FIX30_MODE=r3F: B round 3 (28491dd) on an fps master (arm r3F):
 #   exact timing of THIS master (-vf fps=25), MediaPipe on every source frame, --source-lm + --colour-match upper --seam-lf 4 --sharpen-auto 1.0
 MODE=${FIX30_MODE:-r2}
-src=$(python -c "import json;print(json.load(open('$M'))['input'])"); id=$(basename ${src%.*}); TD=/workspace/dub/artifacts/r3d/timing
+src=$(python -c "import json;print(json.load(open('$M'))['input'])"); id=$(basename ${src%.*}); TD=${FIX30_TD:-/workspace/dub/artifacts/r3d/timing}; mkdir -p $TD
 WM=$(python -c "import json;print(json.load(open('$M'))['work_dir'])")/master_25fps.mp4
 if [ $MODE = r3F ] || [ $MODE = r3cand ] || [ $MODE = r3fix ]; then
   if [ $MODE = r3fix ]; then   # r3cand + confidence-checked 25->30 retime (no torn / ghosted lips on interpolated frames, flash detector r3_flash.py)
@@ -19,7 +19,8 @@ if [ $MODE = r3F ] || [ $MODE = r3cand ] || [ $MODE = r3fix ]; then
     FIX30_ARGS=${FIX30_ARGS:-"--register sim_ring --ring-region upper --edge-px 12 --colour-match upper --seam-lf 4 --sharpen-auto 1.0"}
   fi
   T=$TD/${id}_master_timing_F.json; SL=$TD/${id}_source_lm_F.npz
-  [ -f $T ] || python scripts/quality/r3_master_timing.py --src $src --master $WM --vf fps=25 --out $T
+  MF=${FIX30_MASTER_FPS:-25}; [ $MF = 25 ] || { T=$TD/${id}_master_timing_F$MF.json; SL=$TD/${id}_source_lm_F$MF.npz; FIX30_ARGS="$FIX30_ARGS --master-fps $MF"; }   # r4 V: LatentSync at the source rate
+  [ -f $T ] || python scripts/quality/r3_master_timing.py --src $src --master $WM --vf fps=$MF --out $T
   [ -f $SL ] || python scripts/quality/r3_source_lm.py --src $src --timing $T --out $SL
   FIX30_ARGS="$FIX30_ARGS --source-lm $SL"
 else

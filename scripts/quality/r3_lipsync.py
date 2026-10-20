@@ -12,7 +12,7 @@ continuous in time, so there is no snap at a window start. Same definition of th
 from __future__ import annotations
 import json, math, pathlib, tempfile
 import numpy as np
-FPS = 25; SR = 16000
+FPS = int(__import__("os").environ.get("DUB_LS_FPS", "25")); SR = 16000   # r4 V: follows a 30 fps LatentSync run (was 25)
 
 
 def load_gaps(path) -> list:
