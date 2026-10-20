@@ -75,7 +75,7 @@ def pause_stats(g):
             "gt_1s": int((g > 1.0).sum()), "total_s": round(float(g.sum()), 2)}
 
 
-def score(mix_p, src_p, sep: pathlib.Path, run: pathlib.Path | None = None, manifest=None, do_wer=False, ne_from=None):
+def score(mix_p, src_p, sep: pathlib.Path, run: pathlib.Path | None = None, manifest=None, do_wer=False, ne_from=None, series=None):
     bg_p, voc_p = separation(src_p, sep)
     mix = load(mix_p); src = load(src_p); bg = sf.read(str(bg_p), dtype="float32")[0].mean(1); voc = sf.read(str(voc_p), dtype="float32")[0].mean(1)
     n = min(len(mix), len(bg)); m_, b_ = frames(mix[:n]), frames(bg[:n]); nf = len(m_)
@@ -91,6 +91,7 @@ def score(mix_p, src_p, sep: pathlib.Path, run: pathlib.Path | None = None, mani
     S, D = mask(src_iv, nf, H / SR), mask(dub_iv, nf, H / SR)
     p_bed_sb = (frames(band(bed)) ** 2).mean(1); p_mix = (m_ ** 2).mean(1); p_src = (frames(src[: nf * H]) ** 2).mean(1)
     voice = db(p_mix[D])                                                                  # dub voice (+ ducked bed) level
+    if series: np.savez_compressed(series, S=S, D=D, p_bed_sb=p_bed_sb, p_mix=p_mix, p_src=p_src, voice=voice or 0.0, hop=H / SR)   # 50 ms frames -> r4_review.py
     r = {"dub_intervals_from": dub_src, "duration_s": round(len(mix) / SR, 3), "source_duration_s": round(len(src) / SR, 3),
          "dub_voice_db": round(voice, 2) if voice is not None else None}
     for k, sel in (("under_dub", S & D), ("exposed", S & ~D)):
@@ -124,7 +125,10 @@ def score(mix_p, src_p, sep: pathlib.Path, run: pathlib.Path | None = None, mani
     if run is not None and manifest and (run / "dubbed_24k.wav").exists():
         import r3_joins as rj
         mp = run / pathlib.Path(manifest).name
-        if mp.exists(): r["joins"] = {k: v for k, v in rj.analyse(mp).items() if k not in ("rows", "manifest")}
+        if mp.exists():
+            r["joins"] = {k: v for k, v in rj.analyse(mp).items() if k not in ("rows", "manifest")}
+            import r4_unit_continuity as uc
+            r["units"] = {k: v for k, v in uc.analyse(mp).items() if k != "rows"}
     if do_wer and manifest:
         r["asr"] = {k: v for k, v in sc.back_transcribe(mix_p, json.loads(pathlib.Path(manifest).read_text())).items()}
         import ne_guard   # named entities misheard in the final mix (entity list of this run, or --ne-from another run of the same source)
@@ -136,8 +140,8 @@ def score(mix_p, src_p, sep: pathlib.Path, run: pathlib.Path | None = None, mani
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--mix", required=True); ap.add_argument("--src", required=True); ap.add_argument("--sep", required=True)
     ap.add_argument("--run", default=None); ap.add_argument("--manifest", default=None); ap.add_argument("--wer", action="store_true"); ap.add_argument("--json", default=None)
-    ap.add_argument("--ne-from", default=None, help="take the named-entity list from this manifest (score an older version on the same entities)"); a = ap.parse_args()
-    r = score(a.mix, a.src, pathlib.Path(a.sep), pathlib.Path(a.run) if a.run else None, a.manifest, a.wer, a.ne_from)
+    ap.add_argument("--series", default=None, help="save the 50 ms frame series (npz) for r4_review.py"); ap.add_argument("--ne-from", default=None, help="take the named-entity list from this manifest (score an older version on the same entities)"); a = ap.parse_args()
+    r = score(a.mix, a.src, pathlib.Path(a.sep), pathlib.Path(a.run) if a.run else None, a.manifest, a.wer, a.ne_from, a.series)
     s = json.dumps(r, indent=1, ensure_ascii=False)
     if a.json: pathlib.Path(a.json).write_text(s)
     print(json.dumps({k: v for k, v in r.items() if not isinstance(v, dict) or k == "loudness"}))

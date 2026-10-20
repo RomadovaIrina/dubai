@@ -23,6 +23,8 @@ AX = [("duration - source (s)", lambda m: round(m["duration_s"] - m["source_dura
       ("hard cuts (stop/restart)", lambda m: m.get("hard_cuts"), "up", 0),
       ("joins F0 jump > 3 st", lambda m: (m.get("joins") or {}).get("f0_jump_gt_3st"), "up", 1),
       ("joins energy jump median (dB)", lambda m: (m.get("joins") or {}).get("e_jump_median_db"), "up", 1.0),
+      ("sentence-to-sentence level jump p90 (dB)", lambda m: (m.get("units") or {}).get("level_jump_p90_db"), "up", 1.0),
+      ("sentence-to-sentence F0 jump p90 (st)", lambda m: (m.get("units") or {}).get("f0_jump_p90_st"), "up", 1.0),
       ("named entities misheard", lambda m: (m.get("ne") or {}).get("misheard"), "up", 0)]
 
 
@@ -57,7 +59,7 @@ def main():
         if n is None: bad.append(f"{id_}: no NEW metrics"); L += [f"## {id_}: NEW missing", ""]; continue
         L += [f"## {id_}", "", "| axis | previous | new | verdict |", "|---|---:|---:|---|"]
         for lab, f, kind, tol in AX:
-            stem = lab.startswith(("WER", "hard cuts", "joins", "named"))   # need the run's text / dub stem: from the reproducing run only
+            stem = lab.startswith(("WER", "hard cuts", "joins", "named", "sentence-to"))   # need the run's text / dub stem: from the reproducing run only
             pv = (get(f, pr) if pr else None) if stem else (get(f, p) if p else None)
             nv = get(f, n)
             if lab.startswith("dub pauses"):

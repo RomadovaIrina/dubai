@@ -24,7 +24,7 @@ one() {
   ln -sfn $W $O/mix_src/$id; [ -d $A/sep/$id ] || { mkdir -p $A/sep/$id; cp $W/bg_44k.wav $W/vocals_44k.wav $A/sep/$id/; }
   python scripts/quality/r3_remix.py --src $O/mix_src --out $O ${REMIX_ARGS:-} $id > $O/runs/${id}.remix.log 2>&1 || { echo "FAIL remix $id"; return; }
   ffmpeg -loglevel error -y -i $src -i $O/$id/final_mix_aac.m4a -map 0:v:0 -map 1:a:0 -c copy -shortest $O/${id}_over-original.mp4
-  python scripts/quality/r4_audio_metrics.py --mix $O/${id}_over-original.mp4 --src $src --sep $A/sep/$id --run $O/$id --manifest $O/$id/${id}_r4b.manifest.json --wer \
+  python scripts/quality/r4_audio_metrics.py --mix $O/${id}_over-original.mp4 --src $src --sep $A/sep/$id --run $O/$id --manifest $O/$id/${id}_r4b.manifest.json --wer --series $O/${id}.series.npz \
     --json $O/${id}.metrics.json > $O/runs/${id}.metrics.log 2>&1 || echo "WARN metrics $id"
   echo "== $id $TAG $(( $(date +%s) - s )) s"
 }
