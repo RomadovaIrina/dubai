@@ -282,7 +282,17 @@ def assign_speakers(units: list[dict], turns: list[dict]) -> None:
             u["speaker"] = t["speaker"]; u["speaker_method"] = "nearest_turn_to_center"; u["speaker_overlap_s"] = 0.0
 
 
-def burst_plan(units: list[dict], segments: list[dict], speech: list[dict], duration: float, min_burst_s: float, spill: bool) -> list[dict]:
+def edge_trim(bursts: list, vad: list, slot_s: float, slot_e: float, trim_s: float) -> list:
+    """r4: drop a head (tail) burst that is only the end (start) of a source VAD interval running in from the previous (into the next) sentence and
+    is shorter than trim_s inside the slot. Whisper segment starts precede the real onset: 28 of 67 units on 01-05 began on such a < 0.5 s sliver,
+    the dub then started during the previous sentence's tail and talked through the source pause (05: dub 10.9 s over source pauses)."""
+    b = list(bursts)
+    if trim_s > 0 and len(b) >= 2 and b[0][1] - b[0][0] < trim_s and any(v0 < slot_s - 0.01 < v1 for v0, v1 in vad): b = b[1:]
+    if trim_s > 0 and len(b) >= 2 and b[-1][1] - b[-1][0] < trim_s and any(v0 < slot_e < v1 - 0.01 for v0, v1 in vad): b = b[:-1]
+    return b
+
+
+def burst_plan(units: list[dict], segments: list[dict], speech: list[dict], duration: float, min_burst_s: float, spill: bool, trim_s: float = 0.0) -> list[dict]:
     """--alignment burst, step 1: per unit the source bursts (Silero VAD clipped to the slot, short ones merged), the whisper
     words of the unit assigned to bursts by word start, bursts without words dropped. Slot rule identical to align_units()."""
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
@@ -292,7 +302,7 @@ def burst_plan(units: list[dict], segments: list[dict], speech: list[dict], dura
     for i, u in enumerate(units):
         slot_s = u["start"]; slot_e = min(u["end"], duration, units[i + 1]["start"] - 0.02 if i + 1 < len(units) else duration); slot_e = max(slot_e, slot_s + 0.2)
         next_start = units[i + 1]["start"] if i + 1 < len(units) else duration
-        bursts = merge_short_bursts(bursts_in_slot(vad, slot_s, slot_e), min_burst_s)
+        bursts = merge_short_bursts(edge_trim(bursts_in_slot(vad, slot_s, slot_e), vad, slot_s, slot_e, trim_s), min_burst_s)
         words = sorted((w for sg in segments for w in sg["words"] if w["start"] >= u["start"] - 0.011 and w["end"] <= u["end"] + 0.011 and re.findall(r"[\w']+", w["word"])), key=lambda w: (w["start"], w["end"]))
         groups = assign_words(words, bursts); keep = [(b, g) for b, g in zip(bursts, groups) if g] or [((slot_s, slot_e), words)]
         plans.append({"slot": (slot_s, slot_e), "next_start": next_start, "bursts": [b for b, _ in keep], "groups": [" ".join(w["word"].strip() for w in g) for _, g in keep],
@@ -778,6 +788,8 @@ def main() -> int:
     ap.add_argument("--work-dir", default=str(DEFAULT_WORK), help="runtime media root (work_<stem>/ inside it is recreated per run)")
     ap.add_argument("--max-unit-s", type=float, default=20.0, help="split speech units longer than this at the widest word gap")
     ap.add_argument("--alignment", choices=["slot", "burst"], default="slot", help="slot = frozen baseline aligner; burst = week-3 burst-aware translation split / TTS / placement")
+    ap.add_argument("--burst-edge-trim", type=float, default=0.0, help="r4: burst mode: drop a head / tail burst shorter than this (s) that is the continuation "
+                    "of the neighbouring sentence's speech across the ASR segment boundary (0 = v4)")
     ap.add_argument("--burst-min-s", type=float, default=0.0, help="burst mode: merge source bursts shorter than this into a neighbour")
     ap.add_argument("--burst-spill", choices=["on", "off"], default="on", help="burst mode: last chunk may run into the pause before the next unit (hard cap before any cut)")
     ap.add_argument("--atempo-cap", type=float, default=1.15, help="burst mode: preferred max speed-up of a part (intelligibility degrades above ~1.15-1.2, first_res review)")
@@ -1007,7 +1019,7 @@ def main() -> int:
 
         plans = None
         if a.alignment == "burst":
-            plans = burst_plan(units, segments, speech, duration, a.burst_min_s, a.burst_spill == "on")
+            plans = burst_plan(units, segments, speech, duration, a.burst_min_s, a.burst_spill == "on", a.burst_edge_trim)
             print(f"  [burst] {sum(len(p['bursts']) for p in plans)} bursts with words in {len(units)} units, {sum(p['bursts_without_words'] for p in plans)} bursts without words", flush=True)
         burst_opts = None
         if a.alignment == "burst":
