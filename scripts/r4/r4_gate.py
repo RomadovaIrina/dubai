@@ -56,15 +56,17 @@ def audio_md5(p):
     return hashlib.md5(r.stdout).hexdigest()
 
 
-def score_one(id_, label, d, man_p, force=False):
+def score_one(id_, label, d, man_p, force=False, asr_from=None):
     d = pathlib.Path(d); video = d / f"{id_}_{label}.mp4"; sj = d / f"{id_}_{label}.score.json"
     if sj.exists() and not force:
         r = json.loads(sj.read_text())
         if "r4face" in r: return r
     src = next(pathlib.Path("/workspace/dub/inputs/test_videos_raw").glob(f"{id_}.*")); lm = TIMING / f"{id_}_source_lm_F.npz"
-    subprocess.run([PY, str(Q / "r3_scorecard.py"), "score", "--id", id_, "--label", label, "--video", str(video), "--manifest", str(man_p), "--out", str(d)],
+    subprocess.run([PY, str(Q / "r3_scorecard.py"), "score", "--id", id_, "--label", label, "--video", str(video), "--manifest", str(man_p), "--out", str(d)] + (["--skip-wer"] if asr_from else []),
                    capture_output=True, text=True)
     r = json.loads(sj.read_text()); man = json.loads(pathlib.Path(man_p).read_text())
+    if asr_from:   # composite-only arm: the muxed audio is byte-identical to that set's (checked by md5 below), so its WER is reused
+        ref = json.loads((pathlib.Path(asr_from.split(":")[0]) / f"{id_}_{asr_from.split(':')[1]}.score.json").read_text()); r["asr"] = {**ref["asr"], "reused_from": asr_from}
     fl = d / f"{id_}_{label}.flash.json"
     subprocess.run([PY, str(Q / "r3_flash.py"), "--video", str(video), "--src", str(src), "--lm", str(lm), "--out", str(fl)], capture_output=True, text=True)
     full = json.loads(fl.read_text()) if fl.exists() else {"flash_list": []}
@@ -91,7 +93,7 @@ def cmd_score(a):
     for id_ in ids:
         own = pathlib.Path(a.dir) / f"{id_}_{a.label}.manifest.json"
         man = own if own.exists() else pathlib.Path(mf[0]) / f"{id_}_{mf[1]}.manifest.json"
-        r = score_one(id_, a.label, a.dir, man, a.force)
+        r = score_one(id_, a.label, a.dir, man, a.force, a.asr_from)
         print(id_, a.label, "sync", (r.get("syncnet") or {}).get("dub_only"), "flash", r.get("flash_strong"), "colour", r["r4face"].get("colour_worst_1s_abs_dL"),
               "jaw", (r["r4face"].get("jaw_jitter") or {}).get("ratio_out_over_src"), flush=True)
 
@@ -133,7 +135,7 @@ def cmd_compare(a):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter); sp = ap.add_subparsers(dest="cmd", required=True)
     s = sp.add_parser("score"); s.add_argument("--label", required=True); s.add_argument("--dir", required=True); s.add_argument("--manifest-from", default=None)
-    s.add_argument("--ids", default=",".join(IDS)); s.add_argument("--force", action="store_true")
+    s.add_argument("--ids", default=",".join(IDS)); s.add_argument("--force", action="store_true"); s.add_argument("--asr-from", default=None, help="DIR:LABEL whose WER to reuse (same audio)")
     c = sp.add_parser("compare"); c.add_argument("--new", required=True); c.add_argument("--prev", required=True); c.add_argument("--out", required=True); c.add_argument("--ids", default=",".join(IDS))
     a = ap.parse_args(); return cmd_score(a) if a.cmd == "score" else cmd_compare(a)
 
