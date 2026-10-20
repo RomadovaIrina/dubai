@@ -8,7 +8,7 @@ DUB_ROOT=/workspace/dub/dubai; . $DUB_ROOT/scripts/env.sh >/dev/null; cd $DUB_RO
 KIND=$1; N=$2; NEW=$3; PREV=$4; ND=${3%%:*}; NL=${3#*:}; PD=${4%%:*}; PL=${4#*:}; shift 4; IDS=${*:-01 02 03 04 05}
 OB=/workspace/dub/outbox; REF=/workspace/dub/reference/v4; LM=/workspace/dub/artifacts/r3d/timing; F=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf
 V=${VNAME:-r4_${KIND}_v$N}; C=$(git rev-parse --short HEAD); REG=$OB/${V}_regression.md
-python scripts/r4/r4_gate.py compare --new $NEW --prev $PREV --ids $(echo $IDS | tr ' ' ',') --out $REG > /dev/null 2>&1; rc=$?
+python scripts/r4/r4_gate.py compare --new $NEW --prev $PREV --ids $(echo $IDS | tr ' ' ',') ${GATE_ARGS:-} --out $REG > /dev/null 2>&1; rc=$?
 sed -i "1a\\
 \\
 Version **$V**, commit \`$C\`, NEW = \`$ND/*_$NL.mp4\`, PREV (gate baseline) = \`$PD/*_$PL.mp4\`, $(date -u +%FT%TZ)." $REG
