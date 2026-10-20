@@ -3,7 +3,7 @@
 #   bash scripts/quality/r3_fix30.sh <video-stage manifest.json> [label suffix, default fix30]   (FIX30_ARGS env overrides the flags)
 # -> <stem>_<suffix>.mp4 + .manifest.json (stage_seconds incl. fix30) + .fps_composite.json
 set -u
-DUB_ROOT=/workspace/dub/dubai; . $DUB_ROOT/scripts/env.sh >/dev/null; cd $DUB_ROOT
+DUB_ROOT=${DUB_ROOT:-/workspace/dub/dubai}; . $DUB_ROOT/scripts/env.sh >/dev/null; cd $DUB_ROOT
 M=$1; suf=${2:-fix30}; stem=${M%.manifest.json}; out=${stem}_$suf.mp4
 # FIX30_MODE=r2 (default): B round 2 T3u on a `-r 25` master.  FIX30_MODE=r3F: B round 3 (28491dd) on an fps master (arm r3F):
 #   exact timing of THIS master (-vf fps=25), MediaPipe on every source frame, --source-lm + --colour-match upper --seam-lf 4 --sharpen-auto 1.0
