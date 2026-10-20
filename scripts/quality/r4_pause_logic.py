@@ -51,9 +51,9 @@ def analyse(run, man, min_gap=0.12):
     h = int(0.01 * sr); fr = 20 * np.log10(np.sqrt((y[: len(y) // h * h].reshape(-1, h) ** 2).mean(1)) + 1e-9)
     sil = fr < np.percentile(fr[fr > -80], 90) - 35 if (fr > -80).any() else fr < -60          # silent 10 ms frames (35 dB below the voice)
     d = np.diff(np.concatenate([[0], sil.astype(np.int8), [0]])); gaps = [(a * 0.01, b * 0.01) for a, b in zip(np.flatnonzero(d == 1), np.flatnonzero(d == -1)) if (b - a) * 0.01 > min_gap]
-    mids = np.array([(w[1] + w[2]) / 2 for w in W]); rows = []
+    starts = np.array([w[1] for w in W]); rows = []
     for g0, g1 in gaps:
-        j = int(np.searchsorted(mids, (g0 + g1) / 2)) - 1      # the gap lies between Whisper words j and j + 1
+        j = int(np.searchsorted(starts, g1 - 0.05)) - 1     # the last word that starts before the gap ends (Whisper stretches word ENDS over silence)
         if j < 0 or j + 1 >= len(W) or j not in w2s or j + 1 not in w2s or w2s[j + 1] != w2s[j] + 1: continue
         i = w2s[j]; cls, st = classify(S[i], S[i + 1] if i + 1 < len(S) else None)
         rows.append({"t": round(g0, 2), "gap_s": round(g1 - g0, 3), "class": cls, "strength": st, "before": S[i][0], "after": S[i + 1][0] if i + 1 < len(S) else "", "unit": S[i][1]})
