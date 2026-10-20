@@ -5,6 +5,11 @@ server's v4 audio reproduction (gate PREV), r4_gate.py scores. m2 is published a
   joints 0.975 vs 0.923 (LF 0.974 vs 0.887), audio hard cuts 2 vs 1 (info), s/video-min (two renders shared the GPU).
 - Not the composite: the full v4 composite (seam-LF on) on m2's raw layer scores the same (slide 0.184, joints identical; joints are measured on the
   generator layer).
+- Video-side fix test on 04: m2g = m2 + `--gate-sources dub --gate-merge-gap-s 0.4` (LatentSync only where the dub speaks): slide 0.138 vs v4repro 0.154,
+  joints 0.876 vs 0.923 (LF 0.812 vs 0.887) = better than v4; flashes 17 vs 18; SyncNet on dub-speech seconds 5.98 vs 6.26 (=). Gate FAIL on "v4 resid mouth"
+  1.106 vs 0.999 = frame selection: on IDENTICAL frames (m2g's LS core) m2 1.110, m2g 1.106, v4repro 1.037 (v4's audio = other speech there). Gap 1.0 s = the
+  same segments (all dub silences that matter are > 1 s). m1 (v1 stack on audio v1): 04 slide / joints = v4repro -> the 04 failure is pb1-specific.
+- m3 = `scripts/r4/r4_e2e.sh` (raw input -> audio pb1 flags -> v1 stack with dub-gated segments), all five.
 - Root cause = pb1 timing: m2's LatentSync segments are cut only by the 400-frame cap (04: 2.0-18.0, 18.0-34.0 s) because pb1's merged phrases leave
   long DUB silences while the speaker keeps talking (04 21.4-27.3 s, 5.9 s); the speech gate keeps lip-sync on (the source talks) and LatentSync paints
   a quiet mouth over a talking face for 6 s. 3 of the 6 worst joints (23.8 / 25.1 / 27.0 s) and the worse slide window (25-31.6 s) are inside it.
