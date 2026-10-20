@@ -91,6 +91,7 @@ def main() -> int:
     ap.add_argument("--dubbed-dir", default=None, help="dir with dubbed_16k.wav + dubbed_aac.m4a (+ aligned_u*.wav); default = baseline work dir")
     ap.add_argument("--out", default=str(Q / "candidates")); ap.add_argument("--work-out", default=None)
     ap.add_argument("--manifest", default=None, help="manifest of a finished E2E run (overrides --run-dir / --work-dir)")
+    ap.add_argument("--gate-sources", choices=["both", "dub"], default="both", help="r4 merged: speech gate from source + dub speech (default) or the dub speech only")
     ap.add_argument("--mux", choices=["dub", "final_mix"], default="final_mix", help="audio muxed into the candidate mp4: final_mix (dub + background bed, when present) or the dub voice only")
     ap.add_argument("--speech-gate", choices=["on", "off"], default="on"); ap.add_argument("--gate-margin-s", type=float, default=0.24); ap.add_argument("--gate-merge-gap-s", type=float, default=0.6)
     ap.add_argument("--crossfade-frames", type=int, default=4); ap.add_argument("--router-stride", type=int, default=3); ap.add_argument("--window-batch-size", type=int, default=2)
@@ -175,7 +176,10 @@ def main() -> int:
     speech = man["speech_intervals"]; gate = None
     if a.speech_gate == "on":
         with rp.timed(times, "speech_gate"):
-            dub_speech = rp.run_vad(dub16); gate = faa.build_speech_gate([speech, dub_speech], duration, a.gate_margin_s, a.gate_merge_gap_s)
+            dub_speech = rp.run_vad(dub16)
+            # r4 merged: --gate-sources dub = lip-sync only where the DUB speaks (pb1's long dub silences inside 16 s segments painted a quiet mouth
+            # over a talking face: 04 slide / window joints); the source mouth shows (crossfade) where only the source talks
+            gate = faa.build_speech_gate([dub_speech] if a.gate_sources == "dub" else [speech, dub_speech], duration, a.gate_margin_s, a.gate_merge_gap_s)
         gated = sum(e - s for s, e in gate)
         man["speech_gate"] = {"enabled": True, "margin_s": a.gate_margin_s, "merge_gap_s": a.gate_merge_gap_s, "crossfade_frames": a.crossfade_frames, "source_speech_seconds": round(sum(i["end"] - i["start"] for i in speech), 3),
                               "dubbed_speech_seconds": round(sum(i["end"] - i["start"] for i in dub_speech), 3), "gate_seconds": round(gated, 3), "gate_fraction": round(gated / duration, 4), "intervals": gate}
