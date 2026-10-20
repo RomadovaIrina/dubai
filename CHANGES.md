@@ -1,3 +1,31 @@
+# r4-audio (Agent A audio, round 4) — changelog
+
+Branch `experiment/r4-audio` from v4 `904c5d2`. Server: RTX 5090 (alone). One command: `bash scripts/r4_audio.sh <tag>` (all five videos from the raw input,
+v4 audio-r4 flags + `r3_remix.py` + new audio over the original video + metrics); gate + publish: `bash scripts/r4_audio_publish.sh <ver> <tag>`.
+
+## Findings
+- v4 reproduces: `v4repro` = published v4 within realization noise (LUFS, duration, residue +-2.3 dB, pause W1 +-0.33 s on 05: different Qwen text);
+  two runs on this server are bit-identical (seeded TTS, Qwen temperature 0) -> every A/B here is free of TTS noise.
+- The v5 bed regression is PLACEMENT, not the bed: 53cfb22's remix is in v4 too. v4 vs v5 finals (03 / 04): residue and bed levels equal
+  (+-1 dB); "source speaks, dub silent" 14.5 -> 16.4 s / 5.7 -> 8.0 s, pause W1 0.28 -> 0.46 / 0.28 -> 0.57 s. Bisect: v4 code with
+  `--sentence-flow-gap 1.0` alone gives 04 8.0 s / 0.58 s (= v5), 03 16.0 s / 0.56 s + a 20 dB level jump at pause onsets -> flow gap stays 0.2.
+- Bed A/B on the same dub (remix only): residue duck -15 dB = no-op (Silero hears no speech in the bed); duck -4 dB doubles the bed gain jitter
+  (r3 pumping); `--src-duck-db -6` (bed -6 dB where the source speaks and the dub is silent) lowers the exposed original-voice residue 1-5 dB, nothing else
+  changes -> kept (one flag, no new layer).
+- "Solki" (04): Qwen wrote "Sochi city", Chatterbox said "Soky" (CTC "soky", Whisper "It's OKCITY"); sentence CER 0.05 passed the QA.
+  `--ne-guard on` (ne_guard.py): Qwen lists proper nouns, only rare capitalised words are guarded (capitalised form >= 2 Whisper BPE tokens:
+  Sochi yes; Moscow / Finnish / sauna / banya no), the TTS QA's Whisper must hear them, retries synthesise phonetic respellings of the closest
+  source word ("Sochee", "So-chee", Qwen's); 04: attempt 2 "Sochee" -> Whisper "Sochi". The llama state is restored after the extraction so no other
+  unit changes text.
+- Voice continuity: v4 is already whole-sentence synthesis (F0 at part joins = the uncut take); sentence-to-sentence level / F0 jumps are at or
+  below the source speaker's own variation -> no new layer, gate axis only.
+
+## Gate (`r4_audio_metrics.py`, `r4_audio_gate.py`)
+Mix-only metrics (bed = c(t) x the source's Spleeter accompaniment, c by 50 ms least squares; validated vs stems within 0.3 dB), so a published mp4
+scores on the same axes: residue under dub / exposed, bed VAD, bed level and level jumps in pauses, pause W1 / > 1 s, source-only / dub-only seconds,
+LUFS / TP, duration; stem axes from the reproducing run: WER, hard cuts, joins, sentence continuity, names misheard. Tolerance = fixed + |published
+previous - its reproduction|. Review sheet `r4_review.py` (10 s rows, LOOK flags).
+
 # r3-integration (Agent D, round 3) — changelog
 
 Branch `experiment/r3-integration` from `clean-base` 326e807. Server: RTX 5090, 24 vCPU.
