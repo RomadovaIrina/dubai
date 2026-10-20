@@ -115,11 +115,11 @@ def spread_unit(u: dict, track: np.ndarray, sr: int, y_raw: np.ndarray, cfg: dic
             head, pauses, tail, n = allocate(L, [], cfg["ok"], head_cap)
         if os.environ.get("DUB_SPREAD_OVERLAP", "0") == "1" and L > 1.0 and cfg.get("src_ivs"):
             # r4 (05 u5 / u6: a short English phrase on a window of 3-4 merged source bursts sat at the window start, the speaker talked 5 s with no dub):
-            # slide the whole part inside its window to the offset with the most overlap with the source speech (keep the plan when the gain < 0.3 s)
+            # slide the whole part inside its window to the offset with the most overlap with the source speech (keep the plan when the gain < 0.5 s)
             d_ = len(seg) / sr + sum(pauses)
             def ov(h): return sum(max(0.0, min(e_, t0 + h + d_) - max(s_, t0 + h)) for s_, e_ in cfg["src_ivs"])
-            hs = np.arange(0.0, max(0.0, L - sum(pauses)) + 1e-6, 0.02); best_h = max(hs, key=ov) if len(hs) else 0.0
-            if ov(best_h) - ov(head) >= 0.3: pl["overlap_shift"] = {"from_head_s": round(head, 3), "to_head_s": round(float(best_h), 3), "gain_s": round(ov(best_h) - ov(head), 3)}; head = float(best_h)
+            hs = np.arange(0.0, max(0.0, L - sum(pauses) - 0.25) + 1e-6, 0.02); best_h = max(hs, key=ov) if len(hs) else 0.0   # >= 0.25 s left before the next sentence
+            if ov(best_h) - ov(head) >= 0.5: pl["overlap_shift"] = {"from_head_s": round(head, 3), "to_head_s": round(float(best_h), 3), "gain_s": round(ov(best_h) - ov(head), 3)}; head = float(best_h)
         # render: head offset, then the part split at the chosen boundaries with silences in between
         pieces = []; prev = 0
         for c in chosen:
