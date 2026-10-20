@@ -106,7 +106,8 @@ def spread_unit(u: dict, track: np.ndarray, sr: int, y_raw: np.ndarray, cfg: dic
             tp = u["tts_parts"][k]; c0, c1 = tp["clip_span"]; eff = (c1 - c0) / max(len(seg) / sr, 1e-3)   # effective tempo of the rendered part
             pos_of = lambda c: (c["t_raw"] - c0) / eff
             cs = [c for c in candidates(u, k, y_raw, sr, norm_fn, func_words, fixed_phrases) if c0 < c["t_raw"] < c1]
-            for c in cs: c["cap"] = min(cfg["pause_max"], cfg["pause_total_max"] - c["tts_gap"] / eff)   # silence there = TTS pause + inserted <= pause_total_max
+            bo = os.environ.get("DUB_PAUSE_BOUNDARY_ONLY", "0") == "1"   # r4 v2: pause length by boundary strength (punctuation 0.6 s, clause start 0.35 s)
+            for c in cs: c["cap"] = min(cfg["pause_max"], cfg["pause_total_max"] - c["tts_gap"] / eff) if not bo else ((0.6 if c["quality"] == 3 else 0.35) - c["tts_gap"] / eff)
             cs = [c for c in pick(cs, len(seg) / sr, pos_of, cfg["min_seg"]) if c["cap"] >= 0.05]
             head, pauses, tail, n = allocate(L, [c["cap"] for c in cs], cfg["ok"], head_cap); chosen = cs[:n]
             order = sorted(range(n), key=lambda i: pos_of(chosen[i])); chosen = [chosen[i] for i in order]; pauses = [pauses[i] for i in order]

@@ -573,6 +573,7 @@ def distribute_words_syntax(spans: list[dict], raw_words: list[str], bursts: lis
         elif allowed_after is not None and ds > 0 and sp_after >= 1.0 and end_raw.get(k) in allowed_after:
             # targeted: only a move LATER onto a natural (Qwen-marked) boundary, only before a >= 1 s source pause (the extra words run into the pause)
             tj = tol + min(0.6, 0.5 * sp_after)
+        if boundary_only: tj = max(tj, 1.2)   # r4 v2: a source pause may move up to ~1.2 s onto the nearest English boundary before the bursts merge
         c = 0.5 * d / max(tj, 1e-3) + steep * max(0.0, d - tj) - (w_punct if pu else 0.0) - w_gap * min(gap, 0.4)
         if not pu:
             c += (w_func if lw in func_words or num else 0.0) + (w_tight if gap < 0.06 else 0.0)
@@ -604,7 +605,7 @@ def distribute_words_syntax(spans: list[dict], raw_words: list[str], bursts: lis
         # with the long-pause rule a merge over a long source pause costs at least a weak cut there: otherwise the DP dodges "how our |" by
         # running the phrase through the pause, and the source keeps talking after the dub has finished (05 u03: +1.7 s source without dub)
         mg = w_func_long * min(1.0, max(0.0, (sp_j - long_lo) / max(long_hi - long_lo, 1e-3))) if w_func_long else 0.0
-        opt = (c + w_merge + 0.3 * min(sp_j, 2.0) + mg, (None,) + rest)
+        opt = (c + w_merge + 0.3 * min(sp_j, 2.0) + mg + (2.0 if boundary_only else 0.0), (None,) + rest)   # r4 v2: merging = last resort
         for k, pu, lw, num in ends:
             if prev < k < n:
                 if boundary_only and not (pu or nxt.get(k, "") in CLAUSE_START):   # r4 v2: a source pause is reproduced only at an English boundary
