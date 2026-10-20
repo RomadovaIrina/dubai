@@ -129,6 +129,13 @@ def main() -> int:
     ap.add_argument("--chin-clip", type=float, default=0.0, help="r4 V (user: 'second / third chin moves like a wave'): with --face-clip, the clip polygon's "
                     "jaw edge moves up toward the lower lip by this fraction (0 = the jawline, 1 = the lip), so the regenerated chin returns to the source "
                     "pixels above the jawline; the edge_px feather stays inside the polygon")
+    ap.add_argument("--mouth-region", type=float, default=0.0, help="r4 V task 5 (chin / jaw 'wave': the regenerated chin stubble / skin swims "
+                    "frame to frame, 03 68 s): the paste weight is capped to the source lips + the layer's own lips (its jaw drop) dilated by this "
+                    "many inter-ocular distances; the edge_px feather stays inside, everything farther (chin, jaw, neck) is the source")
+    ap.add_argument("--chin-warp", choices=["on", "off"], default="off", help="r4 V task 5 (with --mouth-region): outside the generated mouth region the "
+                    "SOURCE chin is shifted down by the layer's jaw drop (layer lower lip y - source lower lip y, clipped to -0.2..0.5 IOD), full from the lips "
+                    "to the chin tip, fading to 0 over 0.25 IOD below the jawline and toward the jaw corners: the dub's jaw motion with the source's skin "
+                    "/ folds (no regenerated chin texture to 'wave')")
     ap.add_argument("--face-clip", choices=["on", "off"], default="off", help="r3 D (user: 'the background beside the cheek wobbles'): the paste weight "
                     "is capped by the distance INSIDE the source frame's MediaPipe face contour (0 on / outside it, 1 at --edge-px inside): nothing outside "
                     "the face is pasted / warped / colour-matched")
@@ -490,6 +497,23 @@ def main() -> int:
                     ov[low] = ov[low] + a.chin_clip * (np.stack([ov[low, 0], np.full(low.sum(), lip_y)], 1) - ov[low]) * [0.35, 1.0]
                 fm = np.zeros(aw.shape[:2], np.uint8); cv2.fillPoly(fm, [np.round(ov - [xa, ya]).astype(np.int32)], 1)
                 aw = np.minimum(aw, np.clip(cv2.distanceTransform(fm, cv2.DIST_L2, 3) / max(a.edge_px, 1.0), 0, 1).astype(aw.dtype))
+        if a.mouth_region > 0:
+            lm_mr = lm_at(k, mu); pts_ = [q[tms.LIPS_OUTER, :2] for q in (lm_mr, lerp(mp_ls, m) if mp_ls is not None else None)
+                                         if q is not None and np.isfinite(q[tms.LIPS_OUTER]).all()]
+            if pts_ and np.isfinite(lm_mr[[33, 263]]).all():
+                iod = float(np.linalg.norm(lm_mr[33, :2] - lm_mr[263, :2])); hull = cv2.convexHull(np.concatenate(pts_).astype(np.float32))[:, 0]
+                hm = np.ones(aw.shape[:2], np.uint8); cv2.fillPoly(hm, [np.round(hull - [xa, ya]).astype(np.int32)], 0)
+                dist = cv2.distanceTransform(hm, cv2.DIST_L2, 3)   # px outside the lips hull (0 inside)
+                aw = np.minimum(aw, np.clip((a.mouth_region * iod - dist) / max(a.edge_px, 1.0), 0, 1).astype(aw.dtype))
+                lq = lerp(mp_ls, m) if mp_ls is not None else None
+                if a.chin_warp == "on" and lq is not None and np.isfinite(lq[17]).all() and np.isfinite(lm_mr[[17, 152, 172, 397]]).all():
+                    dy = float(np.clip(lq[17, 1] - lm_mr[17, 1], -0.2 * iod, 0.5 * iod))
+                    if abs(dy) > 0.5:
+                        yy, xx = np.mgrid[ya:yb, xa:xb].astype(np.float32); ly, cy = lm_mr[17, 1], lm_mr[152, 1]; cx = lm_mr[152, 0]
+                        hw = max(0.5 * abs(lm_mr[397, 0] - lm_mr[172, 0]), 1.0)
+                        wv = np.where(yy < ly, np.clip(1 - (ly - yy) / (0.15 * iod), 0, 1), np.where(yy <= cy, 1.0, np.clip(1 - (yy - cy) / (0.25 * iod), 0, 1)))
+                        wh = np.clip(1 - ((xx - cx) / hw) ** 2, 0, 1)
+                        sk = cv2.remap(sk, xx - xa, yy - ya - dy * wv * wh, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
         o = S[k].copy(); o[ya:yb, xa:xb] = np.clip(sk + aw[..., None] * (Lk - sk), 0, 255).round().astype(np.uint8)
         if w >= 1:   # spec 8.4 on small faces: the feather ramp must not reach the lips (source lips and the layer's own lips)
             lm_q = lm_at(k, mu); lips_ = [lm_q] + ([lerp(mp_ls, m)] if mp_ls is not None else [])
