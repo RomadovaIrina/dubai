@@ -37,10 +37,11 @@ for k, fr in enumerate(av.open(a.video).decode(video=0)):
     prev = f
 R = np.array(rows, float); jt = R[:, 1] == 1; out = {"video": a.video, "pairs": len(R), "joints": int(jt.sum())}
 for i, nm in ((2, "resid"), (3, "lowfreq")):
-    loc = []
+    loc = []; at = []
     for q in np.flatnonzero(jt):
         nb = [x for x in range(q - 8, q + 9) if 0 <= x < len(R) and not jt[x] and abs(R[x, 0] - R[q, 0]) <= 10]
-        if nb: loc.append(R[q, i] / np.median(R[nb, i]))
-    loc = np.array(loc)
+        if nb: loc.append(R[q, i] / np.median(R[nb, i])); at.append(int(R[q, 0]))
+    loc = np.array(loc); fps_ = float(av.open(a.video).streams.video[0].average_rate)
+    out[f"{nm}_worst"] = [[round(at[q] / fps_, 2), round(float(loc[q]), 2)] for q in np.argsort(-loc)[:10]]   # r4: [time s, joint / local inner] of the worst joints
     out[nm] = {"joint_over_inner": round(float(R[jt, i].mean() / R[~jt, i].mean()), 3), "local_median": round(float(np.median(loc)), 3), "share_gt_1_5": round(float((loc > 1.5).mean()), 3)}
 pathlib.Path(a.out).write_text(json.dumps(out, indent=1)); print(json.dumps(out))
