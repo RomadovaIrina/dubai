@@ -34,6 +34,8 @@ RULES = [
     ("colour worst 1 s |dL| (half face)", lambda r: r["r4face"]["colour_worst_1s_abs_dL"], +1, 0.5, 0, 4.0),
     ("colour frames |dL|>6", lambda r: r["r4face"]["colour_left"]["frames_abs_dL_gt6"] + r["r4face"]["colour_right"]["frames_abs_dL_gt6"], +1, 3, 0.2, None),
     ("jaw jitter out/src", lambda r: r["r4face"]["jaw_jitter"]["ratio_out_over_src"], +1, 0, 0.05, None),
+    ("chin wave (lower-chin residual std, 2 s)", lambda r: r["chinwave"]["mean"], +1, 0.1, 0.1, None),
+    ("chin wave worst 2 s", lambda r: r["chinwave"]["worst_2s"], +1, 0.15, 0.1, None),
     ("below-jaw band |out-src|", lambda r: r["r4face"]["below_jaw"]["mean"], +1, 0.3, 0, None),
     ("WER final mix", lambda r: r["asr"]["wer_final_mix"], +1, 0.02, 0, None),
     ("audio hard cuts", lambda r: r["audio_gate"]["audio_hard_cuts"]["cuts_stop_restart"], +1, 0, 0, None),
@@ -57,6 +59,14 @@ def run_json(cmd, env=None):
 def audio_md5(p):
     r = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", str(p), "-map", "0:a:0", "-c", "copy", "-f", "data", "-"], capture_output=True)
     return hashlib.md5(r.stdout).hexdigest()
+
+
+def add_chinwave(r, id_, label, d, video):   # task 5: lower-chin low-frequency residual std vs the source (r4_chin_wave.py)
+    src = next(pathlib.Path("/workspace/dub/inputs/test_videos_raw").glob(f"{id_}.*"))
+    cw = run_json([PY, str(HERE / "r4_chin_wave.py"), "--video", str(video), "--src", str(src), "--lm", str(TIMING / f"{id_}_source_lm_F.npz"),
+                   "--out", str(d / f"{id_}_{label}.chinwave.json")])
+    r["chinwave"] = cw if "mean" in cw else {"mean": None, "worst_2s": None, **cw}
+    return r
 
 
 def add_sync(r, id_, label, d, video, man):
@@ -83,6 +93,8 @@ def score_one(id_, label, d, man_p, force=False, asr_from=None):
         if "r4face" in r:
             if "sync_speech" not in r:
                 add_sync(r, id_, label, d, video, json.loads(pathlib.Path(man_p).read_text())); sj.write_text(json.dumps(r, indent=1))
+            if "chinwave" not in r:
+                add_chinwave(r, id_, label, d, video); sj.write_text(json.dumps(r, indent=1))
             return r
     src = next(pathlib.Path("/workspace/dub/inputs/test_videos_raw").glob(f"{id_}.*")); lm = TIMING / f"{id_}_source_lm_F.npz"
     subprocess.run([PY, str(Q / "r3_scorecard.py"), "score", "--id", id_, "--label", label, "--video", str(video), "--manifest", str(man_p), "--out", str(d)] + (["--skip-wer"] if asr_from else []),
@@ -106,7 +118,7 @@ def score_one(id_, label, d, man_p, force=False, asr_from=None):
     if dub.exists():
         ev = hc.events(dub); cuts = [(e1, e2) for e1, e2 in zip(ev, ev[1:]) if e1[0] == "OFF" and e2[0] == "ON" and e2[1] - e1[1] <= 0.6]
         r["audio_gate"] = {"audio_hard_cuts": {"cuts_stop_restart": len(cuts), "cut_times": [round(c[0][1], 3) for c in cuts]}}
-    add_sync(r, id_, label, d, video, man)
+    add_sync(r, id_, label, d, video, man); add_chinwave(r, id_, label, d, video)
     r["manifest_r4v"] = man.get("r4v") or {"s_per_video_min": {"total": None}, "peak_vram_mib": None}
     r["audio_md5"] = audio_md5(video)
     sj.write_text(json.dumps(r, indent=1)); return r
