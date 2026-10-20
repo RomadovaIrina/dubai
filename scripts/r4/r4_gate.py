@@ -104,6 +104,7 @@ def verdict(rule, n, p):
     except Exception: vn = None
     try: vp = f(p)
     except Exception: vp = None
+    if vn is None and vp is None: return vn, vp, "n/a"   # e.g. 02: no lip-sync frames in either
     if dirn == "eq": return vn, vp, "PASS" if vn else "FAIL"
     if dirn == 0 or vn is None or vp is None: return vn, vp, "INFO" if vn is not None else "MISSING"
     if hard is not None and vn * (1 if dirn > 0 else -1) > hard * (1 if dirn > 0 else -1) and not (vp is not None and vn * dirn <= vp * dirn): return vn, vp, "FAIL (limit)"
