@@ -44,6 +44,7 @@ def analyse(mp):
                 ce, cs = parts[k]["clip_span"][1], parts[k + 1]["clip_span"][0]
                 ra, rb = f0_med(seg(raw, rsr, ce - 0.2, ce), rsr), f0_med(seg(raw, rsr, cs, cs + 0.2), rsr)
                 r["f0_raw_st"] = round(abs(12 * np.log2(rb / ra)), 2) if ra and rb else None
+                r["e_raw_db"] = round(abs(db(seg(raw, rsr, ce - 0.1, ce)) - db(seg(raw, rsr, cs, cs + 0.1))), 2)   # r4: the same boundary in the uncut take
             rows.append(r)
     def med(key, f=lambda x: x): v = [f(r[key]) for r in rows if r.get(key) is not None]; return round(float(np.median(v)), 3) if v else None
     fj = [r["f0_jump_st"] for r in rows if r.get("f0_jump_st") is not None]
@@ -51,7 +52,9 @@ def analyse(mp):
     return {"manifest": str(mp), "joins": len(rows), "gap_median_s": med("gap_s"), "joins_gap_gt_0.3s": sum(1 for r in rows if r["gap_s"] > 0.3),
             "d_tempo_mean": round(float(np.mean([r["d_tempo"] for r in rows])), 3) if rows else None, "f0_jump_median_st": med("f0_jump_st"),
             "f0_jump_gt_3st": sum(1 for x in fj if x > 3), "f0_excess_over_raw_median_st": round(float(np.median(exc)), 2) if exc else None,
-            "e_jump_median_db": med("e_jump_db"), "rows": rows}
+            "e_jump_median_db": med("e_jump_db"),
+            "e_excess_over_raw_median_db": round(float(np.median([r["e_jump_db"] - r["e_raw_db"] for r in rows if r.get("e_raw_db") is not None])), 2) if any(r.get("e_raw_db") is not None for r in rows) else None,
+            "rows": rows}
 
 
 if __name__ == "__main__":

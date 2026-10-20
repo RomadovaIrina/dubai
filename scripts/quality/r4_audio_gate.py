@@ -22,7 +22,9 @@ AX = [("duration - source (s)", lambda m: round(m["duration_s"] - m["source_dura
       ("WER final mix", lambda m: (m.get("asr") or {}).get("wer_final_mix"), "up", 0.03),
       ("hard cuts (stop/restart)", lambda m: m.get("hard_cuts"), "up", 0),
       ("joins F0 jump > 3 st", lambda m: (m.get("joins") or {}).get("f0_jump_gt_3st"), "up", 1),
-      ("joins energy jump median (dB)", lambda m: (m.get("joins") or {}).get("e_jump_median_db"), "up", 1.0),
+      ("joins energy jump median (dB)", lambda m: (m.get("joins") or {}).get("e_jump_median_db"), "info", 0),
+      ("joins F0 excess over the uncut take (st)", lambda m: (m.get("joins") or {}).get("f0_excess_over_raw_median_st"), "up", 0.5),
+      ("joins energy excess over the uncut take (dB)", lambda m: (m.get("joins") or {}).get("e_excess_over_raw_median_db"), "up", 1.5),
       ("sentence-to-sentence level jump p90 (dB)", lambda m: (m.get("units") or {}).get("level_jump_p90_db"), "up", 1.0),
       ("sentence-to-sentence F0 jump p90 (st)", lambda m: (m.get("units") or {}).get("f0_jump_p90_st"), "up", 1.0),
       ("named entities misheard", lambda m: (m.get("ne") or {}).get("misheard"), "up", 0)]
@@ -38,7 +40,7 @@ def verdict(kind, tol, p, n):
     if kind == "abs": return "FAIL" if abs(n) > tol else ""
     if kind == "lufs": return "FAIL" if abs(n + 16) > tol else ""
     if kind == "tp": return "FAIL" if n > tol else ""
-    if p is None: return ""
+    if kind == "info" or p is None: return ""
     return "WORSE" if n - p > tol else ("better" if p - n > tol else "")
 
 
