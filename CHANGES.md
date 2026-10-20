@@ -20,6 +20,15 @@ v4 audio-r4 flags + `r3_remix.py` + new audio over the original video + metrics)
 - Voice continuity: v4 is already whole-sentence synthesis (F0 at part joins = the uncut take); sentence-to-sentence level / F0 jumps are at or
   below the source speaker's own variation -> no new layer, gate axis only.
 
+## v2 attempts (gate vs v1; none published)
+- `pause_rhythm.py` on v1: "source w/o dub" 51.6 s on 01-05, of which short fill (English shorter than the source sentence) 28.7 s; "dub w/o source" 34.6 s
+  mostly dub over source pauses inside the slot. 28 of 67 units start on a < 0.5 s sliver of the previous sentence's speech (Whisper segment starts early).
+- `--burst-edge-trim 0.5`: dub over silence 34.6 -> 21.5 s, but pauses drift (W1 03 0.28 -> 0.42, 04 0.28 -> 0.40, 05 1.01 -> 1.30), 04 name take lost -> NO.
+- `--burst-edge-trim 0.3`: gate PASS, but source-only total unchanged (51.55 s), dub-only -4.5 s, 01 source-only +1.75 s -> not a clear win, not published.
+- `--fill-slowdown 0.85`: source-only -1.7 s total, 03 F0 jumps 4 -> 6, 05 pause-onset jump +2.4 dB -> NO.
+- Part joins: v1 = the uncut whole-sentence take (energy excess 0-0.65 dB, F0 -0.1 st) -> nothing to fix; gate axes now measure excess over the take.
+- Remaining "source talks, dub silent" is translation length (fit-up rewrites rejected by the faithfulness judge), not placement.
+
 ## Gate (`r4_audio_metrics.py`, `r4_audio_gate.py`)
 Mix-only metrics (bed = c(t) x the source's Spleeter accompaniment, c by 50 ms least squares; validated vs stems within 0.3 dB), so a published mp4
 scores on the same axes: residue under dub / exposed, bed VAD, bed level and level jumps in pauses, pause W1 / > 1 s, source-only / dub-only seconds,
