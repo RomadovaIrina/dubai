@@ -181,6 +181,7 @@ def main() -> int:
     # cand5 video settings (defaults = the baseline)
     ap.add_argument("--window-batch-size", type=int, default=2); ap.add_argument("--deepcache-interval", type=int, default=5); ap.add_argument("--no-deepcache", action="store_true")
     ap.add_argument("--steps", type=int, default=20); ap.add_argument("--guidance", type=float, default=1.5)
+    ap.add_argument("--seed", type=int, default=1247, help="r4 generator sweep: LatentSync seed (production 1247)")
     ap.add_argument("--crossfade-frames", type=int, default=4); ap.add_argument("--router-stride", type=int, default=3); ap.add_argument("--min-ls-frames", type=int, default=25)
     ap.add_argument("--mask-top", type=float, default=0.52); ap.add_argument("--mask-feather", type=float, default=0.08); ap.add_argument("--mask-smooth", type=int, default=3)
     ap.add_argument("--ls-landmark-smooth", type=int, default=2); ap.add_argument("--codeformer", choices=["off", "optimized"], default="off")
@@ -265,7 +266,7 @@ def main() -> int:
     if a.precomputed:
         runner = PrecomputedRunner(pathlib.Path(a.precomputed), frames, a.precomputed_label, a.precomputed_seconds)
     else:
-        runner = StableRunner(a.window_batch_size, not a.no_deepcache, a.steps, a.guidance, 1247, a.deepcache_interval, stride=a.stride, ref_mode=a.ref_mode, mode=a.mode,
+        runner = StableRunner(a.window_batch_size, not a.no_deepcache, a.steps, a.guidance, a.seed, a.deepcache_interval, stride=a.stride, ref_mode=a.ref_mode, mode=a.mode,
                               overlap=a.overlap, window_len=a.window_len, bridge_len=a.bridge_len, bridge_steps=a.bridge_steps)
     times["latentsync_load"] = round(time.perf_counter() - t, 3)
     silence_info = None
