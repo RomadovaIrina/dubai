@@ -27,6 +27,9 @@ v4 audio-r4 flags + `r3_remix.py` + new audio over the original video + metrics)
 - `--burst-edge-trim 0.3`: gate PASS, but source-only total unchanged (51.55 s), dub-only -4.5 s, 01 source-only +1.75 s -> not a clear win, not published.
 - `--fill-slowdown 0.85`: source-only -1.7 s total, 03 F0 jumps 4 -> 6, 05 pause-onset jump +2.4 dB -> NO.
 - Part joins: v1 = the uncut whole-sentence take (energy excess 0-0.65 dB, F0 -0.1 st) -> nothing to fix; gate axes now measure excess over the take.
+- `--fit-up-persist 0.65` (worst units retry a rejected fuller rewrite with a 15 % smaller length goal, judge unchanged; 45 min box): only 04 changed
+  (one extra accepted rewrite) and got worse (W1 0.28 -> 0.45, dub over silence 4.1 -> 6.2 s); 05's worst moments sit in units whose SENTENCE ratio is 0.68
+  (gap = placement inside the sentence, not total length) -> NO, hold at v1.
 - Remaining "source talks, dub silent" is translation length (fit-up rewrites rejected by the faithfulness judge), not placement.
 
 ## Gate (`r4_audio_metrics.py`, `r4_audio_gate.py`)
