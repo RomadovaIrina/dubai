@@ -278,7 +278,8 @@ class StableRunner:
         self.acc.chunk_hook = self.silence_mix.hook(start, n) if self.silence_mix is not None else None
 
     def run_frames(self, frames_rgb, audio_wav, detections=None):
-        t0 = time.perf_counter(); frames = self.acc.run_frames(frames_rgb, str(audio_wav), detections); dt = round(time.perf_counter() - t0, 2)
+        t0 = time.perf_counter(); frames = self.acc.run_frames(frames_rgb, str(audio_wav), detections,
+            video_fps=int(os.environ.get("DUB_LS_FPS", "25"))); dt = round(time.perf_counter() - t0, 2)   # r4 V: DUB_LS_FPS (a 30 fps run was windowed as 25 fps: SyncNet 0.6)
         st = self.acc.last_stats
         seams = st.get("seams", list(range(self.acc.num_frames, len(frames_rgb), self.acc.num_frames)))   # AccelLatentSync path: 16-frame window starts
         self.calls.append({"frames": st["frames"], "windows": st["windows"], "groups": st["groups"], "unet_calls": st["unet_calls"], "seconds": dt, "stages": st["seconds"], "seams": seams})
