@@ -22,6 +22,9 @@ AX = [("duration - source (s)", lambda m: round(m["duration_s"] - m["source_dura
       ("longest dub gap beyond the source's own pause there (s)", lambda m: m.get("gap_excess_max_s"), "up", 0.5),
       ("dub gaps > 1 s longer than the source pause (count)", lambda m: m.get("gaps_excess_gt_1s"), "up", 0),
       ("dub speaks, source silent (s)", lambda m: m.get("dub_speaks_src_silent_s"), "up", 2.0),
+      ("tempo outside 0.95-1.05 (s of dub)", lambda m: (m.get("tempo") or {}).get("out_s"), "up", 1.0),
+      ("faithfulness: mean Qwen judge score (1-5)", lambda m: (m.get("faith") or {}).get("mean"), "down", 0.1),
+      ("faithfulness: units scored < 4", lambda m: (m.get("faith") or {}).get("lt4"), "up", 0),
       ("WER final mix", lambda m: (m.get("asr") or {}).get("wer_final_mix"), "up", 0.03),
       ("hard cuts (stop/restart)", lambda m: m.get("hard_cuts"), "up", 0),
       ("joins F0 jump > 3 st", lambda m: (m.get("joins") or {}).get("f0_jump_gt_3st"), "up", 1),
@@ -46,6 +49,7 @@ def verdict(kind, tol, p, n):
     if kind == "lufs": return "FAIL" if abs(n + 16) > tol else ""
     if kind == "tp": return "FAIL" if n > tol else ""
     if kind == "info" or p is None: return ""
+    if kind == "down": return "WORSE" if p - n > tol else ("better" if n - p > tol else "")
     return "WORSE" if n - p > tol else ("better" if p - n > tol else "")
 
 
@@ -68,7 +72,7 @@ def main():
         if n is None: bad.append(f"{id_}: no NEW metrics"); L += [f"## {id_}: NEW missing", ""]; continue
         L += [f"## {id_}", "", "| axis | previous | new | previous reproduced | tolerance | verdict |", "|---|---:|---:|---:|---:|---|"]
         for lab, f, kind, tol in AX:
-            stem = lab.startswith(("WER", "hard cuts", "joins", "named", "sentence-to", "pauses inside"))   # need the run's text / dub stem: from the reproducing run only
+            stem = lab.startswith(("WER", "hard cuts", "joins", "named", "sentence-to", "pauses inside", "tempo", "faithfulness"))   # need the run's text / dub stem: from the reproducing run only
             pv = (get(f, pr) if pr else None) if stem else (get(f, p) if p else None)
             nv = get(f, n)
             if lab.startswith("dub pauses"):

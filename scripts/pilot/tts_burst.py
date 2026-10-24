@@ -455,6 +455,7 @@ def run_tts_burst(units: list, plans: list, refs: dict, tgt_lang: str, work: pat
         qa.close()
     empty_cache()
     stats["gen_seconds"] = round(stats["gen_seconds"], 2); stats["qa_seconds"] = round(stats["qa_seconds"], 2)
+    stats["dur_translate"] = {k_: (round(v_, 2) if isinstance(v_, float) else v_) for k_, v_ in dur_translate.STATS.items()} if dur_cfg.get("enabled") else None
     stats["retry_success_rate"] = round(stats["retry_success"] / stats["retried_parts"], 3) if stats["retried_parts"] else None
     return {"model": "ChatterboxMultilingualTTS t3=v3 (models/chatterbox)", "sr": sr, "dtype": str(used).replace("torch.", ""), "language_id": tgt_lang,
             "voice_reference": "speaker's own diarized speech via audio_prompt_path/prepare_conditionals",
@@ -623,7 +624,8 @@ def distribute_words_syntax(spans: list[dict], raw_words: list[str], bursts: lis
 
 def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pathlib.Path, seed: int, times: dict, *, opts, llm=None, src_name: str = "", tgt_name: str = "",
                    fit: dict | None = None, qa_cfg: dict | None = None, fit_up: dict | None = None, split_retries: int = 2, min_part_words: int = 1, soft_part_words: int = 2,
-                   part_max_words: int = 16, phrase_split: str = "timing", phrase_cut: str = "timing", long_pause_func: float = 0.0, long_pause_grow: float = 0.0, cut_fade: str = "fixed", gap_qa: bool = False, gap_qa_retries: int = 2, pause_mark_mode: str = "off", sentence_flow_gap: float = 0.0, log=print) -> dict:
+                   part_max_words: int = 16, phrase_split: str = "timing", phrase_cut: str = "timing", long_pause_func: float = 0.0, long_pause_grow: float = 0.0, cut_fade: str = "fixed", gap_qa: bool = False, gap_qa_retries: int = 2, pause_mark_mode: str = "off", sentence_flow_gap: float = 0.0,
+                   dur_cfg: dict | None = None, log=print) -> dict:
     """Phrase-first TTS (2026-10-02, priorities 1-3 of the coverage fix). Per unit:
       ONE Chatterbox generation of the whole natural translated sentence (QA retry ladder as in run_tts_burst)
       -> fit-DOWN (concise rewrite when the sentence cannot fit its total window at atempo_cap, rule as before)
@@ -645,7 +647,8 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
     from tts_qa import norm
     if tgt_lang not in SUPPORTED_LANGUAGES:
         raise RuntimeError(f"target language {tgt_lang!r} not supported by Chatterbox")
-    fit = fit or {"enabled": False}; qa_cfg = qa_cfg or {"enabled": False}; fit_up = fit_up or {"enabled": False}
+    fit = fit or {"enabled": False}; qa_cfg = qa_cfg or {"enabled": False}; fit_up = fit_up or {"enabled": False}; dur_cfg = dur_cfg or {"enabled": False}
+    import dur_translate
     import model_cache
     def _load_tts():
         m_ = ChatterboxMultilingualTTS.from_local(pathlib.Path(__file__).resolve().parents[2] / "models" / "chatterbox", dev(), t3_model="v3")
@@ -753,6 +756,14 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                 text = u["translation"]; u["parts_original"] = [text]; u["fit"] = []; u["fit_up"] = []
                 y, rec = gen_sentence(u, text, dtype); spans = align(y, text); sp_s = speech_seconds(y, spans)
                 src_words = " ".join(p["groups"]); target = sum(e - s for s, e in p["bursts"]); prev_end = prev_end_of.get(u["id"])
+                # ---- r5 duration-aware translation: N length-budgeted Qwen candidates, judge + back-translation, TTS of the top K, the best dry-run placement wins
+                if dur_cfg.get("enabled") and llm is not None:
+                    cut_kw = {**ACOUSTIC_CUT, "w_func_long": long_pause_func, "long_grow": long_pause_grow} if phrase_cut == "acoustic" else {}
+                    def _synth(t_, salt_, u=u):
+                        y_, r_ = gen_sentence(u, t_, dtype, salt=salt_); s_ = align(y_, t_); return y_, r_, s_, speech_seconds(y_, s_)
+                    def _sim(y_, s_, t_, p=p, prev_end=prev_end, cut_kw=cut_kw):
+                        return dur_translate.simulate(y_, m.sr, s_, _spk(t_), p, opts, prev_end, sentence_flow_gap, cut_kw, norm)
+                    text, y, rec, spans, sp_s = dur_translate.select(u, p, text, (y, rec, spans, sp_s), _synth, _sim, llm, src_name, tgt_name, dur_cfg, _spk, log=log)
                 total_win = max(0.2, p["next_start"] - opts.gap - p["bursts"][0][0])
                 # ---- fit-DOWN: the whole sentence does not fit its total window at the cap -> concise rewrite (rules as in run_tts_burst)
                 for rnd in range(fit.get("rounds", 4) if fit.get("enabled") else 0):
@@ -778,7 +789,8 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                 # ---- fit-UP: synthesized speech much shorter than the source speech of the unit -> fuller rewrite; accepted only if closer AND not less intelligible
                 # not for an --ordered-translation sentence: its pieces are already mapped to the source bursts, a fuller rewrite loses that mapping
                 # (6 of 14 ordered sentences, 2026-10-13) and turned 04 "Nice weather, | onward." into "The weather is really nice | what in front."
-                if fit_up.get("enabled") and llm is not None and target > 0.5 and words_of(text) >= 3 and sp_s / target < fit_up.get("ratio", 0.65) and not u.get("ordered_pieces"):
+                if fit_up.get("enabled") and llm is not None and target > 0.5 and words_of(text) >= 3 and sp_s / target < fit_up.get("ratio", 0.65) and not u.get("ordered_pieces") \
+                        and not (u.get("dur_translate") or {}).get("rounds"):   # r5: the duration-aware candidates already searched the length
                     stats["fit_up_candidates"] += 1
                     persist = sp_s / target < fit_up.get("persist", 0.0); shrink = 1.0   # r4: worst units: a rejected rewrite -> retry with a 15 % smaller length goal
                     for rnd in range(max(fit_up.get("rounds", 2), 4 if persist else 0)):
@@ -949,7 +961,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
         try:
             for k_ in stats:
                 stats[k_] = 0 if not isinstance(stats[k_], float) else 0.0
-            JUDGE_STATS.update(calls=0, seconds=0.0)
+            JUDGE_STATS.update(calls=0, seconds=0.0); dur_translate.STATS.update({k_: 0 if isinstance(v_, int) else 0.0 for k_, v_ in dur_translate.STATS.items()})
             synth_all(dtype); used = dtype; break
         except Exception as e:
             log(f"  [tts] {dtype} failed: {type(e).__name__}: {str(e)[:200]} -> retrying next dtype")
@@ -966,5 +978,5 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
     stats["retry_success_rate"] = round(stats["retry_success"] / stats["retried_parts"], 3) if stats["retried_parts"] else None
     return {"model": "ChatterboxMultilingualTTS t3=v3 (models/chatterbox)", "sr": sr, "dtype": str(used).replace("torch.", ""), "language_id": tgt_lang, "mode": "phrase",
             "voice_reference": "speaker's own diarized speech via audio_prompt_path/prepare_conditionals", "speech_token_guard": {"enabled": True, "flow_calls": guard.calls, "violations": guard.violations},
-            "qa": {"enabled": qa is not None, **qa_cfg}, "fit": {**fit}, "fit_up": {**fit_up}, "alignment": {"method": "ctc_forced_align (wav2vec2-base-960h, torchaudio.forced_align)" if aligner else "silero_valley_fallback", "cuts": "between words only"},
+            "qa": {"enabled": qa is not None, **qa_cfg}, "fit": {**fit}, "fit_up": {**fit_up}, "dur_translate": {**dur_cfg}, "alignment": {"method": "ctc_forced_align (wav2vec2-base-960h, torchaudio.forced_align)" if aligner else "silero_valley_fallback", "cuts": "between words only"},
             "split": {"min_part_words": min_part_words, "soft_part_words": soft_part_words, "part_max_words": part_max_words, "retries": split_retries}, "stats": stats, "references": refs}

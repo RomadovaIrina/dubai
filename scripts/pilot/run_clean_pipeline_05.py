@@ -883,6 +883,11 @@ def main() -> int:
     ap.add_argument("--bg-residue-duck-db", type=float, default=-15.0, help="--background on: bed attenuation where the BED itself sounds like speech (Silero on the "
                     "separated stem) while the source speaks and the dub is silent = voice leak of the separator (r2 2026-10-17: Spleeter 02 39.0-39.4 s); 0 = off")
     ap.add_argument("--bg-offset-db", type=float, default=0.0, help="--background on: bed level relative to the original voice/background balance (dB)")
+    ap.add_argument("--dur-translate", choices=["on", "off"], default="off", help="r5: phrase mode: duration-aware translation (dur_translate.py): Qwen length-budgeted "
+                    "candidates + judge / back-translation + TTS of the top K, the best dry-run placement (tempo ~1.0, no dub-silent source speech) wins")
+    ap.add_argument("--dur-ok-cost", type=float, default=0.25, help="--dur-translate: placement cost (s) below which the plain translation is kept without candidates")
+    ap.add_argument("--dur-top", type=int, default=3, help="--dur-translate: candidates synthesised per round"); ap.add_argument("--dur-rounds", type=int, default=2)
+    ap.add_argument("--dur-min-score", type=int, default=4, help="--dur-translate: minimum Qwen judge meaning score (1-5) of a candidate")
     ap.add_argument("--ne-guard", choices=["on", "off"], default="off", help="r4: named-entity guard (ne_guard.py): Qwen lists proper nouns, TTS gets phonetic respellings on retry, "
                     "the TTS QA's Whisper decode must contain every entity (04: 'Sochi' was said 'Soky')")
     ap.add_argument("--stop-after", choices=["none", "audio"], default="none", help="audio = stop after the dubbed track (audio-only candidate: manifest + dubbed_24k/16k.wav, no LatentSync)")
@@ -1071,7 +1076,9 @@ def main() -> int:
                                             qa_cfg={"enabled": qa_on, "retries": a.tts_retries, "low_temp": a.qa_temp},
                                             fit_up={"enabled": a.fit_up == "on" and llm is not None, "ratio": a.fit_up_ratio, "rounds": a.fit_up_rounds, "aim": a.fit_up_aim, "guard": a.fit_up_guard == "on", "persist": a.fit_up_persist},
                                             split_retries=a.split_retries, min_part_words=a.phrase_min_part_words, soft_part_words=a.phrase_soft_part_words, part_max_words=a.part_max_words,
-                                            phrase_split=a.phrase_split, phrase_cut=a.phrase_cut, long_pause_func=a.long_pause_func, long_pause_grow=a.long_pause_grow, cut_fade=a.cut_fade, gap_qa=a.tts_gap_qa == "on", pause_mark_mode=a.pause_marks, sentence_flow_gap=a.sentence_flow_gap, log=lambda m_: print(m_, flush=True))
+                                            phrase_split=a.phrase_split, phrase_cut=a.phrase_cut, long_pause_func=a.long_pause_func, long_pause_grow=a.long_pause_grow, cut_fade=a.cut_fade, gap_qa=a.tts_gap_qa == "on", pause_mark_mode=a.pause_marks, sentence_flow_gap=a.sentence_flow_gap,
+                                            dur_cfg={"enabled": a.dur_translate == "on" and llm is not None, "ok_cost": a.dur_ok_cost, "tts_top": a.dur_top, "rounds": a.dur_rounds, "min_score": a.dur_min_score},
+                                            log=lambda m_: print(m_, flush=True))
             else:
                 man["tts"] = run_tts_burst(units, plans, refs, tgt, work, a.seed, times, opts=burst_opts, llm=llm, src_name=lang_name(src_lang), tgt_name=lang_name(tgt),
                                            fit={"enabled": llm is not None, "rounds": a.fit_rounds, "target_ratio": a.fit_target_ratio},
