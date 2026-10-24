@@ -158,8 +158,9 @@ def annotate(manifest, t):
 
 
 def crop_box(lm, H, W):
-    p = lm[:, :2]; iod = float(np.linalg.norm(p[33] - p[263])); c = p[[61, 291, 2, 152]].mean(0)
-    s = 1.6 * iod; x0, y0 = int(max(0, c[0] - s)), int(max(0, c[1] - 1.1 * s)); x1, y1 = int(min(W, c[0] + s)), int(min(H, c[1] + 0.9 * s))
+    """lower face: nose base - 0.25 iod .. chin + 0.3 iod, mouth centre +- 0.95 iod."""
+    p = lm[:, :2]; iod = float(np.linalg.norm(p[33] - p[263])); cx = float(p[[61, 291]].mean(0)[0])
+    x0, x1 = int(max(0, cx - 0.95 * iod)), int(min(W, cx + 0.95 * iod)); y0, y1 = int(max(0, p[2, 1] - 0.25 * iod)), int(min(H, p[152, 1] + 0.3 * iod))
     return x0, y0, x1, y1
 
 
@@ -177,7 +178,7 @@ def cmd_sheet(a):
         for k, f in enumerate(decode(path)):
             if k in want: store[k] = f
             if k > max(want): break
-    rows = []; T = 112
+    rows = []; T = 170
     for r_, e in enumerate(ev):
         k = e["frame"]; f0 = fs[k]; H, W = f0.shape[:2]
         if z is not None and np.isfinite(z["lm"][k][[33, 263, 61, 291, 2, 152]]).all(): x0, y0, x1, y1 = crop_box(z["lm"][k].astype(np.float64), H, W)
