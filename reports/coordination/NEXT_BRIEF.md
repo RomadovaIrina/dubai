@@ -126,6 +126,43 @@ Treat face twitching as the single top priority of round 5, above every other it
 7. **Half-face colour shift** (v5 04, first 10 s). Colour match is needed (without it 1.32 → 3.04). The v5colour variant was rejected.
    Keep the r4 colour gate row.
 
+## 5b. Round-5 target and team (user, 21.10): "ideal quality, both video and audio"
+Three agents on three RTX 5090 servers, all starting from `experiment/r4-merged-m4` (m3):
+
+1. **FACE agent (high effort):** blocker #0, face twitch.
+   - Then flashes (item 2) and the chin (item 3: mr38 in).
+   - Acceptance: twitch detector ≤ v4 on all 5 + the human top-20 review.
+2. **GENERATOR-CEILING agent (high effort).** Settle once and for all whether LatentSync 1.6 is the limit.
+   - (a) The best LatentSync settings: guidance 2.0–2.5 + deflash, steps, `--max-ls-frames`, 512 crop / upscale.
+   - (b) One or two alternative lip-sync generators with clean WEIGHT licences. Check the licence first and write it down; drop
+     anything NC / unlicensed.
+   - Compare on the 9 worst windows and on full 04 / 05: SyncNet on dub speech, flashes, twitch, chin wave, s/video-min.
+   - Deliver a recommendation and a side by side for the user.
+3. **AUDIO agent (high effort):** go from patches to the root cause.
+   - Most audio defects (rushed ×1.15 speech, "source talks / dub silent", long merged silences, illogical pauses) come from the
+     EN/RU LENGTH mismatch.
+   - Do **duration-aware translation**: ask Qwen for a translation that fits the source burst's duration (a target syllable /
+     word budget from the source timing), verify it with back-translation / judge for faithfulness, and pick the candidate whose TTS
+     duration is closest. Then pauses come naturally at the source pause points and tempo stays at ≈1.0.
+   - Keep the pb1 boundary rule, the NE guard, the bed duck, and −16 LUFS.
+   - Gates:
+     - tempo outside 0.95–1.05 (s);
+     - source-talks / dub-silent (s);
+     - dub-talks / source-silent (s);
+     - pauses inside a phrase;
+     - WER;
+     - faithfulness score.
+
+**Integration:** the face agent owns the merged E2E (m-series). Every merged candidate goes out as WATCH with a `review.md`, and the
+user + Max confirm it before it counts.
+
+**Human review protocol (with Max):**
+- For each video, the 10 moments the detectors rank worst, each with a 3-s clip at normal and half speed.
+- Max marks each one OK / NOT OK.
+- Anything NOT OK becomes a regression test that all later versions must pass.
+
+**Budget:** 3 × ~$0.8/h ≈ $2.4/h. The balance is $12.14 (~5 h), so the user should top up ~$30 for a full day.
+
 ## 6. How to work
 - One command per experiment, all 5 videos, the gate against the previous published version, WATCH clips + `review.md` (one row per
   10 s: voice / background / pauses / mouth / face) so the user can confirm without hunting for timecodes.
