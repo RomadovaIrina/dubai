@@ -679,7 +679,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
         if m.conds is not None:
             m.conds = m.conds.to(device=dev())
 
-    def gen_sentence(u, text: str, dtype, salt: int = 0) -> tuple:
+    def gen_sentence(u, text: str, dtype, salt: int = 0, cfg_w: float = 0.5) -> tuple:
         """One whole-sentence generation with the QA retry ladder of run_tts_burst (same seed rule, part index 0). Returns (wav float32 1-D, record)."""
         text = _spk(text)   # r3: Chatterbox + QA hear / judge the speakable form; Qwen and its number checks keep the written one
         base = seed + 100 * u["id"] + 100003 * salt
@@ -691,12 +691,12 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
             s = base + 7919 * soff; torch.manual_seed(s); tg = time.perf_counter()
             say = ne_guard.apply(text, ents, ai - 1) if ents else text
             with torch.autocast(dev(), dtype=dtype, enabled=dtype != torch.float32):
-                wav = m.generate(say, language_id=tgt_lang, temperature=temp)
+                wav = m.generate(say, language_id=tgt_lang, temperature=temp, cfg_weight=cfg_w)   # r5: cfg_w < 0.5 = Chatterbox's slower, more deliberate pace
             wav = wav.detach().float().cpu()
             if not torch.isfinite(wav).all() or wav.abs().max() < 1e-4:
                 raise RuntimeError(f"non-finite or silent TTS for unit {u['id']}")
             stats["gen_seconds"] += time.perf_counter() - tg; stats["attempts"] += 1
-            rec = {"attempt": ai + 1, "seed": s, "temperature": temp, "seconds": round(wav.shape[-1] / m.sr, 3)}
+            rec = {"attempt": ai + 1, "seed": s, "temperature": temp, "seconds": round(wav.shape[-1] / m.sr, 3), "cfg_weight": cfg_w}
             if qa is not None:
                 tq = time.perf_counter(); r = qa.assess(say, wav[0].numpy(), m.sr, tgt_lang); stats["qa_seconds"] += time.perf_counter() - tq
                 rec.update({"score": r["score"], "bad": r["bad"], "reasons": r["reasons"], "ctc": r["ctc"][:160], "whisper": r["whisper"][:160], "lost_words": r.get("lost_words", [])})
@@ -759,8 +759,8 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                 # ---- r5 duration-aware translation: N length-budgeted Qwen candidates, judge + back-translation, TTS of the top K, the best dry-run placement wins
                 if dur_cfg.get("enabled") and llm is not None:
                     cut_kw = {**ACOUSTIC_CUT, "w_func_long": long_pause_func, "long_grow": long_pause_grow} if phrase_cut == "acoustic" else {}
-                    def _synth(t_, salt_, u=u):
-                        y_, r_ = gen_sentence(u, t_, dtype, salt=salt_); s_ = align(y_, t_); return y_, r_, s_, speech_seconds(y_, s_)
+                    def _synth(t_, salt_, u=u, cfg_w=0.5):
+                        y_, r_ = gen_sentence(u, t_, dtype, salt=salt_, cfg_w=cfg_w); s_ = align(y_, t_); return y_, r_, s_, speech_seconds(y_, s_)
                     def _sim(y_, s_, t_, p=p, prev_end=prev_end, cut_kw=cut_kw):
                         return dur_translate.simulate(y_, m.sr, s_, _spk(t_), p, opts, prev_end, sentence_flow_gap, cut_kw, norm)
                     text, y, rec, spans, sp_s = dur_translate.select(u, p, text, (y, rec, spans, sp_s), _synth, _sim, llm, src_name, tgt_name, dur_cfg, _spk, log=log)
