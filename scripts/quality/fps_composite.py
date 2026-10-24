@@ -45,18 +45,29 @@ def decode_source(path: str):
     return frames, np.array(pts, np.int64), tb, rate
 
 
-def master_weights(man: dict, n: int) -> np.ndarray:
-    """clean0's per-master-frame LS weight: 1 in LATENT_SYNC segments, the assembly crossfade ramps at LS <-> original switches."""
+def master_weights(man: dict, n: int, xf_frames: int = 0, shape: str = "linear") -> np.ndarray:
+    """clean0's per-master-frame LS weight: 1 in LATENT_SYNC segments, the assembly crossfade ramps at LS <-> original switches.
+    r5 F: xf_frames > 0 overrides the ramp length (capped at a third of the segment), shape smooth = smoothstep."""
     segs = sorted([s for s in man["lipsync"]["segments"] if s["action"] != "SPLIT"], key=lambda s: s["start_frame"]); w = np.zeros(n, np.float32)
+    ease = (lambda x: x * x * (3 - 2 * x)) if shape == "smooth" else (lambda x: x)
     for s in segs:
         if s["action"] != "LATENT_SYNC": continue
-        xf = s.get("crossfade") or {}; L = s["end_frame"] - s["start_frame"]
+        xf = dict(s.get("crossfade") or {}); L = s["end_frame"] - s["start_frame"]
+        if xf_frames > 0:
+            for k_ in ("in", "out"):
+                if xf.get(k_): xf[k_] = min(xf_frames, L // 3)
         for k in range(L):
             a = 1.0
-            if xf.get("in") and k < xf["in"]: a = (k + 1) / (xf["in"] + 1)
-            if xf.get("out") and k >= L - xf["out"]: a = min(a, (L - k) / (xf["out"] + 1))
+            if xf.get("in") and k < xf["in"]: a = ease((k + 1) / (xf["in"] + 1))
+            if xf.get("out") and k >= L - xf["out"]: a = min(a, ease((L - k) / (xf["out"] + 1)))
             if s["start_frame"] + k < n: w[s["start_frame"] + k] = a
     return w
+
+
+def seg_joints(man: dict) -> list:
+    """r5 F: master frames b where one LATENT_SYNC generation ends and the next begins with no source frame between (a hard switch)."""
+    segs = sorted([s for s in man["lipsync"]["segments"] if s["action"] != "SPLIT"], key=lambda s: s["start_frame"])
+    return [b["start_frame"] for a_, b in zip(segs, segs[1:]) if a_["action"] == b["action"] == "LATENT_SYNC" and a_["end_frame"] == b["start_frame"]]
 
 
 def ellipse_alpha(bbox, H, W, edge_px: float, top: float = 0.52):
@@ -186,6 +197,13 @@ def main() -> int:
     ap.add_argument("--mask-track", choices=["dets", "head"], default="dets", help="r3, with --source-lm: dets = LatentSync box of the filtered landmarks, +-3 frame "
                     "mean (clean0 recipe at the source rate); head = box locked to the rigid head motion (anchor_filters.head_locked_boxes: sides / top "
                     "smoothed in head-stabilised coordinates, chin edge sigma 1)")
+    ap.add_argument("--seg-joint", type=int, default=0, help="r5 F (face twitch): LS|LS joints between two SEPARATE generations (dub-silence splits, "
+                    "--max-ls-frames caps; crossfade 0 there) -> the N master frames each side are a confidence-checked flow interpolation between the "
+                    "last frame before and the first after, eased (smoothstep); 0 = off (hard switch)")
+    ap.add_argument("--xfade-frames", type=int, default=0, help="r5 F: LS <-> source crossfade length in master frames (0 = the manifest's, 4)")
+    ap.add_argument("--xfade-shape", choices=["linear", "smooth"], default="linear", help="r5 F: crossfade ramp shape (smooth = smoothstep: no velocity step)")
+    ap.add_argument("--xfade-morph", choices=["on", "off"], default="off", help="r5 F: inside LS <-> source crossfades, a flow morph instead of an alpha "
+                    "blend: both the layer and the source are warped part of the way toward each other (no double jaw / lip contour)")
     a = ap.parse_args()
     global FPS_M; FPS_M = float(a.master_fps)
     t_all = time.perf_counter(); times = {}
@@ -195,7 +213,7 @@ def main() -> int:
     H, W = S[0].shape[:2]; nm = len(L)
     if L[0].shape[:2] != (H, W): raise SystemExit(f"LatentSync frames {L[0].shape[:2]} != source {(H, W)}")
     mp = np.load(cfs.run_mediapipe(work / "master_25fps.mp4", work / "master_mediapipe.npz"))["lm"][:nm]
-    wm = master_weights(man, nm)
+    wm = master_weights(man, nm, a.xfade_frames, a.xfade_shape)
     dets = cfs.ls_detections(mp, W, H, calib=True); dets = faa.smooth_detections(dets, 2)
     bb = np.array([d[0] if d[0] is not None else (np.nan,) * 4 for d in dets], np.float64)
     for k in range(4):   # mask smoothing +-3 (MouthOnlyRunner.boxes) on the master grid
@@ -290,6 +308,18 @@ def main() -> int:
                 y, z = L[b - 1].astype(np.float32), L[b].astype(np.float32)
                 L[b - 1] = np.clip(tms.interp(fl0, y, z, 1 / 3), 0, 255).astype(np.uint8); L[b] = np.clip(tms.interp(fl0, y, z, 2 / 3), 0, 255).astype(np.uint8); nbnd += 1
         times["c2_boundaries"] = round(time.perf_counter() - t0, 2)
+    njoint = 0
+    if a.seg_joint > 0:   # r5 F: two generations meet with no crossfade -> eased interpolation across the joint
+        t0 = time.perf_counter(); N = a.seg_joint
+        for b in seg_joints(man):
+            lo_, hi_ = b - N - 1, b + N
+            if lo_ < 0 or hi_ >= nm or wm[lo_] <= 0 or wm[hi_] <= 0: continue
+            y_, z_ = L[lo_].astype(np.float32), L[hi_].astype(np.float32)
+            for i_ in range(lo_ + 1, hi_):
+                x_ = (i_ - lo_) / (hi_ - lo_); x_ = x_ * x_ * (3 - 2 * x_)
+                L[i_] = np.clip(interp_safe(fl0, y_, z_, x_, a.safe_d, a.safe_cons, a.safe_scale)[0], 0, 255).astype(np.uint8)
+            njoint += 1
+        times["seg_joints"] = {"seconds": round(time.perf_counter() - t0, 2), "joints": njoint}
     tk = pts.astype(np.float64) * float(tb); mpos = tk * FPS_M
     mu_arr = mpos.copy()   # geometry index: nominal (= the old behaviour) unless the true master timing is given
     if a.master_timing:
@@ -514,6 +544,11 @@ def main() -> int:
                         wv = np.where(yy < ly, np.clip(1 - (ly - yy) / (0.15 * iod), 0, 1), np.where(yy <= cy, 1.0, np.clip(1 - (yy - cy) / (0.25 * iod), 0, 1)))
                         wh = np.clip(1 - ((xx - cx) / hw) ** 2, 0, 1)
                         sk = cv2.remap(sk, xx - xa, yy - ya - dy * wv * wh, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+        if a.xfade_morph == "on" and 0 < w < 1:   # r5 F: morph, not a double exposure: the source and the layer meet half way in geometry
+            Fsl = f.calc(tms.gray(sk), tms.gray(Lk)); gx, gy = f.g(*sk.shape[:2])   # sk(x) ~ Lk(x + Fsl)
+            Sw = cv2.remap(sk, gx - w * Fsl[..., 0], gy - w * Fsl[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+            Lw = cv2.remap(Lk, gx + (1 - w) * Fsl[..., 0], gy + (1 - w) * Fsl[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+            Lk = (1 - w) * Sw + w * Lw; aw = np.minimum(aw / w, 1.0)   # the blend weight is now inside Lk; the spatial mask stays
         o = S[k].copy(); o[ya:yb, xa:xb] = np.clip(sk + aw[..., None] * (Lk - sk), 0, 255).round().astype(np.uint8)
         if w >= 1:   # spec 8.4 on small faces: the feather ramp must not reach the lips (source lips and the layer's own lips)
             lm_q = lm_at(k, mu); lips_ = [lm_q] + ([lerp(mp_ls, m)] if mp_ls is not None else [])
