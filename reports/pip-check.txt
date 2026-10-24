@@ -1,5 +1,5 @@
-albucore 0.0.24 requires opencv-python-headless, which is not installed.
 faster-whisper 1.2.1 requires onnxruntime, which is not installed.
+albucore 0.0.24 requires opencv-python-headless, which is not installed.
 chatterbox-tts 0.1.7 requires gradio, which is not installed.
 s3tokenizer 0.3.0 requires pre-commit, which is not installed.
 albumentations 2.0.8 requires opencv-python-headless, which is not installed.
