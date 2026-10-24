@@ -455,7 +455,6 @@ def run_tts_burst(units: list, plans: list, refs: dict, tgt_lang: str, work: pat
         qa.close()
     empty_cache()
     stats["gen_seconds"] = round(stats["gen_seconds"], 2); stats["qa_seconds"] = round(stats["qa_seconds"], 2)
-    stats["dur_translate"] = {k_: (round(v_, 2) if isinstance(v_, float) else v_) for k_, v_ in dur_translate.STATS.items()} if dur_cfg.get("enabled") else None
     stats["retry_success_rate"] = round(stats["retry_success"] / stats["retried_parts"], 3) if stats["retried_parts"] else None
     return {"model": "ChatterboxMultilingualTTS t3=v3 (models/chatterbox)", "sr": sr, "dtype": str(used).replace("torch.", ""), "language_id": tgt_lang,
             "voice_reference": "speaker's own diarized speech via audio_prompt_path/prepare_conditionals",
@@ -971,6 +970,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
     if qa_obj is not None and not model_cache.cached("tts_qa"):
         qa_obj.close()
     empty_cache()
+    stats["dur_translate"] = {k_: (round(v_, 2) if isinstance(v_, float) else v_) for k_, v_ in dur_translate.STATS.items()} if dur_cfg.get("enabled") else None
     stats["judge_calls"] = JUDGE_STATS["calls"]; stats["judge_seconds"] = JUDGE_STATS["seconds"]; stats["pause_marks_seconds"] = round(JUDGE_STATS.pop("pause_marks_s", 0.0), 2)
     for k_ in ("gen_seconds", "qa_seconds", "align_seconds", "fitup_qwen_seconds", "fitdown_qwen_seconds", "fitup_gen_qa_seconds", "judge_seconds", "gap_qa_seconds"):
         if k_ not in stats: continue

@@ -19,6 +19,7 @@ from __future__ import annotations
 import copy
 import json
 import math
+import os
 import re
 import time
 
@@ -26,7 +27,7 @@ STATS = {"units": 0, "triggered": 0, "switched": 0, "candidates": 0, "rejected_g
 SHOTS_SRC_PAUSE = "|"
 DUR_SYSTEM = "You are a professional dubbing translator. You write natural spoken translations that fit a given length. You answer with JSON only."
 JUDGE_SYSTEM = "You are a strict bilingual reviewer of dubbing translations. You answer with JSON only."
-_FILLER = re.compile(r"\b(um+|uh+|er+|erm|you know|basically|actually|literally|i mean|sort of|kind of)\b", re.I)
+_FILLER = re.compile(r"\b(um+|uh+|er+|erm|you know|basically|actually|literally|i mean|sort of|kind of|okay|you see|everyone|if you (?:know|understand) what i mean)\b", re.I)
 
 
 def syllables(text: str) -> int:
@@ -235,6 +236,23 @@ def simulate(y, sr: int, spans, spoken: str, p: dict, opts, prev_end, flow_gap: 
         for j in range(len(counts) - 2, -1, -1):
             if counts[j] == 0:
                 q["bursts"][j:j + 2] = [(q["bursts"][j][0], q["bursts"][j + 1][1])]; counts[j:j + 2] = [counts[j + 1]]
+    # the same voiced-cut rule as run_tts_phrase (DUB_MERGE_VOICED_CUTS): a cut whose 10 ms on either side is within 20 dB of the clip's speech level
+    # is not cut, the two parts become one span over the union window (r5v2 02 u5: the dry run cut at ", which", the take ran the words together, the
+    # pipeline merged two bursts over a 5.7 s source pause and the dub was silent for 3.4 s of source speech)
+    if spans and len(counts) > 1 and os.environ.get("DUB_MERGE_VOICED_CUTS", "1") == "1" and len(y) >= 240:
+        fr = 20 * np.log10(np.sqrt(np.mean(y[: len(y) // 240 * 240].reshape(-1, 240) ** 2, axis=1)) + 1e-9)
+        ref = float(np.percentile(fr[fr > -60], 90)) if (fr > -60).any() else -20.0
+        def lv(t0, t1):
+            i0, i1 = max(0, int(t0 * sr)), min(len(y), int(t1 * sr))
+            return 20 * np.log10(np.sqrt(np.mean(y[i0:i1] ** 2)) + 1e-9) if i1 > i0 else -120.0
+        k = 0; acc = counts[0]
+        while k < len(counts) - 1:
+            e_, s_ = spans[acc - 1]["end"], spans[acc]["start"]
+            if max(lv(e_ - 0.01, e_), lv(s_, s_ + 0.01)) > ref - 20:
+                q["bursts"][k:k + 2] = [(q["bursts"][k][0], q["bursts"][k + 1][1])]; counts[k:k + 2] = [counts[k] + counts[k + 1]]
+            else:
+                k += 1
+            acc = sum(counts[:k + 1])
     durs = []; k0 = 0
     for c in counts:
         if spans:

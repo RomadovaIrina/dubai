@@ -12,6 +12,8 @@ def main():
     tag = sys.argv[1]; ids = sys.argv[2:] or ["01", "02", "03", "04", "05"]
     import run_clean_pipeline_05 as rc
     import dur_translate as dt
+    import os
+    os.environ["DUB_QWEN_SIZE"] = os.environ.get("DUB_FAITH_QWEN", "14b")   # the gate judge: the stronger model, the same for every version scored
     rc.QWEN_GPU_LAYERS = -1; llm, _ = rc.load_llm({})
     for id_ in ids:
         mf = A / tag / id_ / f"{id_}_r4b.manifest.json"; mj = A / tag / f"{id_}.metrics.json"
