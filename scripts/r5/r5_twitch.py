@@ -77,31 +77,28 @@ def cmd_score(a):
     z = np.load(a.lm); lm = z["lm"].astype(np.float64); t = z["t"].astype(np.float64); n = len(lm)
     cv2.setNumThreads(4); dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
     ch = {k: np.full(n, np.nan) for k in ("skin_motion", "skin_app", "lips")}; iods = np.full(n, np.nan); touched = np.zeros(n, bool)
-    po = ps = None; Dprev = None; k = -1
+    po = ps = None; k = -1
     for k, (fo, fs) in enumerate(zip(decode(a.video), decode(a.src))):
         if k >= n: break
         H, W = fs.shape[:2]; mk = masks(lm[k], H, W)
         if mk is None or po is None:
-            po, ps, Dprev = fo, fs, None; continue
+            po, ps = fo, fs; continue
         (y0, y1, x0, x1), skin, lips, iod = mk; iods[k] = iod; sc = 100.0 / iod
         go = lambda f: cv2.cvtColor(f[y0:y1, x0:x1], cv2.COLOR_BGR2GRAY)
         diff = np.abs(fo[y0:y1, x0:x1].astype(np.int16) - fs[y0:y1, x0:x1].astype(np.int16)).max(2)
         touched[k] = bool((diff[skin | lips] > 6).mean() > 0.02) if (skin | lips).any() else False
         if not touched[k] and not (np.abs(po[y0:y1, x0:x1].astype(np.int16) - ps[y0:y1, x0:x1].astype(np.int16)).max(2) > 6).mean() > 0.02:
             for c_ in ch: ch[c_][k] = 0.0   # output = source here and one frame before: nothing pasted, no twitch possible
-            po, ps, Dprev = fo, fs, None; continue
+            po, ps = fo, fs; continue
         Fo = dis.calc(go(po), go(fo), None); Fs = dis.calc(go(ps), go(fs), None); G = np.linalg.norm(Fo - Fs, axis=2) * sc
         if skin.sum() > 30: ch["skin_motion"][k] = float(G[skin].mean())
         if lips.sum() > 10: ch["lips"][k] = float(G[lips].mean())
-        sg = 0.06 * iod; D = cv2.GaussianBlur(cv2.cvtColor(fo[y0:y1, x0:x1], cv2.COLOR_BGR2GRAY).astype(np.float32) - go(fs).astype(np.float32), (0, 0), sg)
-        if Dprev is not None and Dprev[1] == (y0, y1, x0, x1) and skin.sum() > 30:
-            yy, xx = np.mgrid[0:y1 - y0, 0:x1 - x0].astype(np.float32)
-            Fb = dis.calc(go(fs), go(ps), None)   # k -> k-1: pull D_{k-1} onto frame k's geometry
-            Dw = cv2.remap(Dprev[0], xx + Fb[..., 0], yy + Fb[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
-            ch["skin_app"][k] = float(np.abs(D - Dw)[skin].mean())
-        elif skin.sum() > 30:
-            ch["skin_app"][k] = 0.0 if Dprev is None and not touched[k] else np.nan
-        Dprev = (D, (y0, y1, x0, x1)); po, ps = fo, fs
+        sg = 0.06 * iod; lp = lambda o_, s_: cv2.GaussianBlur(cv2.cvtColor(o_[y0:y1, x0:x1], cv2.COLOR_BGR2GRAY).astype(np.float32) - go(s_).astype(np.float32), (0, 0), sg)
+        if skin.sum() > 30:   # D_{k-1} on this frame's roi, pulled onto frame k's geometry by the source flow k -> k-1
+            yy, xx = np.mgrid[0:y1 - y0, 0:x1 - x0].astype(np.float32); Fb = dis.calc(go(fs), go(ps), None)
+            Dw = cv2.remap(lp(po, ps), xx + Fb[..., 0], yy + Fb[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+            ch["skin_app"][k] = float(np.abs(lp(fo, fs) - Dw)[skin].mean())
+        po, ps = fo, fs
         if a.max_frames and k >= a.max_frames: break
     nf = k + 1
     spike = {}
