@@ -7,7 +7,7 @@
 # env: AUDIO_EXTRA = extra run_clean_pipeline_05.py flags; REMIX_ARGS = r3_remix.py flags; REUSE=<tag> = take the TTS run of another tag (bed-only A/B);
 #      PAR = videos in parallel on the GPU (default 2)
 set -u
-DUB_ROOT=/workspace/dub/dubai; export DUB_ROOT; . $DUB_ROOT/scripts/env.sh >/dev/null; cd $DUB_ROOT
+DUB_ROOT=${DUB_ROOT:-/workspace/dub/dubai}; export DUB_ROOT; . $DUB_ROOT/scripts/env.sh >/dev/null; cd $DUB_ROOT
 TAG=$1; shift; IDS=${*:-01 02 03 04 05}; A=/workspace/dub/artifacts/r4a; O=$A/$TAG; mkdir -p $O/runs $O/mix_src $A/sep
 export PYTHONPATH=third_party/llama_cuda${PYTHONPATH:+:$PYTHONPATH} PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True DUB_CUT_SNAP=1 DUB_EQPOWER_FADE=1
 echo "r4_audio $TAG commit $(git rev-parse --short HEAD) AUDIO_EXTRA='${AUDIO_EXTRA:-}' REMIX_ARGS='${REMIX_ARGS:-}' REUSE='${REUSE:-}'" >> $O/README.txt

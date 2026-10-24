@@ -320,7 +320,8 @@ def load_llm(times: dict):
     """Qwen2.5-7B Q8_0 via llama.cpp (CPU), loaded once and shared by sentence segmentation, translation, burst split and the fit rewrites."""
     import glob
     from llama_cpp import Llama
-    files = sorted(glob.glob(str(MODELS / "qwen2.5-7b-instruct-gguf" / f"*{QWEN_QUANT}*.gguf")))
+    size = os.environ.get("DUB_QWEN_SIZE", "7b")   # r5 --qwen-size: 14b = Qwen2.5-14B-Instruct GGUF Q5_K_M (Apache-2.0, same Qwen org repo family)
+    files = sorted(glob.glob(str(MODELS / f"qwen2.5-{size}-instruct-gguf" / f"*{QWEN_QUANT if size == '7b' else 'q5_k_m'}*.gguf")))
     if not files:
         raise Blocker(f"Qwen2.5-7B {QWEN_QUANT} GGUF not found under models/ (python scripts/pilot/fetch_09_qwen_quant.py {QWEN_QUANT} --yes)")
     with timed(times, "translation_load"):
@@ -883,6 +884,7 @@ def main() -> int:
     ap.add_argument("--bg-residue-duck-db", type=float, default=-15.0, help="--background on: bed attenuation where the BED itself sounds like speech (Silero on the "
                     "separated stem) while the source speaks and the dub is silent = voice leak of the separator (r2 2026-10-17: Spleeter 02 39.0-39.4 s); 0 = off")
     ap.add_argument("--bg-offset-db", type=float, default=0.0, help="--background on: bed level relative to the original voice/background balance (dB)")
+    ap.add_argument("--qwen-size", choices=["7b", "14b"], default="7b", help="r5: Qwen2.5 Instruct size for translation + rewrites (14b = Q5_K_M, ~10.5 GB, Apache-2.0)")
     ap.add_argument("--dur-translate", choices=["on", "off"], default="off", help="r5: phrase mode: duration-aware translation (dur_translate.py): Qwen length-budgeted "
                     "candidates + judge / back-translation + TTS of the top K, the best dry-run placement (tempo ~1.0, no dub-silent source speech) wins")
     ap.add_argument("--dur-ok-cost", type=float, default=0.25, help="--dur-translate: placement cost (s) below which the plain translation is kept without candidates")
@@ -942,6 +944,7 @@ def main() -> int:
     os.environ["DUB_QA_WHISPER_COMPUTE"] = a.qa_whisper_compute
     os.environ["DUB_TTS_TEXT_NORM"] = a.tts_text_norm
     if a.pause_boundary_only == "on": os.environ["DUB_PAUSE_BOUNDARY_ONLY"] = "1"
+    os.environ["DUB_QWEN_SIZE"] = a.qwen_size
     if a.spread_overlap == "on": os.environ["DUB_SPREAD_OVERLAP"] = "1"
     if a.qwen_gpu_layers:
         import llama_cpp

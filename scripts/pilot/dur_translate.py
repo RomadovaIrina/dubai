@@ -26,7 +26,7 @@ STATS = {"units": 0, "triggered": 0, "switched": 0, "candidates": 0, "rejected_g
 SHOTS_SRC_PAUSE = "|"
 DUR_SYSTEM = "You are a professional dubbing translator. You write natural spoken translations that fit a given length. You answer with JSON only."
 JUDGE_SYSTEM = "You are a strict bilingual reviewer of dubbing translations. You answer with JSON only."
-_FILLER = re.compile(r"\b(um+|uh+|er+|erm|you know|basically|actually|literally|i mean|sort of|kind of)\b", re.I)
+_FILLER = re.compile(r"\b(um+|uh+|er+|erm|you know|basically|actually|literally|i mean|sort of|kind of|okay|you see|everyone|if you (?:know|understand) what i mean)\b", re.I)
 
 
 def syllables(text: str) -> int:
