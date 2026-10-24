@@ -1,3 +1,21 @@
+# r5-audio (audio agent A): duration-aware translation
+`scripts/r5/r5_audio.sh <tag>` = pb1 flags (`--ne-guard on --pause-boundary-only on`, bed `--src-duck-db -6`) + `--dur-translate on --qwen-size 14b`,
+then `r5_faith.py` (faithfulness axis). `scripts/r5/r5_publish.sh <ver> <tag>` = gate vs pb1 (reproduced on this server) -> outbox + AB + review.md + handoff F.
+- `scripts/pilot/dur_translate.py` (hooked into `tts_burst.run_tts_phrase` after the plain take): dry run of the real placement (flow merge, boundary-only
+  cut DP, voiced-cut merges, burst_fit_ratios) costs every take in seconds (1.5 x speed-up beyond 1.05 + source speech without dub + 0.3 x dub over source
+  silence); above 0.25 s: Qwen per-budget rewordings (budget = this voice's syllables / s x the source speech to fill) + source-pause-ordered piece
+  candidates (one English piece per source pause, budgeted to its burst), deterministic guards (numbers, names, NE, filler, script) + one Qwen judge call
+  per candidate (back-translation, missing / added facts, meaning 1-5, naturalness 1-5; min 4 / 4), TTS of the top K + the plain text re-seeded, Chatterbox
+  pace variants (cfg_weight 0.3 / 0.2) when still under-filled; the cheapest take wins (plain wins ties within 0.15 s). fit-up is skipped after it.
+- `--qwen-size 14b`: Qwen2.5-14B-Instruct GGUF Q5_K_M (Qwen/Qwen2.5-14B-Instruct-GGUF, **Apache-2.0** per the model card, 10.5 GB) for translation,
+  segmentation, NE guard, candidates and judge. On 5 hard 05 sentences it fixed bad 7B translations (u03 "Here it just wants to see" -> "I just want to
+  see how our application will handle itself in this format") and wrote fluent longer versions; Qwen time the same as 7B Q8_0. Two 14B audio runs do not
+  fit one 5090 next to Chatterbox + QA (OOM -> fp32 fallback): PAR=1.
+- Gate axes added: tempo outside 0.95-1.05 (s of placed dub, from the manifest), faithfulness (14B judge on the final English of every unit, the same
+  judge for every version: pb1 re-scored). `r5_known_check.py`: every moment of r4_audio_v1_known_issues.md / pb1_listen.md re-measured prev -> new.
+- Rejected: one-call multi-budget candidates (7B ignores budgets: 11-15 words asked, 8-10 given); Chatterbox cfg_weight as the only lever (+-10 % seed
+  noise as large as the effect on short sentences).
+
 # r4-merged (built on the audio server while the video server is down)
 `scripts/r4/r4_merged.sh`: m2 = r4_video_v1 stack (v4 generator + r3fix composite minus seam-LF) on audio pb1, v4repro = full v4 stack on this
 server's v4 audio reproduction (gate PREV), r4_gate.py scores. m2 is published as a WATCH candidate (not gate-passing): `<id>_r4_merged_m2_WATCH[_sbs].mp4`.

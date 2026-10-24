@@ -261,14 +261,23 @@ def simulate(y, sr: int, spans, spoken: str, p: dict, opts, prev_end, flow_gap: 
             durs.append(len(y) / sr)
         k0 += c
     ratios = burst_fit_ratios([np.zeros(int(d * sr), dtype=np.float32) for d in durs], q["bursts"], q["slot"], q["next_start"], opts, sr=sr, prev_end=prev_end)
-    over = under = extra = 0.0; rows = []
+    # emulate place_groups on the SOURCE speech intervals (the plan's bursts before any merge): a part starts at its window, is sped up to fit
+    # (<= atempo_cap) or slowed down to fill its burst (>= fill_slowdown); then charge in seconds
+    #   1.0 x source speech without dub + 0.7 x dub over source silence (r4 known-issues weights) + 1.5 x speed-up beyond 1.05 + 0.3 x slow-down below 0.95
+    speech = [tuple(b_) for b_ in p["bursts"]]; cap = getattr(opts, "atempo_cap", 1.15); fill = getattr(opts, "fill_slowdown", 1.0) or 1.0
+    src_sil = dub_over = fast = slow = 0.0; rows = []
     for d, r, (bs, be) in zip(durs, ratios, q["bursts"]):
-        ideal = be - bs; win = d / r if r else ideal
-        o = max(0.0, d - 1.05 * win); un = max(0.0, 0.95 * ideal - d); ex = max(0.0, min(d, win) - 1.05 * ideal)
-        over += o; under += un; extra += ex; rows.append([round(d, 2), round(ideal, 2), round(win, 2)])
-    cost = 1.5 * over + 1.0 * under + 0.3 * extra
-    return {"cost": round(cost, 3), "over_s": round(over, 3), "under_s": round(under, 3), "extra_s": round(extra, 3), "parts": rows, "ideal_s": round(sum(r_[1] for r_ in rows), 3),
-            "speech_s": round(sum(durs), 3)}
+        win = d / r if r else (be - bs); blen = max(be - bs, 0.05)
+        t = min(d / win, cap) if d > win else (max(fill, d / blen) if d < blen else 1.0)
+        e = bs + d / t; sp_in = sum(max(0.0, min(be, y1) - max(bs, y0)) for y0, y1 in speech)
+        cov = sum(max(0.0, min(e, y1) - max(bs, y0)) for y0, y1 in speech)
+        src_sil += max(0.0, sp_in - min(cov, sp_in)); dub_over += max(0.0, (e - bs) - cov)
+        if t > 1.05: fast += d / t * min(1.0, (t - 1.05) / 0.10)      # ramps to full weight at x1.15 (the audible "rushed")
+        elif t < 0.95: slow += d / t * min(1.0, (0.95 - t) / 0.075)   # ramps to full weight at x0.875 (the fill floor)
+        rows.append([round(d, 2), round(sp_in, 2), round(win, 2), round(t, 3)])
+    cost = 1.0 * src_sil + 0.7 * dub_over + 1.5 * fast + 0.3 * slow
+    return {"cost": round(cost, 3), "src_silent_s": round(src_sil, 3), "dub_over_silence_s": round(dub_over, 3), "fast_s": round(fast, 3), "slow_s": round(slow, 3),
+            "under_s": round(src_sil, 3), "over_s": round(fast, 3), "parts": rows, "ideal_s": round(sum(r_[1] for r_ in rows), 3), "speech_s": round(sum(durs), 3)}
 
 
 def select(u: dict, p: dict, plain: str, first: tuple, synth, sim, llm, src_name: str, tgt_name: str, cfg: dict, spoken, log=print) -> tuple:
@@ -326,7 +335,7 @@ def select(u: dict, p: dict, plain: str, first: tuple, synth, sim, llm, src_name
             cs = sim(y, sp, c); row.update(sim=cs, tts_s=round(s, 2), qa_bad=bool(rec.get("qa_bad_final")), qa_score=rec.get("qa_score"))
             cand = {"text": c, "y": y, "rec": rec, "spans": sp, "s": s, "sim": cs, "score": j["score"], "plain": bool(row.get("reseed"))}
             row["total"] = round(total(cand), 3)
-            log(f"    [dur] u{u['id']:02d} r{rnd + 1} {'reseed' if row.get('reseed') else 'piece' if row.get('pieces') else 'cand'} tts {s:.2f}s cost {cs['cost']:.2f} (over {cs['over_s']:.2f} under {cs['under_s']:.2f}) "
+            log(f"    [dur] u{u['id']:02d} r{rnd + 1} {'reseed' if row.get('reseed') else 'piece' if row.get('pieces') else 'cand'} tts {s:.2f}s cost {cs['cost']:.2f} (src-silent {cs['src_silent_s']:.2f} dub-over {cs['dub_over_silence_s']:.2f} fast {cs['fast_s']:.2f} slow {cs['slow_s']:.2f}) "
                 f"total {row['total']:.2f} score {j['score']}{' QA-BAD' if rec.get('qa_bad_final') else ''} | {c[:70]}")
             if total(cand) < total(best): best = cand
         if best["sim"]["cost"] <= cfg.get("ok_cost", 0.25) or not pool:
