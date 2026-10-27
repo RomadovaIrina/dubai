@@ -8,6 +8,7 @@ Whisper words (difflib on normalised tokens); every gap > --min-gap s between tw
     python scripts/quality/r4_pause_logic.py --run RUN_MIX_DIR --manifest M.json [--json out.json]"""
 import argparse, difflib, json, pathlib, re, sys
 import numpy as np
+PICK = __import__("os").environ.get("DUB_PAUSE_PICK", "r6")   # r4 = the round-4 word pick (kept for A/B of the metric)
 CLAUSE = frozenset("and but so because that which who whom whose where when while if or although though since unless until whether then".split())
 
 
@@ -53,7 +54,11 @@ def analyse(run, man, min_gap=0.12):
     d = np.diff(np.concatenate([[0], sil.astype(np.int8), [0]])); gaps = [(a * 0.01, b * 0.01) for a, b in zip(np.flatnonzero(d == 1), np.flatnonzero(d == -1)) if (b - a) * 0.01 > min_gap]
     starts = np.array([w[1] for w in W]); rows = []
     for g0, g1 in gaps:
-        j = int(np.searchsorted(starts, g1 - 0.05)) - 1     # the last word that starts before the gap ends (Whisper stretches word ENDS over silence)
+        if PICK == "r4":
+            j = int(np.searchsorted(starts, g1 - 0.05)) - 1     # the last word that starts before the gap ends (Whisper stretches word ENDS over silence)
+        else:   # r6: Whisper also pulls the NEXT word's start back into the silence; the r4 pick then classified (next word | word after) = INSIDE.
+            # The word before a gap is the last one that starts before the gap STARTS (+ 50 ms tolerance for a start on the gap edge).
+            j = int(np.searchsorted(starts, g0 + 0.05)) - 1
         if j < 0 or j + 1 >= len(W) or j not in w2s or j + 1 not in w2s or w2s[j + 1] != w2s[j] + 1: continue
         i = w2s[j]; cls, st = classify(S[i], S[i + 1] if i + 1 < len(S) else None)
         rows.append({"t": round(g0, 2), "gap_s": round(g1 - g0, 3), "class": cls, "strength": st, "before": S[i][0], "after": S[i + 1][0] if i + 1 < len(S) else "", "unit": S[i][1]})

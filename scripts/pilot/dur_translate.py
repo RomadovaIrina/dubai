@@ -25,6 +25,7 @@ import time
 
 STATS = {"units": 0, "triggered": 0, "switched": 0, "candidates": 0, "rejected_guard": 0, "rejected_judge": 0, "tts": 0, "qwen_s": 0.0, "tts_s": 0.0}
 SHOTS_SRC_PAUSE = "|"
+COST = "r5"   # set per unit by select() from cfg["cost"]; read by simulate()
 DUR_SYSTEM = "You are a professional dubbing translator. You write natural spoken translations that fit a given length. You answer with JSON only."
 JUDGE_SYSTEM = "You are a strict bilingual reviewer of dubbing translations. You answer with JSON only."
 _FILLER = re.compile(r"\b(um+|uh+|er+|erm|you know|basically|actually|literally|i mean|sort of|kind of|okay|you see|everyone|if you (?:know|understand) what i mean)\b", re.I)
@@ -272,10 +273,13 @@ def simulate(y, sr: int, spans, spoken: str, p: dict, opts, prev_end, flow_gap: 
         e = bs + d / t; sp_in = sum(max(0.0, min(be, y1) - max(bs, y0)) for y0, y1 in speech)
         cov = sum(max(0.0, min(e, y1) - max(bs, y0)) for y0, y1 in speech)
         src_sil += max(0.0, sp_in - min(cov, sp_in)); dub_over += max(0.0, (e - bs) - cov)
-        if t > 1.05: fast += d / t * min(1.0, (t - 1.05) / 0.10)      # ramps to full weight at x1.15 (the audible "rushed")
+        if COST == "r6":   # r6: what the gate counts (r4_audio_metrics tempo.out_s): every placed second outside 0.95-1.05, at full weight
+            if t > 1.05 + 1e-3: fast += d / t
+            elif t < 0.95 - 1e-3: slow += d / t
+        elif t > 1.05: fast += d / t * min(1.0, (t - 1.05) / 0.10)      # ramps to full weight at x1.15 (the audible "rushed")
         elif t < 0.95: slow += d / t * min(1.0, (0.95 - t) / 0.075)   # ramps to full weight at x0.875 (the fill floor)
         rows.append([round(d, 2), round(sp_in, 2), round(win, 2), round(t, 3)])
-    cost = 1.0 * src_sil + 0.7 * dub_over + 1.5 * fast + 0.3 * slow
+    cost = 1.0 * src_sil + 1.0 * dub_over + 1.5 * fast + 1.0 * slow if COST == "r6" else 1.0 * src_sil + 0.7 * dub_over + 1.5 * fast + 0.3 * slow
     return {"cost": round(cost, 3), "src_silent_s": round(src_sil, 3), "dub_over_silence_s": round(dub_over, 3), "fast_s": round(fast, 3), "slow_s": round(slow, 3),
             "under_s": round(src_sil, 3), "over_s": round(fast, 3), "parts": rows, "ideal_s": round(sum(r_[1] for r_ in rows), 3), "speech_s": round(sum(durs), 3)}
 
@@ -283,7 +287,8 @@ def simulate(y, sr: int, spans, spoken: str, p: dict, opts, prev_end, flow_gap: 
 def select(u: dict, p: dict, plain: str, first: tuple, synth, sim, llm, src_name: str, tgt_name: str, cfg: dict, spoken, log=print) -> tuple:
     """Per unit. first = (y, rec, spans, speech_seconds) of the plain take; synth(text, salt) -> the same tuple for another text; sim(y, spans, text) ->
     simulate() dict. Returns the chosen (text, y, rec, spans, speech_seconds) and writes u["dur_translate"]."""
-    STATS["units"] += 1
+    global COST
+    STATS["units"] += 1; COST = cfg.get("cost", "r5")
     y0, rec0, sp0, s0 = first; c0 = sim(y0, sp0, plain)
     info = {"plain": plain, "plain_sim": c0, "chosen": "plain", "rounds": []}; u["dur_translate"] = info
     if cfg.get("judge_plain", True):
