@@ -196,7 +196,9 @@ def judge(llm, src_name: str, tgt_name: str, source: str, cand: str, ref: str | 
         o["missing"], o["added"], o["score"] = miss, add, sc
         return {"score": int(o.get("score", 0)), "natural": int(o.get("natural", 5)), "back": str(o.get("back_translation", ""))[:300], "missing": [str(x) for x in (o.get("missing") or []) if str(x).strip()][:5],
                 "added": [str(x) for x in (o.get("added") or []) if str(x).strip()][:5]}
-    except Exception:
+    except Exception:   # r6: a looping / truncated answer (r6v6 03 u7: an endless "added" list) -> the score fields if they were written
+        ms, mn = re.search(r'"score"\s*:\s*([1-5])', raw), re.search(r'"natural"\s*:\s*([1-5])', raw)
+        if ms: return {"score": int(ms.group(1)), "natural": int(mn.group(1)) if mn else 5, "back": "", "missing": [], "added": [], "regex": True}
         return {"score": 0, "back": "", "missing": [], "added": [], "unparsable": raw[:200]}
 
 
@@ -235,15 +237,23 @@ def close_inside_pauses(y, sr: int, spans, spoken: str, min_gap: float = 0.12, k
     cuts = []
     for k in range(len(spans) - 1):
         if tok[k] == tok[k + 1]: continue
-        e_, s_ = spans[k]["end"], spans[k + 1]["start"]; g = s_ - e_
         nxt = re.sub(r"[^\w']", "", raw[tok[k + 1]].lower())
-        if g <= min_gap or re.search(r"[,.;:!?…—-]['\"»)]*$", raw[tok[k]]) or nxt in CLAUSE_START: continue
-        a, b = e_ + keep / 2, s_ - keep / 2
+        if re.search(r"[,.;:!?…—-]['\"»)]*$", raw[tok[k]]) or nxt in CLAUSE_START: continue
+        # the silence itself, not the CTC span edges (the aligner stretches a word over the pause: r6v6 02 u6 "and | these" 0.71 s, CTC gap < 0.12 s):
+        # the longest run of 10 ms frames 35 dB below the take's p90 (the pause-logic metric's own rule) between the middles of the two words
+        m0 = int((spans[k]["start"] + spans[k]["end"]) / 2 / 0.01); m1 = int((spans[k + 1]["start"] + spans[k + 1]["end"]) / 2 / 0.01)
+        sil = f[max(0, m0):min(n, m1)] < ref - 35; best = (0, 0); run0 = None
+        for q, v in enumerate(list(sil) + [False]):
+            if v and run0 is None: run0 = q
+            elif not v and run0 is not None:
+                if q - run0 > best[1] - best[0]: best = (run0, q)
+                run0 = None
+        g = (best[1] - best[0]) * 0.01
+        if g <= min_gap: continue
+        a, b = (max(0, m0) + best[0]) * 0.01 + keep / 2, (max(0, m0) + best[1]) * 0.01 - keep / 2
         i0, i1 = int(a * sr), int(b * sr)
         if i1 - i0 < int(0.03 * sr): continue
-        mid = y[i0:i1]; lv = 20 * np.log10(np.sqrt(np.mean(mid ** 2)) + 1e-9)
-        if lv > ref - 30: continue   # not a silence (breath / voiced): leave it
-        cuts.append((i0, i1, round(e_, 2), round(b - a, 3), raw[tok[k]], raw[tok[k + 1]]))
+        cuts.append((i0, i1, round(a, 2), round(b - a, 3), raw[tok[k]], raw[tok[k + 1]]))
     if not cuts: return y, spans, []
     out = []; prev = 0; xf = int(xfade * sr); removed = []
     for i0, i1, t, rm, w0, w1 in cuts:
@@ -256,9 +266,10 @@ def close_inside_pauses(y, sr: int, spans, spoken: str, min_gap: float = 0.12, k
         else:
             z = np.concatenate([z, seg])
     sp2 = []
-    for sp in spans:
-        sh = sum((b1 - a1) + (xfade if xf else 0.0) for a1, b1, *_ in removed if sp["start"] >= b1 - 1e-6)
-        sp2.append({**sp, "start": round(sp["start"] - sh, 3), "end": round(sp["end"] - sh, 3)})
+    def shift(t_):
+        return t_ - sum((b1 - a1) + (xfade if xf else 0.0) for a1, b1, *_ in removed if t_ >= b1 - 1e-6) - sum(t_ - a1 for a1, b1, *_ in removed if a1 < t_ < b1 - 1e-6)
+    for sp in spans:   # a word span that the aligner stretched over the removed silence keeps its start, its end moves with the audio
+        sp2.append({**sp, "start": round(shift(sp["start"]), 3), "end": round(max(shift(sp["start"]) + 0.02, shift(sp["end"])), 3)})
     return z.astype(np.float32), sp2, [(t, rm, w0, w1) for _, _, t, rm, w0, w1 in removed]
 
 
