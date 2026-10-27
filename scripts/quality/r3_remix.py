@@ -66,11 +66,34 @@ def unit_level(man: dict, src: pathlib.Path, out24: pathlib.Path, out16: pathlib
     return {"applied": True, "median_db": round(med, 2), "amount": amount, "cap_db": cap_db, "rows": rows}
 
 
+def cap_gap_bed(bg: pathlib.Path, out: pathlib.Path, speech: list, dub_speech: list, over_db: float = 10.0) -> dict:
+    """r6 --gap-bed-cap-db: where the SOURCE speaks and the DUB is silent (sentence gaps, the speaker's own pauses kept by r6), the separated bed can
+    carry leaked syllables / clicks of the original voice (r6v7 02 12.1 s: a 100 ms burst 39 dB above the bed's median, +2 dB over the dub voice, in
+    a 0.3 s sentence gap). The bed's 10 ms level there is limited to its median over those frames + over_db (smooth gain: 3-frame min + 5-frame mean);
+    everything under the dub and in true pauses is untouched."""
+    import numpy as np, soundfile as sf
+    y, sr = sf.read(str(bg), dtype="float32"); mono = y.mean(1) if y.ndim > 1 else y; h = int(0.01 * sr); n = len(mono) // h
+    L = 20 * np.log10(np.sqrt((mono[:n * h].reshape(n, h) ** 2).mean(1)) + 1e-9); t = (np.arange(n) + 0.5) * 0.01
+    def inside(ivs, pad=0.0):
+        m = np.zeros(n, bool)
+        for a, b in ivs: m[max(0, int((a - pad) / 0.01)):min(n, int((b + pad) / 0.01) + 1)] = True
+        return m
+    M = inside(speech) & ~inside(dub_speech, 0.05)
+    if M.sum() < 20: return {"applied": False}
+    ref = float(np.median(L[M])); cap = ref + over_db; g = np.zeros(n)
+    g[M] = np.minimum(0.0, cap - L[M])
+    g = np.minimum.reduce([np.roll(g, k) for k in (-1, 0, 1)]); g = np.convolve(g, np.ones(5) / 5, mode="same")
+    gs = 10 ** (np.interp(np.arange(len(mono)) / sr, t, g) / 20).astype(np.float32)
+    z = y * (gs[:, None] if y.ndim > 1 else gs); sf.write(str(out), z, sr, subtype="PCM_16")
+    return {"applied": True, "ref_db": round(ref, 1), "cap_db": round(cap, 1), "frames_capped": int((g < -0.5).sum()), "max_cut_db": round(float(g.min()), 1)}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(); ap.add_argument("--src", required=True); ap.add_argument("--out", required=True); ap.add_argument("ids", nargs="+")
     ap.add_argument("--duck-db", type=float, default=-2.0); ap.add_argument("--attack", type=float, default=0.4); ap.add_argument("--release", type=float, default=0.8)
     ap.add_argument("--residue-db", type=float, default=-6.0); ap.add_argument("--src-duck-db", type=float, default=0.0); ap.add_argument("--target", type=float, default=-16.0); ap.add_argument("--tp", type=float, default=-1.5)
     ap.add_argument("--unit-level", choices=["on", "off"], default="off", help="r6: sentence-to-sentence loudness of the dub voice (unit_level())")
+    ap.add_argument("--gap-bed-cap-db", type=float, default=0.0, help="r6: > 0 = bed level cap (median + this) where the source speaks and the dub is silent (cap_gap_bed())")
     a = ap.parse_args()
     import background_bed as bb, run_clean_pipeline_05 as rp, r3_bedswing  # noqa: F401
     for id_ in a.ids:
@@ -85,6 +108,9 @@ def main() -> int:
             for f in ("dubbed_24k.wav", "dubbed_16k.wav"): (O / f).unlink(missing_ok=True)
             man["unit_level"] = unit_level(man, W / "dubbed_24k.wav", O / "dubbed_24k.wav", O / "dubbed_16k.wav"); D = O
         speech = [(s["start"], s["end"]) for s in man["speech_intervals"]]; dub_speech = [(s["start"], s["end"]) for s in rp.run_vad(D / "dubbed_16k.wav")]
+        if a.gap_bed_cap_db > 0:
+            man["gap_bed_cap"] = cap_gap_bed(pathlib.Path(sep["bg"]), O / "bg_capped_44k.wav", speech, dub_speech, a.gap_bed_cap_db)
+            if man["gap_bed_cap"].get("applied"): sep = {**sep, "bg": str(O / "bg_capped_44k.wav")}
         mix = bb.mix_background(sep, D / "dubbed_24k.wav", speech, dub_speech, man["source"]["duration_s"], O, duck_db=a.duck_db, attack_s=a.attack,
                                 release_s=a.release, residue_duck_db=a.residue_db, src_duck_db=a.src_duck_db)
         loud = static_loudness(O / "final_mix_44k.wav", O / "final_mix_aac.m4a", a.target, a.tp)
