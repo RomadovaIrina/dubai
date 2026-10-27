@@ -40,3 +40,14 @@ nearest good frames, source if the run is long).
 | m4 = sa + --mouth-region 0.38 | pending | 46.1 | 8.2 | the m4 candidate; 04's top events = abrupt generator lip-shape changes (22.4 s window joint, 6.9 s), not paste jumps |
 Probe (`/workspace/dub/artifacts/r6f/san_probe.py`): on 05 every flagged frame has interp confidence 0 (small face, flow unreliable); the
 smear frames have ring NCC -0.13..0.14, 03's real flashes 0.95-0.98, 05 p10 0.83.
+
+## m4 per video (twitch_sum; v4 in brackets): 03 42.5 (52.8), 04 46.1 (47.3), 05 8.2 (33.0); 01 / 02 compositing at 12:55
+## Why the two new defaults should hold on unseen videos (user rule: the E2E works on ANY video)
+- `--sanitize-guard on` / `--sanitize-align 0.8`: a normalised grey cross-correlation on the skin ring around the lip box (ring sized by the
+  mouth width): scale-, resolution- and brightness-free. It tests the physics of a flash (lips change, the skin ring does not) against the
+  failure (a misaligned warp moves the skin). 0.8 is not fitted: real flashes 0.95-0.98 (03, 277 frames), smears -0.13..0.14 (05), the 10th
+  percentile of all 05 fixes 0.83. An undefined NCC (textureless ring) = not aligned = the original frame stays (safe side). Depends only on
+  the generator landmarks the sanitizer already needs.
+- `--mouth-region 0.38`: iod units (scale-free), the hull of the source AND layer lips (an opening jaw widens it); depends on MediaPipe
+  landmarks like the whole stack. Risk: a chin moving > 0.38 iod below the lips hull; the r4 sweep kept the jaw drop (SyncNet within +-0.2).
+- Both are composite-side: no generator / model change (G: keep guidance 2.0, bridge on).
