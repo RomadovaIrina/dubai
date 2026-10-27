@@ -19,3 +19,13 @@ Conclusion: the twitches that matter are single / few-frame LAYER failures (a co
 LS <-> source crossfades the r5 flags address. Next: find the failing frames in m3's raw LatentSync layer (local 05 render) and add a
 generic per-frame layer sanity pass in fps_composite (blur / colour / mouth-less patch vs the neighbours -> flow interpolation from the
 nearest good frames, source if the run is long).
+
+## Root cause (local m3 re-render of 05, raw layer + composite log, 27.10 10:30)
+- The raw LatentSync layer is clean at 23.7 s (master 588-598) and at 7.8 s (master 190-200).
+- `fps_composite --sanitize-layer 0.83 --sanitize-mode texture --sanitize-sigma 8` flagged 137 and REPLACED 131 of 1323 layer frames on 05
+  (03: 277 / 2496, 04: 110 / 1359): the flag (lip-box Laplacian or contrast < 0.83 x the neighbours' median) also trips on articulation.
+- The replaced frames at 23.7 s are master 592-593 (+ 587-588), at 7.8 s master 193-195: EXACTLY the smeared patches. Texture mode keeps the
+  frame's own low frequencies and takes the high frequencies from a flow interpolation of the neighbours; on a small (iod 45) moving face
+  that interpolation is misaligned -> a mouth-less smear for 2-4 frames = the face twitch the user sees.
+- Fix (generic, default on): `--sanitize-guard on`: a flagged frame is replaced only if the lip-box high frequencies go UP (a real flash has
+  no lip line, the fix restores it; a misaligned fix lowers them). Arms on m3's raw layers: sg (guard) vs s0 (sanitizer off) vs m3.
