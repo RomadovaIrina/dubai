@@ -49,6 +49,29 @@ Slide (lower face vs the head, fixed shaky windows): 0:25.0-0:31.6: 0.105 vs 0.1
 Lip flash candidates: 14 vs 10.
 Mouth / dub-audio mismatch (talking mouth while the dub is silent + closed mouth while it speaks, face visible): 0.77 s (v4-repro) -> 2.6 s; worst: 0:03.9 closed mouth, dub speaks (1.5 s), 0:51.5 closed mouth, dub speaks (0.4 s), 0:01.8 talking mouth, dub silent (0.4 s), 0:28.6 talking mouth, dub silent (0.3 s)
 
+## 01: gate FAIL (3 rows)
+
+| gate row (FAIL / better) | NEW / PREV |
+|---|---|
+| SyncNet on dub-speech seconds (conf at 0) | 6.443 / 7.783 **FAIL** |
+| window joints LF ratio | 0.960 / 0.845 **FAIL** |
+| jaw jitter out/src | 1.042 / 0.935 **FAIL** |
+| video s / video-min | 190.9 / 140.9 **FAIL** |
+
+Slide (lower face vs the head, fixed shaky windows): 0:00.0-0:10.4: 0.089 vs 0.088 px
+Lip flash candidates: 0 vs 1.
+Mouth / dub-audio mismatch (talking mouth while the dub is silent + closed mouth while it speaks, face visible): 0.0 s (v4-repro) -> 0.0 s; worst: 
+
+## 02: gate PASS
+
+| gate row (FAIL / better) | NEW / PREV |
+|---|---|
+| video s / video-min | 90.1 / 58.9 **FAIL** |
+
+Slide (lower face vs the head, fixed shaky windows): 
+Lip flash candidates: 0 vs 0.
+Mouth / dub-audio mismatch (talking mouth while the dub is silent + closed mouth while it speaks, face visible): 0.0 s (v4-repro) -> 0.0 s; worst: 
+
 
 ## Face twitch detector (r5_twitch.py; lower = better; acceptance: NEW <= v4 on all 5 + the top-20 human review in `r6_m5_twitch/`)
 
@@ -125,3 +148,11 @@ speech onsets / offsets, present in v4 too) moves: 05 19.0 (m4 8.2, v4 33.0), 04
 sanitizer fixes kept back by the alignment guard). 04 is above v4 by 3 points on this channel; 04 is the user's lowest-priority video and its
 events are the same kind (lip-shape changes during fast head turns, head speed > 2 iod/s). Human review: `r6_m5_twitch/<id>_m5_top20.jpg` +
 `<id>_m5_top20_halfspeed.mp4`.
+
+**Gate vs m4 (video axes): FAIL, and the user should know why before choosing.** The face stack is identical to m4; what changed is the
+audio, and the gate shows its cost on the face: mouth / dub-audio mismatch 05 1.74 -> 2.64 s, 04 0.77 -> 2.60 s (the mouth and the new dub
+agree less often: the LS segments are gated by the dub's speech, and r6_audio_v1 places speech differently vs the source face); SyncNet on dub
+speech 05 5.08 -> 4.06 (03 / 04 within noise); strong flashes 05 20 -> 26, 04 10 -> 14 (the generator sees different speech); 03 "v4 resid
+mouth" 1.11 -> 1.19; speed 03 748 / 05 1048 s per video-min (05 was rendered concurrently with 04, so its wall time is inflated). None of these
+rows is a paste / twitch defect. Decision for the user and Max: the audio of record by ear (m5) vs the face that follows the dub more tightly
+(m4 on pb1); the fix for both at once is on the audio side (dub speech placed on the source's speech), not in the face stack.
