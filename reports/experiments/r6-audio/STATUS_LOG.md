@@ -35,3 +35,10 @@
 - 02 residue-exposed: 97.6 % from ONE 0.34 s Chatterbox hesitation over a loud bed moment (12 s); 04 pause-onset jump: a 3-sample p95.
 - new: --close-inside-pauses: hesitations > 0.12 s inside an English phrase shortened to 50 ms in the take (deterministic, CTC spans). Pause-logic edge-word rule.
 - running: r6v5_14b (r6e + fill 0.9), then r6v6_14b (v2 + close-inside + unit-level). Next: pick v-best, 7B arm on it, publish (WATCH if the gate still fails).
+
+## status 6
+- finding: the pipeline is deterministic (r6v6 02-05 = r6v2 + unit-level bit for bit): arm-to-arm swings come from the cost change cascading (other budgets -> other candidates), not noise.
+- r6v5 (r6e + fill 0.9): drawl back to pb1 level without fixing 05 face / 04 src-silent -> fill stays 0.95. 05 = slow speaker, English ~30 % shorter: r6 spreads the silence over the speaker's own pauses (several 1.5-2 s gaps) where pb1 left one 3 s gap.
+- close-inside-pauses v1 never fired on 02-05 (CTC stretches the word over the pause; 02 u6 has two 0.7 s hesitations inside one 7 s part) -> it now finds the silent run itself (3da8b24). Faith judge: regex fallback (03 u7 looped).
+- running: pb1b (pb1 reproduced again = gate noise floor), then r6v7_14b, r6v7_7b.
+- next: gate v7 vs pb1 (+ pb1 vs pb1b), Qwen choice, publish r6_audio_v1 (WATCH if rows still fail) + handoff.
