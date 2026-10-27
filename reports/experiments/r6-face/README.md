@@ -59,3 +59,6 @@ twitch_sum m5 / m4 / v4: 01 12.1 / 10.2 / 8.9; 02 0 / 0 / 0; 03 47.7 / 42.5 / 52
 The audio of record moves the LS segments and the generator's lip motion; the extra events are mouth-shape changes at the new speech
 boundaries (05 0:26.9 / 0:20.2 grid-checked: articulation, no paste smear). Gate vs m4 + WATCH: `r6_m5_WATCH.md`, `gate_m5_vs_m4.md` (03 / 05 / 04
 first; 01 / 02 re-emitted if the server lived long enough). Speed: 01 191 s/video-min, 03 748, 05 ~700 (over the 300 s norm, as m3).
+**m5 gate vs m4 FAILS on video axes** (face stack identical; the new audio's timing): mouth / dub mismatch 05 1.74 -> 2.64 s, 04 0.77 -> 2.60 s;
+SyncNet dub-speech 05 5.08 -> 4.06; strong flashes 05 20 -> 26, 04 10 -> 14; 03 resid mouth 1.11 -> 1.19. Not a paste defect; the user decides
+(audio by ear vs the mouth following the dub). Next round: place the dub's speech on the source's speech spans (audio side), then re-gate.
