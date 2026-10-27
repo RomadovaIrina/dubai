@@ -42,3 +42,10 @@
 - close-inside-pauses v1 never fired on 02-05 (CTC stretches the word over the pause; 02 u6 has two 0.7 s hesitations inside one 7 s part) -> it now finds the silent run itself (3da8b24). Faith judge: regex fallback (03 u7 looped).
 - running: pb1b (pb1 reproduced again = gate noise floor), then r6v7_14b, r6v7_7b.
 - next: gate v7 vs pb1 (+ pb1 vs pb1b), Qwen choice, publish r6_audio_v1 (WATCH if rows still fail) + handoff.
+
+## status 7
+- pb1b = pb1 bit for bit (gate PASS against itself): every remaining gate row on r6 arms is a real change, not noise.
+- r6v7_14b (v2 + unit-level + close-inside on the silent run): 04 now better than pb1 (src-talks/dub-silent 12.2 -> 11.1, face 11.1 -> 7.0), 03 face 12.4 -> 0, tempo-out <= 4.6 s (pb1 23-52).
+- Qwen choice on the v7 config: 14B. 14B vs 7B src-talks/dub-silent 02 14.8 vs 19.35, 03 9.5 vs 17.5, 03 face 0 vs 8.2; faith mixed (7B higher on 03 / 05, 14B on 01 / 02); 7B 04 WER .096; 7B 14 % faster (1249 vs 1450 s for 5 videos).
+- pause metric: exact-zero gaps (pipeline spread pauses) are boundary pauses; pb1 INSIDE now 3/2/0/0/0. Remix --gap-bed-cap-db 10: 02 residue-exposed -20.9 -> -32.6 dB (one leaked syllable at 12.1 s in a sentence gap), bed speech heard 0.4 -> 0.15 s.
+- running: r6v8_14b (v7 + close-inside 30 dB + gap-bed-cap) = the publish candidate; then publish (WATCH if rows remain) + handoff F.
