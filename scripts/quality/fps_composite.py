@@ -124,6 +124,10 @@ def main() -> int:
                     "its good neighbours; texture = keep the flagged frame's own low frequencies (mouth opening / shape = the lip-sync) and take only the "
                     "high-frequency detail (lip line, texture) from that interpolation (Gaussian split at --sanitize-sigma px)")
     ap.add_argument("--sanitize-sigma", type=float, default=2.0)
+    ap.add_argument("--deflash-mc", type=float, default=0.0, help="r6 G (guidance 2.5 flashes): layer frames whose motion-compensated lip-box residual "
+                    "(vs the better of k-1 / k+1, DIS-warped; = r3_flash's structural criterion) is >= this x the median of frames k-2..k+2 (e.g. 1.5) are flagged "
+                    "with the sanitizer and REPLACED (flow interpolation of the good neighbours, never texture mode: the flash is in the shape); 0 = off")
+    ap.add_argument("--deflash-floor", type=float, default=3.0, help="r6 G: --deflash-mc only flags residuals >= this (grey levels): calm frames' noise is no flash")
     ap.add_argument("--sanitize-colour", choices=["on", "off"], default="off", help="r3 D, texture mode: inside the flagged frame's lip box also match the "
                     "LUMINANCE mean / contrast (gain 0.7-1.6) of its low frequencies to the neighbours' interpolation (pale lips); per-channel matching over-saturated")
     ap.add_argument("--chin-clip", type=float, default=0.0, help="r4 V (user: 'second / third chin moves like a wave'): with --face-clip, the clip polygon's "
@@ -207,7 +211,7 @@ def main() -> int:
     mp_ls = np.load(cfs.run_mediapipe(pathlib.Path(a.ls_raw), pathlib.Path(a.ls_raw).with_suffix(".mediapipe.npz")))["lm"][:nm] if (a.skin_texture == "source" or a.ls_sharpen_scope == "lips" or a.ls_sharpen_lips > 0 or a.sharpen_auto > 0 or a.lip_guard == "on") else None
     # C2 on the LatentSync layer (master grid): two frames around every 16-frame window boundary of every LATENT_SYNC segment
     fl0 = tms.Flow(); nbnd = 0; nsan = 0; san_frames = []
-    if a.sanitize_layer > 0 and mp_ls is not None:   # r3 D: generator outliers (pink blob: the lip line vanishes for 1-3 frames) out of the layer first
+    if (a.sanitize_layer > 0 or a.deflash_mc > 0) and mp_ls is not None:   # r3 D: generator outliers (pink blob: the lip line vanishes for 1-3 frames) out of the layer first
         t0 = time.perf_counter(); hf = np.full(nm, np.nan); ct = np.full(nm, np.nan)
         for m_ in range(nm):
             if wm[m_] <= 0 or not np.isfinite(mp_ls[m_][tms.LIPS_OUTER]).all(): continue
@@ -220,6 +224,23 @@ def main() -> int:
             if not np.isfinite(hf[m_]): continue
             nb = [i for i in range(max(0, m_ - 6), min(nm, m_ + 7)) if abs(i - m_) >= 2 and np.isfinite(hf[i])]
             if len(nb) >= 4 and min(hf[m_] / np.median(hf[nb]), ct[m_] / np.median(ct[nb])) < a.sanitize_layer: bad[m_] = True
+        mc_bad = np.zeros(nm, bool); nmc = 0
+        if a.deflash_mc > 0:   # r6 G: structural flashes (mouth matches neither neighbour) of the layer
+            dis_ = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM); mc = np.full(nm, np.nan)
+            for m_ in range(1, nm - 1):
+                if min(wm[m_ - 1], wm[m_], wm[m_ + 1]) <= 0 or not np.isfinite(mp_ls[m_][tms.LIPS_OUTER]).all(): continue
+                q = mp_ls[m_][tms.LIPS_OUTER, :2]; w_ = q[:, 0].max() - q[:, 0].min(); x0, y0 = np.maximum((q.min(0) - 0.25 * w_).astype(int), 0); x1, y1 = (q.max(0) + 0.25 * w_).astype(int)
+                g3 = [cv2.cvtColor(L[j][y0:y1, x0:x1], cv2.COLOR_BGR2GRAY) for j in (m_ - 1, m_, m_ + 1)]
+                if g3[1].shape[0] < 8 or g3[1].shape[1] < 8 or any(x.shape != g3[1].shape for x in g3): continue
+                rr = []
+                for nb_ in (g3[0], g3[2]):
+                    F = dis_.calc(g3[1], nb_, None); hh, ww_ = F.shape[:2]; gx, gy = np.meshgrid(np.arange(ww_, dtype=np.float32), np.arange(hh, dtype=np.float32))
+                    rr.append(float(np.abs(cv2.remap(nb_, gx + F[..., 0], gy + F[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE).astype(np.float32) - g3[1]).mean()))
+                mc[m_] = min(rr)
+            for m_ in range(2, nm - 2):
+                nbv = mc[[m_ - 2, m_ - 1, m_ + 1, m_ + 2]]
+                if np.isfinite(mc[m_]) and np.isfinite(nbv).sum() >= 3 and mc[m_] >= a.deflash_floor and mc[m_] >= a.deflash_mc * np.nanmedian(nbv): mc_bad[m_] = True
+            nmc = int(mc_bad.sum()); bad |= mc_bad
         m_ = 0
         while m_ < nm:
             if not bad[m_]: m_ += 1; continue
@@ -230,7 +251,7 @@ def main() -> int:
                 y_, z_ = L[lo_].astype(np.float32), L[hi_].astype(np.float32)
                 for i_ in range(m_, e_):
                     it_ = interp_safe(fl0, y_, z_, (i_ - lo_) / (hi_ - lo_), a.safe_d, a.safe_cons, a.safe_scale)[0]
-                    if a.sanitize_mode == "texture":   # own low frequencies (shape, opening) + the neighbours' high frequencies (lip line)
+                    if a.sanitize_mode == "texture" and not mc_bad[m_:e_].any():   # own low frequencies (shape, opening) + the neighbours' high frequencies (lip line)
                         own = L[i_].astype(np.float32); sg = a.sanitize_sigma; lo_own = cv2.GaussianBlur(own, (0, 0), sg); lo_it = cv2.GaussianBlur(it_, (0, 0), sg)
                         if a.sanitize_colour == "on" and np.isfinite(mp_ls[i_][tms.LIPS_OUTER]).all():
                             q = mp_ls[i_][tms.LIPS_OUTER, :2]; w_ = q[:, 0].max() - q[:, 0].min()
@@ -245,7 +266,7 @@ def main() -> int:
                         it_ = lo_own + (it_ - lo_it)
                     L[i_] = np.clip(it_, 0, 255).astype(np.uint8); nsan += 1; san_frames.append(int(i_))
             m_ = e_
-        times["sanitize_layer"] = {"seconds": round(time.perf_counter() - t0, 2), "flagged": int(bad.sum()), "replaced": nsan, "frames": san_frames[:200]}
+        times["sanitize_layer"] = {"seconds": round(time.perf_counter() - t0, 2), "flagged": int(bad.sum()), "deflash_mc_flagged": nmc, "replaced": nsan, "frames": san_frames[:200]}
         print(f"  sanitize-layer: {int(bad.sum())} flagged, {nsan} replaced", flush=True)
     nseam = 0
     if a.seam_lf > 0:   # r3: window-joint appearance steps -> ramps
