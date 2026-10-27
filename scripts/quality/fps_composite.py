@@ -135,8 +135,11 @@ def main() -> int:
                     "its good neighbours; texture = keep the flagged frame's own low frequencies (mouth opening / shape = the lip-sync) and take only the "
                     "high-frequency detail (lip line, texture) from that interpolation (Gaussian split at --sanitize-sigma px)")
     ap.add_argument("--sanitize-sigma", type=float, default=2.0)
-    ap.add_argument("--sanitize-guard", choices=["on", "off"], default="on", help="r6 F: a sanitized frame replaces the original only if its lip-box high "
-                    "frequencies go UP (the lip line comes back); otherwise the original stays (off = r3 D behaviour: replace every flagged frame)")
+    ap.add_argument("--sanitize-guard", choices=["on", "off"], default="on", help="r6 F: a flagged frame is replaced only if the interpolated neighbours "
+                    "are aligned with it on the skin ring around the lip box (grey NCC >= --sanitize-align); otherwise the original stays "
+                    "(off = r3 D behaviour: replace every flagged frame)")
+    ap.add_argument("--sanitize-align", type=float, default=0.8, help="r6 F: ring NCC threshold of --sanitize-guard (03 real flashes 0.95-0.98, "
+                    "05 smear frames < 0.15, 05 p10 of all flagged 0.83)")
     ap.add_argument("--sanitize-colour", choices=["on", "off"], default="off", help="r3 D, texture mode: inside the flagged frame's lip box also match the "
                     "LUMINANCE mean / contrast (gain 0.7-1.6) of its low frequencies to the neighbours' interpolation (pale lips); per-channel matching over-saturated")
     ap.add_argument("--chin-clip", type=float, default=0.0, help="r4 V (user: 'second / third chin moves like a wave'): with --face-clip, the clip polygon's "
@@ -233,6 +236,16 @@ def main() -> int:
         g_ = cv2.cvtColor(np.clip(img, 0, 255).astype(np.uint8)[max(0, y0):y1, max(0, x0):x1], cv2.COLOR_BGR2GRAY).astype(np.float32)
         if g_.size < 50: return None
         return float(np.abs(cv2.Laplacian(g_, cv2.CV_32F, ksize=3)).mean()), float(g_.std())
+    def ring_align(own_, cand_, lm_):   # grey NCC of two layer frames on the skin ring around the lip box (box +-0.6 w minus box +-0.1 w), or None
+        if not np.isfinite(lm_[tms.LIPS_OUTER]).all(): return None
+        q = lm_[tms.LIPS_OUTER, :2]; w_ = q[:, 0].max() - q[:, 0].min(); x0, y0 = (q.min(0) - 0.1 * w_).astype(int); x1, y1 = (q.max(0) + 0.1 * w_).astype(int)
+        X0, Y0 = np.maximum((q.min(0) - 0.6 * w_).astype(int), 0); X1, Y1 = (q.max(0) + 0.6 * w_).astype(int)
+        ga = cv2.cvtColor(np.clip(own_, 0, 255).astype(np.uint8)[Y0:Y1, X0:X1], cv2.COLOR_BGR2GRAY).astype(np.float32)
+        gb = cv2.cvtColor(np.clip(cand_, 0, 255).astype(np.uint8)[Y0:Y1, X0:X1], cv2.COLOR_BGR2GRAY).astype(np.float32)
+        if ga.size < 100: return None
+        msk = np.ones(ga.shape, bool); msk[max(0, y0 - Y0):max(0, y1 - Y0), max(0, x0 - X0):max(0, x1 - X0)] = False
+        if msk.sum() < 50 or ga[msk].std() < 1e-3 or gb[msk].std() < 1e-3: return None
+        return float(np.corrcoef(ga[msk], gb[msk])[0, 1])
     nguard = 0
     if a.sanitize_layer > 0 and mp_ls is not None:   # r3 D: generator outliers (pink blob: the lip line vanishes for 1-3 frames) out of the layer first
         t0 = time.perf_counter(); hf = np.full(nm, np.nan); ct = np.full(nm, np.nan)
@@ -268,11 +281,12 @@ def main() -> int:
                                 fw = tms.poly_mask(q, (by0, by1, bx0, bx1), 0.15 * w_, 0.1 * w_)[..., None] if hasattr(tms, "poly_mask") else 1.0
                                 lo_own[by0:by1, bx0:bx1] = ro + fw * (fix - ro)
                         it_ = lo_own + (it_ - lo_it)
-                    if a.sanitize_guard == "on":   # r6 F (05 23.7 s, the user's face twitch): a flagged frame is replaced only if the fix brings the lip
-                        # line BACK (lip-box high frequencies up). Articulation (a closing mouth) trips the flag too, and on a small / moving face
-                        # the flow-interpolated texture is misaligned: the "fix" was then a smeared, mouth-less patch for 2-4 frames.
-                        st_o, st_n = lip_stats(L[i_], mp_ls[i_]), lip_stats(it_, mp_ls[i_])
-                        if st_o is not None and st_n is not None and st_n[0] <= st_o[0]: nguard += 1; continue
+                    if a.sanitize_guard == "on":   # r6 F (05 23.7 s, the user's face twitch): the fix is taken only if the interpolated neighbours are
+                        # ALIGNED with the frame on the skin ring around the lip box (grey NCC >= --sanitize-align). A real flash changes the lips only
+                        # (03: ring NCC 0.95-0.98 on every real flash); on a small / moving face the flow fails (interp confidence 0) and the warped
+                        # neighbour lands elsewhere (05 smear frames: ring NCC -0.13..0.14) -> the "fix" was a mouth-less smear for 2-4 frames.
+                        al_ = ring_align(L[i_], it_, mp_ls[i_])
+                        if al_ is None or al_ < a.sanitize_align: nguard += 1; continue
                     L[i_] = np.clip(it_, 0, 255).astype(np.uint8); nsan += 1; san_frames.append(int(i_))
             m_ = e_
         times["sanitize_layer"] = {"seconds": round(time.perf_counter() - t0, 2), "flagged": int(bad.sum()), "replaced": nsan, "guard_kept": nguard, "frames": san_frames[:200]}
