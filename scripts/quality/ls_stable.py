@@ -46,6 +46,39 @@ class StableLatentSync(AccelLatentSync):
             self.num_frames = int(window_len)
         self.ref_frames = None; self.ref_dets = None          # set by the caller for ref_mode fixed: (16, H, W, 3) RGB uint8 + replayed detections
 
+    # r6 G: classifier-free-guidance variants (deflash at the source), DUB_LS_CFG = comma list of
+    #   rescale:<phi>          CFG rescale (Lin et al. 2024): per-frame std of the guided eps matched to the audio-cond eps, mixed by phi
+    #   interval:<a>-<b>[:<g>] full guidance only on step fraction [a, b), guidance g (default 1.0 = cond only) elsewhere
+    #   decay:<g_end>          guidance linear from --guidance at the first step to g_end at the last
+    #   dsmooth:<alpha>        guidance delta (cond - uncond) temporally smoothed over frames ([1 2 1]/4), mixed by alpha: single-frame push
+    #                          outliers (mouth flashes) are pulled to their neighbours, the consistent push (sync gain) stays
+    #   dclip:<k>              per-frame guidance-delta norm clipped at k x the window median
+    cfg_spec = os.environ.get("DUB_LS_CFG", "").strip()
+
+    def _cfg(self, nu, na, t):
+        g = self.guidance; spec = self.cfg_spec
+        if not spec:
+            return nu + g * (na - nu)
+        opts = dict((kv.split(":", 1) + [""])[:2] for kv in spec.split(","))
+        n = max(len(getattr(self, "_tidx", {})), 1); frac = getattr(self, "_tidx", {}).get(int(t), 0) / n
+        if "interval" in opts:
+            ab, _, gl = opts["interval"].partition(":"); a_, b_ = map(float, ab.split("-"))
+            if not (a_ <= frac < b_): g = float(gl or 1.0)
+        if "decay" in opts:
+            g = g + (float(opts["decay"]) - g) * (frac * n / max(n - 1, 1))
+        d = (na - nu).float()
+        if "dsmooth" in opts and d.shape[2] >= 3:
+            al = float(opts["dsmooth"]); pad = torch.cat([d[:, :, :1], d, d[:, :, -1:]], 2)
+            d = (1 - al) * d + al * (pad[:, :, :-2] + 2 * pad[:, :, 1:-1] + pad[:, :, 2:]) / 4
+        if "dclip" in opts:
+            nrm = d.pow(2).mean((1, 3, 4), keepdim=True).sqrt(); cap = float(opts["dclip"]) * nrm.median(2, keepdim=True).values
+            d = d * torch.clamp(cap / nrm.clamp_min(1e-8), max=1.0)
+        out = nu.float() + g * d
+        if "rescale" in opts:
+            phi = float(opts["rescale"]); sc = na.float().std((1, 3, 4), keepdim=True) / out.std((1, 3, 4), keepdim=True).clamp_min(1e-8)
+            out = phi * out * sc + (1 - phi) * out
+        return out.to(nu.dtype)
+
     def set_reference(self, frames_rgb: np.ndarray, detections: list):
         self.ref_frames, self.ref_dets = np.ascontiguousarray(frames_rgb), list(detections)
 
@@ -61,7 +94,7 @@ class StableLatentSync(AccelLatentSync):
 
     @torch.no_grad()
     def _core(self, video_frames, audio_path, detections=None, weight_dtype=torch.float16, video_fps=25, generator=None):
-        if self.stride is None and self.ref_mode == "same" and self.mode == "ls" and self.num_frames == 16 and not self.bridge_len:
+        if self.stride is None and self.ref_mode == "same" and self.mode == "ls" and self.num_frames == 16 and not self.bridge_len and not self.cfg_spec:
             return super()._core(video_frames, audio_path, detections, weight_dtype, video_fps, generator)
         from accelerate.utils import set_seed
         pipe = self.pipe; set_seed(self.seed); old = os.getcwd(); os.chdir(LS)
@@ -70,6 +103,7 @@ class StableLatentSync(AccelLatentSync):
             ip = self.image_processor(); ip.restorer.p_bias = None
             H = W = self.resolution; nf = self.num_frames; do_cfg = self.guidance > 1.0
             pipe.scheduler.set_timesteps(self.steps, device=device); timesteps = pipe.scheduler.timesteps
+            self._tidx = {int(v): i for i, v in enumerate(timesteps.tolist())}
             extra = pipe.prepare_extra_step_kwargs(generator, 0.0)
             ref_faces = self._ref_crops(ip) if (self.ref_mode == "fixed" and self.mode == "ls") else None
             t0 = time.perf_counter()
@@ -152,7 +186,7 @@ class StableLatentSync(AccelLatentSync):
                                 x2 = torch.cat([x] * 2) if do_cfg else x
                                 npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1
                                 if do_cfg:
-                                    nu, na = npred.chunk(2); npred = nu + self.guidance * (na - nu)
+                                    nu, na = npred.chunk(2); npred = self._cfg(nu, na, t)
                                 x = pipe.scheduler.step(npred, t, x, **extra).prev_sample
                             if o > 0:
                                 x[:, :, :o] = known
@@ -172,7 +206,7 @@ class StableLatentSync(AccelLatentSync):
                                 x2 = torch.cat([x] * 2) if do_cfg else x
                                 npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1
                                 if do_cfg:
-                                    nu, na = npred.chunk(2); npred = nu + self.guidance * (na - nu)
+                                    nu, na = npred.chunk(2); npred = self._cfg(nu, na, t)
                                 x = pipe.scheduler.step(npred, t, x, **extra).prev_sample
                             for k, (a, b) in enumerate(grp):
                                 latents[:, :, a:b] = x[k:k + 1]
@@ -197,7 +231,7 @@ class StableLatentSync(AccelLatentSync):
                                 dc.cached_output = caches[gi]                                                    # per-group DeepCache state
                             npred = self.unet(inp, t, encoder_hidden_states=au).sample; unet_calls += 1
                             if do_cfg:
-                                nu, na = npred.chunk(2); npred = nu + self.guidance * (na - nu)
+                                nu, na = npred.chunk(2); npred = self._cfg(nu, na, t)
                             for k, (a, b) in enumerate(grp):
                                 w = tri(b - a) if self.stride is not None else torch.ones(b - a, device=device)
                                 eps_sum[:, :, a:b] += npred[k:k + 1].float() * w.view(1, 1, -1, 1, 1); w_sum[a:b] += w
@@ -224,7 +258,7 @@ class StableLatentSync(AccelLatentSync):
                                 x2 = torch.cat([x] * 2) if do_cfg else x
                                 npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1
                                 if do_cfg:
-                                    nu, na = npred.chunk(2); npred = nu + self.guidance * (na - nu)
+                                    nu, na = npred.chunk(2); npred = self._cfg(nu, na, t)
                                 x = pipe.scheduler.step(npred, t, x, **extra).prev_sample
                             L_ = b_ - a_; w = torch.tensor([min(i + 1, L_ - i) for i in range(L_)], device=device, dtype=torch.float32)
                             w = (w / w.max()).clamp(max=1.0).to(weight_dtype).view(1, 1, -1, 1, 1)
