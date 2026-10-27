@@ -12,6 +12,7 @@ REG=$A/$NEW/r6_audio_${VER}_regression.md
 python scripts/quality/r4_audio_gate.py --prev $PREV --prev-run $PREV --new $NEW --title "r6_audio_$VER (commit $C)" --out $REG > /dev/null; rc=$?
 KIND=""; if [ $rc -ne 0 ]; then
   [ "${FORCE_WATCH:-0}" = 1 ] || { echo "GATE FAILED -> not published (see $REG)"; grep -A40 "## Verdict" $REG; exit 1; }; KIND="_WATCH"; fi
+[ "${WATCH:-0}" = 1 ] && KIND="_WATCH"   # r6: a gate-passing candidate that still needs the user's ear before it replaces the audio of record (no READY)
 H=/workspace/dub/handoff/out/F/audio-r6-$VER; mkdir -p $OB $H
 for id in 01 02 03 04 05; do
   src=$(ls /workspace/dub/inputs/test_videos_raw/$id.* | head -1); N=$OB/${id}_r6_audio_${VER}${KIND}
