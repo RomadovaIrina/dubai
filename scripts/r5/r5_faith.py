@@ -21,7 +21,11 @@ def main():
         rows = []
         for u in json.loads(mf.read_text())["units"]:
             en = " ".join(t["text"] for t in u.get("tts_parts") or []) or u.get("translation_fitted") or u.get("translation", "")
-            j = dt.judge(llm, "Russian", "English", u["text"], en); rows.append({"id": u["id"], "start": u["start"], "source": u["text"], "english": en, **j})
+            # r6: the budget scales with the sentence (the back-translation of a 40-word unit overran 320 tokens -> unparsable -> score 0, r6v1 03 u7);
+            # one retry on an unparsable answer
+            mt = 200 + 14 * (len(u["text"].split()) + len(en.split())); j = dt.judge(llm, "Russian", "English", u["text"], en, max_tokens=mt)
+            if j.get("unparsable") is not None: j = dt.judge(llm, "Russian", "English", u["text"], en, max_tokens=2 * mt); j["retried"] = True
+            rows.append({"id": u["id"], "start": u["start"], "source": u["text"], "english": en, **j})
         sc = [r["score"] for r in rows]; m = json.loads(mj.read_text())
         m["faith"] = {"mean": round(sum(sc) / max(1, len(sc)), 3), "lt4": sum(1 for x in sc if x < 4), "rows": rows}
         mj.write_text(json.dumps(m, ensure_ascii=False, indent=1)); print(f"{tag} {id_} faith mean {m['faith']['mean']} lt4 {m['faith']['lt4']}", flush=True)

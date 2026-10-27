@@ -175,7 +175,7 @@ def _filter_items(items: list[str], source: str, ref: str | None) -> list[str]:
     return out
 
 
-def judge(llm, src_name: str, tgt_name: str, source: str, cand: str, ref: str | None = None) -> dict:
+def judge(llm, src_name: str, tgt_name: str, source: str, cand: str, ref: str | None = None, max_tokens: int = 320) -> dict:
     """ONE Qwen call (4 calibration shots): back-translate the candidate into the source language, then list the FACTS it drops / adds and score the
     meaning 1-5 (wording, particles, connectors and fuller phrasing are free). `ref` is kept for the record only (the shots calibrate the score)."""
     def q(src, c):
@@ -188,7 +188,7 @@ def judge(llm, src_name: str, tgt_name: str, source: str, cand: str, ref: str | 
     for src, c, o in JUDGE_SHOTS:
         msgs += [{"role": "user", "content": q(src, c)}, {"role": "assistant", "content": json.dumps(o, ensure_ascii=False)}]
     msgs.append({"role": "user", "content": q(source, cand)})
-    raw = _chat(llm, msgs, max_tokens=320)
+    raw = _chat(llm, msgs, max_tokens=max_tokens)
     try:
         o = _json(raw); sc = int(o.get("score", 0))
         miss = _filter_items([str(x) for x in (o.get("missing") or [])], source, None); add = _filter_items([str(x) for x in (o.get("added") or [])], source, ref)
