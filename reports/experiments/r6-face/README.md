@@ -53,3 +53,9 @@ smear frames have ring NCC -0.13..0.14, 03's real flashes 0.95-0.98, 05 p10 0.83
 - Both are composite-side: no generator / model change (G: keep guidance 2.0, bridge on).
 
 ## m4 WATCH (27.10 13:35): gate vs m3 PASS on all 5 (`gate_m4_vs_m3.md`, `r6_m4_WATCH.md`); outbox: <id>_r6_m4_WATCH.mp4 + _sbs (M3 | M4) + r6_m4_twitch/
+
+## m5 = m4 face stack + audio r6_audio_v1 (one command r6_e2e.sh), 27.10 14:20
+twitch_sum m5 / m4 / v4: 01 12.1 / 10.2 / 8.9; 02 0 / 0 / 0; 03 47.7 / 42.5 / 52.8; 04 50.5 / 46.1 / 47.3; 05 19.0 / 8.2 / 33.0.
+The audio of record moves the LS segments and the generator's lip motion; the extra events are mouth-shape changes at the new speech
+boundaries (05 0:26.9 / 0:20.2 grid-checked: articulation, no paste smear). Gate vs m4 + WATCH: `r6_m5_WATCH.md`, `gate_m5_vs_m4.md` (03 / 05 / 04
+first; 01 / 02 re-emitted if the server lived long enough). Speed: 01 191 s/video-min, 03 748, 05 ~700 (over the 300 s norm, as m3).
