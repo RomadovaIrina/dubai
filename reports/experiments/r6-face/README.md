@@ -51,3 +51,5 @@ smear frames have ring NCC -0.13..0.14, 03's real flashes 0.95-0.98, 05 p10 0.83
 - `--mouth-region 0.38`: iod units (scale-free), the hull of the source AND layer lips (an opening jaw widens it); depends on MediaPipe
   landmarks like the whole stack. Risk: a chin moving > 0.38 iod below the lips hull; the r4 sweep kept the jaw drop (SyncNet within +-0.2).
 - Both are composite-side: no generator / model change (G: keep guidance 2.0, bridge on).
+
+## m4 WATCH (27.10 13:35): gate vs m3 PASS on all 5 (`gate_m4_vs_m3.md`, `r6_m4_WATCH.md`); outbox: <id>_r6_m4_WATCH.mp4 + _sbs (M3 | M4) + r6_m4_twitch/

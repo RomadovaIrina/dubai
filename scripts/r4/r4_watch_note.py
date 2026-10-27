@@ -33,12 +33,12 @@ def main():
         fails = [r for r in rows if "FAIL" in r and "s / video-min" not in r]
         L += [f"## {id_}: gate {'FAIL (' + str(len(fails)) + ' row' + ('s' if len(fails) > 1 else '') + ')' if fails else 'PASS'}", "", "| gate row (FAIL / better) | NEW / PREV |", "|---|---|"] + (rows or ["| (none) | |"]) + [""]
         L += ["Slide (lower face vs the head, fixed shaky windows): " + "; ".join(f"{tc(w['window_s'][0])}-{tc(w['window_s'][1])}: {w['nosebase']['slide_px']['mean']:.3f} vs "
-              f"{p['nosebase']['slide_px']['mean']:.3f} px" for w, p in zip(ns["slide"], ps["slide"]))]
+              f"{p['nosebase']['slide_px']['mean']:.3f} px" for w, p in zip(ns.get("slide") or [], ps.get("slide") or []) if isinstance(w, dict) and isinstance(p, dict))]   # r6 F: a video without a face (02) has no slide windows
         if jw: L += [f"Worst LatentSync window joints in {a.name} (time, joint motion / inner motion; > 2 = a possible jump): " + ", ".join(f"{tc(t)} ({r:.1f}x)" for t, r in jw[:6])]
         L += [f"Lip flash candidates: {ns.get('flash_strong')} vs {ps.get('flash_strong')}."]
         mn, mp_ = ns.get("mouth_audio") or {}, ps.get("mouth_audio") or {}
         if mn: L += [f"Mouth / dub-audio mismatch (talking mouth while the dub is silent + closed mouth while it speaks, face visible): {mp_.get('mouth_audio_mismatch_s')} s (v4-repro) -> "
-                     f"{mn.get('mouth_audio_mismatch_s')} s; worst: " + ", ".join(f"{tc(t)} {k} ({d:.1f} s)" for k, t, d in (mn.get("worst") or [])[:4])]
+                     f"{mn.get('mouth_audio_mismatch_s')} s; worst: " + ", ".join(f"{tc(t)} {k} ({d:.1f} s)" for k, t, d in (mn.get("worst") or [])[:4])] if isinstance(mn, dict) else []
         L += [""]
     pathlib.Path(a.out).write_text("\n".join(L) + "\n"); print(a.out)
 

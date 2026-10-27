@@ -6,6 +6,7 @@ set -u
 DUB_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"; export DUB_ROOT; . $DUB_ROOT/scripts/env.sh >/dev/null; cd $DUB_ROOT
 ARM=$1; shift; IDS=${*:-05 04 03 01 02}; A=/workspace/dub/artifacts/r6f/arms/$ARM; OB=/workspace/dub/outbox; F=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf
 PREV=${PREV:-/workspace/dub/artifacts/r4m/m3:m3}; PD=${PREV%%:*}; PL=${PREV##*:}; NAME=r6_$ARM; export OMP_NUM_THREADS=8
+TW_PREV=${TW_PREV:-m3loc}   # the twitch-score label of PREV (r6_twitch.sh dir name); m3 was scored as m3loc
 for id in $IDS; do
   [ -f $A/${id}_$ARM.mp4 ] || { echo "no $ARM $id"; continue; }
   cp $A/${id}_$ARM.mp4 $OB/${id}_${NAME}_WATCH.mp4
@@ -18,6 +19,8 @@ done
 IDC=$(echo $IDS | tr ' ' ',')
 python scripts/r4/r4_gate.py compare --new $A:$ARM --prev $PREV --ids $IDC --audio-info --out $A/gate_${ARM}_vs_$PL.md > $A/gate_compare.log 2>&1
 python3 scripts/r4/r4_watch_note.py --name $ARM --intro "${INTRO:-}" --new $A:$ARM --prev $PREV --gate $A/gate_${ARM}_vs_$PL.md --ids $IDS --out $OB/${NAME}_WATCH.md > /dev/null
+sed -i "s/^# r4 merged $ARM: WATCH candidate/# r6 $ARM: WATCH candidate/; s/<id>_r4_merged_${ARM}_WATCH/<id>_${NAME}_WATCH/g; s/(V4 | ${ARM^^})/(${PL^^} | ${ARM^^})/" $OB/${NAME}_WATCH.md
 { echo; echo "## Face twitch detector (r5_twitch.py; lower = better; acceptance: NEW <= v4 on all 5 + the top-20 human review in \`${NAME}_twitch/\`)"
-  python scripts/r6/r6_twitch_table.py v4 $PL $ARM --top 5 2>/dev/null | sed "s/| m3loc |/| m3 |/"; } >> $OB/${NAME}_WATCH.md
+  python scripts/r6/r6_twitch_table.py v4 $TW_PREV $ARM --top 5 2>/dev/null | sed "s/| $TW_PREV |/| $PL |/; s/^- $TW_PREV /- $PL /"
+  [ -f $A/twitch_note.md ] && cat $A/twitch_note.md; } >> $OB/${NAME}_WATCH.md
 echo R6_WATCH_DONE $ARM
