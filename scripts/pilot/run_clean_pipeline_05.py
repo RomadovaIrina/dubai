@@ -892,6 +892,8 @@ def main() -> int:
                     "0.06 = the old shared gap. r6 audio: 0.15 (r5v4 02: 'That's for sure.' sped up into u7 20 ms later, ASR merged the sentences)")
     ap.add_argument("--dur-cost", choices=["r5", "r6"], default="r5", help="--dur-translate dry-run cost: r5 = 0.7 x dub over source silence, tempo ramps 1.05->1.15 / "
                     "0.95->0.875 (x1.5 / x0.3); r6 = the gate's own axes: 1.0 x dub over silence, every second placed outside 0.95-1.05 at full weight (x1.5 fast, x1.0 slow)")
+    ap.add_argument("--dur-gap-qa-cost", choices=["on", "off"], default="off", help="r6: --dur-translate: a gap-QA re-seed is accepted only if its dry-run placement "
+                    "cost is at most 0.3 s above the chosen take's")
     ap.add_argument("--dur-top", type=int, default=3, help="--dur-translate: candidates synthesised per round"); ap.add_argument("--dur-rounds", type=int, default=2)
     ap.add_argument("--dur-min-score", type=int, default=4, help="--dur-translate: minimum Qwen judge meaning score (1-5) of a candidate")
     ap.add_argument("--ne-guard", choices=["on", "off"], default="off", help="r4: named-entity guard (ne_guard.py): Qwen lists proper nouns, TTS gets phonetic respellings on retry, "
@@ -1084,7 +1086,7 @@ def main() -> int:
                                             fit_up={"enabled": a.fit_up == "on" and llm is not None, "ratio": a.fit_up_ratio, "rounds": a.fit_up_rounds, "aim": a.fit_up_aim, "guard": a.fit_up_guard == "on", "persist": a.fit_up_persist},
                                             split_retries=a.split_retries, min_part_words=a.phrase_min_part_words, soft_part_words=a.phrase_soft_part_words, part_max_words=a.part_max_words,
                                             phrase_split=a.phrase_split, phrase_cut=a.phrase_cut, long_pause_func=a.long_pause_func, long_pause_grow=a.long_pause_grow, cut_fade=a.cut_fade, gap_qa=a.tts_gap_qa == "on", pause_mark_mode=a.pause_marks, sentence_flow_gap=a.sentence_flow_gap,
-                                            dur_cfg={"enabled": a.dur_translate == "on" and llm is not None, "ok_cost": a.dur_ok_cost, "tts_top": a.dur_top, "rounds": a.dur_rounds, "min_score": a.dur_min_score, "cost": a.dur_cost},
+                                            dur_cfg={"enabled": a.dur_translate == "on" and llm is not None, "ok_cost": a.dur_ok_cost, "tts_top": a.dur_top, "rounds": a.dur_rounds, "min_score": a.dur_min_score, "cost": a.dur_cost, "gap_qa_cost": a.dur_gap_qa_cost == "on"},
                                             log=lambda m_: print(m_, flush=True))
             else:
                 man["tts"] = run_tts_burst(units, plans, refs, tgt, work, a.seed, times, opts=burst_opts, llm=llm, src_name=lang_name(src_lang), tgt_name=lang_name(tgt),

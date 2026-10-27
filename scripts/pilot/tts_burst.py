@@ -826,7 +826,12 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                         tq = time.perf_counter(); y2, rec2 = gen_sentence(u, text, dtype, salt=40 + rnd); sp2 = align(y2, text)
                         gv2 = gap_voice(y2, m.sr, sp2) if sp2 is not None else gv; stats["gap_qa_seconds"] = stats.get("gap_qa_seconds", 0.0) + time.perf_counter() - tq
                         u["gap_qa"]["retries"].append({"found": gv2, "qa_bad": rec2["qa_bad_final"], "seconds": round(speech_seconds(y2, sp2), 3)})
-                        if sp2 is not None and not rec2["qa_bad_final"] and sum(b - a for a, b, _ in gv2) < sum(b - a for a, b, _ in gv):
+                        dc_ok = True
+                        if dur_cfg.get("enabled") and dur_cfg.get("gap_qa_cost") and sp2 is not None and llm is not None:   # r6: a cleaner seed must not undo the
+                            # duration-aware choice (r6v1 01 u12: the chosen 7.18 s take re-seeded to 7.96 s -> x1.15 on 7 s): same dry run, <= +0.3 s placement cost
+                            c1, c2 = _sim(y, spans, text)["cost"], _sim(y2, sp2, text)["cost"]; u["gap_qa"]["retries"][-1:] and u["gap_qa"]["retries"][-1].update(cost_before=c1, cost=c2)
+                            dc_ok = c2 <= c1 + dur_cfg.get("gap_qa_cost_margin", 0.3)
+                        if sp2 is not None and not rec2["qa_bad_final"] and dc_ok and sum(b - a for a, b, _ in gv2) < sum(b - a for a, b, _ in gv):
                             y, rec, spans, sp_s, gv = y2, rec2, sp2, speech_seconds(y2, sp2), gv2; u["gap_qa"]["accepted"] = rnd + 1
                         if not gv:
                             break
