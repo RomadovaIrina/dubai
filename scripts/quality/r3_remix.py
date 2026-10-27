@@ -36,10 +36,41 @@ def static_loudness(wav: pathlib.Path, aac: pathlib.Path, target: float, tp: flo
     return {"mode": "static gain + oversampled limiter", "target_lufs": target, "limiter_dbfs": tp, "before": before, "passes": hist, "after_wav": measure(wav), "after_aac": measure(aac)}
 
 
+def unit_level(man: dict, src: pathlib.Path, out24: pathlib.Path, out16: pathlib.Path, amount: float = 0.7, cap_db: float = 4.0) -> dict:
+    """r6 --unit-level on: sentence-to-sentence loudness of the dub voice (Chatterbox takes of different seeds / cfg differ by up to 6 dB; r6v2 03 u5
+    -20.6 dB next to u4 -14.8 dB). Each unit's speech level (RMS of its frames within 30 dB of the loudest) moves `amount` of the way to the video's
+    median unit level, capped at +-cap_db; the gain changes only in the silence between units (20 ms ramps). Writes the levelled 24 kHz / 16 kHz dub."""
+    import numpy as np, soundfile as sf
+    y, sr = sf.read(str(src), dtype="float32"); y = y if y.ndim == 1 else y.mean(1); h = int(0.02 * sr); spans = []
+    for u in man["units"]:
+        pl = [x["placed"] for x in (u.get("alignment") or {}).get("placements", []) if x.get("placed")]
+        if pl: spans.append((u["id"], min(a for a, _ in pl), max(b for _, b in pl)))
+    lv = {}
+    for uid, a, b in spans:
+        seg = y[int(a * sr):int(b * sr)]; n = len(seg) // h
+        if n < 5: continue
+        f = 20 * np.log10(np.sqrt((seg[:n * h].reshape(n, h) ** 2).mean(1)) + 1e-9); act = f[f > f.max() - 30]
+        lv[uid] = float(10 * np.log10(np.mean(10 ** (act / 10))))
+    if not lv: return {"applied": False}
+    med = float(np.median(list(lv.values()))); g = np.ones(len(y), dtype=np.float32); rows = []
+    for uid, a, b in spans:
+        if uid not in lv: continue
+        gdb = float(np.clip(amount * (med - lv[uid]), -cap_db, cap_db)); rows.append({"unit": uid, "level_db": round(lv[uid], 2), "gain_db": round(gdb, 2)})
+        i0, i1 = max(0, int((a - 0.03) * sr)), min(len(y), int((b + 0.05) * sr)); gl = 10 ** (gdb / 20); r = min(int(0.02 * sr), max(1, (i1 - i0) // 4))
+        env = np.full(i1 - i0, gl, dtype=np.float32); env[:r] = np.linspace(1, gl, r); env[-r:] = np.linspace(gl, 1, r); g[i0:i1] = env
+    z = y * g; pk = float(np.max(np.abs(z))) if len(z) else 0.0
+    if pk > 0.98: z *= 0.98 / pk
+    sf.write(str(out24), z, sr, subtype="PCM_16")
+    import librosa
+    sf.write(str(out16), librosa.resample(z, orig_sr=sr, target_sr=16000), 16000, subtype="PCM_16")
+    return {"applied": True, "median_db": round(med, 2), "amount": amount, "cap_db": cap_db, "rows": rows}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(); ap.add_argument("--src", required=True); ap.add_argument("--out", required=True); ap.add_argument("ids", nargs="+")
     ap.add_argument("--duck-db", type=float, default=-2.0); ap.add_argument("--attack", type=float, default=0.4); ap.add_argument("--release", type=float, default=0.8)
     ap.add_argument("--residue-db", type=float, default=-6.0); ap.add_argument("--src-duck-db", type=float, default=0.0); ap.add_argument("--target", type=float, default=-16.0); ap.add_argument("--tp", type=float, default=-1.5)
+    ap.add_argument("--unit-level", choices=["on", "off"], default="off", help="r6: sentence-to-sentence loudness of the dub voice (unit_level())")
     a = ap.parse_args()
     import background_bed as bb, run_clean_pipeline_05 as rp, r3_bedswing  # noqa: F401
     for id_ in a.ids:
@@ -49,14 +80,18 @@ def main() -> int:
             (O / f.name).unlink(missing_ok=True); (O / f.name).symlink_to(f)
         man = json.loads(next(W.glob(f"{id_}_*.manifest.json")).read_text())
         sep = {"bg": str(W / "bg_44k.wav"), "vocals": str(W / "vocals_44k.wav")}
-        speech = [(s["start"], s["end"]) for s in man["speech_intervals"]]; dub_speech = [(s["start"], s["end"]) for s in rp.run_vad(W / "dubbed_16k.wav")]
-        mix = bb.mix_background(sep, W / "dubbed_24k.wav", speech, dub_speech, man["source"]["duration_s"], O, duck_db=a.duck_db, attack_s=a.attack,
+        D = W
+        if a.unit_level == "on":   # the levelled dub replaces the symlinked one in the remix dir (metrics, handoff and the mix all read it)
+            for f in ("dubbed_24k.wav", "dubbed_16k.wav"): (O / f).unlink(missing_ok=True)
+            man["unit_level"] = unit_level(man, W / "dubbed_24k.wav", O / "dubbed_24k.wav", O / "dubbed_16k.wav"); D = O
+        speech = [(s["start"], s["end"]) for s in man["speech_intervals"]]; dub_speech = [(s["start"], s["end"]) for s in rp.run_vad(D / "dubbed_16k.wav")]
+        mix = bb.mix_background(sep, D / "dubbed_24k.wav", speech, dub_speech, man["source"]["duration_s"], O, duck_db=a.duck_db, attack_s=a.attack,
                                 release_s=a.release, residue_duck_db=a.residue_db, src_duck_db=a.src_duck_db)
         loud = static_loudness(O / "final_mix_44k.wav", O / "final_mix_aac.m4a", a.target, a.tp)
         man["background"] = {**man.get("background", {}), "mix": mix, "loudness": loud, "remix": "r3 D r3_remix.py (bed duck -2 dB / 0.4 / 0.8 s, residue -6 dB, static loudness)"}
         man["dubbed_track"] = {**man["dubbed_track"], "aac": str(O / "final_mix_aac.m4a")}
         (O / f"{id_}_r4b.manifest.json").write_text(json.dumps(man, indent=1, ensure_ascii=False))
-        sw = subprocess.run([sys.executable, str(HERE / "r3_bedswing.py"), "--mix", str(O / "final_mix_44k.wav"), "--dub", str(W / "dubbed_24k.wav"), "--bg", sep["bg"]],
+        sw = subprocess.run([sys.executable, str(HERE / "r3_bedswing.py"), "--mix", str(O / "final_mix_44k.wav"), "--dub", str(D / "dubbed_24k.wav"), "--bg", sep["bg"]],
                             capture_output=True, text=True).stdout.strip()
         print(f"== {id_} r4b: {loud['after_aac']} bed {sw}", flush=True)
     return 0
