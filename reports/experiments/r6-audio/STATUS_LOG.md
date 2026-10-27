@@ -13,3 +13,10 @@
 - changed: --dur-cost r6c (cut_parts in the dry run, 40ff182), --dur-gap-qa-cost on (cost guard on gap-QA re-seeds).
 - running: r6v1_14b 02-05, then queue 2 = r6v2_14b, r6v2_7b (v1 7B arm dropped: the 14B / 7B choice is made on v2).
 - next: gate v1 (diagnostics), gate v2 14B vs 7B, publish the better as r6_audio_v1.
+
+## status 3
+- r6v1_14b gate vs pb1: tempo fixed (02 50.7 -> 1.4 s, 05 26.5 -> 0), src-talks/dub-silent better on 01-03, but FAIL: 05 src-silent / face / gaps (no drawl for a slow speaker), inside pauses, 04 WER, joins, bed exposure.
+- metric fixes: pause logic now classifies part boundaries from the placed part texts (Whisper pulled word starts both ways; pb1 02 21 -> 4 INSIDE); faith judge truncated long units (score 0) -> budget + retry; all tags re-scored.
+- new: --dur-cost r6d = r6c + the take's own CTC pauses inside a phrase (Chatterbox hesitations) charged 2x.
+- running: r6v2_14b (r6c + gap-QA cost guard) -> r6v3_14b (r6d + fill 0.9); faith re-score pb1 / v1.
+- next: gate v2 / v3, then 7B on the winner config for the Qwen choice.
