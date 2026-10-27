@@ -9,6 +9,6 @@ while :; do
     python scripts/quality/r4_sweep_metrics.py --win-dir $O --id $id --tag $tag --master $MST --t0 $t0 --t1 $t1 --json $O/$b.metrics.tmp.json > /dev/null 2>$O/$b.metrics.err \
       && mv $O/$b.metrics.tmp.json $O/$b.metrics.json && python scripts/r6/r6_win_extra.py --win-dir $O --id $id --tag $tag --t0 $t0 >/dev/null 2>>$O/$b.metrics.err || echo "FAIL metrics $b"
   done
-  [ "${LOOP:-0}" = 1 ] || break; grep -qs R6_SWEEP_DONE $S/sweep.out && break; sleep 60
+  [ "${LOOP:-0}" = 1 ] || break; grep -qs R6_CHAIN_DONE $S/sweep.out && break; sleep 60
 done
 echo METRICS_DONE

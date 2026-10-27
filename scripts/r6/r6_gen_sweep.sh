@@ -22,6 +22,7 @@ done
 for arm in ${ARMS:-G0_base G1_g25 G3_g25ds10 G2_g25ds05 G4_g25rs07 G7_nobr G10_seed7 MT_musetalk G5_g25dc15 G6_g25int G8_g25nobr G9_s12nobr G11_g30ds10 G13_g225 G14_g25ds10nobr G15_g25seed7}; do
   for id in ${IDS:-04 05 03}; do
     [ -f $S/wins_$id.json ] || continue; W=$M3/work_${id}_m3; MAN=$W/${id}_m3_25fps.manifest.json; RIG=$(ls $W/video/master_rigid.npz $W/*/master_rigid.npz 2>/dev/null | head -1)
+    [ -e $W/video/dubbed_16k.wav ] || ln -s /workspace/dub/artifacts/r4a/m3a/$id/dubbed_16k.wav $W/video/dubbed_16k.wav
     python3 -c "import json;[print(w['t0'],w['t1']) for w in json.load(open('$S/wins_$id.json'))['windows']]" | while read t0 t1; do
       tag=${arm}_${t0%.*}; grep -qs "check PASS" $O/${id}_$tag.log && continue; ts=$(date +%s)
       if [ $arm = MT_musetalk ]; then   # MuseTalk 1.5 generated outside, served through --precomputed (same gate / mask / composite)

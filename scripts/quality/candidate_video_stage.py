@@ -209,7 +209,7 @@ def main() -> int:
             print(f"== {a.id} {a.tag}: prep-only done {prep.times} -> {work}", flush=True); return 0
     else:
         with rp.timed(times, "face_router_load"): router = faa.make_router("retinaface", a.face_min_w, a.face_min_h, a.retina_conf)
-    if a.ref_mode != "same" or a.bridge_len:   # round 3: generator variants (ls_stable.StableLatentSync; same call interface)
+    if a.ref_mode != "same" or a.bridge_len or os.environ.get("DUB_LS_CFG", "").strip():   # r6 G: DUB_LS_CFG guidance variants live in ls_stable; round 3: generator variants (ls_stable.StableLatentSync; same call interface)
         from ls_stable import StableRunner
         with rp.timed(times, "latentsync_load"): runner = StableRunner(a.window_batch_size, not a.no_deepcache, a.steps, a.guidance, 1247, a.deepcache_interval, ref_mode=a.ref_mode,
                                                                        bridge_len=a.bridge_len, bridge_steps=a.bridge_steps)
