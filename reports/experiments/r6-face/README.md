@@ -35,7 +35,8 @@ nearest good frames, source if the run is long).
 |---|---|---|---|---|
 | m3 (local) | 43.7 | 44.4 | 36.1 | sanitizer replaces 277 / 110 / 131 frames |
 | s0 = sanitizer off | 64.4 | 40.3 | 15.1 | 03's real flashes come back (6 events >= 2) |
-| sg = sharpness guard (hf up) | pending | 40.9 | 27.9 | 23.8 s smear still through: a misaligned warp can add edge energy |
-| sa = skin-ring alignment NCC >= 0.8 | pending | pending | **9.1** | 05: 122 replaced, 9 kept; both smears gone (grid checked) |
+| sg = sharpness guard (hf up) | - | 40.9 | 27.9 | 23.8 s smear still through: a misaligned warp can add edge energy |
+| sa = skin-ring alignment NCC >= 0.8 | 43.7 | 46.7 | **9.1** | guard kept 0 / 9 / 9 of 319 / 115 / 137 flagged; both 05 smears gone (grid checked) |
+| m4 = sa + --mouth-region 0.38 | pending | 46.1 | 8.2 | the m4 candidate; 04's top events = abrupt generator lip-shape changes (22.4 s window joint, 6.9 s), not paste jumps |
 Probe (`/workspace/dub/artifacts/r6f/san_probe.py`): on 05 every flagged frame has interp confidence 0 (small face, flow unreliable); the
 smear frames have ring NCC -0.13..0.14, 03's real flashes 0.95-0.98, 05 p10 0.83.
