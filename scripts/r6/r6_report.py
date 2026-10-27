@@ -30,7 +30,9 @@ def load(win):
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--win", default="/workspace/dub/artifacts/r6g/win"); ap.add_argument("--base", default="G0_base")
-    ap.add_argument("--noise", default="G10_seed7"); a = ap.parse_args(); rows = load(pathlib.Path(a.win))
+    ap.add_argument("--noise", default="G10_seed7"); ap.add_argument("--arms", default=None, help="comma list: only these arms (more common windows)")
+    a = ap.parse_args(); rows = load(pathlib.Path(a.win))
+    if a.arms: rows = {k: v for k, v in rows.items() if k in a.arms.split(",")}
     common = set.intersection(*[set(v) for v in rows.values()]) if rows else set()
     wins = sorted(common, key=lambda w: (w.split()[0], int(w.split()[1])))
     print(f"Windows ({len(wins)}, 8 s): " + ", ".join(f"{w.split()[0]} {w.split()[1]}-{int(w.split()[1]) + 8} s" for w in wins) + "\n")
