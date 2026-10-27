@@ -218,6 +218,50 @@ def guard(source: str, plain: str, cand: str, ents: list) -> str | None:
     return None
 
 
+def close_inside_pauses(y, sr: int, spans, spoken: str, min_gap: float = 0.12, keep: float = 0.05, xfade: float = 0.01):
+    """r6 --close-inside-pauses: Chatterbox's own hesitations INSIDE an English phrase ("and | we", "that's | what", 0.13-0.7 s; the gate's
+    pause-logic axis) are shortened in the take itself: a CTC word gap > min_gap s between two words with no punctuation and no clause start, whose
+    middle is silent (30 dB below the take's speech level), keeps `keep` s of silence (10 ms crossfade). Deterministic, no re-synthesis.
+    Returns (y, spans shifted, [(t, removed_s, before, after)])."""
+    import numpy as np
+    from tts_burst import CLAUSE_START
+    from tts_qa import norm as qnorm
+    if not spans or len(spans) < 2: return y, spans, []
+    raw = spoken.split(); tok = [i for i, t in enumerate(raw) for _ in range(len(qnorm(t)))]
+    if len(tok) != len(spans): return y, spans, []
+    h = int(0.01 * sr); n = len(y) // h
+    if n < 10: return y, spans, []
+    f = 20 * np.log10(np.sqrt((y[:n * h].reshape(n, h) ** 2).mean(1)) + 1e-9); ref = float(np.percentile(f, 90))
+    cuts = []
+    for k in range(len(spans) - 1):
+        if tok[k] == tok[k + 1]: continue
+        e_, s_ = spans[k]["end"], spans[k + 1]["start"]; g = s_ - e_
+        nxt = re.sub(r"[^\w']", "", raw[tok[k + 1]].lower())
+        if g <= min_gap or re.search(r"[,.;:!?…—-]['\"»)]*$", raw[tok[k]]) or nxt in CLAUSE_START: continue
+        a, b = e_ + keep / 2, s_ - keep / 2
+        i0, i1 = int(a * sr), int(b * sr)
+        if i1 - i0 < int(0.03 * sr): continue
+        mid = y[i0:i1]; lv = 20 * np.log10(np.sqrt(np.mean(mid ** 2)) + 1e-9)
+        if lv > ref - 30: continue   # not a silence (breath / voiced): leave it
+        cuts.append((i0, i1, round(e_, 2), round(b - a, 3), raw[tok[k]], raw[tok[k + 1]]))
+    if not cuts: return y, spans, []
+    out = []; prev = 0; xf = int(xfade * sr); removed = []
+    for i0, i1, t, rm, w0, w1 in cuts:
+        out.append(y[prev:i0].copy()); prev = i1; removed.append((i0 / sr, i1 / sr, t, rm, w0, w1))
+    out.append(y[prev:].copy())
+    z = out[0]
+    for seg in out[1:]:
+        if xf and len(z) > xf and len(seg) > xf:
+            r_ = np.linspace(0, 1, xf, dtype=np.float32); z[-xf:] = z[-xf:] * (1 - r_) + seg[:xf] * r_; z = np.concatenate([z, seg[xf:]])
+        else:
+            z = np.concatenate([z, seg])
+    sp2 = []
+    for sp in spans:
+        sh = sum((b1 - a1) + (xfade if xf else 0.0) for a1, b1, *_ in removed if sp["start"] >= b1 - 1e-6)
+        sp2.append({**sp, "start": round(sp["start"] - sh, 3), "end": round(sp["end"] - sh, 3)})
+    return z.astype(np.float32), sp2, [(t, rm, w0, w1) for _, _, t, rm, w0, w1 in removed]
+
+
 def simulate(y, sr: int, spans, spoken: str, p: dict, opts, prev_end, flow_gap: float, cut_kw: dict, norm) -> dict:
     """Dry run of the downstream placement of ONE take: the same flow merge, boundary-only cut DP and window rule as run_tts_phrase + place_groups.
     Returns the cost in seconds and its parts. y = the take, spans = its CTC word spans (None -> whole take as one part on the merged window)."""

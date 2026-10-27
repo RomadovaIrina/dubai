@@ -893,6 +893,8 @@ def main() -> int:
     ap.add_argument("--dur-cost", choices=["r5", "r6", "r6c", "r6d", "r6e"], default="r5", help="--dur-translate dry-run cost: r5 = 0.7 x dub over source silence, tempo ramps 1.05->1.15 / "
                     "0.95->0.875 (x1.5 / x0.3); r6 = the gate's own axes: 1.0 x dub over silence, every second placed outside 0.95-1.05 at full weight (x1.5 fast, x1.0 slow); "
                     "r6c = r6 + the parts cut exactly like the pipeline (cut_parts pre/post-roll, +0.14 s per part); r6d = r6c + 2 x the take's own pauses > 0.15 s inside an English phrase (CTC word gaps); r6e = r6d with a slow-down charged 0.5 x the time it adds (monotone under --fill-slowdown < 0.95)")
+    ap.add_argument("--close-inside-pauses", choices=["on", "off"], default="off", help="r6: phrase mode: Chatterbox pauses > 0.12 s inside an English phrase "
+                    "(no punctuation / clause start) are shortened to 0.05 s in every take (dur_translate.close_inside_pauses)")
     ap.add_argument("--dur-gap-qa-cost", choices=["on", "off"], default="off", help="r6: --dur-translate: a gap-QA re-seed is accepted only if its dry-run placement "
                     "cost is at most 0.3 s above the chosen take's")
     ap.add_argument("--dur-top", type=int, default=3, help="--dur-translate: candidates synthesised per round"); ap.add_argument("--dur-rounds", type=int, default=2)
@@ -951,6 +953,7 @@ def main() -> int:
     os.environ["DUB_QA_WHISPER_COMPUTE"] = a.qa_whisper_compute
     os.environ["DUB_TTS_TEXT_NORM"] = a.tts_text_norm
     if a.pause_boundary_only == "on": os.environ["DUB_PAUSE_BOUNDARY_ONLY"] = "1"
+    if a.close_inside_pauses == "on": os.environ["DUB_CLOSE_INSIDE"] = "1"
     os.environ["DUB_QWEN_SIZE"] = a.qwen_size
     if a.spread_overlap == "on": os.environ["DUB_SPREAD_OVERLAP"] = "1"
     if a.qwen_gpu_layers:

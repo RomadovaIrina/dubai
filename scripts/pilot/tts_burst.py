@@ -648,6 +648,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
         raise RuntimeError(f"target language {tgt_lang!r} not supported by Chatterbox")
     fit = fit or {"enabled": False}; qa_cfg = qa_cfg or {"enabled": False}; fit_up = fit_up or {"enabled": False}; dur_cfg = dur_cfg or {"enabled": False}
     import dur_translate
+    CLOSE_INSIDE = os.environ.get("DUB_CLOSE_INSIDE", "0") == "1"   # r6 --close-inside-pauses (set by run_clean_pipeline_05 main)
     import model_cache
     def _load_tts():
         m_ = ChatterboxMultilingualTTS.from_local(pathlib.Path(__file__).resolve().parents[2] / "models" / "chatterbox", dev(), t3_model="v3")
@@ -754,12 +755,16 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
             for u, p in ups:
                 text = u["translation"]; u["parts_original"] = [text]; u["fit"] = []; u["fit_up"] = []
                 y, rec = gen_sentence(u, text, dtype); spans = align(y, text); sp_s = speech_seconds(y, spans)
+                if CLOSE_INSIDE and spans:   # r6: Chatterbox hesitations inside an English phrase shortened in the take (dur_translate.close_inside_pauses)
+                    y, spans, ci = dur_translate.close_inside_pauses(y, m.sr, spans, _spk(text)); sp_s = speech_seconds(y, spans); u["closed_pauses"] = ci
                 src_words = " ".join(p["groups"]); target = sum(e - s for s, e in p["bursts"]); prev_end = prev_end_of.get(u["id"])
                 # ---- r5 duration-aware translation: N length-budgeted Qwen candidates, judge + back-translation, TTS of the top K, the best dry-run placement wins
                 if dur_cfg.get("enabled") and llm is not None:
                     cut_kw = {**ACOUSTIC_CUT, "w_func_long": long_pause_func, "long_grow": long_pause_grow} if phrase_cut == "acoustic" else {}
                     def _synth(t_, salt_, u=u, cfg_w=0.5):
-                        y_, r_ = gen_sentence(u, t_, dtype, salt=salt_, cfg_w=cfg_w); s_ = align(y_, t_); return y_, r_, s_, speech_seconds(y_, s_)
+                        y_, r_ = gen_sentence(u, t_, dtype, salt=salt_, cfg_w=cfg_w); s_ = align(y_, t_)
+                        if CLOSE_INSIDE and s_: y_, s_, _ = dur_translate.close_inside_pauses(y_, m.sr, s_, _spk(t_))
+                        return y_, r_, s_, speech_seconds(y_, s_)
                     def _sim(y_, s_, t_, p=p, prev_end=prev_end, cut_kw=cut_kw):
                         return dur_translate.simulate(y_, m.sr, s_, _spk(t_), p, opts, prev_end, sentence_flow_gap, cut_kw, norm)
                     text, y, rec, spans, sp_s = dur_translate.select(u, p, text, (y, rec, spans, sp_s), _synth, _sim, llm, src_name, tgt_name, dur_cfg, _spk, log=log)
@@ -836,6 +841,9 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                         if not gv:
                             break
                     stats["gap_qa_units"] = stats.get("gap_qa_units", 0) + (1 if u["gap_qa"]["found"] else 0); stats["gap_qa_left"] = stats.get("gap_qa_left", 0) + (1 if gv else 0)
+                if CLOSE_INSIDE and spans is not None:   # the final take (a gap-QA / fit re-seed is not closed yet; idempotent on a closed one)
+                    y, spans, ci = dur_translate.close_inside_pauses(y, m.sr, spans, _spk(text))
+                    if ci: sp_s = speech_seconds(y, spans); u["closed_pauses"] = (u.get("closed_pauses") or []) + ci
                 if _spk(text) != text:   # r3: from here on the spoken form (= the words that were synthesised and aligned) is the unit text
                     u["tts_text_norm"] = {"written": text, "spoken": _spk(text)}; text = _spk(text)
                 if text != u["translation"]:

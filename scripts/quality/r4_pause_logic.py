@@ -77,8 +77,14 @@ def analyse(run, man, min_gap=0.12):
             # The word before a gap is the last one that starts before the gap STARTS (+ 50 ms tolerance for a start on the gap edge).
             j = int(np.searchsorted(starts, g0 + 0.05)) - 1
         if j < 0 or j + 1 >= len(W) or j not in w2s or j + 1 not in w2s or w2s[j + 1] != w2s[j] + 1: continue
-        i = w2s[j]; cls, st = classify(S[i], S[i + 1] if i + 1 < len(S) else None)
-        rows.append({"t": round(g0, 2), "gap_s": round(g1 - g0, 3), "class": cls, "strength": st, "before": S[i][0], "after": S[i + 1][0] if i + 1 < len(S) else "", "unit": S[i][1], "src": "whisper"})
+        i = w2s[j]; cls, st = classify(S[i], S[i + 1] if i + 1 < len(S) else None); amb = False
+        if PICK == "parts" and W[j][1] >= g0 - 0.12 and j - 1 in w2s and w2s[j - 1] == i - 1:
+            # "word j" starts on the gap edge: a word really spoken BEFORE a pause starts >= 0.12 s before it, so Whisper may have pulled the next word's
+            # start into the gap (r6v2 03: "success, | that's" scored "that's | what"). Ambiguous between (j-1 | j) and (j | j+1): the stronger boundary.
+            c2, s2 = classify(S[i - 1], S[i])
+            if s2 > st: i, cls, st, amb = i - 1, c2, s2, True
+        rows.append({"t": round(g0, 2), "gap_s": round(g1 - g0, 3), "class": cls, "strength": st, "before": S[i][0], "after": S[i + 1][0] if i + 1 < len(S) else "", "unit": S[i][1],
+                     "src": "whisper" + (" (edge word)" if amb else "")})
     inside = [r for r in rows if r["class"] == "INSIDE"]
     by = {c: [r["gap_s"] for r in rows if r["class"] == c] for c in ("sentence", "strong", "comma", "clause", "INSIDE")}
     return {"words_whisper": len(W), "aligned": len(w2s), "pauses": len(rows), "pauses_inside_phrase": len(inside), "inside_phrase_s": round(sum(r["gap_s"] for r in inside), 2),
