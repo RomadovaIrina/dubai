@@ -20,3 +20,18 @@
 - new: --dur-cost r6d = r6c + the take's own CTC pauses inside a phrase (Chatterbox hesitations) charged 2x.
 - running: r6v2_14b (r6c + gap-QA cost guard) -> r6v3_14b (r6d + fill 0.9); faith re-score pb1 / v1.
 - next: gate v2 / v3, then 7B on the winner config for the Qwen choice.
+
+## status 4
+- r6v2_14b (r6c + gap-QA guard, fill 0.95): unplanned speed-ups gone (01 fast 18.4 -> 0), 03 face/dub-silent 12.4 -> 0, src-talks/dub-silent 01 7.2 -> 6.35, 02 19.1 -> 14.95, 03 19.1 -> 9.6; tempo-out <= 4.3 s everywhere (pb1 23-52 s).
+- r6v3 (r6d + fill 0.9) FAILED: the r6 cost charged every slowed second, so a SHORTER take was cheaper under a 0.9 floor (03 src-silent back to 17 s) -> r6e: charge only the added drawl time.
+- open v2 rows: inside-phrase pauses (Chatterbox hesitations -> r6d), sentence level jumps (takes differ up to 6 dB -> remix --unit-level), bed exposure in new dub pauses, 05 face/dub-silent 7.35 -> 9.0.
+- running: r6v2L (v2 remix + unit-level, no TTS), r6v4_14b (r6d + unit-level), then r6v5_14b (r6e + fill 0.9).
+- next: gate v4 / v5 vs pb1; 7B on the winner; publish.
+
+## status 5
+- r6v4_14b (r6d inside-pause cost + unit-level): inside counts down on 01 / 02 / 05, but 03 / 04 lost v2's src-silent gains: the 2x inside penalty also hits good long takes and the judge
+  rejected v2's winning u04 candidate this time (natural 3) -> selection outcomes vary run to run; avoiding hesitations by re-rolling is stochastic.
+- remix --unit-level verified on v2's takes (r6v2L, no TTS): sentence level jump p90 below pb1 on all 5 (03 4.75 -> 1.43, pb1 2.31), pause-onset jump 03 2.57 -> 0.36.
+- 02 residue-exposed: 97.6 % from ONE 0.34 s Chatterbox hesitation over a loud bed moment (12 s); 04 pause-onset jump: a 3-sample p95.
+- new: --close-inside-pauses: hesitations > 0.12 s inside an English phrase shortened to 50 ms in the take (deterministic, CTC spans). Pause-logic edge-word rule.
+- running: r6v5_14b (r6e + fill 0.9), then r6v6_14b (v2 + close-inside + unit-level). Next: pick v-best, 7B arm on it, publish (WATCH if the gate still fails).
