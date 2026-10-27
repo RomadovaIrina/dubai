@@ -170,3 +170,17 @@ user + Max confirm it before it counts.
 - Commit and push every step. Short status every ~45 min: hypothesis / evidence / what changed / what failed / next.
 - Handoffs between servers go through the coordinator, ≤ 150 MB. No frame dumps.
 - First deliverable: **m4 WATCH on all 5** (m3 + mr38 + the 23–24 s fix), then the flash work, then g25 + deflash.
+
+## 7. Round-6 outcome (27.10) and the next step
+- Face twitch FIXED: the r3 sanitizer smeared 2–4 frames on small / moving faces → alignment guard (skin-ring NCC ≥ 0.8) + mr38 = **m4**
+  (`experiment/r6-face` 2ec5a1c). Twitch ≤ v4 on 03 / 04 / 05.
+- Audio **r6_audio_v1** (`experiment/r6-audio` a82b54b): the user LOVES it. Duration-aware translation, tempo ≈ 1.0, pauses at the source
+  pauses.
+- **m5 = m4 + r6 audio:** the face is fine, but the lips follow the dub less tightly (04 / 05 mismatch +1–2 s, 05 SyncNet −1), because of where
+  the new audio places speech.
+- **NEXT (#1):** audio placement must put dub speech INSIDE the source speech spans while the face is visible, keeping r6's tempo and pauses.
+  Then build m6 = m4 + that audio, and gate it against m4 on the video axes AND against r6_audio_v1 by ear.
+- Generator: LatentSync 1.6 at guidance 2.0 + bridge stays (`experiment/r6-gen` 5b04678). MuseTalk failed; InfiniteTalk is too heavy.
+- Bandwidth on vast is billed. Avoid > 20 GB downloads.
+- A blind test on unseen videos is still pending: 4 Wikimedia Commons clips were proposed (Kleiman FAL, Levkovich CC BY 3.0, Pokrov CC BY 3.0,
+  BAIC CC BY 4.0).
