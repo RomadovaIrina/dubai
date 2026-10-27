@@ -29,3 +29,13 @@ nearest good frames, source if the run is long).
   that interpolation is misaligned -> a mouth-less smear for 2-4 frames = the face twitch the user sees.
 - Fix (generic, default on): `--sanitize-guard on`: a flagged frame is replaced only if the lip-box high frequencies go UP (a real flash has
   no lip line, the fix restores it; a misaligned fix lowers them). Arms on m3's raw layers: sg (guard) vs s0 (sanitizer off) vs m3.
+
+## Arms on m3's raw layers (composite only), twitch_sum (lower = better); v4 reference 03 52.8 / 04 47.3 / 05 33.0
+| arm | 03 | 04 | 05 | note |
+|---|---|---|---|---|
+| m3 (local) | 43.7 | 44.4 | 36.1 | sanitizer replaces 277 / 110 / 131 frames |
+| s0 = sanitizer off | 64.4 | 40.3 | 15.1 | 03's real flashes come back (6 events >= 2) |
+| sg = sharpness guard (hf up) | pending | 40.9 | 27.9 | 23.8 s smear still through: a misaligned warp can add edge energy |
+| sa = skin-ring alignment NCC >= 0.8 | pending | pending | **9.1** | 05: 122 replaced, 9 kept; both smears gone (grid checked) |
+Probe (`/workspace/dub/artifacts/r6f/san_probe.py`): on 05 every flagged frame has interp confidence 0 (small face, flow unreliable); the
+smear frames have ring NCC -0.13..0.14, 03's real flashes 0.95-0.98, 05 p10 0.83.
