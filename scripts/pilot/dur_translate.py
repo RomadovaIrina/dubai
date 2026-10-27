@@ -255,7 +255,7 @@ def simulate(y, sr: int, spans, spoken: str, p: dict, opts, prev_end, flow_gap: 
                 k += 1
             acc = sum(counts[:k + 1])
     durs = []; k0 = 0
-    if COST == "r6c" and spans:   # r6c: the parts exactly as run_tts_phrase cuts them (cut_parts: 60 ms pre-roll / onset rule, 80 ms post-roll);
+    if COST in ("r6c", "r6d") and spans:   # r6c: the parts exactly as run_tts_phrase cuts them (cut_parts: 60 ms pre-roll / onset rule, 80 ms post-roll);
         try:                     # the span-only length was 0.14 s short per part (r6v1 01: u9 dry run x1.01, placed x1.14)
             from tts_align import cut_parts
             from tts_burst import energy_onset
@@ -281,15 +281,27 @@ def simulate(y, sr: int, spans, spoken: str, p: dict, opts, prev_end, flow_gap: 
         e = bs + d / t; sp_in = sum(max(0.0, min(be, y1) - max(bs, y0)) for y0, y1 in speech)
         cov = sum(max(0.0, min(e, y1) - max(bs, y0)) for y0, y1 in speech)
         src_sil += max(0.0, sp_in - min(cov, sp_in)); dub_over += max(0.0, (e - bs) - cov)
-        if COST in ("r6", "r6c"):   # r6: what the gate counts (r4_audio_metrics tempo.out_s): every placed second outside 0.95-1.05, at full weight
+        if COST in ("r6", "r6c", "r6d"):   # r6: what the gate counts (r4_audio_metrics tempo.out_s): every placed second outside 0.95-1.05, at full weight
             if t > 1.05 + 1e-3: fast += d / t
             elif t < 0.95 - 1e-3: slow += d / t
         elif t > 1.05: fast += d / t * min(1.0, (t - 1.05) / 0.10)      # ramps to full weight at x1.15 (the audible "rushed")
         elif t < 0.95: slow += d / t * min(1.0, (0.95 - t) / 0.075)   # ramps to full weight at x0.875 (the fill floor)
         rows.append([round(d, 2), round(sp_in, 2), round(win, 2), round(t, 3)])
-    cost = 1.0 * src_sil + 1.0 * dub_over + 1.5 * fast + 1.0 * slow if COST in ("r6", "r6c") else 1.0 * src_sil + 0.7 * dub_over + 1.5 * fast + 0.3 * slow
+    cost = 1.0 * src_sil + 1.0 * dub_over + 1.5 * fast + 1.0 * slow if COST in ("r6", "r6c", "r6d") else 1.0 * src_sil + 0.7 * dub_over + 1.5 * fast + 0.3 * slow
+    inside = 0.0; n_inside = 0
+    if COST == "r6d" and spans:   # r6d: the take's OWN pauses inside an English phrase (Chatterbox hesitations "like | a"): a gap
+        # > 0.15 s between two CTC words with no punctuation and no clause start stays inside a part (pb1 cuts only at boundaries) = the gate's INSIDE pause
+        from tts_burst import CLAUSE_START
+        from tts_qa import norm as qnorm
+        tok = [i for i, t in enumerate(raw) for _ in range(len(qnorm(t)))]   # span index -> raw token (a hyphenated token can give several spans)
+        for k in range(len(spans) - 1 if len(tok) == len(spans) else 0):
+            if tok[k] == tok[k + 1]: continue
+            g = spans[k + 1]["start"] - spans[k]["end"]; nxt = re.sub(r"[^\w']", "", raw[tok[k + 1]].lower())
+            if g > 0.15 and not re.search(r"[,.;:!?…—-]['\"»)]*$", raw[tok[k]]) and nxt not in CLAUSE_START:
+                inside += g; n_inside += 1
+        cost += 2.0 * inside + 0.2 * n_inside
     return {"cost": round(cost, 3), "src_silent_s": round(src_sil, 3), "dub_over_silence_s": round(dub_over, 3), "fast_s": round(fast, 3), "slow_s": round(slow, 3),
-            "under_s": round(src_sil, 3), "over_s": round(fast, 3), "parts": rows, "ideal_s": round(sum(r_[1] for r_ in rows), 3), "speech_s": round(sum(durs), 3)}
+            "under_s": round(src_sil, 3), "over_s": round(fast, 3), "inside_s": round(inside, 3), "inside_n": n_inside, "parts": rows, "ideal_s": round(sum(r_[1] for r_ in rows), 3), "speech_s": round(sum(durs), 3)}
 
 
 def select(u: dict, p: dict, plain: str, first: tuple, synth, sim, llm, src_name: str, tgt_name: str, cfg: dict, spoken, log=print) -> tuple:
