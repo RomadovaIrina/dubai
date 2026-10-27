@@ -78,7 +78,10 @@ def analyse(run, man, min_gap=0.12):
             j = int(np.searchsorted(starts, g0 + 0.05)) - 1
         if j < 0 or j + 1 >= len(W) or j not in w2s or j + 1 not in w2s or w2s[j + 1] != w2s[j] + 1: continue
         i = w2s[j]; cls, st = classify(S[i], S[i + 1] if i + 1 < len(S) else None); amb = False
-        if PICK == "parts" and W[j][1] >= g0 - 0.12 and j - 1 in w2s and w2s[j - 1] == i - 1:
+        zero = bool((fr[int(g0 / 0.01):int(g1 / 0.01)] < -150).any())   # exact digital silence = inserted by the pipeline (spread / placement), only at a boundary
+        if PICK == "parts" and (W[j][1] >= g0 - 0.12 or zero) and j - 1 in w2s and w2s[j - 1] == i - 1:
+            # also an exact-zero gap: the pipeline's own inserted pause (r6v7 02 71.9 s: a 0.71 s spread pause before "and", Whisper's "and" box covers it);
+            # a Whisper box that merely covers a NON-zero gap stays as picked (a real hesitation must not be explained away)
             # "word j" starts on the gap edge: a word really spoken BEFORE a pause starts >= 0.12 s before it, so Whisper may have pulled the next word's
             # start into the gap (r6v2 03: "success, | that's" scored "that's | what"). Ambiguous between (j-1 | j) and (j | j+1): the stronger boundary.
             c2, s2 = classify(S[i - 1], S[i])

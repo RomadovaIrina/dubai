@@ -242,7 +242,8 @@ def close_inside_pauses(y, sr: int, spans, spoken: str, min_gap: float = 0.12, k
         # the silence itself, not the CTC span edges (the aligner stretches a word over the pause: r6v6 02 u6 "and | these" 0.71 s, CTC gap < 0.12 s):
         # the longest run of 10 ms frames 35 dB below the take's p90 (the pause-logic metric's own rule) between the middles of the two words
         m0 = int((spans[k]["start"] + spans[k]["end"]) / 2 / 0.01); m1 = int((spans[k + 1]["start"] + spans[k + 1]["end"]) / 2 / 0.01)
-        sil = f[max(0, m0):min(n, m1)] < ref - 35; best = (0, 0); run0 = None
+        sil = f[max(0, m0):min(n, m1)] < ref - float(os.environ.get("DUB_CLOSE_INSIDE_DB", "35")); best = (0, 0); run0 = None   # r6v8: 30 (hesitations at
+        # -50..-70 dB broke into < 0.12 s runs at 35 dB below the take's p90, while the metric on the levelled 16 kHz track still saw one pause)
         for q, v in enumerate(list(sil) + [False]):
             if v and run0 is None: run0 = q
             elif not v and run0 is not None:
