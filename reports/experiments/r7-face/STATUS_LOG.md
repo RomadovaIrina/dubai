@@ -81,3 +81,11 @@ facexlib / basicsr / detector) on the layer's lips region (hull + 0.5 mw, feathe
 Reading: the source-texture transfer at tau 1000 / sigma 2.5 is a clean win for the skin ring (keep); ESRGAN gives the lips +0.04-0.09 but
 flickers frame to frame -> next: temporally stabilise the SR detail (flow-aligned average of the added high frequencies over +-1 layer frame)
 or lower its strength, judged on twitch + a half-speed review.
+
+### SR arms, continued (11:30)
+| arm | lips | 0.15-0.3 | 0.3-0.5 | twitch | |
+|---|---|---|---|---|---|
+| sr06_tex (ESRGAN strength 0.6 + tex) | 0.758 | 0.864 | 0.855 | 48.99 | |
+| srt1_tex (ESRGAN temporal +-1 + tex) | **0.809** | 0.801 | 0.872 | 55.79 | best lips; the twitch rise is the METRIC: its top events are the SAME dub articulations as m6's (37.8 / 42.5 / 47.8 s, same scores +-0.1), plus the mouth opening at 5.83 s (frames 174-176, present in m6 at 1.0, scored 3.2 here) - the lips channel measures flow magnitude on the lips, and crisper lips give larger flow. No new visual defect in the 9-frame strip. |
+Consequence: for sharpness arms the twitch acceptance must use the skin channels (skin_motion / skin_app = the paste jumping) and the
+half-speed review, not the lips channel. r5_twitch.py gets a per-channel sum in the table.
