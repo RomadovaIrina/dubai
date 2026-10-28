@@ -178,3 +178,41 @@ Outbox: `<id>_r7_m11_WATCH.mp4` + `_sbs.mp4` (m8b | m11), `r7_m11_WATCH.md`, `r7
 **02 update (audio-r7-v3a-all5):** the all-5 handoff differs from v2 only on 02 (one re-taken sentence; 01/03 identical to v2, 04/05 identical
 to v3a — cmp). 02 has no face frames, so its m11 output is the source + the new mix (r7_e2e, 90 s, no generator); WATCH + sbs regenerated
 for all 5, gate rows unchanged (02 PASS, no sync / flash).
+
+## 11. m11 = the accepted candidate (user: 04 "excellent", 05 no longer "vomiting"; pause placement forgiven for now)
+
+**What m11 is.** Audio: audio-r7-v3a (r7 audio v2 = r6 takes + lip placement 2.0 / 1.5 / 0.5 s + gap clean + dub gate, plus duration-aware
+re-translation / re-take of the units where the speaker is on screen and the dub ended early; 02 on v3a-all5). Face: the m8 stack =
+LatentSync 1.6 at 512 / 25 fps on the dub, `--ls-split-dub-silence 1.0`, then `scripts/r7/r7_layer_sr.py` (Real-ESRGAN x2 on the layer's lips,
+temporal ±1) and `fps_composite.py` at the source fps with: sim_ring registration (upper ring), edge 12 px, colour match upper, source skin
+texture at full confidence (`--tex-tau 1000 --tex-sigma 2.5`), lip guard, flow_safe retime, face clip, texture-mode sanitizer 0.83 with the
+alignment guard and the rigid fallback (`--sanitize-min-conf 0.3 --sanitize-tear 0`), sharpen-auto 0.95 / lips max 0.8, mouth region
+0.38, paste guard 0.5. Default-off and unused: `--sanitize-mild`, `--sanitize-replace-below/-luma`, `--mouth-region-closed`.
+Known leftovers: 03 37.3 / 37.7 s washed-pink lips (generator; every fix costs SyncNet), 01 7.6 s one-frame lip pop, the generator's open
+mouth on dub-internal pauses (05 7.5 s, 04 4.1 s), the pressed look on the remaining dub-silent spans (05 6.9 s, 04 3.1 s).
+
+**Speed on m11 (s per video-minute, face stage only; this server: one GPU, 24 cores).** Wall per stage from the manifests / score.json:
+
+| video (face frames) | LatentSync 25 fps (gen + load + prep) | layer SR (Real-ESRGAN) | composite (fps_composite + fix30 wrapper) | mediapipe (source + layer) | face stage total |
+|---|---:|---:|---:|---:|---:|
+| 05 (1511 / 1567) | 373 | ~80 | ~45 | 31 | 500 |
+| 04 (1617 / 1617) | 374 | ~95 | ~80 | 48 | 482 |
+| 03 (2710 / 2710) | 372 | ~75 | ~50 | 26 | 480 |
+| 01 (260 / 2542) | 65 | ~15 | ~18 | 12 | 95 |
+| 02 (0 / 3324) | 22 (no generator) | 0 | 11 | 10 | 33 |
+
+(The SR / composite split is from the 05 run: 70 s of the 108 s "layer SR + composite" is Real-ESRGAN; fps_composite itself is ~33 s =
+sanitizer 8.6, composite 9.2, encode 5.8, boundaries 4.3; the fix30 wrapper adds ~40-60 s per video for the frame map, landmarks and
+checks.) The budget is 600 s/video-min: a full-face video sits at ~480-500, i.e. ~100 s of headroom; the audio stage (~140 s/video-min
+with 14B + retake, audio agent) runs on the other server.
+
+**Top-3 speed costs for phase 2:**
+1. **LatentSync itself: ~370 s/video-min, 75 % of the face stage.** Fixed per generated frame (≈ 0.25 s/frame at 512, batch 1); the only
+   levers are fewer generated frames (the dub-silence split already skips the silent stretches: 01 pays 65 for 260 frames) and the
+   generator's own batching / fp16 / torch.compile, untried in r7.
+2. **Real-ESRGAN layer SR with temporal ±1: ~75-95 s/video-min (16-20 %).** Three passes per frame (temporal ±1); a single pass would be
+   ~30, and the lips-only crop is already used. Can run concurrently with the generator of the next video (CPU/GPU overlap, not done).
+3. **The composite wrapper (fix30 + fps_composite): ~45-80 s/video-min (10-16 %)**, dominated by the per-frame landmarks / frame map
+   (fix30 40-60 s) rather than fps_composite (33 s on 05, of which the sanitizer 8.6 and encode 5.8). Source mediapipe (face_stack 20-30)
+   is computed again by fix30; caching the source landmarks (they exist in artifacts/r7f/lm) saves ~20 s/video-min.
+Everything else (speech gate, prep, assembly, score) is < 15 s/video-min together.
