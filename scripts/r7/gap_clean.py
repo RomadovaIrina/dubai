@@ -104,7 +104,7 @@ def clean(bg: np.ndarray, sr: int, source_speech: list, dub_speech: list, voice_
         if tone is not None:
             gdb = np.clip(d["ref"] - 20 * np.log10(floor + 1e-9), -6, 6)
             g = 10 ** (np.interp(np.arange(N) / sr, (np.arange(n) + 0.5) * FR, gdb) / 20).astype(np.float32)[:, None]
-            out = out * (1 - wj) + tone * g * wj
+            out = out * np.cos(np.pi / 2 * wj) + tone * g * np.sin(np.pi / 2 * wj)   # v2: uncorrelated signals -> equal-power crossfade
             rep["tone_floor_db"] = round(20 * np.log10(floor + 1e-9), 1)
         else:              # no room tone: lower the detected frames to the local ambience
             cut = np.minimum(0.0, d["ref"] - d["L"]); g = 10 ** (np.interp(np.arange(N) / sr, (np.arange(n) + 0.5) * FR, cut) / 20).astype(np.float32)[:, None]

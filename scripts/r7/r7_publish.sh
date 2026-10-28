@@ -37,6 +37,7 @@ r7_audio_$VER$KIND commit $C tag $NEW; gate vs $PREV: $([ $rc -eq 0 ] && echo PA
 = r6_audio_v1/v2 (takes, tempo, pause positions, bed mix) + r7:
   lip placement: where the face is visible, dub blocks are moved (never stretched) into the source speech spans; splits only at pb1 boundaries.
   gap clean: in dub gaps the bed's leaked voice / separator bursts -> room tone, denoise where the source speaks.
+  v2: dub gate (the take's noisy pauses >= 0.6 s -> -30 dB, 20-ms sin^2 ramps: the 04 crackle), 20-ms equal-power block fades, lip limits 2.0 / 1.5 / 0.5 s.
 Per video: dubbed_16k.wav / dubbed_24k.wav (dub voice, NEW timing), final_mix_aac.m4a (final mix, -16 LUFS), <id>_r4b.manifest.json
   (units with moved placements; lip_place.dub_speech = the dub's speech spans on the new timeline, use them (or VAD on dubbed_16k.wav) for
   --ls-split-dub-silence; lip_place.shifts = every block's move).

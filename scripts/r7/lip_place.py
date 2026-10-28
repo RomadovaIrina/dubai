@@ -69,7 +69,7 @@ def plan(B, act, c, n, rule):
     return out, best
 
 
-def split_candidates(dub16, man, L, ref, blocks, quiet_rel_db=-25.0):
+def split_candidates(dub16, man, L, ref, blocks, dbg=None, quiet_rel_db=-25.0):
     """logical English boundaries inside blocks: [(frame of the quietest point between the two words, class)]"""
     import r4_pause_logic as pl, difflib
     W = pl.whisper_words(dub16); S = pl.script_tokens(man)
@@ -80,10 +80,12 @@ def split_candidates(dub16, man, L, ref, blocks, quiet_rel_db=-25.0):
     for i in range(len(W) - 1):
         if i not in w2s or i + 1 not in w2s or w2s[i + 1] != w2s[i] + 1: continue
         cls, st = pl.classify(S[w2s[i]], S[w2s[i] + 1])
+        if dbg is not None: dbg.append([round(W[i][2], 2), W[i][0], W[i + 1][0], cls, st])
         if st <= 0: continue
         lo, hi = int((W[i][2] - 0.06) / FR), int((W[i + 1][1] + 0.06) / FR) + 1
         if hi - lo < 1 or lo < 0 or hi > len(L): continue
         f = lo + int(np.argmin(L[lo:hi]))
+        if dbg is not None: dbg[-1].append(round(float(L[f] - ref), 1))
         if L[f] > ref + quiet_rel_db: continue   # no quiet point between the words: a cut there would click / clip a phoneme
         if any(a + 10 < f < b - 10 for a, b in blocks): out.append((f, cls))
     return out
@@ -108,9 +110,10 @@ def main():
     mx, ms = int(round(a.max_shift / FR)), int(round(a.split_shift / FR))
     B = [[b0, b1, mx, "r6" if i and unit_at(*cores[i]) == unit_at(*cores[i - 1]) and unit_at(*cores[i]) is not None else "unit", *cores[i]] for i, (b0, b1) in enumerate(blocks)]
     rule = {"lam": a.lam, "gmin": int(round(0.15 / FR)), "grow": int(round(a.grow / FR)), "split_gap": int(round(a.split_gap / FR)), "grow_unit": int(round(a.grow_unit / FR))}
-    shifts, best = plan(B, act, c, n, rule); base = best; splits = []
+    shifts, best = plan(B, act, c, n, rule); base = best; splits = []; dbg = []
     if a.splits == "on" and fv.any():
-        cands = [(f, cls) for f, cls in split_candidates(W / "dubbed_16k.wav", man, L, ref, cores) if fv[max(0, f - 25):f + 25].mean() > 0.5]
+        allc = split_candidates(W / "dubbed_16k.wav", man, L, ref, cores, dbg := [])
+        cands = [(f, cls) for f, cls in allc if fv[max(0, f - 25):f + 25].mean() > 0.5]
         for _ in range(a.max_splits):
             trial = None
             for f, cls in cands:
@@ -122,13 +125,14 @@ def main():
                 if trial is None or c2 < trial[0]: trial = (c2, B2, s2, f, cls)
             if trial is None or best - trial[0] < a.split_gain / FR: break
             best, B, shifts = trial[0], trial[1], trial[2]; splits.append([round(trial[3] * FR, 2), trial[4]]); cands = [q for q in cands if q[0] != trial[3]]
-    # render: every block's samples moved by its shift (blocks tile the track; 5 ms fades at cut points that move apart)
-    z = np.zeros_like(y); h = int(FR * sr); fd = int(0.005 * sr)
+    # render: every block's samples moved by its shift (blocks tile the track; v2: 20-ms equal-power (sin / cos) fades at cut points that move
+    # apart, so two blocks pushed together crossfade at constant power and a cut that opens never steps)
+    z = np.zeros_like(y); h = int(FR * sr); fd = int(0.02 * sr); ramp = np.sin(np.linspace(0, np.pi / 2, fd))
     for q, ((b0, b1, *_), k) in enumerate(zip(B, shifts)):
         i0, i1 = b0 * h, (min(len(y), b1 * h) if q + 1 < len(B) else len(y)); seg = y[i0:i1].copy()
         if len(seg) > 2 * fd:   # fades only where the neighbour moves differently (a cut point that opens / closes)
-            if q and shifts[q - 1] != k: seg[:fd] *= np.linspace(0, 1, fd)
-            if q + 1 < len(B) and shifts[q + 1] != k: seg[-fd:] *= np.linspace(1, 0, fd)
+            if q and shifts[q - 1] != k: seg[:fd] *= ramp
+            if q + 1 < len(B) and shifts[q + 1] != k: seg[-fd:] *= ramp[::-1]
         j0 = i0 + k * h; c0 = max(0, -j0); c1 = max(0, j0 + len(seg) - len(z)); seg = seg[c0:len(seg) - c1]; j0 = max(0, j0)
         z[j0:j0 + len(seg)] += seg
     D0 = act.copy(); D1 = np.zeros(n, bool)
@@ -161,7 +165,7 @@ def main():
            "mismatch_face_visible_s_before": err(D0), "mismatch_face_visible_s_after": err(D1), "cost_shift_only": round(base * FR, 2), "cost_new": round(best * FR, 2),
            "params": {k: getattr(a, k) for k in ("max_shift", "split_shift", "lam", "w_off", "grow", "grow_unit", "split_gap", "min_piece", "split_gain", "max_splits", "splits")},
            "shifts": [[round(ca * FR, 2), round(cb * FR, 2), round(k * FR, 2), kind] for (_, _, _, kind, ca, cb), k in zip(B, shifts)],
-           "dub_speech": [[round(p * FR, 2), round(q * FR, 2)] for p, q in zip(np.flatnonzero(d == 1), np.flatnonzero(d == -1))]}
+           "split_boundaries": dbg, "dub_speech": [[round(p * FR, 2), round(q * FR, 2)] for p, q in zip(np.flatnonzero(d == 1), np.flatnonzero(d == -1))]}
     man["lip_place"] = rep; man["dubbed_track"] = {**man.get("dubbed_track", {}), "lip_placed": True}
     (O / pathlib.Path(a.manifest).name).write_text(json.dumps(man, indent=1, ensure_ascii=False))
     print(json.dumps({k: v for k, v in rep.items() if k not in ("shifts", "dub_speech")}))

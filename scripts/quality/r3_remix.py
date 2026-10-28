@@ -95,6 +95,47 @@ def cap_gap_bed(bg: pathlib.Path, out: pathlib.Path, speech: list, dub_speech: l
     return {"applied": True, "ref_db": round(ref, 1), "cap_db": round(cap, 1), "frames_capped": int((g < -0.5).sum()), "max_cut_db": round(float(g.min()), 1)}
 
 
+def dub_gate(src24: pathlib.Path, out24: pathlib.Path, out16: pathlib.Path, below_db: float = 20.0, min_s: float = 0.6, ramp_s: float = 0.02, floor_db: float = -30.0,
+             voiced: float = 0.35, deep_db: float = 30.0) -> dict:
+    """r7 v2: the dub voice's noisy pauses (Chatterbox: unvoiced crackly noise at -33..-45 dBFS, 04 3.9-5.7 s, which r7_audio_v1's gap denoise
+    exposed by lowering the bed under it) -> floor_db. 10-ms frames > below_db under the voice's p95 AND unvoiced (normalised autocorrelation
+    peak at 70-400 Hz in a 40-ms window < voiced), or > deep_db under it, in runs >= min_s (a quiet voiced word stays; a fricative, and a
+    0.25-0.5 s breath inside a phrase (muting it opened an audible mid-phrase hole: r4 pauses-inside-phrase 0 -> 4 on 04), are shorter);
+    the gain moves with sin^2 (equal-power) ramp_s ramps INSIDE the run, so word edges keep full level."""
+    import numpy as np
+    from scipy.signal import resample_poly
+    y, sr = sf.read(str(src24), dtype="float32"); mono = y if y.ndim == 1 else y.mean(1); h = sr // 100; n = len(mono) // h
+    L = 10 * np.log10((mono[:n * h].reshape(n, h) ** 2).mean(1) + 1e-12); ref = float(np.percentile(L[L > L.max() - 50], 95))
+    W = 4 * h; pad = np.concatenate([np.zeros(W), mono, np.zeros(W)]); idx = np.arange(n) * h + W - (W - h) // 2
+    fr = np.stack([pad[i:i + W] for i in idx]); fr = fr - fr.mean(1, keepdims=True)
+    F = np.fft.rfft(fr, 2 * W, axis=1); ac = np.fft.irfft(np.abs(F) ** 2, axis=1)[:, :W]; ac = ac / (ac[:, :1] + 1e-12)
+    v = ac[:, int(sr / 400):int(sr / 70)].max(1)
+    low = (((L < ref - below_db) & (v < voiced)) | (L < ref - deep_db)) & (L >= -90)
+    raw = []; i = 0
+    while i < n:
+        if not low[i]: i += 1; continue
+        j = i
+        while j < n and low[j]: j += 1
+        raw.append([i, j]); i = j
+    mer = []   # merge runs split by a < 100 ms quiet hole first (one noisy pause = one run; the hole would pop up as a blip), then the length rule
+    for a0, b0 in raw:
+        if mer and a0 - mer[-1][1] < 10 and (L[mer[-1][1]:a0] < ref - below_db).all(): mer[-1][1] = b0
+        else: mer.append([a0, b0])
+    g = np.ones(n); runs = []
+    for i, j in mer:
+        dig = (i > 0 and L[i - 1] < -90) or (j < n and L[j] < -90)   # a word's decay into the take's digital silence (or the rise out of it) stays
+        if (j - i) / 100 >= min_s and not dig: g[i:j] = 0.0; runs.append([round(i / 100, 2), round(j / 100, 2)])
+    gs = np.repeat(g, h); gs = np.concatenate([gs, np.full(len(mono) - len(gs), gs[-1] if len(gs) else 1.0)])
+    k = int(ramp_s * sr)
+    # erode the gated region by one ramp on each side, then a raised-cosine (sin^2) transition entirely inside the original run
+    gm = (gs < 0.5).astype(float); er = np.convolve(gm, np.ones(k), "same") >= k - 0.5   # eroded mask
+    lin = np.clip(np.convolve(er.astype(float), np.ones(k) / k, "same"), 0, 1)       # 0..1 over ramp_s, inside the run
+    fl = 10 ** (floor_db / 20); gain = 1 - (1 - fl) * np.sin(np.pi / 2 * lin) ** 2
+    z = (y * (gain if y.ndim == 1 else gain[:, None])).astype("float32")
+    sf.write(str(out24), z, sr, subtype="FLOAT"); sf.write(str(out16), resample_poly(z if z.ndim == 1 else z.mean(1), 2, 3).astype("float32") if sr == 24000 else z, 16000, subtype="PCM_16")
+    return {"below_db": below_db, "min_s": min_s, "ramp_s": ramp_s, "floor_db": floor_db, "voiced": voiced, "deep_db": deep_db, "ref_db": round(ref, 1), "gated_s": round(float((gain < 0.5).sum() / sr), 2), "runs": runs}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(); ap.add_argument("--src", required=True); ap.add_argument("--out", required=True); ap.add_argument("ids", nargs="+")
     ap.add_argument("--duck-db", type=float, default=-2.0); ap.add_argument("--attack", type=float, default=0.4); ap.add_argument("--release", type=float, default=0.8)
@@ -103,6 +144,8 @@ def main() -> int:
     ap.add_argument("--gap-bed-cap-scope", choices=["gaps", "edges", "speech"], default="gaps", help="r6: frames the bed cap applies to (cap_gap_bed())")
     ap.add_argument("--gap-bed-cap-db", type=float, default=0.0, help="r6: > 0 = bed level cap (median + this) where the source speaks and the dub is silent (cap_gap_bed())")
     ap.add_argument("--gap-clean", choices=["on", "off"], default="off", help="r7: residual-voice / burst detector + room tone + denoise of the bed in dub gaps (scripts/r7/gap_clean.py)")
+    ap.add_argument("--dub-gate", choices=["on", "off"], default="off", help="r7 v2: dub voice residue in its own pauses (unvoiced runs >= --dub-gate-min s, > --dub-gate-db under the voice p95) -> -30 dB, sin^2 20-ms ramps (dub_gate())")
+    ap.add_argument("--dub-gate-db", type=float, default=20.0); ap.add_argument("--dub-gate-min", type=float, default=0.6)
     ap.add_argument("--gap-clean-voice-p", type=float, default=0.4); ap.add_argument("--gap-clean-burst-db", type=float, default=6.0); ap.add_argument("--gap-clean-nr", type=float, default=0.6); ap.add_argument("--gap-clean-nr-ns", type=float, default=0.0)
     a = ap.parse_args()
     import background_bed as bb, run_clean_pipeline_05 as rp, r3_bedswing  # noqa: F401
@@ -117,6 +160,12 @@ def main() -> int:
         if a.unit_level == "on":   # the levelled dub replaces the symlinked one in the remix dir (metrics, handoff and the mix all read it)
             for f in ("dubbed_24k.wav", "dubbed_16k.wav"): (O / f).unlink(missing_ok=True)
             man["unit_level"] = unit_level(man, W / "dubbed_24k.wav", O / "dubbed_24k.wav", O / "dubbed_16k.wav"); D = O
+        if a.dub_gate == "on":   # before the dub VAD: the gated dub is what the mix, the metrics and the handoff read
+            g24, g16 = O / "dubbed_24k.wav", O / "dubbed_16k.wav"; src24 = (D / "dubbed_24k.wav").resolve()
+            if D == O: src24 = src24.rename(O / "dubbed_24k_ungated.wav")   # unit-levelled dub already in O: keep it as the gate's input
+            g24.unlink(missing_ok=True); g16.unlink(missing_ok=True)
+            man["dub_gate"] = dub_gate(src24, g24, g16, a.dub_gate_db, a.dub_gate_min); D = O
+            print(f"   {id_} dub_gate: {man['dub_gate']['gated_s']} s gated in {len(man['dub_gate']['runs'])} runs", flush=True)
         speech = [(s["start"], s["end"]) for s in man["speech_intervals"]]; dub_speech = [(s["start"], s["end"]) for s in rp.run_vad(D / "dubbed_16k.wav")]
         if a.gap_bed_cap_db > 0:
             man["gap_bed_cap"] = cap_gap_bed(pathlib.Path(sep["bg"]), O / "bg_capped_44k.wav", speech, dub_speech, a.gap_bed_cap_db, a.gap_bed_cap_scope)
