@@ -161,7 +161,7 @@ SyncNet, because the interpolation removes the lip motion of a frame that is sti
 coordinator's rule (restrict it or keep m8): **m8 / m8b stays the default stack; replace mode stays default-off** (flags kept, documented).
 
 **Audio v3 variants on the face** (05 and 04, the m8 stack; `m8rawv3{a,b,c}` generator runs 416-470 s per video = 340-380 s/video-min,
-composites `m8v3{a,b,c}`): outbox `<id>_r7_audio_v3_variants_WATCH.mp4` (2x2 grid v2 | v3a / v3b | v3c, labelled, four titled audio
+composites `m8v3{a,b,c}`): outbox `<id>_r7_audio_v3_variants_WATCH.mp4` (a row of four, v2 | v3a | v3b | v3c, labelled, four titled audio
 tracks) + `r7_audio_v3_variants_WATCH.md` (tables). New metric `scripts/r7/r7_closed_mouth.py`: closed output mouth (< 0.02 IOD) while
 the source talks (> 0.05 IOD), total and dub-silent subset. v2 -> v3a / v3b / v3c: 05 8.7 -> 6.9 / 7.7 / 5.9 s dub-silent closed,
 04 4.7 -> 3.1 / 2.2 / 2.6 s; SyncNet 05 3.91 -> 3.58 / 4.33 / 3.72, 04 6.18 -> 6.42 / 6.11 / 6.28; twitch 05 17.8 -> 15.6 / 9.8 / 12.5,

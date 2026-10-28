@@ -1,7 +1,7 @@
 # r7 audio v3 variants on the face (F): v2 | v3a | v3b | v3c on 05 and 04
 
-Files: `05_r7_audio_v3_variants_WATCH.mp4`, `04_r7_audio_v3_variants_WATCH.mp4` — a 2x2 grid, labelled: top-left **v2 (m8b)**, top-right
-**v3a (m8v3a)**, bottom-left **v3b (m8v3b)**, bottom-right **v3c (m8v3c)**. Four audio tracks, one per variant (titled v2 / v3a / v3b / v3c;
+Files: `05_r7_audio_v3_variants_WATCH.mp4`, `04_r7_audio_v3_variants_WATCH.mp4` — one row of four (both videos are portrait), labelled left to right: **v2 (m8b)**,
+**v3a (m8v3a)**, **v3b (m8v3b)**, **v3c (m8v3c)**. Four audio tracks, one per variant (titled v2 / v3a / v3b / v3c;
 the first = v2): switch the track to hear the variant you watch. Every variant is the same m8 face stack (the default, unchanged since m8),
 LatentSync re-run on that variant's dub; the single-variant files are in `artifacts/r4m/m8v3{a,b,c}/<id>_m8v3?.mp4`.
 
