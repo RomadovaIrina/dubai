@@ -178,10 +178,10 @@ def cmd_sheet(a):
         for k, f in enumerate(decode(path)):
             if k in want: store[k] = f
             if k > max(want): break
-    rows = []; T = 170
+    rows = []; T = 340 if a.whole_frame else 170   # r7 F --whole-frame: the WHOLE frame (the mouth crops hid a paste outside the face)
     for r_, e in enumerate(ev):
         k = e["frame"]; f0 = fs[k]; H, W = f0.shape[:2]
-        if z is not None and np.isfinite(z["lm"][k][[33, 263, 61, 291, 2, 152]]).all(): x0, y0, x1, y1 = crop_box(z["lm"][k].astype(np.float64), H, W)
+        if not a.whole_frame and z is not None and np.isfinite(z["lm"][k][[33, 263, 61, 291, 2, 152]]).all(): x0, y0, x1, y1 = crop_box(z["lm"][k].astype(np.float64), H, W)
         else: x0, y0, x1, y1 = 0, 0, W, H
         sc = T / max(y1 - y0, 1); tw = int(round((x1 - x0) * sc))
         top = [cv2.resize(fo[j][y0:y1, x0:x1], (tw, T)) if j in fo else np.zeros((T, tw, 3), np.uint8) for j in range(k - 2, k + 3)]
@@ -199,7 +199,7 @@ def cmd_sheet(a):
         for r_, e in enumerate(ev):
             ss = max(0.0, e["t"] - 1.0); c_ = tmp / f"{r_:02d}.mp4"
             k = e["frame"]; H, W = fs[k].shape[:2]
-            x0, y0, x1, y1 = crop_box(z["lm"][k].astype(np.float64), H, W) if z is not None and np.isfinite(z["lm"][k][[33, 263, 61, 291, 2, 152]]).all() else (0, 0, W, H)
+            x0, y0, x1, y1 = crop_box(z["lm"][k].astype(np.float64), H, W) if not a.whole_frame and z is not None and np.isfinite(z["lm"][k][[33, 263, 61, 291, 2, 152]]).all() else (0, 0, W, H)
             cw, chh = (x1 - x0) // 2 * 2, (y1 - y0) // 2 * 2; sc = 2 if chh < 240 else 1
             txt = f"#{r_ + 1} t={e['t']:.2f}s score {e['score']:.1f} {e.get('cause', '')}".replace(":", " ")
             fc = (f"[0:v]trim={ss}:{ss + 2},setpts=2*(PTS-STARTPTS),crop={cw}:{chh}:{x0}:{y0},scale=iw*{sc}:ih*{sc}[s];"
@@ -230,6 +230,7 @@ def main():
     s.add_argument("--manifest", default=None); s.add_argument("--out", required=True); s.add_argument("--thr", type=float, default=1.0); s.add_argument("--max-frames", type=int, default=0)
     h = sp.add_parser("sheet"); h.add_argument("--twitch", required=True); h.add_argument("--lm", default=None); h.add_argument("--top", type=int, default=20)
     h.add_argument("--outdir", required=True); h.add_argument("--stem", default=None); h.add_argument("--clips", action="store_true")
+    h.add_argument("--whole-frame", action="store_true", help="r7 F: sheet rows and clips show the WHOLE frame, not the lower-face crop")
     a = ap.parse_args(); return cmd_score(a) if a.cmd == "score" else cmd_sheet(a)
 
 
