@@ -291,7 +291,7 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
                   times: dict | None = None, log=print, speech_gate: list | None = None,
                   crossfade_frames: int = GATE_DEFAULTS["crossfade_frames"], router_stride: int = 1, in_memory: bool = True,
                   cf_runner=None, lm_smooth: int = 0, prep: "VideoPrep | None" = None, max_ls_frames: int = 0,
-                  split_frames: list | None = None, cut_energy=None) -> dict:
+                  split_frames: list | None = None, cut_energy=None, split_ranges: dict | None = None, split_snap: int = 0) -> dict:
     """Face-aware LatentSync on `src` driven by `audio16k` (the dubbed track); `audio_mux` (AAC of the same track) is muxed.
     `speech_gate`: list of (start_s, end_s) intervals (build_speech_gate); frames outside them are passed through.
     `codeformer`: "off" (frozen baseline) or "optimized" (`cf_runner` = codeformer_accel.CodeFormerAccel, applied to the
@@ -334,6 +334,10 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
             cuts = [c for c in sorted(split_frames) if s["action"] == "LATENT_SYNC" and s["start_frame"] + min_ls_frames <= c <= s["end_frame"] - min_ls_frames]
             a_ = s["start_frame"]
             for c in cuts + [s["end_frame"]]:
+                if split_snap and split_ranges and c in split_ranges and c != s["end_frame"]:   # phase 2: snap the cut inside its silence to a window multiple
+                    lo_, hi_ = split_ranges[c]; lo_ = max(lo_, s["start_frame"] + min_ls_frames, a_ + min_ls_frames); hi_ = min(hi_, s["end_frame"] - min_ls_frames)
+                    c_ = a_ + split_snap * int(round((c - a_) / split_snap))
+                    if lo_ <= hi_: c = int(min(max(c_, lo_), hi_))
                 if c - a_ < min_ls_frames and c != s["end_frame"]: continue
                 out_.append({**s, "start_frame": a_, "end_frame": c, "frames": c - a_, "start_s": round(a_ / FPS, 3), "end_s": round(c / FPS, 3), **({"split_from": [s["start_frame"], s["end_frame"]]} if cuts else {})}); a_ = c
         for k, s in enumerate(out_): s["index"] = k

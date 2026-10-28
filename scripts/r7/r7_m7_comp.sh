@@ -15,7 +15,7 @@ for id in ${*:-03 01 05 02 04}; do
     LS=$W/${id}_${ST}_25fps_ls_raw.mp4
     if [ -n "$SR" ]; then
       LS=$W/${id}_${ST}_25fps_ls_$SR.mp4
-      [ -f $LS ] || { python scripts/r7/r7_layer_sr.py --ls-raw $W/${id}_${ST}_25fps_ls_raw.mp4 --lm $W/${id}_${ST}_25fps_ls_raw.mediapipe.npz --out $LS --temporal 1 | grep "^==" ; cp $W/${id}_${ST}_25fps_ls_raw.mediapipe.npz ${LS%.mp4}.mediapipe.npz; }
+      [ -f $LS ] || { python scripts/r7/r7_layer_sr.py --ls-raw $W/${id}_${ST}_25fps_ls_raw.mp4 --lm $W/${id}_${ST}_25fps_ls_raw.mediapipe.npz --out $LS --temporal 1 ${SR_EXTRA:-} | grep "^==" ; cp $W/${id}_${ST}_25fps_ls_raw.mediapipe.npz ${LS%.mp4}.mediapipe.npz; }
     fi
     FIX30_LS=$LS FIX30_MASTER_FPS=25 FIX30_TD=$B/$ST/timing FIX30_MODE=r3fix FIX30_THREADS=${FIX30_THREADS:-16} FIX30_ARGS="$V1 $EXTRA" bash scripts/quality/r3_fix30.sh $M $TAG > $B/$TAG/${id}.fix30.log 2>&1
     F=$W/${id}_${ST}_25fps_$TAG.mp4; [ -f $F ] || { echo "FAIL composite $id (see $B/$TAG/${id}.fix30.log)"; continue; }

@@ -60,12 +60,29 @@ def main():
     ap.add_argument("--ls-raw", required=True); ap.add_argument("--lm", required=True); ap.add_argument("--out", required=True)
     ap.add_argument("--dilate", type=float, default=0.5, help="lips hull dilation in mouth widths = the restored region"); ap.add_argument("--feather", type=float, default=0.15)
     ap.add_argument("--strength", type=float, default=1.0); ap.add_argument("--crf", type=int, default=10); ap.add_argument("--max-frames", type=int, default=0)
+    ap.add_argument("--batch", type=int, default=1, help="phase 2: ESRGAN crops per forward pass (crops padded to the batch's max size, reflect)")
+    ap.add_argument("--encode-preset", default="medium"); ap.add_argument("--mask", choices=["dilate", "down2"], default="dilate", help="phase 2: down2 = the same dilate-by-r + Gaussian edge computed at half resolution and resized (max |diff| 0.07, mean 0.004; 1.3 ms instead of 17 ms per frame)")
     ap.add_argument("--temporal", type=int, default=0, help="r7 F: the ADDED detail (sr - raw) is averaged over +-N layer frames, flow-aligned (DIS on the raw crops) "
                     "to frame k, before it is added: per-frame ESRGAN texture flickers (03: twitch +4.7 at N=0); N=1 = 3-frame average")
     a = ap.parse_args(); lm = np.load(a.lm)["lm"]; net = load_model(); t0 = time.perf_counter()
     import av
-    c = av.open(a.ls_raw); s = c.streams.video[0]; o = av.open(a.out, "w"); st = o.add_stream("libx264", rate=s.average_rate); st.pix_fmt = "yuv420p"; st.options = {"crf": str(a.crf), "preset": "medium"}
+    c = av.open(a.ls_raw); s = c.streams.video[0]; s.thread_type = "AUTO"; o = av.open(a.out, "w")   # phase 2: threaded decode (38 s -> 3 s on 1309 frames)
+    st = o.add_stream("libx264", rate=s.average_rate); st.pix_fmt = "yuv420p"; st.options = {"crf": str(a.crf), "preset": a.encode_preset}; T = {"decode": 0.0, "sr": 0.0, "flow": 0.0, "encode": 0.0}
     frames = []; crops = []; boxes = []   # per frame: (x0, y0, x1, y1, mask) or None; the raw crop and its ESRGAN detail (sr - raw)
+    pending = []   # (frame index, crop float32 BGR, mask, box) awaiting the ESRGAN pass
+    def flush():
+        if not pending: return
+        t1 = time.perf_counter(); hs = [p_[1].shape[0] + p_[1].shape[0] % 2 for p_ in pending]; ws = [p_[1].shape[1] + p_[1].shape[1] % 2 for p_ in pending]; Hm, Wm = max(hs), max(ws)
+        ts = []
+        for _, crop, _, _ in pending:
+            ch, cw = crop.shape[:2]; ts.append(np.pad(crop, ((0, Hm - ch), (0, Wm - cw), (0, 0)), mode="reflect")[..., ::-1].copy())
+        t = torch.from_numpy(np.stack(ts)).permute(0, 3, 1, 2).half().cuda() / 255.0
+        with torch.no_grad(): sr_b = net(t).clamp(0, 1)
+        sr_b = (sr_b.permute(0, 2, 3, 1).float().cpu().numpy()[..., ::-1] * 255.0)
+        for (k_, crop, m_, box), sr in zip(pending, sr_b):
+            ch, cw = crop.shape[:2]; sr = cv2.resize(sr[: 2 * ch, : 2 * cw], (cw, ch), interpolation=cv2.INTER_AREA); boxes[k_] = box + (m_,); crops[k_] = (crop, sr - crop)
+        pending.clear(); T["sr"] += time.perf_counter() - t1
+    td = time.perf_counter()
     for k, fr in enumerate(c.decode(s)):
         f = fr.to_ndarray(format="bgr24"); H, W = f.shape[:2]
         if k == 0: st.width, st.height = W, H
@@ -76,13 +93,18 @@ def main():
         q = p[LIPS_OUTER, :2]; mw = float(q[:, 0].max() - q[:, 0].min()); pad = (a.dilate + a.feather + 0.2) * mw
         x0, y0 = int(max(0, q[:, 0].min() - pad)), int(max(0, q[:, 1].min() - pad)); x1, y1 = int(min(W, q[:, 0].max() + pad)), int(min(H, q[:, 1].max() + pad))
         if x1 - x0 < 16 or y1 - y0 < 16: continue
-        crop = f[y0:y1, x0:x1].astype(np.float32); ch, cw = crop.shape[:2]; ph, pw = ch % 2, cw % 2   # pixel_unshuffle needs even dims
-        t = torch.from_numpy(np.pad(crop, ((0, ph), (0, pw), (0, 0)), mode="reflect")[..., ::-1].copy()).permute(2, 0, 1)[None].half().cuda() / 255.0
-        with torch.no_grad(): sr = net(t).clamp(0, 1)
-        sr = (sr[0].permute(1, 2, 0).float().cpu().numpy()[..., ::-1] * 255.0)[: 2 * ch, : 2 * cw]; sr = cv2.resize(sr, (cw, ch), interpolation=cv2.INTER_AREA)
+        crop = f[y0:y1, x0:x1].astype(np.float32); ch, cw = crop.shape[:2]
         hull = cv2.convexHull((q - [x0, y0]).astype(np.float32))[:, 0]; m = np.zeros((ch, cw), np.float32); cv2.fillPoly(m, [np.round(hull).astype(np.int32)], 1.0)
-        r = int(max(1, a.dilate * mw)); m = cv2.dilate(m, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * r + 1, 2 * r + 1))); m = cv2.GaussianBlur(m, (0, 0), max(0.5, a.feather * mw / 2.563))
-        boxes[-1] = (x0, y0, x1, y1, m); crops[-1] = (crop, sr - crop)
+        r = int(max(1, a.dilate * mw)); sig = max(0.5, a.feather * mw / 2.563)
+        if a.mask == "down2":   # the same morphology at half resolution (the ellipse kernel is O(r^2) per pixel at full resolution)
+            ms = cv2.resize(m, ((cw + 1) // 2, (ch + 1) // 2), interpolation=cv2.INTER_AREA); rr = max(1, int(round(r / 2)))
+            ms = cv2.dilate(ms, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * rr + 1, 2 * rr + 1))); ms = cv2.GaussianBlur(ms, (0, 0), max(0.5, sig / 2))
+            m = cv2.resize(ms, (cw, ch), interpolation=cv2.INTER_LINEAR)
+        else:
+            m = cv2.dilate(m, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * r + 1, 2 * r + 1))); m = cv2.GaussianBlur(m, (0, 0), sig)
+        pending.append((k, crop, m, (x0, y0, x1, y1)))
+        if len(pending) >= a.batch: flush()
+    flush(); T["decode"] = time.perf_counter() - td - T["sr"]
     c.close(); n = len(frames); done = 0
     dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM) if a.temporal > 0 else None
     def warp(img, F):   # img sampled at x + F
@@ -91,7 +113,7 @@ def main():
     for k in range(n):
         f = frames[k]
         if boxes[k] is not None:
-            x0, y0, x1, y1, m = boxes[k]; crop, det = crops[k]
+            x0, y0, x1, y1, m = boxes[k]; crop, det = crops[k]; tf = time.perf_counter()
             if dis is not None:   # average the detail over the neighbours, each warped onto frame k (flow on the raw crops, same box)
                 acc = det.copy(); wsum = np.ones(det.shape[:2], np.float32); g0 = cv2.cvtColor(np.clip(crop, 0, 255).astype(np.uint8), cv2.COLOR_BGR2GRAY)
                 for j in range(k - a.temporal, k + a.temporal + 1):
@@ -105,11 +127,14 @@ def main():
                     dw = warp(dj, F); cw_ = warp(np.ones(det.shape[:2], np.float32), F) * np.exp(-np.abs(warp(cj, F) - crop).mean(-1) / 12.0)   # low weight where the warp disagrees
                     acc += dw * cw_[..., None]; wsum += cw_
                 det = acc / wsum[..., None]
-            f[y0:y1, x0:x1] = np.clip(crop + (a.strength * m)[..., None] * det, 0, 255).round().astype(np.uint8); done += 1
-        nf = av.VideoFrame.from_ndarray(f, format="bgr24")
+            f[y0:y1, x0:x1] = np.clip(crop + (a.strength * m)[..., None] * det, 0, 255).round().astype(np.uint8); done += 1; T["flow"] += time.perf_counter() - tf
+        te = time.perf_counter(); nf = av.VideoFrame.from_ndarray(f, format="bgr24")
         for pk in st.encode(nf): o.mux(pk)
+        T["encode"] += time.perf_counter() - te
+    te = time.perf_counter()
     for pk in st.encode(): o.mux(pk)
-    o.close(); print(f"== layer_sr {a.out}: {done}/{n} frames restored (temporal +-{a.temporal}), {time.perf_counter() - t0:.1f} s")
+    o.close(); T["encode"] += time.perf_counter() - te
+    print(f"== layer_sr {a.out}: {done}/{n} frames restored (temporal +-{a.temporal}, batch {a.batch}), {time.perf_counter() - t0:.1f} s = " + " ".join(f"{k} {v:.1f}" for k, v in T.items()))
 
 
 if __name__ == "__main__":
