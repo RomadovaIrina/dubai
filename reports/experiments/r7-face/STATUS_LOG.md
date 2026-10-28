@@ -143,3 +143,27 @@ Verdict: the pop is gone on 01 (sheet `artifacts/r7f/crack956/01_m8_vs_m9_bilabi
 **03 amplitude.** Mouth opening / IOD on dub-speech frames vs the source over its whole face track: p50 0.074 vs 0.055, p90 0.107 vs 0.106, p98 0.124 vs 0.127 — m8's 03 opens as much as the source does; the "barely moves" impression is not amplitude.
 
 m9 (built, pending the user's call) = m8 + `--sanitize-mild 0.6 --sanitize-hf-ncc 0.3` (01 7.6 s pop) + `--sanitize-mode replace` (03 37 s); costs: 01 twitch 14.2 → 25.1 (lips channel on the sustained pursing), 03 SyncNet −1.1.
+
+## 9. m8b published, m10 (restricted replace mode) fails the gate, audio v3a / v3b / v3c on the face (05, 04)
+
+**m8b WATCH** (outbox `<id>_r7_m8b_WATCH.mp4` + `_sbs.mp4`, left m8 | right m8b, order 05 04 03 01 02; `r7_m8b_WATCH.md`): the m8 face stack
+unchanged on audio-r7-v2, LatentSync re-run on v2 for all 5. Gate vs m8: PASS 04 03 01 02; 05 FAIL on one row only, mouth / dub mismatch
+1.47 -> 2.17 s (49.2 s talking mouth on a dub pause, 40.5 s closed mouth on dub speech, 0.3-0.4 s each; the generator on the new placement).
+Twitch m8 -> m8b: 05 16.6 -> 17.8, 04 39.6 -> 36.0, 03 49.7 -> 41.7, 01 14.2 -> 14.8; SyncNet dub-speech equal within 0.1. Whole-frame gate PASS.
+
+**m10 = m8b + replace mode restricted to colour-collapsed frames.** New flag `--sanitize-replace-luma Y` (with `--sanitize-replace-below X`):
+a flagged frame is replaced by the whole flow interpolation only when its collapse ratio < X AND its lip luma > Y x the neighbours' median
+(the washed-pink blob is BRIGHTER: 03 v2 layer frames 931-933 / 942-943 ratio 0.34-0.46, luma x1.3-1.5; closures and blur are not). With
+X 0.5, Y 1.25 it selects 60 of 364 flagged frames on 03 (sheet `artifacts/r7f/mouth_probe/colour_collapsed_sel.jpg`: all washed blobs),
+11 on 04, 4 on 05, 0 on 01. Result (`gate_m10_vs_m8b.md`): 03 SyncNet dub-speech 7.86 -> 7.30 FAIL, twitch 41.7 -> 47.4, flash 44 -> 47;
+04 flash 9 -> 15 FAIL, twitch 36.0 -> 41.6; 05 twitch 17.8 -> 19.9; 01 unchanged. Even 60 whole-interpolated frames (2.7 % of 03) cost
+SyncNet, because the interpolation removes the lip motion of a frame that is still articulating under the washed colour. Per the
+coordinator's rule (restrict it or keep m8): **m8 / m8b stays the default stack; replace mode stays default-off** (flags kept, documented).
+
+**Audio v3 variants on the face** (05 and 04, the m8 stack; `m8rawv3{a,b,c}` generator runs 416-470 s per video = 340-380 s/video-min,
+composites `m8v3{a,b,c}`): outbox `<id>_r7_audio_v3_variants_WATCH.mp4` (2x2 grid v2 | v3a / v3b | v3c, labelled, four titled audio
+tracks) + `r7_audio_v3_variants_WATCH.md` (tables). New metric `scripts/r7/r7_closed_mouth.py`: closed output mouth (< 0.02 IOD) while
+the source talks (> 0.05 IOD), total and dub-silent subset. v2 -> v3a / v3b / v3c: 05 8.7 -> 6.9 / 7.7 / 5.9 s dub-silent closed,
+04 4.7 -> 3.1 / 2.2 / 2.6 s; SyncNet 05 3.91 -> 3.58 / 4.33 / 3.72, 04 6.18 -> 6.42 / 6.11 / 6.28; twitch 05 17.8 -> 15.6 / 9.8 / 12.5,
+04 36.0 -> 38.8 / 37.9 / 41.2; flash 05 5 -> 6 / 6 / 8, 04 9 -> 16 / 11 / 12. All three reduce the pressed-lips seconds; v3c best on 05,
+v3b / v3c on 04; the longer takes add "open mouth while the dub is silent" (internal pauses, 05 5.0 -> 6.5-8.0 s). User's eye decides.
