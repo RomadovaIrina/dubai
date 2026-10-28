@@ -25,7 +25,7 @@ for id in ${IDS[@]:-05 04 03 01 02}; do
   python scripts/r4/r4_gate.py score --label $TAG --dir $B/$TAG --ids $id > $B/$TAG/${id}.score.log 2>&1 || echo "WARN score $id"
   MAN=$B/$TAG/%s_$TAG.manifest.json bash scripts/r6/r6_twitch.sh $TAG $B/$TAG _$TAG $id | grep '=='
   if [ "$SUBS" = on ] || [ -n "$WM" ]; then
-    SA=(--subs-dummy); [ "$SUBS" = on ] && SA=(--manifest $AM --lang $SUBS_LANG --style $SUBS_STYLE) || SA=(--no-subs)
+    [ "$SUBS" = on ] && SA=(--manifest $AM --lang $SUBS_LANG --style $SUBS_STYLE) || SA=(--no-subs)
     [ -n "$WM" ] && SA+=(--watermark $WM --wm-corner $WM_CORNER --wm-opacity $WM_OPACITY)
     python scripts/r7/r7_subs.py burn --video $B/$TAG/${id}_$TAG.mp4 "${SA[@]}" --out $B/$TAG/${id}_${TAG}_final.mp4 >> $B/$TAG/${id}.run.log 2>&1 || echo "WARN subs $id"
   fi
