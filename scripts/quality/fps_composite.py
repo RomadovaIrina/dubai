@@ -172,6 +172,8 @@ def main() -> int:
                     "is pasted' while the camera shows trees): the layer is pasted only when the CURRENT source frame really holds the face at the paste "
                     "position: grey NCC between the source frame and the (registered, colour-matched) layer on the paste region outside the lips "
                     ">= this; below it the frame passes through untouched (counted: paste_guard_skipped). 0 = off; 0.5 = the r7 default")
+    ap.add_argument("--guard-min-run", type=int, default=3, help="r7 F: --paste-guard passes a frame through only inside a run of >= this many "
+                    "flagged frames (a lost face is lost for a while; a single flagged frame is motion blur on a small face and keeps its paste)")
     ap.add_argument("--max-hold", type=int, default=2, help="r7 F: a source frame whose landmarks are NaN in the raw MediaPipe pass but finite after "
                     "any hold / interpolation is pasted only if the run of such frames is <= this (never carry the face position further); "
                     "the source-lm npz has no hold today, this is the guard for any future one")
@@ -540,7 +542,7 @@ def main() -> int:
                 gl_ = cv2.cvtColor(np.clip(Lk, 0, 255).astype(np.uint8), cv2.COLOR_BGR2GRAY).astype(np.float32)[ring]
                 ncc = float(np.corrcoef(gs_, gl_)[0, 1]) if gs_.std() > 1e-3 and gl_.std() > 1e-3 else 0.0
                 guard_vals.append((k, ncc))
-                if ncc < a.paste_guard: guard_skip.append(k); return S[k], 0, None
+                if ncc < a.paste_guard: guard_skip.append(k)   # applied after the pass: only runs of >= --guard-min-run frames pass through
         ex = None
         if a.skin_texture == "source" or (a.ls_sharpen > 0 and a.ls_sharpen_scope == "lips"):
             lm_s = lm_at(k, mu); lm_l = lerp(mp_ls, m) if mp_ls is not None else None; mw_ = tms.mouth_width(lm_s)
@@ -651,6 +653,13 @@ def main() -> int:
                 if fails <= 3: print(f"  frame {k} failed: {type(e).__name__}: {str(e)[:160]}", flush=True)
     for k in range(len(out)):
         if out[k] is None: out[k] = out[k - 1] if k > 0 and out[k - 1] is not None else S[k]
+    guard_applied = []
+    if guard_skip:   # r7 F: a face that is really gone is gone for many frames (a pan); a single low-NCC frame is motion blur on a small face (05 frame 705)
+        fl_ = np.zeros(len(out), bool); fl_[guard_skip] = True
+        for s_, e_ in af.runs(fl_):
+            if e_ - s_ >= a.guard_min_run:
+                for k in range(s_, e_): out[k] = S[k]; guard_applied.append(k)
+        print(f"  paste-guard: {len(guard_skip)} frames below NCC {a.paste_guard}, {len(guard_applied)} passed through (runs >= {a.guard_min_run})", flush=True)
     times["composite"] = round(time.perf_counter() - t0, 2)
     # encode with the source time base / pts, then copy the run's own final audio stream in
     import av
@@ -668,7 +677,7 @@ def main() -> int:
     dur = float(tk[-1] - tk[0] + (tk[-1] - tk[-2] if len(tk) > 1 else 0))
     em = [e for e in edge_meas if e]
     rep = {"input": src, "output": str(outp), "source_frames": len(S), "source_fps_avg": float(rate), "master_frames": nm, "ls_touched_frames": touched,
-           "fallback_frames": fails, "fallback_fraction": round(fails / max(len(S), 1), 5), "paste_guard": {"threshold": a.paste_guard, "skipped": len(guard_skip), "skipped_frames": sorted(guard_skip)[:300], "ncc_p1": round(float(np.percentile([v for _, v in guard_vals], 1)), 3) if guard_vals else None, "ncc_p5": round(float(np.percentile([v for _, v in guard_vals], 5)), 3) if guard_vals else None, "ncc_min": round(float(min(v for _, v in guard_vals)), 3) if guard_vals else None, "ncc_median": round(float(np.median([v for _, v in guard_vals])), 3) if guard_vals else None}, "boundaries_interpolated": nbnd, "seam_lf_boundaries": nseam, "edge_px_target": a.edge_px,
+           "fallback_frames": fails, "fallback_fraction": round(fails / max(len(S), 1), 5), "paste_guard": {"threshold": a.paste_guard, "min_run": a.guard_min_run, "flagged": len(guard_skip), "flagged_frames": sorted(guard_skip)[:300], "skipped": len(guard_applied), "skipped_frames": guard_applied[:300], "ncc_p1": round(float(np.percentile([v for _, v in guard_vals], 1)), 3) if guard_vals else None, "ncc_p5": round(float(np.percentile([v for _, v in guard_vals], 5)), 3) if guard_vals else None, "ncc_min": round(float(min(v for _, v in guard_vals)), 3) if guard_vals else None, "ncc_median": round(float(np.median([v for _, v in guard_vals])), 3) if guard_vals else None}, "boundaries_interpolated": nbnd, "seam_lf_boundaries": nseam, "edge_px_target": a.edge_px,
            "edge_px_measured": {"median": float(np.median(em)) if em else None, "min": min(em) if em else None, "max": max(em) if em else None, "n": len(em)},
            "silent_master_frames": int(silent.sum()),
            "lip_coverage": (lambda c: {"frames": len(c), "alpha_min_p1": round(float(np.percentile(c[:, 0], 1)), 4), "alpha_min_min": round(float(c[:, 0].min()), 4),
