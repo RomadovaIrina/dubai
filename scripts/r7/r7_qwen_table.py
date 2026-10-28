@@ -43,7 +43,7 @@ def main():
             ("    duration stage: candidates", lambda r: pm(r["cand"])),
             ("    duration stage: judge (back-translation + score)", lambda r: pm(r["judge"])),
             ("    duration stage: other Qwen calls", lambda r: pm(r["other_dur"])),
-            ("  TTS s/video-min (incl. candidate takes)", lambda r: pm(r["tts"])),
+            ("  TTS stage s/video-min (Chatterbox takes + the duration-stage LLM inside it)", lambda r: pm(r["tts"])),
             ("duration-stage tokens/s (generated)", lambda r: round(r["tok"] / r["dur_q"], 1) if r["dur_q"] else None),
             ("peak VRAM MiB", lambda r: r["vram"]),
             ("candidates written / units switched", lambda r: f"{r['cands']} / {r['switched']}"),
