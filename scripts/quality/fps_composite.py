@@ -140,6 +140,10 @@ def main() -> int:
                     "(off = r3 D behaviour: replace every flagged frame)")
     ap.add_argument("--sanitize-align", type=float, default=0.8, help="r6 F: ring NCC threshold of --sanitize-guard (03 real flashes 0.95-0.98, "
                     "05 smear frames < 0.15, 05 p10 of all flagged 0.83)")
+    ap.add_argument("--sanitize-min-conf", type=float, default=0.3, help="r7 F: a flagged frame is fixed only when the neighbours' flow interpolation has "
+                    "at least this confidence (interp_safe); at 0 the fallback warp tears the lip line into 'cracks' (04 m8 frame 956); 0 = off")
+    ap.add_argument("--sanitize-tear", type=float, default=0.0, help="r7 F: with the rigid fallback, pixels where the dense warp and the rigid warp of the "
+                    "nearer frame differ by more than this (grey, blurred 2 px) take the rigid one; 0 (default) = rigid everywhere: a partial blend doubled the lip line on 04 948 / 954")
     ap.add_argument("--sanitize-colour", choices=["on", "off"], default="off", help="r3 D, texture mode: inside the flagged frame's lip box also match the "
                     "LUMINANCE mean / contrast (gain 0.7-1.6) of its low frequencies to the neighbours' interpolation (pale lips); per-channel matching over-saturated")
     ap.add_argument("--chin-clip", type=float, default=0.0, help="r4 V (user: 'second / third chin moves like a wave'): with --face-clip, the clip polygon's "
@@ -255,7 +259,7 @@ def main() -> int:
         msk = np.ones(ga.shape, bool); msk[max(0, y0 - Y0):max(0, y1 - Y0), max(0, x0 - X0):max(0, x1 - X0)] = False
         if msk.sum() < 50 or ga[msk].std() < 1e-3 or gb[msk].std() < 1e-3: return None
         return float(np.corrcoef(ga[msk], gb[msk])[0, 1])
-    nguard = 0
+    nguard = 0; nlowconf = 0; nrigid = 0
     if a.sanitize_layer > 0 and mp_ls is not None:   # r3 D: generator outliers (pink blob: the lip line vanishes for 1-3 frames) out of the layer first
         t0 = time.perf_counter(); hf = np.full(nm, np.nan); ct = np.full(nm, np.nan)
         for m_ in range(nm):
@@ -276,7 +280,19 @@ def main() -> int:
             if e_ - m_ <= 4 and lo_ >= 0 and hi_ < nm and wm[lo_] > 0 and wm[hi_] > 0:
                 y_, z_ = L[lo_].astype(np.float32), L[hi_].astype(np.float32)
                 for i_ in range(m_, e_):
-                    it_ = interp_safe(fl0, y_, z_, (i_ - lo_) / (hi_ - lo_), a.safe_d, a.safe_cons, a.safe_scale)[0]
+                    it_, conf_ = interp_safe(fl0, y_, z_, (i_ - lo_) / (hi_ - lo_), a.safe_d, a.safe_cons, a.safe_scale)
+                    if conf_ < a.sanitize_min_conf:   # r7 F (04 m8 frame 956: a 'cracked' lower lip): at confidence ~0 the dense flow is wrong and the
+                        # fallback (the nearer frame warped by that flow) tears the lip line into cracks -> the nearer good frame moved by a SIMILARITY
+                        # fitted on the mouth + rigid landmarks instead (a similarity cannot tear); no landmarks -> the frame is kept as it is
+                        near_ = lo_ if (i_ - lo_) <= (hi_ - i_) else hi_; idx_ = tms.LIPS_OUTER + [33, 133, 362, 263, 168, 6, 197, 4]   # lips + eyes / nose (RIG_POSE is defined later)
+                        P_, Q_ = mp_ls[near_][idx_, :2], mp_ls[i_][idx_, :2]; Mr_ = None
+                        if np.isfinite(P_).all() and np.isfinite(Q_).all(): Mr_, _ = cv2.estimateAffinePartial2D(P_.astype(np.float32), Q_.astype(np.float32), method=cv2.LMEDS)
+                        if Mr_ is None: nlowconf += 1; continue
+                        rig_ = cv2.warpAffine(L[near_].astype(np.float32), Mr_, (W, H), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE); nrigid += 1
+                        # per pixel: the dense warp where it agrees with the rigid one (it aligns the lip line better), the rigid one where they
+                        # disagree by more than --sanitize-tear grey levels (the torn region); soft switch over 4 levels
+                        dis_ = cv2.GaussianBlur(np.abs(it_ - rig_).mean(2), (0, 0), 2.0); wr_ = np.clip((dis_ - a.sanitize_tear) / 4.0 + 0.5, 0, 1)[..., None]
+                        it_ = it_ + wr_ * (rig_ - it_)
                     if a.sanitize_mode == "texture":   # own low frequencies (shape, opening) + the neighbours' high frequencies (lip line)
                         own = L[i_].astype(np.float32); sg = a.sanitize_sigma; lo_own = cv2.GaussianBlur(own, (0, 0), sg); lo_it = cv2.GaussianBlur(it_, (0, 0), sg)
                         if a.sanitize_colour == "on" and np.isfinite(mp_ls[i_][tms.LIPS_OUTER]).all():
@@ -298,8 +314,8 @@ def main() -> int:
                         if al_ is None or al_ < a.sanitize_align: nguard += 1; continue
                     L[i_] = np.clip(it_, 0, 255).astype(np.uint8); nsan += 1; san_frames.append(int(i_))
             m_ = e_
-        times["sanitize_layer"] = {"seconds": round(time.perf_counter() - t0, 2), "flagged": int(bad.sum()), "replaced": nsan, "guard_kept": nguard, "frames": san_frames[:200]}
-        print(f"  sanitize-layer: {int(bad.sum())} flagged, {nsan} replaced, {nguard} kept by the guard", flush=True)
+        times["sanitize_layer"] = {"seconds": round(time.perf_counter() - t0, 2), "flagged": int(bad.sum()), "replaced": nsan, "guard_kept": nguard, "lowconf_kept": nlowconf, "rigid_fallback": nrigid, "frames": san_frames[:200]}
+        print(f"  sanitize-layer: {int(bad.sum())} flagged, {nsan} replaced, {nguard} kept by the guard, {nrigid} by the rigid fallback (interpolation confidence < {a.sanitize_min_conf}), {nlowconf} kept", flush=True)
     nseam = 0
     if a.seam_lf > 0:   # r3: window-joint appearance steps -> ramps
         t0 = time.perf_counter(); N = a.seam_lf; dis_s = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
