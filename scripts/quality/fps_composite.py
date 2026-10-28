@@ -168,6 +168,13 @@ def main() -> int:
     ap.add_argument("--ls-sharpen-lips", type=float, default=0.0, help="EXTRA unsharp amount inside the outer lip contour of the LatentSync frame (on top of --ls-sharpen)")
     ap.add_argument("--edge-px", type=float, default=12.0); ap.add_argument("--threads", type=int, default=12); ap.add_argument("--crf", type=int, default=13)
     ap.add_argument("--max-fallback", type=float, default=0.02)
+    ap.add_argument("--paste-guard", type=float, default=0.0, help="r7 F (user: 05 25-26 s 'a rectangle with the face plus a background from another frame "
+                    "is pasted' while the camera shows trees): the layer is pasted only when the CURRENT source frame really holds the face at the paste "
+                    "position: grey NCC between the source frame and the (registered, colour-matched) layer on the paste region outside the lips "
+                    ">= this; below it the frame passes through untouched (counted: paste_guard_skipped). 0 = off; 0.5 = the r7 default")
+    ap.add_argument("--max-hold", type=int, default=2, help="r7 F: a source frame whose landmarks are NaN in the raw MediaPipe pass but finite after "
+                    "any hold / interpolation is pasted only if the run of such frames is <= this (never carry the face position further); "
+                    "the source-lm npz has no hold today, this is the guard for any future one")
     ap.add_argument("--lip-guard", choices=["on", "off"], default="off", help="r3: mask = max(ellipse, hull of the source + layer lips dilated 2.6 sigma and "
                     "feathered with the same edge): the lips always sit at alpha >= 0.98 (small faces: the 12 px ramp otherwise reaches them)")
     ap.add_argument("--master-fps", type=float, default=25.0, help="r3 experiment: frame rate of the master / LatentSync layer (30 = LatentSync run on the source frames)")
@@ -409,6 +416,12 @@ def main() -> int:
         if not a.master_timing: raise SystemExit("--source-lm needs --master-timing")
         t0 = time.perf_counter(); lm_s = np.load(a.source_lm)["lm"][:len(S)].astype(np.float64)
         if len(lm_s) != len(S): raise SystemExit(f"--source-lm has {len(lm_s)} frames, source {len(S)}")
+        rawp = pathlib.Path(a.source_lm).with_name(pathlib.Path(a.source_lm).stem + "_mp.npz"); nheld_drop = 0   # r7 F --max-hold: never carry a face position
+        if rawp.exists():
+            raw_ok = np.isfinite(np.load(rawp)["lm"][:len(S), 0, 0]); held = np.isfinite(lm_s[:, 0, 0]) & ~raw_ok
+            for s_, e_ in af.runs(held):
+                if e_ - s_ > a.max_hold: lm_s[s_:e_] = np.nan; nheld_drop += e_ - s_
+        times["held_frames_dropped"] = nheld_drop
         rp = pathlib.Path(a.source_lm).with_name(pathlib.Path(a.source_lm).stem + "_rigid.npz")
         if rp.exists() and len(np.load(rp)["H"]) == len(S): Hs = np.load(rp)["H"]
         else: Hs = af.rigid_motion(S, lm_s); np.savez_compressed(rp, H=Hs)
@@ -431,7 +444,7 @@ def main() -> int:
         if lm_f is None: return lerp(mp, m)
         m0 = int(np.clip(math.floor(m), 0, nm - 1)); m1 = min(m0 + 1, nm - 1); al = float(m - math.floor(m))
         return (1 - al) * lm_f[jj[m0]] + al * lm_f[jj[m1]]
-    edge_meas = []; lip_cov = []
+    edge_meas = []; lip_cov = []; guard_vals = []; guard_skip = []
     only = tuple(int(x) for x in a.only_frames.split(":")) if a.only_frames else None
     def one(k):
         if only and not (only[0] <= k < only[1]): return S[k], 0, None
@@ -519,6 +532,15 @@ def main() -> int:
                     num = cv2.GaussianBlur(d_ * wgt[..., None], (0, 0), sg_); den = cv2.GaussianBlur(wgt, (0, 0), sg_)
                     gm = (d_ * wgt[..., None]).sum((0, 1)) / wgt.sum(); eps = 0.05
                     Lk = Lk + np.clip((num + eps * gm) / (den[..., None] + eps), -a.colour_max, a.colour_max)
+        if a.paste_guard > 0:   # r7 F: paste only if the CURRENT source frame holds the face here (layer vs source agree outside the lips)
+            lm_g = lm_at(k, mu); ring = alpha > 0.5
+            if np.isfinite(lm_g[tms.LIPS_OUTER]).all(): ring &= ~(tms.poly_mask(lm_g[tms.LIPS_OUTER], roi, 0.3 * tms.mouth_width(lm_g), 0) > 0.5)
+            if ring.sum() >= 50:
+                gs_ = cv2.cvtColor(np.clip(sk, 0, 255).astype(np.uint8), cv2.COLOR_BGR2GRAY).astype(np.float32)[ring]
+                gl_ = cv2.cvtColor(np.clip(Lk, 0, 255).astype(np.uint8), cv2.COLOR_BGR2GRAY).astype(np.float32)[ring]
+                ncc = float(np.corrcoef(gs_, gl_)[0, 1]) if gs_.std() > 1e-3 and gl_.std() > 1e-3 else 0.0
+                guard_vals.append((k, ncc))
+                if ncc < a.paste_guard: guard_skip.append(k); return S[k], 0, None
         ex = None
         if a.skin_texture == "source" or (a.ls_sharpen > 0 and a.ls_sharpen_scope == "lips"):
             lm_s = lm_at(k, mu); lm_l = lerp(mp_ls, m) if mp_ls is not None else None; mw_ = tms.mouth_width(lm_s)
@@ -615,7 +637,7 @@ def main() -> int:
         a.ls_sharpen, a.ls_sharpen_lips = best["ls_sharpen"], best["ls_sharpen_lips"]
         if a.sharpen_lips_max > 0: a.ls_sharpen_lips = min(a.ls_sharpen_lips, a.sharpen_lips_max)
         times["sharpen_closed_loop"] = {"iterations": hist, "chosen": best, "seconds": round(time.perf_counter() - t0, 2)}; print("  sharpen closed loop:", best, flush=True)
-    lip_cov.clear(); edge_meas.clear()   # calibration calls of one() do not count
+    lip_cov.clear(); edge_meas.clear(); guard_vals.clear(); guard_skip.clear()   # calibration calls of one() do not count
     t0 = time.perf_counter(); out = [None] * len(S); fails = 0; touched = 0
     with cf.ThreadPoolExecutor(max_workers=a.threads) as ex:
         futs = {ex.submit(one, k): k for k in range(len(S))}
@@ -646,13 +668,13 @@ def main() -> int:
     dur = float(tk[-1] - tk[0] + (tk[-1] - tk[-2] if len(tk) > 1 else 0))
     em = [e for e in edge_meas if e]
     rep = {"input": src, "output": str(outp), "source_frames": len(S), "source_fps_avg": float(rate), "master_frames": nm, "ls_touched_frames": touched,
-           "fallback_frames": fails, "fallback_fraction": round(fails / max(len(S), 1), 5), "boundaries_interpolated": nbnd, "seam_lf_boundaries": nseam, "edge_px_target": a.edge_px,
+           "fallback_frames": fails, "fallback_fraction": round(fails / max(len(S), 1), 5), "paste_guard": {"threshold": a.paste_guard, "skipped": len(guard_skip), "skipped_frames": sorted(guard_skip)[:300], "ncc_p1": round(float(np.percentile([v for _, v in guard_vals], 1)), 3) if guard_vals else None, "ncc_p5": round(float(np.percentile([v for _, v in guard_vals], 5)), 3) if guard_vals else None, "ncc_min": round(float(min(v for _, v in guard_vals)), 3) if guard_vals else None, "ncc_median": round(float(np.median([v for _, v in guard_vals])), 3) if guard_vals else None}, "boundaries_interpolated": nbnd, "seam_lf_boundaries": nseam, "edge_px_target": a.edge_px,
            "edge_px_measured": {"median": float(np.median(em)) if em else None, "min": min(em) if em else None, "max": max(em) if em else None, "n": len(em)},
            "silent_master_frames": int(silent.sum()),
            "lip_coverage": (lambda c: {"frames": len(c), "alpha_min_p1": round(float(np.percentile(c[:, 0], 1)), 4), "alpha_min_min": round(float(c[:, 0].min()), 4),
                                        "frames_alpha_below_0_98": int((c[:, 0] < 0.98).sum()), "lips_to_ramp_px_p1": round(float(np.percentile(c[:, 1], 1)), 2),
                                        "lips_to_ramp_px_min": round(float(c[:, 1].min()), 2), "iod_median": round(float(np.nanmedian(c[:, 2])), 1)} if len(c) else None)(np.array(lip_cov, np.float64).reshape(-1, 3)), "args": vars(a), "seconds": times, "s_per_video_min": round(times["total"] / (dur / 60), 1)}
-    outp.with_suffix(".fps_composite.json").write_text(json.dumps(rep, indent=1)); print(json.dumps({k: rep[k] for k in ("source_frames", "ls_touched_frames", "fallback_frames", "edge_px_measured", "lip_coverage", "s_per_video_min")}))
+    outp.with_suffix(".fps_composite.json").write_text(json.dumps(rep, indent=1)); print(json.dumps({k: rep[k] for k in ("source_frames", "ls_touched_frames", "fallback_frames", "paste_guard", "edge_px_measured", "lip_coverage", "s_per_video_min")}))
     return 3 if rep["fallback_fraction"] > a.max_fallback else 0
 
 
