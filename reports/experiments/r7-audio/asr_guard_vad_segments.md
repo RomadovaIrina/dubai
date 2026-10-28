@@ -16,3 +16,11 @@ Word changes (whole-file today vs r6v1 | VAD pieces vs whole-file):
 
 Every segment the guard dropped, trimmed or flagged:
 
+
+## Regression gate vs r7_audio_v1 (r7v1b)
+
+- Recipe rerun on the current code (tag r7v1asr, REUSE=r6v1src): dubbed_24k.wav and final_mix_44k.wav are byte-identical (md5) to r7v1b on all five videos. The r7_audio_v1 build reuses the r6v1 takes and never calls run_asr.
+- On a fresh run, the guard returns the whole-file transcript unchanged on all five (max no_speech_prob 0.018), so translation input is unchanged.
+- Whole-file ASR is deterministic on this server (a rerun is identical). Versus the r6v1 upload (another server), 0–4 words differ per video (spelling or near-homophones), as listed above.
+- ASR time: whole-file 17.5 s for 6.82 video-min = 2.6 s/video-min; with --asr-segments vad 16.2 s = 2.4 s/video-min. The guard costs about 0 ms. The audio stage stays at about 118 s/video-min (14B, plus r7).
+- --asr-segments vad stays off by default. faster-whisper already handles any length in 30-s windows, and on 02 / 03 the pieces change 5–6 words in either direction.
