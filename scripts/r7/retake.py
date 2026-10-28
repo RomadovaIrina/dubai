@@ -153,7 +153,7 @@ def main():
     from chatterbox.mtl_tts import ChatterboxMultilingualTTS
     from chatterbox_fp16 import install_speech_token_guard
     from tts_qa import TtsQA, norm
-    from tts_align import CtcAligner, cut_parts
+    from tts_align import CtcAligner, cut_parts, hush_gaps
     import ne_guard
     import r4_pause_logic as pl
     m = ChatterboxMultilingualTTS.from_local(HERE.parents[1] / "models" / "chatterbox", "cuda", t3_model="v3"); install_speech_token_guard(m)
@@ -209,6 +209,7 @@ def main():
             if q["unheard"]: c["rejected"] = f"name not heard {q['unheard']}"; continue
             spans = aligner.align(wv, m.sr, q["said"])   # the respelled form when a respelling was spoken
             if not spans: c["rejected"] = "align"; continue
+            wv, c["hushed"] = hush_gaps(wv, m.sr, spans)   # non-word murmur between words (kept by the dub gate: voiced) -> -30 dB
             raw = (" ".join(c["pieces"]) if c["pieces"] else c["en"]).split()   # piece candidates: the joiner's inserted commas are not real punctuation
             layouts = [("coarse", r["coarse"], r["coarse_w"], split_by_time(spans, [b[1] - b[0] for b in r["coarse"]], c["en"]))]
             pc_counts = [len(norm(pc)) for pc in c["pieces"]] if c["pieces"] else None
@@ -219,7 +220,7 @@ def main():
                 if sum(counts) != len(spans) or min(counts) < 1: continue
                 pw = [words[sum(counts[:k]):sum(counts[:k + 1])] for k in range(len(counts))]
                 if len(counts) > 1 and any(len(x) == 1 and re.sub(r"[^\w']", "", x[0].lower()) in FUNC for x in pw): continue   # a lone "The" / "and" at a pause
-                parts = cut_parts(wv, m.sr, spans, counts); placed, t = [], None
+                parts = cut_parts(wv, m.sr, spans, counts, tight_inner=True); placed, t = [], None   # placed apart: no gap murmur cut off into silence
                 for (seg, s0, s1, _), b in zip(parts, bb):
                     t0 = b[0] if t is None else max(b[0], t + 0.12); placed.append((round(t0, 3), round(t0 + len(seg) / m.sr, 3))); t = placed[-1][1]
                 cuts = np.cumsum(counts)[:-1]
