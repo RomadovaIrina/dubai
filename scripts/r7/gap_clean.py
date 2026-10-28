@@ -75,7 +75,7 @@ def detect(bg, sr, source_speech, dub_speech, voice_p=0.4, burst_db=6.0, edge_s=
 
 
 def clean(bg: np.ndarray, sr: int, source_speech: list, dub_speech: list, voice_p: float = 0.4, burst_db: float = 6.0, nr_prop: float = 0.6,
-          xf_s: float = 0.03, seed: int = 0, full: np.ndarray | None = None) -> tuple[np.ndarray, dict]:
+          xf_s: float = 0.03, seed: int = 0, full: np.ndarray | None = None, nr_ns: float = 0.0) -> tuple[np.ndarray, dict]:
     """full = bed + vocals stems (the whole source): the room tone is taken from it, as mix_background's room fill does"""
     import background_bed as bb, noisereduce as nr
     N = len(bg); st = bg if bg.ndim > 1 else bg[:, None]
@@ -95,6 +95,10 @@ def clean(bg: np.ndarray, sr: int, source_speech: list, dub_speech: list, voice_
         den = np.stack([nr.reduce_noise(y=st[:, c], sr=sr, stationary=True, y_noise=prof[:, c], prop_decrease=nr_prop, n_jobs=1) for c in range(st.shape[1])], 1)
         wd = _ramp(gs, sr, N, xf_s)[:, None]; out = out * (1 - wd) + den[:N] * wd
         rep["denoised_s"] = round(float(gs.sum() * FR), 2)
+    elif nr_ns > 0 and gs.any():   # no room tone (music / variable outdoor): non-stationary noisereduce (its own running noise estimate) in those gaps only
+        den = np.stack([nr.reduce_noise(y=st[:, c], sr=sr, stationary=False, prop_decrease=nr_ns, n_jobs=1) for c in range(st.shape[1])], 1)
+        wd = _ramp(gs, sr, N, xf_s)[:, None]; out = out * (1 - wd) + den[:N] * wd
+        rep["denoised_nonstationary_s"] = round(float(gs.sum() * FR), 2); rep["nr_ns"] = nr_ns
     if d["junk"].any():   # 2. replace detected frames by room tone at the local ambience level
         wj = _ramp(d["junk"], sr, N, xf_s)[:, None]
         if tone is not None:
