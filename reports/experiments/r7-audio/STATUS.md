@@ -1,21 +1,17 @@
 # r7-audio status (audio agent A, 2026-10-28)
 
-One command: `bash scripts/r7/r7_audio.sh <tag>` = r6_audio_v2 + LIP_PLACE=on + remix `--gap-clean on`; publish: `bash scripts/r7/r7_publish.sh <ver> <tag> <prev>`.
+**Published: r7_audio_v1 WATCH** (tag r7v1b) = the published r6_audio_v1 takes (handoff/in/audio-r6-v1) + lip placement + gap clean.
+outbox/<id>_r7_audio_v1_WATCH_*, handoff/out/F/audio-r7-v1 (42 MB, READY at the coordinator's request). Details, numbers and the 4 classified
+gate rows: README_v1.md. 7B vs 14B: qwen_7b_vs_14b.md (recommendation: 14B Q5_K_M with --dur-rounds 1, same speed as 7B Q8_0, best faithfulness).
 
-## Done (on a 7B scaffold of r6: same r6 flags, Qwen 7B because the 14B GGUF is not on this server)
-- gap clean (scripts/r7/gap_clean.py): residual voice (Silero on the bed) / separator bursts in dub gaps -> room tone of the video (a floor <= -42 dBFS
-  or a steady ambience, p70-p30 <= 3 dB), noisereduce (MIT) where the source speaks. Music / variable outdoor sound (01, 05): leaked voice only.
-  Residue in exposed gaps (dB rel. voice): 02 -38.2 -> -41.8, 03 -28.7 -> -34.4, 04 -29.9 -> -35.9, 05 unchanged (no room tone).
-- gap metric + listen clips (scripts/r7/gap_metrics.py): per gap voice / burst / voice-band excess / Whisper words; <id>_gaps_AB.m4a.
-- lip placement (scripts/r7/lip_place.py): dub blocks moved (never stretched) into source speech where the face is visible; splits only at pb1
-  boundaries (Whisper words + r4_pause_logic.classify), >= 0.6 s pieces. Nothing moves where no face is seen (02 bit for bit = r6).
-  Speaker on screen talks, dub silent (s): 03 8.8 -> 7.3, 04 10.4 -> 8.6, 05 11.7 -> 7.45; dub over source silence 03 12.2 -> 8.1, 04 10.0 -> 8.2, 05 9.8 -> 7.1.
-- Gate vs the scaffold (r7t7 vs r7s7b): 2 rows: 04 pause W1 0.643 -> 0.749 (tol 0.1, lam 0.3 arm passes but loses 05's gain), 05 dub pauses > 1 s
-  5 -> 9 (source has 10: the dub now pauses where the speaker pauses).
-- Cost: lip_place 5-7 s + gap_clean 2-4 s per video on top of r6 (audio stage 86-173 s/video-min measured with 2 videos sharing the GPU).
+Reproduce: `REUSE=r6v1src R7_PREV=r6v1 REMIX_ARGS="--src-duck-db -6 --unit-level off --gap-bed-cap-db 10 --gap-bed-cap-scope edges --gap-clean on --gap-clean-nr-ns 0.7" bash scripts/r7/r7_audio.sh r7v1b`
+(r6v1src = the uploaded r6v1 dub + manifest with this server's Spleeter stems), then `FORCE_WATCH=1 bash scripts/r7/r7_publish.sh v1 r7v1b r6v1`.
+From raw input: `bash scripts/r7/r7_audio.sh <tag>` (r6 pipeline + both r7 changes).
 
-## Blocked
-- The gate vs r6_audio_v1 and the WATCH / handoff need the r6_audio_v1 takes: the Qwen2.5-14B Q5_K_M GGUF (~10.5 GB > the 5 GB rule, asked the
-  coordinator) or the r6v8_14b work dirs in handoff/in. Then: `bash scripts/r6/r6_audio.sh r6v1repro` ; `REUSE=r6v1repro bash scripts/r7/r7_audio.sh r7v1` ;
-  `bash scripts/r7/r7_publish.sh v1 r7v1 r6v1repro` (WATCH=1 for a WATCH without READY).
-- git push: the deploy key is not live yet; commits are local.
+Findings:
+- r6_audio_v1 does NOT reproduce on another server (14B: 3-20 units per video change text; llama.cpp / Chatterbox are not deterministic across builds and GPUs),
+  so m6 audio is built on the published takes.
+- The "leaked words" in gaps were Whisper hallucinations on joined gaps; per gap with no_speech_prob <= 0.6: 0 words in r6v1 and r7.
+- Speed: r7 adds ~10 s per video (placement 5-7 s incl. Whisper words, gap clean 2-5 s); audio stage 14B 110.7 s/video-min (+~8 with r7), 7B 99.0.
+- Disk 50/150 GB; bandwidth: 14B GGUF 10.5 GB (approved once), spleeter 2stems ~80 MB, pip ~600 MB.
+- git push: the deploy key fails ("check access rights"); all commits are local on experiment/r7-audio.
