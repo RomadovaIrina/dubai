@@ -91,6 +91,9 @@ def main() -> int:
     ap.add_argument("--dubbed-dir", default=None, help="dir with dubbed_16k.wav + dubbed_aac.m4a (+ aligned_u*.wav); default = baseline work dir")
     ap.add_argument("--out", default=str(Q / "candidates")); ap.add_argument("--work-out", default=None)
     ap.add_argument("--manifest", default=None, help="manifest of a finished E2E run (overrides --run-dir / --work-dir)")
+    ap.add_argument("--steps-silent", type=int, default=0, help="phase 2 (speed): LatentSync windows whose dub is >= --silent-frac silent (< --silent-db dBFS per master frame) are "
+                    "denoised with this many DDIM steps while --steps applies to the speaking windows (fewer steps tighten the mouth in dub silence); 0 = off")
+    ap.add_argument("--silent-frac", type=float, default=0.25); ap.add_argument("--silent-db", type=float, default=-45.0)
     ap.add_argument("--ls-split-snap", type=int, default=0, help="phase 2 (speed): move each dub-silence cut inside its silence so that the LatentSync segment before it is a "
                     "multiple of this many frames (16 = one UNet window): fewer partial windows, same closed-mouth re-anchoring; 0 = off")
     ap.add_argument("--ls-split-dub-silence", type=float, default=0.0, help="r4 merged: split LatentSync segments inside dub silences >= this many s (0.12 s after the dub "
@@ -179,7 +182,7 @@ def main() -> int:
             man["e1_summary"] = rep["summary"]
         man["dubbed_track"] = {**man["dubbed_track"], "wav16k": str(dub16), "aac": str(dub_aac), "wav24k": str(dd / "dubbed_24k.wav")}
     speech = man["speech_intervals"]; gate = None; split_frames = None; cut_energy = None
-    if a.ls_split_dub_silence > 0 or a.cap_align == "on":   # r4 merged: dub-silence split points / dub energy per master frame
+    if a.ls_split_dub_silence > 0 or a.cap_align == "on" or a.steps_silent > 0:   # r4 merged: dub-silence split points / dub energy per master frame
         import numpy as np, soundfile as _sf
         _y, _sr = _sf.read(str(dub16), dtype="float32"); _y = _y if _y.ndim == 1 else _y.mean(1); _h = int(_sr / faa.FPS)
         cut_energy = np.sqrt((_y[: len(_y) // _h * _h].reshape(-1, _h) ** 2).mean(1))
@@ -217,6 +220,10 @@ def main() -> int:
         from ls_stable import StableRunner
         with rp.timed(times, "latentsync_load"): runner = StableRunner(a.window_batch_size, not a.no_deepcache, a.steps, a.guidance, 1247, a.deepcache_interval, ref_mode=a.ref_mode,
                                                                        bridge_len=a.bridge_len, bridge_steps=a.bridge_steps)
+        if a.steps_silent > 0 and cut_energy is not None:   # phase 2: per-master-frame dub silence for the adaptive step count
+            import numpy as _np
+            runner.silent_all = _np.asarray(cut_energy) < 10 ** (a.silent_db / 20); runner.acc.steps_silent = a.steps_silent; runner.acc.silent_frac = a.silent_frac
+            man["steps_silent"] = {"steps": a.steps, "steps_silent": a.steps_silent, "silent_frac": a.silent_frac, "silent_db": a.silent_db, "silent_master_frames": int(runner.silent_all.sum())}
         if a.ref_mode == "fixed":
             if prep is None: raise SystemExit("--ref-mode fixed needs the clean face stack")
             import cv2, numpy as np

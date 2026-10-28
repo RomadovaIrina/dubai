@@ -41,6 +41,7 @@ class StableLatentSync(AccelLatentSync):
         assert mode in ("ls", "wrapper", "vae") and (ref_mode in ("same", "fixed") or ref_mode.startswith("shift")) and overlap in ("fuse", "continue")
         self.stride, self.ref_mode, self.mode, self.overlap = stride, ref_mode, mode, overlap
         self.bridge_len, self.bridge_steps = int(bridge_len), int(bridge_steps)
+        self.steps_silent = 0; self.silent_frac = 0.25; self.silent_seg = None   # phase 2: windows whose dub is (mostly) silent keep this many DDIM steps (0 = off)
         if window_len:
             assert 1 <= window_len <= 24, "motion module positional table: <= 24 frames"
             self.num_frames = int(window_len)
@@ -131,7 +132,18 @@ class StableLatentSync(AccelLatentSync):
                     if starts[-1] + L < n: starts.append(n - L)
                 windows = [(s, min(s + L, n)) for s in starts]
                 full = [w for w in windows if w[1] - w[0] == L]; part = [w for w in windows if w[1] - w[0] != L]
-                groups = [full[k:k + self.B] for k in range(0, len(full), self.B)] + [[w] for w in part]
+                gsteps = {}   # phase 2 (--steps-silent): a window with >= silent_frac dub-silent frames is denoised with steps_silent steps (the
+                if self.steps_silent and self.silent_seg is not None and self.stride is None:   # tight silent mouth of a short schedule), the others with self.steps
+                    sil = np.asarray(self.silent_seg, bool); sil = np.concatenate([sil, np.repeat(sil[-1:], max(0, n - len(sil)))]) if len(sil) < n else sil[:n]
+                    is_sil = {w: bool(sil[w[0]:w[1]].mean() >= self.silent_frac) for w in windows}
+                    groups = []
+                    for cls in (False, True):
+                        fw = [w for w in full if is_sil[w] == cls]; groups += [fw[k:k + self.B] for k in range(0, len(fw), self.B)]
+                    groups += [[w] for w in part]
+                    for g in groups: gsteps[id(g)] = self.steps_silent if is_sil[g[0]] else self.steps
+                else:
+                    groups = [full[k:k + self.B] for k in range(0, len(full), self.B)] + [[w] for w in part]
+                n_sil_windows = sum(1 for g in groups if gsteps.get(id(g), self.steps) != self.steps for _ in g)
                 def tri(Lw):
                     return torch.tensor([min(i + 1, Lw - i) for i in range(Lw)], device=device, dtype=torch.float32)
                 caches = [{} for _ in groups]; dc = self.deepcache_helper
@@ -168,7 +180,10 @@ class StableLatentSync(AccelLatentSync):
                                 mk, mi, rl, au = torch.cat([mk] * 2), torch.cat([mi] * 2), torch.cat([rl] * 2), torch.cat([torch.zeros_like(au), au])
                             if dc is not None:
                                 dc.cached_output = {}
-                            for t in timesteps:
+                            ts_g = timesteps
+                            if gsteps.get(id(grp), self.steps) != self.steps:   # this group's own schedule (DeepCache indexes the current scheduler timesteps)
+                                pipe.scheduler.set_timesteps(gsteps[id(grp)], device=device); ts_g = pipe.scheduler.timesteps
+                            for t in ts_g:
                                 x2 = torch.cat([x] * 2) if do_cfg else x
                                 npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1
                                 if do_cfg:
@@ -176,6 +191,7 @@ class StableLatentSync(AccelLatentSync):
                                 x = pipe.scheduler.step(npred, t, x, **extra).prev_sample
                             for k, (a, b) in enumerate(grp):
                                 latents[:, :, a:b] = x[k:k + 1]
+                            if ts_g is not timesteps: pipe.scheduler.set_timesteps(self.steps, device=device); timesteps = pipe.scheduler.timesteps
                     timesteps_done = True
                 else:
                     if dc is not None:   # per-step fusion keeps every window group's DeepCache feature cache alive at once -> OOM on long segments
@@ -246,7 +262,7 @@ class StableLatentSync(AccelLatentSync):
                 seams = [w[0] for w in windows[1:]] if windows else list(range(nf, n, nf))
             stats = {"frames": int(frames.shape[0]), "windows": len(windows), "seams": seams, "full_windows": len([w for w in windows if w[1] - w[0] == nf]),
                      "partial_windows": len([w for w in windows if w[1] - w[0] != nf]), "groups": unet_calls // max(len(timesteps), 1) if windows else 0,
-                     "window_batch_size": self.B, "unet_calls": unet_calls, "stride": self.stride, "ref_mode": self.ref_mode, "mode": self.mode,
+                     "window_batch_size": self.B, "unet_calls": unet_calls, "silent_windows": n_sil_windows if windows else 0, "steps_silent": self.steps_silent, "stride": self.stride, "ref_mode": self.ref_mode, "mode": self.mode,
                      "overlap": self.overlap, "window_len": self.num_frames, "bridge": {"len": self.bridge_len, "steps": self.bridge_steps},
                      "detector": "replayed_verify_pass" if replay is not None else "latentsync_internal", "detector_fallback_calls": replay.fallbacks if replay else 0,
                      "seconds": {"preprocess_audio_video": round(t_pre, 3), "affine": round(t_aff, 3), "vae_and_cond": round(t_vae, 3), "unet_denoise": round(t_unet, 3),
@@ -276,6 +292,7 @@ class StableRunner:
 
     def set_segment(self, start: int, n: int):
         self.acc.chunk_hook = self.silence_mix.hook(start, n) if self.silence_mix is not None else None
+        sa = getattr(self, "silent_all", None); self.acc.silent_seg = sa[start:start + n] if sa is not None else None   # phase 2: dub-silent master frames of this segment
 
     def run_frames(self, frames_rgb, audio_wav, detections=None):
         t0 = time.perf_counter(); frames = self.acc.run_frames(frames_rgb, str(audio_wav), detections,

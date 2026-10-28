@@ -23,11 +23,9 @@ VM=$W/${id}_${TAG}_25fps.manifest.json; t1=$(date +%s.%N)
 if [ -n "${P2_PREP_CACHE:-}" ] && [ ! -d "$PC" ]; then mkdir -p "$PC"; cp "$W"/video/master_25fps.mp4 "$W"/video/*.wav "$W"/video/master_mediapipe*.npz "$W"/video/master_rigid.npz "$PC"/ 2>/dev/null; fi
 if [ -n "${LS_SR_ARGS:-}" ]; then   # phase 2: Real-ESRGAN layer SR (r7_layer_sr.py) right after the generator, the composite then runs ONCE on the restored layer
   RAW=$W/${id}_${TAG}_25fps_ls_raw.mp4; SRL=$W/${id}_${TAG}_25fps_ls_srt1.mp4
-  if [ -f "$RAW" ]; then
-    # the composite's MediaPipe pass on the raw layer (CPU, ~15 s) runs concurrently with the SR (GPU); both read ls_raw
-    python -c "import sys, pathlib; sys.path.insert(0, 'scripts/pilot'); import clean_face_stack as cfs; cfs.run_mediapipe(pathlib.Path('$RAW'), pathlib.Path('${RAW%.mp4}.mediapipe.npz'))" >> "$LOG" 2>&1 & MPJ=$!
-    python scripts/r7/r7_layer_sr.py --ls-raw "$RAW" --lm "$W/${id}_${TAG}_25fps_ls_raw.lm_for_sr.npz" --out "$SRL" $LS_SR_ARGS >> "$LOG" 2>&1; SRRC=$?; wait $MPJ
-    [ $SRRC = 0 ] && { cp "${RAW%.mp4}.mediapipe.npz" "${SRL%.mp4}.mediapipe.npz"; export FIX30_LS=$SRL; }
+  if [ -f "$RAW" ]; then   # the layer's MediaPipe pass (needed by the SR crop and by the composite) once, then the SR
+    python -c "import sys, pathlib; sys.path.insert(0, 'scripts/pilot'); import clean_face_stack as cfs; cfs.run_mediapipe(pathlib.Path('$RAW'), pathlib.Path('${RAW%.mp4}.mediapipe.npz'))" >> "$LOG" 2>&1
+    python scripts/r7/r7_layer_sr.py --ls-raw "$RAW" --lm "${RAW%.mp4}.mediapipe.npz" --out "$SRL" $LS_SR_ARGS >> "$LOG" 2>&1 && { cp "${RAW%.mp4}.mediapipe.npz" "${SRL%.mp4}.mediapipe.npz"; export FIX30_LS=$SRL; }
   fi
 fi
 mkdir -p "$O/timing"; TD=$O/timing; [ -n "${FIX30_TD_SHARED:-}" ] && { TD=/workspace/dub/artifacts/r3d/timing; mkdir -p $TD; }   # phase 2: shared source timing / landmark cache (keyed by id + master fps; source-only data)
