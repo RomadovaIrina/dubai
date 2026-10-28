@@ -42,7 +42,7 @@ def main():
     ap.add_argument("ids", nargs="*"); a = ap.parse_args()
     if a.wav and not a.tag:
         ev = detect(*load(a.wav), thr_db=a.thr); print(json.dumps(ev)) if not a.json else pathlib.Path(a.json).write_text(json.dumps(ev)); return
-    ids = a.ids or ["01", "02", "03", "04", "05"]; R = {}
+    ids = ([a.wav] if a.wav else []) + a.ids or ["01", "02", "03", "04", "05"]; R = {}   # with --tag the first positional is an id
     for id_ in ids:
         r = {}
         for tag in filter(None, [a.prev, a.tag]):

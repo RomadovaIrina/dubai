@@ -118,18 +118,19 @@ def _fade(seg: np.ndarray, sr: int, ms: float = 5.0) -> np.ndarray:
 
 
 def hush_gaps(y: np.ndarray, sr: int, spans: list[dict], min_gap: float = 0.25, pre_s: float = 0.06, post_s: float = 0.08,
-              floor_db: float = -30.0, ramp_s: float = 0.02, onset_db: float = 8.0, onset_hf_db: float = 6.0) -> tuple[np.ndarray, list[tuple[float, float]]]:
+              floor_db: float = -30.0, ramp_s: float = 0.02, onset_db: float = 8.0, onset_hf_db: float = 6.0,
+              after: set[int] | None = None) -> tuple[np.ndarray, list[tuple[float, float]]]:
     """Duck what the TTS put between two aligned words (a voiced hesitation murmur the dub gate keeps: 05 r7v3a 31.45-32.0 s, the user's "fart")
     to floor_db with sin^2 ramps: every inter-word gap >= min_gap, from post_s after the word to the next word's acoustic onset - 0.03 s.
     The onset is the first 10-ms frame within onset_db of that word's median level or onset_hf_db of its median > 2.5 kHz level (a fricative
     head), searched up to its CTC start + 0.05 (CTC starts a word before the murmur ends: "m-filming" -> "coming in"); never before start - pre_s.
-    Returns (audio, hushed spans)."""
+    after: only the gaps after these word indices (a phrase boundary: ducking inside a phrase makes a pause there). Returns (audio, hushed spans)."""
     from scipy.signal import butter, sosfilt
     y = y.copy(); g = 10 ** (floor_db / 20); r = max(1, int(ramp_s * sr)); h = max(1, int(0.01 * sr)); done = []
     lv = lambda x: 20 * np.log10(np.sqrt((x[:len(x) // h * h].reshape(-1, h) ** 2).mean(1)) + 1e-9)
     db, hf = lv(y), lv(sosfilt(butter(4, 2500, "highpass", fs=sr, output="sos"), y))
-    for w0, w1 in zip(spans, spans[1:]):
-        if w1["start"] - w0["end"] < min_gap: continue
+    for n, (w0, w1) in enumerate(zip(spans, spans[1:])):
+        if w1["start"] - w0["end"] < min_gap or (after is not None and n not in after): continue
         a = w0["end"] + post_s; b = w1["start"] - pre_s
         k0, k1 = int(w1["start"] * 100), max(int(w1["start"] * 100) + 1, int(w1["end"] * 100))
         if k1 <= len(db):
