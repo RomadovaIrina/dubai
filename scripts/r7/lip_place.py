@@ -11,7 +11,7 @@ then silent while the speaker talks). r6's takes, tempo and fades stay exactly a
     with w = 1 where MediaPipe sees a face on the source, w_off (0: r6 placement kept off screen) elsewhere;
   * order kept; an r6 gap never shrinks below min(its length, 0.15 s) nor grows by more than grow_s inside one sentence (grow_unit_s = 0.8 s
     between sentences: r7t3 05 12.8 s, a block moved 1 s onto its source span left a 6.3 s dub gap over a slow speaker); a new split opens
-    0..split_gap_s; splits are added greedily while each one removes >= split_gain_s of mismatch (max max_splits).
+    0..split_gap_s (1.5 s) and leaves >= min_piece_s (0.6 s) of speech on both sides (r7t4 05 17.3 s: a 0.2 s orphan, then a 1.7 s pause); splits are added greedily while each one removes >= split_gain_s of mismatch (max max_splits).
 Writes <out>/ = symlinks of the work dir + shifted dubbed_24k.wav / dubbed_16k.wav + the manifest with every placement moved (placed, track_start,
 spread pause times; "lip_shift_s") and man["lip_place"] (blocks, shifts, splits, dub_speech = the new dub speech spans).
     python scripts/r7/lip_place.py --work W --out W2 --manifest W/<id>_r4a.manifest.json --face A/sep/<id>/source_mediapipe.npz"""
@@ -93,7 +93,7 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--work", required=True); ap.add_argument("--out", required=True); ap.add_argument("--manifest", required=True)
     ap.add_argument("--face"); ap.add_argument("--max-shift", type=float, default=1.0); ap.add_argument("--split-shift", type=float, default=2.5)
     ap.add_argument("--lam", type=float, default=0.15); ap.add_argument("--w-off", type=float, default=0.0); ap.add_argument("--grow", type=float, default=0.35); ap.add_argument("--grow-unit", type=float, default=0.8)
-    ap.add_argument("--split-gap", type=float, default=2.5); ap.add_argument("--split-gain", type=float, default=0.3); ap.add_argument("--max-splits", type=int, default=12)
+    ap.add_argument("--split-gap", type=float, default=1.5); ap.add_argument("--min-piece", type=float, default=0.6); ap.add_argument("--split-gain", type=float, default=0.3); ap.add_argument("--max-splits", type=int, default=12)
     ap.add_argument("--splits", choices=["on", "off"], default="on"); a = ap.parse_args()
     W, O = pathlib.Path(a.work).resolve(), pathlib.Path(a.out); O.mkdir(parents=True, exist_ok=True); man = json.loads(pathlib.Path(a.manifest).read_text())
     y, sr = sf.read(str(W / "dubbed_24k.wav"), dtype="float32"); y = y if y.ndim == 1 else y.mean(1)
@@ -116,6 +116,7 @@ def main():
             for f, cls in cands:
                 i = next((k for k, b in enumerate(B) if b[0] + 10 < f < b[1] - 10), None)
                 if i is None: continue
+                if min(act[B[i][0]:f].sum(), act[f:B[i][1]].sum()) * FR < a.min_piece: continue   # no orphan word: >= min_piece s of speech on both sides
                 B2 = B[:i] + [[B[i][0], f, B[i][2], B[i][3]], [f, B[i][1], ms, "split"]] + B[i + 1:]
                 s2, c2 = plan(B2, act, c, n, rule)
                 if trial is None or c2 < trial[0]: trial = (c2, B2, s2, f, cls)
@@ -155,7 +156,7 @@ def main():
     rep = {"blocks": len(B), "splits": splits, "moved_blocks": int(sum(1 for k in shifts if k)), "shift_abs_mean_s": round(float(np.mean(np.abs(shifts))) * FR, 3),
            "shift_abs_max_s": round(float(np.max(np.abs(shifts))) * FR, 3), "face_visible_frac": fvis,
            "mismatch_face_visible_s_before": err(D0), "mismatch_face_visible_s_after": err(D1), "cost_shift_only": round(base * FR, 2), "cost_new": round(best * FR, 2),
-           "params": {k: getattr(a, k) for k in ("max_shift", "split_shift", "lam", "w_off", "grow", "grow_unit", "split_gap", "split_gain", "max_splits", "splits")},
+           "params": {k: getattr(a, k) for k in ("max_shift", "split_shift", "lam", "w_off", "grow", "grow_unit", "split_gap", "min_piece", "split_gain", "max_splits", "splits")},
            "shifts": [[round(b0 * FR, 2), round(b1 * FR, 2), round(k * FR, 2), kind] for (b0, b1, _, kind), k in zip(B, shifts)],
            "dub_speech": [[round(p * FR, 2), round(q * FR, 2)] for p, q in zip(np.flatnonzero(d == 1), np.flatnonzero(d == -1))]}
     man["lip_place"] = rep; man["dubbed_track"] = {**man.get("dubbed_track", {}), "lip_placed": True}
