@@ -148,6 +148,8 @@ def main() -> int:
                     "line, then frame 190 showed the bulge = a one-frame pop): a MILDLY flagged frame (collapse ratio >= this, i.e. its own lip line exists) "
                     "is fixed only when the donated high frequencies correlate with its own on the lip box (grey NCC >= --sanitize-hf-ncc); 0 = off")
     ap.add_argument("--sanitize-hf-ncc", type=float, default=0.3); ap.add_argument("--sanitize-replace-below", type=float, default=0.0, help="r7 F: texture mode, but a frame whose collapse ratio is below this is replaced whole (washed-pink blob); 0 = off")
+    ap.add_argument("--sanitize-replace-luma", type=float, default=1.25, help="r7 F: with --sanitize-replace-below, the frame is replaced whole only if its lip luma is also > this x the neighbours' "
+                    "(the washed-pink blob is brighter; a closure or blur is not); 0 = ratio alone (the m9d hybrid, worse)")
     ap.add_argument("--sanitize-colour", choices=["on", "off"], default="off", help="r3 D, texture mode: inside the flagged frame's lip box also match the "
                     "LUMINANCE mean / contrast (gain 0.7-1.6) of its low frequencies to the neighbours' interpolation (pale lips); per-channel matching over-saturated")
     ap.add_argument("--chin-clip", type=float, default=0.0, help="r4 V (user: 'second / third chin moves like a wave'): with --face-clip, the clip polygon's "
@@ -255,7 +257,8 @@ def main() -> int:
         q = lm_[tms.LIPS_OUTER, :2]; w_ = q[:, 0].max() - q[:, 0].min(); x0, y0 = (q.min(0) - 0.1 * w_).astype(int); x1, y1 = (q.max(0) + 0.1 * w_).astype(int)
         g_ = cv2.cvtColor(np.clip(img, 0, 255).astype(np.uint8)[max(0, y0):y1, max(0, x0):x1], cv2.COLOR_BGR2GRAY).astype(np.float32)
         if g_.size < 50: return None
-        return float(np.abs(cv2.Laplacian(g_, cv2.CV_32F, ksize=3)).mean()), float(g_.std())
+        pm_ = np.zeros(g_.shape, np.uint8); cv2.fillPoly(pm_, [np.round(q - [max(0, x0), max(0, y0)]).astype(np.int32)], 1)   # r7 F: lip luma (washed-pink = brighter)
+        return float(np.abs(cv2.Laplacian(g_, cv2.CV_32F, ksize=3)).mean()), float(g_.std()), float(g_[pm_ > 0].mean()) if pm_.sum() >= 20 else float(g_.mean())
     def ring_align(own_, cand_, lm_):   # grey NCC of two layer frames on the skin ring around the lip box (box +-0.6 w minus box +-0.1 w), or None
         if not np.isfinite(lm_[tms.LIPS_OUTER]).all(): return None
         q = lm_[tms.LIPS_OUTER, :2]; w_ = q[:, 0].max() - q[:, 0].min(); x0, y0 = (q.min(0) - 0.1 * w_).astype(int); x1, y1 = (q.max(0) + 0.1 * w_).astype(int)
@@ -268,18 +271,21 @@ def main() -> int:
         return float(np.corrcoef(ga[msk], gb[msk])[0, 1])
     nguard = 0; nlowconf = 0; nrigid = 0; mr_state = [a.mouth_region]; mr_frames = [0]   # r7 F --mouth-region-closed: current radius, frames widened
     if a.sanitize_layer > 0 and mp_ls is not None:   # r3 D: generator outliers (pink blob: the lip line vanishes for 1-3 frames) out of the layer first
-        t0 = time.perf_counter(); hf = np.full(nm, np.nan); ct = np.full(nm, np.nan)
+        t0 = time.perf_counter(); hf = np.full(nm, np.nan); ct = np.full(nm, np.nan); lu = np.full(nm, np.nan)
         for m_ in range(nm):
             if wm[m_] <= 0: continue
             st_ = lip_stats(L[m_], mp_ls[m_])
-            if st_ is not None: hf[m_], ct[m_] = st_
-        bad = np.zeros(nm, bool); ratio_ = np.full(nm, np.nan)
+            if st_ is not None: hf[m_], ct[m_], lu[m_] = st_
+        bad = np.zeros(nm, bool); ratio_ = np.full(nm, np.nan); luma_r = np.full(nm, np.nan); nrepl = 0; repl_frames = []
         for m_ in range(nm):
             if not np.isfinite(hf[m_]): continue
             nb = [i for i in range(max(0, m_ - 6), min(nm, m_ + 7)) if abs(i - m_) >= 2 and np.isfinite(hf[i])]
             if len(nb) >= 4:
-                ratio_[m_] = min(hf[m_] / np.median(hf[nb]), ct[m_] / np.median(ct[nb]))
+                ratio_[m_] = min(hf[m_] / np.median(hf[nb]), ct[m_] / np.median(ct[nb])); luma_r[m_] = lu[m_] / (np.median(lu[nb]) + 1e-6)
                 if ratio_[m_] < a.sanitize_layer: bad[m_] = True
+        def colour_collapsed(i_):   # r7 F: the washed-pink blob = a strongly collapsed lip texture that is also BRIGHTER than its neighbours (03 v2 layer
+            # 931-933 / 942-943: ratio 0.34-0.46, lip luma 1.3-1.5x); mild collapses (closures, blur) are not brighter -> texture mode keeps them
+            return a.sanitize_replace_below > 0 and ratio_[i_] < a.sanitize_replace_below and (a.sanitize_replace_luma <= 0 or luma_r[i_] > a.sanitize_replace_luma)
         nmild = 0; mild_frames = []
         m_ = 0
         while m_ < nm:
@@ -305,7 +311,9 @@ def main() -> int:
                         it_ = it_ + wr_ * (rig_ - it_)
                     # r7 F (03 37.4 / 37.8 s: a washed-pink lip blob keeps its colour in texture mode because the LF is its own): a STRONGLY
                     # collapsed frame (ratio < --sanitize-replace-below) takes the whole interpolation; mild ones keep texture mode
-                    if a.sanitize_mode == "texture" and not (a.sanitize_replace_below > 0 and ratio_[i_] < a.sanitize_replace_below):   # own low frequencies (shape, opening) + the neighbours' high frequencies (lip line)
+                    cc_ = colour_collapsed(i_)
+                    if cc_: nrepl += 1; repl_frames.append(int(i_)); print(f"  sanitize-replace frame {i_}: ratio {ratio_[i_]:.3f} lip luma x{luma_r[i_]:.2f} -> whole interpolation", flush=True)
+                    if a.sanitize_mode == "texture" and not cc_:   # own low frequencies (shape, opening) + the neighbours' high frequencies (lip line)
                         own = L[i_].astype(np.float32); sg = a.sanitize_sigma; lo_own = cv2.GaussianBlur(own, (0, 0), sg); lo_it = cv2.GaussianBlur(it_, (0, 0), sg)
                         if a.sanitize_colour == "on" and np.isfinite(mp_ls[i_][tms.LIPS_OUTER]).all():
                             q = mp_ls[i_][tms.LIPS_OUTER, :2]; w_ = q[:, 0].max() - q[:, 0].min()
@@ -333,8 +341,8 @@ def main() -> int:
                         if al_ is None or al_ < a.sanitize_align: nguard += 1; continue
                     L[i_] = np.clip(it_, 0, 255).astype(np.uint8); nsan += 1; san_frames.append(int(i_))
             m_ = e_
-        times["sanitize_layer"] = {"seconds": round(time.perf_counter() - t0, 2), "flagged": int(bad.sum()), "replaced": nsan, "guard_kept": nguard, "lowconf_kept": nlowconf, "rigid_fallback": nrigid, "mild_kept": nmild, "mild_frames": mild_frames[:200], "frames": san_frames[:200]}
-        print(f"  sanitize-layer: {int(bad.sum())} flagged, {nsan} replaced, {nguard} kept by the guard, {nrigid} by the rigid fallback (interpolation confidence < {a.sanitize_min_conf}), {nlowconf} kept, {nmild} mild kept (own lip line, donor misaligned)", flush=True)
+        times["sanitize_layer"] = {"seconds": round(time.perf_counter() - t0, 2), "flagged": int(bad.sum()), "replaced": nsan, "guard_kept": nguard, "lowconf_kept": nlowconf, "rigid_fallback": nrigid, "mild_kept": nmild, "mild_frames": mild_frames[:200], "frames": san_frames[:200], "colour_collapsed": nrepl, "colour_collapsed_frames": repl_frames[:200]}
+        print(f"  sanitize-layer: {int(bad.sum())} flagged, {nsan} replaced, {nguard} kept by the guard, {nrigid} by the rigid fallback (interpolation confidence < {a.sanitize_min_conf}), {nlowconf} kept, {nmild} mild kept (own lip line, donor misaligned), {nrepl} colour-collapsed (whole interpolation)", flush=True)
     nseam = 0
     if a.seam_lf > 0:   # r3: window-joint appearance steps -> ramps
         t0 = time.perf_counter(); N = a.seam_lf; dis_s = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
