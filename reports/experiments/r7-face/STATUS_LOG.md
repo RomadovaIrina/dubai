@@ -35,3 +35,35 @@ seam (|grad out| - |grad src| on the footprint boundary band) mean -0.35 p95 0.3
 skin blur (|Laplacian| out / src inside the footprint, outside the lips) mean 0.721 p05 0.576 -> the regenerated skin is ~28 % softer than
 the source everywhere, worst frames ~0.47 (15.6 s, 34.1 s, 62.8 s). On the fast frames (head > 0.3 IOD/s, 77 fr): blur 0.707, seam -0.41.
 At 7 s itself (frames 195-245) blur 0.6-0.8, no seam spike: the user's "seam" is most likely the softness step at the footprint edge.
+
+## 3. Paste guard proven on a synthetic "camera looks away" (28.10, 10:40)
+`scripts/r7/r7_guard_synth.sh 03 m6 600 720`: the source's lower face is covered by a background patch from the same frame for frames
+600-719 while the landmarks / layer still say "face" (the only way to exercise the guard: a real face loss already passes through as NaN
+landmarks). Changed pixels per covered frame (|out - src| > 24): **without the guard ~17 000 px** (a face pasted on the trees = the user's
+05 report), **with `--paste-guard 0.5` 0 px** (frames 600-710), the frames outside the window untouched. On the real videos the guard flags
+0 frames on 03 / 01 / 02 and 1 on 05 (frame 705: the tiny inset face under motion blur, NCC 0.49, a false positive) -> `--guard-min-run 3`:
+pass-through only inside runs of >= 3 flagged frames; 05 keeps its paste there. m6 05 twitch 20.0 vs m5 19.0 (generator non-determinism,
+not the guard: the guard changed nothing on 05).
+Gate blind spot noted: `r7_frame_gate.py` excludes the mouth region from the SOURCE landmarks, so on this synthetic cover (landmarks still
+present) it cannot see the paste; on a real pan the landmarks are NaN and the whole frame counts. Fine for the pipeline, not for this test:
+the test measures the raw changed-pixel count instead.
+
+## 4. The soapy lower face: where the softness is (28.10, 10:40)
+`scripts/r7/r7_sharp_probe.py` (|Laplacian| out / src on the changed pixels, by distance from the lips in mouth widths; control = untouched
+lower-face pixels): m6 03 lips 0.735, 0-0.15 mw 0.775, 0.15-0.3 0.759, 0.3-0.5 0.795, control 1.000 (the encode loses nothing).
+The raw LatentSync layer itself: lips 0.56 (its own sharpen chain brings it to 0.73). LatentSync 1.6 already runs at 512 with a 420x560 crop,
+so 03's ~300 px face is NOT downscaled: the softness is the diffusion VAE's output. Composite-only arms on 03 (r7_comp_arm.sh; twitch m5 = 47.65):
+| arm | lips | 0-0.15 | 0.15-0.3 | 0.3-0.5 | seam blur mean | twitch |
+|---|---|---|---|---|---|---|
+| m6 | 0.735 | 0.775 | 0.759 | 0.795 | 0.758 | 47.64 |
+| --lip-texture on | 0.741 | 0.778 | 0.754 | 0.760 | 0.756 | 48.67 |
+| --lip-dilate 0.06 | 0.729 | 0.782 | 0.778 | 0.880 | 0.758 | 48.02 |
+| --sharpen-lips-max 1.2 | 0.78 | 0.83 | 0.74 | 0.77 | 0.756 | 46.27 |
+| --mouth-region 0.30 | 0.73 | 0.77 | 0.77 | 0.76 | 0.757 | 47.71 |
+| --tex-tau 30 | 0.72 | 0.786 | 0.764 | 0.808 | 0.789 | 49.51 |
+| --tex-tau 1000 | 0.73 | 0.80 | 0.84 | 0.85 | 0.819 | 52.05 |
+| --skin-texture off | - | - | - | - | 0.693 | 47.72 |
+| **--tex-tau 1000 --tex-sigma 2.5** | - | - | - | - | **0.843** | **45.72** |
+The lips never move with composite flags (0.72-0.78): the detail has to come back on the layer -> `r7_layer_sr.py` (Real-ESRGAN x2, BSD-3,
+models/realesrgan/RealESRGAN_x2plus.pth 64 MB, sha256 49fafd45...266abb; RRDBNet re-implemented in plain torch, `weights_only` load, no
+facexlib / basicsr / detector) on the layer's lips region (hull + 0.5 mw, feathered); 2258 frames in ~2 min on the 5090. Arms `sr`, `sr_tex` pending.
