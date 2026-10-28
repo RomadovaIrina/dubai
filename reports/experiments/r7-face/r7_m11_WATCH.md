@@ -1,6 +1,6 @@
 # r7 m11: WATCH candidate
 
-m11 = the m8 face stack (unchanged) + the audio agent's audio-r7-v3a (longer dub takes where the speaker is on screen; the user's pick among v3a/v3b/v3c; 02 on audio-r7-v3a-all5). Left m8b (audio v2) | right m11 (audio v3a).
+m11 = the m8 face stack (unchanged) + the audio agent's audio-r7-v3a (longer dub takes where the speaker is on screen; the user's pick among v3a/v3b/v3c; 02 on v3a-all5, 05 on v3a1 = the 31.5 s junk ducked). Left m8b (audio v2) | right m11 (audio v3a1).
 
 Files: `<id>_r7_m11_WATCH.mp4`, `<id>_r7_m11_WATCH_sbs.mp4` (M8B | M11). Gate verdict per video below (rows FAIL / better).
 
@@ -8,12 +8,11 @@ Files: `<id>_r7_m11_WATCH.mp4`, `<id>_r7_m11_WATCH_sbs.mp4` (M8B | M11). Gate ve
 
 | gate row (FAIL / better) | NEW / PREV |
 |---|---|
-| SyncNet on dub-speech seconds (conf at 0) | 3.576 / 3.911 **FAIL** |
-| window joints ratio | 0.953 / 0.892 **FAIL** |
-| window joints LF ratio | 0.895 / 0.842 **FAIL** |
-| video s / video-min | 500.2 / 420.6 **FAIL** |
+| SyncNet on dub-speech seconds (conf at 0) | 3.472 / 3.911 **FAIL** |
+| window joints ratio | 0.945 / 0.892 **FAIL** |
+| window joints LF ratio | 0.901 / 0.842 **FAIL** |
 
-Slide (lower face vs the head, fixed shaky windows): 0:42.0-0:49.4: 0.031 vs 0.030 px; 0:27.5-0:34.2: 0.038 vs 0.041 px
+Slide (lower face vs the head, fixed shaky windows): 0:42.0-0:49.4: 0.031 vs 0.030 px; 0:27.5-0:34.2: 0.039 vs 0.041 px
 Lip flash candidates: 6 vs 5.
 Mouth / dub-audio mismatch (talking mouth while the dub is silent + closed mouth while it speaks, face visible): 2.17 s (v4-repro) -> 1.84 s; worst: 0:04.2 talking mouth, dub silent (0.4 s), 0:49.2 talking mouth, dub silent (0.4 s), 0:40.5 closed mouth, dub speaks (0.4 s), 0:18.8 talking mouth, dub silent (0.3 s)
 
@@ -61,7 +60,7 @@ Mouth / dub-audio mismatch (talking mouth while the dub is silent + closed mouth
 ## Whole-frame gate (r7_frame_gate.py: % of the frame changed outside the mouth region, per frame; PASS = no frame > 0.2 %; sheets in `r7_m11_frame_gate/`)
 | video | verdict | worst frame | worst % | frames > 0.2 % | p99 % | face frames |
 |---|---|---|---|---|---|---|
-| 05 | PASS | 1336 (44.53 s) | 0.0 | 0 | 0.0 | 1511/1567 |
+| 05 | PASS | 738 (24.6 s) | 0.0 | 0 | 0.0 | 1511/1567 |
 | 04 | PASS | 58 (1.93 s) | 0.0 | 0 | 0.0 | 1617/1617 |
 | 03 | PASS | 2494 (83.13 s) | 0.0 | 0 | 0.0 | 2710/2710 |
 | 01 | PASS | 2523 (84.1 s) | 0.005 | 0 | 0.0 | 260/2542 |
@@ -77,7 +76,7 @@ Mouth / dub-audio mismatch (talking mouth while the dub is silent + closed mouth
 | 02 | - | 0.0 | 0.0 |
 | 03 | - | 41.73 | 41.73 |
 | 04 | - | 36.01 | 38.83 |
-| 05 | - | 17.83 | 15.59 |
+| 05 | - | 17.83 | 16.39 |
 
 **skin_sum** (lower = better; skin_motion + skin_app events only, not the lips channel)
 
@@ -87,7 +86,7 @@ Mouth / dub-audio mismatch (talking mouth while the dub is silent + closed mouth
 | 02 | - | 0 | 0 |
 | 03 | - | 0 | 0 |
 | 04 | - | 1.36 | 5.74 |
-| 05 | - | 4.34 | 2.45 |
+| 05 | - | 4.34 | 2.25 |
 
 **n_events** (lower = better)
 
@@ -117,7 +116,7 @@ Mouth / dub-audio mismatch (talking mouth while the dub is silent + closed mouth
 | 02 | - | 0.0 | 0.0 |
 | 03 | - | 1.355 | 1.355 |
 | 04 | - | 1.696 | 1.628 |
-| 05 | - | 1.274 | 1.299 |
+| 05 | - | 1.274 | 1.366 |
 
 **p99** (lower = better)
 
@@ -127,7 +126,7 @@ Mouth / dub-audio mismatch (talking mouth while the dub is silent + closed mouth
 | 02 | - | 0.0 | 0.0 |
 | 03 | - | 1.068 | 1.068 |
 | 04 | - | 1.345 | 1.383 |
-| 05 | - | 1.061 | 1.002 |
+| 05 | - | 1.061 | 0.995 |
 
 **top events** (t s: score channel cause head-speed)
 - m8b 01: 7.6s 4.3 lips inside_ls h0.98; 1.2s 2.8 lips inside_ls h1.65; 4.4s 1.6 lips inside_ls h1.48; 8.6s 1.5 lips inside_ls h0.45; 0.1s 1.3 skin_motion inside_ls h1.44
@@ -139,7 +138,7 @@ Mouth / dub-audio mismatch (talking mouth while the dub is silent + closed mouth
 - m11 02: 
 - m11 03: 42.5s 2.2 lips inside_ls h0.4; 48.1s 1.5 lips inside_ls h0.19; 74.7s 1.5 lips inside_ls h0.05; 17.8s 1.5 lips inside_ls h0.08; 77.2s 1.4 lips inside_ls h0.14
 - m11 04: 9.0s 4.1 lips inside_ls h1.19; 46.6s 1.8 lips inside_ls h2.34; 36.5s 1.8 lips window_joint h2.08; 41.8s 1.8 lips window_joint h1.26; 35.1s 1.7 skin_motion inside_ls h1.68
-- m11 05: 28.9s 2.4 skin_motion seg_end h1.15; 5.0s 1.4 lips inside_ls h1.34; 38.8s 1.3 lips inside_ls h1.74; 5.6s 1.3 lips inside_ls h1.56; 38.3s 1.3 lips inside_ls h1.14
+- m11 05: 28.9s 2.2 skin_motion seg_end h1.15; 34.0s 2.0 lips inside_ls h0.97; 5.0s 1.4 lips inside_ls h1.34; 38.8s 1.4 lips inside_ls h1.74; 40.3s 1.4 lips inside_ls h1.4
 
 ### m11 (r7 F) = the m8 face stack + audio-r7-v3a on all 5
 Left m8b (audio-r7-v2) | right m11 (audio-r7-v3a: v2 + re-translated / re-taken units where the speaker is on screen and the dub ended
