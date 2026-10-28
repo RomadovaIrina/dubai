@@ -195,19 +195,36 @@ def run_vad(wav16: pathlib.Path) -> list[dict]:
     return [{"start": round(float(t["start"]), 3), "end": round(float(t["end"]), 3)} for t in ts]
 
 
-def run_asr(wav16: pathlib.Path, language: str | None) -> tuple[list[dict], dict]:
+ASR_OPTS = {"hallu_filter": "on", "hallu_nsp": 0.6, "hallu_cov": 0.5, "segments": "off", "seg_min": 45.0, "seg_max": 90.0, "seg_pause": 0.5, "seg_db": -40.0}   # r7 --asr-*
+
+
+def run_asr(wav16: pathlib.Path, language: str | None, speech: list[dict] | None = None) -> tuple[list[dict], dict]:
     import torch  # noqa: F401  maps libcublas before ctranslate2 loads (scripts/check_whisper.py)
     from faster_whisper import WhisperModel
+    from faster_whisper.audio import decode_audio
+    import asr_guard
     import model_cache
     m = model_cache.get("whisper_asr", lambda: WhisperModel(str(MODELS / "whisper-large-v3"), device=dev(), compute_type=whisper_compute("int8_float16")))
-    segs, info = m.transcribe(str(wav16), word_timestamps=True, beam_size=5, vad_filter=False, language=language)
-    out = []
-    for s in segs:
-        out.append({"id": s.id, "start": round(float(s.start), 3), "end": round(float(s.end), 3), "text": s.text.strip(),
-                    "words": [{"word": w.word, "start": round(float(w.start), 3), "end": round(float(w.end), 3),
-                               "p": round(float(w.probability), 3)} for w in (s.words or [])]})
+    chunks, cuts = [(0.0, None)], []
+    if ASR_OPTS["segments"] == "vad" and speech is not None:   # r7 spec 5.2: 45-90 s pieces cut in Silero pauses (one piece = the whole-file call below)
+        audio = decode_audio(str(wav16), sampling_rate=16000)
+        chunks, cuts = asr_guard.vad_chunks(audio, 16000, speech, ASR_OPTS["seg_min"], ASR_OPTS["seg_max"], ASR_OPTS["seg_pause"], ASR_OPTS["seg_db"])
+    out, info, lang = [], None, language
+    for c0, c1 in chunks:
+        inp = str(wav16) if len(chunks) == 1 else audio[int(c0 * 16000):int(c1 * 16000)]
+        segs, inf = m.transcribe(inp, word_timestamps=True, beam_size=5, vad_filter=False, language=lang)
+        info = info or inf; lang = lang or inf.language   # later pieces keep the language detected on the first
+        for s in segs:
+            out.append({"id": len(out) + 1, "start": round(float(s.start) + c0, 3), "end": round(float(s.end) + c0, 3), "text": s.text.strip(),
+                        "words": [{"word": w.word, "start": round(float(w.start) + c0, 3), "end": round(float(w.end) + c0, 3),
+                                   "p": round(float(w.probability), 3)} for w in (s.words or [])],
+                        "no_speech_prob": round(float(s.no_speech_prob), 3), "avg_logprob": round(float(s.avg_logprob), 3), "compression_ratio": round(float(s.compression_ratio), 3)})
     meta = {"language": info.language, "language_probability": round(float(info.language_probability), 3),
-            "audio_duration_s": round(float(info.duration), 3), "compute_type": m.model.compute_type}
+            "audio_duration_s": round(float(info.duration) if len(chunks) == 1 else chunks[-1][1], 3), "compute_type": m.model.compute_type,
+            "chunks": {"mode": ASR_OPTS["segments"], "pieces": [[round(a, 3), round(b, 3) if b is not None else None] for a, b in chunks], "cuts": cuts}}
+    if ASR_OPTS["hallu_filter"] == "on" and speech is not None:   # r7 spec 6.2
+        out, rep = asr_guard.guard(out, speech, ASR_OPTS["hallu_nsp"], ASR_OPTS["hallu_cov"])
+        meta["hallu_filter"] = rep
     free_cuda(m)
     return out, meta
 
@@ -856,6 +873,13 @@ def main() -> int:
     ap.add_argument("--fit-down-short-words", type=int, default=4, help="phrase mode: concise rewrite also for 4-5-word sentences when they overflow their window by > --fit-down-short-overflow-s at the hard cap (previous rule: >= 6 words only)")
     ap.add_argument("--fit-down-short-overflow-s", type=float, default=0.3)
     ap.add_argument("--phrase-min-part-words", type=int, default=1); ap.add_argument("--phrase-soft-part-words", type=int, default=2)
+    ap.add_argument("--asr-hallu-filter", choices=["on", "off"], default="on", help="r7 spec 6.2: drop Whisper segments flagged as hallucinated (no_speech_prob > --asr-hallu-nsp, "
+                    "stock subtitle / outro phrase, looped phrase) where Silero VAD covers < --asr-hallu-cov of the span (asr_guard.py); report in manifest asr.hallu_filter")
+    ap.add_argument("--asr-hallu-nsp", type=float, default=0.6); ap.add_argument("--asr-hallu-cov", type=float, default=0.5)
+    ap.add_argument("--asr-segments", choices=["off", "vad"], default="off", help="r7 spec 5.2: vad = ASR on 45-90 s pieces cut in Silero pauses >= 0.5 s at <= -40 dBFS "
+                    "(off = one whole-file call; a file <= --asr-seg-max is one piece either way)")
+    ap.add_argument("--asr-seg-min", type=float, default=45.0); ap.add_argument("--asr-seg-max", type=float, default=90.0)
+    ap.add_argument("--asr-seg-pause", type=float, default=0.5); ap.add_argument("--asr-seg-db", type=float, default=-40.0)
     ap.add_argument("--vad-device", choices=["cpu", "cuda"], default=None, help="Silero VAD device (default cpu; r3 D GPU audit). Also env DUB_VAD_DEVICE")
     ap.add_argument("--qwen-resident", choices=["on", "off"], default="off", help="keep Qwen loaded until the end of the run (with --qwen-gpu-layers -1: "
                     "all models + Qwen resident on the GPU at the LatentSync peak = the pilot 0.4 question); off = released before LatentSync")
@@ -950,6 +974,8 @@ def main() -> int:
     global QWEN_GPU_LAYERS, QWEN_QUANT, VAD_DEVICE
     QWEN_GPU_LAYERS = a.qwen_gpu_layers; QWEN_QUANT = a.qwen_quant
     if a.vad_device: VAD_DEVICE = a.vad_device
+    ASR_OPTS.update(hallu_filter=a.asr_hallu_filter, hallu_nsp=a.asr_hallu_nsp, hallu_cov=a.asr_hallu_cov, segments=a.asr_segments, seg_min=a.asr_seg_min,
+                    seg_max=a.asr_seg_max, seg_pause=a.asr_seg_pause, seg_db=a.asr_seg_db)
     os.environ["DUB_QA_WHISPER_COMPUTE"] = a.qa_whisper_compute
     os.environ["DUB_TTS_TEXT_NORM"] = a.tts_text_norm
     if a.pause_boundary_only == "on": os.environ["DUB_PAUSE_BOUNDARY_ONLY"] = "1"
@@ -1007,7 +1033,7 @@ def main() -> int:
         print(f"  [vad] {len(speech)} speech intervals, {man['timeline']['speech_seconds']}s speech", flush=True)
 
         with timed(times, "asr"):
-            segments, asr_meta = run_asr(wav16, a.source_lang)
+            segments, asr_meta = run_asr(wav16, a.source_lang, speech)
         src_lang = a.source_lang or asr_meta["language"]
         # r3: diarization BEFORE Qwen is loaded (pyannote ~2.8 GB + Qwen Q8 on all GPU layers 8.3 GB = 11.2 GB peak on the shared GPU); output unchanged
         with timed(times, "diarization"):
