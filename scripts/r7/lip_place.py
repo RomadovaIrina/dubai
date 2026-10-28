@@ -1,32 +1,44 @@
 #!/usr/bin/env python3
 """r7 --lip-place: while the face is visible, put the dub speech INSIDE the source speech spans (m5 = m4 + r6 audio lost lip sync because of where
-r6 places speech: 05 mouth/dub mismatch 1.74 -> 2.64 s, 04 0.77 -> 2.60 s). r6's takes, tempo, fades and pause POSITIONS stay exactly as they are:
-  * the finished dub track (dubbed_24k.wav) is cut into BLOCKS = audible runs separated by real dub silences >= min_gap_s (50 ms). A block is
-    never split and never stretched, so no new pause appears and the tempo is r6's;
-  * every block may move by up to +-max_shift_s; a DP over the blocks (10 ms grid) minimises
-        sum over 10 ms frames of  w(t) * ([dub speaks & source silent] + [source speaks & dub silent])     (= r4_mouth_audio's two error kinds)
-        + lam * |shift|                                                                                    (stay at r6's placement unless it helps)
+r6 places speech: 05 mouth/dub mismatch 1.74 -> 2.64 s, 04 0.77 -> 2.60 s; e.g. 04 u2: one 6.5 s English phrase laid over a 2.3 s source pause,
+then silent while the speaker talks). r6's takes, tempo and fades stay exactly as they are:
+  * the finished dub track (dubbed_24k.wav) is cut into BLOCKS = runs between real dub pauses (>= 80 ms, 35 dB below the take's p95);
+  * where the face is visible a block may also be SPLIT at a logical English boundary (Whisper word times on the dub + r4_pause_logic.classify:
+    sentence end, ; : —, comma, clause start: exactly the places pb1 allows a pause) at a quiet point between the two words;
+  * every block moves by up to +-max_shift_s (a piece after a new split by up to +-split_shift_s); a DP over the blocks (20 ms grid) minimises
+        sum over frames of  w(t) * ([dub speaks & source silent] + [source speaks & dub silent])   (r4_mouth_audio's two error kinds; dub speech
+        dilated by 0.15 s as that metric does)  +  lam * |shift|
     with w = 1 where MediaPipe sees a face on the source, w_off (0: r6 placement kept off screen) elsewhere;
-  * constraints: order kept; a gap never shrinks below min(its r6 length, unit_gap 0.15 s); a gap inside one sentence never grows by more than
-    grow_s (0.35 s: a pause stays a short pause); the track never moves past 0 / the video end.
-Writes <out>/ = symlinks of the work dir + shifted dubbed_24k.wav / dubbed_16k.wav + the manifest with every placement moved by its block's shift
-(placed, track_start, spread pause times; "lip_shift_s"), so the remix, metrics and the face handoff all read the new timing.
-    python scripts/r7/lip_place.py --work W --out W2 --manifest W/<id>_r4a.manifest.json --face A/sep/<id>/source_mediapipe.npz --src SRC.mp4"""
+  * order kept; an r6 gap never shrinks below min(its length, 0.15 s) nor grows by more than grow_s inside one sentence (grow_unit_s = 0.8 s
+    between sentences: r7t3 05 12.8 s, a block moved 1 s onto its source span left a 6.3 s dub gap over a slow speaker); a new split opens
+    0..split_gap_s; splits are added greedily while each one removes >= split_gain_s of mismatch (max max_splits).
+Writes <out>/ = symlinks of the work dir + shifted dubbed_24k.wav / dubbed_16k.wav + the manifest with every placement moved (placed, track_start,
+spread pause times; "lip_shift_s") and man["lip_place"] (blocks, shifts, splits, dub_speech = the new dub speech spans).
+    python scripts/r7/lip_place.py --work W --out W2 --manifest W/<id>_r4a.manifest.json --face A/sep/<id>/source_mediapipe.npz"""
 from __future__ import annotations
 import argparse, json, pathlib, sys
 import numpy as np, soundfile as sf
-HERE = pathlib.Path(__file__).resolve().parent; sys.path.insert(0, str(HERE.parent / "pilot"))
-FR = 0.01
+HERE = pathlib.Path(__file__).resolve().parent; sys.path.insert(0, str(HERE.parent / "pilot")); sys.path.insert(0, str(HERE.parent / "quality"))
+FR = 0.02
 
 
-def blocks_of(y, sr, min_gap_s=0.05, floor_rel_db=-55.0):
-    h = int(FR * sr); n = len(y) // h; L = 20 * np.log10(np.sqrt((y[:n * h].reshape(n, h) ** 2).mean(1)) + 1e-9)
-    act = L > max(-70.0, np.percentile(L[L > -100], 95) + floor_rel_db) if (L > -100).any() else np.zeros(n, bool)
-    d = np.diff(np.concatenate([[0], act.astype(np.int8), [0]])); on, off = list(np.flatnonzero(d == 1)), list(np.flatnonzero(d == -1)); bl = []
-    for a, b in zip(on, off):
-        if bl and a - bl[-1][1] < int(min_gap_s / FR): bl[-1][1] = b
-        else: bl.append([a, b])
-    return [(a * FR, b * FR) for a, b in bl], act, L
+def frames_db(y, sr):
+    h = int(FR * sr); n = len(y) // h
+    return 20 * np.log10(np.sqrt((y[:n * h].reshape(n, h) ** 2).mean(1)) + 1e-9)
+
+
+def blocks_of(L, min_gap_s=0.08, cut_rel_db=-35.0, speech_rel_db=-30.0):
+    """blocks [a, b) in frames between real pauses (>= min_gap_s below p95 + cut_rel_db); act = speech frames (p95 + speech_rel_db)"""
+    n = len(L); ref = np.percentile(L[L > -100], 95) if (L > -100).any() else 0.0; loud = L > ref + cut_rel_db; act = L > ref + speech_rel_db
+    d = np.diff(np.concatenate([[0], loud.astype(np.int8), [0]])); bl = []
+    for a, b in zip(np.flatnonzero(d == 1), np.flatnonzero(d == -1)):
+        if bl and a - bl[-1][1] < int(round(min_gap_s / FR)): bl[-1][1] = int(b)
+        else: bl.append([int(a), int(b)])
+    out = []   # widen into the neighbouring silence (tails / breaths move with the block), never past the middle of the pause
+    for i, (a, b) in enumerate(bl):
+        lo = (bl[i - 1][1] + a) // 2 if i else 0; hi = (b + bl[i + 1][0]) // 2 if i + 1 < len(bl) else n
+        out.append([max(lo, a - 5), min(hi, b + 5)])
+    return out, act, ref
 
 
 def face_mask(face_npz, n, dur):
@@ -35,91 +47,120 @@ def face_mask(face_npz, n, dur):
     return vis[np.minimum((np.arange(n) * FR * fps).astype(int), len(vis) - 1)], round(float(vis.mean()), 3)
 
 
-def plan(blocks, act, S, w, unit_of, max_shift_s=0.6, lam=0.15, unit_gap=0.15, grow_s=0.35, dur=None):
-    n = len(S); K = int(round(max_shift_s / FR)); sh = np.arange(-K, K + 1); c = w * (1 - 2 * S.astype(float))   # frame cost of dub speech here
-    cs = np.concatenate([[0], np.cumsum(np.pad(c, (0, 2 * K + 1)))])
-    B = len(blocks); st = [int(round(a / FR)) for a, _ in blocks]; en = [int(round(b / FR)) for _, b in blocks]
-    cost = np.full((B, len(sh)), np.inf); arg = np.zeros((B, len(sh)), int)
-    def bcost(i, k):   # dub frames of block i (its own activity, internal short silences excluded) moved by k frames
-        a, b = st[i] + k, en[i] + k
-        if a < 0 or (dur is not None and b > n): return np.inf
-        idx = np.flatnonzero(act[st[i]:en[i]]) + a; return float(c[idx].sum()) + lam * abs(k)
-    for j, k in enumerate(sh): cost[0, j] = bcost(0, k)
-    for i in range(1, B):
-        g0 = st[i] - en[i - 1]; gmin = min(g0, int(round(unit_gap / FR))); same = unit_of[i] == unit_of[i - 1] and unit_of[i] is not None
-        gmax = g0 + int(round(grow_s / FR)) if same else 10 ** 9
+def plan(B, act, c, n, rule):
+    """B = [[a, b, bound_frames, kind_of_gap_before]] (kind: 'r6' / 'unit' / 'split'); returns (shifts in frames, cost)"""
+    K = max(b[2] for b in B); sh = np.arange(-K, K + 1); dil = 7   # dub speech dilated by 0.15 s (r4_mouth_audio)
+    cost = np.full((len(B), len(sh)), np.inf); arg = np.zeros((len(B), len(sh)), int)
+    for i, (a, b, bd, kind) in enumerate(B):
+        m = np.flatnonzero(np.convolve(act[a:b].astype(float), np.ones(2 * dil + 1), "same") > 0) + a
+        ok = (np.abs(sh) <= bd) & (a + sh >= 0) & (b + sh <= n)
+        bc = np.array([float(c[m + k].sum()) if o else np.inf for k, o in zip(sh, ok)]) + rule["lam"] * np.abs(sh)
+        if i == 0: cost[0] = bc; continue
+        g0 = a - B[i - 1][1]
+        gmin = 0 if kind == "split" else min(g0, rule["gmin"]); gmax = g0 + (rule["split_gap"] if kind == "split" else rule["grow"] if kind == "r6" else rule["grow_unit"])
         for j, k in enumerate(sh):
-            bc = bcost(i, k)
-            if not np.isfinite(bc): continue
-            # previous block's shift kp: gap = g0 + k - kp in [gmin, gmax]  ->  kp in [k + g0 - gmax, k + g0 - gmin]
+            if not np.isfinite(bc[j]): continue
             lo, hi = max(-K, k + g0 - gmax), min(K, k + g0 - gmin)
             if lo > hi: continue
-            seg = cost[i - 1, lo + K:hi + K + 1]; m = int(np.argmin(seg))
-            if np.isfinite(seg[m]): cost[i, j] = seg[m] + bc; arg[i, j] = lo + K + m
-    j = int(np.argmin(cost[-1])); out = [0] * B
-    for i in range(B - 1, -1, -1): out[i] = int(sh[j]); j = arg[i, j]
-    return [k * FR for k in out], float(cost[-1].min())
+            seg = cost[i - 1, lo + K:hi + K + 1]; mm = int(np.argmin(seg))
+            if np.isfinite(seg[mm]): cost[i, j] = seg[mm] + bc[j]; arg[i, j] = lo + K + mm
+    j = int(np.argmin(cost[-1])); best = float(cost[-1, j]); out = [0] * len(B)
+    for i in range(len(B) - 1, -1, -1): out[i] = int(sh[j]); j = arg[i, j]
+    return out, best
 
 
-def apply(y, sr, blocks, shifts, fade_s=0.005):
-    z = np.zeros_like(y); f = int(fade_s * sr)
-    for (a, b), s in zip(blocks, shifts):
-        i0, i1 = int(round(a * sr)), min(len(y), int(round(b * sr))); seg = y[i0:i1].copy()
-        if len(seg) > 2 * f and f: seg[:f] *= np.linspace(0, 1, f); seg[-f:] *= np.linspace(1, 0, f)
-        j0 = i0 + int(round(s * sr)); j0 = max(0, min(len(z) - len(seg), j0)); z[j0:j0 + len(seg)] += seg
-    return z
+def split_candidates(dub16, man, L, ref, blocks, quiet_rel_db=-25.0):
+    """logical English boundaries inside blocks: [(frame of the quietest point between the two words, class)]"""
+    import r4_pause_logic as pl, difflib
+    W = pl.whisper_words(dub16); S = pl.script_tokens(man)
+    sm = difflib.SequenceMatcher(None, [pl.norm(s[0]) for s in S], [pl.norm(w[0]) for w in W], autojunk=False); w2s = {}
+    for a, b, k in sm.get_matching_blocks():
+        for q in range(k): w2s[b + q] = a + q
+    out = []
+    for i in range(len(W) - 1):
+        if i not in w2s or i + 1 not in w2s or w2s[i + 1] != w2s[i] + 1: continue
+        cls, st = pl.classify(S[w2s[i]], S[w2s[i] + 1])
+        if st <= 0: continue
+        lo, hi = int((W[i][2] - 0.06) / FR), int((W[i + 1][1] + 0.06) / FR) + 1
+        if hi - lo < 1 or lo < 0 or hi > len(L): continue
+        f = lo + int(np.argmin(L[lo:hi]))
+        if L[f] > ref + quiet_rel_db: continue   # no quiet point between the words: a cut there would click / clip a phoneme
+        if any(a + 10 < f < b - 10 for a, b in blocks): out.append((f, cls))
+    return out
 
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--work", required=True); ap.add_argument("--out", required=True); ap.add_argument("--manifest", required=True)
-    ap.add_argument("--face"); ap.add_argument("--max-shift", type=float, default=0.6); ap.add_argument("--lam", type=float, default=0.15)
-    ap.add_argument("--w-off", type=float, default=0.0); ap.add_argument("--grow", type=float, default=0.35); a = ap.parse_args()
+    ap.add_argument("--face"); ap.add_argument("--max-shift", type=float, default=1.0); ap.add_argument("--split-shift", type=float, default=2.5)
+    ap.add_argument("--lam", type=float, default=0.15); ap.add_argument("--w-off", type=float, default=0.0); ap.add_argument("--grow", type=float, default=0.35); ap.add_argument("--grow-unit", type=float, default=0.8)
+    ap.add_argument("--split-gap", type=float, default=2.5); ap.add_argument("--split-gain", type=float, default=0.3); ap.add_argument("--max-splits", type=int, default=12)
+    ap.add_argument("--splits", choices=["on", "off"], default="on"); a = ap.parse_args()
     W, O = pathlib.Path(a.work).resolve(), pathlib.Path(a.out); O.mkdir(parents=True, exist_ok=True); man = json.loads(pathlib.Path(a.manifest).read_text())
     y, sr = sf.read(str(W / "dubbed_24k.wav"), dtype="float32"); y = y if y.ndim == 1 else y.mean(1)
-    blocks, act, _ = blocks_of(y, sr); n = len(act); dur = len(y) / sr
+    L = frames_db(y, sr); n = len(L); blocks, act, ref = blocks_of(L)
     S = np.zeros(n, bool)
     for s in man["speech_intervals"]: S[int(s["start"] / FR):int(np.ceil(s["end"] / FR))] = True
-    fv, fvis = face_mask(a.face, n, man["source"]["duration_s"]); w = np.where(fv, 1.0, a.w_off)
+    fv, fvis = face_mask(a.face, n, man["source"]["duration_s"]); w = np.where(fv, 1.0, a.w_off); c = w * (1 - 2 * S.astype(float))
     pls = [(u["id"], p) for u in man["units"] for p in (u.get("alignment") or {}).get("placements", []) if p.get("placed")]
-    def unit_at(t0, t1):
-        best = max(pls, key=lambda q: min(t1, q[1]["placed"][1]) - max(t0, q[1]["placed"][0]), default=None)
-        return best[0] if best and min(t1, best[1]["placed"][1]) - max(t0, best[1]["placed"][0]) > 0 else None
-    unit_of = [unit_at(a_, b_) for a_, b_ in blocks]
-    shifts, _ = plan(blocks, act, S, w, unit_of, a.max_shift, a.lam, grow_s=a.grow, dur=dur)
-    z = apply(y, sr, blocks, shifts)
-    def err(D):
-        return float(((D & ~S) | (S & ~D))[fv].sum() * FR)
+    def unit_at(f0, f1):
+        t0, t1 = f0 * FR, f1 * FR; ov = [(min(t1, p["placed"][1]) - max(t0, p["placed"][0]), uid) for uid, p in pls]; o = max(ov, default=(0, None))
+        return o[1] if o[0] > 0 else None
+    mx, ms = int(round(a.max_shift / FR)), int(round(a.split_shift / FR))
+    B = [[b0, b1, mx, "r6" if i and unit_at(b0, b1) == unit_at(*blocks[i - 1]) and unit_at(b0, b1) is not None else "unit"] for i, (b0, b1) in enumerate(blocks)]
+    rule = {"lam": a.lam, "gmin": int(round(0.15 / FR)), "grow": int(round(a.grow / FR)), "split_gap": int(round(a.split_gap / FR)), "grow_unit": int(round(a.grow_unit / FR))}
+    shifts, best = plan(B, act, c, n, rule); base = best; splits = []
+    if a.splits == "on" and fv.any():
+        cands = [(f, cls) for f, cls in split_candidates(W / "dubbed_16k.wav", man, L, ref, blocks) if fv[max(0, f - 25):f + 25].mean() > 0.5]
+        for _ in range(a.max_splits):
+            trial = None
+            for f, cls in cands:
+                i = next((k for k, b in enumerate(B) if b[0] + 10 < f < b[1] - 10), None)
+                if i is None: continue
+                B2 = B[:i] + [[B[i][0], f, B[i][2], B[i][3]], [f, B[i][1], ms, "split"]] + B[i + 1:]
+                s2, c2 = plan(B2, act, c, n, rule)
+                if trial is None or c2 < trial[0]: trial = (c2, B2, s2, f, cls)
+            if trial is None or best - trial[0] < a.split_gain / FR: break
+            best, B, shifts = trial[0], trial[1], trial[2]; splits.append([round(trial[3] * FR, 2), trial[4]]); cands = [q for q in cands if q[0] != trial[3]]
+    # render: every block's samples moved by its shift (5 ms fades at the cut points; blocks own disjoint sample ranges)
+    z = np.zeros_like(y); h = int(FR * sr); fd = int(0.005 * sr)
+    for (b0, b1, _, _), k in zip(B, shifts):
+        i0, i1 = b0 * h, min(len(y), b1 * h); seg = y[i0:i1].copy()
+        if len(seg) > 2 * fd: seg[:fd] *= np.linspace(0, 1, fd); seg[-fd:] *= np.linspace(1, 0, fd)
+        j0 = max(0, min(len(z) - len(seg), i0 + k * h)); z[j0:j0 + len(seg)] += seg
     D0 = act.copy(); D1 = np.zeros(n, bool)
-    for (b0, b1), s in zip(blocks, shifts):
-        i0, i1 = int(round(b0 / FR)), int(round(b1 / FR)); k = int(round(s / FR)); src = act[i0:i1]; D1[max(0, i0 + k):max(0, i0 + k) + len(src)] |= src[:max(0, n - max(0, i0 + k))]
+    for (b0, b1, _, _), k in zip(B, shifts):
+        j0 = max(0, b0 + k); m = act[b0:b1][:max(0, n - j0)]; D1[j0:j0 + len(m)] |= m
+    err = lambda D: round(float(((D & ~S) | (S & ~D))[fv].sum() * FR), 2)
     for f in W.iterdir():
         if f.name in ("dubbed_24k.wav", "dubbed_16k.wav") or f.name.endswith(".manifest.json"): continue
         (O / f.name).unlink(missing_ok=True); (O / f.name).symlink_to(f)
     sf.write(str(O / "dubbed_24k.wav"), z, sr, subtype="PCM_16")
     import librosa
     sf.write(str(O / "dubbed_16k.wav"), librosa.resample(z, orig_sr=sr, target_sr=16000), 16000, subtype="PCM_16")
-    mid = [(b0 + b1) / 2 for b0, b1 in blocks]
-    def shift_at(t0, t1):
-        k = max(range(len(blocks)), key=lambda i: min(t1, blocks[i][1]) - max(t0, blocks[i][0])) if blocks else None
-        return shifts[k] if k is not None and min(t1, blocks[k][1]) - max(t0, blocks[k][0]) > 0 else 0.0
-    moved = []
+    def shift_at(t):   # shift of the block holding time t (r6 timeline)
+        f = int(t / FR); k = next((q for q, b in enumerate(B) if b[0] <= f < b[1]), None)
+        if k is None: k = int(np.argmin([min(abs(f - b[0]), abs(f - b[1])) for b in B]))
+        return shifts[k] * FR
     for u in man["units"]:
         al = u.get("alignment") or {}
         for p in al.get("placements", []):
             if not p.get("placed"): continue
-            s = round(shift_at(*p["placed"]), 3); p["lip_shift_s"] = s; p["placed"] = [round(p["placed"][0] + s, 3), round(p["placed"][1] + s, 3)]
-            if "track_start" in p: p["track_start"] = round(p["track_start"] + s, 3)
+            s0, s1 = shift_at(p["placed"][0] + 0.03), shift_at(p["placed"][1] - 0.03); p["lip_shift_s"] = [round(s0, 2), round(s1, 2)]
+            p["placed"] = [round(p["placed"][0] + s0, 3), round(p["placed"][1] + s1, 3)]
+            if "track_start" in p: p["track_start"] = round(p["track_start"] + s0, 3)
             for q in (p.get("spread") or {}).get("pauses", []):
-                if "t" in q: q["t"] = round(q["t"] + s, 3)
-            if s: moved.append(s)
-        if "track_start" in al and al.get("placements"): al["track_start"] = round(al["track_start"] + al["placements"][0].get("lip_shift_s", 0.0), 3)
-    rep = {"blocks": len(blocks), "moved_blocks": int(sum(1 for s in shifts if abs(s) > 1e-6)), "shift_abs_mean_s": round(float(np.mean(np.abs(shifts))), 3) if shifts else 0,
-           "shift_abs_max_s": round(float(np.max(np.abs(shifts))), 3) if shifts else 0, "face_visible_frac": fvis,
-           "mismatch_face_visible_s_before": round(err(D0), 2), "mismatch_face_visible_s_after": round(err(D1), 2),
-           "max_shift_s": a.max_shift, "lam": a.lam, "w_off": a.w_off, "grow_s": a.grow, "shifts": [[round(b0, 2), round(b1, 2), round(s, 2)] for (b0, b1), s in zip(blocks, shifts)]}
+                if "t" in q: q["t"] = round(q["t"] + shift_at(q["t"]), 3)
+        if "track_start" in al and al.get("placements"): al["track_start"] = round(al["track_start"] + shift_at(al["track_start"] + 0.05), 3)
+    d = np.diff(np.concatenate([[0], D1.astype(np.int8), [0]]))
+    rep = {"blocks": len(B), "splits": splits, "moved_blocks": int(sum(1 for k in shifts if k)), "shift_abs_mean_s": round(float(np.mean(np.abs(shifts))) * FR, 3),
+           "shift_abs_max_s": round(float(np.max(np.abs(shifts))) * FR, 3), "face_visible_frac": fvis,
+           "mismatch_face_visible_s_before": err(D0), "mismatch_face_visible_s_after": err(D1), "cost_shift_only": round(base * FR, 2), "cost_new": round(best * FR, 2),
+           "params": {k: getattr(a, k) for k in ("max_shift", "split_shift", "lam", "w_off", "grow", "grow_unit", "split_gap", "split_gain", "max_splits", "splits")},
+           "shifts": [[round(b0 * FR, 2), round(b1 * FR, 2), round(k * FR, 2), kind] for (b0, b1, _, kind), k in zip(B, shifts)],
+           "dub_speech": [[round(p * FR, 2), round(q * FR, 2)] for p, q in zip(np.flatnonzero(d == 1), np.flatnonzero(d == -1))]}
     man["lip_place"] = rep; man["dubbed_track"] = {**man.get("dubbed_track", {}), "lip_placed": True}
     (O / pathlib.Path(a.manifest).name).write_text(json.dumps(man, indent=1, ensure_ascii=False))
-    print(json.dumps({k: v for k, v in rep.items() if k != "shifts"}))
+    print(json.dumps({k: v for k, v in rep.items() if k not in ("shifts", "dub_speech")}))
 
 
 if __name__ == "__main__":

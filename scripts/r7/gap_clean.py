@@ -11,7 +11,7 @@ in dub silences). Runs on the separated bed BEFORE mix_background (which still d
   3. the rest of the gap where the source speaks is denoised (noisereduce, MIT, stationary, noise profile = that room tone, prop_decrease nr_prop):
      the musical noise of the separator goes, steady ambience stays (mix_background's room fill tops it up to the floor).
 Under the dub and in true pauses away from detected voice the bed is untouched (r6_audio_v1 behaviour). Thresholds are relative to the video's
-own bed: no per-video settings. Without a usable room tone (music / loud ambience) only leaked VOICE is treated, lowered to the local ambience."""
+own bed: no per-video settings. Room tone = a floor <= -42 dBFS or a steady one (steadiness() <= 3 dB). Without it (music / variable outdoor sound) only leaked VOICE is treated, lowered to the local ambience."""
 from __future__ import annotations
 import numpy as np
 
@@ -45,6 +45,16 @@ def _ramp(m, sr, n_out, xf_s=0.03):
     return np.clip(np.interp(np.arange(n_out) / sr, (np.arange(len(m)) + 0.5) * FR, w), 0, 1).astype(np.float32)
 
 
+def steadiness(src, sr, source_speech, frame_s=0.2, margin_s=0.3):
+    """p70 - p30 (dB) of the source level in non-speech 200 ms frames: <= 3 dB = a steady ambience (room / hum / even street noise) usable as a room
+    tone even when it is loud (03 -40 dBFS 2.0 dB, 04 -36 dBFS 1.6 dB); music / variable outdoor sound is 7-9 dB (01, 05)"""
+    import background_bed as bb
+    h = int(frame_s * sr); r = 20 * np.log10(bb._frame_rms(src.mean(1) if src.ndim > 1 else src, h) + 1e-9); m = np.zeros(len(r), bool)
+    for a, b in source_speech: m[max(0, int((a - margin_s) / frame_s)):int(np.ceil((b + margin_s) / frame_s))] = True
+    c = r[~m]
+    return round(float(np.percentile(c, 70) - np.percentile(c, 30)), 2) if len(c) >= 5 else None
+
+
 def detect(bg, sr, source_speech, dub_speech, voice_p=0.4, burst_db=6.0, edge_s=0.06, bursts=True):
     import background_bed as bb
     mono = bg.mean(1) if bg.ndim > 1 else bg; h = int(FR * sr); n = len(mono) // h
@@ -69,12 +79,15 @@ def clean(bg: np.ndarray, sr: int, source_speech: list, dub_speech: list, voice_
     """full = bed + vocals stems (the whole source): the room tone is taken from it, as mix_background's room fill does"""
     import background_bed as bb, noisereduce as nr
     N = len(bg); st = bg if bg.ndim > 1 else bg[:, None]
-    tone, floor = bb.room_tone(st if full is None else full[:N], source_speech, sr, N, seed=seed)
+    src = st if full is None else full[:N]; tone, floor = bb.room_tone(src, source_speech, sr, N, seed=seed, max_floor_db=0.0)
+    spread = steadiness(src, sr, source_speech)
+    if tone is not None and 20 * np.log10(floor + 1e-9) > -42.0 and (spread is None or spread > 3.0): tone = None   # loud AND unsteady: music / traffic, not a room tone
     # bursts only over a steady room tone: over music / loud ambience (no room tone) a loud frame is the music itself, only leaked voice is treated
     d = detect(bg, sr, source_speech, dub_speech, voice_p, burst_db, bursts=tone is not None); n = d["n"]
     rep = {"voice_s": round(float(d["voice"].sum() * FR), 2), "burst_s": round(float(d["burst"].sum() * FR), 2), "replaced_s": round(float(d["junk"].sum() * FR), 2),
            "gap_s": round(float(d["G"].sum() * FR), 2), "gap_src_speaks_s": round(float((d["G"] & d["S"]).sum() * FR), 2), "voice_p": voice_p, "burst_db": burst_db,
-           "nr_prop": nr_prop, "room_tone": tone is not None}
+           "nr_prop": nr_prop, "room_tone": tone is not None,
+           "floor_db": None if floor is None else round(20 * np.log10(floor + 1e-9), 1), "ambience_spread_db": spread}
     out = st.copy()
     gs = d["G"] & d["S"] & ~d["junk"]
     if nr_prop > 0 and gs.any() and tone is not None:   # 3. denoise the gap where the source speaks (separator musical noise), noise profile = room tone
