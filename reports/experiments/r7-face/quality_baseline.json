@@ -1,0 +1,201 @@
+{
+ "tag": "m11",
+ "audio": "/workspace/dub/handoff/in/audio-r7-v3a-all5",
+ "tolerances": {
+  "twitch_sum": {
+   "better": "low",
+   "tol": "15%"
+  },
+  "skin_sum": {
+   "better": "low",
+   "tol": 1.0
+  },
+  "sync_speech": {
+   "better": "high",
+   "tol": 0.3
+  },
+  "sync_dub_only": {
+   "better": "high",
+   "tol": 0.3
+  },
+  "flash_strong": {
+   "better": "low",
+   "tol": 3
+  },
+  "frame_gate_worst_pct": {
+   "better": "low",
+   "tol": 0.2
+  },
+  "frame_gate_over": {
+   "better": "low",
+   "tol": 0
+  },
+  "pressed_lips_s": {
+   "better": "low",
+   "tol": 0.5
+  },
+  "mouth_audio_mismatch_s": {
+   "better": "low",
+   "tol": 0.5
+  },
+  "joints_resid": {
+   "better": "low",
+   "tol": 0.05
+  },
+  "joints_lowfreq": {
+   "better": "low",
+   "tol": 0.05
+  },
+  "sharp_mouth": {
+   "better": "high",
+   "tol": 0.03
+  },
+  "chin_flicker": {
+   "better": "low",
+   "tol": 0.1
+  },
+  "jaw_jitter": {
+   "better": "low",
+   "tol": 0.1
+  },
+  "colour_worst_1s_dL": {
+   "better": "low",
+   "tol": 1.0
+  },
+  "spec_pass": {
+   "better": "high",
+   "tol": 0
+  },
+  "s_per_video_min": {
+   "better": "low",
+   "tol": 600
+  }
+ },
+ "videos": {
+  "05": {
+   "twitch_sum": 15.59,
+   "skin_sum": null,
+   "sync_speech": 3.576,
+   "sync_dub_only": null,
+   "flash_strong": 6,
+   "frame_gate_worst_pct": 0.0,
+   "frame_gate_over": 0,
+   "frame_gate_verdict": "PASS",
+   "mouth_audio_mismatch_s": 1.84,
+   "joints_resid": 0.953,
+   "joints_lowfreq": 0.895,
+   "sharp_mouth": 0.962,
+   "chin_flicker": 0.94,
+   "jaw_jitter": 0.994,
+   "colour_worst_1s_dL": 1.66,
+   "spec_pass": 1,
+   "wer_final_mix": 0.0568,
+   "s_per_video_min": 500.2,
+   "face_frames": 1511,
+   "ls_frames": 1114,
+   "audio_md5": "16482c979b151791e1b28b974d9e06fe",
+   "pressed_lips_s": 6.85,
+   "open_mouth_dub_silent_s": 7.49
+  },
+  "04": {
+   "twitch_sum": 38.83,
+   "skin_sum": null,
+   "sync_speech": 6.421,
+   "sync_dub_only": null,
+   "flash_strong": 16,
+   "frame_gate_worst_pct": 0.0,
+   "frame_gate_over": 0,
+   "frame_gate_verdict": "PASS",
+   "mouth_audio_mismatch_s": 0.73,
+   "joints_resid": 0.926,
+   "joints_lowfreq": 0.901,
+   "sharp_mouth": 0.927,
+   "chin_flicker": 0.952,
+   "jaw_jitter": 0.976,
+   "colour_worst_1s_dL": 1.41,
+   "spec_pass": 1,
+   "wer_final_mix": 0.0319,
+   "s_per_video_min": 482.2,
+   "face_frames": 1617,
+   "ls_frames": 1082,
+   "audio_md5": "07e82b1c6b4b16757a4a9a9386c686d7",
+   "pressed_lips_s": 3.13,
+   "open_mouth_dub_silent_s": 4.07
+  },
+  "03": {
+   "twitch_sum": 41.73,
+   "skin_sum": null,
+   "sync_speech": 7.861,
+   "sync_dub_only": null,
+   "flash_strong": 44,
+   "frame_gate_worst_pct": 0.0,
+   "frame_gate_over": 0,
+   "frame_gate_verdict": "PASS",
+   "mouth_audio_mismatch_s": 0.77,
+   "joints_resid": 0.909,
+   "joints_lowfreq": 0.837,
+   "sharp_mouth": 0.833,
+   "chin_flicker": 0.887,
+   "jaw_jitter": 0.958,
+   "colour_worst_1s_dL": 1.33,
+   "spec_pass": 1,
+   "wer_final_mix": 0.0196,
+   "s_per_video_min": 480.0,
+   "face_frames": 2710,
+   "ls_frames": 2065,
+   "audio_md5": "edf612c04067a6376fb8dbc725b062f5",
+   "pressed_lips_s": 3.2,
+   "open_mouth_dub_silent_s": 6.47
+  },
+  "01": {
+   "twitch_sum": 14.78,
+   "skin_sum": null,
+   "sync_speech": 6.654,
+   "sync_dub_only": null,
+   "flash_strong": 4,
+   "frame_gate_worst_pct": 0.005,
+   "frame_gate_over": 0,
+   "frame_gate_verdict": "PASS",
+   "mouth_audio_mismatch_s": 0.0,
+   "joints_resid": 0.926,
+   "joints_lowfreq": 0.923,
+   "sharp_mouth": 0.946,
+   "chin_flicker": 0.904,
+   "jaw_jitter": 1.006,
+   "colour_worst_1s_dL": 1.11,
+   "spec_pass": 1,
+   "wer_final_mix": 0.1031,
+   "s_per_video_min": 94.5,
+   "face_frames": 260,
+   "ls_frames": 260,
+   "audio_md5": "aa763a91e03f323833ad0976f0ad415c",
+   "pressed_lips_s": 0.0,
+   "open_mouth_dub_silent_s": 0.0
+  },
+  "02": {
+   "twitch_sum": 0.0,
+   "skin_sum": null,
+   "sync_speech": null,
+   "sync_dub_only": null,
+   "flash_strong": 0,
+   "frame_gate_worst_pct": 0.0,
+   "frame_gate_over": 0,
+   "frame_gate_verdict": "PASS",
+   "mouth_audio_mismatch_s": 0.0,
+   "joints_resid": null,
+   "joints_lowfreq": null,
+   "sharp_mouth": null,
+   "chin_flicker": null,
+   "jaw_jitter": null,
+   "colour_worst_1s_dL": 0,
+   "spec_pass": 1,
+   "wer_final_mix": 0.0435,
+   "s_per_video_min": 32.9,
+   "face_frames": 0,
+   "ls_frames": 0,
+   "audio_md5": "50418441334a41cfb61abdf87a7b9324",
+   "pressed_lips_s": 0.0,
+   "open_mouth_dub_silent_s": 0.0
+  }
+ }
+}
