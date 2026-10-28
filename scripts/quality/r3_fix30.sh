@@ -28,7 +28,7 @@ else
   T=$TD/${id}_master_timing.json
   [ -f $T ] || python scripts/quality/master_timing.py --src $src --out $T
 fi
-LS=${stem}_ls_raw.mp4; nls=$(python -c "import json;print(json.load(open('$M'))['lipsync']['by_action'].get('LATENT_SYNC',{}).get('frames',0))")
+LS=${FIX30_LS:-${stem}_ls_raw.mp4}; nls=$(python -c "import json;print(json.load(open('$M'))['lipsync']['by_action'].get('LATENT_SYNC',{}).get('frames',0))")
 s=$(date +%s.%N)
 if [ "$nls" -gt 0 ]; then
   python scripts/quality/fps_composite.py --manifest $M --ls-raw $LS --out $out --master-timing $T --threads ${FIX30_THREADS:-16} $FIX30_ARGS > ${stem}_$suf.log 2>&1 || echo "WARN fps_composite rc=$? $M"
