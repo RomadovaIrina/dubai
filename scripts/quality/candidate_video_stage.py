@@ -91,6 +91,8 @@ def main() -> int:
     ap.add_argument("--dubbed-dir", default=None, help="dir with dubbed_16k.wav + dubbed_aac.m4a (+ aligned_u*.wav); default = baseline work dir")
     ap.add_argument("--out", default=str(Q / "candidates")); ap.add_argument("--work-out", default=None)
     ap.add_argument("--manifest", default=None, help="manifest of a finished E2E run (overrides --run-dir / --work-dir)")
+    ap.add_argument("--ls-split-snap", type=int, default=0, help="phase 2 (speed): move each dub-silence cut inside its silence so that the LatentSync segment before it is a "
+                    "multiple of this many frames (16 = one UNet window): fewer partial windows, same closed-mouth re-anchoring; 0 = off")
     ap.add_argument("--ls-split-dub-silence", type=float, default=0.0, help="r4 merged: split LatentSync segments inside dub silences >= this many s (0.12 s after the dub "
                     "stops / before it restarts); 0 = off")
     ap.add_argument("--cap-align", choices=["on", "off"], default="off", help="r4 merged: --max-ls-frames cuts at the quietest dub frame of their last 6 s")
@@ -182,10 +184,12 @@ def main() -> int:
         _y, _sr = _sf.read(str(dub16), dtype="float32"); _y = _y if _y.ndim == 1 else _y.mean(1); _h = int(_sr / faa.FPS)
         cut_energy = np.sqrt((_y[: len(_y) // _h * _h].reshape(-1, _h) ** 2).mean(1))
         if a.ls_split_dub_silence > 0:
-            _ds = rp.run_vad(dub16); split_frames = []
+            _ds = rp.run_vad(dub16); split_frames = []; split_ranges = {}
             for (s0, e0), (s1, e1) in zip([(v["start"], v["end"]) for v in _ds], [(v["start"], v["end"]) for v in _ds][1:]):
-                if s1 - e0 >= a.ls_split_dub_silence: split_frames += [int(round((e0 + 0.12) * faa.FPS)), int(round((s1 - 0.12) * faa.FPS))]
-            man["ls_split"] = {"min_silence_s": a.ls_split_dub_silence, "split_frames": split_frames}
+                if s1 - e0 >= a.ls_split_dub_silence:
+                    c0, c1 = int(round((e0 + 0.12) * faa.FPS)), int(round((s1 - 0.12) * faa.FPS)); split_frames += [c0, c1]
+                    split_ranges[c0] = (c0, c1); split_ranges[c1] = (c0, c1)   # phase 2: a cut may move anywhere inside its dub silence (--ls-split-snap)
+            man["ls_split"] = {"min_silence_s": a.ls_split_dub_silence, "split_frames": split_frames, "snap": a.ls_split_snap}
     if a.speech_gate == "on":
         with rp.timed(times, "speech_gate"):
             dub_speech = rp.run_vad(dub16)
@@ -264,7 +268,8 @@ def main() -> int:
         from codeformer_accel import CodeFormerAccel
         with rp.timed(times, "codeformer_load"): cf_runner = CodeFormerAccel(fidelity_weight=a.codeformer_w, batch_size=a.codeformer_batch, empty_cache_per_face=a.codeformer_empty_cache, landmark_source=a.codeformer_landmarks, autocast=a.codeformer_precision == "fp16", parse_autocast=a.codeformer_precision != "fp32")
     rep = faa.process_video(src, work, dub16, dub_aac, out, router=router, runner=runner, min_ls_frames=a.min_ls_frames, max_verify_depth=a.max_verify_depth, codeformer=a.codeformer, times=times,
-                            log=lambda m: print(m, flush=True), speech_gate=gate, crossfade_frames=a.crossfade_frames, router_stride=a.router_stride, in_memory=True, cf_runner=cf_runner, lm_smooth=a.ls_landmark_smooth, prep=prep, max_ls_frames=a.max_ls_frames, split_frames=split_frames, cut_energy=cut_energy)
+                            log=lambda m: print(m, flush=True), speech_gate=gate, crossfade_frames=a.crossfade_frames, router_stride=a.router_stride, in_memory=True, cf_runner=cf_runner, lm_smooth=a.ls_landmark_smooth, prep=prep, max_ls_frames=a.max_ls_frames, split_frames=split_frames, cut_energy=cut_energy,
+                            split_ranges=(split_ranges if a.ls_split_snap and split_frames else None), split_snap=a.ls_split_snap)
     if rec_cls is not None and rec_cls.rec:
         import numpy as np
         fr_, bx_ = [], []
