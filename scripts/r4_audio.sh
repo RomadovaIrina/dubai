@@ -21,7 +21,12 @@ one() {
     W=$O/runs/$id/work_$(basename ${src%.*}); cp $O/runs/${id}_r4a.manifest.json $W/${id}_r4a.manifest.json
   fi
   export OMP_NUM_THREADS=$TH MKL_NUM_THREADS=$TH DUB_THREADS=$TH   # CPU quota ~30: remix / metrics of PAR videos must not oversubscribe (bed A/B hit load 475)
-  ln -sfn $W $O/mix_src/$id; [ -d $A/sep/$id ] || { mkdir -p $A/sep/$id; cp $W/bg_44k.wav $W/vocals_44k.wav $A/sep/$id/; }
+  [ -d $A/sep/$id ] || { mkdir -p $A/sep/$id; cp $W/bg_44k.wav $W/vocals_44k.wav $A/sep/$id/; }
+  if [ "${LIP_PLACE:-off}" = on ]; then   # r7: dub blocks moved into the source speech spans where the face is visible (scripts/r7/lip_place.py)
+    python -c "import sys; sys.path.insert(0,'scripts/pilot'); import clean_face_stack as c, pathlib; c.run_mediapipe(pathlib.Path('$src'), pathlib.Path('$A/sep/$id/source_mediapipe.npz'))" > /dev/null 2>&1
+    python scripts/r7/lip_place.py --work $W --out $O/placed/$id --manifest $(ls $W/${id}_*.manifest.json | head -1) --face $A/sep/$id/source_mediapipe.npz ${LIP_ARGS:-} > $O/runs/${id}.place.log 2>&1 || { echo "FAIL place $id"; return; }
+    W=$O/placed/$id; fi
+  ln -sfn $W $O/mix_src/$id
   python scripts/quality/r3_remix.py --src $O/mix_src --out $O ${REMIX_ARGS:-} $id > $O/runs/${id}.remix.log 2>&1 || { echo "FAIL remix $id"; return; }
   ffmpeg -loglevel error -y -i $src -i $O/$id/final_mix_aac.m4a -map 0:v:0 -map 1:a:0 -c copy -shortest $O/${id}_over-original.mp4
   python scripts/quality/r4_audio_metrics.py --mix $O/${id}_over-original.mp4 --src $src --sep $A/sep/$id --run $O/$id --manifest $O/$id/${id}_r4b.manifest.json --wer --series $O/${id}.series.npz \

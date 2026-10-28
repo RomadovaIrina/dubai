@@ -9,7 +9,7 @@ Writes <out>/<id>/ = symlinks of the run's work dir + new final_mix_44k.wav / fi
 from __future__ import annotations
 import argparse, json, pathlib, re, subprocess, sys
 import soundfile as sf
-HERE = pathlib.Path(__file__).resolve().parent; sys.path.insert(0, str(HERE.parent / "pilot")); sys.path.insert(0, str(HERE))
+HERE = pathlib.Path(__file__).resolve().parent; sys.path.insert(0, str(HERE.parent / "pilot")); sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent / "r7"))
 
 
 def measure(f):
@@ -102,6 +102,8 @@ def main() -> int:
     ap.add_argument("--unit-level", choices=["on", "off"], default="off", help="r6: sentence-to-sentence loudness of the dub voice (unit_level())")
     ap.add_argument("--gap-bed-cap-scope", choices=["gaps", "edges", "speech"], default="gaps", help="r6: frames the bed cap applies to (cap_gap_bed())")
     ap.add_argument("--gap-bed-cap-db", type=float, default=0.0, help="r6: > 0 = bed level cap (median + this) where the source speaks and the dub is silent (cap_gap_bed())")
+    ap.add_argument("--gap-clean", choices=["on", "off"], default="off", help="r7: residual-voice / burst detector + room tone + denoise of the bed in dub gaps (scripts/r7/gap_clean.py)")
+    ap.add_argument("--gap-clean-voice-p", type=float, default=0.4); ap.add_argument("--gap-clean-burst-db", type=float, default=6.0); ap.add_argument("--gap-clean-nr", type=float, default=0.6)
     a = ap.parse_args()
     import background_bed as bb, run_clean_pipeline_05 as rp, r3_bedswing  # noqa: F401
     for id_ in a.ids:
@@ -119,6 +121,12 @@ def main() -> int:
         if a.gap_bed_cap_db > 0:
             man["gap_bed_cap"] = cap_gap_bed(pathlib.Path(sep["bg"]), O / "bg_capped_44k.wav", speech, dub_speech, a.gap_bed_cap_db, a.gap_bed_cap_scope)
             if man["gap_bed_cap"].get("applied"): sep = {**sep, "bg": str(O / "bg_capped_44k.wav")}
+        if a.gap_clean == "on":   # r7: after the r6 cap, before the mix (room fill / ducks / gains unchanged)
+            import gap_clean
+            bgy, bsr = sf.read(sep["bg"], dtype="float32"); vy, _ = sf.read(sep["vocals"], dtype="float32"); m_ = min(len(bgy), len(vy))
+            z, man["gap_clean"] = gap_clean.clean(bgy, bsr, speech, dub_speech, a.gap_clean_voice_p, a.gap_clean_burst_db, a.gap_clean_nr, full=bgy[:m_] + vy[:m_])
+            sf.write(str(O / "bg_clean_44k.wav"), z, bsr, subtype="FLOAT"); sep = {**sep, "bg": str(O / "bg_clean_44k.wav")}
+            print(f"   {id_} gap_clean: { {k: v for k, v in man['gap_clean'].items() if k != 'runs'} }", flush=True)
         mix = bb.mix_background(sep, D / "dubbed_24k.wav", speech, dub_speech, man["source"]["duration_s"], O, duck_db=a.duck_db, attack_s=a.attack,
                                 release_s=a.release, residue_duck_db=a.residue_db, src_duck_db=a.src_duck_db)
         loud = static_loudness(O / "final_mix_44k.wav", O / "final_mix_aac.m4a", a.target, a.tp)
