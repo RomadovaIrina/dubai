@@ -15,9 +15,11 @@ for id in ${*:-05 04 03 01 02}; do
   [ -f "$AD/dubbed_16k.wav" ] && [ -f "$AD/final_mix_aac.m4a" ] && [ -n "$AM" ] || { echo "FAIL audio $id (need $AD/dubbed_16k.wav, final_mix_aac.m4a, <id>_*.manifest.json)"; continue; }
   VIDEO_ARGS="$GATE" FIX30_ARGS="$V1" bash scripts/r4/r4_video.sh $id $AD $AM $B/$TAG $TAG > $B/$TAG/${id}.run.log 2>&1 || { echo "FAIL video $id"; continue; }
   mkdir -p /workspace/dub/artifacts/r3d/timing; for f in $B/$TAG/timing/${id}_*; do [ -e /workspace/dub/artifacts/r3d/timing/$(basename $f) ] || cp $f /workspace/dub/artifacts/r3d/timing/; done
+  if [ -z "${SKIP_SCORE:-}" ]; then   # r7 F: SKIP_SCORE=1 when the run is only the generator stage of a later candidate (r7_m7_comp.sh scores that one)
   python scripts/r4/r4_gate.py score --label $TAG --dir $B/$TAG --ids $id > $B/$TAG/${id}.score.log 2>&1 || echo "WARN score $id"
   MAN=$B/$TAG/%s_$TAG.manifest.json bash scripts/r6/r6_twitch.sh $TAG $B/$TAG _$TAG $id | grep '=='
   bash scripts/r7/r7_frame_gate.sh $B/$TAG:$TAG $id | grep "^=="
+  fi
   echo "== $TAG $id $(( $(date +%s) - t0 )) s $(date +%T)"
 done
 echo R7_E2E_DONE $TAG
