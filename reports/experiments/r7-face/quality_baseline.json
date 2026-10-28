@@ -1,6 +1,6 @@
 {
  "tag": "m11",
- "audio": "/workspace/dub/handoff/in/audio-r7-v3a-all5",
+ "audio": "/workspace/dub/handoff/in/audio-r7-v3a1",
  "tolerances": {
   "twitch_sum": {
    "better": "low",
@@ -73,28 +73,28 @@
  },
  "videos": {
   "05": {
-   "twitch_sum": 15.59,
+   "twitch_sum": 16.39,
    "skin_sum": null,
-   "sync_speech": 3.576,
+   "sync_speech": 3.472,
    "sync_dub_only": null,
    "flash_strong": 6,
    "frame_gate_worst_pct": 0.0,
    "frame_gate_over": 0,
    "frame_gate_verdict": "PASS",
    "mouth_audio_mismatch_s": 1.84,
-   "joints_resid": 0.953,
-   "joints_lowfreq": 0.895,
-   "sharp_mouth": 0.962,
-   "chin_flicker": 0.94,
-   "jaw_jitter": 0.994,
-   "colour_worst_1s_dL": 1.66,
+   "joints_resid": 0.945,
+   "joints_lowfreq": 0.901,
+   "sharp_mouth": 0.959,
+   "chin_flicker": 0.939,
+   "jaw_jitter": 0.988,
+   "colour_worst_1s_dL": 1.65,
    "spec_pass": 1,
    "wer_final_mix": 0.0568,
-   "s_per_video_min": 500.2,
+   "s_per_video_min": 414.4,
    "face_frames": 1511,
    "ls_frames": 1114,
-   "audio_md5": "16482c979b151791e1b28b974d9e06fe",
-   "pressed_lips_s": 6.85,
+   "audio_md5": "edc2d1554bd0bab225a1f6e35b45b983",
+   "pressed_lips_s": 6.95,
    "open_mouth_dub_silent_s": 7.49
   },
   "04": {

@@ -216,3 +216,17 @@ with 14B + retake, audio agent) runs on the other server.
    (fix30 40-60 s) rather than fps_composite (33 s on 05, of which the sanitizer 8.6 and encode 5.8). Source mediapipe (face_stack 20-30)
    is computed again by fix30; caching the source landmarks (they exist in artifacts/r7f/lm) saves ~20 s/video-min.
 Everything else (speech gate, prep, assembly, score) is < 15 s/video-min together.
+
+## 12. 05 on audio-r7-v3a1, the final set, the quality baseline tag
+
+audio-r7-v3a1 differs from v3a only on 05 and only in the dub track at 31.62-31.98 s (the junk ducked; 01-04 bit-identical, cmp). The old
+05 already had the mouth shut there (opening 0.004-0.015 IOD at 31.6-32.0 s), so the change is the mix; 05 was nevertheless re-rendered
+end to end on v3a1 (generator 363 s + layer SR + composite 91 s + score) so that the candidate is exactly reproducible from its handoff:
+twitch 15.6 -> 16.4, SyncNet dub-speech 3.58 -> 3.47, flash 6 -> 6, joints 0.953 -> 0.945, whole-frame PASS; within the baseline
+tolerances. Old 05 kept in `artifacts/r4m/m11/prev_05_v3a/`.
+Final set: `outbox/final_r7/<id>_DabAI_r7.mp4` (24-56 MB) + `<id>_DabAI_r7_phone.mp4` (23-24 MB) + README.md (`scripts/r7/r7_final_set.sh`).
+Quality baseline for phase 2: `reports/experiments/r7-face/quality_baseline.json` (frozen from m11 with 05 on v3a1; `r7_baseline.py freeze`),
+gate = `r7_baseline.py gate --tag <arm> --audio <handoff>`: a metric fails when worse than the baseline beyond its tolerance (twitch +15 %,
+skin +1, SyncNet -0.3, flash +3, whole-frame worst <= 0.2 % / 0 frames over, pressed lips +0.5 s, mismatch +0.5 s, joints +0.05, mouth
+sharpness -0.03, chin flicker / jaw jitter +0.1, ring colour +1 dL, spec pass, speed <= 600 s/video-min) — plus the user WATCH. Git tag
+`r7-quality-baseline` = this commit.
