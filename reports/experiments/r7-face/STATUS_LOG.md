@@ -103,3 +103,15 @@ m7 = m6 layers + `r7_layer_sr.py --temporal 1` (ESRGAN on the layer's lips, deta
 The lips-channel twitch rise on 03 / 04 is the same dub articulations scored higher because crisper lips give larger flow (section 4);
 the skin channels (the paste jumping = the user's "twitch") are equal or better everywhere. Human check: the half-speed top-20 clips in
 outbox/r7_m7_twitch/.
+
+## 6. m8 (m7 stack + audio-r7-v1) and a cracked-lip defect found and fixed (12:25)
+m8raw = LatentSync on the audio agent's audio-r7-v1 (all 5, 54-490 s/video-min), then the m7 look (r7_m7_comp.sh). First pass: 05 twitch
+10.5 (m7 20.1), flashes 7 (24); 03 49.4; 01 14.1; 04 62.0 with 10 new lips events. The 04 review strip at 31.9 s showed a REAL defect:
+frame 956 has a 'cracked' lower lip (thin bright lines). Window A/Bs (fps_composite --only-frames 945:970): the crack is in the sanitizer's
+texture fix (gone only with --sanitize-layer 0; present with tau 12, without SR, without unsharp). Cause: for every flagged frame on 04 the
+neighbours' flow interpolation has confidence 0 (frames 2-4 apart differ in the mouth), so `interp_safe` falls back to "the nearer frame
+warped by that (wrong) flow", and the warp tears the lip line into cracks; the r6 ring guard cannot see it (the ring is aligned).
+Fix (9b8f594, generic): at interpolation confidence < --sanitize-min-conf (0.3) the fix frame is the nearer good frame moved by a SIMILARITY
+fitted on the lips + eyes / nose landmarks (a similarity cannot tear); a per-pixel blend of dense / rigid (--sanitize-tear 16) doubled the
+lip line on 948 / 954, so the default is rigid everywhere (--sanitize-tear 0). On 04 all 124 sanitized frames take this path; the real
+flash at 985 is still fixed. m8 is being re-composited on all 5 with it; m7 (published) still carries the old sanitizer.
