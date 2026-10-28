@@ -144,6 +144,10 @@ def main() -> int:
                     "at least this confidence (interp_safe); at 0 the fallback warp tears the lip line into 'cracks' (04 m8 frame 956); 0 = off")
     ap.add_argument("--sanitize-tear", type=float, default=0.0, help="r7 F: with the rigid fallback, pixels where the dense warp and the rigid warp of the "
                     "nearer frame differ by more than this (grey, blurred 2 px) take the rigid one; 0 (default) = rigid everywhere: a partial blend doubled the lip line on 04 948 / 954")
+    ap.add_argument("--sanitize-mild", type=float, default=0.0, help="r7 F (01 m8 7.6 s: a pursed bilabial flagged as 'collapsed' got frame 188's flat lip "
+                    "line, then frame 190 showed the bulge = a one-frame pop): a MILDLY flagged frame (collapse ratio >= this, i.e. its own lip line exists) "
+                    "is fixed only when the donated high frequencies correlate with its own on the lip box (grey NCC >= --sanitize-hf-ncc); 0 = off")
+    ap.add_argument("--sanitize-hf-ncc", type=float, default=0.3)
     ap.add_argument("--sanitize-colour", choices=["on", "off"], default="off", help="r3 D, texture mode: inside the flagged frame's lip box also match the "
                     "LUMINANCE mean / contrast (gain 0.7-1.6) of its low frequencies to the neighbours' interpolation (pale lips); per-channel matching over-saturated")
     ap.add_argument("--chin-clip", type=float, default=0.0, help="r4 V (user: 'second / third chin moves like a wave'): with --face-clip, the clip polygon's "
@@ -266,11 +270,14 @@ def main() -> int:
             if wm[m_] <= 0: continue
             st_ = lip_stats(L[m_], mp_ls[m_])
             if st_ is not None: hf[m_], ct[m_] = st_
-        bad = np.zeros(nm, bool)
+        bad = np.zeros(nm, bool); ratio_ = np.full(nm, np.nan)
         for m_ in range(nm):
             if not np.isfinite(hf[m_]): continue
             nb = [i for i in range(max(0, m_ - 6), min(nm, m_ + 7)) if abs(i - m_) >= 2 and np.isfinite(hf[i])]
-            if len(nb) >= 4 and min(hf[m_] / np.median(hf[nb]), ct[m_] / np.median(ct[nb])) < a.sanitize_layer: bad[m_] = True
+            if len(nb) >= 4:
+                ratio_[m_] = min(hf[m_] / np.median(hf[nb]), ct[m_] / np.median(ct[nb]))
+                if ratio_[m_] < a.sanitize_layer: bad[m_] = True
+        nmild = 0; mild_frames = []
         m_ = 0
         while m_ < nm:
             if not bad[m_]: m_ += 1; continue
@@ -305,6 +312,13 @@ def main() -> int:
                                 fix = ro + ((yo - yo.mean()) * gain + yi.mean() - yo)[..., None]   # luminance only: darkness / lip-line contrast, no chroma push
                                 fw = tms.poly_mask(q, (by0, by1, bx0, bx1), 0.15 * w_, 0.1 * w_)[..., None] if hasattr(tms, "poly_mask") else 1.0
                                 lo_own[by0:by1, bx0:bx1] = ro + fw * (fix - ro)
+                        if a.sanitize_mild > 0 and ratio_[i_] >= a.sanitize_mild and np.isfinite(mp_ls[i_][tms.LIPS_OUTER]).all():
+                            q = mp_ls[i_][tms.LIPS_OUTER, :2]; w_ = q[:, 0].max() - q[:, 0].min()
+                            bx0, by0 = np.maximum((q.min(0) - 0.15 * w_).astype(int), 0); bx1, by1 = (q.max(0) + 0.15 * w_).astype(int)
+                            ho = (own - lo_own)[by0:by1, bx0:bx1].mean(2).ravel(); hd_ = (it_ - lo_it)[by0:by1, bx0:bx1].mean(2).ravel()
+                            ncc_ = float(np.corrcoef(ho, hd_)[0, 1]) if ho.size > 30 and ho.std() > 1e-3 and hd_.std() > 1e-3 else 1.0
+                            print(f"  sanitize-mild frame {i_}: ratio {ratio_[i_]:.3f} hf-ncc {ncc_:.3f} -> {'kept' if ncc_ < a.sanitize_hf_ncc else 'fixed'}", flush=True)
+                            if ncc_ < a.sanitize_hf_ncc: nmild += 1; mild_frames.append(int(i_)); continue
                         it_ = lo_own + (it_ - lo_it)
                     if a.sanitize_guard == "on":   # r6 F (05 23.7 s, the user's face twitch): the fix is taken only if the interpolated neighbours are
                         # ALIGNED with the frame on the skin ring around the lip box (grey NCC >= --sanitize-align). A real flash changes the lips only
@@ -314,8 +328,8 @@ def main() -> int:
                         if al_ is None or al_ < a.sanitize_align: nguard += 1; continue
                     L[i_] = np.clip(it_, 0, 255).astype(np.uint8); nsan += 1; san_frames.append(int(i_))
             m_ = e_
-        times["sanitize_layer"] = {"seconds": round(time.perf_counter() - t0, 2), "flagged": int(bad.sum()), "replaced": nsan, "guard_kept": nguard, "lowconf_kept": nlowconf, "rigid_fallback": nrigid, "frames": san_frames[:200]}
-        print(f"  sanitize-layer: {int(bad.sum())} flagged, {nsan} replaced, {nguard} kept by the guard, {nrigid} by the rigid fallback (interpolation confidence < {a.sanitize_min_conf}), {nlowconf} kept", flush=True)
+        times["sanitize_layer"] = {"seconds": round(time.perf_counter() - t0, 2), "flagged": int(bad.sum()), "replaced": nsan, "guard_kept": nguard, "lowconf_kept": nlowconf, "rigid_fallback": nrigid, "mild_kept": nmild, "mild_frames": mild_frames[:200], "frames": san_frames[:200]}
+        print(f"  sanitize-layer: {int(bad.sum())} flagged, {nsan} replaced, {nguard} kept by the guard, {nrigid} by the rigid fallback (interpolation confidence < {a.sanitize_min_conf}), {nlowconf} kept, {nmild} mild kept (own lip line, donor misaligned)", flush=True)
     nseam = 0
     if a.seam_lf > 0:   # r3: window-joint appearance steps -> ramps
         t0 = time.perf_counter(); N = a.seam_lf; dis_s = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)

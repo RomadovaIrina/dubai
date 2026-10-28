@@ -115,3 +115,19 @@ Fix (9b8f594, generic): at interpolation confidence < --sanitize-min-conf (0.3) 
 fitted on the lips + eyes / nose landmarks (a similarity cannot tear); a per-pixel blend of dense / rigid (--sanitize-tear 16) doubled the
 lip line on 948 / 954, so the default is rigid everywhere (--sanitize-tear 0). On 04 all 124 sanitized frames take this path; the real
 flash at 985 is still fixed. m8 is being re-composited on all 5 with it; m7 (published) still carries the old sanitizer.
+
+## 7. "Lip snap" class (01 7.6 s / 04 39.4 s): what it is, the m9 arm, verdict
+
+Measured on the m8 raw LatentSync layers (all 4 videos with LS frames): pixel single-frame outliers on the lips crop (min |f_k - f_k±1| / |f_k-1 - f_k+1| >= 2): **0**; lips-shape second difference on the layer landmarks p99.9 < 0.04 IOD everywhere, no spike at the two frames. There is no single-frame snap on the layers. The 01 7.6 s event is LatentSync's own **2-frame pursed bilabial** (layer frames 189–190, mouth opening 0.003 IOD) — and the sanitizer flagged 189 as a "texture collapse" (collapse ratio 0.77 vs the 0.83 threshold) and gave it frame 188's lip line (texture mode = own LF + donor HF) while 190 kept its bulge: a flat lip → bulge pop in the output. The donor's HF correlates −0.11 with the frame's own HF on the lip box; the same pattern at the 0.3 s bilabial (frames 7–8) and on 04 f985 (ncc 0.28).
+
+Generic guard added to `fps_composite.py`: `--sanitize-mild R --sanitize-hf-ncc C` — a flagged frame whose collapse ratio ≥ R (its own lip line exists) is fixed only when the donated HF correlates ≥ C with its own on the lip box; else the frame is kept as drawn. Default off (m8 unchanged). m9 = m8 + `--sanitize-mild 0.6 --sanitize-hf-ncc 0.3`: kept 9/44 (01), 0/359 (03), 4/132 (05), 7/147 (04) sanitized frames.
+
+| video | twitch m8 → m9 | skin_sum | SyncNet | flash strong | whole-frame gate |
+|---|---|---|---|---|---|
+| 03 | 49.65 → 49.65 | 0 → 0 | 6.65 → 6.60 | 57 → 51 | PASS |
+| 01 | 14.24 → **25.06** | 2.15 → 0 | 6.82 → 6.82 | 2 → 4 | PASS |
+| 05 | 16.55 → 15.06 | 2.88 → 2.88 | 2.63 → 2.76 | 7 → 7 | PASS |
+| 02 | 0 → 0 | - | - | - | PASS |
+| 04 | 39.62 → 41.46 | 1.41 → 1.46 | 4.15 → 4.14 | 17 → 17 | PASS |
+
+Verdict: the pop is gone on 01 (sheet `artifacts/r7f/crack956/01_m8_vs_m9_bilabials.jpg`: m9 shows the generator's pursed lips for 2–3 frames instead of flat→bulge), skin_sum 2.15 → 0, but the lips channel scores the sustained pursing against the open source mouth as four new events (0.4, 0.8, 7.6, 9.6 s: 25.06 vs 14.24) and flash 2 → 4. Under the rule "twitch at or below the previous candidate" m9 does NOT pass on 01; it is neutral-to-better on 03/05, slightly worse on 04 (+1.8). The pursed look itself is LatentSync's rendition of p/b/m on this audio; a composite cannot make it a natural closure. Not published; m8 stays the candidate. Guard committed, default off.
