@@ -230,3 +230,32 @@ gate = `r7_baseline.py gate --tag <arm> --audio <handoff>`: a metric fails when 
 skin +1, SyncNet -0.3, flash +3, whole-frame worst <= 0.2 % / 0 frames over, pressed lips +0.5 s, mismatch +0.5 s, joints +0.05, mouth
 sharpness -0.03, chin flicker / jaw jitter +0.1, ring colour +1 dL, spec pass, speed <= 600 s/video-min) — plus the user WATCH. Git tag
 `r7-quality-baseline` = this commit.
+
+## 13. Phase 2 (speed) — STOPPED by the coordinator (round 7 wrap-up, servers destroyed); WIP state
+
+Harness: `scripts/r7/p2_arm.sh` (one lever arm = generator with VIDEO_EXTRA + m8 composite + `r7_baseline.py gate` + per-stage s/video-min in
+`artifacts/r4m/<arm>/speed.json`). Baseline split on 05 (s/video-min, face): generator stage 340 = UNet 200 + VAE/conditioning 70 +
+mediapipe 24 + load 6 + rest; layer SR + composite 105; face total ~445 (04: 542, 03: 490). Already in place from the pilot: fp16,
+DeepCache interval 5, window batch 2, flash SDPA (inductor compile gave nothing then).
+
+Lever table (05, gate vs tag r7-quality-baseline):
+| lever | arm | generator s/vm | UNet | SR+composite | face total | gate |
+|---|---|---:|---:|---:|---:|---|
+| baseline (m11, 20 steps) | - | 340 | 200 | 105 | 445 | - |
+| steps 14 | s14 | 286 | 145 | 64* | 350 | FAIL: pressed lips 6.95 -> 8.35 s, mismatch 1.84 -> 2.47 |
+| steps 12 | s12 | (killed before scoring) | | | | - |
+| steps 10 | s10 | 240 | 100 | 106 | 346 | FAIL: pressed lips 6.95 -> 8.72 s (all other rows ok; SyncNet 3.47 -> 3.51) |
+| steps 8 | s8 | ~235 | ~85 | 80* | | FAIL: pressed 9.56, flash 6 -> 10 |
+| steps 6 | s6 | 244 | 89 | | | FAIL: pressed 10.26, flash 19, sharpness 0.96 -> 0.90 |
+| layer SR: threaded decode + batch 8 + half-res mask (temporal +-1 kept) | measured alone | - | - | SR 70 s -> 14 s on 05 (-64 s/vm) | | not gated yet (mask max diff 0.07) |
+(* SR timed while another arm shared the GPU.)
+Finding: every step reduction tightens the mouth in dub silence (median opening 0.030 -> 0.022 IOD at 10 steps) = the user's pressed-lips
+complaint, while the speaking windows stay within tolerance down to 10 steps. Built for that: `--steps-silent N` (ls_stable.py: windows with
+>= --silent-frac dub-silent frames keep N steps, the others use --steps; per-group DDIM schedule, DeepCache-compatible) — arms a10 / a12
+were queued, not run. Also built, flag-gated, untested: `FIX30_TD_SHARED=1` (shared source timing / landmark cache, ~18 s per 05 run),
+`P2_PREP_CACHE=1` (shared 25 fps master + MediaPipe prep, ~24 s/vm), `LS_SR_ARGS="..."` in r4_video.sh (SR in line, composite once:
+removes the wasted fix30 composite of the e2e), `--ls-split-snap 16` (dub-silence cuts moved to 16-frame multiples: 79 -> 73 windows,
+17 -> 6 partial on 05, simulated), guidance 1.5 / 1.0 and DeepCache-8 arms (queued, not run). Not started: VAE profiling (70 s/vm:
+2 encodes + 1 decode per window, CPU mask prep), torch.compile re-check, overlap of CPU stages with the next segment's generation.
+Expected stack if the adaptive steps pass: 445 - 70 (steps on speaking windows) - 64 (SR) - 40 (caches) - 15 (snap) ≈ 255 s/vm; the
+≤ 200 target would need the VAE and the no-CFG (guidance 1.0) levers to pass the gate as well.
