@@ -63,7 +63,12 @@ def marked_source(u: dict, p: dict, min_pause: float) -> tuple[str, list[float]]
 def _chat(llm, msgs, max_tokens: int, temperature: float = 0.0) -> str:
     t = time.perf_counter()
     r = llm.create_chat_completion(msgs, max_tokens=max_tokens, temperature=temperature)
-    STATS["qwen_s"] += time.perf_counter() - t
+    dt = time.perf_counter() - t; STATS["qwen_s"] += dt
+    # r7: Qwen time / tokens per caller (candidates / judge = back-translation + score / ...) for the 7B-vs-14B table; no effect on the output
+    import sys as _s
+    k = _s._getframe(1).f_code.co_name; u = r.get("usage") or {}
+    STATS[f"qwen_s_{k}"] = STATS.get(f"qwen_s_{k}", 0.0) + dt; STATS[f"qwen_calls_{k}"] = STATS.get(f"qwen_calls_{k}", 0) + 1
+    STATS["qwen_tok_out"] = STATS.get("qwen_tok_out", 0) + int(u.get("completion_tokens") or 0); STATS["qwen_tok_in"] = STATS.get("qwen_tok_in", 0) + int(u.get("prompt_tokens") or 0)
     return r["choices"][0]["message"]["content"]
 
 
@@ -175,7 +180,27 @@ def _filter_items(items: list[str], source: str, ref: str | None) -> list[str]:
     return out
 
 
+_JUDGE_LLM = {}
+
+
+def _judge_llm(llm):
+    """r7 hybrid arm: DUB_QWEN_JUDGE=14b|7b = the judge (back-translation + score) runs on that Qwen while candidates / translation stay on the main one"""
+    size = os.environ.get("DUB_QWEN_JUDGE")
+    if not size: return llm
+    if size not in _JUDGE_LLM:
+        import glob, pathlib
+        from llama_cpp import Llama
+        m = pathlib.Path(__file__).resolve().parents[2] / "models" / f"qwen2.5-{size}-instruct-gguf"
+        f = sorted(glob.glob(str(m / ("*q5_k_m*.gguf" if size == "14b" else "*q8_0*.gguf"))))[0]
+        _JUDGE_LLM[size] = Llama(model_path=f, n_ctx=4096, n_gpu_layers=-1, verbose=False)
+    return _JUDGE_LLM[size]
+
+
 def judge(llm, src_name: str, tgt_name: str, source: str, cand: str, ref: str | None = None, max_tokens: int = 320) -> dict:
+    return _judge(_judge_llm(llm), src_name, tgt_name, source, cand, ref, max_tokens)
+
+
+def _judge(llm, src_name: str, tgt_name: str, source: str, cand: str, ref: str | None = None, max_tokens: int = 320) -> dict:
     """ONE Qwen call (4 calibration shots): back-translate the candidate into the source language, then list the FACTS it drops / adds and score the
     meaning 1-5 (wording, particles, connectors and fuller phrasing are free). `ref` is kept for the record only (the shots calibrate the score)."""
     def q(src, c):
