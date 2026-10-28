@@ -34,11 +34,10 @@ def blocks_of(L, min_gap_s=0.08, cut_rel_db=-35.0, speech_rel_db=-30.0):
     for a, b in zip(np.flatnonzero(d == 1), np.flatnonzero(d == -1)):
         if bl and a - bl[-1][1] < int(round(min_gap_s / FR)): bl[-1][1] = int(b)
         else: bl.append([int(a), int(b)])
-    out = []   # widen into the neighbouring silence (tails / breaths move with the block), never past the middle of the pause
-    for i, (a, b) in enumerate(bl):
-        lo = (bl[i - 1][1] + a) // 2 if i else 0; hi = (b + bl[i + 1][0]) // 2 if i + 1 < len(bl) else n
-        out.append([max(lo, a - 5), min(hi, b + 5)])
-    return out, act, ref
+    # blocks tile the whole track, cut in the middle of each pause (tails / breaths / the take's own low-level noise move with their block, and a
+    # video where nothing moves is rendered bit for bit as r6)
+    tiles = [[(bl[i - 1][1] + a) // 2 if i else 0, (b + bl[i + 1][0]) // 2 if i + 1 < len(bl) else n] for i, (a, b) in enumerate(bl)]
+    return tiles, bl, act, ref
 
 
 def face_mask(face_npz, n, dur):
@@ -48,15 +47,16 @@ def face_mask(face_npz, n, dur):
 
 
 def plan(B, act, c, n, rule):
-    """B = [[a, b, bound_frames, kind_of_gap_before]] (kind: 'r6' / 'unit' / 'split'); returns (shifts in frames, cost)"""
+    """B = [[a, b, bound_frames, kind_of_gap_before, core_a, core_b]] (tile [a, b) is rendered; gaps / limits use the loud core;
+    kind: 'r6' / 'unit' / 'split'); returns (shifts in frames, cost)"""
     K = max(b[2] for b in B); sh = np.arange(-K, K + 1); dil = 7   # dub speech dilated by 0.15 s (r4_mouth_audio)
     cost = np.full((len(B), len(sh)), np.inf); arg = np.zeros((len(B), len(sh)), int)
-    for i, (a, b, bd, kind) in enumerate(B):
+    for i, (a, b, bd, kind, ca, cb) in enumerate(B):
         m = np.flatnonzero(np.convolve(act[a:b].astype(float), np.ones(2 * dil + 1), "same") > 0) + a
-        ok = (np.abs(sh) <= bd) & (a + sh >= 0) & (b + sh <= n)
+        ok = (np.abs(sh) <= bd) & (ca + sh >= 0) & (cb + sh <= n) & (m.min() + sh >= 0 if len(m) else True) & (m.max() + sh < n if len(m) else True)
         bc = np.array([float(c[m + k].sum()) if o else np.inf for k, o in zip(sh, ok)]) + rule["lam"] * np.abs(sh)
         if i == 0: cost[0] = bc; continue
-        g0 = a - B[i - 1][1]
+        g0 = ca - B[i - 1][5]
         gmin = 0 if kind == "split" else min(g0, rule["gmin"]); gmax = g0 + (rule["split_gap"] if kind == "split" else rule["grow"] if kind == "r6" else rule["grow_unit"])
         for j, k in enumerate(sh):
             if not np.isfinite(bc[j]): continue
@@ -97,7 +97,7 @@ def main():
     ap.add_argument("--splits", choices=["on", "off"], default="on"); a = ap.parse_args()
     W, O = pathlib.Path(a.work).resolve(), pathlib.Path(a.out); O.mkdir(parents=True, exist_ok=True); man = json.loads(pathlib.Path(a.manifest).read_text())
     y, sr = sf.read(str(W / "dubbed_24k.wav"), dtype="float32"); y = y if y.ndim == 1 else y.mean(1)
-    L = frames_db(y, sr); n = len(L); blocks, act, ref = blocks_of(L)
+    L = frames_db(y, sr); n = len(L); blocks, cores, act, ref = blocks_of(L)
     S = np.zeros(n, bool)
     for s in man["speech_intervals"]: S[int(s["start"] / FR):int(np.ceil(s["end"] / FR))] = True
     fv, fvis = face_mask(a.face, n, man["source"]["duration_s"]); w = np.where(fv, 1.0, a.w_off); c = w * (1 - 2 * S.astype(float))
@@ -106,31 +106,34 @@ def main():
         t0, t1 = f0 * FR, f1 * FR; ov = [(min(t1, p["placed"][1]) - max(t0, p["placed"][0]), uid) for uid, p in pls]; o = max(ov, default=(0, None))
         return o[1] if o[0] > 0 else None
     mx, ms = int(round(a.max_shift / FR)), int(round(a.split_shift / FR))
-    B = [[b0, b1, mx, "r6" if i and unit_at(b0, b1) == unit_at(*blocks[i - 1]) and unit_at(b0, b1) is not None else "unit"] for i, (b0, b1) in enumerate(blocks)]
+    B = [[b0, b1, mx, "r6" if i and unit_at(*cores[i]) == unit_at(*cores[i - 1]) and unit_at(*cores[i]) is not None else "unit", *cores[i]] for i, (b0, b1) in enumerate(blocks)]
     rule = {"lam": a.lam, "gmin": int(round(0.15 / FR)), "grow": int(round(a.grow / FR)), "split_gap": int(round(a.split_gap / FR)), "grow_unit": int(round(a.grow_unit / FR))}
     shifts, best = plan(B, act, c, n, rule); base = best; splits = []
     if a.splits == "on" and fv.any():
-        cands = [(f, cls) for f, cls in split_candidates(W / "dubbed_16k.wav", man, L, ref, blocks) if fv[max(0, f - 25):f + 25].mean() > 0.5]
+        cands = [(f, cls) for f, cls in split_candidates(W / "dubbed_16k.wav", man, L, ref, cores) if fv[max(0, f - 25):f + 25].mean() > 0.5]
         for _ in range(a.max_splits):
             trial = None
             for f, cls in cands:
-                i = next((k for k, b in enumerate(B) if b[0] + 10 < f < b[1] - 10), None)
+                i = next((k for k, b in enumerate(B) if b[4] + 10 < f < b[5] - 10), None)
                 if i is None: continue
                 if min(act[B[i][0]:f].sum(), act[f:B[i][1]].sum()) * FR < a.min_piece: continue   # no orphan word: >= min_piece s of speech on both sides
-                B2 = B[:i] + [[B[i][0], f, B[i][2], B[i][3]], [f, B[i][1], ms, "split"]] + B[i + 1:]
+                B2 = B[:i] + [[B[i][0], f, B[i][2], B[i][3], B[i][4], f], [f, B[i][1], ms, "split", f, B[i][5]]] + B[i + 1:]
                 s2, c2 = plan(B2, act, c, n, rule)
                 if trial is None or c2 < trial[0]: trial = (c2, B2, s2, f, cls)
             if trial is None or best - trial[0] < a.split_gain / FR: break
             best, B, shifts = trial[0], trial[1], trial[2]; splits.append([round(trial[3] * FR, 2), trial[4]]); cands = [q for q in cands if q[0] != trial[3]]
-    # render: every block's samples moved by its shift (5 ms fades at the cut points; blocks own disjoint sample ranges)
+    # render: every block's samples moved by its shift (blocks tile the track; 5 ms fades at cut points that move apart)
     z = np.zeros_like(y); h = int(FR * sr); fd = int(0.005 * sr)
-    for (b0, b1, _, _), k in zip(B, shifts):
-        i0, i1 = b0 * h, min(len(y), b1 * h); seg = y[i0:i1].copy()
-        if len(seg) > 2 * fd: seg[:fd] *= np.linspace(0, 1, fd); seg[-fd:] *= np.linspace(1, 0, fd)
-        j0 = max(0, min(len(z) - len(seg), i0 + k * h)); z[j0:j0 + len(seg)] += seg
+    for q, ((b0, b1, *_), k) in enumerate(zip(B, shifts)):
+        i0, i1 = b0 * h, (min(len(y), b1 * h) if q + 1 < len(B) else len(y)); seg = y[i0:i1].copy()
+        if len(seg) > 2 * fd:   # fades only where the neighbour moves differently (a cut point that opens / closes)
+            if q and shifts[q - 1] != k: seg[:fd] *= np.linspace(0, 1, fd)
+            if q + 1 < len(B) and shifts[q + 1] != k: seg[-fd:] *= np.linspace(1, 0, fd)
+        j0 = i0 + k * h; c0 = max(0, -j0); c1 = max(0, j0 + len(seg) - len(z)); seg = seg[c0:len(seg) - c1]; j0 = max(0, j0)
+        z[j0:j0 + len(seg)] += seg
     D0 = act.copy(); D1 = np.zeros(n, bool)
-    for (b0, b1, _, _), k in zip(B, shifts):
-        j0 = max(0, b0 + k); m = act[b0:b1][:max(0, n - j0)]; D1[j0:j0 + len(m)] |= m
+    for (b0, b1, *_), k in zip(B, shifts):
+        ix = np.flatnonzero(act[b0:b1]) + b0 + k; D1[ix[(ix >= 0) & (ix < n)]] = True
     err = lambda D: round(float(((D & ~S) | (S & ~D))[fv].sum() * FR), 2)
     for f in W.iterdir():
         if f.name in ("dubbed_24k.wav", "dubbed_16k.wav") or f.name.endswith(".manifest.json"): continue
@@ -157,7 +160,7 @@ def main():
            "shift_abs_max_s": round(float(np.max(np.abs(shifts))) * FR, 3), "face_visible_frac": fvis,
            "mismatch_face_visible_s_before": err(D0), "mismatch_face_visible_s_after": err(D1), "cost_shift_only": round(base * FR, 2), "cost_new": round(best * FR, 2),
            "params": {k: getattr(a, k) for k in ("max_shift", "split_shift", "lam", "w_off", "grow", "grow_unit", "split_gap", "min_piece", "split_gain", "max_splits", "splits")},
-           "shifts": [[round(b0 * FR, 2), round(b1 * FR, 2), round(k * FR, 2), kind] for (b0, b1, _, kind), k in zip(B, shifts)],
+           "shifts": [[round(ca * FR, 2), round(cb * FR, 2), round(k * FR, 2), kind] for (_, _, _, kind, ca, cb), k in zip(B, shifts)],
            "dub_speech": [[round(p * FR, 2), round(q * FR, 2)] for p, q in zip(np.flatnonzero(d == 1), np.flatnonzero(d == -1))]}
     man["lip_place"] = rep; man["dubbed_track"] = {**man.get("dubbed_track", {}), "lip_placed": True}
     (O / pathlib.Path(a.manifest).name).write_text(json.dumps(man, indent=1, ensure_ascii=False))
