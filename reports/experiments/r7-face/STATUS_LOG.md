@@ -67,3 +67,17 @@ so 03's ~300 px face is NOT downscaled: the softness is the diffusion VAE's outp
 The lips never move with composite flags (0.72-0.78): the detail has to come back on the layer -> `r7_layer_sr.py` (Real-ESRGAN x2, BSD-3,
 models/realesrgan/RealESRGAN_x2plus.pth 64 MB, sha256 49fafd45...266abb; RRDBNet re-implemented in plain torch, `weights_only` load, no
 facexlib / basicsr / detector) on the layer's lips region (hull + 0.5 mw, feathered); 2258 frames in ~2 min on the 5090. Arms `sr`, `sr_tex` pending.
+
+### ESRGAN-on-the-layer arms (03, 28.10 11:00; sharpness bands lips / 0-0.15 / 0.15-0.3 / 0.3-0.5 mw; twitch m5 47.65)
+| arm | lips | 0-0.15 | 0.15-0.3 | 0.3-0.5 | twitch | note |
+|---|---|---|---|---|---|---|
+| m6 | 0.735 | 0.775 | 0.759 | 0.795 | 47.64 | |
+| sr (ESRGAN layer) | 0.771 | 0.761 | 0.684 | 0.771 | 48.38 | the sharpen-auto loop renormalises most of the gain away |
+| sr_tex (+ --tex-tau 1000 --tex-sigma 2.5) | 0.764 | 0.772 | 0.813 | 0.895 | 51.17 | visibly crisper lips + stubble (closeups) |
+| noauto (--sharpen-auto 0) | 0.587 | 0.683 | 0.730 | 0.749 | 50.05 | the raw layer after the composite, no unsharp |
+| sr_noauto | 0.673 | 0.709 | 0.660 | 0.744 | 54.73 | ESRGAN alone: +0.09 on the lips, but per-frame detail flickers (twitch +4.7) |
+| sr_tex_noauto | 0.675 | 0.708 | 0.833 | 0.822 | 51.75 | |
+| tauinf_s25 (no SR) | 0.723 | 0.781 | 0.897 | 0.920 | 45.72 | skin ring from the source texture: twitch BETTER than m5 |
+Reading: the source-texture transfer at tau 1000 / sigma 2.5 is a clean win for the skin ring (keep); ESRGAN gives the lips +0.04-0.09 but
+flickers frame to frame -> next: temporally stabilise the SR detail (flow-aligned average of the added high frequencies over +-1 layer frame)
+or lower its strength, judged on twitch + a half-speed review.
