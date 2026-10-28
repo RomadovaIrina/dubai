@@ -6,12 +6,15 @@ ap = argparse.ArgumentParser(); ap.add_argument("labels", nargs="+"); ap.add_arg
 ap.add_argument("--root", default="/workspace/dub/artifacts/r6f/twitch"); ap.add_argument("--ids", default="01 02 03 04 05")
 a = ap.parse_args(); root = pathlib.Path(a.root); ids = a.ids.split()
 load = lambda lab, i: json.loads((root / lab / f"{i}.twitch.json").read_text()) if (root / lab / f"{i}.twitch.json").exists() else None
-for key in ("twitch_sum", "n_events", "n_events_ge2", "top20_mean", "p99"):
-    print(f"\n**{key}** (lower = better)\n\n| video | " + " | ".join(a.labels) + " |\n|---|" + "---|" * len(a.labels))
+def val(d, key):   # r7 F: skin_sum = the sum over the skin channels only (the paste jumping); the lips channel scales with lip sharpness
+    if key == "skin_sum": return str(round(sum(e["score"] for e in d["events"] if e["channel"] != "lips"), 2))
+    return str(d["summary"][key])
+for key in ("twitch_sum", "skin_sum", "n_events", "n_events_ge2", "top20_mean", "p99"):
+    print(f"\n**{key}** (lower = better" + ("; skin_motion + skin_app events only, not the lips channel" if key == "skin_sum" else "") + ")\n\n| video | " + " | ".join(a.labels) + " |\n|---|" + "---|" * len(a.labels))
     for i in ids:
         row = []
         for lab in a.labels:
-            d = load(lab, i); row.append("-" if d is None else str(d["summary"][key]))
+            d = load(lab, i); row.append("-" if d is None else val(d, key))
         print(f"| {i} | " + " | ".join(row) + " |")
 print("\n**top events** (t s: score channel cause head-speed)")
 for lab in a.labels:
