@@ -167,3 +167,11 @@ the source talks (> 0.05 IOD), total and dub-silent subset. v2 -> v3a / v3b / v3
 04 4.7 -> 3.1 / 2.2 / 2.6 s; SyncNet 05 3.91 -> 3.58 / 4.33 / 3.72, 04 6.18 -> 6.42 / 6.11 / 6.28; twitch 05 17.8 -> 15.6 / 9.8 / 12.5,
 04 36.0 -> 38.8 / 37.9 / 41.2; flash 05 5 -> 6 / 6 / 8, 04 9 -> 16 / 11 / 12. All three reduce the pressed-lips seconds; v3c best on 05,
 v3b / v3c on 04; the longer takes add "open mouth while the dub is silent" (internal pauses, 05 5.0 -> 6.5-8.0 s). User's eye decides.
+
+## 10. m11 = m8 stack + audio-r7-v3a on all 5 (the user's pick), WATCH sbs m8b | m11
+
+05 / 04 = the m8v3a renders; 03 / 01 / 02 = the m8b renders (v3a audio bit-identical to v2 there, verified by cmp). Gate vs m8b
+(`gate_m11_vs_m8b.md`): 03 / 01 / 02 PASS (identical); 05 FAIL on SyncNet dub-speech 3.91 -> 3.58, window joints 0.89 -> 0.95 / LF 0.84 -> 0.90
+and the speed row (500 vs 421 s/video-min, still under 600); 04 FAIL on lip flash strong 9 -> 16. Twitch 05 17.8 -> 15.6, 04 36.0 -> 38.8;
+whole-frame gate PASS all 5. These are the generator's response to the re-taken units (05 units 2-4, 04 unit 2), not a composite change.
+Outbox: `<id>_r7_m11_WATCH.mp4` + `_sbs.mp4` (m8b | m11), `r7_m11_WATCH.md`, `r7_m11_twitch/`, `r7_m11_frame_gate/`.
