@@ -1,6 +1,6 @@
 # r7 m11: WATCH candidate
 
-m11 = the m8 face stack (unchanged) + the audio agent's audio-r7-v3a (longer dub takes where the speaker is on screen; the user's pick among v3a/v3b/v3c). Left m8b (audio v2) | right m11 (audio v3a).
+m11 = the m8 face stack (unchanged) + the audio agent's audio-r7-v3a (longer dub takes where the speaker is on screen; the user's pick among v3a/v3b/v3c; 02 on audio-r7-v3a-all5). Left m8b (audio v2) | right m11 (audio v3a).
 
 Files: `<id>_r7_m11_WATCH.mp4`, `<id>_r7_m11_WATCH_sbs.mp4` (M8B | M11). Gate verdict per video below (rows FAIL / better).
 
@@ -145,8 +145,8 @@ Mouth / dub-audio mismatch (talking mouth while the dub is silent + closed mouth
 Left m8b (audio-r7-v2) | right m11 (audio-r7-v3a: v2 + re-translated / re-taken units where the speaker is on screen and the dub ended
 early; `retake.py`, tempo 1.0). The face stack is unchanged (m6 guards + Real-ESRGAN temporal lips + full-confidence source skin texture +
 texture-mode sanitizer with the rigid fallback). 05 and 04 are the m8v3a renders from the variants WATCH (LatentSync re-run on v3a);
-03, 01, 02 are the m8b renders, because the v3a audio there is bit-identical to v2 (no unit passed the re-take bar) — same files, same
-numbers. Changed sentences: 04 unit 2; 05 units 2, 3, 4 (audio agent's changed_sentences.md).
+03 and 01 are the m8b renders, because the v3a audio there is bit-identical to v2 (no unit passed the re-take bar) — same files, same
+numbers; 02 (no face frames) is the source + the audio-r7-v3a-all5 mix, one re-taken sentence. Changed sentences: 04 unit 2; 05 units 2, 3, 4; 02 one unit.
 Closed mouth while the source talks, dub-silent subset (r7_closed_mouth.py): 05 8.7 -> 6.9 s, 04 4.7 -> 3.1 s. Open mouth while the dub is
 silent rises (05 5.0 -> 7.5 s, 04 1.9 -> 4.1 s: the longer takes' internal pauses, during which the generator keeps the mouth moving).
 Listen / watch (05 | 04): 05 24-25.5 s (the pressed-lips span, now mostly dubbed), 05 units 2-4 (~10-30 s) for the new English; 04 1.5-5.5 s

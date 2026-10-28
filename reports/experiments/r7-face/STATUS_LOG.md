@@ -175,3 +175,6 @@ v3b / v3c on 04; the longer takes add "open mouth while the dub is silent" (inte
 and the speed row (500 vs 421 s/video-min, still under 600); 04 FAIL on lip flash strong 9 -> 16. Twitch 05 17.8 -> 15.6, 04 36.0 -> 38.8;
 whole-frame gate PASS all 5. These are the generator's response to the re-taken units (05 units 2-4, 04 unit 2), not a composite change.
 Outbox: `<id>_r7_m11_WATCH.mp4` + `_sbs.mp4` (m8b | m11), `r7_m11_WATCH.md`, `r7_m11_twitch/`, `r7_m11_frame_gate/`.
+**02 update (audio-r7-v3a-all5):** the all-5 handoff differs from v2 only on 02 (one re-taken sentence; 01/03 identical to v2, 04/05 identical
+to v3a — cmp). 02 has no face frames, so its m11 output is the source + the new mix (r7_e2e, 90 s, no generator); WATCH + sbs regenerated
+for all 5, gate rows unchanged (02 PASS, no sync / flash).

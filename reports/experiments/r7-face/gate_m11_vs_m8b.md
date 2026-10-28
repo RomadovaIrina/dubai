@@ -1,6 +1,6 @@
 # Regression gate: NEW `m11` vs PREV `m8b`
 
-commit 619c6e0
+commit 5c9841b
 
 Face rows `v4 *` are computed on the SAME frames for NEW and PREV (intersection of the frames lip-synced in both); own-frame values: info rows.
 
