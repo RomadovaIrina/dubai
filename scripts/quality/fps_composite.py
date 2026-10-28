@@ -147,7 +147,7 @@ def main() -> int:
     ap.add_argument("--sanitize-mild", type=float, default=0.0, help="r7 F (01 m8 7.6 s: a pursed bilabial flagged as 'collapsed' got frame 188's flat lip "
                     "line, then frame 190 showed the bulge = a one-frame pop): a MILDLY flagged frame (collapse ratio >= this, i.e. its own lip line exists) "
                     "is fixed only when the donated high frequencies correlate with its own on the lip box (grey NCC >= --sanitize-hf-ncc); 0 = off")
-    ap.add_argument("--sanitize-hf-ncc", type=float, default=0.3)
+    ap.add_argument("--sanitize-hf-ncc", type=float, default=0.3); ap.add_argument("--sanitize-replace-below", type=float, default=0.0, help="r7 F: texture mode, but a frame whose collapse ratio is below this is replaced whole (washed-pink blob); 0 = off")
     ap.add_argument("--sanitize-colour", choices=["on", "off"], default="off", help="r3 D, texture mode: inside the flagged frame's lip box also match the "
                     "LUMINANCE mean / contrast (gain 0.7-1.6) of its low frequencies to the neighbours' interpolation (pale lips); per-channel matching over-saturated")
     ap.add_argument("--chin-clip", type=float, default=0.0, help="r4 V (user: 'second / third chin moves like a wave'): with --face-clip, the clip polygon's "
@@ -156,6 +156,9 @@ def main() -> int:
     ap.add_argument("--mouth-region", type=float, default=0.0, help="r4 V task 5 (chin / jaw 'wave': the regenerated chin stubble / skin swims "
                     "frame to frame, 03 68 s): the paste weight is capped to the source lips + the layer's own lips (its jaw drop) dilated by this "
                     "many inter-ocular distances; the edge_px feather stays inside, everything farther (chin, jaw, neck) is the source")
+    ap.add_argument("--mouth-region-closed", type=float, default=0.0, help="r7 F: --mouth-region used while the layer's mouth is closed (opening < --jaw-closed IOD) "
+                    "and the source's is open (> --jaw-open): the generator's closed jaw is pasted with its lips (05 24 s pressed lips); 0 = off")
+    ap.add_argument("--jaw-open", type=float, default=0.05); ap.add_argument("--jaw-closed", type=float, default=0.03); ap.add_argument("--mr-ramp", type=float, default=4.0)
     ap.add_argument("--chin-warp", choices=["on", "off"], default="off", help="r4 V task 5 (with --mouth-region): outside the generated mouth region the "
                     "SOURCE chin is shifted down by the layer's jaw drop (layer lower lip y - source lower lip y, clipped to -0.2..0.5 IOD), full from the lips "
                     "to the chin tip, fading to 0 over 0.25 IOD below the jawline and toward the jaw corners: the dub's jaw motion with the source's skin "
@@ -263,7 +266,7 @@ def main() -> int:
         msk = np.ones(ga.shape, bool); msk[max(0, y0 - Y0):max(0, y1 - Y0), max(0, x0 - X0):max(0, x1 - X0)] = False
         if msk.sum() < 50 or ga[msk].std() < 1e-3 or gb[msk].std() < 1e-3: return None
         return float(np.corrcoef(ga[msk], gb[msk])[0, 1])
-    nguard = 0; nlowconf = 0; nrigid = 0
+    nguard = 0; nlowconf = 0; nrigid = 0; mr_state = [a.mouth_region]; mr_frames = [0]   # r7 F --mouth-region-closed: current radius, frames widened
     if a.sanitize_layer > 0 and mp_ls is not None:   # r3 D: generator outliers (pink blob: the lip line vanishes for 1-3 frames) out of the layer first
         t0 = time.perf_counter(); hf = np.full(nm, np.nan); ct = np.full(nm, np.nan)
         for m_ in range(nm):
@@ -300,7 +303,9 @@ def main() -> int:
                         # disagree by more than --sanitize-tear grey levels (the torn region); soft switch over 4 levels
                         dis_ = cv2.GaussianBlur(np.abs(it_ - rig_).mean(2), (0, 0), 2.0); wr_ = np.clip((dis_ - a.sanitize_tear) / 4.0 + 0.5, 0, 1)[..., None]
                         it_ = it_ + wr_ * (rig_ - it_)
-                    if a.sanitize_mode == "texture":   # own low frequencies (shape, opening) + the neighbours' high frequencies (lip line)
+                    # r7 F (03 37.4 / 37.8 s: a washed-pink lip blob keeps its colour in texture mode because the LF is its own): a STRONGLY
+                    # collapsed frame (ratio < --sanitize-replace-below) takes the whole interpolation; mild ones keep texture mode
+                    if a.sanitize_mode == "texture" and not (a.sanitize_replace_below > 0 and ratio_[i_] < a.sanitize_replace_below):   # own low frequencies (shape, opening) + the neighbours' high frequencies (lip line)
                         own = L[i_].astype(np.float32); sg = a.sanitize_sigma; lo_own = cv2.GaussianBlur(own, (0, 0), sg); lo_it = cv2.GaussianBlur(it_, (0, 0), sg)
                         if a.sanitize_colour == "on" and np.isfinite(mp_ls[i_][tms.LIPS_OUTER]).all():
                             q = mp_ls[i_][tms.LIPS_OUTER, :2]; w_ = q[:, 0].max() - q[:, 0].min()
@@ -614,8 +619,18 @@ def main() -> int:
                 iod = float(np.linalg.norm(lm_mr[33, :2] - lm_mr[263, :2])); hull = cv2.convexHull(np.concatenate(pts_).astype(np.float32))[:, 0]
                 hm = np.ones(aw.shape[:2], np.uint8); cv2.fillPoly(hm, [np.round(hull - [xa, ya]).astype(np.int32)], 0)
                 dist = cv2.distanceTransform(hm, cv2.DIST_L2, 3)   # px outside the lips hull (0 inside)
-                aw = np.minimum(aw, np.clip((a.mouth_region * iod - dist) / max(a.edge_px, 1.0), 0, 1).astype(aw.dtype))
                 lq = lerp(mp_ls, m) if mp_ls is not None else None
+                mr_ = a.mouth_region
+                if a.mouth_region_closed > 0 and lq is not None and np.isfinite(lq[[13, 14]]).all() and np.isfinite(lm_mr[[13, 14]]).all():
+                    # r7 F (05 24-25 s 'glued, pressed lips': the dub is silent, the generator closes the mouth, but the 0.38 IOD region keeps the
+                    # SOURCE's talking, dropped jaw under the closed lips -> lips stretched over an open jaw). When the layer is closed while the
+                    # source holds the mouth open, the paste region widens to --mouth-region-closed so the generator's closed jaw comes with its
+                    # lips; the radius moves by at most 1/--mr-ramp of the difference per frame (no region pop).
+                    os_ = float(np.linalg.norm(lm_mr[13, :2] - lm_mr[14, :2])) / iod; ol_ = float(np.linalg.norm(lq[13, :2] - lq[14, :2])) / iod
+                    tgt_ = a.mouth_region_closed if (os_ > a.jaw_open and ol_ < a.jaw_closed) else a.mouth_region
+                    mr_state[0] += np.clip(tgt_ - mr_state[0], -abs(a.mouth_region_closed - a.mouth_region) / a.mr_ramp, abs(a.mouth_region_closed - a.mouth_region) / a.mr_ramp)
+                    mr_ = float(mr_state[0]); mr_frames[0] += int(mr_ > a.mouth_region + 1e-6)
+                aw = np.minimum(aw, np.clip((mr_ * iod - dist) / max(a.edge_px, 1.0), 0, 1).astype(aw.dtype))
                 if a.chin_warp == "on" and lq is not None and np.isfinite(lq[17]).all() and np.isfinite(lm_mr[[17, 152, 172, 397]]).all():
                     dy = float(np.clip(lq[17, 1] - lm_mr[17, 1], -0.2 * iod, 0.5 * iod))
                     if abs(dy) > 0.5:
@@ -709,7 +724,7 @@ def main() -> int:
     rep = {"input": src, "output": str(outp), "source_frames": len(S), "source_fps_avg": float(rate), "master_frames": nm, "ls_touched_frames": touched,
            "fallback_frames": fails, "fallback_fraction": round(fails / max(len(S), 1), 5), "paste_guard": {"threshold": a.paste_guard, "min_run": a.guard_min_run, "flagged": len(guard_skip), "flagged_frames": sorted(guard_skip)[:300], "skipped": len(guard_applied), "skipped_frames": guard_applied[:300], "ncc_p1": round(float(np.percentile([v for _, v in guard_vals], 1)), 3) if guard_vals else None, "ncc_p5": round(float(np.percentile([v for _, v in guard_vals], 5)), 3) if guard_vals else None, "ncc_min": round(float(min(v for _, v in guard_vals)), 3) if guard_vals else None, "ncc_median": round(float(np.median([v for _, v in guard_vals])), 3) if guard_vals else None}, "boundaries_interpolated": nbnd, "seam_lf_boundaries": nseam, "edge_px_target": a.edge_px,
            "edge_px_measured": {"median": float(np.median(em)) if em else None, "min": min(em) if em else None, "max": max(em) if em else None, "n": len(em)},
-           "silent_master_frames": int(silent.sum()),
+           "silent_master_frames": int(silent.sum()), "mouth_region_closed": {"radius": a.mouth_region_closed, "widened_frames": mr_frames[0]},
            "lip_coverage": (lambda c: {"frames": len(c), "alpha_min_p1": round(float(np.percentile(c[:, 0], 1)), 4), "alpha_min_min": round(float(c[:, 0].min()), 4),
                                        "frames_alpha_below_0_98": int((c[:, 0] < 0.98).sum()), "lips_to_ramp_px_p1": round(float(np.percentile(c[:, 1], 1)), 2),
                                        "lips_to_ramp_px_min": round(float(c[:, 1].min()), 2), "iod_median": round(float(np.nanmedian(c[:, 2])), 1)} if len(c) else None)(np.array(lip_cov, np.float64).reshape(-1, 3)), "args": vars(a), "seconds": times, "s_per_video_min": round(times["total"] / (dur / 60), 1)}
