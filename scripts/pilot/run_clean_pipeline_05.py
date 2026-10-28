@@ -204,7 +204,7 @@ def run_asr(wav16: pathlib.Path, language: str | None, speech: list[dict] | None
     from faster_whisper.audio import decode_audio
     import asr_guard
     import model_cache
-    m = model_cache.get("whisper_asr", lambda: WhisperModel(str(MODELS / "whisper-large-v3"), device=dev(), compute_type=whisper_compute("int8_float16")))
+    m = model_cache.get("whisper_asr", lambda: WhisperModel(str(MODELS / "whisper-large-v3"), device=dev(), compute_type=whisper_compute(ASR_OPTS.get("compute", "int8_float16"))))
     chunks, cuts = [(0.0, None)], []
     if ASR_OPTS["segments"] == "vad" and speech is not None:   # r7 spec 5.2: 45-90 s pieces cut in Silero pauses (one piece = the whole-file call below)
         audio = decode_audio(str(wav16), sampling_rate=16000)
@@ -342,7 +342,11 @@ def load_llm(times: dict):
     if not files:
         raise Blocker(f"Qwen2.5-7B {QWEN_QUANT} GGUF not found under models/ (python scripts/pilot/fetch_09_qwen_quant.py {QWEN_QUANT} --yes)")
     with timed(times, "translation_load"):
-        llm = Llama(model_path=files[0], n_ctx=4096, n_threads=QWEN_THREADS, n_threads_batch=QWEN_THREADS, n_gpu_layers=QWEN_GPU_LAYERS, verbose=False)
+        kw = {}
+        if int(os.environ.get("DUB_QWEN_PLOOKUP", "0")) > 0:   # speed track --qwen-plookup N: prompt-lookup speculative decoding (no extra model; greedy
+            from llama_cpp.llama_speculative import LlamaPromptLookupDecoding   # verification: the same tokens as plain greedy up to last-bit rounding)
+            kw.update(draft_model=LlamaPromptLookupDecoding(num_pred_tokens=int(os.environ["DUB_QWEN_PLOOKUP"])), logits_all=True)   # verification needs every logit
+        llm = Llama(model_path=files[0], n_ctx=4096, n_threads=QWEN_THREADS, n_threads_batch=QWEN_THREADS, n_gpu_layers=QWEN_GPU_LAYERS, verbose=False, **kw)
     return llm, os.path.basename(files[0])
 
 
@@ -876,6 +880,9 @@ def main() -> int:
     ap.add_argument("--asr-hallu-filter", choices=["on", "off"], default="on", help="r7 spec 6.2: drop Whisper segments flagged as hallucinated (no_speech_prob > --asr-hallu-nsp, "
                     "stock subtitle / outro phrase, looped phrase) where Silero VAD covers < --asr-hallu-cov of the span (asr_guard.py); report in manifest asr.hallu_filter")
     ap.add_argument("--asr-hallu-nsp", type=float, default=0.6); ap.add_argument("--asr-hallu-cov", type=float, default=0.5)
+    ap.add_argument("--asr-compute", choices=["int8_float16", "float16"], default="int8_float16", help="faster-whisper compute type of the source ASR. On the RTX 5090 "
+                    "(ctranslate2 4.8.2) int8_float16 loses case / punctuation and some words (05: 'тестим' -> 'с этим'), which moves the sentence segmentation; "
+                    "float16 reproduces the r6v1 transcripts (made with int8_float16 on the r6 server)")
     ap.add_argument("--asr-segments", choices=["off", "vad"], default="off", help="r7 spec 5.2: vad = ASR on 45-90 s pieces cut in Silero pauses >= 0.5 s at <= -40 dBFS "
                     "(off = one whole-file call; a file <= --asr-seg-max is one piece either way)")
     ap.add_argument("--asr-seg-min", type=float, default=45.0); ap.add_argument("--asr-seg-max", type=float, default=90.0)
@@ -928,6 +935,10 @@ def main() -> int:
     ap.add_argument("--stop-after", choices=["none", "audio"], default="none", help="audio = stop after the dubbed track (audio-only candidate: manifest + dubbed_24k/16k.wav, no LatentSync)")
     ap.add_argument("--min-ls-frames", type=int, default=25, help="VALID_FACE runs shorter than this are passed through")
     ap.add_argument("--max-verify-depth", type=int, default=3)
+    ap.add_argument("--tts-fast-t3", choices=["on", "off"], default="off", help="speed track: Chatterbox T3 speech-token decode through a static KV cache + CUDA graphs per "
+                    "length bucket (t3_fast.py; same model, sampling unchanged op for op; takes not bit-identical)")
+    ap.add_argument("--qwen-plookup", type=int, default=0, help="speed track: Qwen prompt-lookup speculative decoding with this many draft tokens (0 = off; "
+                    "llama-cpp-python LlamaPromptLookupDecoding, no extra model)")
     ap.add_argument("--seed", type=int, default=1247)
     ap.add_argument("--video-backend", choices=["baseline", "optimized"], default="optimized",
                     help="baseline = face_aware_latentsync.py functions (insightface classification, sequential windows); "
@@ -974,13 +985,15 @@ def main() -> int:
     global QWEN_GPU_LAYERS, QWEN_QUANT, VAD_DEVICE
     QWEN_GPU_LAYERS = a.qwen_gpu_layers; QWEN_QUANT = a.qwen_quant
     if a.vad_device: VAD_DEVICE = a.vad_device
-    ASR_OPTS.update(hallu_filter=a.asr_hallu_filter, hallu_nsp=a.asr_hallu_nsp, hallu_cov=a.asr_hallu_cov, segments=a.asr_segments, seg_min=a.asr_seg_min,
+    ASR_OPTS.update(compute=a.asr_compute, hallu_filter=a.asr_hallu_filter, hallu_nsp=a.asr_hallu_nsp, hallu_cov=a.asr_hallu_cov, segments=a.asr_segments, seg_min=a.asr_seg_min,
                     seg_max=a.asr_seg_max, seg_pause=a.asr_seg_pause, seg_db=a.asr_seg_db)
     os.environ["DUB_QA_WHISPER_COMPUTE"] = a.qa_whisper_compute
     os.environ["DUB_TTS_TEXT_NORM"] = a.tts_text_norm
     if a.pause_boundary_only == "on": os.environ["DUB_PAUSE_BOUNDARY_ONLY"] = "1"
     if a.close_inside_pauses == "on": os.environ["DUB_CLOSE_INSIDE"] = "1"
     os.environ["DUB_QWEN_SIZE"] = a.qwen_size
+    os.environ["DUB_TTS_FAST_T3"] = "1" if a.tts_fast_t3 == "on" else os.environ.get("DUB_TTS_FAST_T3", "0")
+    if a.qwen_plookup: os.environ["DUB_QWEN_PLOOKUP"] = str(a.qwen_plookup)
     if a.spread_overlap == "on": os.environ["DUB_SPREAD_OVERLAP"] = "1"
     if a.qwen_gpu_layers:
         import llama_cpp

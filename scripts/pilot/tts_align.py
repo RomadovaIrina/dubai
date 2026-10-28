@@ -27,6 +27,14 @@ class CtcAligner:
     def from_qa(cls, qa) -> "CtcAligner":
         return cls(qa.proc, qa.w2v, qa.device)
 
+    @classmethod
+    def standalone(cls, device: str = "cuda") -> "CtcAligner":
+        """The same wav2vec2-base-960h CTC model TtsQA loads, without its Whisper (hush_placed: alignment only)."""
+        from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
+        from tts_qa import MODELS
+        p = str(MODELS / "wav2vec2-base-960h")
+        return cls(Wav2Vec2Processor.from_pretrained(p), Wav2Vec2ForCTC.from_pretrained(p).to(device).eval(), device)
+
     def align(self, y: np.ndarray, sr: int, expected: str) -> list[dict] | None:
         """Word spans (seconds, in the clip's own time base) of `expected` inside `y`; None when the alignment is impossible/implausible."""
         import librosa

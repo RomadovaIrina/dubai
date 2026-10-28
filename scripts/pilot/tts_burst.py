@@ -655,6 +655,9 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
         if dev() == "cuda":   # r3 shared GPU: cast to the first dtype of the ladder now and release the fp32 blocks (-1.4 GB reserved VRAM)
             for mod in (m_.t3, m_.s3gen, m_.ve): mod.to(tts_dtypes(torch)[0])
             empty_cache()
+            if os.environ.get("DUB_TTS_FAST_T3", "0") == "1":   # speed track --tts-fast-t3 on: T3 decode via static KV cache + CUDA graphs (t3_fast.py)
+                from t3_fast import install_fast_t3
+                install_fast_t3(m_)
         _oom_backoff(m_, "generate")
         return m_, m_.conds
     t0 = time.perf_counter(); m, builtin = model_cache.get("chatterbox_v3", _load_tts)

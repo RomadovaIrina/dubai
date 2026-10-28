@@ -29,13 +29,13 @@ def main():
     y, sr = sf.read(P / "dubbed_24k.wav", dtype="float32"); z = y.copy()
     h = int(0.01 * sr); db = 20 * np.log10(np.sqrt((y[:len(y) // h * h].reshape(-1, h) ** 2).mean(1)) + 1e-9); ref = np.percentile(db[db > -80], 95)
     loud = lambda s, e: (db[int(s * 100):int(e * 100)] > ref - a.db_below).sum() * 0.01
-    from tts_qa import TtsQA
     from tts_align import CtcAligner
-    al = CtcAligner.from_qa(TtsQA()); rep = []
+    al = None; rep = []   # loaded only when the dub has re-taken pieces (wav2vec2 CTC alone: TtsQA's Whisper was 2-3 s of load per video for nothing)
     for u in man["units"]:
         for p in (u.get("alignment") or {}).get("placements") or []:
             if not (p.get("r7_retake") and p.get("placed") and p.get("text")): continue
             t0, t1 = p["placed"]; i0, i1 = int(t0 * sr), int(t1 * sr); seg = z[i0:i1].copy()
+            al = al or CtcAligner.standalone()
             sp = al.align(seg, sr, p["text"])
             if not sp: rep.append({"unit": u["id"], "text": p["text"], "skipped": "align"}); continue
             ws = p["text"].split(); after = {k for k, w in enumerate(ws) if re.search(r"[,.;:!?]$", w)} if len(ws) == len(sp) else set()   # phrase boundaries only

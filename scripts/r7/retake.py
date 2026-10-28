@@ -15,7 +15,7 @@
   5. the old take's span is faded out (20-ms sin ramps), the new pieces added (10-ms edge fades); manifest: translation / tts_parts / placements
      updated, u["r7_retake"] = the record. Every other unit's audio is bit-identical.
     python scripts/r7/retake.py --work <r6 work dir> --out <new work dir> --face <mediapipe npz> --faith <r7v2 metrics json> --src16 <source 16k wav>"""
-import argparse, copy, json, pathlib, re, sys, time
+import argparse, copy, json, os, pathlib, re, sys, time
 import numpy as np, soundfile as sf
 HERE = pathlib.Path(__file__).resolve().parent
 for p in (HERE.parent / "pilot", HERE.parent / "quality", HERE): sys.path.insert(0, str(p))
@@ -110,7 +110,19 @@ def main():
     fv, _ = lip_place.face_mask(a.face, n, D)
     S = np.zeros(n, bool)
     for s in man["speech_intervals"]: S[int(s["start"] / FR):int(np.ceil(s["end"] / FR))] = True
-    faith = {r["id"]: r for r in (json.loads(pathlib.Path(a.faith).read_text()).get("faith") or {}).get("rows", [])} if a.faith else {}
+    llm = None
+    if a.faith == "judge":   # speed track R7_LEAN: the r5_faith judge here (same prompt, budget, retry, 14B) on the pipeline's own text; no separate pass
+        os.environ.setdefault("DUB_QWEN_SIZE", "14b")
+        import run_clean_pipeline_05 as rp
+        rp.QWEN_GPU_LAYERS = -1; llm, _ = rp.load_llm({}); faith = {}
+        for u in man["units"]:
+            en = " ".join(t["text"] for t in u.get("tts_parts") or []) or u.get("translation_fitted") or u.get("translation", "")
+            mt = 200 + 14 * (len(u["text"].split()) + len(en.split())); j = dt.judge(llm, "Russian", "English", u["text"], en, max_tokens=mt)
+            if j.get("unparsable") is not None: j = dt.judge(llm, "Russian", "English", u["text"], en, max_tokens=2 * mt); j["retried"] = True
+            faith[u["id"]] = {"id": u["id"], "source": u["text"], "english": en, **j}
+        (O / "faith.json").write_text(json.dumps(list(faith.values()), indent=1, ensure_ascii=False))
+    else:
+        faith = {r["id"]: r for r in (json.loads(pathlib.Path(a.faith).read_text()).get("faith") or {}).get("rows", [])} if a.faith else {}
     words_all = [w for sg in man["asr"]["segments"] for w in sg.get("words") or []]
     units = man["units"]; pls_all = [(u, p) for u in units for p in (u.get("alignment") or {}).get("placements", []) if p.get("placed")]
     syl = sum(dt.syllables(p["text"]) for _, p in pls_all); spk_s = sum(p["group_s"] for _, p in pls_all); wrd = sum(dt.words_of(p["text"]) for _, p in pls_all)
@@ -149,7 +161,7 @@ def main():
     import run_clean_pipeline_05 as rp
     import llama_cpp
     if not llama_cpp.llama_supports_gpu_offload(): sys.exit(f"CPU llama_cpp ({llama_cpp.__file__}): PYTHONPATH=third_party/llama_cuda")
-    rp.QWEN_GPU_LAYERS = -1; llm, qname = rp.load_llm({})
+    if llm is None: rp.QWEN_GPU_LAYERS = -1; llm, qname = rp.load_llm({})
     from chatterbox.mtl_tts import ChatterboxMultilingualTTS
     from chatterbox_fp16 import install_speech_token_guard
     from tts_qa import TtsQA, norm
@@ -157,6 +169,9 @@ def main():
     import ne_guard
     import r4_pause_logic as pl
     m = ChatterboxMultilingualTTS.from_local(HERE.parents[1] / "models" / "chatterbox", "cuda", t3_model="v3"); install_speech_token_guard(m)
+    if os.environ.get("DUB_TTS_FAST_T3", "0") == "1":   # speed track: same switch as the pipeline's --tts-fast-t3
+        from t3_fast import install_fast_t3
+        install_fast_t3(m)
     qa = TtsQA(); aligner = CtcAligner.from_qa(qa)
     refs = rp.speaker_references(units, man["diarization"]["turns"], pathlib.Path(a.src16), O); cur_spk = None
     z = y.copy(); h = int(FR * sr)
