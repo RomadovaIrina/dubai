@@ -20,7 +20,10 @@ for id in ${*:-03 01 05 02 04}; do
     if [ -n "${DFK:-}" ]; then   # r8 F: layer tone deflicker (inner mouth + lower face), cached per DFK label: DFK=dfk1 DFK_ARGS="--sigma 1.5 ..."
       LSD=${LS%.mp4}_$DFK.mp4; [ -f $LSD ] || { python scripts/r8/r8_layer_deflicker.py --ls $LS --lm ${LS%.mp4}.mediapipe.npz --out $LSD ${DFK_ARGS:-} | grep "^=="; cp ${LS%.mp4}.mediapipe.npz ${LSD%.mp4}.mediapipe.npz; }; LS=$LSD
     fi
-    FIX30_LS=$LS FIX30_MASTER_FPS=25 FIX30_TD=$B/$ST/timing FIX30_MODE=r3fix FIX30_THREADS=${FIX30_THREADS:-16} FIX30_ARGS="$V1 $EXTRA" bash scripts/quality/r3_fix30.sh $M $TAG > $B/$TAG/${id}.fix30.log 2>&1
+    FBX=""; if [ -n "${FB:-}" ]; then   # r8 F: confidence fallback to the source mouth, FB=<label> FB_ARGS="--thr-wash ..." (score on the raw layer, cached)
+      FBN=$W/${id}_${ST}_25fps_fb_$FB.npz; [ -f $FBN ] || python scripts/r8/r8_fallback.py --work $W --ls $W/${id}_${ST}_25fps_ls_raw.mp4 --lm $W/${id}_${ST}_25fps_ls_raw.mediapipe.npz --out $FBN ${FB_ARGS:-} | grep "^=="; FBX="--fallback $FBN"
+    fi
+    FIX30_LS=$LS FIX30_MASTER_FPS=25 FIX30_TD=$B/$ST/timing FIX30_MODE=r3fix FIX30_THREADS=${FIX30_THREADS:-16} FIX30_ARGS="$V1 $EXTRA $FBX" bash scripts/quality/r3_fix30.sh $M $TAG > $B/$TAG/${id}.fix30.log 2>&1
     F=$W/${id}_${ST}_25fps_$TAG.mp4; [ -f $F ] || { echo "FAIL composite $id (see $B/$TAG/${id}.fix30.log)"; continue; }
     mv $F $B/$TAG/${id}_$TAG.mp4; mv $W/${id}_${ST}_25fps_$TAG.manifest.json $B/$TAG/${id}_$TAG.manifest.json; mv $W/${id}_${ST}_25fps_$TAG.fps_composite.json $B/$TAG/${id}_$TAG.fps_composite.json 2>/dev/null; mv $W/${id}_${ST}_25fps_$TAG.log $B/$TAG/${id}_$TAG.log 2>/dev/null
   else   # no LatentSync frames (02): the m6 output is the source + audio already

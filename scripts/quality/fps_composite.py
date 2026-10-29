@@ -216,6 +216,7 @@ def main() -> int:
                     "LatentSync layer towards the source frame, estimated in the mask border band above the mouth-corner line (lips excluded; normalised "
                     "Gaussian, sigma --colour-sigma x mouth width) and extended over the whole pasted region; upper = estimated on ALL mask skin above the "
                     "mouth-corner line (alpha > 0.05: nose base, cheeks, upper-lip skin), not only the band")
+    ap.add_argument("--fallback", default="", help="r8 F: npz with per-master-frame fb (0..1, r8_fallback.py): master weight x (1 - fb) = crossfade to the source mouth")
     ap.add_argument("--colour-sigma", type=float, default=0.6); ap.add_argument("--colour-max", type=float, default=20.0)
     ap.add_argument("--sharpen-auto", type=float, default=0.0, help="r3: per-VIDEO unsharp amounts (constant -> no flicker) so that the LatentSync layer's sharpness "
                     "(mean |Laplacian|) reaches TARGET x the source's, calibrated on 48 LatentSync frames against the source frame each was generated from "
@@ -241,6 +242,11 @@ def main() -> int:
     if L[0].shape[:2] != (H, W): raise SystemExit(f"LatentSync frames {L[0].shape[:2]} != source {(H, W)}")
     mp = np.load(cfs.run_mediapipe(work / "master_25fps.mp4", work / "master_mediapipe.npz"))["lm"][:nm]
     wm = master_weights(man, nm, a.xfade_frames, a.xfade_shape)
+    if a.fallback:   # r8 F: confidence fallback (r8_fallback.py): the generator's mouth crossfades back to the source where the artefact score is high
+        fb_ = np.load(a.fallback)["fb"][:nm]; fb_ = np.pad(fb_, (0, nm - len(fb_))); wm0_ = wm.copy(); wm = (wm * (1 - fb_)).astype(np.float32)
+        times["fallback"] = {"file": a.fallback, "ls_frames": int((wm0_ > 0).sum()), "fallback_weight_pct": round(100 * float((wm0_ - wm).sum()) / max(1.0, float(wm0_.sum())), 2),
+                             "frames_gt05": int(((wm0_ > 0) & (fb_ > 0.5)).sum())}
+        print(f"  fallback: {times['fallback']}", flush=True)
     dets = cfs.ls_detections(mp, W, H, calib=True); dets = faa.smooth_detections(dets, 2)
     bb = np.array([d[0] if d[0] is not None else (np.nan,) * 4 for d in dets], np.float64)
     for k in range(4):   # mask smoothing +-3 (MouthOnlyRunner.boxes) on the master grid
