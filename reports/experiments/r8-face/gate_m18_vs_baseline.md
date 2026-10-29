@@ -44,9 +44,32 @@
 | 05 | colour_worst_1s_dL | 1.65 | 1.43 | +1.0 | ok |
 | 05 | spec_pass | 1 | 1 | -0 | ok |
 | 05 | s_per_video_min | 414.4 | 437.8 | <= 600 | ok |
+| 04 | sync_speech | 6.421 | 5.116 | -0.3 | **FAIL** |
+| 04 | flash_strong | 16 | 3 | +3 | ok |
+| 04 | frame_gate_worst_pct | 0.0 | 0.0 | +0.2 | ok |
+| 04 | frame_gate_over | 0 | 0 | +0 | ok |
+| 04 | pressed_lips_s | 3.13 | 2.93 | +0.5 | ok |
+| 04 | mouth_audio_mismatch_s | 0.73 | 0.7 | +0.5 | ok |
+| 04 | joints_resid | 0.926 | 0.945 | +0.05 | ok |
+| 04 | joints_lowfreq | 0.901 | 0.912 | +0.05 | ok |
+| 04 | sharp_mouth | 0.927 | 0.949 | -0.03 | ok |
+| 04 | chin_flicker | 0.952 | 0.97 | +0.1 | ok |
+| 04 | jaw_jitter | 0.976 | 0.991 | +0.1 | ok |
+| 04 | colour_worst_1s_dL | 1.41 | 1.46 | +1.0 | ok |
+| 04 | spec_pass | 1 | 1 | -0 | ok |
+| 04 | s_per_video_min | 482.2 | 409.9 | <= 600 | ok |
+| 02 | flash_strong | 0 | 0 | +3 | ok |
+| 02 | frame_gate_worst_pct | 0.0 | 0.0 | +0.2 | ok |
+| 02 | frame_gate_over | 0 | 0 | +0 | ok |
+| 02 | pressed_lips_s | 0.0 | 0.0 | +0.5 | ok |
+| 02 | mouth_audio_mismatch_s | 0.0 | 0.0 | +0.5 | ok |
+| 02 | colour_worst_1s_dL | 0 | 0 | +1.0 | ok |
+| 02 | spec_pass | 1 | 1 | -0 | ok |
+| 02 | s_per_video_min | 32.9 | 46.4 | <= 600 | ok |
 
 ## Verdict: **FAIL**
 - 01 sync_speech: 4.061 vs baseline 6.654
 - 03 sync_speech: 6.098 vs baseline 7.861
 - 03 mouth_audio_mismatch_s: 1.87 vs baseline 0.77
 - 05 joints_lowfreq: 1.054 vs baseline 0.901
+- 04 sync_speech: 5.116 vs baseline 6.421
