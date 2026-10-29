@@ -96,5 +96,5 @@ bash scripts/r8/sep_watch.sh sepH8p 02 04 05
 In the one-command chain: `REMIX_ARGS="<r8v4 flags> --sep htdemucs --bed-pauses source --bed-noise-back on --src-duck-db -3"` with `DUB_ALLOW_NC_BED=1` and the PYTHONPATH above.
 
 ## Cost
-- Disk: 60 → about 67 GB of 150 GB (stems ~1.5 GB, NC weights 0.7 GB, mixes ~3 GB).
-- Download: about 0.8 GB (weights + pip).
+- Disk: server 60 → 81 GB of 150 GB (incl. the audio agent's runs); this work = 18 GB: 17 variant mix dirs /workspace/dub/artifacts/r4a/sep* ~15 GB (all but sepS0 / sepH8p deletable), stems 1.5 GB, NC weights 0.7 GB, outbox 0.2 GB.
+- Download: 0.79 GB (eth0 rx; weights 0.72 GB + pip 4 MB).
