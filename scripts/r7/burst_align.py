@@ -156,8 +156,13 @@ def main():
             uo, un = rec["uncovered_old_new"]
             if un <= uo - 0.3 and new_cost <= rec["old_cost"] + 0.5: rec["accepted"] = True
             if un > uo + 0.05: rec["accepted"] = False
+        if a.natural_cuts == "on":   # r8 v3: a placement split at an unnatural point (04 v3a "Today we are / starting", "make life / a lot easier") is replaced
+            bad_old = [q for q in range(len(ps) - 1) if (ps[q]["text"].split() or [""])[-1].lower().strip(",.;:!?") in NOCUT
+                       or pl.classify(((ps[q]["text"].split() or [""])[-1], None, False), ((ps[q + 1]["text"].split() or [""])[:1] or [""]))[1] <= 0]
+            rec["unnatural_old_splits"] = len(bad_old)
             so, sn = rec["over_silence_old_new"]
             if a.sil_ratio > 0 and sn - so > 0.1 and (uo - un) < a.sil_ratio * (sn - so): rec["accepted"] = False; rec["skipped"] = "over_silence"
+        if a.natural_cuts == "on" and rec.get("unnatural_old_splits") and (K, nw) in dp: rec["accepted"] = True; rec["forced"] = "unnatural old split"   # after every other guard
         if rec["accepted"]:
             counts = [sum(tc[c["j0"]:c["j1"]]) for c in chunks]   # cut_parts counts aligner tokens
             if sum(counts) != len(spans): rec["accepted"] = False; rec["skipped"] = "count"; rep["units"].append(rec); continue
