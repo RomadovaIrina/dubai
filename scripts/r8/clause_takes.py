@@ -29,8 +29,11 @@ PREP = {"on", "in", "at", "for", "with", "from", "about", "among", "around", "in
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--work", required=True); ap.add_argument("--out", required=True); ap.add_argument("--src16", required=True)
     ap.add_argument("--face"); ap.add_argument("--short-s", type=float, default=0.4); ap.add_argument("--min-gain", type=float, default=0.2); ap.add_argument("--seed", type=int, default=11)
+    ap.add_argument("--cfgs", default="0.5,0.3", help="speed: Chatterbox cfg weights tried; with --lazy-cfg on the later ones only when the first finds no accepted layout")
+    ap.add_argument("--lazy-cfg", choices=["on", "off"], default="off")
+    ap.add_argument("--plan-top", type=int, default=0, help="speed: > 0 = only the K layouts best on ESTIMATED clause lengths are synthesised (0 = all)")
     ap.add_argument("--max-cuts", type=int, default=3); ap.add_argument("--tmin", type=float, default=0.9); a = ap.parse_args()
-    import retake, r4_pause_logic as pl
+    import retake, r4_pause_logic as pl, dur_translate as dt
     W, O = pathlib.Path(a.work).resolve(), pathlib.Path(a.out); O.mkdir(parents=True, exist_ok=True)
     mp = next(W.glob("*_r4a.manifest.json")); man = json.loads(mp.read_text()); D = man["source"]["duration_s"]
     y, sr = sf.read(str(W / "dubbed_24k.wav"), dtype="float32"); y = y if y.ndim == 1 else y.mean(1); z = y.copy(); n = int(D / FR) + 1; h = int(FR * sr)
@@ -68,6 +71,9 @@ def main():
         from tts_qa import TtsQA
         from tts_align import CtcAligner, cut_parts, hush_gaps
         m = ChatterboxMultilingualTTS.from_local(HERE.parents[1] / "models" / "chatterbox", "cuda", t3_model="v3"); install_speech_token_guard(m)
+        if os.environ.get("DUB_TTS_FAST_T3", "0") == "1":   # speed track: the same switch as the pipeline's --tts-fast-t3 / retake
+            from t3_fast import install_fast_t3
+            install_fast_t3(m)
         qa = TtsQA(); aligner = CtcAligner.from_qa(qa)
         refs = rp.speaker_references(units, man["diarization"]["turns"], pathlib.Path(a.src16), O); cur = None; cache = {}
     for r in rows:
@@ -99,34 +105,48 @@ def main():
                 if not spans: continue
                 wv, _ = hush_gaps(wv, m.sr, spans); seg = cut_parts(wv, m.sr, spans, [len(spans)], pre_s=0.12, post_s=0.12)[0][0]; res = (seg, q["whisper"][:120]); break
             cache[key] = res; return res
+        layouts = []
         for k in range(1, min(a.max_cuts, len(cuts_ok)) + 1):
             for cs in itertools.combinations(cuts_ok, k):
                 bnd = [0, *cs, nw]; cl = [" ".join(words[bnd[q]:bnd[q + 1]]) for q in range(len(bnd) - 1)]
                 if any(len(c.split()) < 2 and not (q == 0 and re.sub(r"[^\w']", "", c.lower()) in INTRO) for q, c in enumerate(cl)): continue
                 say = [(c[0].lower() + c[1:] if q and not re.match(r"(I\b|I'|[A-Z]{2})", c) else c) for q, c in enumerate(cl)]
                 say = [s if q == len(say) - 1 or re.search(r"[,.;:!?]$", s) else s + "," for q, s in enumerate(say)]
-                nc = len(cl)
-                if nc > len(B): continue
-                for cfg in (0.5, 0.3):
+                if len(cl) <= len(B): layouts.append((cl, say, len(cl)))
+
+        def evaluate(lens, nc):   # the best run assignment / tempo for clause lengths `lens`: (cost, placed, detail, tempi)
+            bestrun = None
+            for st in itertools.combinations(range(len(B)), nc):   # clause q starts on source piece st[q]; leading pieces may stay without dub
+                rb = [*st, len(B)]; runs = [(B[rb[q]][0], B[rb[q + 1] - 1][1]) for q in range(nc)]   # (04 u1: "Город" 0.3 s, then "Сочи", "28 августа")
+                for tem in itertools.product(TEMPI, repeat=nc):   # per clause tempo 1.0 / 0.95 / 0.9 (slower only where it covers more than it costs)
+                    placed, t = [], None
+                    for (r0, r1), L, tp in zip(runs, lens, tem):
+                        t0 = r0 if t is None else max(t + 0.12, min(r0, t + srcsil(t, r0) + 0.35))
+                        placed.append((t0, t0 + L / tp)); t = t0 + L / tp
+                    if t > r["win"] + 0.05:   # r8 v4: the last clause may start up to 0.25 s before its burst to end before the next sentence (04 u1 "on August twenty-eight." vs u2 at 18.8)
+                        sh_ = t - (r["win"] + 0.05); lo_ = placed[-2][1] + 0.12 if len(placed) > 1 else 0.0
+                        if sh_ > 0.25 or placed[-1][0] - sh_ < lo_: continue
+                        placed[-1] = (placed[-1][0] - sh_, placed[-1][1] - sh_); t = placed[-1][1]
+                    c_, d_ = cost_of(placed, B[0][0], B[-1][1])
+                    c_ += sum(abs(1 - tp_) * (q[1] - q[0]) for tp_, q in zip(tem, placed))   # tempo cost as burst_align
+                    if bestrun is None or c_ < bestrun[0]: bestrun = (c_, placed, d_, list(tem))
+            return bestrun
+
+        if a.plan_top > 0 and len(layouts) > a.plan_top:   # speed: rank the layouts on estimated clause lengths (the voice's syllable rate in this take), synthesise the best only
+            ps_ = [p for p in u["alignment"]["placements"] if p.get("placed")]
+            rate = sum(dt.syllables(p["text"]) for p in ps_) / max(0.3, sum(p.get("group_s") or (p["placed"][1] - p["placed"][0]) for p in ps_))
+            est = []
+            for lay in layouts:
+                br = evaluate([dt.syllables(c) / max(rate, 1e-3) + 0.24 for c in lay[0]], lay[2])
+                if br: est.append((br[0], lay))
+            rec_plan = len(layouts); layouts = [x[1] for x in sorted(est, key=lambda x: x[0])[:a.plan_top]]
+        for cl, say, nc in layouts:
+                for cfg in [float(x) for x in a.cfgs.split(",")]:
+                    if a.lazy_cfg == "on" and cfg != float(a.cfgs.split(",")[0]) and best is not None and best[0] <= r["base"] - a.min_gain: break
                     segs = [take(s, cfg) for s in say]
                     if any(s is None for s in segs): continue
                     lens = [len(s[0]) / m.sr for s in segs]
-                    # runs of source pieces per clause: contiguous partition of B into nc runs, closest run lengths to the clause lengths
-                    bestrun = None
-                    for st in itertools.combinations(range(len(B)), nc):   # clause q starts on source piece st[q]; leading pieces may stay without dub
-                        rb = [*st, len(B)]; runs = [(B[rb[q]][0], B[rb[q + 1] - 1][1]) for q in range(nc)]   # (04 u1: "Город" 0.3 s, then "Сочи", "28 августа")
-                        for tem in itertools.product(TEMPI, repeat=nc):   # per clause tempo 1.0 / 0.95 / 0.9 (slower only where it covers more than it costs)
-                            placed, t = [], None
-                            for (r0, r1), L, tp in zip(runs, lens, tem):
-                                t0 = r0 if t is None else max(t + 0.12, min(r0, t + srcsil(t, r0) + 0.35))
-                                placed.append((t0, t0 + L / tp)); t = t0 + L / tp
-                            if t > r["win"] + 0.05:   # r8 v4: the last clause may start up to 0.25 s before its burst to end before the next sentence (04 u1 "on August twenty-eight." vs u2 at 18.8)
-                                sh_ = t - (r["win"] + 0.05); lo_ = placed[-2][1] + 0.12 if len(placed) > 1 else 0.0
-                                if sh_ > 0.25 or placed[-1][0] - sh_ < lo_: continue
-                                placed[-1] = (placed[-1][0] - sh_, placed[-1][1] - sh_); t = placed[-1][1]
-                            c_, d_ = cost_of(placed, B[0][0], B[-1][1])
-                            c_ += sum(abs(1 - tp_) * (q[1] - q[0]) for tp_, q in zip(tem, placed))   # tempo cost as burst_align
-                            if bestrun is None or c_ < bestrun[0]: bestrun = (c_, placed, d_, list(tem))
+                    bestrun = evaluate(lens, nc)
                     if bestrun and (best is None or bestrun[0] < best[0]): best = (bestrun[0], bestrun[1], bestrun[2], cl, say, segs, cfg, bestrun[3])
         rec = {"id": u["id"], "en": " ".join(words), "old_cost": round(r["base"], 2), "old_detail": r["det"], "natural_cuts": [words[j - 1] + " | " + words[j] for j in cuts_ok]}
         ok = best is not None and (best[0] <= r["base"] - a.min_gain or (r["det"]["uncovered_s"] - best[2]["uncovered_s"] >= 0.3 and best[0] <= r["base"]))   # a real coverage gain at no extra cost (04 u2 "Today,")

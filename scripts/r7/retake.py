@@ -149,7 +149,7 @@ def main():
     if a.faith == "judge":   # speed track R7_LEAN: the r5_faith judge here (same prompt, budget, retry, 14B) on the pipeline's own text; no separate pass
         os.environ.setdefault("DUB_QWEN_SIZE", "14b")
         import run_clean_pipeline_05 as rp
-        rp.QWEN_GPU_LAYERS = -1; llm, _ = rp.load_llm({}); faith = {}
+        rp.QWEN_GPU_LAYERS = -1; llm, qname = rp.load_llm({}); faith = {}
         for u in man["units"]:
             en = " ".join(t["text"] for t in u.get("tts_parts") or []) or u.get("translation_fitted") or u.get("translation", "")
             mt = 200 + 14 * (len(u["text"].split()) + len(en.split())); j = dt.judge(llm, "Russian", "English", u["text"], en, max_tokens=mt)
@@ -191,7 +191,7 @@ def main():
     if a.select_only or not rows:
         (O / "retake.json").write_text(json.dumps({**rep, "selected": [{k: v for k, v in r.items() if k != "u"} | {"id": r["u"]["id"]} for r in rows]}, indent=1, ensure_ascii=False)); return
     # models: Qwen 14B (GPU), Chatterbox, TTS QA (Whisper + wav2vec2 CTC)
-    import os, torch
+    import torch   # os: module level (the --faith judge path uses it earlier in main)
     os.environ.setdefault("DUB_QWEN_SIZE", "14b")
     import run_clean_pipeline_05 as rp
     import llama_cpp
