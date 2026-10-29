@@ -102,12 +102,14 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--work", required=True); ap.add_argument("--out", required=True); ap.add_argument("--face"); ap.add_argument("--faith")
     ap.add_argument("--src16", required=True); ap.add_argument("--short-s", type=float, default=0.6); ap.add_argument("--min-gain", type=float, default=0.3)
     ap.add_argument("--scales", default="1.0,1.15,1.3"); ap.add_argument("--max-tts", type=int, default=3); ap.add_argument("--seed", type=int, default=7)
-    ap.add_argument("--select-only", action="store_true"); a = ap.parse_args()
+    ap.add_argument("--select-only", action="store_true")
+    ap.add_argument("--cover-all", choices=["on", "off"], default="off", help="r8 --cover-all on (management on final_r7 02 / 05: the dub keeps disappearing): off-screen source speech counts like face-visible speech"); a = ap.parse_args()
     import lip_place, dur_translate as dt
     W, O = pathlib.Path(a.work).resolve(), pathlib.Path(a.out); O.mkdir(parents=True, exist_ok=True)
     mp = next(W.glob("*_r4a.manifest.json")); man = json.loads(mp.read_text()); D = man["source"]["duration_s"]
     y, sr = sf.read(str(W / "dubbed_24k.wav"), dtype="float32"); y = y if y.ndim == 1 else y.mean(1); n = int(D / FR) + 1
     fv, _ = lip_place.face_mask(a.face, n, D)
+    if a.cover_all == "on": fv[:] = True   # r8: the dub speaks whenever the source speaks, on screen or not (02 has no face at all)
     S = np.zeros(n, bool)
     for s in man["speech_intervals"]: S[int(s["start"] / FR):int(np.ceil(s["end"] / FR))] = True
     llm = None

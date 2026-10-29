@@ -30,7 +30,8 @@ def atempo(seg, sr, t):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--work", required=True); ap.add_argument("--out", required=True); ap.add_argument("--face")
     ap.add_argument("--tmin", type=float, default=0.92); ap.add_argument("--tmax", type=float, default=1.08); ap.add_argument("--min-gain", type=float, default=0.2)
-    ap.add_argument("--min-face", type=float, default=0.5); a = ap.parse_args()
+    ap.add_argument("--min-face", type=float, default=0.5)
+    ap.add_argument("--cover-all", choices=["on", "off"], default="off", help="r8 --cover-all on (management on final_r7 02 / 05: the dub keeps disappearing): off-screen source speech counts like face-visible speech"); a = ap.parse_args()
     import lip_place, retake
     from tts_qa import TtsQA, norm
     from tts_align import CtcAligner, cut_parts
@@ -39,6 +40,7 @@ def main():
     mp = next(W.glob("*_r4a.manifest.json")); man = json.loads(mp.read_text()); D = man["source"]["duration_s"]
     y, sr = sf.read(str(W / "dubbed_24k.wav"), dtype="float32"); y = y if y.ndim == 1 else y.mean(1); n = int(D / FR) + 1
     fv, _ = lip_place.face_mask(a.face, n, D); S = np.zeros(n, bool)
+    if a.cover_all == "on": fv[:] = True   # r8: off-screen source speech is covered too
     for s in man["speech_intervals"]: S[int(s["start"] / FR):int(np.ceil(s["end"] / FR))] = True
     words_all = [w for sg in man["asr"]["segments"] for w in sg.get("words") or []]
     qa = TtsQA(); aligner = CtcAligner.from_qa(qa); units = man["units"]; z = y.copy(); rep = {"tmin": a.tmin, "tmax": a.tmax, "units": []}
