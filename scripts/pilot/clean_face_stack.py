@@ -371,6 +371,9 @@ def banned_files() -> list:
 def assert_clean_tree() -> None:
     """Fail LOUDLY when a banned weight file is reachable (r3 D, 19.10: download_models.sh had re-fetched HDEMUCS on this server)."""
     hits = banned_files()
+    if hits and nc_allowed():   # r8 F (29.10, USER DECISION: the old NC face stack is back for experiments, licence risk accepted and logged)
+        print("[clean] DUB_ALLOW_NC=1: banned weight files present and ALLOWED for this run (deliberate licence deviation, r8): " + ", ".join(hits), flush=True)
+        return
     if hits:
         raise SystemExit("LICENCE GUARD: banned (non-commercial / unlicensed) weight files present, move them to /workspace/dub/quarantine_nc/:\n  "
                          + "\n  ".join(hits))

@@ -260,14 +260,36 @@ def main() -> int:
         if not getattr(runner, "deferred", False): raise SystemExit("--dump-ls-raw needs --mouth-only-pasteback on --codeformer-scope mouth")
         import hashlib, numpy as np
         import face_aware_latentsync as _fa
-        _mf = prep.frames if prep is not None else _fa.read_frames(work / "master_25fps.mp4")
-        _h = [hashlib.md5(f.tobytes()).hexdigest() for f in _mf]; _idx = {}; _comp = runner.composite
-        for i, hh in enumerate(_h): _idx.setdefault(hh, []).append(i)
+        # r8 F: without the MediaPipe prep (--face-stack insightface) the 25 fps master is written by process_video AFTER this point, in work/video/:
+        # the master frames + their hashes are loaded lazily, on the first composite call
+        _mf = prep.frames if prep is not None else []; _h = []; _idx = {}; _comp = runner.composite; _thumb = []
+        def _load_master():
+            if not _mf:
+                mp_ = next((q for q in (work / "video" / "master_25fps.mp4", work / "master_25fps.mp4", base_work / "video" / "master_25fps.mp4") if q.exists()), None)
+                if mp_ is None: raise RuntimeError("--dump-ls-raw: no 25 fps master found")
+                _mf.extend(_fa.read_frames(mp_))
+            if not _h:
+                _h.extend(hashlib.md5(f.tobytes()).hexdigest() for f in _mf)
+                for i, hh in enumerate(_h): _idx.setdefault(hh, []).append(i)
         def _composite(outs, originals, boxes=None):   # segment start = the master position whose frames match (repeated frames: all of them must match)
+            _load_master()
             oh = [hashlib.md5(np.ascontiguousarray(o).tobytes()).hexdigest() for o in originals]
             st = next((i for i in _idx.get(oh[0], []) if _h[i:i + len(oh)] == oh), None) if oh else None
+            swap = False
+            if st is None and len(originals):   # r8 F: the InsightFace / CodeFormer path hands the frames over differently decoded or channel-swapped:
+                # nearest 32 x 32 thumbnail (both channel orders), confirmed on the segment's first frames
+                import cv2 as _cv
+                if not _thumb: _thumb.append(np.stack([_cv.resize(f, (32, 32), interpolation=_cv.INTER_AREA).astype(np.float32) for f in _mf]))
+                T = _thumb[0]; best = None
+                for sw in (False, True):
+                    q = [_cv.resize(np.ascontiguousarray(o[..., ::-1] if sw else o), (32, 32), interpolation=_cv.INTER_AREA).astype(np.float32) for o in originals[:min(8, len(originals))]]
+                    d0 = np.abs(T - q[0]).mean((1, 2, 3)); i0 = int(np.argmin(d0))
+                    if i0 + len(q) <= len(T):
+                        d = float(np.mean([np.abs(T[i0 + k] - q[k]).mean() for k in range(len(q))]))
+                        if best is None or d < best[0]: best = (d, i0, sw)
+                if best is not None and best[0] < 2.0: _, st, swap = best; print(f"  [dump-ls-raw] segment start {st} by thumbnail match (mad {best[0]:.2f}, channel swap {swap})", flush=True)
             if st is None: raise RuntimeError("--dump-ls-raw: LS segment start not found among the master frames")
-            for k, o in enumerate(outs): raw_ls[st + k] = o.copy()
+            for k, o in enumerate(outs): raw_ls[st + k] = (o[..., ::-1] if swap else o).copy()
             return _comp(outs, originals, boxes)
         runner.composite = _composite
     cf_runner = None
@@ -289,6 +311,7 @@ def main() -> int:
         with rp.timed(times, "dump_ls_raw"):
             raw_path = out.with_name(out.stem + "_ls_raw.mp4") if a.dump_ls_raw == "on" else pathlib.Path(a.dump_ls_raw); w = iio.get_writer(str(raw_path), fps=25, codec="libx264rgb", macro_block_size=None, pixelformat="rgb24",
                                                                                 ffmpeg_params=["-crf", "0", "-preset", "veryfast"], ffmpeg_log_level="error")
+            _load_master()
             for i, f in enumerate(_mf): w.append_data((raw_ls.get(i, f))[:, :, ::-1])
             w.close()
         man["ls_raw"] = {"path": str(raw_path), "ls_frames": len(raw_ls), "master_frames": len(_mf)}; del raw_ls

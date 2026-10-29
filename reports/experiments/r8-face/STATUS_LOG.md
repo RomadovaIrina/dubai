@@ -62,3 +62,15 @@ Evidence in git:
 - So it never helped lip-sync; it changes the look (lip / teeth texture).
 Restoring it (downloading the weights + unlocking assert_clean_tree under DUB_ALLOW_NC=1) was BLOCKED by this session's permission check. It
 needs the user's own go-ahead in the F session. Not done.
+
+## 8. DELIBERATE LICENCE DEVIATION (29.10, the user in the F session: "Yes, restore it"; the licence risk is accepted by the user)
+The old NC face stack is restored for experiments, behind DUB_ALLOW_NC=1 only (the defaults stay clean; without the env var assert_clean_tree
+still fails on the files below):
+- CodeFormer (S-Lab License 1.0, NON-COMMERCIAL): third_party/CodeFormer/weights/CodeFormer/codeformer.pth (sczhou/CodeFormer v0.1.0 release,
+  377 MB) + facelib detection_Resnet50_Final.pth (110 MB) + parsing_parsenet.pth (85 MB, CC BY-NC-SA).
+- InsightFace buffalo_l (NON-COMMERCIAL research only): third_party/latentsync/checkpoints/auxiliary/models/buffalo_l (deepinsight/insightface
+  v0.7 release, 341 MB).
+Code: clean_face_stack.assert_clean_tree() lets them through only under DUB_ALLOW_NC=1 (and prints the deviation); candidate_video_stage
+--dump-ls-raw loads the 25 fps master lazily (on the InsightFace path the master is written after the hook) + thumbnail fallback match.
+m14 = cand5 flags (--codeformer optimized --codeformer-w 1.0 --codeformer-scope mouth --face-stack insightface) on audio-r8-v4 + the m13b
+composite (fb6 + dfk2). The dumped layer is CodeFormer-restored (restore_frames runs before the mouth-only composite).
