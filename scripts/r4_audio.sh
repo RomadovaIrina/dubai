@@ -29,6 +29,8 @@ one() {
     python -c "import sys; sys.path.insert(0,'scripts/pilot'); import clean_face_stack as c, pathlib; c.run_mediapipe(pathlib.Path('$src'), pathlib.Path('$A/sep/$id/source_mediapipe.npz'))" > /dev/null 2>&1
     python scripts/r7/lip_place.py --work $W --out $O/placed/$id --manifest $(ls $W/${id}_*.manifest.json | head -1) --face $A/sep/$id/source_mediapipe.npz ${LIP_ARGS:-} > $O/runs/${id}.place.log 2>&1 || { echo "FAIL place $id"; return; }
     W=$O/placed/$id; fi
+  if [ "${PHRASE_FIT:-off}" = on ]; then   # r8 v4: every placed piece re-timed as a whole (tempo 0.9-1.1, start +-0.5 s) to cover the source speech (scripts/r8/phrase_fit.py)
+    python scripts/r8/phrase_fit.py --placed $W --out $O/pfit/$id > $O/runs/${id}.pfit.log 2>&1 && W=$O/pfit/$id || echo "WARN phrase_fit $id"; fi
   t_place=$(date +%s.%N)
   if [ "${HUSH_PLACED:-off}" = on ]; then   # r7_audio_v3a.1: non-word TTS material at re-taken piece edges -> -30 dB, timing kept (scripts/r7/hush_placed.py)
     python scripts/r7/hush_placed.py --placed $W --out $O/hushed/$id > $O/runs/${id}.hush.log 2>&1 || { echo "FAIL hush $id"; return; }
