@@ -312,11 +312,13 @@ def main():
         rec["accepted"] = bool(ok); rec["seconds"] = round(time.perf_counter() - t_start, 1)
         if ok:
             cst, c, parts, placed, bb, sw_, pcs = best
-            a0, a1 = span_of(u); i0, i1 = int((a0 - 0.03) * sr), int((a1 + 0.03) * sr); old = z[i0:i1].copy()
-            L = lambda x: float(np.percentile(20 * np.log10(np.sqrt((x[:len(x) // h * h].reshape(-1, h) ** 2).mean(1)) + 1e-9), 95))
+            a0, a1 = span_of(u); i1 = min(len(z), int((a1 + 0.03) * sr)); i0 = min(max(0, int((a0 - 0.03) * sr)), i1); old = z[i0:i1].copy()   # r8: clipped to the track (01 seeds +1: the old span ran past its end)
+            L = lambda x: float(np.percentile(20 * np.log10(np.sqrt((x[:len(x) // h * h].reshape(-1, h) ** 2).mean(1)) + 1e-9), 95)) if len(x) >= h else -60.0   # r8: an old span shorter than one frame (01, seeds +1)
             gain = 10 ** ((L(old) - L(np.concatenate([p[0] for p in parts]))) / 20)
-            k = int(0.02 * sr); g = np.zeros(i1 - i0); g[:k] = 1 - ramp(k); g[-k:] = ramp(k)   # old take out: 1 -> 0 over 20 ms at its head, 0 -> 1 after its tail
-            z[i0:i1] = old * g
+            k = int(0.02 * sr)
+            if i1 - i0 > 2 * k:   # old take out: 1 -> 0 over 20 ms at its head, 0 -> 1 after its tail
+                g = np.zeros(i1 - i0); g[:k] = 1 - ramp(k); g[-k:] = ramp(k); z[i0:i1] = old * g
+            elif i1 > i0: z[i0:i1] = 0.0
             for (seg, *_), (t0, t1) in zip(parts, placed):
                 j0 = int(t0 * sr); s_ = seg * gain; f = int(0.01 * sr); s_[:f] *= ramp(f); s_[-f:] *= ramp(f)[::-1]
                 z[j0:j0 + len(s_)] += s_[:max(0, len(z) - j0)]

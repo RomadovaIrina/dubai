@@ -96,6 +96,17 @@ wins, "Let's test out this video recording format as well.", judged 4 at selecti
 04 faith 5.0 in r8b1 vs 4.8 in r8b5 with identical code and seeds.
 AB for the ear: `outbox/{04,05}_audio_r8b5_WATCH_AB_prev-then-new.mp4` (A = audio-r8-v4, B = r8b5).
 
+### Envelope gate (3 sequential draws: seeds as r8v4, +1, +2; `scripts/r8/envelope_gate.py`, `envelope_gate_r8b5.md`)
+
+A build fails an axis only when worse than the WORST of the 3 sequential draws by more than the tolerance (faith 0.05, coverage / gap 0.3 s,
+W1 0.05 s, dub over silence 0.5 s, WER 0.01, cut-word ends / inserted gaps / dead air 0). r8b5: 2 FAIL rows of 45, the rest inside or better:
+- 05 coverage (source speaks, dub silent, spans > 0.3 s) 5.22 s vs 3.6 / 4.1 / 4.3 (the u0 candidate flip); 05 faith 4.43 is inside
+  (draw 3 = 4.0);
+- 01 inserted mid-sentence gaps 1 vs 0 / 0 / 0: one 0.4 s pause inside a Chatterbox take at 0:58.4 (unit 14), not a cut.
+- better than every draw: 02 WER 0.006, 03 dub over silence 9.8 s, 04 gap excess 0.8 s, 05 WER 0.0.
+Fixed on the way (pre-existing, seed-dependent, sequential too): retake crashed when a unit's old span was shorter than one frame or ran
+past the end of the track (01 with seeds + 1).
+
 ## Where the rest goes (r8b5, 175 s/video-min)
 
 - Qwen 14B: the duration-aware candidates + a judge call per candidate (pipeline), the faith judge + candidates + judges (retake); now the
@@ -103,6 +114,13 @@ AB for the ear: `outbox/{04,05}_audio_r8b5_WATCH_AB_prev-then-new.mp4` (A = audi
 - the pipeline's batches are small (2-4 takes per round): each unit's selection runs on its own with Qwen in between.
 - S3Gen per take (~0.25 s), the TTS QA (Whisper + CTC) per take, the chain (~19).
 - Next levers: units' selections concurrently (bigger batches), batched / speculative Qwen judging, batched S3Gen.
+
+## Noted for later (quality lever, not done)
+
+Quality swings with the seed about as much as with any lever (the sequential draws above). With batching, extra takes per unit are cheap
+(the decode step costs about the same for 2 or 32 rows), so a cheap quality win is MORE SEED DIVERSITY per unit: K seeds of the same text
+in one batch, picked by the metrics the pipeline already uses (QA key, the duration dry-run cost / coverage, then the judge), instead of the
+first passing seed. It changes the selection, so it needs its own gate against the envelope.
 
 ## Reading (lever runs above)
 
