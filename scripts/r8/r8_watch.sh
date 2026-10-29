@@ -20,7 +20,11 @@ for id in "$@"; do
   off=$(python3 -c "import subprocess;d=float(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','csv=p=0','$t/a.mp4']));print(round(d+1,2))")
   python scripts/r8/pacing.py --run $PREV/$id --id $id --label $PVER --face $A/sep/$id/source_mediapipe.npz --out /workspace/dub/r8a/pacing/prev_$id > /dev/null 2>&1
   python scripts/r8/coverage.py --run $PREV/$id --id $id --label prev --face $A/sep/$id/source_mediapipe.npz --out /workspace/dub/r8a/cov/prev_$id > /dev/null 2>&1
+  python scripts/r8/cuts.py --run $PREV/$id --id $id --label $PVER --out /workspace/dub/r8a/cuts/prev_$id > /dev/null 2>&1
+  python scripts/r8/cuts.py --run $A/$NEW/$id --id $id --label $VER --out $A/$NEW/cov/cuts_$id > /dev/null 2>&1
   python scripts/r8/listen.py --id $id --ver $VER --prev /workspace/dub/r8a/cov/prev_$id.json --new $A/$NEW/cov/cov_$id.json \
-    --pace-prev /workspace/dub/r8a/pacing/prev_$id.json --pver $PVER --pace-new $A/$NEW/cov/pace_$id.json --offset $off > $OUT/${id}_audio_${VER}_listen.md
+    --pace-prev /workspace/dub/r8a/pacing/prev_$id.json --pver $PVER --pace-new $A/$NEW/cov/pace_$id.json --offset $off \
+    --cuts-prev /workspace/dub/r8a/cuts/prev_$id.json --cuts-new $A/$NEW/cov/cuts_$id.json \
+    --man-prev $(ls $PREV/$id/${id}_r4b.manifest.json) --man-new $A/$NEW/$id/${id}_r4b.manifest.json > $OUT/${id}_audio_${VER}_listen.md
   rm -rf $t; echo "WATCH $id -> $OUT/${id}_audio_${VER}_WATCH_AB_prev-then-new.mp4 (B starts at $off s)"
 done

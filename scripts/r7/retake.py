@@ -26,6 +26,8 @@ def ramp(n):
     return np.sin(np.linspace(0, np.pi / 2, n)) ** 2
 
 
+NOCUT = {"the", "a", "an", "to", "of", "in", "on", "at", "for", "with", "from", "by", "and", "or", "but", "our", "my", "their", "your", "his", "her", "its",
+         "we", "i", "they", "he", "she", "is", "are", "was", "were", "be", "will", "would", "can", "have", "has", "very", "just", "really", "that", "which", "who", "this", "these"}
 FUNC = {"the", "a", "an", "and", "or", "but", "to", "of", "in", "on", "at", "for", "with", "we", "i", "it", "that", "this", "so", "is", "are", "was", "be", "our", "my", "you", "they", "he", "she", "as", "by", "from", "which", "who"}
 DET_KIND = re.compile(r"\b(this|that|what|a|the|any|some|every|which|these|those)\s+(kind|sort)\s+of\b", re.I)
 
@@ -106,6 +108,7 @@ def main():
     ap.add_argument("--budget-scales", default="1.15,1.3,1.5", help="r8 v2: whole-sentence word budgets x the old sentence's words")
     ap.add_argument("--cap-scale", type=float, default=1.0, help="r8 v2: word cap = this x the source time at this voice's rate")
     ap.add_argument("--min-piece", type=float, default=0.3, help="r8 v2: source pieces shorter than this join a neighbour")
+    ap.add_argument("--natural-cuts", choices=["on", "off"], default="off", help="r8 v3 (user on r8v1: 'I'm saying ..... the phrase', words cut off): cuts only at punctuation / clause starts or a real quiet take pause >= 0.15 s, never after a function word; an inserted gap <= the source pause + 0.35 s")
     ap.add_argument("--cover-all", choices=["on", "off"], default="off", help="r8 --cover-all on (management on final_r7 02 / 05: the dub keeps disappearing): off-screen source speech counts like face-visible speech"); a = ap.parse_args()
     import lip_place, dur_translate as dt
     W, O = pathlib.Path(a.work).resolve(), pathlib.Path(a.out); O.mkdir(parents=True, exist_ok=True)
@@ -240,10 +243,14 @@ def main():
                 if sum(counts) != len(spans) or min(counts) < 1: continue
                 pw = [words[sum(counts[:k]):sum(counts[:k + 1])] for k in range(len(counts))]
                 if len(counts) > 1 and any(len(x) == 1 and re.sub(r"[^\w']", "", x[0].lower()) in FUNC for x in pw): continue   # a lone "The" / "and" at a pause
-                parts = cut_parts(wv, m.sr, spans, counts, tight_inner=True); placed, t = [], None   # placed apart: no gap murmur cut off into silence
-                for (seg, s0, s1, _), b in zip(parts, bb):
-                    t0 = b[0] if t is None else max(b[0], t + 0.12); placed.append((round(t0, 3), round(t0 + len(seg) / m.sr, 3))); t = placed[-1][1]
                 cuts = np.cumsum(counts)[:-1]
+                if a.natural_cuts == "on" and any(raw[e - 1].lower().strip(",.;:!?") in NOCUT or not (pl.classify((raw[e - 1], None, False), (raw[e],))[1] > 0 or spans[e]["start"] - spans[e - 1]["end"] >= 0.15)
+                                                  for e in cuts if e < len(raw) and e < len(spans)): continue   # r8 v3: natural cuts only
+                parts = cut_parts(wv, m.sr, spans, counts, pre_s=0.12 if a.natural_cuts == "on" else 0.06, post_s=0.12 if a.natural_cuts == "on" else 0.08, tight_inner=True); placed, t = [], None   # placed apart: no gap murmur cut off into silence
+                for (seg, s0, s1, _), b in zip(parts, bb):
+                    t0 = b[0] if t is None else max(b[0], t + 0.12)
+                    if a.natural_cuts == "on" and t is not None: t0 = max(t + 0.12, min(t0, t + float((~S)[int(t / FR):int(b[0] / FR)].sum() * FR) + 0.35))   # gap <= source pause + 0.35
+                    placed.append((round(t0, 3), round(t0 + len(seg) / m.sr, 3))); t = placed[-1][1]
                 inner = sum(1 for e in cuts if e < len(raw) and pl.classify((raw[e - 1], None, False), (raw[e],))[1] <= 0)   # r6 pb1 boundary? (punctuation / clause start)
                 if placed[-1][1] > r["win"] + 0.05: continue   # never into the next unit's take (two voices at once)
                 cst, det = cost_of(placed, bb, r["win"]); one = sum(1 for k_ in counts if k_ == 1) if len(counts) > 1 else 0

@@ -27,6 +27,9 @@ for id in $IDS; do
   if [ "${R8_CLOSE:-off}" = on ]; then   # v2: the take's inner pauses where the source talks closed, the piece slowed to keep its span (scripts/r8/close_inner.py)
     python scripts/r8/close_inner.py --work $W --out $S/ci/$id --tmin ${R8_TMIN:-0.9} > $S/ci_$id.log 2>&1 && W=$S/ci/$id || echo "WARN close_inner $id (see $S/ci_$id.log)"
   fi
+  if [ "${R8_SOFTEN:-off}" = on ]; then   # v3: abrupt word ends / starts in the take softened (scripts/r8/soften_edges.py)
+    python scripts/r8/soften_edges.py --work $W --out $S/se/$id > $S/se_$id.log 2>&1 && W=$S/se/$id || echo "WARN soften $id (see $S/se_$id.log)"
+  fi
   t3=$(date +%s.%N); ln -sfn $W $S/mix_src/$id
   python3 -c "import json,sys; t=[float(x) for x in sys.argv[1:]]; json.dump({'retake':t[1]-t[0],'burst_align':t[2]-t[1],'close_inner':t[3]-t[2]},open('$S/$id.steps.json','w'))" $t0 $t1 $t2 $t3
   echo "== $id src $(( $(date +%s) - s )) s"

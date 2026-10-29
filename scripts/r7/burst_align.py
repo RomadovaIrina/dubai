@@ -35,6 +35,7 @@ def main():
     ap.add_argument("--min-face", type=float, default=0.5)
     ap.add_argument("--min-piece", type=float, default=0.3, help="r8 v2: source pieces shorter than this join a neighbour (0.2: 05 u3 'Вот,' 0.26 s keeps its own 'Well,')")
     ap.add_argument("--sil-ratio", type=float, default=0.0, help="r8 v2: > 0 = a coverage gain must be >= this x the added dub-over-source-silence (03: 7.0 -> 10.2 s in r8v1)")
+    ap.add_argument("--natural-cuts", choices=["on", "off"], default="off", help="r8 v3 (user on r8v1: 'I'm saying ..... the phrase', words cut off): cuts only at punctuation / clause starts or a real quiet take pause >= 0.15 s, never after a function word; an inserted gap <= the source pause + 0.35 s")
     ap.add_argument("--cover-all", choices=["on", "off"], default="off", help="r8 --cover-all on (management on final_r7 02 / 05: the dub keeps disappearing): off-screen source speech counts like face-visible speech"); a = ap.parse_args()
     import lip_place, retake
     from tts_qa import TtsQA, norm
@@ -86,11 +87,21 @@ def main():
         keep_w = [k_ for k_, x in enumerate(ws_) if x]; words_tok = tc; spans_w = [ws_[k_] for k_ in keep_w]; words = [words[k_] for k_ in keep_w]; tc = [tc[k_] for k_ in keep_w]
         nw, K = len(words), len(B)
         okcut = [j == 0 or j == nw or pl.classify((words[j - 1], None, False), (words[j],))[1] > 0 for j in range(nw + 1)]
+        if a.natural_cuts == "on":   # r8 v3: a cut needs punctuation / a clause start or a >= 0.15 s take pause, a quiet point there, and no function word before it
+            hh = int(0.005 * sr); Lr = 20 * np.log10(np.sqrt((reg[:len(reg) // hh * hh].reshape(-1, hh) ** 2).mean(1)) + 1e-9); rf = float(np.percentile(Lr[Lr > -90], 95)) if (Lr > -90).any() else 0.0
+            def natural(j):
+                if j == 0 or j == nw: return True
+                e_, s_ = spans_w[j - 1]["end"], spans_w[j]["start"]; q = Lr[int(e_ * sr / hh):max(int(e_ * sr / hh) + 1, int((s_ + 0.02) * sr / hh))]
+                quiet = len(q) and float(q.min()) <= rf - 35
+                return bool(quiet) and (okcut[j] or s_ - e_ >= 0.15) and re.sub(r"[^\w']", "", words[j - 1].lower()) not in NOCUT
+            natcut = [natural(j) for j in range(nw + 1)]
         func = lambda j0, j1: j1 - j0 == 1 and re.sub(r"[^\w']", "", words[j0].lower()) in retake.FUNC
 
         def group(j0, j1, k0, k1, start_min):   # words [j0, j1) on pieces [k0, k1): (cost, tempo, t0, t1)
             d = spans_w[j1 - 1]["end"] - spans_w[j0]["start"] + 0.14; T = B[k1 - 1][1] - B[k0][0]
             t = min(a.tmax, max(a.tmin, d / T)); L = d / t; t0 = max(B[k0][0], start_min); t1 = t0 + L
+            if a.natural_cuts == "on" and j0 > 0:   # r8 v3: the gap inserted after the previous chunk <= the source's own pause there + 0.35 s
+                le_ = start_min - 0.12; t0 = max(start_min, min(t0, le_ + sil(le_, B[k0][0]) + 0.35)); t1 = t0 + L
             limit = B[k1][0] - 0.1 if k1 < K else win
             if t1 > limit + 0.02: return None
             unc = max(0.0, fs(B[k0][0], B[k1 - 1][1]) - fs(t0, t1))
@@ -113,7 +124,8 @@ def main():
                 for k1 in range(k + 1, K + 1):
                     for j1 in range(j + 1, nw + 1):
                         if func(j, j1) and nw > 1: continue   # a lone "The" / "and" at a pause
-                        if a.cover_all == "on" and j1 < nw and re.sub(r"[^\w']", "", words[j1 - 1].lower()) in NOCUT: continue   # r8: no pause after "we" / "the" / "have" ("Here we | have a")
+                        if a.cover_all == "on" and j1 < nw and re.sub(r"[^\w']", "", words[j1 - 1].lower()) in NOCUT: continue
+                        if a.natural_cuts == "on" and j1 < nw and not natcut[j1]: continue   # r8: no pause after "we" / "the" / "have" ("Here we | have a")
                         g = group(j, j1, k, k1, le + (0.12 if j else 0.0))
                         if g is None: continue
                         cc = c0 + g[0] + (0.8 if j1 < nw and not okcut[j1] else 0.0) + (0.5 if j1 - j == 1 and nw > 1 else 0.0)
@@ -149,7 +161,7 @@ def main():
         if rec["accepted"]:
             counts = [sum(tc[c["j0"]:c["j1"]]) for c in chunks]   # cut_parts counts aligner tokens
             if sum(counts) != len(spans): rec["accepted"] = False; rec["skipped"] = "count"; rep["units"].append(rec); continue
-            parts = cut_parts(reg, sr, spans, counts)
+            parts = cut_parts(reg, sr, spans, counts, pre_s=0.12, post_s=0.12, tight_inner=True) if a.natural_cuts == "on" else cut_parts(reg, sr, spans, counts)
             k = int(0.02 * sr); g_ = np.zeros(i1 - i0); g_[:k] = 1 - retake.ramp(k); g_[-k:] = retake.ramp(k); z[i0:i1] = z[i0:i1] * g_
             newp = []
             for c, (seg, *_) in zip(chunks, parts):
