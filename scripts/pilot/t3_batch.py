@@ -168,7 +168,7 @@ def generate_batch(m, items: list[dict], **kw) -> list:
     return [vocode(m, it, d) for it, d in zip(items, decode_batch(m, items, **kw))]
 
 
-def ladder_batch(m, jobs: list[list[dict]], assess):
+def ladder_batch(m, jobs: list[list[dict]], assess, ctx=None):
     """the QA retry ladders of many takes at once, with the SAME selection as the sequential loop
         take = None
         for entry in ladder: wav = generate(entry); key = assess(...); (take = this if take is None or key < take key); if not key[0]: break
@@ -176,9 +176,11 @@ def ladder_batch(m, jobs: list[list[dict]], assess):
     assess(job, r, item, wav) -> (key, payload); returns per job (wav, payload, key) of the chosen take, or None for an empty ladder"""
     best = [None] * len(jobs); active = [j for j, lad in enumerate(jobs) if lad]; r = 0
     while active:
-        items = [jobs[j][r] for j in active]; decs = decode_batch(m, items); nxt = []
+        items = [jobs[j][r] for j in active]; nxt = []
+        with (ctx() if ctx else torch.inference_mode()): decs = decode_batch(m, items)
         for j, it, d in zip(active, items, decs):
-            wav = vocode(m, it, d); key, pay = assess(j, r, it, wav)
+            with (ctx() if ctx else torch.inference_mode()): wav = vocode(m, it, d)   # ctx = the caller autocast (generate ran under it); assess runs outside it
+            key, pay = assess(j, r, it, wav)
             if best[j] is None or key < best[j][2]: best[j] = (wav, pay, key)
             if key[0] and r + 1 < len(jobs[j]): nxt.append(j)
         active = nxt; r += 1

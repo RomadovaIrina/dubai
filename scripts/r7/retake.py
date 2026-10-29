@@ -240,14 +240,29 @@ def main():
             cur_spk = u["speaker"]
         kept = [dict(c, cfg=w) for c in kept[:a.max_tts] for w in (0.5, 0.3)]   # 0.3 = Chatterbox's slower, more deliberate delivery (no atempo)
         rec["candidates"] += [c for c in kept if c["cfg"] == 0.3]
-        for c in kept:
+        def ladder_of(c):   # the candidate's QA ladder and its "names heard" check (shared by the sequential loop and the batched path)
             ents = [e for e in (u.get("ne") or []) if re.search(r"\b" + re.escape(e["english"]) + r"\b", c["en"], re.I)]
             toks = c["en"].split(); names = [re.sub(r"[^\w'-]", "", t) for k_, t in enumerate(toks) if k_ and t[:1].isupper() and not re.search(r"[.!?]$", toks[k_ - 1])]
             unheard_of = lambda wh: [w for w in names if w.lower() not in FUNC and len(w) >= 3 and not ne_guard.heard(w, wh) and not any(ne_guard.heard(e, wh) for e in ents if w.lower() in e["english"].lower())] \
                 + [e["english"] for e in ents if not ne_guard.heard(e, wh)]   # 04: "Sochi" synthesised as "Soki"
             ladder = [(0, 0.8, -1), (1, 0.8, -1), (2, 0.6, -1)] + ([(3 + k, 0.8, k) for k in range(3)] if any(e.get("respellings") for e in ents) else [])   # then the NE respellings
-            take = None
-            for soff, temp, rk in ladder:
+            return ents, unheard_of, ladder
+        batched = {}
+        if os.environ.get("DUB_TTS_BATCH", "0") == "1" and kept:   # r8 speed: every candidate ladder decoded together, round by round (t3_batch.ladder_batch:
+            import t3_batch                                         # the same texts, seeds, temperatures, cfg and selection as the loop below)
+            lads = [ladder_of(c) for c in kept]
+            jobs = [[dict(text=ne_guard.apply(c["en"], ents, rk), seed=a.seed + 100 * u["id"] + 7919 * soff, temperature=temp, cfg_weight=c["cfg"]) for soff, temp, rk in lad]
+                    for c, (ents, _, lad) in zip(kept, lads)]
+            def assess(j, r_, it, wav):
+                if wav is None: return (True, float("inf")), (None, {"bad": True, "score": float("inf"), "whisper": "", "unheard": [], "said": it["text"]})
+                wv = wav.detach().float().cpu()[0].numpy().astype(np.float32); q = qa.assess(it["text"], wv, m.sr, "en"); un = lads[j][1](q["whisper"])
+                return (q["bad"] or bool(un), q["score"]), (wv, {**q, "unheard": un, "said": it["text"]})
+            for j, b in enumerate(t3_batch.ladder_batch(m, jobs, assess, ctx=lambda: torch.autocast("cuda", dtype=torch.float16))):
+                batched[j] = (b[1][0], b[1][1], b[2])
+        for ci, c in enumerate(kept):
+            ents, unheard_of, ladder = ladder_of(c)
+            take = batched.get(ci)
+            for soff, temp, rk in (ladder if take is None else []):
                 say = ne_guard.apply(c["en"], ents, rk); torch.manual_seed(a.seed + 100 * u["id"] + 7919 * soff)
                 with torch.autocast("cuda", dtype=torch.float16):
                     wav = m.generate(say, language_id="en", temperature=temp, cfg_weight=c["cfg"])
@@ -255,7 +270,9 @@ def main():
                 key = (q["bad"] or bool(un), q["score"])
                 if take is None or key < take[2]: take = (wv, {**q, "unheard": un, "said": say}, key)
                 if not key[0]: break
-            wv, q, _ = take; c["qa"] = {"bad": q["bad"], "score": q["score"], "whisper": q["whisper"][:200], "said": q["said"]}
+            wv, q, _ = take
+            if wv is None: c["rejected"] = "tts_empty"; continue
+            c["qa"] = {"bad": q["bad"], "score": q["score"], "whisper": q["whisper"][:200], "said": q["said"]}
             if q["bad"]: c["rejected"] = "tts_qa"; continue
             if q["unheard"]: c["rejected"] = f"name not heard {q['unheard']}"; continue
             spans = aligner.align(wv, m.sr, q["said"])   # the respelled form when a respelling was spoken
