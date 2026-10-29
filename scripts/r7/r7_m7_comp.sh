@@ -2,7 +2,7 @@
 # r7 F: m7 candidate = the m6 run's raw LatentSync layers (no generator rerun) + r7_layer_sr.py (Real-ESRGAN x2 on the layer's lips, temporal +-1)
 # + the m6 composite with the source skin texture at full confidence (--tex-tau 1000 --tex-sigma 2.5). Output in the r4m layout so that
 # r7_watch.sh / r4_gate.py compare / r6_twitch.sh work unchanged: /workspace/dub/artifacts/r4m/<TAG>/<id>_<TAG>.mp4 + .manifest.json + score.
-#   TAG=m7 SRC_TAG=m6 bash scripts/r7/r7_m7_comp.sh [ids]     env: SR=srt1 (layer suffix made by r7_layer_sr.py --temporal 1; "" = the raw layer), EXTRA (composite flags)
+#   TAG=m7 SRC_TAG=m6 bash scripts/r7/r7_m7_comp.sh [ids]     env: DFK=<label> (r8: r8_layer_deflicker.py after the SR, DFK_ARGS), SR=srt1 (layer suffix made by r7_layer_sr.py --temporal 1; "" = the raw layer), EXTRA (composite flags)
 set -u
 DUB_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"; export DUB_ROOT; . $DUB_ROOT/scripts/env.sh >/dev/null; export DUB_ROOT; cd $DUB_ROOT
 TAG=${TAG:-m7}; ST=${SRC_TAG:-m6}; SR=${SR:-srt1}; EXTRA=${EXTRA:---tex-tau 1000 --tex-sigma 2.5}; B=/workspace/dub/artifacts/r4m; mkdir -p $B/$TAG; ln -sfn $B/$ST/timing $B/$TAG/timing
@@ -16,6 +16,9 @@ for id in ${*:-03 01 05 02 04}; do
     if [ -n "$SR" ]; then
       LS=$W/${id}_${ST}_25fps_ls_$SR.mp4
       [ -f $LS ] || { python scripts/r7/r7_layer_sr.py --ls-raw $W/${id}_${ST}_25fps_ls_raw.mp4 --lm $W/${id}_${ST}_25fps_ls_raw.mediapipe.npz --out $LS --temporal 1 ${SR_EXTRA:-} | grep "^==" ; cp $W/${id}_${ST}_25fps_ls_raw.mediapipe.npz ${LS%.mp4}.mediapipe.npz; }
+    fi
+    if [ -n "${DFK:-}" ]; then   # r8 F: layer tone deflicker (inner mouth + lower face), cached per DFK label: DFK=dfk1 DFK_ARGS="--sigma 1.5 ..."
+      LSD=${LS%.mp4}_$DFK.mp4; [ -f $LSD ] || { python scripts/r8/r8_layer_deflicker.py --ls $LS --lm ${LS%.mp4}.mediapipe.npz --out $LSD ${DFK_ARGS:-} | grep "^=="; cp ${LS%.mp4}.mediapipe.npz ${LSD%.mp4}.mediapipe.npz; }; LS=$LSD
     fi
     FIX30_LS=$LS FIX30_MASTER_FPS=25 FIX30_TD=$B/$ST/timing FIX30_MODE=r3fix FIX30_THREADS=${FIX30_THREADS:-16} FIX30_ARGS="$V1 $EXTRA" bash scripts/quality/r3_fix30.sh $M $TAG > $B/$TAG/${id}.fix30.log 2>&1
     F=$W/${id}_${ST}_25fps_$TAG.mp4; [ -f $F ] || { echo "FAIL composite $id (see $B/$TAG/${id}.fix30.log)"; continue; }
