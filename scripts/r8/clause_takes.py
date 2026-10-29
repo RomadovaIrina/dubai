@@ -140,6 +140,25 @@ def main():
                 br = evaluate([dt.syllables(c) / max(rate, 1e-3) + 0.24 for c in lay[0]], lay[2])
                 if br: est.append((br[0], lay))
             rec_plan = len(layouts); layouts = [x[1] for x in sorted(est, key=lambda x: x[0])[:a.plan_top]]
+        if os.environ.get("DUB_TTS_BATCH", "0") == "1" and layouts:   # r8 speed: every clause take this unit can need, decoded together round by round
+            import t3_batch                                              # (t3_batch.ladder_batch: the same texts, seeds, ladder and first-good selection as take())
+            cfgs_ = [float(x) for x in a.cfgs.split(",")]; cfgs_ = cfgs_[:1] if a.lazy_cfg == "on" else cfgs_   # lazy: the later cfgs stay on demand
+            need = []
+            for _, say_, _ in layouts:
+                for cfg_ in cfgs_:
+                    for s_ in say_:
+                        if (s_, cfg_) not in cache and (s_, cfg_) not in need: need.append((s_, cfg_))
+            jobs = [[dict(text=s_, seed=a.seed + 100 * u["id"] + 7919 * soff + zlib.crc32(s_.encode()) % 1000, temperature=temp, cfg_weight=cfg_)
+                     for soff, temp in ((0, 0.8), (1, 0.8), (2, 0.6))] for s_, cfg_ in need]
+            def assess(j, r_, it, wav):
+                if wav is None: return (True, 0), None
+                wv = wav.detach().float().cpu()[0].numpy().astype(np.float32); q = qa.assess(it["text"], wv, m.sr, "en")
+                if q["bad"]: return (True, 0), None
+                spans = aligner.align(wv, m.sr, it["text"])
+                if not spans: return (True, 0), None
+                wv, _ = hush_gaps(wv, m.sr, spans); return (False, 0), (cut_parts(wv, m.sr, spans, [len(spans)], pre_s=0.12, post_s=0.12)[0][0], q["whisper"][:120])
+            for (s_, cfg_), b in zip(need, t3_batch.ladder_batch(m, jobs, assess, ctx=lambda: torch.autocast("cuda", dtype=torch.float16))):
+                cache[(s_, cfg_)] = b[1] if b is not None and not b[2][0] else None
         for cl, say, nc in layouts:
                 for cfg in [float(x) for x in a.cfgs.split(",")]:
                     if a.lazy_cfg == "on" and cfg != float(a.cfgs.split(",")[0]) and best is not None and best[0] <= r["base"] - a.min_gain: break
