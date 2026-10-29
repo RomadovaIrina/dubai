@@ -12,16 +12,21 @@ for id in ${*:-03 01 05 02 04}; do
   t0=$(date +%s); W=$B/$ST/work_${id}_$ST; M=$W/${id}_${ST}_25fps.manifest.json; [ -f $M ] || { echo "no $M"; continue; }
   nls=$(python -c "import json;print(json.load(open('$M'))['lipsync']['by_action'].get('LATENT_SYNC',{}).get('frames',0))")
   if [ "$nls" -gt 0 ]; then
-    LS=$W/${id}_${ST}_25fps_ls_raw.mp4
+    RAW=$W/${id}_${ST}_25fps_ls_raw.mp4; LS=$RAW; SRN=$W/${id}_${ST}_25fps_ls_$SR.mp4
+    if [ -n "${CFD:-}" ]; then   # r8 F: CodeFormer DETAIL only: CFD=<clean base tag of the same seeded run> CFD_LABEL CFD_ARGS (r8_cf_detail.py)
+      BW=$B/$CFD/work_${id}_$CFD; RAW=$W/${id}_${ST}_25fps_ls_cfd_${CFD_LABEL:-cfd}.mp4; SRN=${RAW%.mp4}_$SR.mp4
+      [ -f $RAW ] || { python scripts/r8/r8_cf_detail.py --base $BW/${id}_${CFD}_25fps_ls_raw.mp4 --cf $W/${id}_${ST}_25fps_ls_raw.mp4 --lm $BW/${id}_${CFD}_25fps_ls_raw.mediapipe.npz --out $RAW ${CFD_ARGS:-} | grep "^=="; cp $BW/${id}_${CFD}_25fps_ls_raw.mediapipe.npz ${RAW%.mp4}.mediapipe.npz; }
+      LS=$RAW
+    fi
     if [ -n "$SR" ]; then
-      LS=$W/${id}_${ST}_25fps_ls_$SR.mp4
-      [ -f $LS ] || { python scripts/r7/r7_layer_sr.py --ls-raw $W/${id}_${ST}_25fps_ls_raw.mp4 --lm $W/${id}_${ST}_25fps_ls_raw.mediapipe.npz --out $LS --temporal 1 ${SR_EXTRA:-} | grep "^==" ; cp $W/${id}_${ST}_25fps_ls_raw.mediapipe.npz ${LS%.mp4}.mediapipe.npz; }
+      LS=$SRN
+      [ -f $LS ] || { python scripts/r7/r7_layer_sr.py --ls-raw $RAW --lm ${RAW%.mp4}.mediapipe.npz --out $LS --temporal 1 ${SR_EXTRA:-} | grep "^==" ; cp ${RAW%.mp4}.mediapipe.npz ${LS%.mp4}.mediapipe.npz; }
     fi
     if [ -n "${DFK:-}" ]; then   # r8 F: layer tone deflicker (inner mouth + lower face), cached per DFK label: DFK=dfk1 DFK_ARGS="--sigma 1.5 ..."
       LSD=${LS%.mp4}_$DFK.mp4; [ -f $LSD ] || { python scripts/r8/r8_layer_deflicker.py --ls $LS --lm ${LS%.mp4}.mediapipe.npz --out $LSD ${DFK_ARGS:-} | grep "^=="; cp ${LS%.mp4}.mediapipe.npz ${LSD%.mp4}.mediapipe.npz; }; LS=$LSD
     fi
     FBX=""; if [ -n "${FB:-}" ]; then   # r8 F: confidence fallback to the source mouth, FB=<label> FB_ARGS="--thr-wash ..." (score on the raw layer, cached)
-      FBN=$W/${id}_${ST}_25fps_fb_$FB.npz; [ -f $FBN ] || python scripts/r8/r8_fallback.py --work $W --ls $W/${id}_${ST}_25fps_ls_raw.mp4 --lm $W/${id}_${ST}_25fps_ls_raw.mediapipe.npz --out $FBN ${FB_ARGS:-} | grep "^=="; FBX="--fallback $FBN"
+      FBN=$W/${id}_${ST}_25fps_fb_$FB.npz; [ -f $FBN ] || python scripts/r8/r8_fallback.py --work $W --ls $RAW --lm ${RAW%.mp4}.mediapipe.npz --out $FBN ${FB_ARGS:-} | grep "^=="; FBX="--fallback $FBN"
     fi
     FIX30_LS=$LS FIX30_MASTER_FPS=25 FIX30_TD=$B/$ST/timing FIX30_MODE=r3fix FIX30_THREADS=${FIX30_THREADS:-16} FIX30_ARGS="$V1 $EXTRA $FBX" bash scripts/quality/r3_fix30.sh $M $TAG > $B/$TAG/${id}.fix30.log 2>&1
     F=$W/${id}_${ST}_25fps_$TAG.mp4; [ -f $F ] || { echo "FAIL composite $id (see $B/$TAG/${id}.fix30.log)"; continue; }
