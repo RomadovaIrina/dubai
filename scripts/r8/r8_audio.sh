@@ -11,6 +11,7 @@
 #     REUSE=v3a1r R7_PREV=r8repro2 bash scripts/r8/r8_audio.sh <tag>  on the rebuilt v3a1 takes (how audio-r8-v4 was built); R8_ALIGN / R8_CLAUSE / ... = off to skip a step
 set -u
 DUB_ROOT=$(cd "$(dirname "$0")/../.." && pwd); cd $DUB_ROOT; R=$DUB_ROOT; . scripts/env.sh >/dev/null; DUB_ROOT=$R; export DUB_ROOT
+export DUB_TTS_BATCH=${DUB_TTS_BATCH:-1}   # batched Chatterbox (scripts/pilot/t3_batch.py): the default since the user accepted the r8b5 AB (DUB_TTS_BATCH=0 = one by one)
 TAG=$1; shift; IDS=${*:-01 02 03 04 05}; A=/workspace/dub/artifacts/r4a; S=$A/${TAG}src; mkdir -p $S/mix_src $S/src16
 s=$(date +%s)
 if [ -z "${REUSE:-}" ]; then   # from the raw input (one-command E2E): the r6 pipeline's takes only (ASR, diarization, Qwen 14B, Chatterbox), no mix / metrics / judge
