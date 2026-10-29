@@ -16,6 +16,8 @@ import numpy as np, soundfile as sf
 HERE = pathlib.Path(__file__).resolve().parent
 for p in (HERE.parent / "pilot", HERE.parent / "quality", HERE): sys.path.insert(0, str(p))
 FR = 0.02
+NOCUT = {"the", "a", "an", "to", "of", "in", "on", "at", "for", "with", "from", "by", "and", "or", "but", "our", "my", "their", "your", "his", "her", "its",
+         "we", "i", "they", "he", "she", "is", "are", "was", "were", "be", "will", "would", "can", "have", "has", "very", "just", "really", "that", "which", "who", "this", "these"}
 
 
 def atempo(seg, sr, t):
@@ -89,7 +91,13 @@ def main():
             t = min(a.tmax, max(a.tmin, d / T)); L = d / t; t0 = max(B[k0][0], start_min); t1 = t0 + L
             limit = B[k1][0] - 0.1 if k1 < K else win
             if t1 > limit + 0.02: return None
-            c = max(0.0, fs(B[k0][0], B[k1 - 1][1]) - fs(t0, t1)) + 0.3 * sil(t0, t1) + 1.0 * abs(1 - t) * L
+            unc = max(0.0, fs(B[k0][0], B[k1 - 1][1]) - fs(t0, t1))
+            if a.cover_all == "on":   # r8: every source piece the chunk leaves (almost) without dub counts x2, as a skipped piece does (05 u3 "Well,"
+                unc = 0.0              # alone on a 2-s talking piece; 02 u3 "...a Russian banya" said 9 s before the speaker says it)
+                for k_ in range(k0, k1):
+                    f_, g_ = fs(*B[k_]), fs(max(t0, B[k_][0]), min(t1, B[k_][1])) if t1 > B[k_][0] and t0 < B[k_][1] else 0.0
+                    unc += max(0.0, f_ - g_) * (2.0 if g_ < 0.3 * f_ else 1.0)
+            c = unc + 0.3 * sil(t0, t1) + 1.0 * abs(1 - t) * L
             return c, t, t0, t1
 
         INF = (1e9, None, 0.0); dp = {(0, 0): (0.0, None, prev_end)}   # (pieces done, words done) -> (cost, back, end of the last chunk)
@@ -103,6 +111,7 @@ def main():
                 for k1 in range(k + 1, K + 1):
                     for j1 in range(j + 1, nw + 1):
                         if func(j, j1) and nw > 1: continue   # a lone "The" / "and" at a pause
+                        if a.cover_all == "on" and j1 < nw and re.sub(r"[^\w']", "", words[j1 - 1].lower()) in NOCUT: continue   # r8: no pause after "we" / "the" / "have" ("Here we | have a")
                         g = group(j, j1, k, k1, le + (0.12 if j else 0.0))
                         if g is None: continue
                         cc = c0 + g[0] + (0.8 if j1 < nw and not okcut[j1] else 0.0) + (0.5 if j1 - j == 1 and nw > 1 else 0.0)
@@ -118,6 +127,16 @@ def main():
         rec.update({"new_cost": round(new_cost, 2), "chunks": [{"en": " ".join(words[c["j0"]:c["j1"]]), "src": [round(B[c["k0"]][0], 2), round(B[c["k1"] - 1][1], 2)],
                                                                 "placed": [round(c["t0"], 2), round(c["t1"], 2)], "tempo": round(c["tempo"], 3)} for c in chunks]})
         rec["accepted"] = new_cost <= rec["old_cost"] - a.min_gain
+        if a.cover_all == "on":   # r8: never more source speech left without dub than the placement it replaces; a real coverage gain (>= 0.3 s) may cost
+                                  # up to +0.5 (cuts / tempo) over the old placement
+            def unc_of(pl_):
+                Dm = np.zeros(n, bool)
+                for t0, t1 in pl_: Dm[int(t0 / FR):int(t1 / FR)] = True
+                return float((S & ~Dm)[lo:max(hi, int(max(t1 for _, t1 in pl_) / FR))].sum() * FR)
+            rec["uncovered_old_new"] = [round(unc_of([tuple(p["placed"]) for p in ps]), 2), round(unc_of(placed), 2)]
+            uo, un = rec["uncovered_old_new"]
+            if un <= uo - 0.3 and new_cost <= rec["old_cost"] + 0.5: rec["accepted"] = True
+            if un > uo + 0.05: rec["accepted"] = False
         if rec["accepted"]:
             counts = [sum(tc[c["j0"]:c["j1"]]) for c in chunks]   # cut_parts counts aligner tokens
             if sum(counts) != len(spans): rec["accepted"] = False; rec["skipped"] = "count"; rep["units"].append(rec); continue

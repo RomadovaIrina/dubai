@@ -9,7 +9,7 @@
 #   then scripts/r8/coverage.py + pacing.py rows per video (<tag>/cov/).
 #     REUSE=v3a1r R7_PREV=r8repro2 bash scripts/r8/r8_audio.sh <tag> [ids]      R8_ALIGN=off skips step 2
 set -u
-DUB_ROOT=${DUB_ROOT:-/workspace/dub/dubai}; cd $DUB_ROOT; R=$DUB_ROOT; . scripts/env.sh >/dev/null; DUB_ROOT=$R; export DUB_ROOT
+DUB_ROOT=$(cd "$(dirname "$0")/../.." && pwd); cd $DUB_ROOT; R=$DUB_ROOT; . scripts/env.sh >/dev/null; DUB_ROOT=$R; export DUB_ROOT
 TAG=$1; shift; IDS=${*:-01 02 03 04 05}; A=/workspace/dub/artifacts/r4a; BASE=${REUSE:?REUSE=<base tag>}; S=$A/${TAG}src; mkdir -p $S/mix_src $S/src16
 s=$(date +%s)
 for id in $IDS; do
