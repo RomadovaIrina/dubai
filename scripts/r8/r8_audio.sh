@@ -22,7 +22,7 @@ else BASE=$REUSE; FAITH_ARG=""; fi
 echo "BASE_DONE $(( $(date +%s) - s )) s" >> $S/times.txt
 RT_ARGS="${R8_RETAKE_ARGS---short-s 0.3 --budget-scales 1.15,1.3,1.5,1.75 --cap-scale 1.2 --min-piece 0.2 --max-tts 4 --natural-cuts on --fillers on}"
 BA_ARGS="${R8_ALIGN_ARGS---min-piece 0.2 --sil-ratio 1.5 --natural-cuts on}"
-if [ "${R8_ONEPROC:-off}" = on ]; then   # speed L5: retake -> clause takes -> burst_align of ALL videos in one process, models loaded once (scripts/r8/r8_tts_stage.py)
+if [ "${R8_ONEPROC:-on}" = on ]; then   # speed L5: retake -> clause takes -> burst_align of ALL videos in one process, models loaded once (scripts/r8/r8_tts_stage.py)
   J=$S/oneproc_jobs.json; t0p=$(date +%s.%N)
   for id in $IDS; do
     ffmpeg -loglevel error -y -i "$(ls /workspace/dub/inputs/test_videos_raw/$id.* | head -1)" -vn -ac 1 -ar 16000 -c:a pcm_s16le $S/src16/${id}_16k.wav
@@ -44,7 +44,7 @@ json.dump(jobs, open('$J', 'w'), indent=1)"
   echo "ONEPROC_DONE $(python3 -c "import time;print(round(time.time()-$t0p,1))") s" >> $S/times.txt
 fi
 for id in $IDS; do
-  if [ "${R8_ONEPROC:-off}" = on ]; then   # the one-process stage already ran: take its furthest output, then close_inner / soften as below
+  if [ "${R8_ONEPROC:-on}" = on ]; then   # the one-process stage already ran: take its furthest output, then close_inner / soften as below
     t0=$(date +%s.%N); [ -f $S/rt/$id/dubbed_24k.wav ] || { echo "FAIL retake $id (see $S/rt_$id.log)"; continue; }
     W=$S/rt/$id; [ -f $S/ct/$id/dubbed_24k.wav ] && W=$S/ct/$id; [ -f $S/ba/$id/dubbed_24k.wav ] && W=$S/ba/$id; t1=$t0; t2=$t0
   else
