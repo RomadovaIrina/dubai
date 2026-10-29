@@ -33,6 +33,8 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--work", required=True); ap.add_argument("--out", required=True); ap.add_argument("--face")
     ap.add_argument("--tmin", type=float, default=0.92); ap.add_argument("--tmax", type=float, default=1.08); ap.add_argument("--min-gain", type=float, default=0.2)
     ap.add_argument("--min-face", type=float, default=0.5)
+    ap.add_argument("--min-piece", type=float, default=0.3, help="r8 v2: source pieces shorter than this join a neighbour (0.2: 05 u3 'Вот,' 0.26 s keeps its own 'Well,')")
+    ap.add_argument("--sil-ratio", type=float, default=0.0, help="r8 v2: > 0 = a coverage gain must be >= this x the added dub-over-source-silence (03: 7.0 -> 10.2 s in r8v1)")
     ap.add_argument("--cover-all", choices=["on", "off"], default="off", help="r8 --cover-all on (management on final_r7 02 / 05: the dub keeps disappearing): off-screen source speech counts like face-visible speech"); a = ap.parse_args()
     import lip_place, retake
     from tts_qa import TtsQA, norm
@@ -62,7 +64,7 @@ def main():
     for i, u in enumerate(units):
         ps = [p for p in (u.get("alignment") or {}).get("placements", []) if p.get("placed")]
         if not ps: continue
-        B, _ = retake.sub_bursts(ps, man, words_all, u["text"]); lo, hi = int(B[0][0] / FR), int(B[-1][1] / FR)
+        B, _ = retake.sub_bursts(ps, man, words_all, u["text"], min_piece=a.min_piece); lo, hi = int(B[0][0] / FR), int(B[-1][1] / FR)
         if hi <= lo or float(fv[lo:hi].mean()) < a.min_face: continue
         a0, a1 = span_of(u); prev_end = max([span_of(v)[1] for v in units[:i] if span_of(v)] or [0.0]) + 0.1
         win = min([span_of(v)[0] for v in units[i + 1:] if span_of(v)] or [D]) - 0.15
@@ -134,9 +136,16 @@ def main():
                 for t0, t1 in pl_: Dm[int(t0 / FR):int(t1 / FR)] = True
                 return float((S & ~Dm)[lo:max(hi, int(max(t1 for _, t1 in pl_) / FR))].sum() * FR)
             rec["uncovered_old_new"] = [round(unc_of([tuple(p["placed"]) for p in ps]), 2), round(unc_of(placed), 2)]
+            def sil_of(pl_):
+                Dm = np.zeros(n, bool)
+                for t0, t1 in pl_: Dm[int(t0 / FR):int(t1 / FR)] = True
+                return float((Dm & ~S)[lo:max(hi, int(max(t1 for _, t1 in pl_) / FR))].sum() * FR)
+            rec["over_silence_old_new"] = [round(sil_of([tuple(p["placed"]) for p in ps]), 2), round(sil_of(placed), 2)]
             uo, un = rec["uncovered_old_new"]
             if un <= uo - 0.3 and new_cost <= rec["old_cost"] + 0.5: rec["accepted"] = True
             if un > uo + 0.05: rec["accepted"] = False
+            so, sn = rec["over_silence_old_new"]
+            if a.sil_ratio > 0 and sn - so > 0.1 and (uo - un) < a.sil_ratio * (sn - so): rec["accepted"] = False; rec["skipped"] = "over_silence"
         if rec["accepted"]:
             counts = [sum(tc[c["j0"]:c["j1"]]) for c in chunks]   # cut_parts counts aligner tokens
             if sum(counts) != len(spans): rec["accepted"] = False; rec["skipped"] = "count"; rep["units"].append(rec); continue

@@ -21,10 +21,14 @@ for id in $IDS; do
     || { echo "FAIL retake $id (see $S/rt_$id.log)"; continue; }
   t1=$(date +%s.%N); W=$S/rt/$id
   if [ "${R8_ALIGN:-on}" = on ]; then
-    python scripts/r7/burst_align.py --work $W --out $S/ba/$id --face $fc --cover-all on --tmin ${R8_TMIN:-0.9} --tmax ${R8_TMAX:-1.1} > $S/ba_$id.log 2>&1 && W=$S/ba/$id || echo "WARN burst_align $id (see $S/ba_$id.log)"
+    python scripts/r7/burst_align.py --work $W --out $S/ba/$id --face $fc --cover-all on --tmin ${R8_TMIN:-0.9} --tmax ${R8_TMAX:-1.1} ${R8_ALIGN_ARGS:-} > $S/ba_$id.log 2>&1 && W=$S/ba/$id || echo "WARN burst_align $id (see $S/ba_$id.log)"
   fi
-  t2=$(date +%s.%N); ln -sfn $W $S/mix_src/$id
-  python3 -c "import json,sys; t=[float(x) for x in sys.argv[1:]]; json.dump({'retake':t[1]-t[0],'burst_align':t[2]-t[1]},open('$S/$id.steps.json','w'))" $t0 $t1 $t2
+  t2=$(date +%s.%N)
+  if [ "${R8_CLOSE:-off}" = on ]; then   # v2: the take's inner pauses where the source talks closed, the piece slowed to keep its span (scripts/r8/close_inner.py)
+    python scripts/r8/close_inner.py --work $W --out $S/ci/$id --tmin ${R8_TMIN:-0.9} > $S/ci_$id.log 2>&1 && W=$S/ci/$id || echo "WARN close_inner $id (see $S/ci_$id.log)"
+  fi
+  t3=$(date +%s.%N); ln -sfn $W $S/mix_src/$id
+  python3 -c "import json,sys; t=[float(x) for x in sys.argv[1:]]; json.dump({'retake':t[1]-t[0],'burst_align':t[2]-t[1],'close_inner':t[3]-t[2]},open('$S/$id.steps.json','w'))" $t0 $t1 $t2 $t3
   echo "== $id src $(( $(date +%s) - s )) s"
 done
 RETAKE=off REUSE=${TAG}src LIP_ARGS="--max-shift 2.0 --grow-unit 1.5 --grow 0.5 --pace on --cover-all on ${R8_LIP_ARGS:-}" \

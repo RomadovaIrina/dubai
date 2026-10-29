@@ -103,6 +103,9 @@ def main():
     ap.add_argument("--src16", required=True); ap.add_argument("--short-s", type=float, default=0.6); ap.add_argument("--min-gain", type=float, default=0.3)
     ap.add_argument("--scales", default="1.0,1.15,1.3"); ap.add_argument("--max-tts", type=int, default=3); ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--select-only", action="store_true")
+    ap.add_argument("--budget-scales", default="1.15,1.3,1.5", help="r8 v2: whole-sentence word budgets x the old sentence's words")
+    ap.add_argument("--cap-scale", type=float, default=1.0, help="r8 v2: word cap = this x the source time at this voice's rate")
+    ap.add_argument("--min-piece", type=float, default=0.3, help="r8 v2: source pieces shorter than this join a neighbour")
     ap.add_argument("--cover-all", choices=["on", "off"], default="off", help="r8 --cover-all on (management on final_r7 02 / 05: the dub keeps disappearing): off-screen source speech counts like face-visible speech"); a = ap.parse_args()
     import lip_place, dur_translate as dt
     W, O = pathlib.Path(a.work).resolve(), pathlib.Path(a.out); O.mkdir(parents=True, exist_ok=True)
@@ -145,7 +148,7 @@ def main():
     for i, u in enumerate(units):
         ps = [p for p in (u.get("alignment") or {}).get("placements", []) if p.get("placed")]
         if not ps: continue
-        bursts, srcw = sub_bursts(ps, man, words_all, u["text"]); lo, hi = int(bursts[0][0] / FR), int(bursts[-1][1] / FR)
+        bursts, srcw = sub_bursts(ps, man, words_all, u["text"], min_piece=a.min_piece); lo, hi = int(bursts[0][0] / FR), int(bursts[-1][1] / FR)
         src_face = float((S & fv)[lo:hi].sum() * FR); dub_s = sum(p["group_s"] for p in ps); fvf = float(fv[lo:hi].mean()) if hi > lo else 0
         f = (faith.get(u["id"]) or {}).get("score"); why = []
         if src_face - dub_s >= a.short_s and fvf >= 0.5: why.append("short")
@@ -184,8 +187,8 @@ def main():
         pieces = r["coarse_w"]; secs = [b[1] - b[0] for b in r["coarse"]]   # Qwen sees the r6 bursts (every fine pause marked made it pad: "..., comma.")
         scl = tuple(float(s) for s in a.scales.split(","))
         cands = [(" ".join(g)[0].upper() + " ".join(g)[1:], g) for _, g in dt.piece_candidates(llm, "Russian", "English", pieces, secs, wps, scales=scl[:1])]   # spoken without the joiner's commas
-        cap = max(2, int(round(wps * sum(secs))))   # the source time at this voice's rate: an upper bound (slow speakers: filling it all = padding)
-        budgets = sorted({min(cap, max(2, int(round(dt.words_of(old_text) * k)))) for k in (1.15, 1.3, 1.5)})   # whole sentence, budget enforced
+        cap = max(2, int(round(a.cap_scale * wps * sum(secs))))   # the source time at this voice's rate: an upper bound (slow speakers: filling it all = padding)
+        budgets = sorted({min(cap, max(2, int(round(dt.words_of(old_text) * k)))) for k in (float(x) for x in a.budget_scales.split(","))})   # whole sentence, budget enforced
         cands += [(t, None) for t in dt.candidates(llm, "Russian", "English", f" {dt.SHOTS_SRC_PAUSE} ".join(pieces), secs, old_text, budgets, sum(secs))]
         seen = set(); cands = [c for c in cands if not (c[0].lower() in seen or seen.add(c[0].lower()))]
         rec = {"id": u["id"], "why": r["why"], "ru": u["text"], "old_en": old_text, "old_judge": {k: old_j.get(k) for k in ("score", "natural", "missing", "added")},
