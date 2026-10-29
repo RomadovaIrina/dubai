@@ -1,0 +1,1 @@
+--thr-tone 1e9 --thr-coll 0.5 --thr-wash 0.10 --thr-dark 0.68 --thr-jerk 0.06 --knee 0.75 --dilate 0 --merge-gap 2 --ramp-sigma 1.2 --win-frac 0.6
