@@ -75,7 +75,7 @@ def detect(bg, sr, source_speech, dub_speech, voice_p=0.4, burst_db=6.0, edge_s=
 
 
 def clean(bg: np.ndarray, sr: int, source_speech: list, dub_speech: list, voice_p: float = 0.4, burst_db: float = 6.0, nr_prop: float = 0.6,
-          xf_s: float = 0.03, seed: int = 0, full: np.ndarray | None = None, nr_ns: float = 0.0) -> tuple[np.ndarray, dict]:
+          xf_s: float = 0.03, seed: int = 0, full: np.ndarray | None = None, nr_ns: float = 0.0, floor_db: float = 0.0, floor_xf_s: float = 0.12) -> tuple[np.ndarray, dict]:
     """full = bed + vocals stems (the whole source): the room tone is taken from it, as mix_background's room fill does"""
     import background_bed as bb, noisereduce as nr
     N = len(bg); st = bg if bg.ndim > 1 else bg[:, None]
@@ -109,6 +109,19 @@ def clean(bg: np.ndarray, sr: int, source_speech: list, dub_speech: list, voice_
         else:              # no room tone: lower the detected frames to the local ambience
             cut = np.minimum(0.0, d["ref"] - d["L"]); g = 10 ** (np.interp(np.arange(N) / sr, (np.arange(n) + 0.5) * FR, cut) / 20).astype(np.float32)[:, None]
             out = out * (1 - wj) + out * g * wj
+    if floor_db > 0:   # r8 v4 (user: "a word, and then IMMEDIATE silence"): a cleaned gap never sits more than floor_db under the local ambience;
+        # the deficit is filled with the source's own ambience (room tone from its non-speech parts, used here even when too unsteady to REPLACE
+        # with), at the power that brings the level back, >= floor_xf_s ramps; frames the clean did not touch are left as they are
+        fill, ffl = (tone, floor) if tone is not None else bb.room_tone(src, source_speech, sr, N, seed=seed + 1, max_floor_db=0.0)
+        if fill is not None:
+            h = int(FR * sr); Lc = 20 * np.log10(bb._frame_rms(out.mean(1), h) + 1e-9)[:n]; touched = (gs | d["junk"])[:len(Lc)]
+            tgt = d["ref"][:len(Lc)] - floor_db; need = touched & (Lc < tgt)
+            if need.any():
+                add_p = np.where(need, np.maximum(0.0, 10 ** (tgt / 10) - 10 ** (Lc / 10)), 0.0); fl_p = float(ffl) ** 2 if ffl else 1e-12
+                gf = np.sqrt(add_p / max(fl_p, 1e-12)); k = max(1, int(round(floor_xf_s / FR))); gf = np.convolve(gf, np.ones(2 * k + 1) / (2 * k + 1), "same")
+                gs_ = np.interp(np.arange(N) / sr, (np.arange(len(gf)) + 0.5) * FR, gf).astype(np.float32)[:, None]
+                out = out + fill[:N] * gs_
+                rep["floor_filled_s"] = round(float(need.sum() * FR), 2); rep["floor_db"] = floor_db
     runs = []; m = d["junk"]; dd = np.diff(np.concatenate([[0], m.astype(np.int8), [0]]))
     for a, b in zip(np.flatnonzero(dd == 1), np.flatnonzero(dd == -1)):
         runs.append([round(a * FR, 2), round(b * FR, 2), "voice" if d["voice"][a:b].any() else "burst"])

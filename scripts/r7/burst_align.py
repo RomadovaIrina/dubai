@@ -65,6 +65,7 @@ def main():
     for i, u in enumerate(units):
         ps = [p for p in (u.get("alignment") or {}).get("placements", []) if p.get("placed")]
         if not ps: continue
+        if u.get("r8_clause"): continue   # r8 v4: already one take per clause on its source pieces (scripts/r8/clause_takes.py)
         B, _ = retake.sub_bursts(ps, man, words_all, u["text"], min_piece=a.min_piece); lo, hi = int(B[0][0] / FR), int(B[-1][1] / FR)
         if hi <= lo or float(fv[lo:hi].mean()) < a.min_face: continue
         a0, a1 = span_of(u); prev_end = max([span_of(v)[1] for v in units[:i] if span_of(v)] or [0.0]) + 0.1

@@ -20,6 +20,9 @@ for id in $IDS; do
   PYTHONPATH=$DUB_ROOT/third_party/llama_cuda:${PYTHONPATH:-} python scripts/r7/retake.py --work $w --out $S/rt/$id --face $fc $f --src16 $s16 --cover-all on ${R8_RETAKE_ARGS:-} > $S/rt_$id.log 2>&1 \
     || { echo "FAIL retake $id (see $S/rt_$id.log)"; continue; }
   t1=$(date +%s.%N); W=$S/rt/$id
+  if [ "${R8_CLAUSE:-off}" = on ]; then   # v4: one take per clause for sentences over source pauses (scripts/r8/clause_takes.py)
+    python scripts/r8/clause_takes.py --work $W --out $S/ct/$id --src16 $s16 --face $fc > $S/ct_$id.log 2>&1 && W=$S/ct/$id || echo "WARN clause_takes $id (see $S/ct_$id.log)"
+  fi
   if [ "${R8_ALIGN:-on}" = on ]; then
     python scripts/r7/burst_align.py --work $W --out $S/ba/$id --face $fc --cover-all on --tmin ${R8_TMIN:-0.9} --tmax ${R8_TMAX:-1.1} ${R8_ALIGN_ARGS:-} > $S/ba_$id.log 2>&1 && W=$S/ba/$id || echo "WARN burst_align $id (see $S/ba_$id.log)"
   fi
@@ -35,11 +38,13 @@ for id in $IDS; do
   echo "== $id src $(( $(date +%s) - s )) s"
 done
 RETAKE=off REUSE=${TAG}src LIP_ARGS="--max-shift 2.0 --grow-unit 1.5 --grow 0.5 --pace on --cover-all on ${R8_LIP_ARGS:-}" \
-  REMIX_ARGS="--src-duck-db -6 --unit-level off --gap-bed-cap-db 10 --gap-bed-cap-scope edges --gap-clean on --gap-clean-nr-ns 0.7 --dub-gate on" \
+  REMIX_ARGS="--src-duck-db -6 --unit-level off --gap-bed-cap-db 10 --gap-bed-cap-scope edges --gap-clean on --gap-clean-nr-ns 0.7 --dub-gate on --gap-clean-floor ${R8_FLOOR:-0}" \
   R7_PREV=${R7_PREV:-} bash scripts/r7/r7_audio.sh $TAG $IDS
 mkdir -p $A/$TAG/cov
 for id in $IDS; do
   python scripts/r8/coverage.py --run $A/$TAG/$id --id $id --label $TAG --face $A/sep/$id/source_mediapipe.npz --out $A/$TAG/cov/cov_$id 2>/dev/null | tail -1
   python scripts/r8/pacing.py --run $A/$TAG/$id --id $id --label $TAG --face $A/sep/$id/source_mediapipe.npz --out $A/$TAG/cov/pace_$id 2>/dev/null | tail -1
+  python scripts/r8/cuts.py --run $A/$TAG/$id --id $id --label $TAG --out $A/$TAG/cov/cuts_$id 2>/dev/null | tail -1
+  python scripts/r8/mixdrop.py --run $A/$TAG/$id --id $id --label $TAG --out $A/$TAG/cov/mix_$id 2>/dev/null | tail -1
 done
 echo "R8_AUDIO_DONE $TAG $(( $(date +%s) - s )) s"

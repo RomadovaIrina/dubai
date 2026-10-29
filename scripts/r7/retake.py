@@ -32,6 +32,32 @@ FUNC = {"the", "a", "an", "and", "or", "but", "to", "of", "in", "on", "at", "for
 DET_KIND = re.compile(r"\b(this|that|what|a|the|any|some|every|which|these|those)\s+(kind|sort)\s+of\b", re.I)
 
 
+RU_MARKERS = re.compile(r"(?<!\w)(вот|ну|короче|так сказать|то есть|значит|как бы|просто|вообще|типа|собственно|в общем)(?!\w)", re.I)
+FILLER_SHOTS = [   # generic (not from the test videos): the speaker's own discourse markers kept as spoken English, nothing else added
+    ("Ну, короче, мы туда приехали уже вечером.", "Well, anyway, we got there in the evening already."),
+    ("Вот, значит, это наша кухня, так сказать.", "So, here, this is our kitchen, so to speak."),
+    ("Просто хочу показать, как это работает.", "I just want to show how this works.")]
+
+
+def filler_candidates(dt, llm, ru, old_en, budgets):
+    """r8 v4: when the English is much shorter than the Russian speech, a version that keeps the speaker's OWN discourse markers / hesitation
+    words (вот, ну, короче, так сказать, то есть, значит, просто ...) as natural spoken English (well, so, anyway, so to speak, that is, just),
+    adding nothing else; the guard and the judge still decide"""
+    if not RU_MARKERS.search(ru): return []
+    sys_ = ("You are a professional dubbing translator. Translate the Russian line into natural spoken English for dubbing. Keep every discourse "
+            "marker and hesitation word the speaker uses (вот, ну, короче, так сказать, то есть, значит, просто, вообще, в общем) as a natural spoken "
+            "English equivalent (so, well, anyway, so to speak, that is, just), in the same place. Do not add any content, "
+            "greeting, question or filler the speaker did not say. Answer with the translation only.")
+    out = []
+    for n in budgets[:2]:
+        msgs = [{"role": "system", "content": sys_}]
+        for r_, e_ in FILLER_SHOTS: msgs += [{"role": "user", "content": r_}, {"role": "assistant", "content": e_}]
+        msgs.append({"role": "user", "content": f"{ru}\n(current version, too short: \"{old_en}\"; about {n} words)"})
+        v = " ".join(dt._chat(llm, msgs, max_tokens=24 + 4 * n).split()).strip().strip('"«»“”')
+        if v and v.lower() != old_en.lower() and v not in out: out.append(v)
+    return out
+
+
 def guard(dt, source, plain, cand, ents):
     """dur_translate.guard with two rules narrowed for retakes (the judge then decides): 'kind of' / 'sort of' after a determiner is not filler
     ("this kind of feature"); a dropped lower-case common word is a synonym choice, not a lost name ("variants" -> "options"): only a dropped
@@ -108,6 +134,7 @@ def main():
     ap.add_argument("--budget-scales", default="1.15,1.3,1.5", help="r8 v2: whole-sentence word budgets x the old sentence's words")
     ap.add_argument("--cap-scale", type=float, default=1.0, help="r8 v2: word cap = this x the source time at this voice's rate")
     ap.add_argument("--min-piece", type=float, default=0.3, help="r8 v2: source pieces shorter than this join a neighbour")
+    ap.add_argument("--fillers", choices=["on", "off"], default="off", help="r8 v4: also a candidate keeping the speaker's own discourse markers (вот / ну / короче ...) as spoken English")
     ap.add_argument("--natural-cuts", choices=["on", "off"], default="off", help="r8 v3 (user on r8v1: 'I'm saying ..... the phrase', words cut off): cuts only at punctuation / clause starts or a real quiet take pause >= 0.15 s, never after a function word; an inserted gap <= the source pause + 0.35 s")
     ap.add_argument("--cover-all", choices=["on", "off"], default="off", help="r8 --cover-all on (management on final_r7 02 / 05: the dub keeps disappearing): off-screen source speech counts like face-visible speech"); a = ap.parse_args()
     import lip_place, dur_translate as dt
@@ -193,6 +220,7 @@ def main():
         cap = max(2, int(round(a.cap_scale * wps * sum(secs))))   # the source time at this voice's rate: an upper bound (slow speakers: filling it all = padding)
         budgets = sorted({min(cap, max(2, int(round(dt.words_of(old_text) * k)))) for k in (float(x) for x in a.budget_scales.split(","))})   # whole sentence, budget enforced
         cands += [(t, None) for t in dt.candidates(llm, "Russian", "English", f" {dt.SHOTS_SRC_PAUSE} ".join(pieces), secs, old_text, budgets, sum(secs))]
+        if a.fillers == "on": cands += [(t, None) for t in filler_candidates(dt, llm, u["text"], old_text, budgets)]   # r8 v4: the speaker's own fillers
         seen = set(); cands = [c for c in cands if not (c[0].lower() in seen or seen.add(c[0].lower()))]
         rec = {"id": u["id"], "why": r["why"], "ru": u["text"], "old_en": old_text, "old_judge": {k: old_j.get(k) for k in ("score", "natural", "missing", "added")},
                "old_cost": round(base_cost, 2), "old_detail": base_det, "candidates": []}

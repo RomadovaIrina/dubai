@@ -147,6 +147,7 @@ def main() -> int:
     ap.add_argument("--dub-gate", choices=["on", "off"], default="off", help="r7 v2: dub voice residue in its own pauses (unvoiced runs >= --dub-gate-min s, > --dub-gate-db under the voice p95) -> -30 dB, sin^2 20-ms ramps (dub_gate())")
     ap.add_argument("--dub-gate-db", type=float, default=20.0); ap.add_argument("--dub-gate-min", type=float, default=0.6)
     ap.add_argument("--gap-clean-voice-p", type=float, default=0.4); ap.add_argument("--gap-clean-burst-db", type=float, default=6.0); ap.add_argument("--gap-clean-nr", type=float, default=0.6); ap.add_argument("--gap-clean-nr-ns", type=float, default=0.0)
+    ap.add_argument("--gap-clean-floor", type=float, default=0.0, help="r8 v4: > 0 = a cleaned dub gap never sits more than this many dB under the local ambience (filled with the source's own ambience, >= 120-ms ramps)")
     a = ap.parse_args()
     import background_bed as bb, run_clean_pipeline_05 as rp, r3_bedswing  # noqa: F401
     for id_ in a.ids:
@@ -173,7 +174,7 @@ def main() -> int:
         if a.gap_clean == "on":   # r7: after the r6 cap, before the mix (room fill / ducks / gains unchanged)
             import gap_clean
             bgy, bsr = sf.read(sep["bg"], dtype="float32"); vy, _ = sf.read(sep["vocals"], dtype="float32"); m_ = min(len(bgy), len(vy))
-            z, man["gap_clean"] = gap_clean.clean(bgy, bsr, speech, dub_speech, a.gap_clean_voice_p, a.gap_clean_burst_db, a.gap_clean_nr, full=bgy[:m_] + vy[:m_], nr_ns=a.gap_clean_nr_ns)
+            z, man["gap_clean"] = gap_clean.clean(bgy, bsr, speech, dub_speech, a.gap_clean_voice_p, a.gap_clean_burst_db, a.gap_clean_nr, full=bgy[:m_] + vy[:m_], nr_ns=a.gap_clean_nr_ns, floor_db=a.gap_clean_floor)
             sf.write(str(O / "bg_clean_44k.wav"), z, bsr, subtype="FLOAT"); sep = {**sep, "bg": str(O / "bg_clean_44k.wav")}
             print(f"   {id_} gap_clean: { {k: v for k, v in man['gap_clean'].items() if k != 'runs'} }", flush=True)
         mix = bb.mix_background(sep, D / "dubbed_24k.wav", speech, dub_speech, man["source"]["duration_s"], O, duck_db=a.duck_db, attack_s=a.attack,

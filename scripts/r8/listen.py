@@ -36,12 +36,14 @@ def main():
     MP, MN = ld(a.man_prev), ld(a.man_new)
     if MP and MN:   # every unit whose pieces (the splits) changed
         pcs = lambda m: {u["id"]: [(p["text"], p["placed"]) for p in (u.get("alignment") or {}).get("placements", []) if p.get("placed")] for u in m["units"]}
-        pp, pn = pcs(MP), pcs(MN); rows = []
+        pp, pn = pcs(MP), pcs(MN); rows = []; ru = {u["id"]: u["text"] for u in MN["units"]}
+        clause = {u["id"]: "clause takes" for u in MN["units"] if u.get("r8_clause")}
         for uid in pn:
             if [t for t, _ in pp.get(uid, [])] != [t for t, _ in pn[uid]] or any(abs(x[1][0] - y[1][0]) > 0.05 for x, y in zip(pp.get(uid, []), pn[uid])):
                 f = lambda ps, off: " / ".join(f"[{mm(q[0] + off)}] {t}" for t, q in ps)
-                rows.append(f"| {uid} | {f(pp.get(uid, []), 0.0)} | {f(pn[uid], a.offset)} |")
-        o += ["", f"## Changed splits ({len(rows)} units; ' / ' = a piece boundary, [time] = piece start in the AB file)", "", f"| unit | {a.pver} (A) | {a.ver} (B) |", "|---|---|---|"] + rows
+                rows.append(f"| {uid} | {ru.get(uid, '')} | {f(pp.get(uid, []), 0.0)} | {f(pn[uid], a.offset)} | {clause.get(uid, '')} |")
+        o += ["", f"## Changed units ({len(rows)}; RU → EN {a.pver} → EN {a.ver}; ' / ' = a piece boundary, [time] = piece start in the AB file)", "",
+              f"| unit | RU | {a.pver} (A) | {a.ver} (B) | how |", "|---|---|---|---|---|"] + rows
     for lab, Q, off in ((a.pver, PP, 0.0), (a.ver, PN, a.offset)):
         if not Q: continue
         o += ["", f"## Pacing events, {lab}", "", "summary: " + ", ".join(f"{k} {v}" for k, v in Q["summary"].items()), "", "| at (AB file) | kind | detail |", "|---|---|---|"]
