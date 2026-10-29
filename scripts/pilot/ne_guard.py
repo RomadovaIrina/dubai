@@ -96,6 +96,23 @@ def apply(text: str, ents: list, k: int) -> str:
     return text
 
 
+def latin_respell(w: str) -> str:
+    """a Latin-script name the source already writes in Latin (brands: Neometria, Flora): syllables hyphenated (V-CV / VC-CV), "Ne-o-met-ri-a"."""
+    v = [i for i, ch in enumerate(w.lower()) if ch in "aeiouy"]; cuts = [i + 1 if j - i - 1 <= 1 else i + 2 for i, j in zip(v, v[1:])]
+    return "-".join(w[a:b] for a, b in zip([0] + cuts, cuts + [len(w)]))
+
+
+def unit_entities(u: dict) -> list:
+    """r8 v4s: the unit's named entities to check by ear = u["ne"] (Qwen's list with its respellings) + rare Latin-script names written the same
+    in the source and the translation (brands the list missed: 01 "Neometria", "Flora"), respelled by syllables."""
+    ents = [dict(e, guard=e.get("guard") or [w for w in re.findall(r"[A-Za-z]+", e["english"]) if len(w) >= 3]) for e in (u.get("ne") or [])]
+    have = {g.lower() for e in ents for g in e["guard"]}
+    for w in dict.fromkeys(re.findall(r"\b[A-Z][a-z]{2,}\b", u.get("text", ""))):
+        if w.lower() not in have and re.search(r"\b" + w + r"\b", u.get("translation", "")) and rare(w):
+            ents.append({"english": w, "guard": [w], "respellings": [latin_respell(w)], "extra": True}); have.add(w.lower())
+    return ents
+
+
 def extract(llm, units: list, log=print) -> dict:
     """Qwen lists the proper nouns per unit; kept only when the English form occurs in the unit translation. Sets u['ne'] = [entity ...]."""
     rows = [f'{u["id"]}: RU: {u.get("text", "").strip()} | EN: {u.get("translation", "").strip()}' for u in units if u.get("translation")]

@@ -27,7 +27,8 @@ PREP = {"on", "in", "at", "for", "with", "from", "about", "among", "around", "in
 
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument("--work", required=True); ap.add_argument("--out", required=True); ap.add_argument("--src16", required=True)
+    ap = argparse.ArgumentParser(); ap.add_argument("--names", default="on", choices=["on", "off"], help="r8 v4s: proper nouns heard by Whisper, else respelled retries")
+    ap.add_argument("--work", required=True); ap.add_argument("--out", required=True); ap.add_argument("--src16", required=True)
     ap.add_argument("--face"); ap.add_argument("--short-s", type=float, default=0.4); ap.add_argument("--min-gain", type=float, default=0.2); ap.add_argument("--seed", type=int, default=11)
     ap.add_argument("--cfgs", default="0.5,0.3", help="speed: Chatterbox cfg weights tried; with --lazy-cfg on the later ones only when the first finds no accepted layout")
     ap.add_argument("--lazy-cfg", choices=["on", "off"], default="off")
@@ -69,6 +70,7 @@ def main():
         from chatterbox.mtl_tts import ChatterboxMultilingualTTS
         from chatterbox_fp16 import install_speech_token_guard
         from tts_qa import TtsQA
+        import ne_guard
         from tts_align import CtcAligner, cut_parts, hush_gaps
         m = ChatterboxMultilingualTTS.from_local(HERE.parents[1] / "models" / "chatterbox", "cuda", t3_model="v3"); install_speech_token_guard(m)
         if os.environ.get("DUB_TTS_FAST_T3", "0") == "1":   # speed track: the same switch as the pipeline's --tts-fast-t3 / retake
@@ -91,20 +93,27 @@ def main():
             ref = refs[u["speaker"]]["file"]
             if ref: m.prepare_conditionals(ref)
             cur = u["speaker"]
+        unit_ents = ne_guard.unit_entities(u) if a.names == "on" else []
+        def names_in(txt):   # r8 v4s: the unit's named entities said in this clause
+            return [e for e in unit_ents if all(re.search(r"\b" + re.escape(g) + r"\b", txt, re.I) for g in e["guard"])]
+        def ladder(txt, ents):   # (text said, seed offset, temperature): the QA ladder, then each respelling (Chatterbox only; the text keeps the name)
+            return [(txt, 0, 0.8), (txt, 1, 0.8), (txt, 2, 0.6)] + [(ne_guard.apply(txt, ents, k), 0, 0.8) for k in range(max((len(e.get("respellings") or []) for e in ents), default=0))]
         def take(txt, cfg):   # one clause take: QA ladder, CTC trim with 0.12 s of the take's own silence at both ends, gap murmur hushed
             key = (txt, cfg)
             if key in cache: return cache[key]
-            res = None
-            for soff, temp in ((0, 0.8), (1, 0.8), (2, 0.6)):
-                torch.manual_seed(a.seed + 100 * u["id"] + 7919 * soff + zlib.crc32(txt.encode()) % 1000)
+            res = fb = None; ents = names_in(txt)
+            for say_, soff, temp in ladder(txt, ents):
+                torch.manual_seed(a.seed + 100 * u["id"] + 7919 * soff + zlib.crc32(say_.encode()) % 1000)
                 with torch.autocast("cuda", dtype=torch.float16):
-                    wav = m.generate(txt, language_id="en", temperature=temp, cfg_weight=cfg)
-                wv = wav.detach().float().cpu()[0].numpy().astype(np.float32); q = qa.assess(txt, wv, m.sr, "en")
+                    wav = m.generate(say_, language_id="en", temperature=temp, cfg_weight=cfg)
+                wv = wav.detach().float().cpu()[0].numpy().astype(np.float32); q = qa.assess(say_, wv, m.sr, "en")
                 if q["bad"]: continue
-                spans = aligner.align(wv, m.sr, txt)
+                spans = aligner.align(wv, m.sr, say_)
                 if not spans: continue
-                wv, _ = hush_gaps(wv, m.sr, spans); seg = cut_parts(wv, m.sr, spans, [len(spans)], pre_s=0.12, post_s=0.12)[0][0]; res = (seg, q["whisper"][:120]); break
-            cache[key] = res; return res
+                wv, _ = hush_gaps(wv, m.sr, spans); seg = (cut_parts(wv, m.sr, spans, [len(spans)], pre_s=0.12, post_s=0.12)[0][0], q["whisper"][:120])
+                if all(ne_guard.heard(e, q["whisper"]) for e in ents): res = seg; break
+                if fb is None and say_ == txt: fb = seg   # no respelling heard either -> the first good written-form take (the r4 NE guard rule)
+            cache[key] = res or fb; return res or fb
         layouts = []
         for k in range(1, min(a.max_cuts, len(cuts_ok)) + 1):
             for cs in itertools.combinations(cuts_ok, k):
@@ -148,17 +157,21 @@ def main():
                 for cfg_ in cfgs_:
                     for s_ in say_:
                         if (s_, cfg_) not in cache and (s_, cfg_) not in need: need.append((s_, cfg_))
-            jobs = [[dict(text=s_, seed=a.seed + 100 * u["id"] + 7919 * soff + zlib.crc32(s_.encode()) % 1000, temperature=temp, cfg_weight=cfg_)
-                     for soff, temp in ((0, 0.8), (1, 0.8), (2, 0.6))] for s_, cfg_ in need]
+            jobs = [[dict(text=say_, seed=a.seed + 100 * u["id"] + 7919 * soff + zlib.crc32(say_.encode()) % 1000, temperature=temp, cfg_weight=cfg_)
+                     for say_, soff, temp in ladder(s_, names_in(s_))] for s_, cfg_ in need]
+            fbs = {}
             def assess(j, r_, it, wav):
                 if wav is None: return (True, 0), None
                 wv = wav.detach().float().cpu()[0].numpy().astype(np.float32); q = qa.assess(it["text"], wv, m.sr, "en")
                 if q["bad"]: return (True, 0), None
                 spans = aligner.align(wv, m.sr, it["text"])
                 if not spans: return (True, 0), None
-                wv, _ = hush_gaps(wv, m.sr, spans); return (False, 0), (cut_parts(wv, m.sr, spans, [len(spans)], pre_s=0.12, post_s=0.12)[0][0], q["whisper"][:120])
-            for (s_, cfg_), b in zip(need, t3_batch.ladder_batch(m, jobs, assess, ctx=lambda: torch.autocast("cuda", dtype=torch.float16))):
-                cache[(s_, cfg_)] = b[1] if b is not None and not b[2][0] else None
+                wv, _ = hush_gaps(wv, m.sr, spans); seg = (cut_parts(wv, m.sr, spans, [len(spans)], pre_s=0.12, post_s=0.12)[0][0], q["whisper"][:120])
+                if all(ne_guard.heard(e, q["whisper"]) for e in names_in(need[j][0])): return (False, 0), seg
+                if it["text"] == need[j][0]: fbs.setdefault(j, seg)   # not heard: kept as the fallback, the ladder goes on to the respellings
+                return (True, 0), None
+            for j, ((s_, cfg_), b) in enumerate(zip(need, t3_batch.ladder_batch(m, jobs, assess, ctx=lambda: torch.autocast("cuda", dtype=torch.float16)))):
+                cache[(s_, cfg_)] = (b[1] if b is not None and not b[2][0] else None) or fbs.get(j)
         for cl, say, nc in layouts:
                 for cfg in [float(x) for x in a.cfgs.split(",")]:
                     if a.lazy_cfg == "on" and cfg != float(a.cfgs.split(",")[0]) and best is not None and best[0] <= r["base"] - a.min_gain: break
