@@ -115,13 +115,25 @@ def clean(bg: np.ndarray, sr: int, source_speech: list, dub_speech: list, voice_
         fill, ffl = (tone, floor) if tone is not None else bb.room_tone(src, source_speech, sr, N, seed=seed + 1, max_floor_db=0.0)
         if fill is not None:
             h = int(FR * sr); Lc = 20 * np.log10(bb._frame_rms(out.mean(1), h) + 1e-9)[:n]; touched = (gs | d["junk"])[:len(Lc)]
-            tgt = d["ref"][:len(Lc)] - floor_db; need = touched & (Lc < tgt)
+            # the ambience the ear hears: MEDIAN of the untouched non-speech bed within +-3 s (detect()'s ref is its 30th percentile: on music, 01,
+            # that sits far under the pauses and left the cleaned gaps dead)
+            amb = ~_mask_frames(source_speech, n, 0.3); ai = np.flatnonzero(amb); r50 = d["ref"].copy(); kk = int(3.0 / FR)
+            for i in range(0, n, 25):
+                sel = d["L"][ai[np.searchsorted(ai, i - kk):np.searchsorted(ai, i + kk)]]
+                if len(sel) >= 25: r50[i:i + 25] = np.median(sel)
+            tgt = r50[:len(Lc)] - floor_db; need = touched & (Lc < tgt)
             if need.any():
                 add_p = np.where(need, np.maximum(0.0, 10 ** (tgt / 10) - 10 ** (Lc / 10)), 0.0); fl_p = float(ffl) ** 2 if ffl else 1e-12
                 gf = np.sqrt(add_p / max(fl_p, 1e-12)); k = max(1, int(round(floor_xf_s / FR))); gf = np.convolve(gf, np.ones(2 * k + 1) / (2 * k + 1), "same")
                 gs_ = np.interp(np.arange(N) / sr, (np.arange(len(gf)) + 0.5) * FR, gf).astype(np.float32)[:, None]
                 out = out + fill[:N] * gs_
                 rep["floor_filled_s"] = round(float(need.sum() * FR), 2); rep["floor_db"] = floor_db
+        if tone is None:   # no room tone (music / variable outdoor, 01): the denoise itself is limited to -2 x floor_db against the raw bed there
+            h = int(FR * sr); Lc = 20 * np.log10(bb._frame_rms(out.mean(1), h) + 1e-9)[:n]; Lr = d["L"][:len(Lc)]; touched = (gs | d["junk"])[:len(Lc)]
+            b_ = np.where(touched & (Lc < Lr - 2 * floor_db), np.clip(((Lr - 2 * floor_db) - Lc) / np.maximum(1e-3, Lr - Lc), 0, 1), 0.0)
+            k = max(1, int(round(floor_xf_s / FR))); b_ = np.convolve(b_, np.ones(2 * k + 1) / (2 * k + 1), "same")
+            bs = np.interp(np.arange(N) / sr, (np.arange(len(b_)) + 0.5) * FR, b_).astype(np.float32)[:, None]
+            out = out * (1 - bs) + st * bs; rep["denoise_limited_s"] = round(float((b_ > 0.05).sum() * FR), 2)
     runs = []; m = d["junk"]; dd = np.diff(np.concatenate([[0], m.astype(np.int8), [0]]))
     for a, b in zip(np.flatnonzero(dd == 1), np.flatnonzero(dd == -1)):
         runs.append([round(a * FR, 2), round(b * FR, 2), "voice" if d["voice"][a:b].any() else "burst"])

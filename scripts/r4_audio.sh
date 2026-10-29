@@ -35,6 +35,8 @@ one() {
   if [ "${HUSH_PLACED:-off}" = on ]; then   # r7_audio_v3a.1: non-word TTS material at re-taken piece edges -> -30 dB, timing kept (scripts/r7/hush_placed.py)
     python scripts/r7/hush_placed.py --placed $W --out $O/hushed/$id > $O/runs/${id}.hush.log 2>&1 || { echo "FAIL hush $id"; return; }
     W=$O/hushed/$id; fi
+  if [ "${FINAL_SOFTEN:-off}" = on ]; then   # r8 v4: the last abrupt word ends (hush / gate / placement edges) softened on the final dub (scripts/r8/soften_edges.py)
+    python scripts/r8/soften_edges.py --work $W --out $O/soft/$id > $O/runs/${id}.soft.log 2>&1 && W=$O/soft/$id || echo "WARN final soften $id"; fi
   t_hush=$(date +%s.%N)
   ln -sfn $W $O/mix_src/$id
   python scripts/quality/r3_remix.py --src $O/mix_src --out $O ${REMIX_ARGS:-} $id > $O/runs/${id}.remix.log 2>&1 || { echo "FAIL remix $id"; return; }

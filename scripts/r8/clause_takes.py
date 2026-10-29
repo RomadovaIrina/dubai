@@ -21,12 +21,14 @@ HERE = pathlib.Path(__file__).resolve().parent
 for p in (HERE.parent / "pilot", HERE.parent / "quality", HERE.parent / "r7"): sys.path.insert(0, str(p))
 FR = 0.02
 TEMPI = (1.0, 0.95, 0.9)
+QUANT = {"all", "some", "every", "each", "any", "no", "many", "much", "more", "most", "such", "both", "few", "several", "other", "another"}
+INTRO = {"today", "now", "here", "so", "well", "then", "also", "yesterday", "tomorrow", "anyway", "first", "next", "later"}   # a sentence-opening adverbial may stand alone: "Today, / we are starting"
 PREP = {"on", "in", "at", "for", "with", "from", "about", "among", "around", "into", "over", "under", "after", "before", "during"}   # not "of" / "to": "kind | of", "want | to"
 
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--work", required=True); ap.add_argument("--out", required=True); ap.add_argument("--src16", required=True)
-    ap.add_argument("--face"); ap.add_argument("--short-s", type=float, default=0.4); ap.add_argument("--min-gain", type=float, default=0.3); ap.add_argument("--seed", type=int, default=11)
+    ap.add_argument("--face"); ap.add_argument("--short-s", type=float, default=0.4); ap.add_argument("--min-gain", type=float, default=0.2); ap.add_argument("--seed", type=int, default=11)
     ap.add_argument("--max-cuts", type=int, default=3); ap.add_argument("--tmin", type=float, default=0.9); a = ap.parse_args()
     import retake, r4_pause_logic as pl
     W, O = pathlib.Path(a.work).resolve(), pathlib.Path(a.out); O.mkdir(parents=True, exist_ok=True)
@@ -73,10 +75,11 @@ def main():
         pause_after = lambda k: B[k + 1][0] - B[k][1] if k + 1 < len(B) else 0.0
         def natural(j):   # boundary before words[j]
             prev, nxt = re.sub(r"[^\w']", "", words[j - 1].lower()), re.sub(r"[^\w']", "", words[j].lower())
-            if prev in retake.NOCUT or prev in retake.FUNC: return False
+            if prev in retake.NOCUT or prev in retake.FUNC or prev in QUANT: return False   # not "from all | around the world"
             if re.search(r"[,.;:!?—]$", words[j - 1]) or nxt in pl.CLAUSE: return True
             return nxt in PREP and max(pause_after(k) for k in range(len(B))) >= 0.5
         cuts_ok = [j for j in range(2, nw - 1) if natural(j)]
+        if nw > 3 and re.sub(r"[^\w']", "", words[0].lower()) in INTRO: cuts_ok = [1] + cuts_ok   # r8 v4: 04 u2 "Today, / we are starting ..." (the speaker says "сегодня" alone)
         best = None
         if u["speaker"] != cur:
             ref = refs[u["speaker"]]["file"]
@@ -99,7 +102,7 @@ def main():
         for k in range(1, min(a.max_cuts, len(cuts_ok)) + 1):
             for cs in itertools.combinations(cuts_ok, k):
                 bnd = [0, *cs, nw]; cl = [" ".join(words[bnd[q]:bnd[q + 1]]) for q in range(len(bnd) - 1)]
-                if any(len(c.split()) < 2 for c in cl): continue
+                if any(len(c.split()) < 2 and not (q == 0 and re.sub(r"[^\w']", "", c.lower()) in INTRO) for q, c in enumerate(cl)): continue
                 say = [(c[0].lower() + c[1:] if q and not re.match(r"(I\b|I'|[A-Z]{2})", c) else c) for q, c in enumerate(cl)]
                 say = [s if q == len(say) - 1 or re.search(r"[,.;:!?]$", s) else s + "," for q, s in enumerate(say)]
                 nc = len(cl)
@@ -110,20 +113,23 @@ def main():
                     lens = [len(s[0]) / m.sr for s in segs]
                     # runs of source pieces per clause: contiguous partition of B into nc runs, closest run lengths to the clause lengths
                     bestrun = None
-                    for brk in itertools.combinations(range(1, len(B)), nc - 1):
-                        rb = [0, *brk, len(B)]; runs = [(B[rb[q]][0], B[rb[q + 1] - 1][1]) for q in range(nc)]
+                    for st in itertools.combinations(range(len(B)), nc):   # clause q starts on source piece st[q]; leading pieces may stay without dub
+                        rb = [*st, len(B)]; runs = [(B[rb[q]][0], B[rb[q + 1] - 1][1]) for q in range(nc)]   # (04 u1: "Город" 0.3 s, then "Сочи", "28 августа")
                         for tem in itertools.product(TEMPI, repeat=nc):   # per clause tempo 1.0 / 0.95 / 0.9 (slower only where it covers more than it costs)
                             placed, t = [], None
                             for (r0, r1), L, tp in zip(runs, lens, tem):
                                 t0 = r0 if t is None else max(t + 0.12, min(r0, t + srcsil(t, r0) + 0.35))
                                 placed.append((t0, t0 + L / tp)); t = t0 + L / tp
-                            if t > r["win"] + 0.05: continue
+                            if t > r["win"] + 0.05:   # r8 v4: the last clause may start up to 0.25 s before its burst to end before the next sentence (04 u1 "on August twenty-eight." vs u2 at 18.8)
+                                sh_ = t - (r["win"] + 0.05); lo_ = placed[-2][1] + 0.12 if len(placed) > 1 else 0.0
+                                if sh_ > 0.25 or placed[-1][0] - sh_ < lo_: continue
+                                placed[-1] = (placed[-1][0] - sh_, placed[-1][1] - sh_); t = placed[-1][1]
                             c_, d_ = cost_of(placed, B[0][0], B[-1][1])
                             c_ += sum(abs(1 - tp_) * (q[1] - q[0]) for tp_, q in zip(tem, placed))   # tempo cost as burst_align
                             if bestrun is None or c_ < bestrun[0]: bestrun = (c_, placed, d_, list(tem))
                     if bestrun and (best is None or bestrun[0] < best[0]): best = (bestrun[0], bestrun[1], bestrun[2], cl, say, segs, cfg, bestrun[3])
         rec = {"id": u["id"], "en": " ".join(words), "old_cost": round(r["base"], 2), "old_detail": r["det"], "natural_cuts": [words[j - 1] + " | " + words[j] for j in cuts_ok]}
-        ok = best is not None and best[0] <= r["base"] - a.min_gain
+        ok = best is not None and (best[0] <= r["base"] - a.min_gain or (r["det"]["uncovered_s"] - best[2]["uncovered_s"] >= 0.3 and best[0] <= r["base"]))   # a real coverage gain at no extra cost (04 u2 "Today,")
         rec["accepted"] = bool(ok)
         if best: rec.update({"tempo": best[7], "new_cost": round(best[0], 2), "new_detail": best[2], "clauses": best[3], "said": best[4], "cfg": best[6], "placed": [[round(p, 2) for p in q] for q in best[1]],
                              "whisper": [s[1] for s in best[5]]})
