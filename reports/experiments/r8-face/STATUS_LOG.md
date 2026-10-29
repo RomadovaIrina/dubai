@@ -74,3 +74,7 @@ Code: clean_face_stack.assert_clean_tree() lets them through only under DUB_ALLO
 --dump-ls-raw loads the 25 fps master lazily (on the InsightFace path the master is written after the hook) + thumbnail fallback match.
 m14 = cand5 flags (--codeformer optimized --codeformer-w 1.0 --codeformer-scope mouth --face-stack insightface) on audio-r8-v4 + the m13b
 composite (fb6 + dfk2). The dumped layer is CodeFormer-restored (restore_frames runs before the mouth-only composite).
+
+## 9. m14 result
+See m14_WATCH.md: the old stack is not a lip-sync win (SyncNet +-0.35 either way), doubles mismatch (03, 05) and pressed lips (03), slightly crisper lips.
+Plain composites on audio-r8-v4 (no fallback / deflicker): clean SyncNet 01 6.47, 03 7.90, 05 4.02 (all pass), i.e. the fallback + deflicker cost ~1.5-2 on 03.
