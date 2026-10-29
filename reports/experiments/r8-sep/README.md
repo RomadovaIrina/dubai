@@ -98,3 +98,12 @@ In the one-command chain: `REMIX_ARGS="<r8v4 flags> --sep htdemucs --bed-pauses 
 ## Cost
 - Disk: server 60 → 81 GB of 150 GB (incl. the audio agent's runs); this work = 18 GB: 17 variant mix dirs /workspace/dub/artifacts/r4a/sep* ~15 GB (all but sepS0 / sepH8p deletable), stems 1.5 GB, NC weights 0.7 GB, outbox 0.2 GB.
 - Download: 0.79 GB (eth0 rx; weights 0.72 GB + pip 4 MB).
+
+## 29.10 evening: published audio-r8-v5 (user: "Spleeter 90-95 %, htdemucs 95-100 %, absolutely no farts; 05 audibly better"; NC deviation accepted)
+- `/workspace/dub/handoff/out/F/audio-r8-v5/` READY = the audio-r8-v4s dub (04 "City of Sochi" re-taken; samples identical to v4s) on the sepH8p bed
+  (`--sep htdemucs --bed-pauses source --bed-noise-back on --src-duck-db -3`, the rest = the v4 remix flags, `--dub-gate off` as the handoff dub is already gated).
+  Tag v5_v4s. Gate: 0 gap words on all 5; Silero gap voice <= the Spleeter twin (05 0.32 -> 0.24 s); mixdrop dead <= (04 1 -> 0).
+- `/workspace/dub/handoff/out/F/audio-r8-v5-spleeter/` READY = the same dub on the Spleeter bed (tag v5spl_v4s): bit-exact r8v4c on 01/02/03/05, 04 decodes identical to audio-r8-v4s.
+- The two 02 flags are NOT new sounds: at 50.8 s r8v4 has the same dip (-56.5 vs -56.1 dB); it is flagged "abrupt" only because the v5 ambience reference (the pauses = the source room) is higher. At 75.14 s r8v4 has the same transient at the same level (-37.6 vs -37.4 dBFS), score 17.4 vs 18.8 against the detector threshold 18. Tried and dropped (no effect): a duck-compensated gap_clean floor, room tone without transient frames.
+- WATCH (v5-spleeter -> v5, same dub): `/workspace/dub/outbox/sep/{02,04,05}_audio_sep_WATCH_AB_v5spleeter-then-v5.mp4` (+ `_over-original.mp4`, `_listen.md`).
+- One command for a new dub handoff: `bash scripts/r8/publish_v5.sh <dub handoff dir> <label>`.
