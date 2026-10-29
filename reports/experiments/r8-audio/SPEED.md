@@ -58,6 +58,54 @@ All stacks keep 0 cut-word ends and the dead-air counts (0–2 per video); what 
 - L2 (fast T3) is deterministic but gives OTHER takes (not bit-identical by design); on this one sample they score worse on 04 / 05. One
   draw cannot separate "worse model" from "worse draw" (audio-r8-v4 vs the from-scratch baseline already differ by that much on 05);
   it needs several seeds before it can be gated.
+## Batched Chatterbox (`DUB_TTS_BATCH=1`, `scripts/pilot/t3_batch.py`) + one process (now the default)
+
+Same candidate sets and selection code; only the execution changes:
+- T3 decode of N takes together over a static KV cache (per-row position / RoPE / mask, CUDA graphs per length bucket); each take samples
+  with its own CUDA generator seeded like `torch.manual_seed(seed)` + `generate`, S3Gen runs with that take's RNG state;
+- QA ladders round by round (`ladder_batch`: decode entry r of every unfinished take, vocode + QA in order) = the sequential first-good /
+  best-key selection, no speculative takes;
+- pipeline: the first take of every unit in one batch; the duration-aware selection judges first (the judge never depends on a take), then
+  synthesises the round's candidates in one batch, pace takes per cfg; retake: all candidate ladders of a unit; clause takes: every
+  clause take a unit can need.
+
+Equivalence (`scripts/r8/test_t3_batch.py`, 12 takes): 8 / 12 bit-identical to upstream `generate` (t3_fast: 7 / 12); the rest diverge
+from one token on (last-bit rounding of the shared step) = another draw of the same model. Fused SDPA attention: 6 / 12 (worse, off).
+Per stage on 04: retake identical candidates / verdicts / costs (47 → 35 s); clause takes 172 → 75 s, 4 / 5 the same layouts.
+
+| build (all 5) | s/video-min | pipeline / retake / clause / chain |
+|---|---:|---|
+| baseline r8e2e0 + r8e2e0b | 303 | 146 / 47 / 92 / 18 |
+| **batched r8b5** | **175** | 99 / 25 / 32 / 19 |
+
+### Gate: draw-to-draw spread first
+
+The sequential pipeline itself, re-run with every seed + 1 (r8s2, 04 + 05), moves as much as any lever:
+
+| run | 04 faith / coverage / gap excess | 05 faith / coverage / pause W1 |
+|---|---|---|
+| sequential draw 1 (r8e2e0b) | 5.0 / 0.8 / 0.9 | 4.71 / 3.6 / 0.38 |
+| sequential draw 2 (r8s2) | 4.8 / 3.2 / 3.6 | 4.57 / 4.1 / 0.67 |
+| batched (r8b5) | 4.8 / 1.3 / 0.8 | 4.43 / 5.2 / 0.68 |
+
+r8b5 vs r8e2e0b on all 5 (faith / coverage beyond breaths s / gap excess s / cut-word ends / dead air):
+01 4.81 = / 1.3 = / 0.0 = / 0 / 1 → 2; 02 4.64 → 4.55 / 2.9 → 3.0 / 1.35 → 1.1 / 0 / 0 → 1; 03 4.55 = / 2.2 → 3.7 / 0.95 → 2.25 / 0 / 0;
+04 5.0 → 4.8 / 0.8 → 1.3 / 0.9 → 0.8 / 0 / 1 → 0; 05 4.71 → 4.43 / 3.6 → 5.2 / 1.7 → 2.35 / 0 / 2 → 1.
+04 / 02 inside the upstream envelope; 03 / 05 coverage beyond it (05 u0: a diverged take changes the placement cost and another candidate
+wins, "Let's test out this video recording format as well.", judged 4 at selection, 3 by the final judge). The final judge itself varies:
+04 faith 5.0 in r8b1 vs 4.8 in r8b5 with identical code and seeds.
+AB for the ear: `outbox/{04,05}_audio_r8b5_WATCH_AB_prev-then-new.mp4` (A = audio-r8-v4, B = r8b5).
+
+## Where the rest goes (r8b5, 175 s/video-min)
+
+- Qwen 14B: the duration-aware candidates + a judge call per candidate (pipeline), the faith judge + candidates + judges (retake); now the
+  biggest single block in the pipeline and retake stages.
+- the pipeline's batches are small (2-4 takes per round): each unit's selection runs on its own with Qwen in between.
+- S3Gen per take (~0.25 s), the TTS QA (Whisper + CTC) per take, the chain (~19).
+- Next levers: units' selections concurrently (bigger batches), batched / speculative Qwen judging, batched S3Gen.
+
+## Reading (lever runs above)
+
 - ≤ 80 s/video-min with today's quality is not reachable by these flags. The remaining lever is architectural: BATCHED Chatterbox
   inference (several units / candidates in one T3 forward, batch > 2 next to CFG, with the CUDA-graph decode) and synthesising each unit
   once for the pipeline + retake + clause stages instead of three times.
