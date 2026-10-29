@@ -9,6 +9,8 @@ source also has does not count:
   tone     inner-mouth luma HF residual (r8_mouth_flicker model: luma not explained by the opening, 2nd difference) of the layer minus the source
   app      mouth-box appearance jump: mean |crop[t] - (crop[t-1] + crop[t+1]) / 2| (grey, box from frame t's landmarks, same box in the
            neighbours), layer minus 1.5 x source (cavity / teeth blobs, colour pops, lip-shape collapse)
+  coll / wash  lip-box contrast loss / brightening vs the source at the same frame (the washed pink blob), transient part
+  dark     near-black cavity: the layer's 5th-percentile mouth luma vs the source's typical open-mouth cavity over the video
   geo      rigid-landmark disagreement layer vs source (eyes / nose, IOD): the generated face does not sit where the source face is
   joint    the app / jerk excess at a 16-frame window joint counts x --joint-gain (window-joint jumps)
 score = max over the features, each scaled so 1 = a clear artefact (--thr-*). fallback weight fb (0..1): score -> clip, max-filter
@@ -87,7 +89,7 @@ def main():
     jerk = np.nan_to_num(hf(ol[:n]) - hf(os_[:n]), nan=0.0)
     tone = np.nan_to_num(tone_hf(yl[:n], ol[:n], al_[:n]) - np.nan_to_num(tone_hf(ys[:n], os_[:n], as_[:n]), nan=0.0), nan=0.0)
     appx = np.nan_to_num(apl[:n] - 1.5 * np.nan_to_num(aps[:n], nan=0.0), nan=0.0)
-    coll = np.zeros(n); wash = np.zeros(n); dark = np.zeros(n)
+    coll = np.zeros(n); wash = np.zeros(n); sp5 = np.full(n, np.nan); lp5 = np.full(n, np.nan)
     cl = cv2.VideoCapture(str(a.ls)); cs = cv2.VideoCapture(str(work / "video/master_25fps.mp4"))
     for k in range(n):
         okl, fl = cl.read(); oks, fs = cs.read()
@@ -101,8 +103,13 @@ def main():
         gl = cv2.cvtColor(fl, cv2.COLOR_BGR2GRAY).astype(np.float32)[m]; gs = cv2.cvtColor(fs, cv2.COLOR_BGR2GRAY).astype(np.float32)[m]
         coll[k] = 1 - gl.std() / max(gs.std(), 1.0)                       # lip / cavity contrast lost vs the source (washed blob)
         wash[k] = (gl.mean() - gs.mean()) / max(gs.mean(), 1.0)           # the mouth region brighter than the source (pale / pink pop)
-        dark[k] = (np.percentile(gs, 10) - np.percentile(gl, 10)) / max(np.percentile(gs, 10) + 10, 1.0)   # a black hole darker than the source's cavity
+        sp5[k], lp5[k] = np.percentile(gs, 5), np.percentile(gl, 5)
     cl.release(); cs.release()
+    # black hole: the layer's darkest mouth pixels vs the source's TYPICAL open-mouth cavity over the video (not the same frame: a dub-open mouth over a
+    # closed source mouth is a legitimate dark cavity; a near-black slot darker than this person's cavity ever is, is not)
+    so_ = np.isfinite(os_[:n]) & (os_[:n] > 0.06) & np.isfinite(sp5)
+    ref_cav = float(np.median(sp5[so_])) if so_.sum() > 10 else float(np.nanpercentile(sp5, 10))
+    dark = np.where(np.isfinite(lp5), (ref_cav - lp5) / (ref_cav + 10.0), 0.0)
     geo = np.zeros(n)
     for k in range(n):
         p, q = lml[k], lms[k]
@@ -116,7 +123,7 @@ def main():
     sc = lambda x, t: np.clip((x - a.knee * t) / ((1 - a.knee) * t), 0, 1)
     tmed = lambda x: np.array([np.median(x[max(0, k - 6):k + 7]) for k in range(len(x))])   # the transient part (a pop), not a steady offset
     F = {"jerk": sc(jerk, a.thr_jerk), "tone": sc(tone, a.thr_tone), "app": sc(appx, a.thr_app), "geo": sc(geo, a.thr_geo),
-         "coll": sc(coll - np.minimum(tmed(coll), 0.15), a.thr_coll), "wash": sc(wash - np.minimum(tmed(wash), 0.05), a.thr_wash), "dark": sc(dark - np.minimum(tmed(dark), 0.2), a.thr_dark)}
+         "coll": sc(coll - np.minimum(tmed(coll), 0.15), a.thr_coll), "wash": sc(wash - np.minimum(tmed(wash), 0.05), a.thr_wash), "dark": sc(dark, a.thr_dark)}
     for k_ in ("jerk", "app"): F[k_] = np.where(joint, np.clip(F[k_] * a.joint_gain, 0, 1), F[k_])
     score = np.max(np.stack(list(F.values()), 1), 1) * ls_mask
     fb = score.copy()
