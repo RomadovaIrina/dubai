@@ -7,7 +7,7 @@ The dub voice and its timing are untouched (lip renders stay valid); only the be
 Writes <out>/<id>/ = symlinks of the run's work dir + new final_mix_44k.wav / final_mix_aac.m4a + <id>_r4b.manifest.json, and checks it.
     python scripts/quality/r3_remix.py --src /workspace/dub/artifacts/r3d/audio-r4 --out /workspace/dub/artifacts/r3d/audio-r4b 03 04 ..."""
 from __future__ import annotations
-import argparse, json, pathlib, re, subprocess, sys
+import argparse, json, os, pathlib, re, subprocess, sys
 import soundfile as sf
 HERE = pathlib.Path(__file__).resolve().parent; sys.path.insert(0, str(HERE.parent / "pilot")); sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent / "r7"))
 
@@ -148,8 +148,19 @@ def main() -> int:
     ap.add_argument("--dub-gate-db", type=float, default=20.0); ap.add_argument("--dub-gate-min", type=float, default=0.6)
     ap.add_argument("--gap-clean-voice-p", type=float, default=0.4); ap.add_argument("--gap-clean-burst-db", type=float, default=6.0); ap.add_argument("--gap-clean-nr", type=float, default=0.6); ap.add_argument("--gap-clean-nr-ns", type=float, default=0.0)
     ap.add_argument("--gap-clean-floor", type=float, default=0.0, help="r8 v4: > 0 = a cleaned dub gap never sits more than this many dB under the local ambience (filled with the source's own ambience, >= 120-ms ramps)")
+    ap.add_argument("--sep", choices=["spleeter", "hdemucs", "htdemucs", "htdemucs_ft"], default="spleeter", help="r8-sep: separator of the bed. spleeter = the run's own "
+                    "bg_44k.wav (MIT, unchanged); the others are NC (MUSDB18-HQ weights, user-accepted deviation, DUB_ALLOW_NC_BED=1): stems from the cache "
+                    "$DUB_SEP_STEMS/stems_<sep>[_res]/<id>/ (scripts/r8/sep_stems.py; separated here when missing)")
+    ap.add_argument("--sep-bg", choices=["stems", "residual"], default="stems", help="r8-sep, --sep != spleeter: bed = sum of the non-vocal stems | source - vocals stem")
+    ap.add_argument("--room-fill", choices=["on", "off"], default="on", help="r8-sep: mix_background's room-tone top-up under the source speech (an HDemucs workaround)")
+    ap.add_argument("--bed-pauses", choices=["sep", "source"], default="sep", help="r8-sep: source = in the source pauses (speech_intervals +-0.3 s off) the bed IS the "
+                    "source (bed + vocals stems), separated bed only under / around the speech, 60-ms equal-power joins (htdemucs files part of 02's room noise "
+                    "under vocals: its pause bed was 7 dB low)")
+    ap.add_argument("--bed-noise-back", choices=["on", "off"], default="off", help="r8-sep: the stationary noise of the vocals stem (noisereduce, profile = the "
+                    "vocals stem in the source pauses) moved back to the bed: htdemucs takes 02's room noise out WITH the voice (bed under speech -65 vs -52 dB)")
     a = ap.parse_args()
     import background_bed as bb, run_clean_pipeline_05 as rp, r3_bedswing  # noqa: F401
+    stems_root = pathlib.Path(os.environ.get("DUB_SEP_STEMS", "/workspace/dub/r8a"))
     for id_ in a.ids:
         W = (pathlib.Path(a.src) / id_).resolve(); O = pathlib.Path(a.out) / id_; O.mkdir(parents=True, exist_ok=True)
         for f in W.iterdir():
@@ -157,6 +168,15 @@ def main() -> int:
             (O / f.name).unlink(missing_ok=True); (O / f.name).symlink_to(f)
         man = json.loads(next(W.glob(f"{id_}_*.manifest.json")).read_text())
         sep = {"bg": str(W / "bg_44k.wav"), "vocals": str(W / "vocals_44k.wav")}
+        if a.sep != "spleeter":   # r8-sep: the bed (and the vocals stem the gains / room tone read) of another separator; the dub, timing and flags unchanged
+            C = stems_root / f"stems_{a.sep}{'_res' if a.sep_bg == 'residual' else ''}" / id_
+            if not (C / "bg_44k.wav").exists():
+                os.environ["DUB_SEP_BG"] = a.sep_bg; bb.SEP_BG = a.sep_bg; C.mkdir(parents=True, exist_ok=True)
+                src = next(pathlib.Path("/workspace/dub/inputs/test_videos_raw").glob(f"{id_}.*"))
+                (C / "sep.json").write_text(json.dumps(bb.separate_background(src, C, separator=a.sep), indent=1))
+            sep = {"bg": str(C / "bg_44k.wav"), "vocals": str(C / "vocals_44k.wav")}
+            for f in ("bg_44k.wav", "vocals_44k.wav"): (O / f).unlink(missing_ok=True); (O / f).symlink_to(C / f)   # mixdrop / metrics read the run dir's raw bed
+            man["bed_separator"] = {"sep": a.sep, "bg": a.sep_bg, "stems": str(C), "licence": "NC weights (MUSDB18-HQ), user-accepted deviation 29.10"}
         D = W
         if a.unit_level == "on":   # the levelled dub replaces the symlinked one in the remix dir (metrics, handoff and the mix all read it)
             for f in ("dubbed_24k.wav", "dubbed_16k.wav"): (O / f).unlink(missing_ok=True)
@@ -168,6 +188,33 @@ def main() -> int:
             man["dub_gate"] = dub_gate(src24, g24, g16, a.dub_gate_db, a.dub_gate_min); D = O
             print(f"   {id_} dub_gate: {man['dub_gate']['gated_s']} s gated in {len(man['dub_gate']['runs'])} runs", flush=True)
         speech = [(s["start"], s["end"]) for s in man["speech_intervals"]]; dub_speech = [(s["start"], s["end"]) for s in rp.run_vad(D / "dubbed_16k.wav")]
+        if a.bed_noise_back == "on":   # r8-sep: the vocals stem's stationary noise (profile = that stem in the source pauses) goes back to the bed
+            import numpy as np, noisereduce as nr
+            bgy, bsr = sf.read(sep["bg"], dtype="float32"); vy, _ = sf.read(sep["vocals"], dtype="float32"); m_ = min(len(bgy), len(vy)); bgy, vy = bgy[:m_], vy[:m_]
+            Pm = ~bb._mask([(s0 - 0.3, e0 + 0.3) for s0, e0 in speech], m_, bsr); prof = vy[Pm][: 30 * bsr]
+            if len(prof) >= bsr:
+                vn = np.stack([vy[:, c] - nr.reduce_noise(y=vy[:, c], sr=bsr, stationary=True, y_noise=prof[:, c], prop_decrease=1.0, n_jobs=1)[:m_] for c in range(vy.shape[1])], 1)
+                # only the STATIONARY part goes back: 10-ms frames above the component's own pause level (median) + 3 dB are scaled down to it (the
+                # gate's mask lags at voice onsets: 02 69.89 s a consonant onset passed into the bed), 5-ms smoothed gains
+                h = int(0.01 * bsr); nf_ = len(vn) // h; r_ = np.sqrt((vn[:nf_ * h].mean(1).reshape(nf_, h) ** 2).mean(1)) + 1e-9
+                lim = np.median(r_[Pm[:nf_ * h:h]]) * 10 ** (3 / 20) if Pm[:nf_ * h:h].any() else np.median(r_)
+                from scipy.ndimage import minimum_filter1d
+                gn = np.convolve(minimum_filter1d(np.minimum(1.0, lim / r_), 3), np.ones(3) / 3, "same")   # min over +-10 ms first: no onset escapes the ramp
+                vn = vn * np.interp(np.arange(m_), (np.arange(nf_) + 0.5) * h, gn).astype(np.float32)[:, None]
+                sf.write(str(O / "bg_nb_44k.wav"), (bgy + vn).astype(np.float32), bsr, subtype="FLOAT"); sf.write(str(O / "vocals_nb_44k.wav"), (vy - vn).astype(np.float32), bsr, subtype="FLOAT")
+                sep = {**sep, "bg": str(O / "bg_nb_44k.wav"), "vocals": str(O / "vocals_nb_44k.wav")}
+                man["bed_noise_back"] = {"noise_db": round(float(bb._db(vn.mean(1))), 2), "vocals_db": round(float(bb._db(vy.mean(1))), 2), "profile_s": round(len(prof) / bsr, 1)}
+        if a.bed_pauses == "source":   # r8-sep: true pauses keep the original sound itself (nothing to separate there: no voice)
+            import numpy as np
+            bgy, bsr = sf.read(sep["bg"], dtype="float32"); vy, _ = sf.read(sep["vocals"], dtype="float32"); m_ = min(len(bgy), len(vy)); bgy, vy = bgy[:m_], vy[:m_]
+            # weight 1 only 0.3 s clear of the speech, 150-ms linear ramps INSIDE the pause (bed and source are correlated: linear); 60 ms left a step
+            # on 02 (separated bed 30 dB under the source room) that the click detector caught at 28.47 s
+            w = (~bb._mask([(s0 - 0.3 - 0.075, e0 + 0.3 + 0.075) for s0, e0 in speech], m_, bsr)).astype(np.float32); k = int(0.15 * bsr)
+            w = np.clip(np.convolve(w, np.ones(k, np.float32) / k, "same"), 0, 1)[:, None]
+            # bed + w * vocals = the source in pauses; the vocals stem keeps the rest, so bed + vocals stays the source for room tone / gains
+            sf.write(str(O / "bg_hyb_44k.wav"), (bgy + w * vy).astype(np.float32), bsr, subtype="FLOAT"); sf.write(str(O / "vocals_hyb_44k.wav"), ((1 - w) * vy).astype(np.float32), bsr, subtype="FLOAT")
+            sep = {**sep, "bg": str(O / "bg_hyb_44k.wav"), "vocals": str(O / "vocals_hyb_44k.wav")}
+            man["bed_pauses"] = {"mode": "source", "pause_s": round(float((w[:, 0] > 0.5).sum() / bsr), 2)}
         if a.gap_bed_cap_db > 0:
             man["gap_bed_cap"] = cap_gap_bed(pathlib.Path(sep["bg"]), O / "bg_capped_44k.wav", speech, dub_speech, a.gap_bed_cap_db, a.gap_bed_cap_scope)
             if man["gap_bed_cap"].get("applied"): sep = {**sep, "bg": str(O / "bg_capped_44k.wav")}
@@ -178,7 +225,7 @@ def main() -> int:
             sf.write(str(O / "bg_clean_44k.wav"), z, bsr, subtype="FLOAT"); sep = {**sep, "bg": str(O / "bg_clean_44k.wav")}
             print(f"   {id_} gap_clean: { {k: v for k, v in man['gap_clean'].items() if k != 'runs'} }", flush=True)
         mix = bb.mix_background(sep, D / "dubbed_24k.wav", speech, dub_speech, man["source"]["duration_s"], O, duck_db=a.duck_db, attack_s=a.attack,
-                                release_s=a.release, residue_duck_db=a.residue_db, src_duck_db=a.src_duck_db)
+                                release_s=a.release, residue_duck_db=a.residue_db, src_duck_db=a.src_duck_db, room_fill=a.room_fill == "on")
         loud = static_loudness(O / "final_mix_44k.wav", O / "final_mix_aac.m4a", a.target, a.tp)
         man["background"] = {**man.get("background", {}), "mix": mix, "loudness": loud, "remix": "r3 D r3_remix.py (bed duck -2 dB / 0.4 / 0.8 s, residue -6 dB, static loudness)"}
         man["dubbed_track"] = {**man["dubbed_track"], "aac": str(O / "final_mix_aac.m4a")}
