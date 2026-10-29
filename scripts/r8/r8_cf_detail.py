@@ -22,7 +22,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base", required=True); ap.add_argument("--cf", required=True); ap.add_argument("--lm", required=True); ap.add_argument("--out", required=True)
     ap.add_argument("--alpha", type=float, default=1.0); ap.add_argument("--beta", type=float, default=0.0); ap.add_argument("--sigma", type=float, default=0.12)
-    ap.add_argument("--dilate", type=float, default=0.25); ap.add_argument("--temporal", type=int, default=1); ap.add_argument("--crf", type=int, default=10)
+    ap.add_argument("--dilate", type=float, default=0.25); ap.add_argument("--temporal", type=int, default=1); ap.add_argument("--crf", type=int, default=10); ap.add_argument("--preset", default="medium", help="x264 preset of this intermediate layer (r8 speed: veryfast)")
     a = ap.parse_args(); lm = np.load(a.lm)["lm"]; t0 = time.perf_counter()
     cb, cc = av.open(a.base), av.open(a.cf); sb = cb.streams.video[0]; sb.thread_type = "AUTO"; cc.streams.video[0].thread_type = "AUTO"
     B = [f.to_ndarray(format="bgr24") for f in cb.decode(video=0)]; C = [f.to_ndarray(format="bgr24") for f in cc.decode(video=0)]; cb.close(); cc.close()
@@ -41,7 +41,7 @@ def main():
         sg = max(0.8, a.sigma * mw); lf = cv2.GaussianBlur(D, (0, 0), sg)
         boxes[k] = (y0, y1, x0, x1, m); det[k] = (D - lf, lf)
         ring = (m < 0.02); outside.append(float(np.abs(D[ring]).mean()) if ring.any() else 0.0)
-    o = av.open(a.out, "w"); st = o.add_stream("libx264", rate=sb.average_rate); st.width, st.height = W, H; st.pix_fmt = "yuv420p"; st.options = {"crf": str(a.crf), "preset": "medium"}
+    o = av.open(a.out, "w"); st = o.add_stream("libx264", rate=sb.average_rate); st.width, st.height = W, H; st.pix_fmt = "yuv420p"; st.options = {"crf": str(a.crf), "preset": a.preset}
     for k in range(n):
         img = B[k]
         if boxes[k] is not None:

@@ -114,7 +114,7 @@ def main() -> int:
     ap.add_argument("--codeformer-scope", choices=["face", "mouth"], default="face", help="with --mouth-only-pasteback: face = CodeFormer on the composited frame (whole face re-rendered, "
                     "previous behaviour); mouth = CodeFormer on the raw LatentSync frame, THEN the mouth-only composite (eyes / brows stay the source)")
     ap.add_argument("--codeformer", choices=["off", "optimized"], default="off", help="week 2: in-memory CodeFormer on LATENT_SYNC frames (codeformer_accel)")
-    ap.add_argument("--codeformer-w", type=float, default=1.0); ap.add_argument("--codeformer-batch", type=int, default=8)
+    ap.add_argument("--codeformer-parse", choices=["on", "off"], default="on", help="r8 F (speed): off = no ParseNet paste mask (the r8 detail transfer applies its own mouth mask)"); ap.add_argument("--codeformer-w", type=float, default=1.0); ap.add_argument("--codeformer-batch", type=int, default=8)
     ap.add_argument("--codeformer-empty-cache", action="store_true", help="A/B: upstream per-face torch.cuda.empty_cache()")
     ap.add_argument("--codeformer-landmarks", choices=["insightface", "retinaface"], default="insightface")
     ap.add_argument("--face-stack", choices=["insightface", "mediapipe"], default="mediapipe", help="mediapipe = clean face stack (default); insightface needs DUB_ALLOW_NC=1")
@@ -255,7 +255,7 @@ def main() -> int:
             Mo = rec_cls = make_box_recorder(MouthOnlyRunner, prep.frames)
         runner = Mo(runner, a.mask_top, a.mask_feather, a.mask_smooth, defer=a.codeformer_scope == "mouth")
         if a.dump_raw: runner.raw = {}   # A r3: --dump-raw (_lsraw.mp4)
-    raw_ls = {}
+    raw_ls = {}; raw_pre = {}; _pre_stash = []   # r8 F: raw_pre = the same LatentSync frames BEFORE CodeFormer (--dump-ls-raw writes _ls_pre.mp4)
     if a.dump_ls_raw != "off":   # r3 D: keep the raw LatentSync frames (BGR, before the mouth-only composite) per master frame
         if not getattr(runner, "deferred", False): raise SystemExit("--dump-ls-raw needs --mouth-only-pasteback on --codeformer-scope mouth")
         import hashlib, numpy as np
@@ -290,12 +290,20 @@ def main() -> int:
                 if best is not None and best[0] < 2.0: _, st, swap = best; print(f"  [dump-ls-raw] segment start {st} by thumbnail match (mad {best[0]:.2f}, channel swap {swap})", flush=True)
             if st is None: raise RuntimeError("--dump-ls-raw: LS segment start not found among the master frames")
             for k, o in enumerate(outs): raw_ls[st + k] = (o[..., ::-1] if swap else o).copy()
+            if len(_pre_stash) == len(outs):
+                for k, o in enumerate(_pre_stash): raw_pre[st + k] = (o[..., ::-1] if swap else o).copy()
+            _pre_stash.clear()
             return _comp(outs, originals, boxes)
         runner.composite = _composite
     cf_runner = None
     if a.codeformer == "optimized":
         from codeformer_accel import CodeFormerAccel
-        with rp.timed(times, "codeformer_load"): cf_runner = CodeFormerAccel(fidelity_weight=a.codeformer_w, batch_size=a.codeformer_batch, empty_cache_per_face=a.codeformer_empty_cache, landmark_source=a.codeformer_landmarks, autocast=a.codeformer_precision == "fp16", parse_autocast=a.codeformer_precision != "fp32")
+        with rp.timed(times, "codeformer_load"): cf_runner = CodeFormerAccel(fidelity_weight=a.codeformer_w, use_parse=a.codeformer_parse == "on", batch_size=a.codeformer_batch, empty_cache_per_face=a.codeformer_empty_cache, landmark_source=a.codeformer_landmarks, autocast=a.codeformer_precision == "fp16", parse_autocast=a.codeformer_precision != "fp32")
+        if a.dump_ls_raw != "off":   # r8 F: remember CodeFormer's input frames of the segment for the pre-CodeFormer dump
+            _rf = cf_runner.restore_frames
+            def _restore(frames, lms, _rf=_rf):
+                _pre_stash[:] = [np.ascontiguousarray(f).copy() for f in frames]; return _rf(frames, lms)
+            cf_runner.restore_frames = _restore
     rep = faa.process_video(src, work, dub16, dub_aac, out, router=router, runner=runner, min_ls_frames=a.min_ls_frames, max_verify_depth=a.max_verify_depth, codeformer=a.codeformer, times=times,
                             log=lambda m: print(m, flush=True), speech_gate=gate, crossfade_frames=a.crossfade_frames, router_stride=a.router_stride, in_memory=True, cf_runner=cf_runner, lm_smooth=a.ls_landmark_smooth, prep=prep, max_ls_frames=a.max_ls_frames, split_frames=split_frames, cut_energy=cut_energy,
                             split_ranges=(split_ranges if a.ls_split_snap and split_frames else None), split_snap=a.ls_split_snap)
@@ -315,6 +323,14 @@ def main() -> int:
             for i, f in enumerate(_mf): w.append_data((raw_ls.get(i, f))[:, :, ::-1])
             w.close()
         man["ls_raw"] = {"path": str(raw_path), "ls_frames": len(raw_ls), "master_frames": len(_mf)}; del raw_ls
+        if raw_pre:   # r8 F: the clean (pre-CodeFormer) layer of the same run: the base of the CodeFormer detail transfer (r8_cf_detail.py)
+            with rp.timed(times, "dump_ls_pre"):
+                pre_path = raw_path.with_name(raw_path.name.replace("_ls_raw", "_ls_pre")); w = iio.get_writer(str(pre_path), fps=25, codec="libx264rgb", macro_block_size=None,
+                                                                                                          pixelformat="rgb24", ffmpeg_params=["-crf", "0", "-preset", "veryfast"], ffmpeg_log_level="error")
+                for i, f in enumerate(_mf): w.append_data((raw_pre.get(i, f))[:, :, ::-1])
+                w.close()
+            man["ls_raw"]["pre_codeformer"] = {"path": str(pre_path), "ls_frames": len(raw_pre)}
+        del raw_pre
     if a.dump_raw and getattr(runner, "raw", None):
         import cv2, imageio, face_aware_latentsync as fa_
         rawp = out.with_name(out.stem + "_lsraw.mp4"); w_ = imageio.get_writer(str(rawp), fps=25, codec="libx264rgb", macro_block_size=None, pixelformat="rgb24",

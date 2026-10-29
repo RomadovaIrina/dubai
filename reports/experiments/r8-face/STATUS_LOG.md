@@ -78,3 +78,39 @@ composite (fb6 + dfk2). The dumped layer is CodeFormer-restored (restore_frames 
 ## 9. m14 result
 See m14_WATCH.md: the old stack is not a lip-sync win (SyncNet +-0.35 either way), doubles mismatch (03, 05) and pressed lips (03), slightly crisper lips.
 Plain composites on audio-r8-v4 (no fallback / deflicker): clean SyncNet 01 6.47, 03 7.90, 05 4.02 (all pass), i.e. the fallback + deflicker cost ~1.5-2 on 03.
+
+
+## 10. Speed of the CodeFormer face pipeline (user plan: CodeFormer stays in the product)
+Profile m16, 03 (1.51 video-min), s/video-min, measured while other jobs ran (inflated):
+- generator 453: LatentSync 361 (UNet 225, VAE / conditioning 80), CodeFormer ~41, MediaPipe / prep ~45;
+- layer SR ~66, CodeFormer detail ~20, deflicker ~29, fallback + composite ~55;
+- face total ~620.
+
+| lever (flag) | arm | effect | gate vs the previous arm |
+|---|---|---|---|
+| adaptive DDIM steps: 10 on speaking windows, 20 on dub-silent ones (`--steps 10 --steps-silent 20`) | m17 vs m16 | LatentSync 03 361 -> 276, 05 320 -> 264; UNet 225 -> 147 | OK: SyncNet 01 4.05 -> 3.89, 03 5.68 -> 6.11, 05 3.52 -> 3.65; mismatch better; pressed lips +0.2/+0.3 s (tolerance 0.5) |
+| drop the ESRGAN layer SR (`SR=""`) | m16nosr vs m16 | -66 s/vm | REJECTED: 05 SyncNet 3.52 -> 3.13 (tiny face); 03 fine (5.75) |
+| CodeFormer without ParseNet + batch 16 (`--codeformer-parse off --codeformer-batch 16`) | m18 vs m17 | 37 -> 57 faces/s (03 CodeFormer 58 -> 37 s) | OK (same run, see below) |
+| fast layer SR (`SR_EXTRA="--batch 8 --mask down2"`) | m18 vs m17 | 03 SR 90 -> 49 s | OK |
+| pre-CodeFormer dump in the generator (`_ls_pre.mp4`, `CFD=self`) | m17 / m18 | no separate clean run needed for the detail transfer | - |
+
+m18 vs m17 (01 / 03 / 05):
+- SyncNet 4.06 / 6.10 / 3.76 vs 3.89 / 6.11 / 3.65;
+- flashes 0 / 29 / 4 vs 0 / 34 / 3;
+- pressed lips 0 / 3.70 / 4.85 vs 0 / 3.70 / 4.88;
+- mismatch 0 / 1.87 / 1.67 vs 0 / 1.87 / 1.54;
+- whole-frame gate PASS.
+
+m18 face stage on 03 (generator 496 s + SR / detail / deflicker / fallback / composite 222 s) ~ 476 s/vm, under contention; a clean timed
+run is pending.
+
+Bug found: r8_teeth.py cached MediaPipe landmarks next to its input. When it was run on /workspace/dub/inputs/test_videos_raw/05.mp4, this
+wrote 05.flk_mp.npz into the inputs dir, and r7_frame_gate.sh's 05.* glob then picked it up. The file is moved out and the inputs are
+sha256-verified; every 05 frame gate since 14:50 was re-run: PASS.
+
+Next levers:
+- fuse detail + SR + deflicker into one decode / encode pass, or use the veryfast preset for intermediates (`--preset`, added): ~-40 s/vm;
+- the fix30 caches (FIX30_TD_SHARED, P2_PREP_CACHE);
+- CodeFormer torch.compile;
+- VAE (75 s/vm);
+- CPU / GPU overlap.

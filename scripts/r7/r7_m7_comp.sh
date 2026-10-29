@@ -5,7 +5,7 @@
 #   TAG=m7 SRC_TAG=m6 bash scripts/r7/r7_m7_comp.sh [ids]     env: DFK=<label> (r8: r8_layer_deflicker.py after the SR, DFK_ARGS), SR=srt1 (layer suffix made by r7_layer_sr.py --temporal 1; "" = the raw layer), EXTRA (composite flags)
 set -u
 DUB_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"; export DUB_ROOT; . $DUB_ROOT/scripts/env.sh >/dev/null; export DUB_ROOT; cd $DUB_ROOT
-TAG=${TAG:-m7}; ST=${SRC_TAG:-m6}; SR=${SR:-srt1}; EXTRA=${EXTRA:---tex-tau 1000 --tex-sigma 2.5}; B=/workspace/dub/artifacts/r4m; mkdir -p $B/$TAG; ln -sfn $B/$ST/timing $B/$TAG/timing
+TAG=${TAG:-m7}; ST=${SRC_TAG:-m6}; SR=${SR-srt1}; EXTRA=${EXTRA:---tex-tau 1000 --tex-sigma 2.5}; B=/workspace/dub/artifacts/r4m; mkdir -p $B/$TAG; ln -sfn $B/$ST/timing $B/$TAG/timing
 V1="--register sim_ring --ring-region upper --edge-px 12 --colour-match upper --sharpen-auto 0.95 --skin-texture source --lip-guard on --retime flow_safe --face-clip on --sanitize-layer 0.83 --sanitize-mode texture --sanitize-sigma 8 --sharpen-lips-max 0.8 --sanitize-guard on --mouth-region 0.38 --paste-guard 0.5"
 echo "r7_m7_comp $TAG from $ST layers (SR=$SR) EXTRA=$EXTRA commit $(git rev-parse --short HEAD)" >> $B/$TAG/README.txt
 for id in ${*:-03 01 05 02 04}; do
@@ -14,8 +14,10 @@ for id in ${*:-03 01 05 02 04}; do
   if [ "$nls" -gt 0 ]; then
     RAW=$W/${id}_${ST}_25fps_ls_raw.mp4; LS=$RAW; SRN=$W/${id}_${ST}_25fps_ls_$SR.mp4
     if [ -n "${CFD:-}" ]; then   # r8 F: CodeFormer DETAIL only: CFD=<clean base tag of the same seeded run> CFD_LABEL CFD_ARGS (r8_cf_detail.py)
-      BW=$B/$CFD/work_${id}_$CFD; RAW=$W/${id}_${ST}_25fps_ls_cfd_${CFD_LABEL:-cfd}.mp4; SRN=${RAW%.mp4}_$SR.mp4
-      [ -f $RAW ] || { python scripts/r8/r8_cf_detail.py --base $BW/${id}_${CFD}_25fps_ls_raw.mp4 --cf $W/${id}_${ST}_25fps_ls_raw.mp4 --lm $BW/${id}_${CFD}_25fps_ls_raw.mediapipe.npz --out $RAW ${CFD_ARGS:-} | grep "^=="; cp $BW/${id}_${CFD}_25fps_ls_raw.mediapipe.npz ${RAW%.mp4}.mediapipe.npz; }
+      if [ "$CFD" = self ]; then BASE=$W/${id}_${ST}_25fps_ls_pre.mp4; BLM=$W/${id}_${ST}_25fps_ls_raw.mediapipe.npz   # this run's pre-CodeFormer dump
+      else BW=$B/$CFD/work_${id}_$CFD; BASE=$BW/${id}_${CFD}_25fps_ls_raw.mp4; BLM=$BW/${id}_${CFD}_25fps_ls_raw.mediapipe.npz; fi
+      RAW=$W/${id}_${ST}_25fps_ls_cfd_${CFD_LABEL:-cfd}.mp4; SRN=${RAW%.mp4}_$SR.mp4
+      [ -f $RAW ] || { python scripts/r8/r8_cf_detail.py --base $BASE --cf $W/${id}_${ST}_25fps_ls_raw.mp4 --lm $BLM --out $RAW ${CFD_ARGS:-} | grep "^=="; cp $BLM ${RAW%.mp4}.mediapipe.npz; }
       LS=$RAW
     fi
     if [ -n "$SR" ]; then

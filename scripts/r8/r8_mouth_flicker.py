@@ -56,6 +56,9 @@ def landmarks(video: pathlib.Path, lm_path: str | None):
     if lm_path: return np.load(lm_path)["lm"]
     import clean_face_stack as cfs
     out = video.with_suffix(".flk_mp.npz")
+    if "/inputs/" in str(video.resolve()):   # never write next to the source videos (r7_frame_gate globs <id>.*)
+        import hashlib; d = pathlib.Path("/workspace/dub/artifacts/r8f/lmcache"); d.mkdir(parents=True, exist_ok=True)
+        out = d / (video.stem + "_" + hashlib.md5(str(video.resolve()).encode()).hexdigest()[:8] + ".flk_mp.npz")
     return np.load(cfs.run_mediapipe(video, out))["lm"]
 
 

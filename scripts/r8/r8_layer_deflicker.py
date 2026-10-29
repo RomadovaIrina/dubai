@@ -73,7 +73,7 @@ def main():
     ap.add_argument("--ls", required=True); ap.add_argument("--lm", required=True); ap.add_argument("--out", required=True)
     ap.add_argument("--sigma", type=float, default=1.5); ap.add_argument("--inner-max", type=float, default=0.3); ap.add_argument("--open-min", type=float, default=0.03)
     ap.add_argument("--open-ramp", type=float, default=0.03); ap.add_argument("--min-px", type=int, default=6); ap.add_argument("--feather", type=float, default=0.04, help="inner mask dilation + blur, IOD")
-    ap.add_argument("--lf", choices=["off", "on"], default="on"); ap.add_argument("--lf-max", type=float, default=4.0); ap.add_argument("--crf", type=int, default=10)
+    ap.add_argument("--lf", choices=["off", "on"], default="on"); ap.add_argument("--lf-max", type=float, default=4.0); ap.add_argument("--crf", type=int, default=10); ap.add_argument("--preset", default="medium", help="x264 preset of this intermediate layer (r8 speed: veryfast)")
     a = ap.parse_args(); lm = np.load(a.lm)["lm"]; t0 = time.perf_counter()
     c = av.open(a.ls); s = c.streams.video[0]; s.thread_type = "AUTO"; rate = s.average_rate; n = len(lm)
     yin = np.full(n, np.nan); op = np.full(n, np.nan); ar = np.full(n, np.nan); cells = np.full((n, 9), np.nan); k = 0
@@ -95,7 +95,7 @@ def main():
             vc = np.isfinite(cells[:n, cc]); sm = smooth_runs(cells[:n, cc], vc, a.sigma); dcell[:, cc] = np.where(vc, np.clip(sm - cells[:n, cc], -a.lf_max, a.lf_max), 0)
     t1 = time.perf_counter()
     c = av.open(a.ls); s = c.streams.video[0]; s.thread_type = "AUTO"; o = av.open(a.out, "w")
-    st = o.add_stream("libx264", rate=rate); st.width, st.height = s.codec_context.width, s.codec_context.height; st.pix_fmt = "yuv420p"; st.options = {"crf": str(a.crf), "preset": "medium"}; k = 0; nin = nlf = 0
+    st = o.add_stream("libx264", rate=rate); st.width, st.height = s.codec_context.width, s.codec_context.height; st.pix_fmt = "yuv420p"; st.options = {"crf": str(a.crf), "preset": a.preset}; k = 0; nin = nlf = 0
     for fr in c.decode(video=0):
         if k >= n: break
         img = fr.to_ndarray(format="bgr24"); p = lm[k]
