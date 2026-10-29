@@ -10,6 +10,8 @@ The caller (run_clean_pipeline_05.py) owns the translation stage; this module re
 from __future__ import annotations
 
 import pathlib
+import os as _os
+BATCH = _os.environ.get("DUB_TTS_BATCH", "0") == "1"   # r8 speed: batched Chatterbox (scripts/pilot/t3_batch.py)
 import re
 import sys
 import time
@@ -719,6 +721,49 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
         return wav[0].numpy().astype(np.float32), {"text": text, "attempts": attempts, "qa_bad_final": bool(rec.get("bad", False)), "qa_score": rec.get("score"), "seed_used": rec["seed"],
                                                    "temperature_used": rec["temperature"], "seconds": round(len(wav[0]) / m.sr, 3)}
 
+    def gen_sentences(reqs: list, dtype) -> list:
+        """r8 speed (DUB_TTS_BATCH=1): gen_sentence(u, text, dtype, salt, cfg_w) for every (u, text, salt, cfg_w) at once: the same ladder, seeds,
+        temperatures, NE respellings, attempt records, stats and selection, the T3 decode of each ladder round batched (t3_batch.ladder_batch)"""
+        import t3_batch
+        jobs, meta = [], []
+        for u, text, salt, cfg_w in reqs:
+            text = _spk(text); base = seed + 100 * u["id"] + 100003 * salt
+            ladder = [(0, 0.8)] + ([(1, 0.8), (2, qa_cfg.get("low_temp", 0.6))][: qa_cfg.get("retries", 2)] if qa is not None else [])
+            ents = [e for e in (u.get("ne") or []) if re.search(r"\b" + re.escape(e["english"]) + r"\b", text, re.I)] if qa is not None else []
+            if ents: ladder = ladder + [(3, 0.8)]
+            jobs.append([dict(text=ne_guard.apply(text, ents, ai - 1) if ents else text, seed=base + 7919 * soff, temperature=temp, cfg_weight=cfg_w, language_id=tgt_lang)
+                         for ai, (soff, temp) in enumerate(ladder)])
+            meta.append({"u": u, "text": text, "ents": ents, "cfg_w": cfg_w, "attempts": [], "first": None})
+        def assess(j, ai, it, wav):
+            mt = meta[j]
+            if wav is None: raise RuntimeError(f"non-finite or silent TTS for unit {mt['u']['id']}")
+            wav = wav.detach().float().cpu()
+            if not torch.isfinite(wav).all() or wav.abs().max() < 1e-4:
+                raise RuntimeError(f"non-finite or silent TTS for unit {mt['u']['id']}")
+            stats["attempts"] += 1
+            rec = {"attempt": ai + 1, "seed": it["seed"], "temperature": it["temperature"], "seconds": round(wav.shape[-1] / m.sr, 3), "cfg_weight": mt["cfg_w"]}
+            if qa is not None:
+                tq = time.perf_counter(); r = qa.assess(it["text"], wav[0].numpy(), m.sr, tgt_lang); stats["qa_seconds"] += time.perf_counter() - tq
+                rec.update({"score": r["score"], "bad": r["bad"], "reasons": r["reasons"], "ctc": r["ctc"][:160], "whisper": r["whisper"][:160], "lost_words": r.get("lost_words", [])})
+                if mt["ents"]:
+                    miss = [e["english"] for e in mt["ents"] if not ne_guard.heard(e, r["whisper"])]
+                    rec.update({"said": it["text"], "ne_misheard": miss})
+                    if miss: rec["bad"] = True; rec["reasons"] = list(rec["reasons"]) + [f"named entity not heard: {', '.join(miss)}"]; stats["ne_misheard_attempts"] = stats.get("ne_misheard_attempts", 0) + 1
+            mt["attempts"].append(rec)
+            if ai == 0: mt["first"] = (wav, rec)
+            return ((rec["bad"], rec["score"]) if qa is not None else (False, 0)), (wav, rec)
+        tg = time.perf_counter()
+        best = t3_batch.ladder_batch(m, jobs, assess, ctx=lambda: torch.autocast(dev(), dtype=dtype, enabled=dtype != torch.float32))
+        stats["gen_seconds"] += time.perf_counter() - tg   # incl. the QA of the batched rounds
+        out = []
+        for mt, b in zip(meta, best):
+            wav, rec = b[1]
+            if mt["ents"] and all(a_.get("ne_misheard") for a_ in mt["attempts"]) and rec["attempt"] != 1:
+                wav, rec = mt["first"]   # r4 NE guard: no respelling was heard either -> keep the written-form attempt
+            out.append((wav[0].numpy().astype(np.float32), {"text": mt["text"], "attempts": mt["attempts"], "qa_bad_final": bool(rec.get("bad", False)), "qa_score": rec.get("score"),
+                                                            "seed_used": rec["seed"], "temperature_used": rec["temperature"], "seconds": round(len(wav[0]) / m.sr, 3)}))
+        return out
+
     def align(y, text):
         text = _spk(text)
         if aligner is None:
@@ -755,9 +800,10 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
             with torch.autocast(dev(), dtype=dtype, enabled=dtype != torch.float32):
                 if ref: m.prepare_conditionals(ref)
                 else: m.conds = builtin.to(device=dev()); guard.use_builtin()
-            for u, p in ups:
+            firsts = gen_sentences([(u, u["translation"], 0, 0.5) for u, _ in ups], dtype) if BATCH else None   # r8 speed: every first take at once
+            for ui, (u, p) in enumerate(ups):
                 text = u["translation"]; u["parts_original"] = [text]; u["fit"] = []; u["fit_up"] = []
-                y, rec = gen_sentence(u, text, dtype); spans = align(y, text); sp_s = speech_seconds(y, spans)
+                y, rec = firsts[ui] if BATCH else gen_sentence(u, text, dtype); spans = align(y, text); sp_s = speech_seconds(y, spans)
                 if CLOSE_INSIDE and spans:   # r6: Chatterbox hesitations inside an English phrase shortened in the take (dur_translate.close_inside_pauses)
                     y, spans, ci = dur_translate.close_inside_pauses(y, m.sr, spans, _spk(text)); sp_s = speech_seconds(y, spans); u["closed_pauses"] = ci
                 src_words = " ".join(p["groups"]); target = sum(e - s for s, e in p["bursts"]); prev_end = prev_end_of.get(u["id"])
@@ -770,7 +816,15 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                         return y_, r_, s_, speech_seconds(y_, s_)
                     def _sim(y_, s_, t_, p=p, prev_end=prev_end, cut_kw=cut_kw):
                         return dur_translate.simulate(y_, m.sr, s_, _spk(t_), p, opts, prev_end, sentence_flow_gap, cut_kw, norm)
-                    text, y, rec, spans, sp_s = dur_translate.select(u, p, text, (y, rec, spans, sp_s), _synth, _sim, llm, src_name, tgt_name, dur_cfg, _spk, log=log)
+                    def _synth_many(reqs_, u=u):   # [(text, salt, cfg_w)] -> [(y, rec, spans, speech_seconds)], the same as _synth one by one
+                        outs = []
+                        for (t_, _, _), (y_, r_) in zip(reqs_, gen_sentences([(u, t_, sl_, cw_) for t_, sl_, cw_ in reqs_], dtype)):
+                            s_ = align(y_, t_)
+                            if CLOSE_INSIDE and s_: y_, s_, _ = dur_translate.close_inside_pauses(y_, m.sr, s_, _spk(t_))
+                            outs.append((y_, r_, s_, speech_seconds(y_, s_)))
+                        return outs
+                    text, y, rec, spans, sp_s = dur_translate.select(u, p, text, (y, rec, spans, sp_s), _synth, _sim, llm, src_name, tgt_name, dur_cfg, _spk, log=log,
+                                                                     synth_many=_synth_many if BATCH else None)
                 total_win = max(0.2, p["next_start"] - opts.gap - p["bursts"][0][0])
                 # ---- fit-DOWN: the whole sentence does not fit its total window at the cap -> concise rewrite (rules as in run_tts_burst)
                 for rnd in range(fit.get("rounds", 4) if fit.get("enabled") else 0):

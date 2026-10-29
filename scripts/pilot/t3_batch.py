@@ -20,6 +20,8 @@ import torch.nn.functional as F
 
 BUCKET = 128
 CHUNK = 16      # takes per decode batch (2 x CHUNK rows); the decoder and its graphs are reused across chunks
+import os as _os
+SDPA = _os.environ.get("T3B_SDPA", "0") == "1"   # attention through F.scaled_dot_product_attention (closer to upstream)
 MAXLEN = 1536   # conditioning (~150-400 tokens) + up to 1000 speech tokens + headroom
 
 
@@ -48,8 +50,11 @@ class BatchDecoder:
             self.k[i][self.ridx, :, self.pos] = k[:, :, 0]; self.v[i][self.ridx, :, self.pos] = v[:, :, 0]
             kk, vv = self.k[i, :, :, :n], self.v[i, :, :, :n]
             if self.KV != self.H: kk, vv = repeat_kv(kk, self.H // self.KV), repeat_kv(vv, self.H // self.KV)
-            s = torch.matmul(q, kk.transpose(-1, -2)).float() * self.scale + mask
-            o = torch.matmul(torch.softmax(s, dim=-1).to(self.dt), vv)
+            if SDPA:   # the fused kernel upstream HF attention uses (q_len 1), the padded slots masked
+                o = F.scaled_dot_product_attention(q, kk, vv, attn_mask=mask > -1)
+            else:
+                s = torch.matmul(q, kk.transpose(-1, -2)).float() * self.scale + mask
+                o = torch.matmul(torch.softmax(s, dim=-1).to(self.dt), vv)
             x = x + a.o_proj(o.transpose(1, 2).reshape(R, 1, -1))
             x = x + layer.mlp(layer.post_attention_layernorm(x))
         return self.t3.speech_head(self.tf.norm(x))[:, -1, :]

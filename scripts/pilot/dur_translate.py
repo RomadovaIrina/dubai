@@ -386,7 +386,7 @@ def simulate(y, sr: int, spans, spoken: str, p: dict, opts, prev_end, flow_gap: 
             "under_s": round(src_sil, 3), "over_s": round(fast, 3), "inside_s": round(inside, 3), "inside_n": n_inside, "parts": rows, "ideal_s": round(sum(r_[1] for r_ in rows), 3), "speech_s": round(sum(durs), 3)}
 
 
-def select(u: dict, p: dict, plain: str, first: tuple, synth, sim, llm, src_name: str, tgt_name: str, cfg: dict, spoken, log=print) -> tuple:
+def select(u: dict, p: dict, plain: str, first: tuple, synth, sim, llm, src_name: str, tgt_name: str, cfg: dict, spoken, log=print, synth_many=None) -> tuple:
     """Per unit. first = (y, rec, spans, speech_seconds) of the plain take; synth(text, salt) -> the same tuple for another text; sim(y, spans, text) ->
     simulate() dict. Returns the chosen (text, y, rec, spans, speech_seconds) and writes u["dur_translate"]."""
     global COST
@@ -429,6 +429,7 @@ def select(u: dict, p: dict, plain: str, first: tuple, synth, sim, llm, src_name
         pool.sort(key=lambda t: t[0]); tried = 0
         if rnd == 0 and cfg.get("plain_reseeds", 1):   # the plain text with other seeds: Chatterbox takes vary +-10 % in length, a free faithful lever
             pool = [(0.0, plain, {"text": plain, "reseed": True})] * cfg.get("plain_reseeds", 1) + pool
+        todo = []   # (c, row, j, salt): judged first, in pool order (the judge never depends on a take), so the syntheses are known before any is made
         for _, c, row in pool:
             if tried >= cfg.get("tts_top", 3) + (cfg.get("plain_reseeds", 1) if rnd == 0 else 0): break
             if row.get("reseed"):
@@ -438,7 +439,11 @@ def select(u: dict, p: dict, plain: str, first: tuple, synth, sim, llm, src_name
             if not row.get("reseed") and (j["score"] < cfg.get("min_score", 4) or j.get("natural", 5) < cfg.get("min_natural", 4)):
                 row["reject"] = f"judge {j['score']} natural {j.get('natural')}" + (f" added {j['added']}" if j["added"] else ""); STATS["rejected_judge"] += 1
                 log(f"    [dur] u{u['id']:02d} r{rnd + 1} {row['reject']} missing {j.get('missing')} | {c[:70]}"); continue
-            tried += 1; t = time.perf_counter(); y, rec, sp, s = synth(c, salt); salt += 1; STATS["tts"] += 1; STATS["tts_s"] += time.perf_counter() - t
+            tried += 1; todo.append((c, row, j, salt)); salt += 1
+        t = time.perf_counter()
+        takes = synth_many([(c, sl, 0.5) for c, _, _, sl in todo]) if synth_many and todo else [synth(c, sl) for c, _, _, sl in todo]
+        if todo: STATS["tts"] += len(todo); STATS["tts_s"] += time.perf_counter() - t
+        for (c, row, j, _), (y, rec, sp, s) in zip(todo, takes):
             cs = sim(y, sp, c); row.update(sim=cs, tts_s=round(s, 2), qa_bad=bool(rec.get("qa_bad_final")), qa_score=rec.get("qa_score"))
             cand = {"text": c, "y": y, "rec": rec, "spans": sp, "s": s, "sim": cs, "score": j["score"], "plain": bool(row.get("reseed"))}
             row["total"] = round(total(cand), 3)
@@ -452,9 +457,11 @@ def select(u: dict, p: dict, plain: str, first: tuple, synth, sim, llm, src_name
     if cfg.get("pace", (0.3, 0.2)) and best["sim"]["under_s"] > cfg.get("pace_under_s", 0.4):
         texts = [best["text"]] + ([plain] if not best.get("plain") and cfg.get("pace_plain", True) else [])
         for cw in cfg.get("pace", (0.3, 0.2)):
-            for tx in texts:
+            t = time.perf_counter(); sl0 = salt; salt += len(texts)
+            takes = synth_many([(tx, sl0 + k, cw) for k, tx in enumerate(texts)]) if synth_many else [synth(tx, sl0 + k, cfg_w=cw) for k, tx in enumerate(texts)]
+            STATS["tts"] += len(texts); STATS["tts_s"] += time.perf_counter() - t; STATS["pace_takes"] = STATS.get("pace_takes", 0) + len(texts)
+            for tx, (y, rec, sp, s) in zip(texts, takes):
                 is_plain = tx == plain; sc_ = (info.get("plain_judge") or {}).get("score", 5) if is_plain else best["score"]
-                t = time.perf_counter(); y, rec, sp, s = synth(tx, salt, cfg_w=cw); salt += 1; STATS["tts"] += 1; STATS["tts_s"] += time.perf_counter() - t; STATS["pace_takes"] = STATS.get("pace_takes", 0) + 1
                 cs = sim(y, sp, tx); cand = {"text": tx, "y": y, "rec": rec, "spans": sp, "s": s, "sim": cs, "score": sc_, "plain": is_plain, "cfg_w": cw}
                 row = {"text": tx, "pace_cfg_weight": cw, "sim": cs, "tts_s": round(s, 2), "qa_bad": bool(rec.get("qa_bad_final")), "qa_score": rec.get("qa_score"), "total": round(total(cand), 3)}
                 info.setdefault("pace", []).append(row)
