@@ -23,7 +23,7 @@ pub $SPL audio-r8-v5-spleeter "Spleeter 2stems (MIT; = the audio-r8-v4 bed)" "no
 pub $HTD audio-r8-v5 "Demucs v4 htdemucs (NC weights trained on MUSDB18-HQ: a deliberate, user-accepted deviation 29.10)" "--sep htdemucs $HFLAGS"
 cp reports/experiments/r8-sep/README.md $OUT/audio-r8-v5/README_r8-sep.md
 for id in 02 04 05; do cp /workspace/dub/outbox/sep/${id}_audio_sep_listen.md $OUT/audio-r8-v5/$id/ 2>/dev/null; done
-ok=1; for id in $IDS; do w=$(python3 -c "import json;print(json.load(open(//.gaps.json)).get(gap_words,?))" 2>/dev/null); echo "$id gap_words $w"; [ "$w" = 0 ] || ok=0; done | tee $LOG/${HTD}_gate.txt
+for id in $IDS; do w=$(python3 -c "import json, sys; d = json.load(open(sys.argv[1])); print(d.get('new', d).get('gap_words', '?'))" $A/$HTD/$id.gaps.json 2>/dev/null); echo "$id gap_words $w"; done | tee $LOG/${HTD}_gate.txt
 grep -q -v "gap_words 0" $LOG/${HTD}_gate.txt && ok=0 || ok=1
 for d in audio-r8-v5 audio-r8-v5-spleeter; do [ $ok = 1 ] && date +%FT%T > $OUT/$d/READY || echo "gap words: see $LOG/${HTD}_gate.txt" > $OUT/$d/NOT_READY; done
 WATCH_PREV=$SPL WATCH_PREV_LABEL="v5-spleeter" WATCH_NAME="v5spleeter-then-v5" bash scripts/r8/sep_watch.sh $HTD 02 04 05 > $LOG/${HTD}_watch.log 2>&1
