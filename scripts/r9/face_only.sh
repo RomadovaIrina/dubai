@@ -12,7 +12,7 @@ for ID in "$@"; do
   export DUB_INPUTS=/workspace/dub/r9/runs/$ID/work/in; SRC=$(ls $DUB_INPUTS/$ID.* | head -1)
   env | grep -E "^(GEN_COMP|FAST_|LS_|CFD_|SR_|REP|E2E_|STAB|MP_)" | sort > $L/env.txt
   echo "face_only $ID V=$V commit $(git rev-parse --short HEAD) $(date -Is) $(tr '\n' ' ' < $L/env.txt)" | tee $L/face.log
-  nvidia-smi --query-gpu=timestamp,memory.used,utilization.gpu --format=csv,noheader,nounits -lms 500 > $L/nvsmi.csv 2>/dev/null & NV=$!
+  nvidia-smi --query-gpu=timestamp,memory.used,utilization.gpu --format=csv,noheader,nounits -lms 100 > $L/nvsmi.csv 2>/dev/null & NV=$!   # 100 ms: GPU-busy seconds per stage
   t0=$(date +%s.%N); rm -rf $B/$GT $B/$FT; SP=""; unset MP_SOURCE_NPZ
   SMP=$A/sep/$ID/source_mediapipe.npz   # the audio stage's single-face VIDEO-mode MediaPipe pass of the source (r8_audio.sh)
   if [ "${FAST_MPREUSE:-0}" = 1 ] && [ -f $SMP ]; then   # r9 speed: the generator's master pass from it (frame map; gated) + the composite's source pass IS it (identical)
@@ -40,7 +40,23 @@ out, ad, t0, t1, t2, nv, v = sys.argv[1], sys.argv[2], *map(float, sys.argv[3:6]
 m = json.load(open(glob.glob(ad + "/*_r4b.manifest.json")[0])); vmin = m["source"]["duration_s"] / 60
 peak = max((int(l.split(",")[1]) for l in open(nv) if l.count(",") >= 2 and l.split(",")[1].strip().isdigit()), default=None)
 st = {"face_gen": round(t1 - t0, 1), "face_comp": round(t2 - t1, 1), "face": round(t2 - t0, 1)}
-r = {"variant": v, "duration_s": m["source"]["duration_s"], "seconds": st, "s_per_video_min": {k: round(x / vmin, 1) for k, x in st.items()}, "peak_vram_mib": peak}
+# GPU-busy seconds (spec: GPU-minutes per video-minute): nvidia-smi samples (local-time stamps, as `date`), a sample counts as busy at utilisation > 10 %
+import datetime
+smp = []
+for l in open(nv):
+    f_ = [x.strip() for x in l.split(",")]
+    if len(f_) < 3 or not f_[2].isdigit(): continue
+    try: smp.append((datetime.datetime.strptime(f_[0], "%Y/%m/%d %H:%M:%S.%f").timestamp(), int(f_[2])))
+    except ValueError: pass
+def busy(a_, b_):
+    s_ = 0.0
+    for (ta, ua), (tb, _) in zip(smp, smp[1:]):
+        lo, hi = max(ta, a_), min(tb, b_)
+        if hi > lo and ua > 10: s_ += hi - lo
+    return round(s_, 1)
+gb = {"face_gen": busy(t0, t1), "face_comp": busy(t1, t2), "face": busy(t0, t2)}
+r = {"variant": v, "duration_s": m["source"]["duration_s"], "seconds": st, "s_per_video_min": {k: round(x / vmin, 1) for k, x in st.items()}, "peak_vram_mib": peak,
+     "gpu_busy_seconds": gb, "gpu_busy_s_per_video_min": {k: round(x / vmin, 1) for k, x in gb.items()}, "gpu_samples": len(smp)}
 pathlib.Path(out).write_text(json.dumps(r, indent=1)); print("== timing", json.dumps(r))
 PY
   [ "${METRICS:-on}" = off ] && continue

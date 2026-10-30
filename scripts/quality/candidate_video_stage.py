@@ -239,6 +239,38 @@ def main() -> int:
             print(f"== {a.id} {a.tag}: prep-only done {prep.times} -> {work}", flush=True); return 0
     else:
         with rp.timed(times, "face_router_load"): router = faa.make_router("retinaface", a.face_min_w, a.face_min_h, a.retina_conf)
+    if os.environ.get("LS_SKIP_SILENT") == "1" and gate and prep is not None and cut_energy is not None:
+        # r9 speed: no LatentSync where BOTH are silent with a closed mouth (dub energy < --silent-db, source mouth closed on the master landmarks,
+        # no source speech within 0.2 s): runs >= LS_SKIP_MIN frames, shrunk by the crossfade on each side, leave the gate -> the source passes through
+        import numpy as np
+        z_ = np.load(work / "master_mediapipe.npz")["lm"]; n_ = len(z_)
+        fh_ = np.linalg.norm(z_[:, 10, :2] - z_[:, 152, :2], axis=1); op_ = np.linalg.norm(z_[:, 13, :2] - z_[:, 14, :2], axis=1) / np.maximum(fh_, 1e-6)
+        ce_ = np.asarray(cut_energy); dsil_ = np.zeros(n_, bool); m_ = min(n_, len(ce_)); dsil_[:m_] = ce_[:m_] < 10 ** (a.silent_db / 20)
+        ssp_ = np.zeros(n_, bool)
+        for iv in speech: ssp_[max(0, int((iv["start"] - 0.2) * faa.FPS)):int((iv["end"] + 0.2) * faa.FPS) + 1] = True
+        sk_ = dsil_ & (np.nan_to_num(op_, nan=1.0) < float(os.environ.get("LS_SKIP_OPEN", "0.02"))) & ~ssp_
+        lmin = int(os.environ.get("LS_SKIP_MIN", "16")); xf = a.crossfade_frames; cuts = []; k = 0
+        while k < n_:
+            if sk_[k]:
+                e_ = k
+                while e_ + 1 < n_ and sk_[e_ + 1]: e_ += 1
+                if e_ - k + 1 >= lmin and e_ - k + 1 - 2 * xf > 0: cuts.append(((k + xf) / faa.FPS, (e_ + 1 - xf) / faa.FPS))
+                k = e_ + 1
+            else: k += 1
+        def _minus(iv, cs):
+            out_ = [list(iv)]
+            for c0, c1 in cs:
+                nxt = []
+                for s0, s1 in out_:
+                    if c1 <= s0 or c0 >= s1: nxt.append([s0, s1]); continue
+                    if c0 > s0: nxt.append([s0, c0])
+                    if c1 < s1: nxt.append([c1, s1])
+                out_ = nxt
+            return [x for x in out_ if x[1] - x[0] > 0.2]
+        g0 = sum(e - s for s, e in gate); gate = [x for iv in gate for x in _minus(iv, cuts)]; g1 = sum(e - s for s, e in gate)
+        man["speech_gate"] = {**man.get("speech_gate", {}), "intervals": gate, "skip_silent": {"cuts_s": [[round(c0, 2), round(c1, 2)] for c0, c1 in cuts], "gate_seconds_before": round(g0, 2),
+                              "gate_seconds_after": round(g1, 2), "skipped_seconds": round(g0 - g1, 2), "skipped_pct_of_video": round(100 * (g0 - g1) / duration, 2)}}
+        print(f"  [skip-silent] {len(cuts)} cuts, gate {g0:.1f} -> {g1:.1f} s ({100 * (g0 - g1) / duration:.1f} % of the video)", flush=True)
     if a.ref_mode != "same" or a.bridge_len:   # round 3: generator variants (ls_stable.StableLatentSync; same call interface)
         from ls_stable import StableRunner
         with rp.timed(times, "latentsync_load"): runner = StableRunner(a.window_batch_size, not a.no_deepcache, a.steps, a.guidance, 1247, a.deepcache_interval, ref_mode=a.ref_mode,
