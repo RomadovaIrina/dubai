@@ -54,7 +54,7 @@ def main():
     ap = argparse.ArgumentParser()
     for k in ("ls", "lm", "fb", "src-lm", "out", "fb-out"): ap.add_argument("--" + k, required=True)
     ap.add_argument("--src-video", default="", help="the 25 fps master (enables the lip-colour slide detector)")
-    ap.add_argument("--red-off", type=float, default=0.08); ap.add_argument("--red-spread", type=float, default=1.15)
+    ap.add_argument("--red-off", type=float, default=0.065, help="LATERAL lip-colour offset (IOD) that flags a slid mouth (m03: the slides 0.07-0.11, p99 of the video 0.045)"); ap.add_argument("--red-spread", type=float, default=99.0, help="off by default: the spread over-fires on a generator that does not copy the source shape")
     ap.add_argument("--fb-thr", type=float, default=0.5); ap.add_argument("--spike", type=float, default=0.025); ap.add_argument("--slide", type=float, default=0.06)
     ap.add_argument("--max-run", type=int, default=3); ap.add_argument("--ramp-sigma", type=float, default=2.0); ap.add_argument("--crf", type=int, default=10)
     a = ap.parse_args(); t0 = time.perf_counter()
@@ -62,6 +62,8 @@ def main():
     c = av.open(a.ls); s = c.streams.video[0]; s.thread_type = "AUTO"; rate = s.average_rate
     F = [f.to_ndarray(format="bgr24") for f in c.decode(s)]; c.close(); n = len(F)
     lm = np.load(a.lm)["lm"][:n].astype(np.float64); src = np.load(a.src_lm)["lm"][:n]; fbz = np.load(a.fb); fb = fbz["fb"][:n]; lsm = fbz["ls_mask"][:n].astype(bool)
+    pad = lambda v, fill: np.concatenate([v, np.full((n - len(v),) + v.shape[1:], fill, v.dtype)]) if len(v) < n else v   # scores / landmarks a frame or two shorter than the layer (m15)
+    fb, lsm, src, lm = pad(fb, 0), pad(lsm, False), pad(src.astype(np.float64), np.nan), pad(lm, np.nan)
     o, so = opening(lm), opening(src); sp, ssp = spike(o), spike(so); x, y = lipxy(lm); sx, sy = lipxy(src)
     flag = lsm & ((fb > a.fb_thr) | ((np.abs(sp) > a.spike) & ~(np.abs(ssp) > 0.5 * np.abs(sp))) | (np.hypot(x - sx, y - sy) > a.slide))
     flag &= np.isfinite(o) | (fb > a.fb_thr)
@@ -73,7 +75,7 @@ def main():
             if not ok: break
             SF.append(f)
         Sr, Lr = red_stats(SF, src), red_stats(F[:len(SF)], src); m = min(len(Sr), n)
-        off = np.hypot(Lr[:m, 0] - Sr[:m, 0], Lr[:m, 1] - Sr[:m, 1]); spr = Lr[:m, 2] / np.maximum(1e-6, Sr[:m, 2])
+        off = np.abs(Lr[:m, 0] - Sr[:m, 0]); spr = Lr[:m, 2] / np.maximum(1e-6, Sr[:m, 2])   # lateral only: a different mouth SHAPE moves the colour centre up / down, a slide moves it sideways
         red = np.zeros(n, bool); red[:m] = lsm[:m] & np.nan_to_num((off > a.red_off) | (spr > a.red_spread)).astype(bool); nred = int(red.sum()); flag |= red; del SF
     runs, k = [], 0
     while k < n:

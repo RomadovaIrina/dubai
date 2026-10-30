@@ -31,7 +31,7 @@ for id in ${*:-03 01 05 02 04}; do
       FBN=$W/${id}_${ST}_25fps_fb_$FB.npz; [ -f $FBN ] || python scripts/r8/r8_fallback.py --work $W --ls $RAW --lm ${RAW%.mp4}.mediapipe.npz --out $FBN ${FB_ARGS:-} | grep "^=="; FBX="--fallback $FBN"
     fi
     if [ -n "${REP:-}" ] && [ -n "$FBX" ]; then   # r9: short glitches re-drawn IN the layer (flow interpolation of the good neighbours) instead of a 1-frame swap to the source mouth
-      LSR=${LS%.mp4}_rep2.mp4; FBR=${FBN%.npz}_${TAG}_rep2.npz
+      RL=${REP_LABEL:-rep2}; LSR=${LS%.mp4}_$RL.mp4; FBR=${FBN%.npz}_${TAG}_$RL.npz
       [ -s $LSR ] || python scripts/r9/r9_layer_repair.py --ls $LS --lm ${LS%.mp4}.mediapipe.npz --fb $FBN --src-lm $W/video/master_mediapipe.npz --src-video $W/video/master_25fps.mp4 --out $LSR --fb-out $FBR ${REP_ARGS:-} | grep "^=="
       [ -s $LSR ] && { LS=$LSR; FBX="--fallback $FBR"; }
     fi
