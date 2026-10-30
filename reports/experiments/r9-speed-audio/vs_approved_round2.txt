@@ -1,0 +1,8 @@
+m04 faith 5.0->5.0; cov 1.48->1.48; gap 0.0->0.0; w1 0.175->0.175; over 0.4->0.4; wer 0.0->0.0; cut 0->0; ins 1->1; dead 3->3; gw_s 0->0; dead_d 2->2; gw_d 0->0
+m01 faith 4.562->4.562; cov 0.9->0.9; gap 0.0->0.0; w1 0.071->0.071; over 1.18->1.18; wer 0.0167->0.0167; cut 0->0; ins 0->0; dead 4->4; gw_s 0->0; dead_d 5->5; gw_d 0->0
+02 faith 4.727->4.727; cov 3.02->3.02; gap 1.6->1.6; w1 0.384->0.384; over 7.38->7.38; wer 0.0324->0.0324; cut 0->0; ins 2->2; dead 0->0; gw_s 0->0; dead_d 0->0; gw_d 0->0
+03 faith 4.727->4.727; cov 6.0->6.0; gap 2.5->2.5; w1 0.118->0.118; over 8.7->8.7; wer 0.02->0.02; cut 0->0; ins 3->3; dead 1->1; gw_s 0->0; dead_d 1->1; gw_d 0->0
+05 faith 4.571->4.571; cov 4.52->4.52; gap 2.75->2.75; w1 0.666->0.666; over 2.08->2.08; wer 0.0135->0.0135; cut 0->0; ins 1->1; dead 0->0; gw_s 0->0; dead_d 1->1; gw_d 0->0
+01 faith 4.808->4.808; cov 0.5->0.5; gap 0.0->0.0; w1 0.128->0.128; over 2.68->2.68; wer 0.0761->0.0797; cut 0->0; ins 0->0; dead 2->2; gw_s 0->0; dead_d 2->2; gw_d 0->0
+04 faith 5.0->5.0; cov 0.8->0.8; gap 0.8->0.8; w1 0.313->0.313; over 4.9->4.9; wer 0.0538->0.0538; cut 0->0; ins 0->0; dead 0->0; gw_s 0->0; dead_d 0->0; gw_d 0->0
+r9fast7 vs r9f2: 0 rows worse than the approved stack by more than the tolerance

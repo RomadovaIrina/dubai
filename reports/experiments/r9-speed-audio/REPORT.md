@@ -136,3 +136,39 @@ Where the time goes on m01 now (s):
   - lip_place `--off-early 1.0` (timing only): total dub silence 49.0 → 48.9 s, excess 8.8 → 11.4 s.
 - **Neither is taken.** Total dub silence = video length − dub speech length, so timing only moves silence around. The long pauses are the
   speaker's own and stay mirrored, as designed. Only more dub speech off-screen (slower delivery or fuller wording) would shorten them.
+
+## Round 2 (31.10): the e2e audio + sep stages toward 60–80
+
+Reference = the APPROVED r9fast-audio. A round-2 lever must not move any gate row of it beyond the envelope tolerance (`scripts/r9/vsref.py`).
+Timing now covers the e2e audio AND sep stages (`speed_gate_run.sh`: the htdemucs stems + the demucs remix, sequential or overlapped).
+
+| lever | flag | what | effect | vs the approved stack | taken |
+|---|---|---|---|---|---|
+| O | `R9_SEP_OVERLAP=on` (`scripts/r9/sep_overlap.sh`) | the htdemucs stems while the audio stage runs (they need only the source); the demucs remix starts the moment the final dub is linked, in parallel with the Spleeter remix (`r4_audio.sh` hook) | sep stage m04 8.8 → 0 s, m01 18.3 → 2.0 s | same commands; the demucs mix differs only by htdemucs's own run-to-run noise (its bed stem differs 26 % rms between two runs on the same input; m04 demucs dead air 3 / 2 / 3 over 3 sequential re-mixes vs 3 overlapped) | **yes** |
+| C | `R9_CHAIN_INPROC=on` (`scripts/r9/chain_inproc.py`) | close_inner → soften → lip_place → hush → soften → remix inside the audio process (same argv / env / dirs); lip_place's Whisper = the QA's (large-v3 int8_float16), hush's wav2vec2 = the QA's | chain after the stage m04 16 → 5 s, m01 29 → 15 s | every step's samples identical to the bash chain (the WAV md5 differ only by libsndfile's PEAK-chunk timestamp) | **yes** |
+| K | `R9_TTS_PRELOAD=on` | the stage's fp32 Chatterbox loaded on the CPU in a thread while the GPU pipeline runs, moved to the GPU for retake / clause (the pipeline casts its own copy to fp16 in place) | −3.4 / −4.1 s (04 / m04) | pipeline, retake, soften outputs sample-identical | **yes** |
+| B1 | `DUB_QA_BEAM=1` | the TTS QA's Whisper greedy instead of beam 5 | −0.5 … −7.7 s (≈ −3 %) | identical on m04 / m01 / 03 / 05, but on 04 one QA verdict flips: coverage 0.8 → 2.0 s, gap 0.8 → 2.6 s, W1, WER 0.054 → 0.082 | no |
+
+Also fixed on the way: the in-process stage now runs with `r8_audio.sh`'s env (`R9_STAGE_ENV`), not the pipeline's. It made no difference to the
+outputs, but it is the env the separate process had.
+
+**Result, all 7 videos (8.62 video-min), audio + sep stages:**
+
+| | audio s/vmin | **audio + sep s/vmin** | per video audio + sep (m04 / m01 / 02 / 03 / 05 / 01 / 04) | gate |
+|---|---:|---:|---|---|
+| baseline (r9 E2E path) | 215.7 | ~229 | – | – |
+| r9fast-audio (approved, round 1) | 112.0 | 125.6 | 223 / 114 / 105 / 138 / 144 / 98 / 161 | the ear-approved rows |
+| **r9fast-audio round 2 = + O + C + K (default)** | **97.9** | **99.5** | 158 / 91 / 85 / 114 / 110 / 77 / 128 | **0 rows worse than the approved stack**; the envelope rows are the approved ones (6 rows, 7 before) |
+
+`e2e.sh` default (`R9_FAST_AUDIO=2`) = round 2. `R9_SEP_OVERLAP=off`, `R9_CHAIN_INPROC=off` and `R9_TTS_PRELOAD=off` switch the levers off one by one.
+
+**Still above 60–80.** The long clips are at 77–91, the 21-s m04 at 158 (fixed costs). What is left in m01 (130 s):
+- the pipeline's TTS stage ~48 s: T3 decode 11, S3Gen 10, QA 12, Qwen 13;
+- ASR + diarization + their loads ~20 s;
+- retake / clause work ~15 s;
+- the in-process chain ~15 s: lip_place's Whisper pass 4, remix 8.
+
+The remaining levers change the output, so each needs its own gate and ear AB:
+- a smaller QA / lip_place Whisper (turbo);
+- fewer duration-aware candidates;
+- one resident worker across videos (the ASR / diarization / Qwen / Chatterbox loads, ~20 s per video).
