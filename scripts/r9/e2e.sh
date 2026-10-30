@@ -18,7 +18,7 @@ DUB_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"; R=$DUB_ROOT; . $
 IN=$(readlink -f "$1"); OUT=$(mkdir -p "$2" && readlink -f "$2")
 ID=${ID:-$(basename "${IN%.*}" | tr -c 'A-Za-z0-9_\n-' '_')}
 export METRICS=off   # production stages only; every gate / scoring pass runs in the metrics stage below (honest per-stage time)
-case "${R9_FAST_AUDIO:-0}" in   # r9 audio speed (reports/experiments/r9-speed-audio/REPORT.md)
+case "${R9_FAST_AUDIO:-2}" in   # r9 audio speed (reports/experiments/r9-speed-audio/REPORT.md); default 2 = r9fast-audio (user-approved by ear, 30.10); 0 = the r9 E2E audio path
   1) export R9_MP_BG=on DUB_S3_BATCH=1 R9_ONEPROC=on;;   # r9fast-audio-safe: background MediaPipe, batched S3Gen, the stage in the pipeline process
   2) export R9_MP_BG=on DUB_S3_BATCH=1 R9_ONEPROC=on DUB_UNIT_CONC=1 DUB_QWEN_BATCH=1;;   # r9fast-audio: + units concurrently, batched resident Qwen 14B
 esac

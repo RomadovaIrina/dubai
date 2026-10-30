@@ -1,5 +1,7 @@
 # r9 AUDIO speed (r9-f): lever → s/video-min → gate, and the stack r9fast-audio
 
+**Decision (30.10): the user listened to the ear AB (`/workspace/dub/outbox/r9fast_audio_AB/`: m04, 03, 05, m01, baseline → r9fast-audio, demucs mix): "sounds the same, all great". r9fast-audio (112 s/video-min) is APPROVED and is now the default of `scripts/r9/e2e.sh` (`R9_FAST_AUDIO=2`; `=1` = the safe stack, `=0` = the r9 E2E audio path).**
+
 Branch `experiment/r9-e2e` on r9-f (local commits 701c104, e2b9a77, + the report commit). Every lever is an env flag, default OFF: with no
 flag set the audio stage is the r9 E2E one.
 
