@@ -43,9 +43,11 @@ r = dict(m6.get("r4v") or {}); st = dict(r.get("stage_wall_s") or {}); st["layer
 vmin = m["source"]["duration_s"] / 60; r["s_per_video_min"] = {k: round(v / vmin, 1) for k, v in st.items() if isinstance(v, (int, float))}; m["r4v"] = r; mp.write_text(json.dumps(m, indent=1))
 print("==", mp.stem, "layer SR + composite", st["layer_sr_and_composite"], "s =", round(st["layer_sr_and_composite"] / vmin), "s/video-min")
 PY
+  if [ -z "${SKIP_SCORE:-}" ]; then   # r9: SKIP_SCORE=1 = production only (e2e.sh scores in its metrics stage)
   python scripts/r4/r4_gate.py score --label $TAG --dir $B/$TAG --ids $id > $B/$TAG/${id}.score.log 2>&1 || echo "WARN score $id"
   MAN=$B/$TAG/%s_$TAG.manifest.json bash scripts/r6/r6_twitch.sh $TAG $B/$TAG _$TAG $id | grep '=='
   bash scripts/r7/r7_frame_gate.sh $B/$TAG:$TAG $id | grep "^=="
+  fi
   echo "== $TAG $id $(( $(date +%s) - t0 )) s $(date +%T)"
 done
 echo R7_M7_DONE $TAG

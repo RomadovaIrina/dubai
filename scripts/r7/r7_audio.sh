@@ -35,5 +35,5 @@ if [ "${RETAKE:-on}" = on ]; then   # v3a (default): longer takes where the spea
 fi
 bash scripts/r6/r6_audio.sh $TAG $IDS
 . scripts/env.sh >/dev/null
-python scripts/r7/gap_metrics.py --tag $TAG ${R7_PREV:+--prev $R7_PREV} --clips $A/$TAG/gaps $IDS > $A/$TAG/runs/gaps.log 2>&1 || echo "WARN gaps"
+[ "${METRICS:-on}" = on ] && python scripts/r7/gap_metrics.py --tag $TAG ${R7_PREV:+--prev $R7_PREV} --clips $A/$TAG/gaps $IDS > $A/$TAG/runs/gaps.log 2>&1 || echo "WARN gaps"
 echo "R7_AUDIO_DONE $TAG $(( $(date +%s) - s )) s"

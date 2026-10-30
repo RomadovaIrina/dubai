@@ -12,11 +12,12 @@ export OMP_NUM_THREADS=6 MKL_NUM_THREADS=6 DUB_THREADS=6 CUDA_VISIBLE_DEVICES=""
 for id in $IDS; do
   python scripts/quality/r3_remix.py --src $A/${SEP_SRC:-$P}/mix_src --out $O $BASE $EXTRA --sep $SEP --sep-bg $BG $id > $O/runs/$id.remix.log 2>&1 || { echo "FAIL remix $id"; continue; }
   ffmpeg -loglevel error -y -i $(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1) -i $O/$id/final_mix_aac.m4a -map 0:v:0 -map 1:a:0 -c copy -shortest $O/${id}_over-original.mp4
-  python scripts/r8/mixdrop.py --run $O/$id --id $id --label $T --out $O/cov/mix_$id 2>/dev/null | tail -1
+  [ "${METRICS:-on}" = on ] && python scripts/r8/mixdrop.py --run $O/$id --id $id --label $T --out $O/cov/mix_$id 2>/dev/null | tail -1
 done
-python scripts/r7/clicks.py --tag $T --prev $P --json $O/cov/clicks.json $IDS 2>/dev/null
+[ "${METRICS:-on}" = on ] && python scripts/r7/clicks.py --tag $T --prev $P --json $O/cov/clicks.json $IDS 2>/dev/null
 unset CUDA_VISIBLE_DEVICES
-if [ "${SEP_ASR:-on}" = on ]; then flock /workspace/dub/gpu.lock python scripts/r7/gap_metrics.py --tag $T --prev $P --clips $O/gaps $IDS > $O/runs/gaps.log 2>&1 || echo "WARN gaps"
+if [ "${METRICS:-on}" != on ]; then :
+elif [ "${SEP_ASR:-on}" = on ]; then flock /workspace/dub/gpu.lock python scripts/r7/gap_metrics.py --tag $T --prev $P --clips $O/gaps $IDS > $O/runs/gaps.log 2>&1 || echo "WARN gaps"
 else CUDA_VISIBLE_DEVICES="" python scripts/r7/gap_metrics.py --tag $T --asr off $IDS > $O/runs/gaps.log 2>&1; fi   # SEP_ASR=off: no Whisper (the GPU is busy), the rest of the gate
 grep -h "^0[1-5]" $O/runs/gaps.log | cut -c1-400
 echo "SEP_MIX_DONE $T"

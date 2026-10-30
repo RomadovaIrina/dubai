@@ -79,7 +79,7 @@ FINAL_SOFTEN=${FINAL_SOFTEN:-on} RETAKE=off REUSE=${TAG}src LIP_ARGS="--max-shif
   REMIX_ARGS="--src-duck-db -6 --unit-level off --gap-bed-cap-db 10 --gap-bed-cap-scope edges --gap-clean on --gap-clean-nr-ns 0.7 --dub-gate on --gap-clean-floor ${R8_FLOOR:-3}" \
   R7_PREV=${R7_PREV:-} bash scripts/r7/r7_audio.sh $TAG $IDS
 mkdir -p $A/$TAG/cov
-for id in $IDS; do
+[ "${METRICS:-on}" = on ] && for id in $IDS; do
   python scripts/r8/coverage.py --run $A/$TAG/$id --id $id --label $TAG --face $A/sep/$id/source_mediapipe.npz --out $A/$TAG/cov/cov_$id 2>/dev/null | tail -1
   python scripts/r8/pacing.py --run $A/$TAG/$id --id $id --label $TAG --face $A/sep/$id/source_mediapipe.npz --out $A/$TAG/cov/pace_$id 2>/dev/null | tail -1
   python scripts/r8/cuts.py --run $A/$TAG/$id --id $id --label $TAG --out $A/$TAG/cov/cuts_$id 2>/dev/null | tail -1
