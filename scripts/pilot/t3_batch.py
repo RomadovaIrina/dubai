@@ -19,6 +19,7 @@ import torch
 import torch.nn.functional as F
 
 BUCKET = 128
+S3_BATCH = __import__("os").environ.get("DUB_S3_BATCH", "0") == "1"   # r9: S3Gen of a ladder round batched (scripts/r9/s3_batch.py)
 CHUNK = 16      # takes per decode batch (2 x CHUNK rows); the decoder and its graphs are reused across chunks
 import os as _os
 SDPA = _os.environ.get("T3B_SDPA", "0") == "1"   # attention through F.scaled_dot_product_attention (closer to upstream)
@@ -179,13 +180,29 @@ def ladder_batch(m, jobs: list[list[dict]], assess, ctx=None):
         for entry in ladder: wav = generate(entry); key = assess(...); (take = this if take is None or key < take key); if not key[0]: break
     round r decodes entry r of every job still searching (one batch), then vocodes + assesses them in job order.
     assess(job, r, item, wav) -> (key, payload); returns per job (wav, payload, key) of the chosen take, or None for an empty ladder"""
+    import time
     best = [None] * len(jobs); active = [j for j, lad in enumerate(jobs) if lad]; r = 0
     while active:
         items = [jobs[j][r] for j in active]; nxt = []
+        t_ = time.perf_counter()
         with (ctx() if ctx else torch.inference_mode()): decs = decode_batch(m, items)
-        for j, it, d in zip(active, items, decs):
-            with (ctx() if ctx else torch.inference_mode()): wav = vocode(m, it, d)   # ctx = the caller autocast (generate ran under it); assess runs outside it
+        torch.cuda.synchronize(); STATS["decode_s"] = STATS.get("decode_s", 0.0) + time.perf_counter() - t_; STATS["rounds"] = STATS.get("rounds", 0) + 1
+        wavs = None
+        if S3_BATCH:   # r9 speed (DUB_S3_BATCH=1): the round's takes vocoded together (scripts/r9/s3_batch.py: each take's own random draws, batched CFM)
+            import sys as _s, pathlib as _p
+            _s.path.insert(0, str(_p.Path(__file__).resolve().parents[1] / "r9")); import s3_batch
+            t_ = time.perf_counter()
+            with (ctx() if ctx else torch.inference_mode()): wavs = s3_batch.vocode_batch(m, items, decs)
+            STATS["vocode_s"] = STATS.get("vocode_s", 0.0) + time.perf_counter() - t_
+        for k_, (j, it, d) in enumerate(zip(active, items, decs)):
+            t_ = time.perf_counter()
+            if wavs is not None:
+                wav = wavs[k_]
+            else:
+                with (ctx() if ctx else torch.inference_mode()): wav = vocode(m, it, d)   # ctx = the caller autocast (generate ran under it); assess runs outside it
+            t1_ = time.perf_counter(); STATS["vocode_s"] = STATS.get("vocode_s", 0.0) + (t1_ - t_ if wavs is None else 0.0)
             key, pay = assess(j, r, it, wav)
+            STATS["assess_s"] = STATS.get("assess_s", 0.0) + time.perf_counter() - t1_
             if best[j] is None or key < best[j][2]: best[j] = (wav, pay, key)
             if key[0] and r + 1 < len(jobs[j]): nxt.append(j)
         active = nxt; r += 1

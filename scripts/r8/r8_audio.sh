@@ -15,7 +15,13 @@ export DUB_TTS_BATCH=${DUB_TTS_BATCH:-1}   # batched Chatterbox (scripts/pilot/t
 TAG=$1; shift; IDS=${*:-01 02 03 04 05}; A=/workspace/dub/artifacts/r4a; S=$A/${TAG}src; mkdir -p $S/mix_src $S/src16
 s=$(date +%s)
 if [ -z "${REUSE:-}" ]; then   # from the raw input (one-command E2E): the r6 pipeline's takes only (ASR, diarization, Qwen 14B, Chatterbox), no mix / metrics / judge
+  MPP=()
+  if [ "${R9_MP_BG:-off}" = on ]; then   # r9 speed: the source face track (MediaPipe, CPU only, ~1 s per video-second) runs while the GPU pipeline runs (same file)
+    for id in $IDS; do mkdir -p $A/sep/$id; [ -f $A/sep/$id/source_mediapipe.npz ] && continue
+      python -c "import sys; sys.path.insert(0,'scripts/pilot'); import clean_face_stack as c, pathlib; c.run_mediapipe(pathlib.Path('$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1)'), pathlib.Path('$A/sep/$id/source_mediapipe.npz'))" > /dev/null 2>&1 & MPP+=($!); done
+  fi
   BASE=${TAG}pre; R4_PIPELINE_ONLY=1 R5_FAITH=off PAR=${PAR:-1} R6_EXTRA="${R8_PIPE_EXTRA:-}" bash scripts/r6/r6_audio.sh $BASE $IDS || exit 1
+  for p in "${MPP[@]}"; do wait $p; done
   for id in $IDS; do mkdir -p $A/sep/$id; [ -f $A/sep/$id/bg_44k.wav ] || cp $(readlink -f $A/$BASE/mix_src/$id)/bg_44k.wav $(readlink -f $A/$BASE/mix_src/$id)/vocals_44k.wav $A/sep/$id/
     [ -f $A/sep/$id/source_mediapipe.npz ] || python -c "import sys; sys.path.insert(0,'scripts/pilot'); import clean_face_stack as c, pathlib; c.run_mediapipe(pathlib.Path('$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1)'), pathlib.Path('$A/sep/$id/source_mediapipe.npz'))" > /dev/null 2>&1; done
   FAITH_ARG="--faith judge"   # retake judges the pipeline's own text (same prompt / 14B), no separate faith pass

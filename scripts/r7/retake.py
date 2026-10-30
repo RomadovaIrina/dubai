@@ -48,12 +48,13 @@ def filler_candidates(dt, llm, ru, old_en, budgets):
             "marker and hesitation word the speaker uses (вот, ну, короче, так сказать, то есть, значит, просто, вообще, в общем) as a natural spoken "
             "English equivalent (so, well, anyway, so to speak, that is, just), in the same place. Do not add any content, "
             "greeting, question or filler the speaker did not say. Answer with the translation only.")
-    out = []
-    for n in budgets[:2]:
+    def one(n):   # r9: the budgets are independent calls (dt.pmap: decoded together under the unit scheduler)
         msgs = [{"role": "system", "content": sys_}]
         for r_, e_ in FILLER_SHOTS: msgs += [{"role": "user", "content": r_}, {"role": "assistant", "content": e_}]
         msgs.append({"role": "user", "content": f"{ru}\n(current version, too short: \"{old_en}\"; about {n} words)"})
-        v = " ".join(dt._chat(llm, msgs, max_tokens=24 + 4 * n).split()).strip().strip('"«»“”')
+        return " ".join(dt._chat(llm, msgs, max_tokens=24 + 4 * n).split()).strip().strip('"«»“”')
+    out = []
+    for v in dt.pmap(one, budgets[:2]):
         if v and v.lower() != old_en.lower() and v not in out: out.append(v)
     return out
 
@@ -146,15 +147,25 @@ def main():
     S = np.zeros(n, bool)
     for s in man["speech_intervals"]: S[int(s["start"] / FR):int(np.ceil(s["end"] / FR))] = True
     llm = None
+    co = None
+    if os.environ.get("DUB_UNIT_CONC", "0") == "1":   # r9 speed: the units' Qwen work concurrently (scripts/r9/coop.py), greedy calls decoded together (DUB_QWEN_BATCH=1)
+        sys.path.insert(0, str(HERE.parent / "r9")); import coop
+        co = coop.Coop({"qwen": coop.qwen_handler}, wrap=coop.torch_wrap())
+    def conc(fn, items):   # fn over items: as cooperative workers (their Qwen calls batched) or one after another
+        if co is None: return [fn(x) for x in items]
+        dt.CHAT_HOOK = lambda l_, ms_, mt_: co.call("qwen", (l_, ms_, mt_)); dt.PMAP = co.map
+        try: return co.map(fn, items)
+        finally: dt.CHAT_HOOK = None; dt.PMAP = None
     if a.faith == "judge":   # speed track R7_LEAN: the r5_faith judge here (same prompt, budget, retry, 14B) on the pipeline's own text; no separate pass
         os.environ.setdefault("DUB_QWEN_SIZE", "14b")
         import run_clean_pipeline_05 as rp
         rp.QWEN_GPU_LAYERS = -1; llm, qname = rp.load_llm({}); faith = {}
-        for u in man["units"]:
+        def faith_of(u):
             en = " ".join(t["text"] for t in u.get("tts_parts") or []) or u.get("translation_fitted") or u.get("translation", "")
             mt = 200 + 14 * (len(u["text"].split()) + len(en.split())); j = dt.judge(llm, "Russian", "English", u["text"], en, max_tokens=mt)
             if j.get("unparsable") is not None: j = dt.judge(llm, "Russian", "English", u["text"], en, max_tokens=2 * mt); j["retried"] = True
-            faith[u["id"]] = {"id": u["id"], "source": u["text"], "english": en, **j}
+            return {"id": u["id"], "source": u["text"], "english": en, **j}
+        for u, fr in zip(man["units"], conc(faith_of, man["units"])): faith[u["id"]] = fr
         (O / "faith.json").write_text(json.dumps(list(faith.values()), indent=1, ensure_ascii=False))
     else:
         faith = {r["id"]: r for r in (json.loads(pathlib.Path(a.faith).read_text()).get("faith") or {}).get("rows", [])} if a.faith else {}
@@ -216,57 +227,86 @@ def main():
     qa = TtsQA(); aligner = CtcAligner.from_qa(qa)
     refs = rp.speaker_references(units, man["diarization"]["turns"], pathlib.Path(a.src16), O); cur_spk = None
     z = y.copy(); h = int(FR * sr)
-    for r in rows:
+    def ladder_of(u, c):   # the candidate's QA ladder and its "names heard" check (shared by the sequential loop and the batched path)
+        ents = [e for e in (u.get("ne") or []) if re.search(r"\b" + re.escape(e["english"]) + r"\b", c["en"], re.I)]
+        toks = c["en"].split(); names = [re.sub(r"[^\w'-]", "", t) for k_, t in enumerate(toks) if k_ and t[:1].isupper() and not re.search(r"[.!?]$", toks[k_ - 1])]
+        unheard_of = lambda wh: [w for w in names if w.lower() not in FUNC and len(w) >= 3 and not ne_guard.heard(w, wh) and not any(ne_guard.heard(e, wh) for e in ents if w.lower() in e["english"].lower())] \
+            + [e["english"] for e in ents if not ne_guard.heard(e, wh)]   # 04: "Sochi" synthesised as "Soki"
+        ladder = [(0, 0.8, -1), (1, 0.8, -1), (2, 0.6, -1)] + ([(3 + k, 0.8, k) for k in range(3)] if any(e.get("respellings") for e in ents) else [])   # then the NE respellings
+        return ents, unheard_of, ladder
+
+    def prep(r):   # phase A of a unit: all its Qwen work (old judge, candidate versions, their judges) -> the kept candidates; no Chatterbox yet
         u = r["u"]; ps = [p for p in u["alignment"]["placements"] if p.get("placed")]; t_start = time.perf_counter()
-        old_text = " ".join(p["text"] for p in ps); old_j = dt.judge(llm, "Russian", "English", u["text"], old_text)
-        base_cost, base_det = cost_of([tuple(p["placed"]) for p in ps], r["bursts"], r["win"])
+        old_text = " ".join(p["text"] for p in ps)
         pieces = r["coarse_w"]; secs = [b[1] - b[0] for b in r["coarse"]]   # Qwen sees the r6 bursts (every fine pause marked made it pad: "..., comma.")
         scl = tuple(float(s) for s in a.scales.split(","))
-        cands = [(" ".join(g)[0].upper() + " ".join(g)[1:], g) for _, g in dt.piece_candidates(llm, "Russian", "English", pieces, secs, wps, scales=scl[:1])]   # spoken without the joiner's commas
         cap = max(2, int(round(a.cap_scale * wps * sum(secs))))   # the source time at this voice's rate: an upper bound (slow speakers: filling it all = padding)
         budgets = sorted({min(cap, max(2, int(round(dt.words_of(old_text) * k)))) for k in (float(x) for x in a.budget_scales.split(","))})   # whole sentence, budget enforced
-        cands += [(t, None) for t in dt.candidates(llm, "Russian", "English", f" {dt.SHOTS_SRC_PAUSE} ".join(pieces), secs, old_text, budgets, sum(secs))]
-        if a.fillers == "on": cands += [(t, None) for t in filler_candidates(dt, llm, u["text"], old_text, budgets)]   # r8 v4: the speaker's own fillers
+        # the old judge and the three candidate sources are independent (r9: decoded together under the unit scheduler; else in this order)
+        old_j, c1, c2, c3 = dt.pmap(lambda f: f(), [
+            lambda: dt.judge(llm, "Russian", "English", u["text"], old_text),
+            lambda: [(" ".join(g)[0].upper() + " ".join(g)[1:], g) for _, g in dt.piece_candidates(llm, "Russian", "English", pieces, secs, wps, scales=scl[:1])],   # spoken without the joiner's commas
+            lambda: [(t, None) for t in dt.candidates(llm, "Russian", "English", f" {dt.SHOTS_SRC_PAUSE} ".join(pieces), secs, old_text, budgets, sum(secs))],
+            lambda: [(t, None) for t in filler_candidates(dt, llm, u["text"], old_text, budgets)] if a.fillers == "on" else []])   # r8 v4: the speaker's own fillers
+        base_cost, base_det = cost_of([tuple(p["placed"]) for p in ps], r["bursts"], r["win"])
+        cands = c1 + c2 + c3
         seen = set(); cands = [c for c in cands if not (c[0].lower() in seen or seen.add(c[0].lower()))]
         rec = {"id": u["id"], "why": r["why"], "ru": u["text"], "old_en": old_text, "old_judge": {k: old_j.get(k) for k in ("score", "natural", "missing", "added")},
                "old_cost": round(base_cost, 2), "old_detail": base_det, "candidates": []}
         need = max(4, old_j.get("score") or 0); kept = []
-        for txt, pcs in cands:
-            g = guard(dt, u["text"], old_text, txt, u.get("ne") or [])
+        gs = [guard(dt, u["text"], old_text, txt, u.get("ne") or []) for txt, _ in cands]
+        js = iter(dt.pmap(lambda txt: dt.judge(llm, "Russian", "English", u["text"], txt), [txt for (txt, _), g in zip(cands, gs) if not g]))
+        for (txt, pcs), g in zip(cands, gs):
             if g: rec["candidates"].append({"en": txt, "rejected": g}); continue
-            j = dt.judge(llm, "Russian", "English", u["text"], txt)
+            j = next(js)
             c = {"en": txt, "pieces": pcs, "judge": {k: j.get(k) for k in ("score", "natural", "missing", "added")}, "pred_s": round(dt.syllables(txt) / sps, 2)}
             if (j.get("score") or 0) < need or j.get("added") or (j.get("natural") or 5) < min(4, old_j.get("natural") or 5): c["rejected"] = "judge"; rec["candidates"].append(c); continue
             kept.append(c); rec["candidates"].append(c)
         target = sum(secs); kept.sort(key=lambda c: abs(c["pred_s"] - target))
+        kept = [dict(c, cfg=w) for c in kept[:a.max_tts] for w in (0.5, 0.3)]   # 0.3 = Chatterbox's slower, more deliberate delivery (no atempo)
+        rec["candidates"] += [c for c in kept if c["cfg"] == 0.3]
+        return {"ps": ps, "t_start": t_start, "old_text": old_text, "old_j": old_j, "base_cost": base_cost, "rec": rec, "kept": kept}
+
+    def tts_jobs(u, kept):
+        lads = [ladder_of(u, c) for c in kept]
+        return lads, [[dict(text=ne_guard.apply(c["en"], ents, rk), seed=a.seed + 100 * u["id"] + 7919 * soff, temperature=temp, cfg_weight=c["cfg"]) for soff, temp, rk in lad]
+                      for c, (ents, _, lad) in zip(kept, lads)]
+
+    def ladders(group):   # [(u, kept)] of one speaker -> per entry {candidate index: (wav, qa, key)}: every ladder decoded together, round by round (t3_batch.ladder_batch:
+        import t3_batch    # the same texts, seeds, temperatures, cfg and selection as the sequential loop below)
+        flat, own = [], []
+        for gi, (u, kept) in enumerate(group):
+            lads, jobs = tts_jobs(u, kept); flat += jobs; own += [(gi, ci, lads[ci]) for ci in range(len(kept))]
+        def assess(j, r_, it, wav):
+            if wav is None: return (True, float("inf")), (None, {"bad": True, "score": float("inf"), "whisper": "", "unheard": [], "said": it["text"]})
+            wv = wav.detach().float().cpu()[0].numpy().astype(np.float32); q = qa.assess(it["text"], wv, m.sr, "en"); un = own[j][2][1](q["whisper"])
+            return (q["bad"] or bool(un), q["score"]), (wv, {**q, "unheard": un, "said": it["text"]})
+        out = [{} for _ in group]
+        for j, b in enumerate(t3_batch.ladder_batch(m, flat, assess, ctx=lambda: torch.autocast("cuda", dtype=torch.float16))):
+            out[own[j][0]][own[j][1]] = (b[1][0], b[1][1], b[2])
+        return out
+
+    preps = conc(prep, rows)
+    pre_tts = {}
+    if co is not None and os.environ.get("DUB_TTS_BATCH", "0") == "1":   # r9 speed: the candidate takes of ALL selected units in one ladder batch per speaker
+        for spk in dict.fromkeys(r["u"]["speaker"] for r, P in zip(rows, preps) if P["kept"]):
+            ix = [k for k, (r, P) in enumerate(zip(rows, preps)) if P["kept"] and r["u"]["speaker"] == spk]
+            ref = refs[spk]["file"]
+            if ref: m.prepare_conditionals(ref)
+            cur_spk = spk
+            for k, res in zip(ix, ladders([(rows[k]["u"], preps[k]["kept"]) for k in ix])): pre_tts[k] = res
+    for ri, (r, P) in enumerate(zip(rows, preps)):
+        u = r["u"]; ps, t_start, old_text, old_j, base_cost, rec, kept = P["ps"], P["t_start"], P["old_text"], P["old_j"], P["base_cost"], P["rec"], P["kept"]
         best = None
-        if kept and u["speaker"] != cur_spk:
+        if kept and ri not in pre_tts and u["speaker"] != cur_spk:
             ref = refs[u["speaker"]]["file"]
             if ref: m.prepare_conditionals(ref)
             cur_spk = u["speaker"]
-        kept = [dict(c, cfg=w) for c in kept[:a.max_tts] for w in (0.5, 0.3)]   # 0.3 = Chatterbox's slower, more deliberate delivery (no atempo)
-        rec["candidates"] += [c for c in kept if c["cfg"] == 0.3]
-        def ladder_of(c):   # the candidate's QA ladder and its "names heard" check (shared by the sequential loop and the batched path)
-            ents = [e for e in (u.get("ne") or []) if re.search(r"\b" + re.escape(e["english"]) + r"\b", c["en"], re.I)]
-            toks = c["en"].split(); names = [re.sub(r"[^\w'-]", "", t) for k_, t in enumerate(toks) if k_ and t[:1].isupper() and not re.search(r"[.!?]$", toks[k_ - 1])]
-            unheard_of = lambda wh: [w for w in names if w.lower() not in FUNC and len(w) >= 3 and not ne_guard.heard(w, wh) and not any(ne_guard.heard(e, wh) for e in ents if w.lower() in e["english"].lower())] \
-                + [e["english"] for e in ents if not ne_guard.heard(e, wh)]   # 04: "Sochi" synthesised as "Soki"
-            ladder = [(0, 0.8, -1), (1, 0.8, -1), (2, 0.6, -1)] + ([(3 + k, 0.8, k) for k in range(3)] if any(e.get("respellings") for e in ents) else [])   # then the NE respellings
-            return ents, unheard_of, ladder
-        batched = {}
-        if os.environ.get("DUB_TTS_BATCH", "0") == "1" and kept:   # r8 speed: every candidate ladder decoded together, round by round (t3_batch.ladder_batch:
-            import t3_batch                                         # the same texts, seeds, temperatures, cfg and selection as the loop below)
-            lads = [ladder_of(c) for c in kept]
-            jobs = [[dict(text=ne_guard.apply(c["en"], ents, rk), seed=a.seed + 100 * u["id"] + 7919 * soff, temperature=temp, cfg_weight=c["cfg"]) for soff, temp, rk in lad]
-                    for c, (ents, _, lad) in zip(kept, lads)]
-            def assess(j, r_, it, wav):
-                if wav is None: return (True, float("inf")), (None, {"bad": True, "score": float("inf"), "whisper": "", "unheard": [], "said": it["text"]})
-                wv = wav.detach().float().cpu()[0].numpy().astype(np.float32); q = qa.assess(it["text"], wv, m.sr, "en"); un = lads[j][1](q["whisper"])
-                return (q["bad"] or bool(un), q["score"]), (wv, {**q, "unheard": un, "said": it["text"]})
-            for j, b in enumerate(t3_batch.ladder_batch(m, jobs, assess, ctx=lambda: torch.autocast("cuda", dtype=torch.float16))):
-                batched[j] = (b[1][0], b[1][1], b[2])
+        batched = pre_tts.get(ri, {})
+        if ri not in pre_tts and os.environ.get("DUB_TTS_BATCH", "0") == "1" and kept:   # r8 speed: every candidate ladder of this unit decoded together
+            batched = ladders([(u, kept)])[0]
         for ci, c in enumerate(kept):
-            ents, unheard_of, ladder = ladder_of(c)
+            ents, unheard_of, ladder = ladder_of(u, c)
             take = batched.get(ci)
             for soff, temp, rk in (ladder if take is None else []):
                 say = ne_guard.apply(c["en"], ents, rk); torch.manual_seed(a.seed + 100 * u["id"] + 7919 * soff)

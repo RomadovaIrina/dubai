@@ -60,10 +60,24 @@ def marked_source(u: dict, p: dict, min_pause: float) -> tuple[str, list[float]]
     return " | ".join(pieces), [round(s, 2) for s in secs]
 
 
+CHAT_HOOK = None   # r9 speed: set by the unit scheduler (scripts/r9/coop.py): a greedy call is parked and decoded with the other units' calls (qwen_batch)
+PMAP = None        # r9 speed: map(fn, items) of the scheduler (independent calls of one unit run as sub-tasks, their Qwen calls batched); None = sequential
+
+
+def pmap(fn, items):
+    items = list(items)
+    return PMAP(fn, items) if PMAP is not None and len(items) > 1 else [fn(x) for x in items]
+
+
 def _chat(llm, msgs, max_tokens: int, temperature: float = 0.0) -> str:
     t = time.perf_counter()
-    r = llm.create_chat_completion(msgs, max_tokens=max_tokens, temperature=temperature)
+    if CHAT_HOOK is not None and temperature == 0.0:
+        r = {"choices": [{"message": {"content": CHAT_HOOK(llm, msgs, max_tokens)}}]}
+    else:
+        r = llm.create_chat_completion(msgs, max_tokens=max_tokens, temperature=temperature)
     dt = time.perf_counter() - t; STATS["qwen_s"] += dt
+    if os.environ.get("DUB_QWEN_RECORD"):   # r9: every call + its answer (the batched-engine equivalence test, scripts/r9/test_qwen_batch.py)
+        with open(os.environ["DUB_QWEN_RECORD"], "a") as f_: f_.write(json.dumps({"msgs": msgs, "max_tokens": max_tokens, "temperature": temperature, "answer": r["choices"][0]["message"]["content"], "s": round(dt, 3)}, ensure_ascii=False) + "\n")
     # r7: Qwen time / tokens per caller (candidates / judge = back-translation + score / ...) for the 7B-vs-14B table; no effect on the output
     import sys as _s
     k = _s._getframe(1).f_code.co_name; u = r.get("usage") or {}
@@ -94,8 +108,7 @@ def _cand_prompt(src_name, tgt_name, marked, plain, n):
 def candidates(llm, src_name: str, tgt_name: str, marked: str, piece_s: list[float], plain: str, budgets: list[int], seconds: float) -> list[str]:
     """One Qwen conversation per word budget (3 generic shots, temperature 0): a version with budget +-1 words; a miss is fed back once with the
     count it got (Qwen 7B ignores budgets given as a list: 11-15 words asked, 8-10 delivered). Returns the versions (closest attempt per budget)."""
-    out = []
-    for n in budgets:
+    def one(n):   # r9: the budgets are independent conversations (pmap: decoded together under the unit scheduler)
         msgs = [{"role": "system", "content": DUR_SYSTEM.replace(" You answer with JSON only.", " You answer with the version only.")}]
         for src, ref, k, ver in CAND_SHOTS:
             msgs += [{"role": "user", "content": _cand_prompt(src_name, tgt_name, src, ref, k)}, {"role": "assistant", "content": ver}]
@@ -108,8 +121,8 @@ def candidates(llm, src_name: str, tgt_name: str, marked: str, piece_s: list[flo
             if abs(words_of(v) - n) <= 1: break
             msgs += [{"role": "assistant", "content": raw}, {"role": "user", "content": f"That has {words_of(v)} words; it must have between {n - 1} and {n + 1} words with the same "
                      f"meaning ({'fuller, more explicit wording' if words_of(v) < n else 'tighter wording'}). Answer with the version only."}]
-        if best: out.append(best)
-    return out
+        return best
+    return [b for b in pmap(one, budgets) if b]
 
 
 PIECE_SHOTS = [   # generic (not from the test videos): pieces, seconds, word budgets, answer
@@ -131,8 +144,7 @@ def piece_candidates(llm, src_name: str, tgt_name: str, pieces: list[str], secs:
     the piece's speech seconds), joined with a comma where the piece does not end a phrase, so pb1's boundary rule reproduces the source pause there.
     Returns [(joined text, pieces)] (one per scale of the budgets)."""
     from tts_burst import CLAUSE_START
-    out = []
-    for sc in scales:
+    def one(sc):   # r9: one independent conversation per scale (pmap)
         budgets = [max(1, int(round(wps * s_ * sc))) for s_ in secs]
         msgs = [{"role": "system", "content": DUR_SYSTEM}]
         for ps, ss, bs, ans in PIECE_SHOTS:
@@ -147,15 +159,15 @@ def piece_candidates(llm, src_name: str, tgt_name: str, pieces: list[str], secs:
             if len(got) == len(pieces) and all(words_of(g) for g in got):
                 break
             msgs += [{"role": "assistant", "content": raw}, {"role": "user", "content": f"It must be JSON with exactly {len(pieces)} non-empty pieces. Answer again."}]; got = []
-        if not got: continue
+        if not got: return None
         txt = got[0]
         for g in got[1:]:
             first = re.sub(r"[^\w']", "", g.split()[0].lower()) if g.split() else ""
             if not re.search(r"[,.;:!?…—-]['\"»)]*$", txt) and first not in CLAUSE_START: txt += ","
             txt += " " + g
         txt = txt[0].upper() + txt[1:]
-        out.append((txt, got))
-    return out
+        return (txt, got)
+    return [o for o in pmap(one, scales) if o]
 
 
 JUDGE_SHOTS = [   # generic calibration examples (not from the test videos)
@@ -393,28 +405,38 @@ def select(u: dict, p: dict, plain: str, first: tuple, synth, sim, llm, src_name
     STATS["units"] += 1; COST = cfg.get("cost", "r5")
     y0, rec0, sp0, s0 = first; c0 = sim(y0, sp0, plain)
     info = {"plain": plain, "plain_sim": c0, "chosen": "plain", "rounds": []}; u["dur_translate"] = info
+    triggered = not (c0["cost"] <= cfg.get("ok_cost", 0.25) and not rec0.get("qa_bad_final"))
+    marked, piece_s = marked_source(u, p, cfg.get("mark_pause", 0.6)) if triggered else ("", [])
+    def plan(b):   # a round's word budgets from the current best take (this voice's syllables / s on it)
+        spk_b = spoken(b["text"]); rate = syllables(spk_b) / max(b["s"], 0.3)
+        ideal = max(0.4, b["sim"]["ideal_s"]); goal_syl = rate * ideal; wpsyl = words_of(b["text"]) / max(1, syllables(spk_b))
+        goal_w = goal_syl * wpsyl
+        return rate, ideal, goal_w, sorted({max(3, int(round(goal_w * f))) for f in cfg.get("budget_f", (0.9, 1.0, 1.12))})
+    def versions(b, budgets, ideal):   # the round's Qwen versions: budgeted + source-pause-ordered (independent: decoded together under the scheduler)
+        jobs = [lambda: candidates(llm, src_name, tgt_name, marked, piece_s, plain, budgets, ideal)]
+        if len(piece_s) > 1 and cfg.get("pieces", True):   # source-pause-ordered candidates (a boundary at every source pause, each piece budgeted to its burst)
+            wps = words_of(b["text"]) / max(b["s"], 0.3)
+            jobs.append(lambda: [t_ for t_, _ in piece_candidates(llm, src_name, tgt_name, marked.split(" | "), piece_s, wps, scales=cfg.get("piece_scales", (1.0, 1.15)))])
+        res = pmap(lambda f: f(), jobs); pc = res[1] if len(res) > 1 else []
+        return res[0] + pc, {t_.lower().strip(" .") for t_ in pc}
+    pre = None
     if cfg.get("judge_plain", True):
-        info["plain_judge"] = judge(llm, src_name, tgt_name, u["text"], plain)
-    if c0["cost"] <= cfg.get("ok_cost", 0.25) and not rec0.get("qa_bad_final"):
+        if PMAP is not None and triggered:   # r9: round 1 does not depend on the plain judge (only the selection does): both at once
+            b0 = {"text": plain, "s": s0, "sim": c0}; pl0 = plan(b0)
+            info["plain_judge"], pre = pmap(lambda f: f(), [lambda: judge(llm, src_name, tgt_name, u["text"], plain), lambda: versions(b0, pl0[3], pl0[1])])
+        else:
+            info["plain_judge"] = judge(llm, src_name, tgt_name, u["text"], plain)
+    if not triggered:
         return plain, y0, rec0, sp0, s0
     STATS["triggered"] += 1
     best = {"text": plain, "y": y0, "rec": rec0, "spans": sp0, "s": s0, "sim": c0, "score": (info.get("plain_judge") or {}).get("score", 5), "plain": True}
-    seen = {plain.lower().strip(" .")}; marked, piece_s = marked_source(u, p, cfg.get("mark_pause", 0.6)); salt = 60
+    seen = {plain.lower().strip(" .")}; salt = 60
     def total(c):   # selection cost: placement seconds + fidelity + QA
         return c["sim"]["cost"] + cfg.get("fid_w", 0.12) * (5 - min(5, max(1, c["score"]))) + (2.0 if c["rec"].get("qa_bad_final") else 0.0) - (cfg.get("switch_margin", 0.15) if c.get("plain") else 0.0)
     for rnd in range(cfg.get("rounds", 2)):
-        b = best; spk_b = spoken(b["text"]); rate = syllables(spk_b) / max(b["s"], 0.3)   # this voice's syllables / s on the current best take
-        ideal = max(0.4, b["sim"]["ideal_s"]); goal_syl = rate * ideal; wpsyl = words_of(b["text"]) / max(1, syllables(spk_b))
-        goal_w = goal_syl * wpsyl
-        budgets = sorted({max(3, int(round(goal_w * f))) for f in cfg.get("budget_f", (0.9, 1.0, 1.12))})
+        b = best; rate, ideal, goal_w, budgets = plan(b)
         if rnd and budgets == info["rounds"][-1]["budgets"]: break   # the same budgets give the same (temperature 0) versions
-        cands = candidates(llm, src_name, tgt_name, marked, piece_s, plain, budgets, ideal)
-        if len(piece_s) > 1 and cfg.get("pieces", True):   # source-pause-ordered candidates (a boundary at every source pause, each piece budgeted to its burst)
-            wps = words_of(b["text"]) / max(b["s"], 0.3)
-            pc = [t_ for t_, _ in piece_candidates(llm, src_name, tgt_name, marked.split(" | "), piece_s, wps, scales=cfg.get("piece_scales", (1.0, 1.15)))]
-            piece_set = {t_.lower().strip(" .") for t_ in pc}; cands += pc
-        else:
-            piece_set = set()
+        cands, piece_set = pre if (rnd == 0 and pre is not None) else versions(b, budgets, ideal)
         log(f"    [dur] u{u['id']:02d} r{rnd + 1} rate {rate:.2f} syl/s ideal {ideal:.2f}s budgets {budgets} -> {len(cands)} versions {[words_of(c) for c in cands]}")
         rr = {"round": rnd + 1, "rate_syl_s": round(rate, 2), "ideal_s": round(ideal, 2), "goal_words": round(goal_w, 1), "budgets": budgets, "candidates": []}; info["rounds"].append(rr)
         pool = []
@@ -430,12 +452,16 @@ def select(u: dict, p: dict, plain: str, first: tuple, synth, sim, llm, src_name
         if rnd == 0 and cfg.get("plain_reseeds", 1):   # the plain text with other seeds: Chatterbox takes vary +-10 % in length, a free faithful lever
             pool = [(0.0, plain, {"text": plain, "reseed": True})] * cfg.get("plain_reseeds", 1) + pool
         todo = []   # (c, row, j, salt): judged first, in pool order (the judge never depends on a take), so the syntheses are known before any is made
+        lim = cfg.get("tts_top", 3) + (cfg.get("plain_reseeds", 1) if rnd == 0 else 0); prej = {}
+        if PMAP is not None:   # r9: every candidate the loop below can reach judged at once (the same judge calls + at most a few the loop would skip)
+            need = [c for _, c, row in pool[:lim + 8] if not row.get("reseed")]
+            prej = dict(zip(need, pmap(lambda c: judge(llm, src_name, tgt_name, u["text"], c, ref=plain), need)))
         for _, c, row in pool:
-            if tried >= cfg.get("tts_top", 3) + (cfg.get("plain_reseeds", 1) if rnd == 0 else 0): break
+            if tried >= lim: break
             if row.get("reseed"):
                 row = dict(row); rr["candidates"].append(row); j = {"score": best["score"] if best.get("plain") else (info.get("plain_judge") or {}).get("score", 5)}
             else:
-                j = judge(llm, src_name, tgt_name, u["text"], c, ref=plain); row["judge"] = j
+                j = prej[c] if c in prej else judge(llm, src_name, tgt_name, u["text"], c, ref=plain); row["judge"] = j
             if not row.get("reseed") and (j["score"] < cfg.get("min_score", 4) or j.get("natural", 5) < cfg.get("min_natural", 4)):
                 row["reject"] = f"judge {j['score']} natural {j.get('natural')}" + (f" added {j['added']}" if j["added"] else ""); STATS["rejected_judge"] += 1
                 log(f"    [dur] u{u['id']:02d} r{rnd + 1} {row['reject']} missing {j.get('missing')} | {c[:70]}"); continue
