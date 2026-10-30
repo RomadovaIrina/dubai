@@ -38,6 +38,21 @@ if CALIB_FILE.exists():
 LMK_ADAPT_ORIGIN_ORDER = [1, 10, 12, 14, 16, 3, 5, 7, 0, 23, 21, 19, 32, 30, 28, 26, 17, 43, 48, 49, 51, 50, 102, 103, 104, 105, 101, 73, 74, 86]
 
 
+def _seed_master_mp(out: pathlib.Path, fmap_: dict, n: int) -> None:
+    """r9 speed (MP_SOURCE_NPZ=<the audio stage's single-face VIDEO-mode MediaPipe npz of the SOURCE>): the master frames are source frames
+    (frame_map master_to_source), so the master pass is that npz indexed by the map instead of a second MediaPipe run. Not identical: VIDEO-mode
+    tracking on the master skips the dropped source frames."""
+    import os
+    src_npz = os.environ.get("MP_SOURCE_NPZ", "")
+    if not src_npz or out.exists() or not pathlib.Path(src_npz).exists() or "master_to_source" not in fmap_: return
+    z = np.load(src_npz); f_ = z.files
+    if "matrix" not in f_ or "lm_all" in f_: return
+    j = np.asarray(fmap_["master_to_source"], int)[:n]; ns = len(z["lm"])
+    if len(j) != n or j.max() >= ns: return
+    d = {k: (z[k][j] if (z[k].ndim >= 1 and len(z[k]) == ns) else z[k]) for k in f_}
+    np.savez_compressed(out, **d); print(f"  [mediapipe] master pass from the source npz ({n} of {ns} frames, frame map)", flush=True)
+
+
 def run_mediapipe(video: pathlib.Path, out: pathlib.Path, mode: str = "video", num_faces: int = 1, every: int = 1) -> pathlib.Path:
     """MediaPipe Face Landmarker over every frame of `video` in its own env -> npz (cached next to the master)."""
     if out.exists():
@@ -223,6 +238,7 @@ class CleanPrep:
         except Exception as e:   # never fail the video stage for a bookkeeping table
             self.frame_map = {"error": f"{type(e).__name__}: {str(e)[:200]}"}
         self.times["prep_frame_map"] = round(time.perf_counter() - t0, 3); t0 = time.perf_counter()
+        _seed_master_mp(pathlib.Path(work) / "master_mediapipe.npz", self.frame_map, len(self.frames))   # r9 speed (MP_SOURCE_NPZ)
         # spec 11.1-11.3: a MediaPipe failure never crashes the worker: one retry, then a voice-only result (no lip-sync), flagged
         self.failure = None; npz = pathlib.Path(work) / "master_mediapipe.npz"; lm = None; z = None
         for attempt in (1, 2):

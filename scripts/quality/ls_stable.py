@@ -232,11 +232,23 @@ class StableLatentSync(AccelLatentSync):
                     dc_start = getattr(dc, "start_timestep", None) if dc is not None else None
                     if dc is not None: dc.start_timestep = k0   # DeepCache counts its skip schedule from start_timestep: each bridge must open with a full step
                     with _sdpa_context(self.sdpa):
+                        spans = []
                         for seam in [w[0] for w in windows[1:]]:
                             a_, b_ = max(0, seam - half), min(n, seam + (self.bridge_len - half))
                             if b_ - a_ < 4: continue
-                            x = pipe.scheduler.add_noise(latents[:, :, a_:b_], eps0[:, :, a_:b_], timesteps[k0].reshape(1))
-                            mk, mi, rl, au = mask_lat[:, :, a_:b_], masked_lat[:, :, a_:b_], ref_lat[:, :, a_:b_], audio_all[a_:b_]
+                            spans.append((a_, b_))
+                        # r9 speed L5 (LS_BRIDGE_BATCH=k): the bridges never overlap (seams 16 apart, bridges <= 16 long), so k of the same length are denoised
+                        # together on the batch axis (CFG layout as the main windows: all unconditional, then all conditional); 0 / 1 = one at a time
+                        bb = int(os.environ.get("LS_BRIDGE_BATCH", "0") or 0)
+                        if bb > 1 and self.bridge_len <= nf:
+                            by_len = {}
+                            for sp in spans: by_len.setdefault(sp[1] - sp[0], []).append(sp)
+                            batches = [v[k:k + bb] for v in by_len.values() for k in range(0, len(v), bb)]
+                        else: batches = [[sp] for sp in spans]
+                        for bt in batches:
+                            x = torch.cat([pipe.scheduler.add_noise(latents[:, :, a_:b_], eps0[:, :, a_:b_], timesteps[k0].reshape(1)) for a_, b_ in bt])
+                            mk = torch.cat([mask_lat[:, :, a_:b_] for a_, b_ in bt]); mi = torch.cat([masked_lat[:, :, a_:b_] for a_, b_ in bt])
+                            rl = torch.cat([ref_lat[:, :, a_:b_] for a_, b_ in bt]); au = torch.cat([audio_all[a_:b_] for a_, b_ in bt])
                             if do_cfg:
                                 mk, mi, rl, au = torch.cat([mk] * 2), torch.cat([mi] * 2), torch.cat([rl] * 2), torch.cat([torch.zeros_like(au), au])
                             if dc is not None:
@@ -247,16 +259,21 @@ class StableLatentSync(AccelLatentSync):
                                 if do_cfg:
                                     nu, na = npred.chunk(2); npred = nu + self.guidance * (na - nu)
                                 x = pipe.scheduler.step(npred, t, x, **extra).prev_sample
-                            L_ = b_ - a_; w = torch.tensor([min(i + 1, L_ - i) for i in range(L_)], device=device, dtype=torch.float32)
-                            w = (w / w.max()).clamp(max=1.0).to(weight_dtype).view(1, 1, -1, 1, 1)
-                            latents[:, :, a_:b_] = w * x + (1 - w) * latents[:, :, a_:b_]; bridges += 1
+                            for j, (a_, b_) in enumerate(bt):
+                                L_ = b_ - a_; w = torch.tensor([min(i + 1, L_ - i) for i in range(L_)], device=device, dtype=torch.float32)
+                                w = (w / w.max()).clamp(max=1.0).to(weight_dtype).view(1, 1, -1, 1, 1)
+                                latents[:, :, a_:b_] = w * x[j:j + 1] + (1 - w) * latents[:, :, a_:b_]; bridges += 1
                     if dc is not None: dc.start_timestep = dc_start
                     torch.cuda.synchronize(); t_bridge = time.perf_counter() - t0
                 if dc is not None:
                     dc.cached_output = {}
                 t0 = time.perf_counter(); out = []
-                for a in range(0, n, nf):
-                    dec = pipe.decode_latents(latents[:, :, a:a + nf])
+                r0 = int(os.environ.get("LS_DEC_ROW0", "0") or 0)   # r9 speed: mouth-only VAE decode from latent row r0 (the fixed mask regenerates pixel rows 190-485 = latent 23-60;
+                for a in range(0, n, nf):                           # rows above r0 * 8 are pasted back from the input anyway); 0 = the whole latent
+                    if r0 > 0:
+                        part = pipe.decode_latents(latents[:, :, a:a + nf, r0:]); dec = cur_px[a:a + nf].to(device=part.device, dtype=part.dtype).clone(); dec[:, :, r0 * 8:] = part
+                    else:
+                        dec = pipe.decode_latents(latents[:, :, a:a + nf])
                     out.append(pipe.paste_surrounding_pixels_back(dec, cur_px[a:a + nf], 1 - masks[a:a + nf], device, weight_dtype))
                 synced = torch.cat(out); torch.cuda.synchronize(); t_vae += time.perf_counter() - t0
             t0 = time.perf_counter(); frames = pipe.restore_video(synced, video_frames, boxes, affine); t_res = time.perf_counter() - t0
@@ -277,13 +294,63 @@ class StableLatentSync(AccelLatentSync):
             os.chdir(old)
 
 
+class _Pad16(torch.nn.Module):
+    """r9 speed (LS_VAE_COMPILE=<torch.compile mode>): the VAE encoder / decoder compiled for ONE shape: every call is split / padded to 16 images
+    (the VAE works per image: GroupNorm and attention are per sample, so the padding does not change the real images), one inductor graph, cached on disk."""
+    def __init__(self, m, mode):
+        super().__init__(); self.inner = m; self.c = torch.compile(m, mode=mode, dynamic=False)
+    def forward(self, x, *args, **kw):
+        n = x.shape[0]; outs = []
+        for i in range(0, n, 16):
+            xb = x[i:i + 16]; k = xb.shape[0]
+            if k < 16: xb = torch.cat([xb, xb[-1:].expand(16 - k, *xb.shape[1:])])
+            outs.append(self.c(xb, *args, **kw)[:k])
+        return torch.cat(outs)
+
+
+def vae_compile(pipe):
+    mode = os.environ.get("LS_VAE_COMPILE", "")
+    if not mode or getattr(pipe.vae, "_r9_compiled", False): return
+    pipe.vae.decoder = _Pad16(pipe.vae.decoder, mode); pipe.vae.encoder = _Pad16(pipe.vae.encoder, mode); pipe.vae._r9_compiled = True
+    print(f"  [ls] VAE encoder / decoder torch.compile mode={mode} (16-image shape)", flush=True)
+
+
+def half_rate_fill(src, sub, idx):
+    """r9 speed (LS_HALF_RATE): the generated frames at idx (every other frame) + the frames between them: inside the region LatentSync changed
+    (|out - in| > 3 on either neighbour, dilated, feathered) the bidirectional DIS-flow interpolation of the two generated neighbours (as
+    r9_layer_repair.py), outside it the frame's own pixels. A trailing frame takes the previous generated frame's region."""
+    import cv2
+    n = len(src); out = np.empty_like(src); out[idx] = np.asarray(sub)[:len(idx)]   # at 12.5 fps the audio gives 1-2 more chunks than frames (LatentSync loops the clip): keep the generated frames
+    dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
+    def region(k):
+        return (np.abs(out[k].astype(np.int16) - src[k].astype(np.int16)).max(2) > 3)
+    for k in range(n):
+        if k % 2 == 0: continue
+        p, q = k - 1, k + 1
+        m = region(p) | (region(q) if q < n else False)
+        ys, xs = np.nonzero(m)
+        if len(ys) == 0: out[k] = src[k]; continue
+        H, W = m.shape; pad = 24; y0, y1, x0, x1 = max(0, ys.min() - pad), min(H, ys.max() + pad + 1), max(0, xs.min() - pad), min(W, xs.max() + pad + 1)
+        A = out[p][y0:y1, x0:x1]
+        if q < n:
+            Bq = out[q][y0:y1, x0:x1]; ga, gb = cv2.cvtColor(A, cv2.COLOR_RGB2GRAY), cv2.cvtColor(Bq, cv2.COLOR_RGB2GRAY)
+            fab, fba = dis.calc(ga, gb, None), dis.calc(gb, ga, None); gy, gx = np.mgrid[0:y1 - y0, 0:x1 - x0].astype(np.float32)
+            wa = cv2.remap(A, gx + 0.5 * fba[..., 0], gy + 0.5 * fba[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+            wb = cv2.remap(Bq, gx + 0.5 * fab[..., 0], gy + 0.5 * fab[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+            it = 0.5 * wa.astype(np.float32) + 0.5 * wb.astype(np.float32)
+        else: it = A.astype(np.float32)
+        mm = cv2.GaussianBlur(cv2.dilate(m[y0:y1, x0:x1].astype(np.uint8), np.ones((9, 9), np.uint8)).astype(np.float32), (0, 0), 4.0)[..., None]
+        f = src[k].copy(); f[y0:y1, x0:x1] = np.clip(mm * it + (1 - mm) * f[y0:y1, x0:x1].astype(np.float32), 0, 255).round().astype(np.uint8); out[k] = f
+    return out
+
+
 class StableRunner:
     """Same interface as face_aware_latentsync_accel.AccelRunner (run_frames / calls / config), executing StableLatentSync."""
 
     def __init__(self, window_batch_size=2, deepcache=True, steps=20, guidance=1.5, seed=1247, deepcache_interval=5, stride=None, ref_mode="same", mode="ls", pipe=None,
                  overlap="fuse", window_len=None, bridge_len=0, bridge_steps=0):
         from resident_vram_probe import load_latentsync
-        t0 = time.perf_counter(); pipe = pipe or load_latentsync()
+        t0 = time.perf_counter(); pipe = pipe or load_latentsync(); vae_compile(pipe)
         self.acc = StableLatentSync(pipe, stride=stride, ref_mode=ref_mode, mode=mode, overlap=overlap, window_len=window_len, bridge_len=bridge_len, bridge_steps=bridge_steps,
                                     window_batch_size=window_batch_size,
                                     deepcache=deepcache, steps=steps, guidance=guidance, seed=seed, deepcache_interval=deepcache_interval)
@@ -300,8 +367,17 @@ class StableRunner:
         sa = getattr(self, "silent_all", None); self.acc.silent_seg = sa[start:start + n] if sa is not None else None   # phase 2: dub-silent master frames of this segment
 
     def run_frames(self, frames_rgb, audio_wav, detections=None):
-        t0 = time.perf_counter(); frames = self.acc.run_frames(frames_rgb, str(audio_wav), detections,
-            video_fps=int(os.environ.get("DUB_LS_FPS", "25"))); dt = round(time.perf_counter() - t0, 2)   # r4 V: DUB_LS_FPS (a 30 fps run was windowed as 25 fps: SyncNet 0.6)
+        fps = int(os.environ.get("DUB_LS_FPS", "25")); t0 = time.perf_counter()
+        if os.environ.get("LS_HALF_RATE") == "1" and len(frames_rgb) >= 32:   # r9 speed: LatentSync on every other frame (12.5 fps, each with its own audio chunk)
+            n = len(frames_rgb); idx = np.arange(0, n, 2); ss = self.acc.silent_seg
+            if ss is not None: self.acc.silent_seg = np.asarray(ss)[idx[idx < len(ss)]]
+            try:
+                sub = self.acc.run_frames(np.ascontiguousarray(np.asarray(frames_rgb)[idx]), str(audio_wav), [detections[i] for i in idx] if detections is not None else None, video_fps=fps / 2)
+            finally: self.acc.silent_seg = ss
+            frames = half_rate_fill(np.asarray(frames_rgb), sub, idx)
+        else:
+            frames = self.acc.run_frames(frames_rgb, str(audio_wav), detections, video_fps=fps)   # r4 V: DUB_LS_FPS (a 30 fps run was windowed as 25 fps: SyncNet 0.6)
+        dt = round(time.perf_counter() - t0, 2)
         st = self.acc.last_stats
         seams = st.get("seams", list(range(self.acc.num_frames, len(frames_rgb), self.acc.num_frames)))   # AccelLatentSync path: 16-frame window starts
         self.calls.append({"frames": st["frames"], "windows": st["windows"], "groups": st["groups"], "unet_calls": st["unet_calls"], "seconds": dt, "stages": st["seconds"], "seams": seams})
