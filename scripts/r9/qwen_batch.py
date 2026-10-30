@@ -100,40 +100,42 @@ class Engine:
                 out[s + i] = int(lg.argmax())
         return out
 
+    def _base(self, t):
+        """the longest resident prefix of a prompt (a proper prefix): (length, cache entry)"""
+        b, s = 0, None
+        for c in self.cache:
+            k = len(c["tok"])
+            if b < k < len(t) and t[:k] == c["tok"]: b, s = k, c
+        return b, s
+
+    def _plan(self, reqs):
+        """per request (base, leader index, own): the resident prefix, the request whose evaluated prompt it shares (itself = a leader) and from
+        which position its own tokens are evaluated. Leaders = the first request of each (base, next 16 tokens) group; a follower shares its OWN
+        longest common prefix with its leader (KV cells shared, not copied)"""
+        out, lead = [], {}
+        for j, (t, _, _) in enumerate(reqs):
+            b, _ = self._base(t); key = (b, tuple(t[b:b + 16]))
+            if key not in lead: lead[key] = j; out.append((b, j, b)); continue
+            l_ = lead[key]; own = max(b, min(_lcp(reqs[l_][0], t), len(t) - 1)); out.append((b, l_, own))
+        return out
+
     def _wave(self, reqs):
         """reqs = [(tokens, stop, max_tokens)] (<= n_seq, KV-fitting): resident / shared prefixes once, then greedy decode of all together"""
         L = self.L; n = len(reqs); t_p = time.perf_counter(); self.tick += 1
         for j in range(self.seq_base): L.llama_memory_seq_rm(self.mem, j, -1, -1)
-        # 1. a resident prefix per request (the longest cache entry that is a proper prefix of its prompt)
-        base, src = [0] * n, [None] * n
-        for j, (t, _, _) in enumerate(reqs):
-            for c in self.cache:
-                k = len(c["tok"])
-                if base[j] < k < len(t) and t[:k] == c["tok"]: base[j], src[j] = k, c
-        # 2. requests with the same base whose next tokens agree share their longer common prefix (evaluated once on the first member)
-        groups = {}
-        for j, (t, _, _) in enumerate(reqs): groups.setdefault((base[j], tuple(t[base[j]:base[j] + 16])), []).append(j)
-        own = [0] * n; rows = []
-        for (b0, _), js in groups.items():
-            t0 = reqs[js[0]][0]; lcp = min(len(reqs[j][0]) for j in js) - 1
-            for j in js[1:]: lcp = min(lcp, _lcp(t0, reqs[j][0]))
-            if len(js) == 1: lcp = b0
-            lcp = max(lcp, b0)
-            if src[js[0]] is not None: L.llama_memory_seq_cp(self.mem, src[js[0]]["seq"], js[0], 0, b0); src[js[0]]["used"] = self.tick
-            rows += [(t0[pos], pos, js[0], False) for pos in range(b0, lcp)]
-            for j in js: own[j] = lcp
-        if rows: self._flush(rows)
-        STATS["eval_tok"] += len(rows)
-        for (b0, _), js in groups.items():
-            for j in js[1:]: L.llama_memory_seq_cp(self.mem, js[0], j, 0, own[j])
-        rows, last_row = [], {}
-        for j, (t, _, _) in enumerate(reqs):
-            for pos in range(own[j], len(t)):
-                rows.append((t[pos], pos, j, pos == len(t) - 1))
-                if pos == len(t) - 1: last_row[len(rows) - 1] = j
-            STATS["prompt_tok"] += len(t); STATS["cached_tok"] += base[j]
-        STATS["eval_tok"] += len(rows)
-        nxt = {last_row[r]: tok for r, tok in self._flush(rows).items()}
+        plan = self._plan(reqs); nxt = {}
+        for phase in ("leaders", "followers"):   # 1. leaders: their whole prompt after the resident prefix; 2. followers: after what they share
+            rows, last_row = [], {}
+            for j, ((t, _, _), (b, l_, own)) in enumerate(zip(reqs, plan)):
+                if (l_ == j) != (phase == "leaders"): continue
+                if l_ != j and own > b: L.llama_memory_seq_cp(self.mem, l_, j, 0, own)
+                elif b: c = self._base(t)[1]; L.llama_memory_seq_cp(self.mem, c["seq"], j, 0, b); c["used"] = self.tick
+                for pos in range(own, len(t)):
+                    rows.append((t[pos], pos, j, pos == len(t) - 1))
+                    if pos == len(t) - 1: last_row[len(rows) - 1] = j
+                STATS["prompt_tok"] += len(t); STATS["cached_tok"] += b
+            STATS["eval_tok"] += len(rows)
+            if rows: nxt.update({last_row[r]: tok for r, tok in self._flush(rows).items()})
         # 3. new resident prefixes: what a prompt shares with a recent one (>= MIN_CACHE tokens, not covered yet), copied from its evaluated sequence
         for j, (t, _, _) in enumerate(reqs):
             k = max([_lcp(t, r) for r in self.recent] + [0])
@@ -167,24 +169,29 @@ class Engine:
             seq = self.seq_base + len(self.cache)
         L.llama_memory_seq_cp(self.mem, j, seq, 0, len(tok)); self.cache.append({"seq": seq, "tok": list(tok), "used": self.tick})
 
+    def _run(self, P, w, res):
+        """one wave; a KV cache that turns out too full (llama_decode 1: no slot) -> the wave in two halves (the estimate is approximate)"""
+        try:
+            for j, t in zip(w, self._wave([P[j] for j in w])): res[j] = t
+            STATS["waves"] += 1
+        except RuntimeError as e:
+            if "llama_decode 1" not in str(e) or len(w) < 2: raise
+            STATS["splits"] = STATS.get("splits", 0) + 1
+            for j in range(self.seq_base): self.L.llama_memory_seq_rm(self.mem, j, -1, -1)
+            h = len(w) // 2; self._run(P, w[:h], res); self._run(P, w[h:], res)
+
     def chat(self, reqs):
         """reqs = [(msgs, max_tokens)] -> answer texts, in order (waves of <= n_seq requests that fit the KV cache)"""
         t0 = time.perf_counter(); P = [(*prompt_tokens(self.llm, m, mt), mt) for m, mt in reqs]; res = [None] * len(P)
         idx = sorted(range(len(P)), key=lambda j: P[j][0][:64])   # similar prompts together (prefix sharing)
-        room = self.n_ctx - self.cached_cells() - 2 * max([len(P[j][0]) for j in idx] + [0]) - 64   # the new cache entries of a wave need cells too
-        wave, need = [], 0
-        def run(w):
-            for j, t in zip(w, self._wave([P[j] for j in w])): res[j] = t
-            STATS["waves"] += 1
-        for j in idx:   # KV cells: a request's own tokens beyond what it shares with the previous one (sorted, so shared prefixes are adjacent) + its answer
-            t = P[j][0]; k = _lcp(t, P[wave[-1]][0]) if wave else 0
-            k = max(k, max([len(c["tok"]) for c in self.cache if len(c["tok"]) < len(t) and t[:len(c["tok"])] == c["tok"]] + [0]))
-            c = len(t) - k + P[j][2] + 8
-            if wave and (len(wave) >= self.n_seq or need + c > room):
-                run(wave); wave, need = [], 0
-                room = self.n_ctx - self.cached_cells() - 2 * len(t) - 64
-            wave.append(j); need += c
-        if wave: run(wave)
+        wave = []
+        def need(w):   # KV cells of a wave as _wave will use them: every request's own evaluated tokens + its answer
+            return sum(len(P[j][0]) - own + P[j][2] + 8 for j, (_, _, own) in zip(w, self._plan([P[j] for j in w])))
+        for j in idx:
+            if wave and (len(wave) >= self.n_seq or need(wave + [j]) > self.n_ctx - self.cached_cells() - 64):
+                self._run(P, wave, res); wave = []
+            wave.append(j)
+        if wave: self._run(P, wave, res)
         STATS["calls"] += len(P); STATS["seconds"] += time.perf_counter() - t0
         return res
 

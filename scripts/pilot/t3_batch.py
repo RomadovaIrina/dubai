@@ -15,10 +15,12 @@ RNG: each take samples with its OWN CUDA generator seeded with its seed (= the d
 and S3Gen then runs with the default generator set to that take state, so every take consumes the same random numbers as when made alone.
 """
 from __future__ import annotations
+import sys
 import torch
 import torch.nn.functional as F
 
 BUCKET = 128
+QA_BATCH = __import__("os").environ.get("DUB_QA_BATCH", "0") == "1"   # r9: the Whisper QA of a ladder round batched (scripts/r9/qa_batch.py)
 S3_BATCH = __import__("os").environ.get("DUB_S3_BATCH", "0") == "1"   # r9: S3Gen of a ladder round batched (scripts/r9/s3_batch.py)
 CHUNK = 16      # takes per decode batch (2 x CHUNK rows); the decoder and its graphs are reused across chunks
 import os as _os
@@ -194,6 +196,15 @@ def ladder_batch(m, jobs: list[list[dict]], assess, ctx=None):
             t_ = time.perf_counter()
             with (ctx() if ctx else torch.inference_mode()): wavs = s3_batch.vocode_batch(m, items, decs)
             STATS["vocode_s"] = STATS.get("vocode_s", 0.0) + time.perf_counter() - t_
+        if QA_BATCH:   # r9 speed (DUB_QA_BATCH=1): the round's Whisper QA in one batch first (scripts/r9/qa_batch.py); assess then reads those texts
+            import sys as _s, pathlib as _p
+            _s.path.insert(0, str(_p.Path(__file__).resolve().parents[1] / "r9")); import qa_batch, tts_qa
+            if wavs is None:
+                t_ = time.perf_counter()
+                with (ctx() if ctx else torch.inference_mode()): wavs = [vocode(m, it, d) for it, d in zip(items, decs)]
+                STATS["vocode_s"] = STATS.get("vocode_s", 0.0) + time.perf_counter() - t_
+            if tts_qa.ACTIVE is not None:
+                t_ = time.perf_counter(); qa_batch.prefetch(tts_qa.ACTIVE, wavs, m.sr); STATS["qa_batch_s"] = STATS.get("qa_batch_s", 0.0) + time.perf_counter() - t_
         for k_, (j, it, d) in enumerate(zip(active, items, decs)):
             t_ = time.perf_counter()
             if wavs is not None:
@@ -205,5 +216,6 @@ def ladder_batch(m, jobs: list[list[dict]], assess, ctx=None):
             STATS["assess_s"] = STATS.get("assess_s", 0.0) + time.perf_counter() - t1_
             if best[j] is None or key < best[j][2]: best[j] = (wav, pay, key)
             if key[0] and r + 1 < len(jobs[j]): nxt.append(j)
+        if QA_BATCH and "tts_qa" in sys.modules and sys.modules["tts_qa"].ACTIVE is not None: sys.modules["tts_qa"].ACTIVE.wcache.clear()   # unused prefetches
         active = nxt; r += 1
     return best

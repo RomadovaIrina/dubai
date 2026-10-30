@@ -14,29 +14,11 @@ DUB_ROOT=$(cd "$(dirname "$0")/../.." && pwd); cd $DUB_ROOT; R=$DUB_ROOT; . scri
 export DUB_TTS_BATCH=${DUB_TTS_BATCH:-1}   # batched Chatterbox (scripts/pilot/t3_batch.py): the default since the user accepted the r8b5 AB (DUB_TTS_BATCH=0 = one by one)
 TAG=$1; shift; IDS=${*:-01 02 03 04 05}; A=/workspace/dub/artifacts/r4a; S=$A/${TAG}src; mkdir -p $S/mix_src $S/src16
 s=$(date +%s)
-if [ -z "${REUSE:-}" ]; then   # from the raw input (one-command E2E): the r6 pipeline's takes only (ASR, diarization, Qwen 14B, Chatterbox), no mix / metrics / judge
-  MPP=()
-  if [ "${R9_MP_BG:-off}" = on ]; then   # r9 speed: the source face track (MediaPipe, CPU only, ~1 s per video-second) runs while the GPU pipeline runs (same file)
-    for id in $IDS; do mkdir -p $A/sep/$id; [ -f $A/sep/$id/source_mediapipe.npz ] && continue
-      python -c "import sys; sys.path.insert(0,'scripts/pilot'); import clean_face_stack as c, pathlib; c.run_mediapipe(pathlib.Path('$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1)'), pathlib.Path('$A/sep/$id/source_mediapipe.npz'))" > /dev/null 2>&1 & MPP+=($!); done
-  fi
-  BASE=${TAG}pre; R4_PIPELINE_ONLY=1 R5_FAITH=off PAR=${PAR:-1} R6_EXTRA="${R8_PIPE_EXTRA:-}" bash scripts/r6/r6_audio.sh $BASE $IDS || exit 1
-  for p in "${MPP[@]}"; do wait $p; done
-  for id in $IDS; do mkdir -p $A/sep/$id; [ -f $A/sep/$id/bg_44k.wav ] || cp $(readlink -f $A/$BASE/mix_src/$id)/bg_44k.wav $(readlink -f $A/$BASE/mix_src/$id)/vocals_44k.wav $A/sep/$id/
-    [ -f $A/sep/$id/source_mediapipe.npz ] || python -c "import sys; sys.path.insert(0,'scripts/pilot'); import clean_face_stack as c, pathlib; c.run_mediapipe(pathlib.Path('$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1)'), pathlib.Path('$A/sep/$id/source_mediapipe.npz'))" > /dev/null 2>&1; done
-  FAITH_ARG="--faith judge"   # retake judges the pipeline's own text (same prompt / 14B), no separate faith pass
-else BASE=$REUSE; FAITH_ARG=""; fi
-echo "BASE_DONE $(( $(date +%s) - s )) s" >> $S/times.txt
 RT_ARGS="${R8_RETAKE_ARGS---short-s 0.3 --budget-scales 1.15,1.3,1.5,1.75 --cap-scale 1.2 --min-piece 0.2 --max-tts 4 --natural-cuts on --fillers on}"
 BA_ARGS="${R8_ALIGN_ARGS---min-piece 0.2 --sil-ratio 1.5 --natural-cuts on}"
-if [ "${R8_ONEPROC:-on}" = on ]; then   # speed L5: retake -> clause takes -> burst_align of ALL videos in one process, models loaded once (scripts/r8/r8_tts_stage.py)
-  J=$S/oneproc_jobs.json; t0p=$(date +%s.%N)
-  for id in $IDS; do
-    ffmpeg -loglevel error -y -i "$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1)" -vn -ac 1 -ar 16000 -c:a pcm_s16le $S/src16/${id}_16k.wav
-    f="$FAITH_ARG"; [ -z "$f" ] && for t in ${R7_PREV:-} $BASE; do [ -f $A/$t/$id.metrics.json ] && { f="--faith $A/$t/$id.metrics.json"; break; }; done
-    [ -z "$f" ] && f="--faith judge"
-    echo "$id|$(readlink -f $A/$BASE/mix_src/$id)|$f"
-  done | S=$S A=$A RT="$RT_ARGS" BA="$BA_ARGS" CA="${R8_CLAUSE_ARGS:-}" CL="${R8_CLAUSE:-on}" AL="${R8_ALIGN:-on}" TMIN=${R8_TMIN:-0.9} TMAX=${R8_TMAX:-1.1} python3 -c "
+[ "${R9_ONEPROC:-off}" = on ] && { [ -z "${REUSE:-}" ] && [ "${R8_ONEPROC:-on}" = on ] || { echo "R9_ONEPROC needs the raw-input path and R8_ONEPROC=on"; exit 1; }; R9_MP_BG=on; }
+mkjobs() {   # the retake -> clause takes -> burst_align jobs (stdin: "id|work dir|faith arg"); $1 = one json for all ids, or a dir: one oneproc_jobs_<id>.json each (R9_ONEPROC)
+  S=$S A=$A RT="$RT_ARGS" BA="$BA_ARGS" CA="${R8_CLAUSE_ARGS:-}" CL="${R8_CLAUSE:-on}" AL="${R8_ALIGN:-on}" TMIN=${R8_TMIN:-0.9} TMAX=${R8_TMAX:-1.1} OUT=$1 python3 -c "
 import json, os, shlex, sys
 S, A = os.environ['S'], os.environ['A']; jobs = []
 for ln in sys.stdin:
@@ -46,7 +28,41 @@ for ln in sys.stdin:
     if os.environ['CL'] == 'on': st.append(['clause', ['--work', wk, '--out', f'{S}/ct/{id_}', '--src16', s16, '--face', fc, *shlex.split(os.environ['CA'])]]); wk = f'{S}/ct/{id_}'
     if os.environ['AL'] == 'on': st.append(['burst_align', ['--work', wk, '--out', f'{S}/ba/{id_}', '--face', fc, '--cover-all', 'on', '--tmin', os.environ['TMIN'], '--tmax', os.environ['TMAX'], *shlex.split(os.environ['BA'])]])
     jobs.append({'id': id_, 'steps': st, 'logs': {'retake': f'{S}/rt_{id_}.log', 'clause': f'{S}/ct_{id_}.log', 'burst_align': f'{S}/ba_{id_}.log'}})
-json.dump(jobs, open('$J', 'w'), indent=1)"
+o = os.environ['OUT']
+if os.path.isdir(o):
+    for j in jobs: json.dump({'wait': [f'{A}/sep/{j[\"id\"]}/source_mediapipe.npz'], 'jobs': [j]}, open(f'{o}/oneproc_jobs_{j[\"id\"]}.json', 'w'), indent=1)
+else: json.dump(jobs, open(o, 'w'), indent=1)"
+}
+src16() { ffmpeg -loglevel error -y -i "$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$1.* | head -1)" -vn -ac 1 -ar 16000 -c:a pcm_s16le $S/src16/${1}_16k.wav; }
+if [ -z "${REUSE:-}" ]; then   # from the raw input (one-command E2E): the r6 pipeline's takes only (ASR, diarization, Qwen 14B, Chatterbox), no mix / metrics / judge
+  BASE=${TAG}pre; MPP=()
+  if [ "${R9_MP_BG:-off}" = on ]; then   # r9 speed: the source face track (MediaPipe, CPU only, ~1 s per video-second) runs while the GPU pipeline runs (same file; <npz>.done when written)
+    for id in $IDS; do mkdir -p $A/sep/$id; npz=$A/sep/$id/source_mediapipe.npz; [ -f $npz ] && { touch $npz.done; continue; }
+      ( python -c "import sys; sys.path.insert(0,'scripts/pilot'); import clean_face_stack as c, pathlib; c.run_mediapipe(pathlib.Path('$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1)'), pathlib.Path('$npz'))"; touch $npz.done ) > /dev/null 2>&1 & MPP+=($!); done
+  fi
+  if [ "${R9_ONEPROC:-off}" = on ]; then   # r9 speed L: the stage runs inside the pipeline process (scripts/r9/audio_proc.py), its jobs written now (the work dir is known)
+    for id in $IDS; do src16 $id; echo "$id|$A/$BASE/runs/$id/work_$id|--faith judge"; done | mkjobs $S
+    export R9_PIPE_PY=scripts/r9/audio_proc.py R9_AFTER_JOBS=$S
+  fi
+  t0p=$(date +%s.%N)
+  R4_PIPELINE_ONLY=1 R5_FAITH=off PAR=${PAR:-1} R6_EXTRA="${R8_PIPE_EXTRA:-}" bash scripts/r6/r6_audio.sh $BASE $IDS || exit 1
+  unset R9_PIPE_PY R9_AFTER_JOBS
+  for p in "${MPP[@]}"; do wait $p; done
+  for id in $IDS; do mkdir -p $A/sep/$id; [ -f $A/sep/$id/bg_44k.wav ] || cp $(readlink -f $A/$BASE/mix_src/$id)/bg_44k.wav $(readlink -f $A/$BASE/mix_src/$id)/vocals_44k.wav $A/sep/$id/
+    [ -f $A/sep/$id/source_mediapipe.npz ] || python -c "import sys; sys.path.insert(0,'scripts/pilot'); import clean_face_stack as c, pathlib; c.run_mediapipe(pathlib.Path('$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1)'), pathlib.Path('$A/sep/$id/source_mediapipe.npz'))" > /dev/null 2>&1; done
+  FAITH_ARG="--faith judge"   # retake judges the pipeline's own text (same prompt / 14B), no separate faith pass
+else BASE=$REUSE; FAITH_ARG=""; fi
+echo "BASE_DONE $(( $(date +%s) - s )) s" >> $S/times.txt
+if [ "${R9_ONEPROC:-off}" = on ]; then   # the stage already ran inside the pipeline process: its time is in BASE_DONE
+  echo "ONEPROC_DONE in-process (BASE incl. the stage, $(python3 -c "import time;print(round(time.time()-$t0p,1))") s pipeline + stage)" >> $S/times.txt
+elif [ "${R8_ONEPROC:-on}" = on ]; then   # speed L5: retake -> clause takes -> burst_align of ALL videos in one process, models loaded once (scripts/r8/r8_tts_stage.py)
+  J=$S/oneproc_jobs.json; t0p=$(date +%s.%N)
+  for id in $IDS; do
+    src16 $id
+    f="$FAITH_ARG"; [ -z "$f" ] && for t in ${R7_PREV:-} $BASE; do [ -f $A/$t/$id.metrics.json ] && { f="--faith $A/$t/$id.metrics.json"; break; }; done
+    [ -z "$f" ] && f="--faith judge"
+    echo "$id|$(readlink -f $A/$BASE/mix_src/$id)|$f"
+  done | mkjobs $J
   PYTHONPATH=$DUB_ROOT/third_party/llama_cuda:${PYTHONPATH:-} python scripts/r8/r8_tts_stage.py --jobs $J > $S/oneproc.log 2>&1 || echo "WARN oneproc (see $S/oneproc.log)"
   echo "ONEPROC_DONE $(python3 -c "import time;print(round(time.time()-$t0p,1))") s" >> $S/times.txt
 fi

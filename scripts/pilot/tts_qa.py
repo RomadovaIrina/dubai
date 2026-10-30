@@ -110,6 +110,9 @@ def lost_words(expected: str, *recognized: str, min_len: int = 4, thr: float = 0
     return out
 
 
+ACTIVE = None   # r9: the last TtsQA made in this process (qa_batch.prefetch from t3_batch.ladder_batch)
+
+
 class TtsQA:
     def __init__(self, device: str | None = None, whisper_dir: str | pathlib.Path | None = None, w2v_dir: str | pathlib.Path | None = None):
         import torch
@@ -122,6 +125,9 @@ class TtsQA:
         p = str(w2v_dir or MODELS / "wav2vec2-base-960h")
         self.proc = Wav2Vec2Processor.from_pretrained(p)
         self.w2v = Wav2Vec2ForCTC.from_pretrained(p).to(device).eval()
+        self.wcache = {}   # r9: prefetched Whisper texts (qa_batch)
+        global ACTIVE
+        ACTIVE = self
 
     @staticmethod
     def to16(y: np.ndarray, sr: int = TTS_SR) -> np.ndarray:
@@ -129,6 +135,9 @@ class TtsQA:
         return librosa.resample(y.astype(np.float32), orig_sr=sr, target_sr=16000) if sr != 16000 else y.astype(np.float32)
 
     def whisper(self, y16: np.ndarray, language: str = "en", pad_s: float = 0.4) -> str:
+        if self.wcache:   # r9 speed (DUB_QA_BATCH=1): the text of this exact take, transcribed in a batch beforehand (scripts/r9/qa_batch.prefetch)
+            hit = self.wcache.pop((language, y16.shape[0], y16.tobytes()), None)
+            if hit is not None: return hit
         pad = np.zeros(int(pad_s * 16000), dtype=np.float32)
         segs, _ = self.wh.transcribe(np.concatenate([pad, y16, pad]), language=language, beam_size=5, temperature=0.0, condition_on_previous_text=False,
                                      vad_filter=False, no_speech_threshold=0.95, log_prob_threshold=None, compression_ratio_threshold=None)
