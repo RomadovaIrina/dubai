@@ -16,6 +16,9 @@ TAG=$1; shift; IDS=${*:-01 02 03 04 05}; A=/workspace/dub/artifacts/r4a; S=$A/${
 s=$(date +%s)
 RT_ARGS="${R8_RETAKE_ARGS---short-s 0.3 --budget-scales 1.15,1.3,1.5,1.75 --cap-scale 1.2 --min-piece 0.2 --max-tts 4 --natural-cuts on --fillers on}"
 BA_ARGS="${R8_ALIGN_ARGS---min-piece 0.2 --sil-ratio 1.5 --natural-cuts on}"
+LIPA="--max-shift 2.0 --grow-unit 1.5 --grow 0.5 --pace on --cover-all on ${R8_LIP_ARGS---dsplit off}"   # the r7 chain's LIP_ARGS / REMIX_ARGS (below; also the in-process chain job)
+REMA="--src-duck-db -6 --unit-level off --gap-bed-cap-db 10 --gap-bed-cap-scope edges --gap-clean on --gap-clean-nr-ns 0.7 --dub-gate on --gap-clean-floor ${R8_FLOOR:-3}"
+[ "${R9_CHAIN_INPROC:-off}" = on ] && [ "${R9_ONEPROC:-off}" != on ] && { echo "R9_CHAIN_INPROC needs R9_ONEPROC=on"; exit 1; }
 [ "${R9_ONEPROC:-off}" = on ] && { [ -z "${REUSE:-}" ] && [ "${R8_ONEPROC:-on}" = on ] || { echo "R9_ONEPROC needs the raw-input path and R8_ONEPROC=on"; exit 1; }; R9_MP_BG=on; }
 mkjobs() {   # the retake -> clause takes -> burst_align jobs (stdin: "id|work dir|faith arg"); $1 = one json for all ids, or a dir: one oneproc_jobs_<id>.json each (R9_ONEPROC)
   S=$S A=$A RT="$RT_ARGS" BA="$BA_ARGS" CA="${R8_CLAUSE_ARGS:-}" CL="${R8_CLAUSE:-on}" AL="${R8_ALIGN:-on}" TMIN=${R8_TMIN:-0.9} TMAX=${R8_TMAX:-1.1} OUT=$1 python3 -c "
@@ -43,6 +46,18 @@ if [ -z "${REUSE:-}" ]; then   # from the raw input (one-command E2E): the r6 pi
   if [ "${R9_ONEPROC:-off}" = on ]; then   # r9 speed L: the stage runs inside the pipeline process (scripts/r9/audio_proc.py), its jobs written now (the work dir is known)
     for id in $IDS; do src16 $id; echo "$id|$A/$BASE/runs/$id/work_$id|--faith judge"; done | mkjobs $S
     export R9_PIPE_PY=scripts/r9/audio_proc.py R9_AFTER_JOBS=$S
+    if [ "${R9_CHAIN_INPROC:-off}" = on ]; then   # r9 speed C: the chain job (the same argv / env the bash chain gets: r7 -> r6 -> r5 -> r4_audio.sh, PAR=1)
+      for id in $IDS; do rm -f $S/chain_done_$id
+        ID_=$id S_=$S A_=$A TAG_=$TAG LIPA="$LIPA" REMA="$REMA" SRC_="$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1)" python3 -c "
+import json, os
+e = os.environ; th = str(max(2, 24 // int(e.get('PAR', '1') or 1)))
+json.dump({'S': e['S_'], 'A': e['A_'], 'id': e['ID_'], 'tag': e['TAG_'], 'close': e.get('R8_CLOSE', 'on') == 'on', 'soften': e.get('R8_SOFTEN', 'on') == 'on',
+           'tmin': e.get('R8_TMIN', '0.9'), 'lip_args': e['LIPA'], 'remix_args': e['REMA'], 'src': e['SRC_'],
+           'env': {'DUB_CUT_SNAP': '1', 'DUB_EQPOWER_FADE': '1', 'DUB_CLOSE_INSIDE_DB': e.get('DUB_CLOSE_INSIDE_DB', '30'), 'DUB_THREADS': th, 'OMP_NUM_THREADS': th,
+                   'MKL_NUM_THREADS': th, 'REUSE': e['TAG_'] + 'src', 'RETAKE': 'off', 'FINAL_SOFTEN': e.get('FINAL_SOFTEN', 'on'), 'HUSH_PLACED': 'on', 'LIP_PLACE': 'on'}},
+          open(e['S_'] + '/chain_' + e['ID_'] + '.json', 'w'), indent=1)"; done
+    fi
+    python3 -c "import json, os; json.dump(dict(os.environ), open('$S/stage_env.json', 'w'))"; export R9_STAGE_ENV=$S/stage_env.json   # the stage runs with THIS env (as when r8_tts_stage.py is started from here), not the one r4_audio.sh gives the pipeline (DUB_CUT_SNAP ...)
   fi
   t0p=$(date +%s.%N)
   R4_PIPELINE_ONLY=1 R5_FAITH=off PAR=${PAR:-1} R6_EXTRA="${R8_PIPE_EXTRA:-}" bash scripts/r6/r6_audio.sh $BASE $IDS || exit 1
@@ -66,7 +81,9 @@ elif [ "${R8_ONEPROC:-on}" = on ]; then   # speed L5: retake -> clause takes -> 
   PYTHONPATH=$DUB_ROOT/third_party/llama_cuda:${PYTHONPATH:-} python scripts/r8/r8_tts_stage.py --jobs $J > $S/oneproc.log 2>&1 || echo "WARN oneproc (see $S/oneproc.log)"
   echo "ONEPROC_DONE $(python3 -c "import time;print(round(time.time()-$t0p,1))") s" >> $S/times.txt
 fi
-for id in $IDS; do
+IDS_CHAIN=""   # the ids whose chain still has to run here (R9_CHAIN_INPROC: done inside the audio process -> skipped)
+for id in $IDS; do [ -f $S/chain_done_$id ] || IDS_CHAIN="$IDS_CHAIN $id"; done
+for id in $IDS_CHAIN; do
   if [ "${R8_ONEPROC:-on}" = on ]; then   # the one-process stage already ran: take its furthest output, then close_inner / soften as below
     t0=$(date +%s.%N); [ -f $S/rt/$id/dubbed_24k.wav ] || { echo "FAIL retake $id (see $S/rt_$id.log)"; continue; }
     W=$S/rt/$id; [ -f $S/ct/$id/dubbed_24k.wav ] && W=$S/ct/$id; [ -f $S/ba/$id/dubbed_24k.wav ] && W=$S/ba/$id; t1=$t0; t2=$t0
@@ -97,9 +114,8 @@ for id in $IDS; do
   python3 -c "import json,sys; t=[float(x) for x in sys.argv[1:]]; json.dump({'retake':t[1]-t[0],'burst_align':t[2]-t[1],'close_inner':t[3]-t[2]},open('$S/$id.steps.json','w'))" $t0 $t1 $t2 $t3
   echo "== $id src $(( $(date +%s) - s )) s"
 done
-FINAL_SOFTEN=${FINAL_SOFTEN:-on} RETAKE=off REUSE=${TAG}src LIP_ARGS="--max-shift 2.0 --grow-unit 1.5 --grow 0.5 --pace on --cover-all on ${R8_LIP_ARGS---dsplit off}" \
-  REMIX_ARGS="--src-duck-db -6 --unit-level off --gap-bed-cap-db 10 --gap-bed-cap-scope edges --gap-clean on --gap-clean-nr-ns 0.7 --dub-gate on --gap-clean-floor ${R8_FLOOR:-3}" \
-  R7_PREV=${R7_PREV:-} bash scripts/r7/r7_audio.sh $TAG $IDS
+[ -n "${IDS_CHAIN// /}" ] && FINAL_SOFTEN=${FINAL_SOFTEN:-on} RETAKE=off REUSE=${TAG}src LIP_ARGS="$LIPA" REMIX_ARGS="$REMA" \
+  R7_PREV=${R7_PREV:-} bash scripts/r7/r7_audio.sh $TAG $IDS_CHAIN
 mkdir -p $A/$TAG/cov
 [ "${METRICS:-on}" = on ] && for id in $IDS; do
   python scripts/r8/coverage.py --run $A/$TAG/$id --id $id --label $TAG --face $A/sep/$id/source_mediapipe.npz --out $A/$TAG/cov/cov_$id 2>/dev/null | tail -1

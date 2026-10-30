@@ -39,6 +39,7 @@ one() {
     python scripts/r8/soften_edges.py --work $W --out $O/soft/$id > $O/runs/${id}.soft.log 2>&1 && W=$O/soft/$id || echo "WARN final soften $id"; fi
   t_hush=$(date +%s.%N)
   ln -sfn $W $O/mix_src/$id
+  [ -n "${R9_ON_MIXSRC:-}" ] && { ( eval "$R9_ON_MIXSRC" ) < /dev/null > /dev/null 2>&1 & }   # r9 speed O: the final dub exists -> the demucs remix starts (scripts/r9/sep_overlap.sh)
   python scripts/quality/r3_remix.py --src $O/mix_src --out $O ${REMIX_ARGS:-} $id > $O/runs/${id}.remix.log 2>&1 || { echo "FAIL remix $id"; return; }
   t_remix=$(date +%s.%N)
   ffmpeg -loglevel error -y -i $src -i $O/$id/final_mix_aac.m4a -map 0:v:0 -map 1:a:0 -c copy -shortest $O/${id}_over-original.mp4

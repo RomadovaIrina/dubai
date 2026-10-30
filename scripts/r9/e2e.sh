@@ -55,15 +55,27 @@ SRC=$(ls $DUB_INPUTS/$ID.* | head -1)
 
 st audio   # one id, from the raw input; its own tag so nothing of another run is reused (the per-id caches $A/sep/<id> are cleared)
 rm -rf $A/sep/$ID $A/$AT $A/${AT}src $A/${AT}pre
+export DUB_SEP_STEMS=/workspace/dub/r8a
+OVL=${R9_SEP_OVERLAP:-on}   # r9 speed O: the htdemucs stems while the audio stage runs, the demucs remix in parallel with the Spleeter one (same commands = same files)
+if [ "$OVL" = on ]; then
+  rm -rf $DUB_SEP_STEMS/stems_htdemucs/$ID $A/$HT
+  bash scripts/r9/sep_overlap.sh start $ID $DUB_SEP_STEMS/stems_htdemucs $W $L
+  export R9_ON_MIXSRC="bash $DUB_ROOT/scripts/r9/sep_overlap.sh mix $ID $AT $HT $W $L"
+fi
 bash scripts/r8/r8_audio.sh $AT $ID > $L/audio.log 2>&1
+unset R9_ON_MIXSRC
 AD=$A/$AT/$ID
 [ -f $AD/final_mix_aac.m4a ] && [ -f $AD/dubbed_16k.wav ] || { fail audio_failed ERROR "see logs/audio.log"; finish; }
 
 st sep   # htdemucs: stems on the GPU (models loaded once), then the sepH8p remix of the SAME dub on the CPU
-export DUB_SEP_STEMS=/workspace/dub/r8a; rm -rf $DUB_SEP_STEMS/stems_htdemucs/$ID $A/$HT
+if [ "$OVL" = on ] && timeout 900 bash scripts/r9/sep_overlap.sh wait $W; then :   # the demucs mix was made during the audio stage
+elif [ "$OVL" = on ] && [ -f $W/sepmix.done ]; then fail htdemucs_stems_failed PARTIAL_SUCCESS "see logs/sep_stems.log"
+else   # sequential (R9_SEP_OVERLAP=off, or the overlap never started)
+rm -rf $DUB_SEP_STEMS/stems_htdemucs/$ID $A/$HT
 ( export PYTHONPATH=/workspace/dub/sep_pylib:${PYTHONPATH:-}; flock /workspace/dub/gpu.lock python scripts/r8/sep_stems.py --sep htdemucs --out $DUB_SEP_STEMS/stems_htdemucs $ID ) > $L/sep_stems.log 2>&1 \
   || fail htdemucs_stems_failed PARTIAL_SUCCESS "see logs/sep_stems.log"
 SEP_SRC=$AT SEP_PREV=$AT bash scripts/r8/sep_mix.sh $HT htdemucs stems "--bed-pauses source --bed-noise-back on --src-duck-db -3" $ID > $L/sep_mix.log 2>&1
+fi
 [ -f $A/$HT/$ID/final_mix_aac.m4a ] || fail htdemucs_mix_failed PARTIAL_SUCCESS "see logs/sep_mix.log: no demucs file"
 
 VID=""

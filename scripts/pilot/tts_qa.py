@@ -139,7 +139,7 @@ class TtsQA:
             hit = self.wcache.pop((language, y16.shape[0], y16.tobytes()), None)
             if hit is not None: return hit
         pad = np.zeros(int(pad_s * 16000), dtype=np.float32)
-        segs, _ = self.wh.transcribe(np.concatenate([pad, y16, pad]), language=language, beam_size=5, temperature=0.0, condition_on_previous_text=False,
+        segs, _ = self.wh.transcribe(np.concatenate([pad, y16, pad]), language=language, beam_size=int(os.environ.get("DUB_QA_BEAM", "5")), temperature=0.0, condition_on_previous_text=False,
                                      vad_filter=False, no_speech_threshold=0.95, log_prob_threshold=None, compression_ratio_threshold=None)
         return " ".join(s.text.strip() for s in segs).strip()
 
