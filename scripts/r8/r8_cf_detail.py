@@ -10,7 +10,7 @@ The low frequencies (mouth shape, opening, motion = what SyncNet and the mismatc
     python scripts/r8/r8_cf_detail.py --base BASE.mp4 --cf CF.mp4 --lm BASE.mediapipe.npz --out OUT.mp4 [--alpha 1 --beta 0 --sigma 0.12 --temporal 1]
 """
 from __future__ import annotations
-import argparse, json, os, pathlib, sys, time
+import argparse, json, pathlib, sys, time
 import numpy as np, cv2
 cv2.setNumThreads(4)
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -25,6 +25,7 @@ def main():
     ap.add_argument("--dilate", type=float, default=0.25); ap.add_argument("--temporal", type=int, default=1); ap.add_argument("--crf", type=int, default=10); ap.add_argument("--preset", default="medium", help="x264 preset of this intermediate layer (r8 speed: veryfast)")
     a = ap.parse_args(); lm = np.load(a.lm)["lm"]; t0 = time.perf_counter()
     cb, cc = av.open(a.base), av.open(a.cf); sb = cb.streams.video[0]; sb.thread_type = "AUTO"; cc.streams.video[0].thread_type = "AUTO"
+    rate = sb.average_rate   # r9: read while the container is open (after cb.close() the stream reads freed memory: random rate -> libx264 "timebase is not set", m15 / m19 / m20)
     B = [f.to_ndarray(format="bgr24") for f in cb.decode(video=0)]; C = [f.to_ndarray(format="bgr24") for f in cc.decode(video=0)]; cb.close(); cc.close()
     n = min(len(B), len(C), len(lm)); H, W = B[0].shape[:2]; dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_FAST)
     boxes = [None] * n; det = [None] * n; outside = []
@@ -41,7 +42,7 @@ def main():
         sg = max(0.8, a.sigma * mw); lf = cv2.GaussianBlur(D, (0, 0), sg)
         boxes[k] = (y0, y1, x0, x1, m); det[k] = (D - lf, lf)
         ring = (m < 0.02); outside.append(float(np.abs(D[ring]).mean()) if ring.any() else 0.0)
-    o = av.open(a.out, "w"); st = o.add_stream("libx264", rate=sb.average_rate); st.width, st.height = W, H; st.pix_fmt = "yuv420p"; st.thread_count = int(os.environ.get("DUB_THREADS", "16")); st.options = {"crf": str(a.crf), "preset": a.preset}   # r9: explicit encoder threads (auto on 48 cores: sporadic avcodec_open2 EINVAL, m15 / m20)
+    o = av.open(a.out, "w"); st = o.add_stream("libx264", rate=rate); st.width, st.height = W, H; st.pix_fmt = "yuv420p"; st.options = {"crf": str(a.crf), "preset": a.preset}
     for k in range(n):
         img = B[k]
         if boxes[k] is not None:
