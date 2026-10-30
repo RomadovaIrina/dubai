@@ -14,7 +14,7 @@ import argparse, json, pathlib, sys, time
 import numpy as np, cv2
 cv2.setNumThreads(4)
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from r8_mouth_flicker import LIPS_OUTER
+from r8_mouth_flicker import LIPS_OUTER, LIPS_INNER
 
 
 def main():
@@ -22,7 +22,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base", required=True); ap.add_argument("--cf", required=True); ap.add_argument("--lm", required=True); ap.add_argument("--out", required=True)
     ap.add_argument("--alpha", type=float, default=1.0); ap.add_argument("--beta", type=float, default=0.0); ap.add_argument("--sigma", type=float, default=0.12)
-    ap.add_argument("--dilate", type=float, default=0.25); ap.add_argument("--temporal", type=int, default=1); ap.add_argument("--crf", type=int, default=10); ap.add_argument("--preset", default="medium", help="x264 preset of this intermediate layer (r8 speed: veryfast)")
+    ap.add_argument("--dilate", type=float, default=0.25); ap.add_argument("--inner-alpha", type=float, default=1.0, help="r9: detail weight inside the inner-lip polygon (teeth / cavity; CodeFormer draws them sharper and brighter than the source: m03 x1.5)"); ap.add_argument("--temporal", type=int, default=1); ap.add_argument("--crf", type=int, default=10); ap.add_argument("--preset", default="medium", help="x264 preset of this intermediate layer (r8 speed: veryfast)")
     a = ap.parse_args(); lm = np.load(a.lm)["lm"]; t0 = time.perf_counter()
     cb, cc = av.open(a.base), av.open(a.cf); sb = cb.streams.video[0]; sb.thread_type = "AUTO"; cc.streams.video[0].thread_type = "AUTO"
     rate = sb.average_rate   # r9: read while the container is open (after cb.close() the stream reads freed memory: random rate -> libx264 "timebase is not set", m15 / m19 / m20)
@@ -39,6 +39,9 @@ def main():
         m = np.zeros((y1 - y0, x1 - x0), np.uint8); hull = cv2.convexHull((p[LIPS_OUTER, :2] - [x0, y0]).astype(np.float32))[:, 0]
         cv2.fillPoly(m, [np.round(hull).astype(np.int32)], 1); rd = max(1, int(a.dilate * iod))
         m = cv2.dilate(m, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * rd + 1,) * 2)).astype(np.float32); m = cv2.GaussianBlur(m, (0, 0), max(1.0, 0.08 * iod))
+        if a.inner_alpha < 1.0 and np.isfinite(p[LIPS_INNER]).all():
+            mi = np.zeros_like(m, np.uint8); cv2.fillPoly(mi, [np.round(p[LIPS_INNER, :2] - [x0, y0]).astype(np.int32)], 1)
+            m = m * (1.0 - (1.0 - a.inner_alpha) * cv2.GaussianBlur(mi.astype(np.float32), (0, 0), max(1.0, 0.03 * iod)))
         sg = max(0.8, a.sigma * mw); lf = cv2.GaussianBlur(D, (0, 0), sg)
         boxes[k] = (y0, y1, x0, x1, m); det[k] = (D - lf, lf)
         ring = (m < 0.02); outside.append(float(np.abs(D[ring]).mean()) if ring.any() else 0.0)

@@ -22,7 +22,7 @@ export DUB_ALLOW_NC=1 DUB_ALLOW_NC_BED=1   # CodeFormer + htdemucs: deliberate N
 A=/workspace/dub/artifacts/r4a; B=/workspace/dub/artifacts/r4m; AT=r9_$ID; HT=r9_${ID}_htd; GT=r9g_$ID; FT=r9f_$ID
 W=$OUT/work; L=$OUT/logs; mkdir -p $W $L; T=$W/stages.tsv; : > $T; STATUS=SUCCESS; FL=(); ER=()
 export DUB_INPUTS=$W/in; rm -rf $DUB_INPUTS; mkdir -p $DUB_INPUTS
-echo "r9 e2e $ID commit $(git rev-parse --short HEAD) input $IN out $OUT $(date -Is)" | tee $L/e2e.log
+echo "r9 e2e $ID E2E_REF=${E2E_REF:-same} E2E_FX=${E2E_FX:-0} commit $(git rev-parse --short HEAD) input $IN out $OUT $(date -Is)" | tee $L/e2e.log
 nvidia-smi --query-gpu=timestamp,memory.used,utilization.gpu --format=csv,noheader,nounits -lms 500 > $W/nvsmi.csv 2>/dev/null & NV=$!
 trap 'kill $NV 2>/dev/null' EXIT
 st() { echo -e "$1\t$(date +%s.%N)" >> $T; echo "== $ID stage $1 $(date +%T)" | tee -a $L/e2e.log; }   # stage start; the next st (or 'end') closes it
@@ -67,10 +67,12 @@ if [[ " $PF " == *" no_face "* ]]; then FL+=("face_skipped_no_face")
 else
   st face_gen
   rm -rf $B/$GT $B/$FT
-  AUDIO=$A/$AT TAG=$GT SKIP_SCORE=1 VIDEO_EXTRA="--codeformer optimized --codeformer-w 1.0 --steps 10 --steps-silent 20 --codeformer-parse off --codeformer-batch 16" \
+  REFX=""; [ -n "${E2E_REF:-}" ] && REFX="--ref-mode ${E2E_REF%%:*} --audio-lead ${E2E_REF#*:}"   # r9: E2E_REF=fixed:0.5 = LatentSync reference from a calm closed-mouth clip (no copy of the source mouth) + its half-frame lag compensated
+  AUDIO=$A/$AT TAG=$GT SKIP_SCORE=1 VIDEO_EXTRA="--codeformer optimized --codeformer-w 1.0 --steps 10 --steps-silent 20 --codeformer-parse off --codeformer-batch 16 $REFX" \
     bash scripts/r7/r7_e2e.sh $ID > $L/face_gen.log 2>&1
   if [ -f $B/$GT/work_${ID}_$GT/${ID}_${GT}_25fps.manifest.json ]; then
     st face_comp
+    [ "${E2E_FX:-0}" = 1 ] && export REP=1 CFD_LABEL=ia04 CFD_ARGS="--inner-alpha 0.4"   # r9: short mouth glitches re-drawn in the layer, long ones -> smooth source fallback; CodeFormer detail at 0.4 inside the mouth
     SKIP_SCORE=1 TAG=$FT SRC_TAG=$GT CFD=self SR=srt1 SR_EXTRA="--batch 8 --mask down2" FB=fb7 FB_ARGS="$(cat reports/experiments/r8-face/fb7.args)" \
       bash scripts/r7/r7_m7_comp.sh $ID > $L/face_comp.log 2>&1
     [ -f $B/$FT/${ID}_$FT.mp4 ] && VID=$B/$FT/${ID}_$FT.mp4 || fail face_comp_failed PARTIAL_SUCCESS "see logs/face_comp.log: source picture used"
@@ -106,6 +108,7 @@ export METRICS=on
     MAN=$B/$FT/%s_$FT.manifest.json bash scripts/r6/r6_twitch.sh $FT $B/$FT _$FT $ID | grep '=='
     python scripts/r7/r7_baseline.py freeze --tag $FT --audio $A/$AT --ids $ID --out $W/face_gate.json | tail -2
     python scripts/r7/r7_closed_mouth.py --ids $ID --variants $FT:$A/$AT --out $W/closed_mouth.json | tail -1   # pressed lips
+    python scripts/r9/occl_scan.py --src $SRC --out $B/$FT/${ID}_$FT.mp4 --lm $B/$GT/timing/${ID}_source_lm_F.npz --sheet $W/occlusion_scan.jpg --json $W/occlusion.json | tail -1   # something next to the mouth overwritten
   fi
 } > $L/metrics.log 2>&1
 if [ -f $B/$FT/${ID}_$FT.mp4 ]; then   # the whole-frame gate is one CPU core for ~1 s per frame at 1080p: in the background (next video starts), then the rows again

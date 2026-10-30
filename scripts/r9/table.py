@@ -31,7 +31,7 @@ def row(m):
          "syncnet_speech": fg.get("sync_speech", g(fs, "sync_speech", "conf_speech")), "flashes": fg.get("flash_strong", fs.get("flash_strong")),
          "fallback_pct": fb.get("fallback_weight_pct"), "pressed_lips_s": fg.get("pressed_lips_s", (me.get("closed_mouth") or {}).get("closed_while_source_talks_dub_silent_s")),
          "mismatch_s": fg.get("mouth_audio_mismatch_s", g(fs, "mouth_audio", "mouth_audio_mismatch_s")),
-         "frame_gate": fg.get("frame_gate_verdict"), "frame_gate_worst_pct": fg.get("frame_gate_worst_pct"),
+         "frame_gate": fg.get("frame_gate_verdict"), "occl_ring_p95_max": max(((me.get("occlusion") or {}).get("per_second_max") or {"_": None}).values(), key=lambda v: v or 0), "occl_frames_over_2x": (me.get("occlusion") or {}).get("frames_over_2x_median"), "frame_gate_worst_pct": fg.get("frame_gate_worst_pct"),
          "src_speaks_dub_silent_s": c("cov").get("src_speaks_dub_silent_s"), "on_face_s": c("cov").get("on_face_s"),
          "cut_words": c("cuts").get("cut_word"), "dead_air": c("mix").get("dead"), "abrupt": c("mix").get("abrupt"),
          "faith": g(am, "faith", "mean"), "faith_lt4": g(am, "faith", "lt4"), "wer": g(am, "asr", "wer_final_mix"),

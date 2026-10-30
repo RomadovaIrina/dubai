@@ -74,7 +74,12 @@ class StableLatentSync(AccelLatentSync):
             extra = pipe.prepare_extra_step_kwargs(generator, 0.0)
             ref_faces = self._ref_crops(ip) if (self.ref_mode == "fixed" and self.mode == "ls") else None
             t0 = time.perf_counter()
-            feat = pipe.audio_encoder.audio2feat(str(audio_path)); chunks = pipe.audio_encoder.feature2chunks(feature_array=feat, fps=video_fps)
+            feat = pipe.audio_encoder.audio2feat(str(audio_path))
+            lead = float(getattr(self, "audio_lead", 0) or 0)   # r9: driven by the audio LEAD frames later, in 50 Hz whisper steps (0.5 frame = 1 step at 25 fps); without the source-mouth copy (--ref-mode fixed / shiftS) the generator answers ~0.5 frame late
+            nsh = int(round(lead * 50.0 / video_fps))
+            if nsh > 0 and len(feat) > nsh:
+                feat = torch.cat([feat[nsh:], feat[-1:].repeat(nsh, *([1] * (feat.dim() - 1)))]) if torch.is_tensor(feat) else np.concatenate([feat[nsh:], np.repeat(feat[-1:], nsh, 0)])
+            chunks = pipe.audio_encoder.feature2chunks(feature_array=feat, fps=video_fps)
             if self.chunk_hook is not None: chunks = self.chunk_hook(pipe.audio_encoder, chunks)
             t_pre = time.perf_counter() - t0; t0 = time.perf_counter()
             real = ip.face_detector; replay = None

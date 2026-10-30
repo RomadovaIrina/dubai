@@ -141,6 +141,7 @@ def main() -> int:
     ap.add_argument("--ref-mode", choices=["same", "fixed", "shift8", "shift16", "shift32"], default="same", help="round 3: LatentSync UNet reference (ls_stable.py): same = current frames "
                     "(upstream); fixed = a calm 16-frame clip of the same video (--ref-select); shiftS = the same segment S frames away")
     ap.add_argument("--ref-select", choices=["calm_any", "calm_closed"], default="calm_closed")
+    ap.add_argument("--audio-lead", type=float, default=0.0, help="r9: LatentSync driven by the audio N frames later, in 50 Hz whisper steps (0.5 = one step at 25 fps; stable path). --ref-mode fixed / shiftS answer ~0.5 frame late")
     ap.add_argument("--bridge-len", type=int, default=0); ap.add_argument("--bridge-steps", type=int, default=0, help="round 3 (spec 8.5): low-noise bridge windows over every 16-frame seam (ls_stable.py)")
     ap.add_argument("--max-ls-frames", type=int, default=0, help="round 3 (D's VRAM audit): LatentSync calls of at most this many frames (rounded down to 16k; 400 -> 400)")
     ap.add_argument("--inject-ls-error", default=None, help="round 3 spec-11 test: comma list of LatentSync call numbers (1-based) that raise RuntimeError -> PASS_THROUGH_LS_FAILED")
@@ -220,6 +221,7 @@ def main() -> int:
         from ls_stable import StableRunner
         with rp.timed(times, "latentsync_load"): runner = StableRunner(a.window_batch_size, not a.no_deepcache, a.steps, a.guidance, 1247, a.deepcache_interval, ref_mode=a.ref_mode,
                                                                        bridge_len=a.bridge_len, bridge_steps=a.bridge_steps)
+        runner.acc.audio_lead = a.audio_lead; man["audio_lead"] = a.audio_lead
         if a.steps_silent > 0 and cut_energy is not None:   # phase 2: per-master-frame dub silence for the adaptive step count
             import numpy as _np
             runner.silent_all = _np.asarray(cut_energy) < 10 ** (a.silent_db / 20); runner.acc.steps_silent = a.steps_silent; runner.acc.silent_frac = a.silent_frac
