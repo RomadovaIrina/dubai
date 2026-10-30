@@ -56,6 +56,7 @@ def main():
     ap.add_argument("--src-video", default="", help="the 25 fps master (enables the lip-colour slide detector)")
     ap.add_argument("--red-off", type=float, default=0.065, help="LATERAL lip-colour offset (IOD) that flags a slid mouth (m03: the slides 0.07-0.11, p99 of the video 0.045)"); ap.add_argument("--red-spread", type=float, default=99.0, help="off by default: the spread over-fires on a generator that does not copy the source shape")
     ap.add_argument("--fb-thr", type=float, default=0.5); ap.add_argument("--spike", type=float, default=0.025); ap.add_argument("--slide", type=float, default=0.06)
+    ap.add_argument("--spikes", choices=["on", "off"], default="on", help="off = fx-lite: repair only breakages (fallback flags, slides, lip-colour slides), keep 1-2-frame opening spikes")
     ap.add_argument("--max-run", type=int, default=3); ap.add_argument("--ramp-sigma", type=float, default=2.0); ap.add_argument("--crf", type=int, default=10)
     a = ap.parse_args(); t0 = time.perf_counter()
     import av
@@ -65,7 +66,10 @@ def main():
     pad = lambda v, fill: np.concatenate([v, np.full((n - len(v),) + v.shape[1:], fill, v.dtype)]) if len(v) < n else v   # scores / landmarks a frame or two shorter than the layer (m15)
     fb, lsm, src, lm = pad(fb, 0), pad(lsm, False), pad(src.astype(np.float64), np.nan), pad(lm, np.nan)
     o, so = opening(lm), opening(src); sp, ssp = spike(o), spike(so); x, y = lipxy(lm); sx, sy = lipxy(src)
-    flag = lsm & ((fb > a.fb_thr) | ((np.abs(sp) > a.spike) & ~(np.abs(ssp) > 0.5 * np.abs(sp))) | (np.hypot(x - sx, y - sy) > a.slide))
+    f_fb = lsm & (fb > a.fb_thr); f_slide = lsm & (np.hypot(x - sx, y - sy) > a.slide)
+    f_spike = lsm & (np.abs(sp) > a.spike) & ~(np.abs(ssp) > 0.5 * np.abs(sp))
+    if a.spikes == "off": f_spike[:] = False   # r9 fx-lite: a 1-2-frame opening spike can be a REAL consonant closure / opening (user: m03 r9fx lips look lazy)
+    flag = f_fb | f_spike | f_slide
     flag &= np.isfinite(o) | (fb > a.fb_thr)
     nred = 0
     if a.src_video:
@@ -110,7 +114,7 @@ def main():
     o2.close()
     np.savez_compressed(pathlib.Path(a.out).with_suffix(".mediapipe.npz"), **{**{k: v for k, v in np.load(a.lm).items()}, "lm": lm.astype(np.float32)})
     np.savez_compressed(a.fb_out, fb=fb_out, ls_mask=lsm)
-    rp = {"frames": n, "ls_frames": int(lsm.sum()), "flagged": int(flag.sum()), "lip_colour_flags": nred, "runs": len(runs), "repaired_runs": len(rep), "repaired_frames": int(sum(e - b + 1 for b, e in rep)),
+    rp = {"frames": n, "ls_frames": int(lsm.sum()), "flagged": int(flag.sum()), "by_class": {"fallback": int(f_fb.sum()), "opening_spike": int(f_spike.sum()), "landmark_slide": int(f_slide.sum()), "lip_colour": nred}, "lip_colour_flags": nred, "runs": len(runs), "repaired_runs": len(rep), "repaired_frames": int(sum(e - b + 1 for b, e in rep)),
           "fallback_frames_left": int((fb_out > 0.5).sum()), "fb7_frames_gt05": int((fb > 0.5).sum()), "seconds": round(time.perf_counter() - t0, 1)}
     pathlib.Path(a.out).with_suffix(".repair.json").write_text(json.dumps({**rp, "repaired": rep}, indent=1)); print("== layer_repair", json.dumps(rp), flush=True)
 

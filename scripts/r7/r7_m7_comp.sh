@@ -27,6 +27,10 @@ for id in ${*:-03 01 05 02 04}; do
     if [ -n "${DFK:-}" ]; then   # r8 F: layer tone deflicker (inner mouth + lower face), cached per DFK label: DFK=dfk1 DFK_ARGS="--sigma 1.5 ..."
       LSD=${LS%.mp4}_$DFK.mp4; [ -f $LSD ] || { python scripts/r8/r8_layer_deflicker.py --ls $LS --lm ${LS%.mp4}.mediapipe.npz --out $LSD ${DFK_ARGS:-} | grep "^=="; cp ${LS%.mp4}.mediapipe.npz ${LSD%.mp4}.mediapipe.npz; }; LS=$LSD
     fi
+    if [ -n "${STAB:-}" ]; then   # r9: mouth-detail temporal stabiliser (flow-aligned median of the high frequencies over +-R frames; m18 texture pops)
+      LSS=${LS%.mp4}_stab${STAB_R:-2}.mp4; [ -s $LSS ] || { python scripts/r9/r9_hf_stabilise.py --ls $LS --lm ${LS%.mp4}.mediapipe.npz --out $LSS --radius ${STAB_R:-2} | grep "^=="; }
+      [ -s $LSS ] && { cp ${LS%.mp4}.mediapipe.npz ${LSS%.mp4}.mediapipe.npz; LS=$LSS; }
+    fi
     FBX=""; if [ -n "${FB:-}" ]; then   # r8 F: confidence fallback to the source mouth, FB=<label> FB_ARGS="--thr-wash ..." (score on the raw layer, cached)
       FBN=$W/${id}_${ST}_25fps_fb_$FB.npz; [ -f $FBN ] || python scripts/r8/r8_fallback.py --work $W --ls $RAW --lm ${RAW%.mp4}.mediapipe.npz --out $FBN ${FB_ARGS:-} | grep "^=="; FBX="--fallback $FBN"
     fi
