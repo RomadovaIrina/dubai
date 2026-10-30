@@ -1,0 +1,38 @@
+{
+ "speech_s": 35.3,
+ "faces": [
+  {
+   "face": 0,
+   "centre_px": [
+    162,
+    641
+   ],
+   "visible_frac": 0.977,
+   "height_px_median": 227.4,
+   "mouth_open_speech": 0.0674,
+   "mouth_open_silence": 0.0512,
+   "mouth_motion_std_speech": 0.0191,
+   "corr_open_vs_speech": 0.095
+  },
+  {
+   "face": 1,
+   "centre_px": [
+    447,
+    466
+   ],
+   "visible_frac": 1.0,
+   "height_px_median": 305.4,
+   "mouth_open_speech": 0.0469,
+   "mouth_open_silence": 0.0245,
+   "mouth_motion_std_speech": 0.0246,
+   "corr_open_vs_speech": 0.255
+  }
+ ],
+ "speaker_by_mouth_motion": 1,
+ "tracked_face_share": [
+  0.0,
+  1.0
+ ],
+ "relipped_face": 1,
+ "relipped_is_speaker": true
+}

@@ -1,0 +1,10 @@
+id,status,flags,dur_s,fmt,out_matches_src,s/vmin precheck,s/vmin audio,s/vmin sep,s/vmin face_gen,s/vmin face_comp,s/vmin mux,s/vmin production,s/vmin metrics,s/vmin total,vram_peak_mib,lipsync_s,lipsync_pct,syncnet_speech,flashes,fallback_pct,pressed_lips_s,mismatch_s,frame_gate,frame_gate_worst_pct,src_speaks_dub_silent_s,on_face_s,cut_words,dead_air,abrupt,faith,faith_lt4,wer,gap_words_spleeter,gap_words_demucs,errors
+m19,SUCCESS,odd_fps,17.9,720x1280 29.61,True,6.9,328.2,28.1,788.8,403.8,0.4,1556.5,726.9,2283.1,26466,16.6,92.5,6.114,4,6.42,1.55,0.27,PASS,0.0,3.5,2.5,1,1,0,4.667,0,0.0,0,0,
+m01,SUCCESS,high_fps long_video,86.3,1072x1904 60.016,True,7.5,226.8,12.5,1497.5,1192.1,0.2,2936.6,1651.7,4588.3,26892,86.2,100.0,8.74,20,4.18,0.4,0.0,,,2.8,0.4,4,5,0,4.688,0,0.0138,0,0,
+m04,SUCCESS,high_fps odd_fps variable_fps output_format_differs_from_source,21.5,1072x1920 39.969,False,8.6,390.3,24.5,1320.4,1058.4,0.5,2802.9,5649.4,8452.1,27040,21.0,97.6,7.77,26,2.68,0.5,0.0,PASS,0.0,1.78,0.98,3,2,0,4.333,1,0.0,0,0,
+m03,SUCCESS,two_faces,40.5,720x1280 29.975,True,8.3,216.0,17.0,706.4,290.8,0.2,1238.8,1200.3,2439.0,27018,37.8,93.2,7.225,26,5.12,0.63,0.57,PASS,0.0,2.58,1.4,0,0,0,4.857,0,0.0078,0,0,
+m15,SUCCESS,,33.6,720x1280 30.0,True,5.3,250.0,18.9,661.5,304.6,0.2,1240.4,656.8,1897.4,26740,31.8,94.5,1.947,10,10.54,0.6,0.73,PASS,0.0,2.88,1.78,3,1,0,5.0,0,0.0366,0,0,
+m17,SUCCESS,low_res,43.3,464x848 29.954,True,5.4,182.4,16.4,521.8,152.5,0.2,878.8,426.6,1305.3,22080,41.6,96.1,7.928,6,2.18,0.17,1.23,PASS,0.0,0.7,0,3,0,0,4.875,0,0.0431,0,0,
+m18,SUCCESS,,20.1,720x1280 30.01,True,6.4,244.7,24.7,837.1,651.1,0.4,1764.4,714.4,2478.7,22054,19.0,94.7,7.299,7,6.86,0.0,1.03,PASS,0.0,0.7,0,0,1,0,5.0,0,0.0196,0,0,
+m21,SUCCESS,landscape low_res no_face face_skipped_no_face,33.4,848x464 29.94,True,2.6,206.4,17.7,,,0.2,227.0,64.9,291.8,27082,0,0.0,,,,,,,,4.2,0,1,2,1,5.0,0,0.033,0,0,
+m20,SUCCESS,low_res,27.6,464x848 29.891,True,5.6,244.0,20.6,575.9,203.3,0.3,1049.8,489.9,1539.6,26284,27.2,98.3,6.057,17,0.23,0.1,0.6,PASS,0.0,0.4,0,0,5,0,5.0,0,0.0208,0,0,
