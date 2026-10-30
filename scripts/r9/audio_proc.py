@@ -21,7 +21,7 @@ def main():
     _load = rp.load_llm
     def load_llm(times):   # one Qwen per process; the pipeline's own close() at its end is a no-op (the stage reuses it)
         if "llm" not in keep:
-            keep["llm"] = _load(times); keep["llm"].close = lambda: None
+            keep["llm"] = _load(times); keep["llm"][0].close = lambda: None   # load_llm -> (Llama, model name)
         return keep["llm"]
     rp.load_llm = load_llm
     _Q = tts_qa.TtsQA
