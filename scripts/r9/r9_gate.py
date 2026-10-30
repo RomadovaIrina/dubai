@@ -58,8 +58,15 @@ def main():
         if id_ in dr:
             D = [rows(t, id_) for t in dr[id_]]; src = ", ".join(dr[id_]); vals = {k: [d[k] for d in D if d.get(k) is not None] for k, *_ in eg.AXES + EXTRA}
         else:
-            src = "r8 envelope (r8e2e0b / +1 / +2 seeds) + r8b5"; vals = {k: v for k, v in env.get(id_, {}).items()}
+            src = "r8 envelope (r8e2e0b / +1 / +2 seeds) + r8b5"; vals = {k: list(v) for k, v in env.get(id_, {}).items()}
             vals.update({"gw_s": [0], "gw_d": [0], "dead_d": [N["dead"]] if N.get("dead") is not None else []})   # no htdemucs draws for 01-05: 0 gap words; dead air as on its own Spleeter mix
+            hb = [t for t in (f"r9b0_{id_}", f"r9b1_{id_}", f"r9b2_{id_}") if (A / t / f"{id_}.metrics.json").exists()]   # + baseline draws made on THIS harness
+            if hb:
+                src += " + " + ", ".join(hb); H = [rows(t, id_) for t in hb]
+                for k, *_ in eg.AXES + EXTRA:
+                    hv = [h[k] for h in H if h.get(k) is not None]
+                    if k in ("gw_s", "gw_d", "dead_d"): vals[k] = hv or vals.get(k, [])
+                    else: vals[k] = vals.get(k, []) + hv
         md += [f"## {id_} (draws: {src})", "", "| axis | draws | envelope | new | verdict |", "|---|---|---|---:|---|"]; f_id = 0
         for k, name, sign, tol in eg.AXES + EXTRA:
             v = N.get(k); vs = vals.get(k) or []

@@ -12,17 +12,19 @@ D="--short-s 0.3 --budget-scales 1.15,1.3,1.5,1.75 --cap-scale 1.2 --min-piece 0
 if [ "$SO" != 0 ]; then export R8_PIPE_EXTRA="--seed $((1247 + SO))" R8_RETAKE_ARGS="$D --seed $((7 + SO))" R8_CLAUSE_ARGS="--seed $((11 + SO))"; fi
 if [ "${METRICS_ONLY:-0}" != 1 ]; then   # METRICS_ONLY=1: the metrics block again on an existing run
 rm -rf "/workspace/dub/artifacts/r4a/sep/${id:?}" "/workspace/dub/artifacts/r4a/${TAG:?}" "/workspace/dub/artifacts/r4a/${TAG:?}src" "/workspace/dub/artifacts/r4a/${TAG:?}pre" "/workspace/dub/artifacts/r4a/${TAG:?}_htd"
+exec 9>/workspace/dub/gpu.lock; flock 9   # the GPU alone for the timed audio stage (its inner scripts never take this lock); the wait is not timed
 t0=$(date +%s.%N); bash scripts/r8/r8_audio.sh $TAG $id > $L/$TAG.$id.audio.log 2>&1; t1=$(date +%s.%N)
+flock -u 9
 dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 $(ls $d/$id.* | head -1))
 python3 -c "import sys, json; t=float(sys.argv[1]) - float(sys.argv[2]); d=float(sys.argv[3]); print(json.dumps({'tag': sys.argv[4], 'id': sys.argv[5], 'audio_s': round(t, 1), 'dur_s': d, 'audio_s_per_vmin': round(t / d * 60, 1)}))" $t1 $t0 $dur $TAG $id | tee -a /workspace/dub/r9s/timing.jsonl
-O=$A/$TAG; [ -f $O/$id/final_mix_aac.m4a ] || { echo "GATE_FAIL $TAG $id: no audio"; exit 1; }
+[ -f $A/$TAG/$id/final_mix_aac.m4a ] || { echo "GATE_FAIL $TAG $id: no audio"; exit 1; }
 # the htdemucs mix (stems cached per id: they depend on the source only)
 export DUB_SEP_STEMS=/workspace/dub/r8a
 [ -f $DUB_SEP_STEMS/stems_htdemucs/$id/bg.wav ] || [ -n "$(ls $DUB_SEP_STEMS/stems_htdemucs/$id 2>/dev/null)" ] || \
   ( export PYTHONPATH=/workspace/dub/sep_pylib:${PYTHONPATH:-}; flock /workspace/dub/gpu.lock python scripts/r8/sep_stems.py --sep htdemucs --out $DUB_SEP_STEMS/stems_htdemucs $id ) > $L/$TAG.$id.stems.log 2>&1
 SEP_SRC=$TAG SEP_PREV=$TAG bash scripts/r8/sep_mix.sh $HT htdemucs stems "--bed-pauses source --bed-noise-back on --src-duck-db -3" $id > $L/$TAG.$id.sepmix.log 2>&1
 fi
-export METRICS=on
+export METRICS=on; O=$A/$TAG
 { src=$(ls $d/$id.* | head -1)
   python scripts/quality/r4_audio_metrics.py --mix $O/${id}_over-original.mp4 --src $src --sep $A/sep/$id --run $O/$id --manifest $O/$id/${id}_r4b.manifest.json --wer \
     --series $O/${id}.series.npz --json $O/${id}.metrics.json || echo "WARN audio metrics"

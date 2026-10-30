@@ -33,6 +33,10 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--work", required=True); ap.add_argument("--out", required=True); ap.add_argument("--face")
     ap.add_argument("--tmin", type=float, default=0.92); ap.add_argument("--tmax", type=float, default=1.08); ap.add_argument("--min-gain", type=float, default=0.2)
     ap.add_argument("--min-face", type=float, default=0.5)
+    ap.add_argument("--tmin-off", type=float, help="r9 (02 'the pauses are long'): tempo floor for a chunk whose source pieces are OFF screen (face not visible: no lip "
+                    "constraint), so an English phrase may stretch to end where the Russian ends; default = --tmin")
+    ap.add_argument("--tmax-off", type=float, help="r9: tempo ceiling off screen; default = --tmax")
+    ap.add_argument("--tempo-w-off", type=float, default=1.0, help="r9: weight of the tempo cost |1 - t| x seconds off screen (1.0 = as on screen)")
     ap.add_argument("--min-piece", type=float, default=0.3, help="r8 v2: source pieces shorter than this join a neighbour (0.2: 05 u3 'Вот,' 0.26 s keeps its own 'Well,')")
     ap.add_argument("--sil-ratio", type=float, default=0.0, help="r8 v2: > 0 = a coverage gain must be >= this x the added dub-over-source-silence (03: 7.0 -> 10.2 s in r8v1)")
     ap.add_argument("--natural-cuts", choices=["on", "off"], default="off", help="r8 v3 (user on r8v1: 'I'm saying ..... the phrase', words cut off): cuts only at punctuation / clause starts or a real quiet take pause >= 0.15 s, never after a function word; an inserted gap <= the source pause + 0.35 s")
@@ -44,8 +48,9 @@ def main():
     W, O = pathlib.Path(a.work).resolve(), pathlib.Path(a.out); O.mkdir(parents=True, exist_ok=True)
     mp = next(W.glob("*_r4a.manifest.json")); man = json.loads(mp.read_text()); D = man["source"]["duration_s"]
     y, sr = sf.read(str(W / "dubbed_24k.wav"), dtype="float32"); y = y if y.ndim == 1 else y.mean(1); n = int(D / FR) + 1
-    fv, _ = lip_place.face_mask(a.face, n, D); S = np.zeros(n, bool)
+    fv, _ = lip_place.face_mask(a.face, n, D); S = np.zeros(n, bool); fv_real = fv.copy()   # r9: the real face mask (off-screen tempo bounds)
     if a.cover_all == "on": fv[:] = True   # r8: off-screen source speech is covered too
+    t_off = (a.tmin if a.tmin_off is None else a.tmin_off, a.tmax if a.tmax_off is None else a.tmax_off)
     for s in man["speech_intervals"]: S[int(s["start"] / FR):int(np.ceil(s["end"] / FR))] = True
     words_all = [w for sg in man["asr"]["segments"] for w in sg.get("words") or []]
     qa = TtsQA(); aligner = CtcAligner.from_qa(qa); units = man["units"]; z = y.copy(); rep = {"tmin": a.tmin, "tmax": a.tmax, "units": []}
@@ -100,7 +105,9 @@ def main():
 
         def group(j0, j1, k0, k1, start_min):   # words [j0, j1) on pieces [k0, k1): (cost, tempo, t0, t1)
             d = spans_w[j1 - 1]["end"] - spans_w[j0]["start"] + 0.14; T = B[k1 - 1][1] - B[k0][0]
-            t = min(a.tmax, max(a.tmin, d / T)); L = d / t; t0 = max(B[k0][0], start_min); t1 = t0 + L
+            off = float(fv_real[int(B[k0][0] / FR):max(int(B[k0][0] / FR) + 1, int(B[k1 - 1][1] / FR))].mean()) < 0.5   # r9: these source pieces are off screen
+            tlo, thi = t_off if off else (a.tmin, a.tmax)
+            t = min(thi, max(tlo, d / T)); L = d / t; t0 = max(B[k0][0], start_min); t1 = t0 + L
             if a.natural_cuts == "on" and j0 > 0:   # r8 v3: the gap inserted after the previous chunk <= the source's own pause there + 0.35 s
                 le_ = start_min - 0.12; t0 = max(start_min, min(t0, le_ + sil(le_, B[k0][0]) + 0.35)); t1 = t0 + L
             limit = B[k1][0] - 0.1 if k1 < K else win
@@ -111,7 +118,7 @@ def main():
                 for k_ in range(k0, k1):
                     f_, g_ = fs(*B[k_]), fs(max(t0, B[k_][0]), min(t1, B[k_][1])) if t1 > B[k_][0] and t0 < B[k_][1] else 0.0
                     unc += max(0.0, f_ - g_) * (2.0 if g_ < 0.3 * f_ else 1.0)
-            c = unc + 0.3 * sil(t0, t1) + 1.0 * abs(1 - t) * L
+            c = unc + 0.3 * sil(t0, t1) + (a.tempo_w_off if off else 1.0) * abs(1 - t) * L
             return c, t, t0, t1
 
         INF = (1e9, None, 0.0); dp = {(0, 0): (0.0, None, prev_end)}   # (pieces done, words done) -> (cost, back, end of the last chunk)

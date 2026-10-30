@@ -133,6 +133,9 @@ def main():
     ap.add_argument("--unit-gmin", type=float); ap.add_argument("--gate-blocks", choices=["on", "off"]); ap.add_argument("--dsplit", choices=["on", "off"])
     ap.add_argument("--cover-all", choices=["on", "off"], default="off", help="r8 --cover-all on (management on final_r7 02 / 05: the dub keeps disappearing): off-screen source speech counts like face-visible speech")
     ap.add_argument("--onset-inner", type=float); ap.add_argument("--inner-gap", type=float, default=0.3); ap.add_argument("--inner-cap", type=float, default=1.0)
+    ap.add_argument("--off-early", type=float, default=0.0, help="r9 (02 'the pauses are long'): OFF screen (face not visible), a unit whose start leaves a dub gap "
+                    "longer than the source's own silence there by > 0.3 s starts up to this many seconds earlier (the whole unit, its inner gaps kept; timing only, "
+                    "not before the unit gap floor); 0 = off")
     ap.add_argument("--dsplit-src-pause", type=float, default=1.0); ap.add_argument("--dsplit-cost", type=float, default=0.8); ap.add_argument("--dsplit-gap", type=float, default=4.0)
     a = ap.parse_args(); P = a.pace == "on"
     for k, on_v, off_v in (("onset_early", 2.0, 0.0), ("onset_late", 1.0, 0.0), ("onset_inner", 0.5, 0.0), ("unit_gmin", 0.3, 0.15), ("gate_blocks", "on", "off"), ("dsplit", "on", "off")):
@@ -149,7 +152,7 @@ def main():
     blocks, cores, act, ref = blocks_of(L, quiet=quiet)
     S = np.zeros(n, bool)
     for s in man["speech_intervals"]: S[int(s["start"] / FR):int(np.ceil(s["end"] / FR))] = True
-    fv, fvis = face_mask(a.face, n, man["source"]["duration_s"])
+    fv, fvis = face_mask(a.face, n, man["source"]["duration_s"]); fv_real = fv.copy()   # r9: the real face mask (--off-early)
     if a.cover_all == "on": fv = np.ones(n, bool)   # r8: off-screen speech placed like on-screen speech (02: face_visible 0, nothing moved before)
     w = np.where(fv, 1.0, a.w_off); c = w * (1 - 2 * S.astype(float))
     pls = [(u["id"], p) for u in man["units"] for p in (u.get("alignment") or {}).get("placements", []) if p.get("placed")]
@@ -192,6 +195,19 @@ def main():
                 if trial is None or c2 < trial[0]: trial = (c2, B2, s2, f, cls, pen)
             if trial is None or best - trial[0] < a.split_gain / FR: break
             best, B, shifts = trial[0], trial[1], trial[2]; pens += trial[5]; splits.append([round(trial[3] * FR, 2), trial[4]]); cands = [q for q in cands if q[0] != trial[3]]
+    off_moves = []
+    if a.off_early > 0:   # r9: off screen, close a between-unit dub gap that is longer than the source's silence there (the speaker talks, the dub waits)
+        E, tolf, ug = int(round(a.off_early / FR)), int(round(0.3 / FR)), rule["ugmin"]
+        for i in range(1, len(B)):
+            if B[i][3] != "unit": continue
+            ca, pe = B[i][4] + shifts[i], B[i - 1][5] + shifts[i - 1]   # this unit's first block start / the previous block's end (dub frames, loud cores)
+            if fv_real[max(0, ca - 25):ca + 25].mean() >= 0.5: continue   # on screen: the lips decide
+            gap = ca - pe; ex = gap - int((~S[max(0, pe):max(0, ca)]).sum())   # the part of the dub gap where the source speaks
+            js = [i] + [j for j in range(i + 1, len(B)) if all(B[q][3] != "unit" for q in range(i + 1, j + 1))]   # the unit's blocks
+            mv = min(E, ex - tolf, gap - ug, min(B[j][2] + shifts[j] for j in js))
+            if mv <= 0: continue
+            for j in js: shifts[j] -= mv
+            off_moves.append([round(ca * FR, 2), round(mv * FR, 2)])
     # render: every block's samples moved by its shift (blocks tile the track; v2: 20-ms equal-power (sin / cos) fades at cut points that move
     # apart, so two blocks pushed together crossfade at constant power and a cut that opens never steps)
     z = np.zeros_like(y); h = int(FR * sr); fd = int(0.02 * sr); ramp = np.sin(np.linspace(0, np.pi / 2, fd))
@@ -227,7 +243,7 @@ def main():
                 if "t" in q: q["t"] = round(q["t"] + shift_at(q["t"]), 3)
         if "track_start" in al and al.get("placements"): al["track_start"] = round(al["track_start"] + shift_at(al["track_start"] + 0.05), 3)
     d = np.diff(np.concatenate([[0], D1.astype(np.int8), [0]]))
-    rep = {"blocks": len(B), "splits": splits, "moved_blocks": int(sum(1 for k in shifts if k)), "shift_abs_mean_s": round(float(np.mean(np.abs(shifts))) * FR, 3),
+    rep = {"blocks": len(B), "splits": splits, "off_early_moves": off_moves, "moved_blocks": int(sum(1 for k in shifts if k)), "shift_abs_mean_s": round(float(np.mean(np.abs(shifts))) * FR, 3),
            "shift_abs_max_s": round(float(np.max(np.abs(shifts))) * FR, 3), "face_visible_frac": fvis,
            "mismatch_face_visible_s_before": err(D0), "mismatch_face_visible_s_after": err(D1), "cost_shift_only": round(base * FR, 2), "cost_new": round(best * FR, 2),
            "params": {k: getattr(a, k) for k in ("max_shift", "split_shift", "lam", "w_off", "grow", "grow_unit", "split_gap", "min_piece", "split_gain", "max_splits", "splits", "pace", "onset_early", "onset_late", "onset_inner", "inner_gap", "inner_cap", "onset_tol", "unit_gmin", "gate_blocks", "dsplit", "dsplit_src_pause", "dsplit_cost", "dsplit_gap")}, "gate_runs": gate_runs,
