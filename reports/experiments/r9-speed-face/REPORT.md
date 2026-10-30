@@ -25,7 +25,7 @@ Tools: `scripts/r9/face_only.sh` (runner), `scripts/r9/gate_cmp.py` (gate).
 |---|---|---|---|
 | **b0**: r9 + fix (E2E_FX look) | **982** (677 + 305) | 276 | reference: sync 7.61, flashes 20, pressed 0.67, stick 0 / slide 1, fallback 3.92 % |
 | S: stack (below, incl. mouth-only decode) | 635 (429 + 206) | 266 | FAIL: stick 0 → 2 (the events appear in the composite / fallback; the generated layers have the same counts). Rest PASS. |
-| S2: S without mouth-only decode | 642 (437 + 205) | 278 | (gate not finished at hand-over) |
+| S2: S without mouth-only decode | 642 (437 + 205) | 278 | PASS on every row measured (stick within +1: dropping the decode fixes S), whole-frame gate not finished |
 | **S + VAE compile (warm cache) = RECOMMENDED** | **619** (416 + 203) | **245** | **PASS on every row**: sync 7.43, flashes 17, pressed 1.10 (+0.43), stick 1 / slide 0, fallback 3.92 %, frame gate PASS |
 | S + VAE compile (first run, cold cache) | 810 | n/a | identical metrics to the warm run (deterministic). The ~120 s compile is paid once per machine (inductor disk cache). |
 | S + half-rate generation | **552** (346 + 206) | **158** | FAIL by the stack's own stick +2 (same as S). Sync 7.34 (−0.275, inside −0.3 but thin); flashes 21, pressed 0.73. |
@@ -73,7 +73,7 @@ That is 982 → 619 s/vmin wall (−37 %) on r9-a, gate PASS.
 - **m01 (1080p60): nothing measured on r9-a.** The baseline alone is ~1 h. The 1080p levers (LS_ROI, the threading levers, which scale with resolution) are untested there. From r9-f's old logs the m01 composite is 1192 s/vmin (CF-detail 385 s, SR 259, fps composite 843): the biggest remaining target.
 - **m19:** b0 + S2 + half-rate were queued in qa2; see `/workspace/dub/r9/face/m19_*` if they finished (they may not have).
 - **skip-silent:** m03 S2k queued in qa2.
-- **S2 gate** (whether dropping the mouth decode alone fixes stick).
+- S2 = S without the mouth decode PASSES (stick within +1) except the whole-frame gate, unfinished: S2 + VAE compile (~626 expected) is the most conservative passing stack; S2 + half-rate (~560) the next to gate.
 - The fused mouth-ROI composite (CF-detail + SR + stab + repair in one pass): designed, not built. The per-step profile on m03 is CF-detail 13 s, SR 28, repair 9, fps_composite 47 after pre-threads.
 - The r9-g commits (eefc560) are lost unless r9-g returns. Everything was rebuilt from the kit and re-measured on r9-a; only the r9-g timings in section 2 come from there.
 
