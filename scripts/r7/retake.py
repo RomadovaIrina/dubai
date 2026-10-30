@@ -189,7 +189,13 @@ def main():
     print(f"rate {sps:.2f} syl/s {wps:.2f} words/s; selected", [(r["u"]["id"], r["why"], r["src_face_s"], r["dub_s"], r["faith_old"]) for r in rows], flush=True)
     rep = {"rate_sps": round(sps, 2), "rate_wps": round(wps, 2), "units": []}
     if a.select_only or not rows:
-        (O / "retake.json").write_text(json.dumps({**rep, "selected": [{k: v for k, v in r.items() if k != "u"} | {"id": r["u"]["id"]} for r in rows]}, indent=1, ensure_ascii=False)); return
+        (O / "retake.json").write_text(json.dumps({**rep, "selected": [{k: v for k, v in r.items() if k != "u"} | {"id": r["u"]["id"]} for r in rows]}, indent=1, ensure_ascii=False))
+        if not a.select_only:   # r9: nothing to re-take (m17) = the input take passed through unchanged, so the later steps have a work dir
+            for f in W.iterdir():
+                if f.name.endswith(".manifest.json") or f.name in ("retake.json", "faith.json"): continue
+                (O / f.name).unlink(missing_ok=True); (O / f.name).symlink_to(f)
+            man["r7_retake"] = {"rate_sps": rep["rate_sps"], "changed": [], "selected": [], "qwen": None}; (O / mp.name).write_text(json.dumps(man, indent=1, ensure_ascii=False))
+        return
     # models: Qwen 14B (GPU), Chatterbox, TTS QA (Whisper + wav2vec2 CTC)
     import torch   # os: module level (the --faith judge path uses it earlier in main)
     os.environ.setdefault("DUB_QWEN_SIZE", "14b")

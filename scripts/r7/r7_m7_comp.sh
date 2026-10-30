@@ -17,12 +17,12 @@ for id in ${*:-03 01 05 02 04}; do
       if [ "$CFD" = self ]; then BASE=$W/${id}_${ST}_25fps_ls_pre.mp4; BLM=$W/${id}_${ST}_25fps_ls_raw.mediapipe.npz   # this run's pre-CodeFormer dump
       else BW=$B/$CFD/work_${id}_$CFD; BASE=$BW/${id}_${CFD}_25fps_ls_raw.mp4; BLM=$BW/${id}_${CFD}_25fps_ls_raw.mediapipe.npz; fi
       RAW=$W/${id}_${ST}_25fps_ls_cfd_${CFD_LABEL:-cfd}.mp4; SRN=${RAW%.mp4}_$SR.mp4
-      [ -f $RAW ] || { python scripts/r8/r8_cf_detail.py --base $BASE --cf $W/${id}_${ST}_25fps_ls_raw.mp4 --lm $BLM --out $RAW ${CFD_ARGS:-} | grep "^=="; cp $BLM ${RAW%.mp4}.mediapipe.npz; }
+      for try in 1 2; do [ -s $RAW ] && break; [ $try = 2 ] && echo "== RETRY cf_detail $id"; python scripts/r8/r8_cf_detail.py --base $BASE --cf $W/${id}_${ST}_25fps_ls_raw.mp4 --lm $BLM --out $RAW ${CFD_ARGS:-} | grep "^=="; done; [ -f $RAW ] && cp $BLM ${RAW%.mp4}.mediapipe.npz   # r9: one retry (sporadic libx264 open EINVAL, not reproducible)
       LS=$RAW
     fi
     if [ -n "$SR" ]; then
       LS=$SRN
-      [ -f $LS ] || { python scripts/r7/r7_layer_sr.py --ls-raw $RAW --lm ${RAW%.mp4}.mediapipe.npz --out $LS --temporal 1 ${SR_EXTRA:-} | grep "^==" ; cp ${RAW%.mp4}.mediapipe.npz ${LS%.mp4}.mediapipe.npz; }
+      for try in 1 2; do [ -s $LS ] && break; [ $try = 2 ] && echo "== RETRY layer_sr $id"; python scripts/r7/r7_layer_sr.py --ls-raw $RAW --lm ${RAW%.mp4}.mediapipe.npz --out $LS --temporal 1 ${SR_EXTRA:-} | grep "^==" ; done; [ -f $LS ] && cp ${RAW%.mp4}.mediapipe.npz ${LS%.mp4}.mediapipe.npz
     fi
     if [ -n "${DFK:-}" ]; then   # r8 F: layer tone deflicker (inner mouth + lower face), cached per DFK label: DFK=dfk1 DFK_ARGS="--sigma 1.5 ..."
       LSD=${LS%.mp4}_$DFK.mp4; [ -f $LSD ] || { python scripts/r8/r8_layer_deflicker.py --ls $LS --lm ${LS%.mp4}.mediapipe.npz --out $LSD ${DFK_ARGS:-} | grep "^=="; cp ${LS%.mp4}.mediapipe.npz ${LSD%.mp4}.mediapipe.npz; }; LS=$LSD
