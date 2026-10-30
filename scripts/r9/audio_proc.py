@@ -3,8 +3,8 @@
 
 Without it the pipeline process exits and r8_tts_stage.py starts a second one that imports everything again and loads Qwen 14B, the TTS QA
 (Whisper large-v3 + wav2vec2) and Chatterbox again (m01: ~14 s of start + loads). Here the pipeline runs as usual (run_clean_pipeline_05.main,
-same argv), its Qwen and TTS QA objects stay resident (their close() is a no-op until the end) and the stage's mains get them through the
-r8_tts_stage caches; the batched Qwen engine keeps its resident few-shot prefixes. Chatterbox is NOT shared: the pipeline casts its copy to fp16 in
+same argv), its Qwen stays resident (its close() is a no-op until the end) and the stage's mains get it through the r8_tts_stage cache
+and so does its TTS QA; the batched Qwen engine keeps its resident few-shot prefixes. Chatterbox is NOT shared: the pipeline casts its copy to fp16 in
 place, retake / clause takes load their own as before (identical numerics).
     python scripts/r9/audio_proc.py <run_clean_pipeline_05 argv>     env R9_AFTER_JOBS=<dir with oneproc_jobs_<id>.json>
 After the pipeline: its manifest copied into the work dir (as r4_audio.sh does), the source face tracks waited for (<npz>.done of the background
@@ -16,7 +16,7 @@ for p in (HERE.parent / "pilot", HERE.parent / "quality", HERE.parent / "r7", HE
 
 def main():
     argv = sys.argv[1:]
-    import run_clean_pipeline_05 as rp, tts_qa
+    import run_clean_pipeline_05 as rp
     keep = {}
     _load = rp.load_llm
     def load_llm(times):   # one Qwen per process; the pipeline's own close() at its end is a no-op (the stage reuses it)
@@ -24,15 +24,18 @@ def main():
             keep["llm"] = _load(times); keep["llm"][0].close = lambda: None   # load_llm -> (Llama, model name)
         return keep["llm"]
     rp.load_llm = load_llm
+    import tts_qa
     _Q = tts_qa.TtsQA
-    class SharedQA:   # one TtsQA per process (the pipeline's model_cache.get("tts_qa", TtsQA) and the stage's TtsQA())
-        def __new__(cls, *a, **k):
+    class SharedQA:   # one TtsQA per process (the pipeline's model_cache.get("tts_qa", TtsQA) and the stage's TtsQA()): a 2nd Whisper next to the resident
+        def __new__(cls, *a, **k):   # Qwen + its batched engine runs out of VRAM (02); a stage QA of its own gave bit-identical outputs anyway
             if "qa" not in keep:
                 keep["qa"] = _Q(*a, **k); keep["qa"].close = lambda: None
             return keep["qa"]
     tts_qa.TtsQA = SharedQA
+    env0 = dict(os.environ)   # the env the pipeline sets for itself (os.environ) is restored before the stage
     sys.argv = [str(HERE.parent / "pilot" / "run_clean_pipeline_05.py")] + argv
     rc = rp.main()
+    os.environ.clear(); os.environ.update(env0)
     if rc not in (None, 0): sys.exit(rc)
     jd = os.environ.get("R9_AFTER_JOBS")
     if not jd: return

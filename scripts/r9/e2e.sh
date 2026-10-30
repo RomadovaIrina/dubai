@@ -18,9 +18,10 @@ DUB_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"; R=$DUB_ROOT; . $
 IN=$(readlink -f "$1"); OUT=$(mkdir -p "$2" && readlink -f "$2")
 ID=${ID:-$(basename "${IN%.*}" | tr -c 'A-Za-z0-9_\n-' '_')}
 export METRICS=off   # production stages only; every gate / scoring pass runs in the metrics stage below (honest per-stage time)
-if [ "${R9_FAST_AUDIO:-0}" = 1 ]; then   # r9 audio speed stack r9fast-audio (reports/experiments/r9-speed-audio/REPORT.md): units concurrently, batched resident
-  export DUB_UNIT_CONC=1 DUB_QWEN_BATCH=1 R9_MP_BG=on DUB_S3_BATCH=1 DUB_QA_BATCH=${DUB_QA_BATCH:-0}   # Qwen 14B, background MediaPipe, batched S3Gen
-fi
+case "${R9_FAST_AUDIO:-0}" in   # r9 audio speed (reports/experiments/r9-speed-audio/REPORT.md)
+  1) export R9_MP_BG=on DUB_S3_BATCH=1 R9_ONEPROC=on;;   # r9fast-audio-safe: background MediaPipe, batched S3Gen, the stage in the pipeline process
+  2) export R9_MP_BG=on DUB_S3_BATCH=1 R9_ONEPROC=on DUB_UNIT_CONC=1 DUB_QWEN_BATCH=1;;   # r9fast-audio: + units concurrently, batched resident Qwen 14B
+esac
 export DUB_ALLOW_NC=1 DUB_ALLOW_NC_BED=1   # CodeFormer + htdemucs: deliberate NC deviation, user-accepted (brief_r9_e2e.md); InsightFace is not used
 A=/workspace/dub/artifacts/r4a; B=/workspace/dub/artifacts/r4m; AT=r9_$ID; HT=r9_${ID}_htd; GT=r9g_$ID; FT=r9f_$ID
 W=$OUT/work; L=$OUT/logs; mkdir -p $W $L; T=$W/stages.tsv; : > $T; STATUS=SUCCESS; FL=(); ER=()
