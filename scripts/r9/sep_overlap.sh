@@ -10,12 +10,14 @@ cd "$(dirname "$0")/../.."
 case "$1" in
   start)
     id=$2; ST=$3; M=$4; L=$5; rm -f $M/stems.ok $M/stems.done $M/sepmix.done
-    ( export PYTHONPATH=/workspace/dub/sep_pylib:${PYTHONPATH:-}; python scripts/r8/sep_stems.py --sep htdemucs --out $ST $id > $L/sep_stems.log 2>&1 && touch $M/stems.ok; touch $M/stems.done ) &
+    ( t0_=$(date +%s.%N); export PYTHONPATH=/workspace/dub/sep_pylib:${PYTHONPATH:-}; python scripts/r8/sep_stems.py --sep htdemucs --out $ST $id > $L/sep_stems.log 2>&1 && touch $M/stems.ok; touch $M/stems.done
+      [ -n "${R9_TIMELINE:-}" ] && echo "[\"bg:sep_stems\", $t0_, $(date +%s.%N)]" >> $R9_TIMELINE ) &
     ;;
   mix)
     id=$2; AT=$3; HT=$4; M=$5; L=$6
     while [ ! -f $M/stems.done ]; do sleep 0.5; done
-    [ -f $M/stems.ok ] && SEP_SRC=$AT SEP_PREV=$AT bash scripts/r8/sep_mix.sh $HT htdemucs stems "--bed-pauses source --bed-noise-back on --src-duck-db -3" $id > $L/sep_mix.log 2>&1
+    t0_=$(date +%s.%N); [ -f $M/stems.ok ] && SEP_SRC=$AT SEP_PREV=$AT bash scripts/r8/sep_mix.sh $HT htdemucs stems "--bed-pauses source --bed-noise-back on --src-duck-db -3" $id > $L/sep_mix.log 2>&1
+    [ -n "${R9_TIMELINE:-}" ] && echo "[\"bg:sep_remix\", $t0_, $(date +%s.%N)]" >> $R9_TIMELINE
     touch $M/sepmix.done
     ;;
   wait)

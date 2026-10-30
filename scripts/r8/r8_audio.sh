@@ -41,11 +41,13 @@ if [ -z "${REUSE:-}" ]; then   # from the raw input (one-command E2E): the r6 pi
   BASE=${TAG}pre; MPP=()
   if [ "${R9_MP_BG:-off}" = on ]; then   # r9 speed: the source face track (MediaPipe, CPU only, ~1 s per video-second) runs while the GPU pipeline runs (same file; <npz>.done when written)
     for id in $IDS; do mkdir -p $A/sep/$id; npz=$A/sep/$id/source_mediapipe.npz; [ -f $npz ] && { touch $npz.done; continue; }
-      ( python -c "import sys; sys.path.insert(0,'scripts/pilot'); import clean_face_stack as c, pathlib; c.run_mediapipe(pathlib.Path('$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1)'), pathlib.Path('$npz'))"; touch $npz.done ) > /dev/null 2>&1 & MPP+=($!); done
+      ( t0_=$(date +%s.%N); python -c "import sys; sys.path.insert(0,'scripts/pilot'); import clean_face_stack as c, pathlib; c.run_mediapipe(pathlib.Path('$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1)'), pathlib.Path('$npz'))"; touch $npz.done
+        [ -n "${R9_TIMELINE:-}" ] && echo "[\"bg:mediapipe\", $t0_, $(date +%s.%N)]" >> $R9_TIMELINE ) > /dev/null 2>&1 & MPP+=($!); done
   fi
   if [ "${R9_ONEPROC:-off}" = on ]; then   # r9 speed L: the stage runs inside the pipeline process (scripts/r9/audio_proc.py), its jobs written now (the work dir is known)
     for id in $IDS; do src16 $id; echo "$id|$A/$BASE/runs/$id/work_$id|--faith judge"; done | mkjobs $S
     export R9_PIPE_PY=scripts/r9/audio_proc.py R9_AFTER_JOBS=$S
+    [ -n "${R9_WORKER_SPOOL:-}" ] && export R9_PIPE_PY=scripts/r9/audio_client.py   # r9 speed R: the job goes to the resident audio worker
     if [ "${R9_CHAIN_INPROC:-off}" = on ]; then   # r9 speed C: the chain job (the same argv / env the bash chain gets: r7 -> r6 -> r5 -> r4_audio.sh, PAR=1)
       for id in $IDS; do rm -f $S/chain_done_$id
         ID_=$id S_=$S A_=$A TAG_=$TAG LIPA="$LIPA" REMA="$REMA" SRC_="$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1)" python3 -c "

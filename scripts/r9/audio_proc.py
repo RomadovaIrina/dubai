@@ -14,6 +14,24 @@ HERE = pathlib.Path(__file__).resolve().parent
 for p in (HERE.parent / "pilot", HERE.parent / "quality", HERE.parent / "r7", HERE.parent / "r8", HERE): sys.path.insert(0, str(p))
 
 
+def _timeline_hooks(rp):
+    """R9_TIMELINE (GPU-busy accounting, scripts/r9/gpu_busy.py): intervals of the pipeline stages and of every GPU call class; outputs unchanged"""
+    import timeline as tl, t3_batch, s3_batch, tts_qa, qwen_batch, r4_pause_logic
+    from llama_cpp import Llama
+    from chatterbox.mtl_tts import ChatterboxMultilingualTTS as CB
+    _t = rp.timed
+    def timed(times, name):
+        c, m = _t(times, name), tl.mark("pipe:" + name)
+        class W:
+            def __enter__(s_): m.__enter__(); return c.__enter__()
+            def __exit__(s_, *e): r = c.__exit__(*e); m.__exit__(*e); return r
+        return W()
+    rp.timed = timed
+    tl.wrap(t3_batch, "decode_batch", "t3"); tl.wrap(t3_batch, "vocode", "s3gen"); tl.wrap(s3_batch, "vocode_batch", "s3gen")
+    tl.wrap(tts_qa.TtsQA, "assess", "qa"); tl.wrap(qwen_batch.Engine, "chat", "qwen"); tl.wrap(Llama, "create_chat_completion", "qwen")
+    tl.wrap(CB, "generate", "tts_sequential"); tl.wrap(r4_pause_logic, "whisper_words", "chain:lip_whisper")
+
+
 def _preload_tts(keep):
     """lever K: ChatterboxMultilingualTTS.from_local(<models/chatterbox>, "cpu", t3_model="v3") in a thread at the start; the FIRST cuda load (the
     pipeline's, which it then casts to fp16) runs as before; a LATER one with the same arguments (the stage's fp32 retake / clause model) gets the
@@ -40,10 +58,16 @@ def _preload_tts(keep):
     CB.from_local = classmethod(from_local)
 
 
-def main():
-    argv = sys.argv[1:]
+KEEP = {}            # the resident objects of this process: Qwen (load_llm), the TTS QA (+ across videos in the audio worker, scripts/r9/audio_worker.py)
+_SETUP = {"done": False}
+
+
+def setup():
+    """once per process: one Qwen, one TTS QA (their close() a no-op), the timeline hooks"""
     import run_clean_pipeline_05 as rp
-    keep = {}
+    if _SETUP["done"]: return rp
+    keep = KEEP
+    if os.environ.get("R9_TIMELINE"): _timeline_hooks(rp)
     _load = rp.load_llm
     def load_llm(times):   # one Qwen per process; the pipeline's own close() at its end is a no-op (the stage reuses it)
         if "llm" not in keep:
@@ -60,20 +84,30 @@ def main():
     tts_qa.TtsQA = SharedQA
     if os.environ.get("R9_TTS_PRELOAD", "off") == "on":   # r9 speed K: the stage's fp32 Chatterbox loaded on the CPU WHILE the GPU pipeline runs
         _preload_tts(keep)                                  # (the pipeline casts its own copy to fp16 in place: not shareable)
+    _SETUP["done"] = True
+    return rp
+
+
+def run_job(argv):
+    """one video: the pipeline (its argv), then the stage and the chain (R9_AFTER_JOBS) -> the pipeline's exit code"""
+    rp = setup(); keep = KEEP
     env0 = dict(os.environ)   # the env the pipeline sets for itself (os.environ) is restored before the stage
     sys.argv = [str(HERE.parent / "pilot" / "run_clean_pipeline_05.py")] + argv
-    rc = rp.main()
+    try:
+        rc = rp.main()
+    except SystemExit as e:
+        rc = e.code
     os.environ.clear(); os.environ.update(env0)
-    if os.environ.get("R9_STAGE_ENV"):   # the env r8_audio.sh starts the stage with (r4_audio.sh exports DUB_CUT_SNAP / DUB_EQPOWER_FADE / ... for the pipeline only:
-        se = json.loads(pathlib.Path(os.environ["R9_STAGE_ENV"]).read_text())   # retake's cut_parts reads DUB_CUT_SNAP; inheriting it changed the cuts: 02 pause W1 0.26 -> 0.39)
+    if os.environ.get("R9_STAGE_ENV"):   # the env r8_audio.sh starts the stage with (r4_audio.sh exports DUB_CUT_SNAP / DUB_EQPOWER_FADE / ... for the pipeline only)
+        se = json.loads(pathlib.Path(os.environ["R9_STAGE_ENV"]).read_text())
         jd_ = os.environ.get("R9_AFTER_JOBS"); os.environ.clear(); os.environ.update(se)
         if jd_: os.environ["R9_AFTER_JOBS"] = jd_
-    if rc not in (None, 0): sys.exit(rc)
+    if rc not in (None, 0): return rc
     jd = os.environ.get("R9_AFTER_JOBS")
-    if not jd: return
+    if not jd: return 0
     out = pathlib.Path(argv[argv.index("--output") + 1]); wdir = pathlib.Path(argv[argv.index("--work-dir") + 1]); id_ = wdir.name
     J = pathlib.Path(jd) / f"oneproc_jobs_{id_}.json"
-    if not J.exists(): print(f"[oneproc] no jobs for {id_}", file=sys.stderr); return
+    if not J.exists(): print(f"[oneproc] no jobs for {id_}", file=sys.stderr); return 0
     w = wdir / f"work_{pathlib.Path(argv[argv.index('--input') + 1]).stem}"
     shutil.copy(out.with_name(out.stem + ".manifest.json"), w / f"{id_}_r4a.manifest.json")
     t0 = time.perf_counter()
@@ -83,13 +117,19 @@ def main():
     import r8_tts_stage
     jobs = json.loads(J.read_text())["jobs"]; jf = J.with_name(f"oneproc_{id_}.json"); jf.write_text(json.dumps(jobs, indent=1))
     sys.argv = ["r8_tts_stage", "--jobs", str(jf)]
-    r8_tts_stage.main()
+    import timeline
+    with timeline.mark("stage"): r8_tts_stage.main()
     cj = J.with_name(f"chain_{id_}.json")   # r9 speed C (R9_CHAIN_INPROC=on): the CPU chain after the stage in this process (scripts/r9/chain_inproc.py)
     if cj.exists():
         import chain_inproc
         t1 = time.perf_counter(); ok = chain_inproc.run(json.loads(cj.read_text()), keep.get("qa"))
         print(f"[oneproc] {id_}: chain in-process {'done' if ok else 'FAILED (the bash chain runs)'} in {time.perf_counter() - t1:.1f} s", file=sys.stderr, flush=True)
+    return 0
 
+
+def main():
+    rc = run_job(sys.argv[1:])
+    if rc not in (None, 0): sys.exit(rc)
 
 if __name__ == "__main__":
     main()

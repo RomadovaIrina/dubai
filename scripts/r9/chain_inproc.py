@@ -35,7 +35,8 @@ def _logged(path, argv):
 
 def _step(main, name, argv, log):
     """True when the step's main ran without an exception / non-zero exit (the bash `&&`)"""
-    with _logged(log, [name] + [str(x) for x in argv]):
+    import timeline
+    with _logged(log, [name] + [str(x) for x in argv]), timeline.mark("chain:" + name):
         try:
             r = main(); return r in (None, 0)
         except SystemExit as e:
@@ -59,7 +60,7 @@ def _reuse(qa):
         if qa is not None and str(model_size_or_path) == qpath and device == "cuda" and compute_type == "int8_float16" and not a and not k \
                 and getattr(qa, "_r9_compute", None) == "int8_float16":
             return qa.wh
-        return W0(model_size_or_path, device, compute_type, *a, **k)
+        return W0(model_size_or_path, *a, device=device, compute_type=compute_type, **k)
     faster_whisper.WhisperModel = WM
     if qa is not None:
         tts_align.CtcAligner.standalone = classmethod(lambda cls, device="cuda": cls.from_qa(qa) if device == qa.device else cls(*_standalone(device)))

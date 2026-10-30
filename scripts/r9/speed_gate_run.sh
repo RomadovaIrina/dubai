@@ -16,22 +16,33 @@ if [ "${METRICS_ONLY:-0}" != 1 ]; then
 rm -rf "/workspace/dub/artifacts/r4a/sep/${id:?}" "/workspace/dub/artifacts/r4a/${TAG:?}" "/workspace/dub/artifacts/r4a/${TAG:?}src" "/workspace/dub/artifacts/r4a/${TAG:?}pre" "/workspace/dub/artifacts/r4a/${TAG:?}_htd" "/workspace/dub/r8a/stems_htdemucs/${id:?}"
 M=$L/ovl_$TAG; rm -rf "/workspace/dub/r9s/logs/ovl_${TAG:?}"; mkdir -p $M
 exec 9>/workspace/dub/gpu.lock; flock 9   # the GPU alone for the timed stages (their inner scripts never take this lock); the wait is not timed
+if [ "${R9_GPU_ACCT:-off}" = on ]; then   # GPU-busy accounting: 100-ms NVML samples + the stage timeline (scripts/r9/timeline.py, gpu_busy.py)
+  export R9_TIMELINE=$L/tl_$TAG.jsonl; : > $R9_TIMELINE
+  nvidia-smi --query-gpu=timestamp,utilization.gpu,memory.used --format=csv,noheader,nounits -lms 100 > $L/nv_$TAG.csv 2>/dev/null & NVP=$!
+fi
 t0=$(date +%s.%N)
 if [ "${R9_SEP_OVERLAP:-off}" = on ]; then
   bash scripts/r9/sep_overlap.sh start $id $ST $M $M
   R9_ON_MIXSRC="bash $DUB_ROOT/scripts/r9/sep_overlap.sh mix $id $TAG $HT $M $M" bash scripts/r8/r8_audio.sh $TAG $id > $L/$TAG.$id.audio.log 2>&1; t1=$(date +%s.%N)
-  timeout 900 bash scripts/r9/sep_overlap.sh wait $M || echo "WARN overlap sep $TAG"
+  if [ -f $A/$TAG/$id/final_mix_aac.m4a ]; then timeout 900 bash scripts/r9/sep_overlap.sh wait $M || echo "WARN overlap sep $TAG"; else echo "WARN no audio: no overlap wait"; fi
 else
   bash scripts/r8/r8_audio.sh $TAG $id > $L/$TAG.$id.audio.log 2>&1; t1=$(date +%s.%N)
   ( export PYTHONPATH=/workspace/dub/sep_pylib:${PYTHONPATH:-}; python scripts/r8/sep_stems.py --sep htdemucs --out $ST $id ) > $M/sep_stems.log 2>&1
   SEP_SRC=$TAG SEP_PREV=$TAG bash scripts/r8/sep_mix.sh $HT htdemucs stems "--bed-pauses source --bed-noise-back on --src-duck-db -3" $id > $M/sep_mix.log 2>&1
 fi
 t2=$(date +%s.%N); flock -u 9
+if [ "${R9_GPU_ACCT:-off}" = on ]; then
+  kill $NVP 2>/dev/null; wait $NVP 2>/dev/null
+  echo "[\"run\", $t0, $t2]" >> $R9_TIMELINE; echo "[\"sep (wait after the audio stage)\", $t1, $t2]" >> $R9_TIMELINE
+  python3 scripts/r9/gpu_busy.py --nv $L/nv_$TAG.csv --tl $R9_TIMELINE --dur $(ffprobe -v error -show_entries format=duration -of csv=p=0 $(ls $d/$id.* | head -1)) --json $L/gpubusy_$TAG.json > $L/gpubusy_$TAG.md
+  unset R9_TIMELINE
+fi
 dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 $(ls $d/$id.* | head -1))
 python3 -c "import sys, json; t0, t1, t2, d = map(float, sys.argv[1:5]); print(json.dumps({'tag': sys.argv[5], 'id': sys.argv[6], 'audio_s': round(t1 - t0, 1), 'sep_s': round(t2 - t1, 1), 'audio_sep_s': round(t2 - t0, 1), 'dur_s': d, 'audio_s_per_vmin': round((t1 - t0) / d * 60, 1), 'audio_sep_s_per_vmin': round((t2 - t0) / d * 60, 1), 'overlap': sys.argv[7]}))" $t0 $t1 $t2 $dur $TAG $id ${R9_SEP_OVERLAP:-off} | tee -a /workspace/dub/r9s/timing.jsonl
 [ -f $A/$TAG/$id/final_mix_aac.m4a ] || { echo "GATE_FAIL $TAG $id: no audio"; exit 1; }
 [ -f $A/$HT/$id/final_mix_aac.m4a ] || echo "WARN $TAG $id: no demucs mix"
 fi
+[ "${R9_NO_METRICS:-0}" = 1 ] && { echo "GATE_RUN_DONE $TAG $id (timing only)"; exit 0; }
 export METRICS=on; O=$A/$TAG
 { src=$(ls $d/$id.* | head -1)
   python scripts/quality/r4_audio_metrics.py --mix $O/${id}_over-original.mp4 --src $src --sep $A/sep/$id --run $O/$id --manifest $O/$id/${id}_r4b.manifest.json --wer \
