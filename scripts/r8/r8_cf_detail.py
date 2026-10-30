@@ -10,7 +10,7 @@ The low frequencies (mouth shape, opening, motion = what SyncNet and the mismatc
     python scripts/r8/r8_cf_detail.py --base BASE.mp4 --cf CF.mp4 --lm BASE.mediapipe.npz --out OUT.mp4 [--alpha 1 --beta 0 --sigma 0.12 --temporal 1]
 """
 from __future__ import annotations
-import argparse, json, pathlib, sys, time
+import argparse, json, os, pathlib, sys, time
 import numpy as np, cv2
 cv2.setNumThreads(4)
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -41,7 +41,7 @@ def main():
         sg = max(0.8, a.sigma * mw); lf = cv2.GaussianBlur(D, (0, 0), sg)
         boxes[k] = (y0, y1, x0, x1, m); det[k] = (D - lf, lf)
         ring = (m < 0.02); outside.append(float(np.abs(D[ring]).mean()) if ring.any() else 0.0)
-    o = av.open(a.out, "w"); st = o.add_stream("libx264", rate=sb.average_rate); st.width, st.height = W, H; st.pix_fmt = "yuv420p"; st.options = {"crf": str(a.crf), "preset": a.preset}
+    o = av.open(a.out, "w"); st = o.add_stream("libx264", rate=sb.average_rate); st.width, st.height = W, H; st.pix_fmt = "yuv420p"; st.thread_count = int(os.environ.get("DUB_THREADS", "16")); st.options = {"crf": str(a.crf), "preset": a.preset}   # r9: explicit encoder threads (auto on 48 cores: sporadic avcodec_open2 EINVAL, m15 / m20)
     for k in range(n):
         img = B[k]
         if boxes[k] is not None:
