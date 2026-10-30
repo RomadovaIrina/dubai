@@ -27,10 +27,11 @@ nvidia-smi --query-gpu=timestamp,memory.used,utilization.gpu --format=csv,nohead
 trap 'kill $NV 2>/dev/null' EXIT
 st() { echo -e "$1\t$(date +%s.%N)" >> $T; echo "== $ID stage $1 $(date +%T)" | tee -a $L/e2e.log; }   # stage start; the next st (or 'end') closes it
 fail() { FL+=("$1"); ER+=("$1: ${3:-}"); [ "$2" = ERROR ] && STATUS=ERROR || { [ $STATUS = SUCCESS ] && STATUS=$2; }; echo "== $ID $2: $1 ${3:-}" | tee -a $L/e2e.log; }   # fail <flag> <status> [detail]
+collect() { python scripts/r9/collect.py --id $ID --out $OUT --status $STATUS --flags "${FL[*]:-}" --errors "$(printf '%s\n' "${ER[@]:-}")" --stages $T --nvsmi $W/nvsmi.csv --precheck $W/precheck.json \
+    --audio $A/$AT --htd $A/$HT --face $B/$FT --input "$IN"; }
 finish() {
   st end; kill $NV 2>/dev/null; wait $NV 2>/dev/null
-  python scripts/r9/collect.py --id $ID --out $OUT --status $STATUS --flags "${FL[*]:-}" --errors "$(printf '%s\n' "${ER[@]:-}")" --stages $T --nvsmi $W/nvsmi.csv --precheck $W/precheck.json \
-    --audio $A/$AT --htd $A/$HT --face $B/$FT --input "$IN" 2>&1 | tee -a $L/e2e.log
+  collect 2>&1 | tee -a $L/e2e.log
   echo "R9_E2E_DONE $ID $STATUS" | tee -a $L/e2e.log; exit 0
 }
 
@@ -102,8 +103,11 @@ export METRICS=on
   if [ -f $B/$FT/${ID}_$FT.mp4 ]; then
     python scripts/r4/r4_gate.py score --label $FT --dir $B/$FT --ids $ID > $L/face_score.log 2>&1 || echo "WARN face score"
     MAN=$B/$FT/%s_$FT.manifest.json bash scripts/r6/r6_twitch.sh $FT $B/$FT _$FT $ID | grep '=='
-    bash scripts/r7/r7_frame_gate.sh $B/$FT:$FT $ID | grep "^=="
     python scripts/r7/r7_baseline.py freeze --tag $FT --audio $A/$AT --ids $ID --out $W/face_gate.json | tail -2
   fi
 } > $L/metrics.log 2>&1
+if [ -f $B/$FT/${ID}_$FT.mp4 ]; then   # the whole-frame gate is one CPU core for ~1 s per frame at 1080p: in the background (next video starts), then the rows again
+  ( bash scripts/r7/r7_frame_gate.sh $B/$FT:$FT $ID | grep "^=="; python scripts/r7/r7_baseline.py freeze --tag $FT --audio $A/$AT --ids $ID --out $W/face_gate.json | tail -2
+    collect | tail -1; echo "R9_FRAME_GATE_DONE $ID" ) > $L/frame_gate.log 2>&1 < /dev/null &
+  disown; fi
 finish
