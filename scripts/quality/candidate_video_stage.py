@@ -8,9 +8,31 @@ runner's schema (so quality_manifest.py / face_metrics.py work unchanged).
 """
 from __future__ import annotations
 import argparse, json, os, pathlib, shutil, sys, time
+import numpy as np
 HERE = pathlib.Path(__file__).resolve().parent; sys.path.insert(0, str(HERE.parent / "pilot")); sys.path.insert(0, str(HERE.parent / "optim"))
 os.environ.setdefault("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", "1")
 Q = pathlib.Path("/tmp/dabai_quality")
+
+
+class _DiskFrames:
+    """r9: the raw LatentSync frames of the --dump-ls-raw layers, kept in one file on disk instead of two in-RAM dicts (IMG_6185, 158 s:
+    2 x ~11 GB of frames + the master frames exceeded the 44 GB container -> OOM kill). Same use as the dicts: [i] = frame, get(i, default), len()."""
+
+    def __init__(self, path):
+        self.path = pathlib.Path(path); self.fh = open(self.path, "w+b"); self.idx = {}
+
+    def __setitem__(self, i, a):
+        a = np.ascontiguousarray(a); self.fh.seek(0, 2); self.idx[i] = (self.fh.tell(), a.shape, a.dtype.str); self.fh.write(a.tobytes())
+
+    def get(self, i, default=None):
+        if i not in self.idx: return default
+        off, shp, dt = self.idx[i]; self.fh.seek(off); n = int(np.prod(shp)) * np.dtype(dt).itemsize
+        return np.frombuffer(self.fh.read(n), dtype=dt).reshape(shp)
+
+    def __len__(self): return len(self.idx)
+
+    def close(self):
+        self.fh.close(); self.path.unlink(missing_ok=True)
 
 
 class MouthOnlyRunner:
@@ -257,7 +279,8 @@ def main() -> int:
             Mo = rec_cls = make_box_recorder(MouthOnlyRunner, prep.frames)
         runner = Mo(runner, a.mask_top, a.mask_feather, a.mask_smooth, defer=a.codeformer_scope == "mouth")
         if a.dump_raw: runner.raw = {}   # A r3: --dump-raw (_lsraw.mp4)
-    raw_ls = {}; raw_pre = {}; _pre_stash = []   # r8 F: raw_pre = the same LatentSync frames BEFORE CodeFormer (--dump-ls-raw writes _ls_pre.mp4)
+    raw_ls = _DiskFrames(out.with_name(out.stem + "_ls_raw.frames")) if a.dump_ls_raw != "off" else {}   # r9: on disk (long videos)
+    raw_pre = _DiskFrames(out.with_name(out.stem + "_ls_pre.frames")) if a.dump_ls_raw != "off" else {}; _pre_stash = []   # r8 F: raw_pre = the same LatentSync frames BEFORE CodeFormer (--dump-ls-raw writes _ls_pre.mp4)
     if a.dump_ls_raw != "off":   # r3 D: keep the raw LatentSync frames (BGR, before the mouth-only composite) per master frame
         if not getattr(runner, "deferred", False): raise SystemExit("--dump-ls-raw needs --mouth-only-pasteback on --codeformer-scope mouth")
         import hashlib, numpy as np
@@ -324,7 +347,7 @@ def main() -> int:
             _load_master()
             for i, f in enumerate(_mf): w.append_data((raw_ls.get(i, f))[:, :, ::-1])
             w.close()
-        man["ls_raw"] = {"path": str(raw_path), "ls_frames": len(raw_ls), "master_frames": len(_mf)}; del raw_ls
+        man["ls_raw"] = {"path": str(raw_path), "ls_frames": len(raw_ls), "master_frames": len(_mf)}; raw_ls.close(); del raw_ls
         if raw_pre:   # r8 F: the clean (pre-CodeFormer) layer of the same run: the base of the CodeFormer detail transfer (r8_cf_detail.py)
             with rp.timed(times, "dump_ls_pre"):
                 pre_path = raw_path.with_name(raw_path.name.replace("_ls_raw", "_ls_pre")); w = iio.get_writer(str(pre_path), fps=25, codec="libx264rgb", macro_block_size=None,
@@ -332,7 +355,7 @@ def main() -> int:
                 for i, f in enumerate(_mf): w.append_data((raw_pre.get(i, f))[:, :, ::-1])
                 w.close()
             man["ls_raw"]["pre_codeformer"] = {"path": str(pre_path), "ls_frames": len(raw_pre)}
-        del raw_pre
+        raw_pre.close(); del raw_pre
     if a.dump_raw and getattr(runner, "raw", None):
         import cv2, imageio, face_aware_latentsync as fa_
         rawp = out.with_name(out.stem + "_lsraw.mp4"); w_ = imageio.get_writer(str(rawp), fps=25, codec="libx264rgb", macro_block_size=None, pixelformat="rgb24",
