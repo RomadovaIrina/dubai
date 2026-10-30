@@ -16,12 +16,13 @@ Per video (`score`), from the output mp4 + its run manifest:
     python scripts/quality/r3_scorecard.py table --label clean0 --dir DIR [--label r2m --dir DIR2 ...] --out card.md
 """
 from __future__ import annotations
+import os
 import argparse, json, math, pathlib, re, subprocess, sys, tempfile, time
 import numpy as np
 HERE = pathlib.Path(__file__).resolve().parent
 for d in ("pilot", "quality", "diag"): sys.path.insert(0, str(HERE.parent / d))
 PY = sys.executable
-SRC_DIR = pathlib.Path("/workspace/dub/inputs/test_videos_raw"); SHAKY = pathlib.Path("/workspace/dub/common/shaky_windows.json")
+SRC_DIR = pathlib.Path(os.environ.get("DUB_INPUTS", "/workspace/dub/inputs/test_videos_raw")); SHAKY = pathlib.Path("/workspace/dub/common/shaky_windows.json")
 
 
 def src_of(id_):

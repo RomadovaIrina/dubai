@@ -8,6 +8,7 @@ the manifest of --manifest-from, the reproduction of the same version, for the m
     python scripts/r4/r4_gate.py score --label L --dir D [--manifest-from DIR:LABEL] [--ids 01,02,03,04,05]
     python scripts/r4/r4_gate.py compare --new D:L --prev D:L --out r4_video_vN_regression.md [--ids ...]"""
 from __future__ import annotations
+import os
 import argparse, hashlib, json, pathlib, subprocess, sys
 import numpy as np
 HERE = pathlib.Path(__file__).resolve().parent; Q = HERE.parent / "quality"; PY = sys.executable
@@ -65,7 +66,7 @@ def audio_md5(p):
 
 
 def add_chinwave(r, id_, label, d, video):   # task 5: lower-chin low-frequency residual std vs the source (r4_chin_wave.py)
-    src = next(pathlib.Path("/workspace/dub/inputs/test_videos_raw").glob(f"{id_}.*"))
+    src = next(pathlib.Path(os.environ.get("DUB_INPUTS", "/workspace/dub/inputs/test_videos_raw")).glob(f"{id_}.*"))
     cw = run_json([PY, str(HERE / "r4_chin_wave.py"), "--video", str(video), "--src", str(src), "--lm", str(TIMING / f"{id_}_source_lm_F.npz"),
                    "--out", str(d / f"{id_}_{label}.chinwave.json")])
     r["chinwave"] = cw if "mean" in cw else {"mean": None, "worst_2s": None, **cw}
@@ -106,7 +107,7 @@ def score_one(id_, label, d, man_p, force=False, asr_from=None):
                 add_chinwave(r, id_, label, d, video); sj.write_text(json.dumps(r, indent=1))
             if "mouth_audio" not in r: add_mouth_audio(r, id_, label, d, video, json.loads(pathlib.Path(man_p).read_text())); sj.write_text(json.dumps(r, indent=1))
             return r
-    src = next(pathlib.Path("/workspace/dub/inputs/test_videos_raw").glob(f"{id_}.*")); lm = TIMING / f"{id_}_source_lm_F.npz"
+    src = next(pathlib.Path(os.environ.get("DUB_INPUTS", "/workspace/dub/inputs/test_videos_raw")).glob(f"{id_}.*")); lm = TIMING / f"{id_}_source_lm_F.npz"
     subprocess.run([PY, str(Q / "r3_scorecard.py"), "score", "--id", id_, "--label", label, "--video", str(video), "--manifest", str(man_p), "--out", str(d)] + (["--skip-wer"] if asr_from else []),
                    capture_output=True, text=True)
     r = json.loads(sj.read_text()); man = json.loads(pathlib.Path(man_p).read_text())
@@ -179,7 +180,7 @@ def face_same_frames(id_, sn, sp, cache):
     tmpl = json.loads(json.dumps(mn)); segs = [s for s in tmpl["lipsync"]["segments"] if s.get("action") == "LATENT_SYNC"][:1]
     tmpl["lipsync"]["segments"] = [{**segs[0], "start_frame": a0, "end_frame": a1, "action": "LATENT_SYNC"} for a0, a1 in inter]
     mpath = cache.with_suffix(".manifest.json"); mpath.write_text(json.dumps(tmpl))
-    src = next(pathlib.Path("/workspace/dub/inputs/test_videos_raw").glob(f"{id_}.*")); out = {}
+    src = next(pathlib.Path(os.environ.get("DUB_INPUTS", "/workspace/dub/inputs/test_videos_raw")).glob(f"{id_}.*")); out = {}
     for tag, sc in (("new", sn), ("prev", sp)):
         j = cache.with_name(cache.stem + f"_{tag}.mjhr.json")
         subprocess.run([PY, str(Q / "mouth_jitter_hr.py"), "--video", sc["video"], "--reference", str(src), "--manifest", str(mpath), "--out", str(j), "--tag", tag], capture_output=True, text=True)

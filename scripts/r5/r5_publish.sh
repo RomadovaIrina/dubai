@@ -14,7 +14,7 @@ KIND=""; if [ $rc -ne 0 ]; then
   [ "${FORCE_WATCH:-0}" = 1 ] || { echo "GATE FAILED -> not published (see $REG)"; grep -A40 "## Verdict" $REG; exit 1; }; KIND="_WATCH"; fi
 H=/workspace/dub/handoff/out/F/audio-r5-$VER; mkdir -p $OB $H
 for id in 01 02 03 04 05; do
-  src=$(ls /workspace/dub/inputs/test_videos_raw/$id.* | head -1); N=$OB/${id}_r5_audio_${VER}${KIND}
+  src=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1); N=$OB/${id}_r5_audio_${VER}${KIND}
   cp $A/$NEW/${id}_over-original.mp4 ${N}_over-original.mp4
   printf "file '%s'\nfile '%s'\n" $A/$PREV/${id}_over-original.mp4 $A/$NEW/${id}_over-original.mp4 > $A/$NEW/_ab_$id.txt
   ffmpeg -loglevel error -y -f concat -safe 0 -i $A/$NEW/_ab_$id.txt -c copy ${N}_AB_prev-then-new.mp4; rm -f $A/$NEW/_ab_$id.txt

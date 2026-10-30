@@ -7,7 +7,7 @@ for id in "$@"; do
   C=/workspace/dub/canonical/artifacts/baseline/$id/work/work_$id; D=/workspace/dub/artifacts/baseline/$id/work/work_$id; M=/workspace/dub/artifacts/r3/masters/$id
   mkdir -p $D $M
   for f in $C/*; do ln -sfn $f $D/; done
-  src=$(ls /workspace/dub/inputs/test_videos_raw/$id.* | head -1)
+  src=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1)
   [ -f $M/master_25fps.mp4 ] || ffmpeg -loglevel error -y -nostdin -i $src -r 25 -crf 18 -an $M/master_25fps.mp4
   ln -sfn $M/master_25fps.mp4 $D/master_25fps.mp4
   echo "$id: $(ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of csv=p=0 $M/master_25fps.mp4) master frames"

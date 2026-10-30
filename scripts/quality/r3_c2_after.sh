@@ -1,6 +1,6 @@
 #!/bin/bash
 # r3 B: after each C-audio render (gen/<id>_c2F) -> R3 composite (comp/<id>_c2_R3), SyncNet, whole-video deliverables in outbox/
-cd /workspace/dub/dubai; R=/workspace/dub/artifacts/r3-face; S=/workspace/dub/inputs/test_videos_raw; O=/workspace/dub/outbox
+cd /workspace/dub/dubai; R=/workspace/dub/artifacts/r3-face; S=${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}; O=/workspace/dub/outbox
 X="--colour-match upper --seam-lf 4 --sharpen-auto 1.0 --skin-texture source"
 for id in "$@"; do
   until grep -q "^== $id c2F\|^FAIL $id c2F" $R/gen/${id}_c2F.log 2>/dev/null || grep -q "FAIL $id c2F" $R/gpuq/logs/*.log 2>/dev/null; do sleep 20; done

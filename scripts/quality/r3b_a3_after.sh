@@ -1,7 +1,7 @@
 #!/bin/bash
 # r3 B: after each A-recipe render on C audio-r2 (gen/<id>_a3F: r2best, window batch 1, C's manifest / gate, on-time master)
 #   -> final R3 composite comp/<id>_a3_R3 + eval + SyncNet -> outbox full video + window clips + whole-video SBS (all audio-r2).
-cd /workspace/dub/dubai; R=/workspace/dub/artifacts/r3-face; S=/workspace/dub/inputs/test_videos_raw; O=/workspace/dub/outbox
+cd /workspace/dub/dubai; R=/workspace/dub/artifacts/r3-face; S=${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}; O=/workspace/dub/outbox
 R3FLAGS="--colour-match upper --seam-lf 4 --sharpen-auto 0.95 --skin-texture source --lip-guard on"
 for id in "$@"; do
   until grep -q "^== $id a3F\|^FAIL $id a3F" $R/gen/${id}_a3F.log 2>/dev/null; do sleep 20; done

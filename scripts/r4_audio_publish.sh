@@ -11,7 +11,7 @@ python scripts/quality/r4_audio_gate.py --prev $PREV --prev-run $PRUN --new $NEW
 [ $rc -eq 0 ] || { echo "GATE FAILED -> not published (see $REG)"; grep -A30 "## Verdict" $REG; exit 1; }
 H=/workspace/dub/handoff/out/V/audio-r4a-$VER; mkdir -p $OB $H
 for id in 01 02 03 04 05; do
-  src=$(ls /workspace/dub/inputs/test_videos_raw/$id.* | head -1); pm=$(ls $PMED/${id}_*.mp4 | head -1)
+  src=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1); pm=$(ls $PMED/${id}_*.mp4 | head -1)
   cp $A/$NEW/${id}_over-original.mp4 $OB/${id}_r4_audio_${VER}_over-original.mp4
   ffmpeg -loglevel error -y -i $src -i $pm -map 0:v:0 -map 1:a:0 -c copy -shortest $A/$NEW/_prev_$id.mp4
   printf "file '%s'\nfile '%s'\n" $A/$NEW/_prev_$id.mp4 $A/$NEW/${id}_over-original.mp4 > $A/$NEW/_ab_$id.txt

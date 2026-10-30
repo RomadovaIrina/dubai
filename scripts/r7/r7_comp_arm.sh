@@ -7,7 +7,7 @@ set -u
 DUB_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"; export DUB_ROOT; . $DUB_ROOT/scripts/env.sh >/dev/null; cd $DUB_ROOT
 ARM=$1; id=${2:-03}; TAG=${3:-m6}; B=/workspace/dub/artifacts/r4m/$TAG; W=$B/work_${id}_$TAG; O=/workspace/dub/artifacts/r7f/arms/$ARM; mkdir -p $O
 V1="--register sim_ring --ring-region upper --edge-px 12 --colour-match upper --sharpen-auto 0.95 --skin-texture source --lip-guard on --retime flow_safe --face-clip on --sanitize-layer 0.83 --sanitize-mode texture --sanitize-sigma 8 --sharpen-lips-max 0.8 --sanitize-guard on --mouth-region 0.38 --paste-guard 0.5"
-src=$(ls /workspace/dub/inputs/test_videos_raw/$id.* | head -1)
+src=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1)
 s=$(date +%s)
 FIX30_MASTER_FPS=25 FIX30_TD=$B/timing FIX30_MODE=r3fix FIX30_THREADS=${FIX30_THREADS:-12} FIX30_ARGS="$V1 ${EXTRA:-}" bash scripts/quality/r3_fix30.sh $W/${id}_${TAG}_25fps.manifest.json $ARM > $O/${id}.fix30.log 2>&1
 [ -f $W/${id}_${TAG}_25fps_$ARM.mp4 ] || { echo "FAIL arm $ARM $id (see $O/${id}.fix30.log)"; exit 1; }

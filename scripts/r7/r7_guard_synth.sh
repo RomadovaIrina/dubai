@@ -5,7 +5,7 @@
 set -u
 DUB_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"; export DUB_ROOT; . $DUB_ROOT/scripts/env.sh >/dev/null; cd $DUB_ROOT
 id=${1:-03}; TAG=${2:-m6}; F0=${3:-600}; F1=${4:-720}; B=/workspace/dub/artifacts/r4m/$TAG; W=$B/work_${id}_$TAG; O=/workspace/dub/artifacts/r7f/guard_synth; mkdir -p $O
-src=$(ls /workspace/dub/inputs/test_videos_raw/$id.* | head -1); COV=$O/${id}_cover.mp4
+src=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1); COV=$O/${id}_cover.mp4
 python - "$src" "$COV" $F0 $F1 /workspace/dub/artifacts/r7f/lm/${id}_src_mp.npz <<'PY'
 import sys, numpy as np, cv2, av
 src, out, f0, f1, lmp = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4]), sys.argv[5]; lm = np.load(lmp)["lm"]

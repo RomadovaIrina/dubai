@@ -12,10 +12,11 @@ off the dub edges: where the bed is heard alone), GS = G & S (the separator remo
           lvl_P_db / lsd_P_db  the same for the bed in P (a separator should leave pauses alone)
     python scripts/r8/bed_metrics.py --var spleeter=/workspace/dub/r8a/stems_spleeter --var htdemucs=... --ref-tag r8v4c --out X.json 01 02 ..."""
 from __future__ import annotations
+import os
 import argparse, json, pathlib, subprocess, sys
 import numpy as np, soundfile as sf
 HERE = pathlib.Path(__file__).resolve().parent; sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent / "pilot")); sys.path.insert(0, str(HERE.parent / "r7"))
-A = pathlib.Path("/workspace/dub/artifacts/r4a"); RAW = pathlib.Path("/workspace/dub/inputs/test_videos_raw"); FR = 0.02; SR = 44100
+A = pathlib.Path("/workspace/dub/artifacts/r4a"); RAW = pathlib.Path(os.environ.get("DUB_INPUTS", "/workspace/dub/inputs/test_videos_raw")); FR = 0.02; SR = 44100
 HALLU = ("продолжение следует", "субтитр", "редактор", "корректор", "спасибо за просмотр", "подписывайтесь")
 
 

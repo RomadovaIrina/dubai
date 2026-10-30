@@ -3,13 +3,14 @@
 Production = what the dub needs: the r6 pipeline (ASR, diarization, segmentation, Qwen translation, Chatterbox TTS + QA, separation, track),
 retake, clause takes + burst_align, close_inner + soften, lip_place, hush + final soften, remix. NOT counted: the faith judge, metrics, coverage rows.
     python scripts/r8/speed_table.py <tag> [ids]  -> markdown table on stdout"""
+import os
 import json, pathlib, subprocess, sys
 
 A = pathlib.Path("/workspace/dub/artifacts/r4a")
 
 
 def dur(id_):
-    src = sorted(pathlib.Path("/workspace/dub/inputs/test_videos_raw").glob(f"{id_}.*"))[0]
+    src = sorted(pathlib.Path(os.environ.get("DUB_INPUTS", "/workspace/dub/inputs/test_videos_raw")).glob(f"{id_}.*"))[0]
     return float(subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(src)]))
 
 

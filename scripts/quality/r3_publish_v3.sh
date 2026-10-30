@@ -33,7 +33,7 @@ bgclip() {   # 04 17-22 s: full frame + 2x crop of the lower face / jaw side, ha
   CR=$(python - $id $t0 <<'PY'
 import sys, numpy as np, av
 id_, t0 = sys.argv[1], float(sys.argv[2]); lm = np.load(f"/workspace/dub/artifacts/r3d/timing/{id_}_source_lm_F.npz")["lm"]
-c = av.open([p for p in __import__("glob").glob(f"/workspace/dub/inputs/test_videos_raw/{id_}.*")][0]); fps = float(c.streams.video[0].average_rate); c.close()
+c = av.open([p for p in __import__("glob").glob(f"${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/{id_}.*")][0]); fps = float(c.streams.video[0].average_rate); c.close()
 k = int(t0 * fps); seg = lm[k:k + int(5 * fps)]; ov = seg[:, [234, 93, 132, 58, 172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365, 397, 288, 361, 323, 454], :2].reshape(-1, 2)
 ov = ov[np.isfinite(ov).all(1)]; x0, y0 = ov.min(0) - 30; x1, y1 = ov.max(0) + 30; y0 = max(y0, ov[:, 1].mean() - 40)
 w, h = int(x1 - x0) // 2 * 2, int(y1 - y0) // 2 * 2; print(f"{w}:{h}:{max(0, int(x0))}:{max(0, int(y0))}")

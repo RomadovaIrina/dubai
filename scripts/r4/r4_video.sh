@@ -7,7 +7,7 @@
 set -uo pipefail
 DUB_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"; export DUB_ROOT; . "${DUB_ROOT}/scripts/env.sh" >/dev/null; cd "${DUB_ROOT}"
 id=$1; AD=$2; AM=$3; O=$4; TAG=${5:-r4v}; mkdir -p "$O"
-in=$(ls /workspace/dub/inputs/test_videos_raw/${id}.* | head -1); W=$O/work_${id}_$TAG; rm -rf "$W"; mkdir -p "$W"; LOG=$O/${id}_${TAG}.log; : > "$LOG"
+in=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/${id}.* | head -1); W=$O/work_${id}_$TAG; rm -rf "$W"; mkdir -p "$W"; LOG=$O/${id}_${TAG}.log; : > "$LOG"
 PC=/workspace/dub/artifacts/r3d/prep/$id   # phase 2: shared CPU-prep cache per source (25 fps master + its wav + MediaPipe passes; CleanPrep / make_master skip what exists)
 if [ -n "${P2_PREP_CACHE:-}" ] && [ -d "$PC" ]; then mkdir -p "$W/video"; cp -n "$PC"/* "$W/video/" 2>/dev/null; echo "prep cache: $(ls $PC | tr '\n' ' ')" >> "$LOG"; fi
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True

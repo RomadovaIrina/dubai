@@ -4,6 +4,7 @@
   most: the excerpt with PREVIOUS audio, then the same excerpt with the candidate, labelled), outbox/<cand>_listen.md (5 most-changed pauses per video
   + the added "source talks, dub silent" seconds).
     python scripts/quality/r4_listen_pack.py --prev cand2 --prev-label v1 --cand pb1 [--len 18]"""
+import os
 import argparse, json, pathlib, subprocess
 A = pathlib.Path("/workspace/dub/artifacts/r4a"); OB = pathlib.Path("/workspace/dub/outbox"); F = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
@@ -34,7 +35,7 @@ def main():
     for id_ in ["01", "02", "03", "04", "05"]:
         pm, nm = (json.loads((A / t / f"{id_}.metrics.json").read_text()) for t in (a.prev, a.cand))
         ch = changes(pm.get("pause_rows") or [], nm.get("pause_rows") or [])
-        src = next(pathlib.Path("/workspace/dub/inputs/test_videos_raw").glob(f"{id_}.*"))
+        src = next(pathlib.Path(os.environ.get("DUB_INPUTS", "/workspace/dub/inputs/test_videos_raw")).glob(f"{id_}.*"))
         subprocess.run(["cp", str(A / a.cand / f"{id_}_over-original.mp4"), str(OB / f"{id_}_r4_audio_{a.cand}_LISTEN_over-original.mp4")], check=True)
         dur = pm["duration_s"]; ex = []
         for _, t, _ in ch:   # excerpts centred on the biggest changes, non-overlapping

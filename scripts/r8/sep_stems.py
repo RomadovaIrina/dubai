@@ -3,9 +3,10 @@
 <out>/<id>/{bg_44k.wav, vocals_44k.wav, sep.json}. The first video is preceded by a 10-s warm-up so its separate_s is not the CUDA init.
     DUB_ALLOW_NC_BED=1 [DUB_SEP_BG=residual] flock /workspace/dub/gpu.lock python scripts/r8/sep_stems.py --sep htdemucs --out /workspace/dub/r8a/stems_htdemucs 01 02 ..."""
 from __future__ import annotations
+import os
 import argparse, json, pathlib, sys, tempfile, time
 HERE = pathlib.Path(__file__).resolve().parent; sys.path.insert(0, str(HERE.parent / "pilot"))
-RAW = pathlib.Path("/workspace/dub/inputs/test_videos_raw")
+RAW = pathlib.Path(os.environ.get("DUB_INPUTS", "/workspace/dub/inputs/test_videos_raw"))
 
 
 def main():

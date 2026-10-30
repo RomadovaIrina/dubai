@@ -28,7 +28,7 @@ m["dubbed_track"] = {**m["dubbed_track"], "aac": str(pathlib.Path(b3) / "final_m
 pathlib.Path(out).with_suffix(".manifest.json").write_text(json.dumps(m, indent=1))
 PY
   cp $out $OB/${id}_r3cand_audio-r3_final.mp4
-  SRC=$(ls /workspace/dub/inputs/test_videos_raw/$id.* | head -1)
+  SRC=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1)
   C0=$V/${id}_clean0a3.mp4; [ -f $C0 ] || C0=$V/${id}_clean0.mp4
   HALF=1 bash scripts/quality/r3d_sbs.sh $OB/${id}_sbs_CLEAN0-R3F-R3CAND.mp4 ORIGINAL=$SRC "CLEAN0 25fps"=$C0 "R3F (audio-r2)"=$V/${id}_r3F_fix30.mp4 "R3CAND (audio-r3b)"=$out > /dev/null 2>&1
   echo "== $id r3cand final -> $OB/${id}_r3cand_audio-r3_final.mp4"

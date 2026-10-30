@@ -6,7 +6,7 @@ set -u
 cd /workspace/dub/dubai; . scripts/env.sh >/dev/null
 VER=$1; PREV=$2; NEW=$3; shift 3; PVER=${PVER:-v3a1}; A=/workspace/dub/artifacts/r4a; OUT=/workspace/dub/outbox; mkdir -p $OUT /workspace/dub/r8a/cov
 for id in "$@"; do
-  src=$(ls /workspace/dub/inputs/test_videos_raw/$id.* | head -1); t=$(mktemp -d)
+  src=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1); t=$(mktemp -d)
   ffmpeg -loglevel error -y -i $src -i $PREV/$id/final_mix_aac.m4a -map 0:v:0 -map 1:a:0 -vf "scale=-2:720,fps=25,drawtext=text='A  $PVER':x=20:y=20:fontsize=36:fontcolor=white:box=1:boxcolor=black@0.6" \
     -c:v libx264 -crf 20 -preset veryfast -c:a aac -b:a 192k -ar 48000 -ac 2 -shortest $t/a.mp4
   W=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 $t/a.mp4)

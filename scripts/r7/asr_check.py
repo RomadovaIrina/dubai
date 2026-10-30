@@ -4,12 +4,13 @@
   2. the hallucination guard on that transcript: every dropped / trimmed / flagged segment, a listen clip of each drop (clips/<id>_drop<k>.m4a)
   3. --asr-segments vad: the piece table, every cut checked against Silero speech (+-50 ms), and the transcript diff vs the whole-file call
     python scripts/r7/asr_check.py --out /workspace/dub/artifacts/r4a/asrchk [ids]       (writes asr_check.json + asr_check.md)"""
+import os
 import argparse, difflib, json, pathlib, subprocess, sys, time
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "pilot"))
 import run_clean_pipeline_05 as P  # noqa: E402
 import asr_guard  # noqa: E402
 
-RAW = pathlib.Path("/workspace/dub/inputs/test_videos_raw"); R6 = pathlib.Path("/workspace/dub/handoff/in/audio-r6-v1")
+RAW = pathlib.Path(os.environ.get("DUB_INPUTS", "/workspace/dub/inputs/test_videos_raw")); R6 = pathlib.Path("/workspace/dub/handoff/in/audio-r6-v1")
 
 
 def tc(t): return f"{int(t // 60)}:{t % 60:05.2f}"

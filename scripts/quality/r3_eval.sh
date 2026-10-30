@@ -4,7 +4,7 @@
 set -u
 id=$1; tag=$2; vid=$3; man=${4:-}
 cd /workspace/dub/dubai; export SLIDE_DIR=/workspace/dub/artifacts/r3-face; R=$SLIDE_DIR; M=$R/metrics; mkdir -p $M
-PY=/venv/dabai/bin/python; SRC=$(ls /workspace/dub/inputs/test_videos_raw/$id.*)
+PY=/venv/dabai/bin/python; SRC=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.*)
 $PY scripts/quality/r3_flicker.py --video $vid --ref $SRC --lm $R/timing/${id}_source_lm.npz --out $M/${id}_$tag.flicker.json --series > /dev/null 2>&1 &
 for w in $($PY -c "
 import json,numpy as np; d=json.load(open('/workspace/dub/common/shaky_windows.json'))['videos'].get('$id',{}).get('windows_s',[])

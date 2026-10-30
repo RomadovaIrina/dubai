@@ -4,7 +4,7 @@
 # has 0 gap words (Whisper on the mix gaps) on the htdemucs mix.
 #     bash scripts/r8/publish_v5.sh /workspace/dub/handoff/out/F/audio-r8-v4s v4s
 set -u
-cd /workspace/dub/sep; H=$1; L=$2; IDS="01 02 03 04 05"; A=/workspace/dub/artifacts/r4a; OUT=/workspace/dub/handoff/out/F; LOG=/workspace/dub/r8a/sep_logs
+cd "$(dirname "$0")/../.."; H=$1; L=$2; IDS="01 02 03 04 05"; A=/workspace/dub/artifacts/r4a; OUT=/workspace/dub/handoff/out/F; LOG=/workspace/dub/r8a/sep_logs
 SRC=h_$L; SPL=v5spl_$L; HTD=v5_$L; HFLAGS="--bed-pauses source --bed-noise-back on --src-duck-db -3 --dub-gate off"
 bash scripts/r8/from_handoff.sh $H $SRC $IDS
 SEP_SRC=$SRC SEP_ASR=off bash scripts/r8/sep_mix.sh $SPL spleeter stems "--dub-gate off" $IDS > $LOG/$SPL.out 2>&1

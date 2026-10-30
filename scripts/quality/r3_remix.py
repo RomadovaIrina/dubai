@@ -172,7 +172,7 @@ def main() -> int:
             C = stems_root / f"stems_{a.sep}{'_res' if a.sep_bg == 'residual' else ''}" / id_
             if not (C / "bg_44k.wav").exists():
                 os.environ["DUB_SEP_BG"] = a.sep_bg; bb.SEP_BG = a.sep_bg; C.mkdir(parents=True, exist_ok=True)
-                src = next(pathlib.Path("/workspace/dub/inputs/test_videos_raw").glob(f"{id_}.*"))
+                src = next(pathlib.Path(os.environ.get("DUB_INPUTS", "/workspace/dub/inputs/test_videos_raw")).glob(f"{id_}.*"))
                 (C / "sep.json").write_text(json.dumps(bb.separate_background(src, C, separator=a.sep), indent=1))
             sep = {"bg": str(C / "bg_44k.wav"), "vocals": str(C / "vocals_44k.wav")}
             for f in ("bg_44k.wav", "vocals_44k.wav"): (O / f).unlink(missing_ok=True); (O / f).symlink_to(C / f)   # mixdrop / metrics read the run dir's raw bed

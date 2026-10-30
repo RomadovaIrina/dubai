@@ -8,7 +8,7 @@ set -euo pipefail
 id=$1; tag=${2:-r2}; shift $(( $# >= 2 ? 2 : 1 ))
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNS=/workspace/dub/c/runs/$tag; mkdir -p "$RUNS"
-src=$(ls /workspace/dub/inputs/test_videos_raw/${id}.* | head -1)
+src=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/${id}.* | head -1)
 source /venv/dabai/bin/activate
 set -a; . /workspace/.env 2>/dev/null || true; set +a          # HF token for the gated pyannote pipeline (never printed)
 export DUB_ROOT="$REPO" DUB_SPLEETER_PY=/workspace/dub/c/venv-spleeter/bin/python DUB_THREADS=${DUB_THREADS:-8}

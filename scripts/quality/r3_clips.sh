@@ -5,7 +5,7 @@
 #   r3_clips.sh <id> <r3 tag> [r2 tag=T3] [clean0 tag=clean0] [label]
 set -u
 id=$1; r3=$2; r2=${3:-T3}; c0=${4:-clean0}; lab=${5:-R3}; cd /workspace/dub/dubai; R=/workspace/dub/artifacts/r3-face; O=/workspace/dub/outbox; mkdir -p $R/sbs $O
-SRC=$(ls /workspace/dub/inputs/test_videos_raw/$id.*); PY=/venv/dabai/bin/python
+SRC=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.*); PY=/venv/dabai/bin/python
 FPS=$(ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate -of csv=p=0 $SRC | python3 -c "import sys;n,d=sys.stdin.read().split('/');print(round(float(n)/float(d),3))")
 for w in $($PY -c "
 import json; d=json.load(open('/workspace/dub/common/shaky_windows.json'))['videos'].get('$id',{}).get('windows_s',[])

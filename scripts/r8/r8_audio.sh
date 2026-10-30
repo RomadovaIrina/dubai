@@ -17,7 +17,7 @@ s=$(date +%s)
 if [ -z "${REUSE:-}" ]; then   # from the raw input (one-command E2E): the r6 pipeline's takes only (ASR, diarization, Qwen 14B, Chatterbox), no mix / metrics / judge
   BASE=${TAG}pre; R4_PIPELINE_ONLY=1 R5_FAITH=off PAR=${PAR:-1} R6_EXTRA="${R8_PIPE_EXTRA:-}" bash scripts/r6/r6_audio.sh $BASE $IDS || exit 1
   for id in $IDS; do mkdir -p $A/sep/$id; [ -f $A/sep/$id/bg_44k.wav ] || cp $(readlink -f $A/$BASE/mix_src/$id)/bg_44k.wav $(readlink -f $A/$BASE/mix_src/$id)/vocals_44k.wav $A/sep/$id/
-    [ -f $A/sep/$id/source_mediapipe.npz ] || python -c "import sys; sys.path.insert(0,'scripts/pilot'); import clean_face_stack as c, pathlib; c.run_mediapipe(pathlib.Path('$(ls /workspace/dub/inputs/test_videos_raw/$id.* | head -1)'), pathlib.Path('$A/sep/$id/source_mediapipe.npz'))" > /dev/null 2>&1; done
+    [ -f $A/sep/$id/source_mediapipe.npz ] || python -c "import sys; sys.path.insert(0,'scripts/pilot'); import clean_face_stack as c, pathlib; c.run_mediapipe(pathlib.Path('$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1)'), pathlib.Path('$A/sep/$id/source_mediapipe.npz'))" > /dev/null 2>&1; done
   FAITH_ARG="--faith judge"   # retake judges the pipeline's own text (same prompt / 14B), no separate faith pass
 else BASE=$REUSE; FAITH_ARG=""; fi
 echo "BASE_DONE $(( $(date +%s) - s )) s" >> $S/times.txt
@@ -26,7 +26,7 @@ BA_ARGS="${R8_ALIGN_ARGS---min-piece 0.2 --sil-ratio 1.5 --natural-cuts on}"
 if [ "${R8_ONEPROC:-on}" = on ]; then   # speed L5: retake -> clause takes -> burst_align of ALL videos in one process, models loaded once (scripts/r8/r8_tts_stage.py)
   J=$S/oneproc_jobs.json; t0p=$(date +%s.%N)
   for id in $IDS; do
-    ffmpeg -loglevel error -y -i "$(ls /workspace/dub/inputs/test_videos_raw/$id.* | head -1)" -vn -ac 1 -ar 16000 -c:a pcm_s16le $S/src16/${id}_16k.wav
+    ffmpeg -loglevel error -y -i "$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1)" -vn -ac 1 -ar 16000 -c:a pcm_s16le $S/src16/${id}_16k.wav
     f="$FAITH_ARG"; [ -z "$f" ] && for t in ${R7_PREV:-} $BASE; do [ -f $A/$t/$id.metrics.json ] && { f="--faith $A/$t/$id.metrics.json"; break; }; done
     [ -z "$f" ] && f="--faith judge"
     echo "$id|$(readlink -f $A/$BASE/mix_src/$id)|$f"
@@ -50,7 +50,7 @@ for id in $IDS; do
     W=$S/rt/$id; [ -f $S/ct/$id/dubbed_24k.wav ] && W=$S/ct/$id; [ -f $S/ba/$id/dubbed_24k.wav ] && W=$S/ba/$id; t1=$t0; t2=$t0
   else
   w=$(readlink -f $A/$BASE/mix_src/$id); s16=$S/src16/${id}_16k.wav; fc=$A/sep/$id/source_mediapipe.npz
-  ffmpeg -loglevel error -y -i "$(ls /workspace/dub/inputs/test_videos_raw/$id.* | head -1)" -vn -ac 1 -ar 16000 -c:a pcm_s16le $s16
+  ffmpeg -loglevel error -y -i "$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1)" -vn -ac 1 -ar 16000 -c:a pcm_s16le $s16
   f="$FAITH_ARG"; [ -z "$f" ] && for t in ${R7_PREV:-} $BASE; do [ -f $A/$t/$id.metrics.json ] && { f="--faith $A/$t/$id.metrics.json"; break; }; done
   [ -z "$f" ] && f="--faith judge"   # no faith rows anywhere (a fresh base): retake judges the text itself
   t0=$(date +%s.%N)

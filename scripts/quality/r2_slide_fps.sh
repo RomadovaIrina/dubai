@@ -6,7 +6,7 @@
 set -u
 id=$1; win=$2; out=$3; vid=$4; pos=${5:-}
 DUB_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"; export DUB_ROOT; . "${DUB_ROOT}/scripts/env.sh" >/dev/null; cd "${DUB_ROOT}"
-R=${SLIDE_DIR:-/workspace/dub/artifacts/restoration-temporal/r2}; SRC=$(ls /workspace/dub/inputs/test_videos_raw/$id.*); C=$R/fps30/cuts; mkdir -p $C
+R=${SLIDE_DIR:-/workspace/dub/artifacts/restoration-temporal/r2}; SRC=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.*); C=$R/fps30/cuts; mkdir -p $C
 K=$(python -c "
 import numpy as np; z=np.load('$R/timing/${id}_source_lm.npz'); mu=z['mu']; A,B=[int(x) for x in '$win'.split(':')]
 k=np.flatnonzero((mu>=A+2)&(mu<=B-3)); print(f'{k.min()}:{k.max()+1}')")

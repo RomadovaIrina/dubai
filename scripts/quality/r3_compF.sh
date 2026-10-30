@@ -1,7 +1,7 @@
 #!/bin/bash
 # Round 3 track B: on-time-master (genF) source-fps composite of <id> + evaluation.  r3_compF.sh <id> <tag> [extra fps_composite flags]
 set -u
-id=$1; tag=$2; shift 2; cd /workspace/dub/dubai; R=/workspace/dub/artifacts/r3-face; T=$R/timing; PY=/venv/dabai/bin/python; SRC=$(ls /workspace/dub/inputs/test_videos_raw/$id.*)
+id=$1; tag=$2; shift 2; cd /workspace/dub/dubai; R=/workspace/dub/artifacts/r3-face; T=$R/timing; PY=/venv/dabai/bin/python; SRC=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.*)
 [ -f $T/${id}_master_timing_F.json ] || $PY scripts/quality/r3_master_timing.py --src $SRC --master $R/gen/work_${id}_genF/master_25fps.mp4 --vf fps=25 --out $T/${id}_master_timing_F.json
 [ -f $T/${id}_source_lm_F.npz ] || $PY -c "
 import numpy as np, json

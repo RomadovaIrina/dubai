@@ -23,7 +23,7 @@ if [ "${RETAKE:-on}" = on ]; then   # v3a (default): longer takes where the spea
   mkdir -p $A/${TAG}src/mix_src $A/${TAG}src/src16
   for id in $IDS; do
     w=$(readlink -f $A/$BASE/mix_src/$id); o=$A/${TAG}src/runs/$id/work; s16=$A/${TAG}src/src16/${id}_16k.wav
-    ffmpeg -loglevel error -y -i "$(ls /workspace/dub/inputs/test_videos_raw/$id.* | head -1)" -vn -ac 1 -ar 16000 -c:a pcm_s16le $s16
+    ffmpeg -loglevel error -y -i "$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1)" -vn -ac 1 -ar 16000 -c:a pcm_s16le $s16
     f=""; for t in $BASE ${R7_PREV:-}; do [ -f $A/$t/$id.metrics.json ] && { f="--faith $A/$t/$id.metrics.json"; break; }; done   # same text => same judge rows
     [ "${R7_LEAN:-off}" = on ] && [ -z "${REUSE:-}" ] && f="--faith judge"
     fc=$A/sep/$id/source_mediapipe.npz; [ -f $fc ] && fc="--face $fc" || fc=""

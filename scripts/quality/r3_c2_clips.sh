@@ -1,7 +1,7 @@
 #!/bin/bash
 # r3 B: user clips on C's audio-r2 only: R2 panel = round-2 FIX30 (T3) on A's generator with the -r 25 master (gen/<id>_c2g),
 # CLEAN0 panel = clean-base video stage (gen/<id>_c2c0), R3 = comp/<id>_c2_R3f. Window clips + whole-video side-by-side.
-cd /workspace/dub/dubai; R=/workspace/dub/artifacts/r3-face; S=/workspace/dub/inputs/test_videos_raw; O=/workspace/dub/outbox
+cd /workspace/dub/dubai; R=/workspace/dub/artifacts/r3-face; S=${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}; O=/workspace/dub/outbox
 for id in "$@"; do
   until grep -q "^== $id c2g" $R/gen/${id}_c2g.log 2>/dev/null; do sleep 20; done
   [ -f $R/comp/${id}_c2_T3.mp4 ] || /venv/dabai/bin/python scripts/quality/fps_composite.py --manifest $R/gen/${id}_c2g.manifest.json --ls-raw $R/gen/${id}_c2g_ls_raw.mp4 \

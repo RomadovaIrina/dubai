@@ -13,7 +13,7 @@ export PYTHONPATH=third_party/llama_cuda${PYTHONPATH:+:$PYTHONPATH} PYTORCH_CUDA
 echo "r4_audio $TAG commit $(git rev-parse --short HEAD) AUDIO_EXTRA='${AUDIO_EXTRA:-}' REMIX_ARGS='${REMIX_ARGS:-}' REUSE='${REUSE:-}'" >> $O/README.txt
 TH=$(( 24 / ${PAR:-2} )); [ $TH -lt 2 ] && TH=2
 one() {
-  id=$1; src=$(ls /workspace/dub/inputs/test_videos_raw/$id.* | head -1); s=$(date +%s); t_start=$(date +%s.%N)
+  id=$1; src=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1); s=$(date +%s); t_start=$(date +%s.%N)
   if [ -n "${REUSE:-}" ]; then W=$(readlink -f $A/$REUSE/mix_src/$id); else
     python scripts/pilot/run_clean_pipeline_05.py --input $src --output $O/runs/${id}_r4a.mp4 --target-lang en --alignment burst \
       --stop-after audio --codeformer off --face-stack mediapipe --audio-policy r2 --qwen-gpu-layers -1 --tts-text-norm on --qa-whisper-compute int8_float16 \

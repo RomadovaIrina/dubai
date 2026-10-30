@@ -7,7 +7,7 @@ for id in 04 03 05 01 02; do
   [ -f $A4/$id/dubbed_16k.wav ] || { echo "WARN no audio-r4 $id"; continue; }
   DUBBED_DIR_TPL=$A4/$id MANIFEST_TPL=$A4/$id/${id}_r4.manifest.json bash scripts/quality/r3_video.sh r3final $id
   ( FIX30_MODE=r3fix FIX30_THREADS=8 bash scripts/quality/r3_fix30.sh $V/${id}_r3final.manifest.json
-    SRC=$(ls /workspace/dub/inputs/test_videos_raw/$id.* | head -1); LM=$T/${id}_source_lm_F.npz; [ -f $LM ] && LMA="--lm $LM" || LMA=""
+    SRC=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1); LM=$T/${id}_source_lm_F.npz; [ -f $LM ] && LMA="--lm $LM" || LMA=""
     python scripts/quality/r3_flash.py --video $V/${id}_r3final_fix30.mp4 --src $SRC $LMA --out $V/${id}_r3final_fix30.flash.json | tail -1 | cut -c1-200 ) &
 done
 wait; echo "R3FINAL_DONE $(date +%T)"

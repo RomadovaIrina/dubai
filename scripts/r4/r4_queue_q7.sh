@@ -34,7 +34,7 @@ for id in $IDS; do
   done
 done
 mkdir -p $B/v5; [ -f $B/v5/04_e2e_v5.mp4 ] || flock /workspace/dub/gpu.lock bash scripts/r3_e2e_v5.sh 04 $B/v5 > $B/v5/run.out 2>&1
-python scripts/r4/r4_face_metrics.py --video $B/v5/04_e2e_v5.mp4 --src /workspace/dub/inputs/test_videos_raw/04.mp4 --src-lm $B/v4repro/timing/04_source_lm_F.npz --out $B/v5/04_e2e_v5.r4face.json > $B/v5/face.out 2>&1
+python scripts/r4/r4_face_metrics.py --video $B/v5/04_e2e_v5.mp4 --src ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/04.mp4 --src-lm $B/v4repro/timing/04_source_lm_F.npz --out $B/v5/04_e2e_v5.r4face.json > $B/v5/face.out 2>&1
 wait
 cat $B/q7_cpu_*.out | grep -E "^==|FAIL"
 echo Q7_DONE

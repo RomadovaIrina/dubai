@@ -1,7 +1,7 @@
 #!/bin/bash
 # r3 B: dub-silent stretches where the source speaks (C's residual gaps): OPT1 still lower face / OPT2 original pass-through, eased,
 # on top of the final R3 composite; 4-panel clips ORIGINAL | R3 | OPT1 | OPT2 (+ half speed) around every gap >= 0.6 s. audio-r2 only.
-cd /workspace/dub/dubai; R=/workspace/dub/artifacts/r3-face; S=/workspace/dub/inputs/test_videos_raw; O=/workspace/dub/outbox
+cd /workspace/dub/dubai; R=/workspace/dub/artifacts/r3-face; S=${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}; O=/workspace/dub/outbox
 R3FLAGS="--colour-match upper --seam-lf 4 --sharpen-auto 0.95 --skin-texture source --lip-guard on"
 for id in "$@"; do
   until [ -f $R/comp/${id}_a3_R3.mp4 ] && [ -f $R/metrics/${id}_a3_R3.syncnet.json ]; do sleep 30; done

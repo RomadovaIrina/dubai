@@ -15,7 +15,7 @@ KIND=""; if [ $rc -ne 0 ]; then
 [ "${WATCH:-0}" = 1 ] && KIND="_WATCH"   # r6: a gate-passing candidate that still needs the user's ear before it replaces the audio of record (no READY)
 H=/workspace/dub/handoff/out/F/audio-r6-$VER; mkdir -p $OB $H
 for id in 01 02 03 04 05; do
-  src=$(ls /workspace/dub/inputs/test_videos_raw/$id.* | head -1); N=$OB/${id}_r6_audio_${VER}${KIND}
+  src=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1); N=$OB/${id}_r6_audio_${VER}${KIND}
   cp $A/$NEW/${id}_over-original.mp4 ${N}_over-original.mp4
   printf "file '%s'\nfile '%s'\n" $A/$PREV/${id}_over-original.mp4 $A/$NEW/${id}_over-original.mp4 > $A/$NEW/_ab_$id.txt
   ffmpeg -loglevel error -y -f concat -safe 0 -i $A/$NEW/_ab_$id.txt -c copy ${N}_AB_prev-then-new.mp4; rm -f $A/$NEW/_ab_$id.txt

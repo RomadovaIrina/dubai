@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """r8-sep: residual bed of a stem cache: bg = source - vocals stem (keeps what the model filed under no stem, e.g. the room noise under the voice).
     python scripts/r8/derive_res.py /workspace/dub/r8a/stems_htdemucs 01 02 ...   -> /workspace/dub/r8a/stems_htdemucs_res/<id>/"""
+import os
 import json, pathlib, subprocess, sys
 import numpy as np, soundfile as sf
-RAW = pathlib.Path("/workspace/dub/inputs/test_videos_raw")
+RAW = pathlib.Path(os.environ.get("DUB_INPUTS", "/workspace/dub/inputs/test_videos_raw"))
 src_dir = pathlib.Path(sys.argv[1]); out = src_dir.with_name(src_dir.name + "_res")
 for id_ in sys.argv[2:]:
     d = out / id_; d.mkdir(parents=True, exist_ok=True); w = d / "_src.wav"

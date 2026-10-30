@@ -11,7 +11,7 @@ export OMP_NUM_THREADS=${OMP_NUM_THREADS:-8}
 LABEL=$1; DIR=$2; SUF=$3; shift 3; IDS=${*:-01 02 03 04 05}
 LM_DIR=${LM_DIR:-/workspace/dub/artifacts/r6f/lm}; O=/workspace/dub/artifacts/r6f/twitch/$LABEL; mkdir -p $O
 for id in $IDS; do
-  v=$DIR/${id}${SUF}.mp4; src=$(ls /workspace/dub/inputs/test_videos_raw/$id.* | head -1); lm=$LM_DIR/${id}_src_lm.npz
+  v=$DIR/${id}${SUF}.mp4; src=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1); lm=$LM_DIR/${id}_src_lm.npz
   [ -f "$v" ] || { echo "no video $v"; continue; }; [ -f "$lm" ] || { echo "no landmarks $lm"; continue; }
   m=(); [ -n "${MAN:-}" ] && { mf=$(printf "$MAN" $id); [ -f "$mf" ] && m=(--manifest "$mf"); }
   s=$(date +%s)

@@ -8,9 +8,10 @@ the inactive face must be untouched (encode noise only), the active one lip-sync
     r3_twoface.py check --out DIR --video RUN.mp4
 """
 from __future__ import annotations
+import os
 import argparse, json, pathlib, subprocess, sys
 import numpy as np
-CAN = pathlib.Path("/workspace/dub/canonical/artifacts/baseline"); RAW = pathlib.Path("/workspace/dub/inputs/test_videos_raw")
+CAN = pathlib.Path("/workspace/dub/canonical/artifacts/baseline"); RAW = pathlib.Path(os.environ.get("DUB_INPUTS", "/workspace/dub/inputs/test_videos_raw"))
 
 
 def run(c): subprocess.run(c, check=True)

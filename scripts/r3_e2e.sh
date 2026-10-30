@@ -13,7 +13,7 @@
 set -uo pipefail
 DUB_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"; export DUB_ROOT; . "${DUB_ROOT}/scripts/env.sh" >/dev/null; cd "${DUB_ROOT}"
 arg=$1; O=${2:-/workspace/dub/artifacts/r3d/e2e}; mkdir -p "$O"
-if [ -f "$arg" ]; then in=$arg; id=$(basename "${arg%.*}"); else id=$arg; in=$(ls /workspace/dub/inputs/test_videos_raw/${id}.* | head -1); fi
+if [ -f "$arg" ]; then in=$arg; id=$(basename "${arg%.*}"); else id=$arg; in=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/${id}.* | head -1); fi
 TAG=${TAG:-r3}; W=$O/work; mkdir -p "$W"; LOG=$O/${id}_${TAG}.log; : > "$LOG"
 VIDEO_ARGS=${VIDEO_ARGS:-"--anchor-filter flow:4 --anchor-round off --affine-precision fp32 --mask-track head"}
 FIX30_ARGS=${FIX30_ARGS:-"--register sim_ring --ring-region upper --edge-px 12"}

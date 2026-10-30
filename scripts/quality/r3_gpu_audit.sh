@@ -35,7 +35,7 @@ elif [ $var = resaudio ]; then
   run_one worker python scripts/pilot/run_worker.py --run-root $R --ids "$@" -- $FLAGS $GF --qwen-resident off
 else
   for id in "$@"; do
-    in=$(ls /workspace/dub/inputs/test_videos_raw/$id.* | head -1)
+    in=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1)
     export DUB_STAGE_JOB=$id; run_one $id python scripts/pilot/run_clean_pipeline_05.py --input $in --output $R/${id}_final.mp4 --work-dir $R/work $FLAGS $GF
   done
 fi

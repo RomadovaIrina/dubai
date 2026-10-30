@@ -3,12 +3,13 @@
 speed (audio stage s/video-min, LLM time split candidates / judge (= back-translation + score in one call) / pipeline LLM steps, tokens/s), peak VRAM,
 quality (14B faithfulness judge for every arm, NE, WER, tempo / gap / placement axes). Sums / means over the five videos.
     python scripts/r7/r7_qwen_table.py q14 q7 q7j14 q14r1 > table.md"""
+import os
 import json, pathlib, re, subprocess, sys
 A = pathlib.Path("/workspace/dub/artifacts/r4a"); IDS = ["01", "02", "03", "04", "05"]
 
 
 def dur(id_):
-    f = next(pathlib.Path("/workspace/dub/inputs/test_videos_raw").glob(f"{id_}.*"))
+    f = next(pathlib.Path(os.environ.get("DUB_INPUTS", "/workspace/dub/inputs/test_videos_raw")).glob(f"{id_}.*"))
     return float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(f)], capture_output=True, text=True).stdout)
 
 
