@@ -89,6 +89,7 @@ done
 [ -f $OUT/${ID}_DabAI_r9_spleeter.mp4 ] || [ -f $OUT/${ID}_DabAI_r9_demucs.mp4 ] || fail no_output ERROR
 
 st metrics   # NOT production: the r8 gate rows on the outputs (logs/metrics.log)
+[ "${E2E_METRICS:-on}" = off ] && finish   # r9: production only (the gate rows are scored separately)
 export METRICS=on
 { src=$SRC; O=$A/$AT
   python scripts/quality/r4_audio_metrics.py --mix $O/${ID}_over-original.mp4 --src $src --sep $A/sep/$ID --run $O/$ID --manifest $O/$ID/${ID}_r4b.manifest.json --wer \
