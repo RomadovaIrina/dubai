@@ -9,5 +9,5 @@ DUB_ROOT=${DUB_ROOT:-/workspace/dub/dubai}; export DUB_ROOT; cd $DUB_ROOT; TAG=$
 export AUDIO_EXTRA="--ne-guard on --pause-boundary-only on ${R5_EXTRA---dur-translate on}" REMIX_ARGS="${REMIX_ARGS:---src-duck-db -6}"
 s=$(date +%s); bash scripts/r4_audio.sh $TAG $IDS
 . scripts/env.sh >/dev/null; export PYTHONPATH=third_party/llama_cuda${PYTHONPATH:+:$PYTHONPATH}
-[ "${R5_FAITH:-on}" = on ] && { python scripts/r5/r5_faith.py $TAG $IDS > /workspace/dub/artifacts/r4a/$TAG/runs/faith.log 2>&1 || echo "WARN faith"; }
+[ "${R5_FAITH:-on}" = on ] && [ "${METRICS:-on}" = on ] && { python scripts/r5/r5_faith.py $TAG $IDS > /workspace/dub/artifacts/r4a/$TAG/runs/faith.log 2>&1 || echo "WARN faith"; }
 echo "R5_AUDIO_DONE $TAG $(( $(date +%s) - s )) s"

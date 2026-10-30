@@ -91,6 +91,7 @@ export METRICS=on
 { src=$SRC; O=$A/$AT
   python scripts/quality/r4_audio_metrics.py --mix $O/${ID}_over-original.mp4 --src $src --sep $A/sep/$ID --run $O/$ID --manifest $O/$ID/${ID}_r4b.manifest.json --wer \
     --series $O/${ID}.series.npz --json $O/${ID}.metrics.json || echo "WARN audio metrics"
+  PYTHONPATH=third_party/llama_cuda:${PYTHONPATH:-} python scripts/r5/r5_faith.py $AT $ID > $O/runs/faith.log 2>&1 || echo "WARN faith"   # the 14B judge + back-translation -> metrics.json faith
   python scripts/r8/coverage.py --run $O/$ID --id $ID --label $AT --face $A/sep/$ID/source_mediapipe.npz --out $O/cov/cov_$ID | tail -1
   python scripts/r8/pacing.py --run $O/$ID --id $ID --label $AT --face $A/sep/$ID/source_mediapipe.npz --out $O/cov/pace_$ID | tail -1
   python scripts/r8/cuts.py --run $O/$ID --id $ID --label $AT --out $O/cov/cuts_$ID | tail -1
@@ -104,6 +105,7 @@ export METRICS=on
     python scripts/r4/r4_gate.py score --label $FT --dir $B/$FT --ids $ID > $L/face_score.log 2>&1 || echo "WARN face score"
     MAN=$B/$FT/%s_$FT.manifest.json bash scripts/r6/r6_twitch.sh $FT $B/$FT _$FT $ID | grep '=='
     python scripts/r7/r7_baseline.py freeze --tag $FT --audio $A/$AT --ids $ID --out $W/face_gate.json | tail -2
+    python scripts/r7/r7_closed_mouth.py --ids $ID --variants $FT:$A/$AT --out $W/closed_mouth.json | tail -1   # pressed lips
   fi
 } > $L/metrics.log 2>&1
 if [ -f $B/$FT/${ID}_$FT.mp4 ]; then   # the whole-frame gate is one CPU core for ~1 s per frame at 1080p: in the background (next video starts), then the rows again

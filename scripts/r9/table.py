@@ -29,7 +29,7 @@ def row(m):
          "s/vmin total": t.get("total_s_per_video_min"), "vram_peak_mib": t.get("vram_peak_mib"),
          "lipsync_s": round(ls_s, 1), "lipsync_pct": round(100 * ls_s / dur, 1) if dur else None,
          "syncnet_speech": fg.get("sync_speech", g(fs, "sync_speech", "conf_speech")), "flashes": fg.get("flash_strong", fs.get("flash_strong")),
-         "fallback_pct": fb.get("fallback_weight_pct"), "pressed_lips_s": fg.get("pressed_lips_s"),
+         "fallback_pct": fb.get("fallback_weight_pct"), "pressed_lips_s": fg.get("pressed_lips_s", (me.get("closed_mouth") or {}).get("closed_while_source_talks_dub_silent_s")),
          "mismatch_s": fg.get("mouth_audio_mismatch_s", g(fs, "mouth_audio", "mouth_audio_mismatch_s")),
          "frame_gate": fg.get("frame_gate_verdict"), "frame_gate_worst_pct": fg.get("frame_gate_worst_pct"),
          "src_speaks_dub_silent_s": c("cov").get("src_speaks_dub_silent_s"), "on_face_s": c("cov").get("on_face_s"),

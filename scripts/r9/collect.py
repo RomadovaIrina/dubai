@@ -61,7 +61,8 @@ def main():
         "face_r4v": fm.get("r4v"), "lipsync_by_action": (fm.get("lipsync") or {}).get("by_action"),
         "audio_metrics": jl(ad / f"{i_}.metrics.json"), "gaps_spleeter": jl(ad / f"{i_}.gaps.json"), "gaps_demucs": jl(hd / f"{i_}.gaps.json"),
         "coverage": {pathlib.Path(f).name: jl(f) for f in sorted(glob.glob(str(ad / "cov" / f"*_{i_}*.json")))},
-        "face_gate": (jl(out / "work" / "face_gate.json") or {}).get(i_) if jl(out / "work" / "face_gate.json") else None,
+        "face_gate": ((jl(out / "work" / "face_gate.json") or {}).get("videos") or {}).get(i_),
+        "closed_mouth": ((jl(out / "work" / "closed_mouth.json") or {}).get(i_) or {}).get(fd.name),
         "fallback": next((json.loads(l.split("== fallback ", 1)[1]) for l in open(out / "logs" / "face_comp.log") if l.startswith("== fallback ")), None) if (out / "logs" / "face_comp.log").exists() else None,
         "demucs_cov": {pathlib.Path(f).name: jl(f) for f in sorted(glob.glob(str(hd / "cov" / "*.json")))},
     }
