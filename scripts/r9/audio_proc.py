@@ -14,6 +14,32 @@ HERE = pathlib.Path(__file__).resolve().parent
 for p in (HERE.parent / "pilot", HERE.parent / "quality", HERE.parent / "r7", HERE.parent / "r8", HERE): sys.path.insert(0, str(p))
 
 
+def _preload_tts(keep):
+    """lever K: ChatterboxMultilingualTTS.from_local(<models/chatterbox>, "cpu", t3_model="v3") in a thread at the start; the FIRST cuda load (the
+    pipeline's, which it then casts to fp16) runs as before; a LATER one with the same arguments (the stage's fp32 retake / clause model) gets the
+    CPU copy moved to the GPU: the same fp32 weights read from the same files, ~1 s instead of ~5 s"""
+    import threading
+    from chatterbox.mtl_tts import ChatterboxMultilingualTTS as CB
+    fl = CB.from_local.__func__; path = HERE.parents[1] / "models" / "chatterbox"; box = {}
+    def load():
+        try: box["m"] = fl(CB, path, "cpu", t3_model="v3")
+        except Exception as e: box["err"] = repr(e)
+    th = threading.Thread(target=load, daemon=True); th.start(); calls = [0]
+    def from_local(cls, ckpt_dir, device, *a, **k):
+        calls[0] += 1
+        if calls[0] > 1 and str(device) == "cuda" and pathlib.Path(ckpt_dir).resolve() == path.resolve() and k == {"t3_model": "v3"} and not a:
+            th.join()
+            m = box.pop("m", None)
+            if m is not None:
+                for mod in (m.t3, m.s3gen, m.ve): mod.to(device)
+                m.device = device
+                if m.conds is not None: m.conds = m.conds.to(device=device)
+                print("[oneproc] stage Chatterbox from the CPU preload", file=sys.stderr, flush=True)
+                return m
+        return fl(cls, ckpt_dir, device, *a, **k)
+    CB.from_local = classmethod(from_local)
+
+
 def main():
     argv = sys.argv[1:]
     import run_clean_pipeline_05 as rp
@@ -32,6 +58,8 @@ def main():
                 keep["qa"] = _Q(*a, **k); keep["qa"].close = lambda: None; keep["qa"]._r9_compute = os.environ.get("DUB_QA_WHISPER_COMPUTE", "float16")   # (chain_inproc reuse check)
             return keep["qa"]
     tts_qa.TtsQA = SharedQA
+    if os.environ.get("R9_TTS_PRELOAD", "off") == "on":   # r9 speed K: the stage's fp32 Chatterbox loaded on the CPU WHILE the GPU pipeline runs
+        _preload_tts(keep)                                  # (the pipeline casts its own copy to fp16 in place: not shareable)
     env0 = dict(os.environ)   # the env the pipeline sets for itself (os.environ) is restored before the stage
     sys.argv = [str(HERE.parent / "pilot" / "run_clean_pipeline_05.py")] + argv
     rc = rp.main()

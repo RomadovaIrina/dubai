@@ -20,7 +20,7 @@ ID=${ID:-$(basename "${IN%.*}" | tr -c 'A-Za-z0-9_\n-' '_')}
 export METRICS=off   # production stages only; every gate / scoring pass runs in the metrics stage below (honest per-stage time)
 case "${R9_FAST_AUDIO:-2}" in   # r9 audio speed (reports/experiments/r9-speed-audio/REPORT.md); default 2 = r9fast-audio (user-approved by ear, 30.10); 0 = the r9 E2E audio path
   1) export R9_MP_BG=on DUB_S3_BATCH=1 R9_ONEPROC=on;;   # r9fast-audio-safe: background MediaPipe, batched S3Gen, the stage in the pipeline process
-  2) export R9_MP_BG=on DUB_S3_BATCH=1 R9_ONEPROC=on DUB_UNIT_CONC=1 DUB_QWEN_BATCH=1;;   # r9fast-audio: + units concurrently, batched resident Qwen 14B
+  2) export R9_MP_BG=on DUB_S3_BATCH=1 R9_ONEPROC=on DUB_UNIT_CONC=1 DUB_QWEN_BATCH=1 R9_CHAIN_INPROC=${R9_CHAIN_INPROC:-on} R9_TTS_PRELOAD=${R9_TTS_PRELOAD:-on};;   # r9fast-audio: + units concurrently, batched resident Qwen 14B, the CPU chain in the audio process (round 2; R9_SEP_OVERLAP below)
 esac
 export DUB_ALLOW_NC=1 DUB_ALLOW_NC_BED=1   # CodeFormer + htdemucs: deliberate NC deviation, user-accepted (brief_r9_e2e.md); InsightFace is not used
 A=/workspace/dub/artifacts/r4a; B=/workspace/dub/artifacts/r4m; AT=r9_$ID; HT=r9_${ID}_htd; GT=r9g_$ID; FT=r9f_$ID
