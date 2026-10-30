@@ -145,6 +145,14 @@ def score(mix_p, src_p, sep: pathlib.Path, run: pathlib.Path | None = None, mani
             r["joins"] = {k: v for k, v in rj.analyse(mp).items() if k not in ("rows", "manifest")}
             import r4_pause_logic as pl   # r4 v2: pauses inside an English phrase (Whisper words + script punctuation)
             pl_ = pl.analyse(run, json.loads(mp.read_text())); r["pause_logic"] = {k: v for k, v in pl_.items() if k != "rows"}; r["pause_rows"] = pl_["rows"]
+            # r5: speech placed at a tempo outside 0.95-1.05 (atempo speed-up = rushed, slow-down = drawl), seconds of placed dub
+            fast = slow = 0.0; tmax = 1.0
+            for u_ in json.loads(mp.read_text())["units"]:
+                for pl_ in (u_.get("alignment") or {}).get("placements", []):
+                    t_ = float(pl_.get("atempo", 1.0)); d_ = (pl_["placed"][1] - pl_["placed"][0]) if pl_.get("placed") else 0.0; tmax = max(tmax, t_)
+                    if t_ > 1.05: fast += d_
+                    elif t_ < 0.95: slow += d_
+            r["tempo"] = {"out_s": round(fast + slow, 2), "fast_s": round(fast, 2), "slow_s": round(slow, 2), "max": round(tmax, 3)}
             import r4_unit_continuity as uc
             r["units"] = {k: v for k, v in uc.analyse(mp).items() if k != "rows"}
     if do_wer and manifest:

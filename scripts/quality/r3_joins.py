@@ -40,7 +40,7 @@ def analyse(mp):
             r = {"unit": u["id"], "k": k, "gap_s": round(s - e, 3), "d_tempo": round(abs(pl[k + 1].get("atempo", 1) - pl[k].get("atempo", 1)), 3),
                  "f0_jump_st": round(abs(12 * np.log2(fb / fa)), 2) if fa and fb else None,
                  "e_jump_db": round(abs(db(seg(y, sr, e - 0.1, e)) - db(seg(y, sr, s, s + 0.1))), 2)}
-            if raw is not None and k + 1 < len(parts):
+            if raw is not None and k + 1 < len(parts) and "clip_span" in parts[k] and "clip_span" in parts[k + 1]:   # r8: clause / retake parts are their own takes (no span in the r6 take)
                 ce, cs = parts[k]["clip_span"][1], parts[k + 1]["clip_span"][0]
                 ra, rb = f0_med(seg(raw, rsr, ce - 0.2, ce), rsr), f0_med(seg(raw, rsr, cs, cs + 0.2), rsr)
                 r["f0_raw_st"] = round(abs(12 * np.log2(rb / ra)), 2) if ra and rb else None

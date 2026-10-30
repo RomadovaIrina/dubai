@@ -27,6 +27,14 @@ class CtcAligner:
     def from_qa(cls, qa) -> "CtcAligner":
         return cls(qa.proc, qa.w2v, qa.device)
 
+    @classmethod
+    def standalone(cls, device: str = "cuda") -> "CtcAligner":
+        """The same wav2vec2-base-960h CTC model TtsQA loads, without its Whisper (hush_placed: alignment only)."""
+        from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
+        from tts_qa import MODELS
+        p = str(MODELS / "wav2vec2-base-960h")
+        return cls(Wav2Vec2Processor.from_pretrained(p), Wav2Vec2ForCTC.from_pretrained(p).to(device).eval(), device)
+
     def align(self, y: np.ndarray, sr: int, expected: str) -> list[dict] | None:
         """Word spans (seconds, in the clip's own time base) of `expected` inside `y`; None when the alignment is impossible/implausible."""
         import librosa
@@ -117,11 +125,41 @@ def _fade(seg: np.ndarray, sr: int, ms: float = 5.0) -> np.ndarray:
     return seg
 
 
+def hush_gaps(y: np.ndarray, sr: int, spans: list[dict], min_gap: float = 0.25, pre_s: float = 0.06, post_s: float = 0.08,
+              floor_db: float = -30.0, ramp_s: float = 0.02, onset_db: float = 8.0, onset_hf_db: float = 6.0,
+              after: set[int] | None = None) -> tuple[np.ndarray, list[tuple[float, float]]]:
+    """Duck what the TTS put between two aligned words (a voiced hesitation murmur the dub gate keeps: 05 r7v3a 31.45-32.0 s, the user's "fart")
+    to floor_db with sin^2 ramps: every inter-word gap >= min_gap, from post_s after the word to the next word's acoustic onset - 0.03 s.
+    The onset is the first 10-ms frame within onset_db of that word's median level or onset_hf_db of its median > 2.5 kHz level (a fricative
+    head), searched up to its CTC start + 0.05 (CTC starts a word before the murmur ends: "m-filming" -> "coming in"); never before start - pre_s.
+    after: only the gaps after these word indices (a phrase boundary: ducking inside a phrase makes a pause there). Returns (audio, hushed spans)."""
+    from scipy.signal import butter, sosfilt
+    y = y.copy(); g = 10 ** (floor_db / 20); r = max(1, int(ramp_s * sr)); h = max(1, int(0.01 * sr)); done = []
+    lv = lambda x: 20 * np.log10(np.sqrt((x[:len(x) // h * h].reshape(-1, h) ** 2).mean(1)) + 1e-9)
+    db, hf = lv(y), lv(sosfilt(butter(4, 2500, "highpass", fs=sr, output="sos"), y))
+    for n, (w0, w1) in enumerate(zip(spans, spans[1:])):
+        if w1["start"] - w0["end"] < min_gap or (after is not None and n not in after): continue
+        a = w0["end"] + post_s; b = w1["start"] - pre_s
+        k0, k1 = int(w1["start"] * 100), max(int(w1["start"] * 100) + 1, int(w1["end"] * 100))
+        if k1 <= len(db):
+            ref, ref_hf = np.median(db[k0:k1]), np.median(hf[k0:k1])
+            k = int(b * 100)
+            while k < min(len(db), int((w1["start"] + 0.05) * 100)) and db[k] < ref - onset_db and hf[k] < ref_hf - onset_hf_db: k += 1
+            b = max(b, k / 100 - 0.03)
+        if b - a < 2 * ramp_s: continue
+        i, j = int(a * sr), int(b * sr); env = np.full(j - i, g)
+        q = np.sin(np.linspace(0, np.pi / 2, r)) ** 2; env[:r] = 1 - (1 - g) * q; env[-r:] = g + (1 - g) * q
+        y[i:j] *= env; done.append((round(a, 3), round(b, 3)))
+    return y, done
+
+
 def cut_parts(y: np.ndarray, sr: int, spans: list[dict], counts: list[int], pre_s: float = 0.06, post_s: float = 0.08,
-              onset_s: float | None = None, preroll_max: float = 0.25) -> list[tuple[np.ndarray, float, float, list[dict]]]:
+              onset_s: float | None = None, preroll_max: float = 0.25, tight_inner: bool = False) -> list[tuple[np.ndarray, float, float, list[dict]]]:
     """Slice the clip into len(counts) consecutive parts at safe inter-word cut points. The first part starts pre_s before its first word
     (moved back to `onset_s` - 0.03 when an energy onset is earlier, by at most preroll_max: the onset-protection rule of tts_burst.speech_span),
-    the last part ends post_s after its last word; leading/trailing silence of the clip is dropped. Returns (audio, start_s, end_s, word spans)."""
+    the last part ends post_s after its last word; leading/trailing silence of the clip is dropped. tight_inner: the inner edges too (a part ends
+    post_s after its own last word, the next starts pre_s before its first), so what the TTS put in the gap (a hesitation murmur: 05 r7v3a 31.5 s,
+    cut off into silence once the parts are placed apart) stays out. Returns (audio, start_s, end_s, word spans)."""
     cuts = cut_points(spans, counts, y, sr); dur = len(y) / sr
     s0 = max(0.0, spans[0]["start"] - pre_s)
     if onset_s is not None:
@@ -130,6 +168,9 @@ def cut_parts(y: np.ndarray, sr: int, spans: list[dict], counts: list[int], pre_
     bounds = [s0] + cuts + [e_last]; out = []; i = 0
     for k, c in enumerate(counts):
         a, b = bounds[k], bounds[k + 1]
+        if tight_inner:
+            if k: a = max(a, spans[i]["start"] - pre_s)
+            if k < len(counts) - 1: b = min(b, spans[i + c - 1]["end"] + post_s)
         seg = _fade(y[int(a * sr):int(b * sr)], sr)
         out.append((seg, round(a, 3), round(b, 3), spans[i:i + c])); i += c
     return out

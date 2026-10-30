@@ -195,19 +195,36 @@ def run_vad(wav16: pathlib.Path) -> list[dict]:
     return [{"start": round(float(t["start"]), 3), "end": round(float(t["end"]), 3)} for t in ts]
 
 
-def run_asr(wav16: pathlib.Path, language: str | None) -> tuple[list[dict], dict]:
+ASR_OPTS = {"hallu_filter": "on", "hallu_nsp": 0.6, "hallu_cov": 0.5, "segments": "off", "seg_min": 45.0, "seg_max": 90.0, "seg_pause": 0.5, "seg_db": -40.0}   # r7 --asr-*
+
+
+def run_asr(wav16: pathlib.Path, language: str | None, speech: list[dict] | None = None) -> tuple[list[dict], dict]:
     import torch  # noqa: F401  maps libcublas before ctranslate2 loads (scripts/check_whisper.py)
     from faster_whisper import WhisperModel
+    from faster_whisper.audio import decode_audio
+    import asr_guard
     import model_cache
-    m = model_cache.get("whisper_asr", lambda: WhisperModel(str(MODELS / "whisper-large-v3"), device=dev(), compute_type=whisper_compute("int8_float16")))
-    segs, info = m.transcribe(str(wav16), word_timestamps=True, beam_size=5, vad_filter=False, language=language)
-    out = []
-    for s in segs:
-        out.append({"id": s.id, "start": round(float(s.start), 3), "end": round(float(s.end), 3), "text": s.text.strip(),
-                    "words": [{"word": w.word, "start": round(float(w.start), 3), "end": round(float(w.end), 3),
-                               "p": round(float(w.probability), 3)} for w in (s.words or [])]})
+    m = model_cache.get("whisper_asr", lambda: WhisperModel(str(MODELS / "whisper-large-v3"), device=dev(), compute_type=whisper_compute(ASR_OPTS.get("compute", "int8_float16"))))
+    chunks, cuts = [(0.0, None)], []
+    if ASR_OPTS["segments"] == "vad" and speech is not None:   # r7 spec 5.2: 45-90 s pieces cut in Silero pauses (one piece = the whole-file call below)
+        audio = decode_audio(str(wav16), sampling_rate=16000)
+        chunks, cuts = asr_guard.vad_chunks(audio, 16000, speech, ASR_OPTS["seg_min"], ASR_OPTS["seg_max"], ASR_OPTS["seg_pause"], ASR_OPTS["seg_db"])
+    out, info, lang = [], None, language
+    for c0, c1 in chunks:
+        inp = str(wav16) if len(chunks) == 1 else audio[int(c0 * 16000):int(c1 * 16000)]
+        segs, inf = m.transcribe(inp, word_timestamps=True, beam_size=5, vad_filter=False, language=lang)
+        info = info or inf; lang = lang or inf.language   # later pieces keep the language detected on the first
+        for s in segs:
+            out.append({"id": len(out) + 1, "start": round(float(s.start) + c0, 3), "end": round(float(s.end) + c0, 3), "text": s.text.strip(),
+                        "words": [{"word": w.word, "start": round(float(w.start) + c0, 3), "end": round(float(w.end) + c0, 3),
+                                   "p": round(float(w.probability), 3)} for w in (s.words or [])],
+                        "no_speech_prob": round(float(s.no_speech_prob), 3), "avg_logprob": round(float(s.avg_logprob), 3), "compression_ratio": round(float(s.compression_ratio), 3)})
     meta = {"language": info.language, "language_probability": round(float(info.language_probability), 3),
-            "audio_duration_s": round(float(info.duration), 3), "compute_type": m.model.compute_type}
+            "audio_duration_s": round(float(info.duration) if len(chunks) == 1 else chunks[-1][1], 3), "compute_type": m.model.compute_type,
+            "chunks": {"mode": ASR_OPTS["segments"], "pieces": [[round(a, 3), round(b, 3) if b is not None else None] for a, b in chunks], "cuts": cuts}}
+    if ASR_OPTS["hallu_filter"] == "on" and speech is not None:   # r7 spec 6.2
+        out, rep = asr_guard.guard(out, speech, ASR_OPTS["hallu_nsp"], ASR_OPTS["hallu_cov"])
+        meta["hallu_filter"] = rep
     free_cuda(m)
     return out, meta
 
@@ -320,11 +337,16 @@ def load_llm(times: dict):
     """Qwen2.5-7B Q8_0 via llama.cpp (CPU), loaded once and shared by sentence segmentation, translation, burst split and the fit rewrites."""
     import glob
     from llama_cpp import Llama
-    files = sorted(glob.glob(str(MODELS / "qwen2.5-7b-instruct-gguf" / f"*{QWEN_QUANT}*.gguf")))
+    size = os.environ.get("DUB_QWEN_SIZE", "7b")   # r5 --qwen-size: 14b = Qwen2.5-14B-Instruct GGUF Q5_K_M (Apache-2.0, same Qwen org repo family)
+    files = sorted(glob.glob(str(MODELS / f"qwen2.5-{size}-instruct-gguf" / f"*{QWEN_QUANT if size == '7b' else 'q5_k_m'}*.gguf")))
     if not files:
         raise Blocker(f"Qwen2.5-7B {QWEN_QUANT} GGUF not found under models/ (python scripts/pilot/fetch_09_qwen_quant.py {QWEN_QUANT} --yes)")
     with timed(times, "translation_load"):
-        llm = Llama(model_path=files[0], n_ctx=4096, n_threads=QWEN_THREADS, n_threads_batch=QWEN_THREADS, n_gpu_layers=QWEN_GPU_LAYERS, verbose=False)
+        kw = {}
+        if int(os.environ.get("DUB_QWEN_PLOOKUP", "0")) > 0:   # speed track --qwen-plookup N: prompt-lookup speculative decoding (no extra model; greedy
+            from llama_cpp.llama_speculative import LlamaPromptLookupDecoding   # verification: the same tokens as plain greedy up to last-bit rounding)
+            kw.update(draft_model=LlamaPromptLookupDecoding(num_pred_tokens=int(os.environ["DUB_QWEN_PLOOKUP"])), logits_all=True)   # verification needs every logit
+        llm = Llama(model_path=files[0], n_ctx=4096, n_threads=QWEN_THREADS, n_threads_batch=QWEN_THREADS, n_gpu_layers=QWEN_GPU_LAYERS, verbose=False, **kw)
     return llm, os.path.basename(files[0])
 
 
@@ -855,6 +877,16 @@ def main() -> int:
     ap.add_argument("--fit-down-short-words", type=int, default=4, help="phrase mode: concise rewrite also for 4-5-word sentences when they overflow their window by > --fit-down-short-overflow-s at the hard cap (previous rule: >= 6 words only)")
     ap.add_argument("--fit-down-short-overflow-s", type=float, default=0.3)
     ap.add_argument("--phrase-min-part-words", type=int, default=1); ap.add_argument("--phrase-soft-part-words", type=int, default=2)
+    ap.add_argument("--asr-hallu-filter", choices=["on", "off"], default="on", help="r7 spec 6.2: drop Whisper segments flagged as hallucinated (no_speech_prob > --asr-hallu-nsp, "
+                    "stock subtitle / outro phrase, looped phrase) where Silero VAD covers < --asr-hallu-cov of the span (asr_guard.py); report in manifest asr.hallu_filter")
+    ap.add_argument("--asr-hallu-nsp", type=float, default=0.6); ap.add_argument("--asr-hallu-cov", type=float, default=0.5)
+    ap.add_argument("--asr-compute", choices=["int8_float16", "float16"], default="int8_float16", help="faster-whisper compute type of the source ASR. On the RTX 5090 "
+                    "(ctranslate2 4.8.2) int8_float16 loses case / punctuation and some words (05: 'тестим' -> 'с этим'), which moves the sentence segmentation; "
+                    "float16 reproduces the r6v1 transcripts (made with int8_float16 on the r6 server)")
+    ap.add_argument("--asr-segments", choices=["off", "vad"], default="off", help="r7 spec 5.2: vad = ASR on 45-90 s pieces cut in Silero pauses >= 0.5 s at <= -40 dBFS "
+                    "(off = one whole-file call; a file <= --asr-seg-max is one piece either way)")
+    ap.add_argument("--asr-seg-min", type=float, default=45.0); ap.add_argument("--asr-seg-max", type=float, default=90.0)
+    ap.add_argument("--asr-seg-pause", type=float, default=0.5); ap.add_argument("--asr-seg-db", type=float, default=-40.0)
     ap.add_argument("--vad-device", choices=["cpu", "cuda"], default=None, help="Silero VAD device (default cpu; r3 D GPU audit). Also env DUB_VAD_DEVICE")
     ap.add_argument("--qwen-resident", choices=["on", "off"], default="off", help="keep Qwen loaded until the end of the run (with --qwen-gpu-layers -1: "
                     "all models + Qwen resident on the GPU at the LatentSync peak = the pilot 0.4 question); off = released before LatentSync")
@@ -883,11 +915,30 @@ def main() -> int:
     ap.add_argument("--bg-residue-duck-db", type=float, default=-15.0, help="--background on: bed attenuation where the BED itself sounds like speech (Silero on the "
                     "separated stem) while the source speaks and the dub is silent = voice leak of the separator (r2 2026-10-17: Spleeter 02 39.0-39.4 s); 0 = off")
     ap.add_argument("--bg-offset-db", type=float, default=0.0, help="--background on: bed level relative to the original voice/background balance (dB)")
+    ap.add_argument("--qwen-size", choices=["7b", "14b"], default="7b", help="r5: Qwen2.5 Instruct size for translation + rewrites (14b = Q5_K_M, ~10.5 GB, Apache-2.0)")
+    ap.add_argument("--dur-translate", choices=["on", "off"], default="off", help="r5: phrase mode: duration-aware translation (dur_translate.py): Qwen length-budgeted "
+                    "candidates + judge / back-translation + TTS of the top K, the best dry-run placement (tempo ~1.0, no dub-silent source speech) wins")
+    ap.add_argument("--dur-ok-cost", type=float, default=0.25, help="--dur-translate: placement cost (s) below which the plain translation is kept without candidates")
+    ap.add_argument("--unit-gap", type=float, default=0.06, help="r6: burst mode: silence kept before the next unit's first burst (last part's window end); "
+                    "0.06 = the old shared gap. r6 audio: 0.15 (r5v4 02: 'That's for sure.' sped up into u7 20 ms later, ASR merged the sentences)")
+    ap.add_argument("--dur-cost", choices=["r5", "r6", "r6c", "r6d", "r6e"], default="r5", help="--dur-translate dry-run cost: r5 = 0.7 x dub over source silence, tempo ramps 1.05->1.15 / "
+                    "0.95->0.875 (x1.5 / x0.3); r6 = the gate's own axes: 1.0 x dub over silence, every second placed outside 0.95-1.05 at full weight (x1.5 fast, x1.0 slow); "
+                    "r6c = r6 + the parts cut exactly like the pipeline (cut_parts pre/post-roll, +0.14 s per part); r6d = r6c + 2 x the take's own pauses > 0.15 s inside an English phrase (CTC word gaps); r6e = r6d with a slow-down charged 0.5 x the time it adds (monotone under --fill-slowdown < 0.95)")
+    ap.add_argument("--close-inside-pauses", choices=["on", "off"], default="off", help="r6: phrase mode: Chatterbox pauses > 0.12 s inside an English phrase "
+                    "(no punctuation / clause start) are shortened to 0.05 s in every take (dur_translate.close_inside_pauses)")
+    ap.add_argument("--dur-gap-qa-cost", choices=["on", "off"], default="off", help="r6: --dur-translate: a gap-QA re-seed is accepted only if its dry-run placement "
+                    "cost is at most 0.3 s above the chosen take's")
+    ap.add_argument("--dur-top", type=int, default=3, help="--dur-translate: candidates synthesised per round"); ap.add_argument("--dur-rounds", type=int, default=2)
+    ap.add_argument("--dur-min-score", type=int, default=4, help="--dur-translate: minimum Qwen judge meaning score (1-5) of a candidate")
     ap.add_argument("--ne-guard", choices=["on", "off"], default="off", help="r4: named-entity guard (ne_guard.py): Qwen lists proper nouns, TTS gets phonetic respellings on retry, "
                     "the TTS QA's Whisper decode must contain every entity (04: 'Sochi' was said 'Soky')")
     ap.add_argument("--stop-after", choices=["none", "audio"], default="none", help="audio = stop after the dubbed track (audio-only candidate: manifest + dubbed_24k/16k.wav, no LatentSync)")
     ap.add_argument("--min-ls-frames", type=int, default=25, help="VALID_FACE runs shorter than this are passed through")
     ap.add_argument("--max-verify-depth", type=int, default=3)
+    ap.add_argument("--tts-fast-t3", choices=["on", "off"], default="off", help="speed track: Chatterbox T3 speech-token decode through a static KV cache + CUDA graphs per "
+                    "length bucket (t3_fast.py; same model, sampling unchanged op for op; takes not bit-identical)")
+    ap.add_argument("--qwen-plookup", type=int, default=0, help="speed track: Qwen prompt-lookup speculative decoding with this many draft tokens (0 = off; "
+                    "llama-cpp-python LlamaPromptLookupDecoding, no extra model)")
     ap.add_argument("--seed", type=int, default=1247)
     ap.add_argument("--video-backend", choices=["baseline", "optimized"], default="optimized",
                     help="baseline = face_aware_latentsync.py functions (insightface classification, sequential windows); "
@@ -934,9 +985,15 @@ def main() -> int:
     global QWEN_GPU_LAYERS, QWEN_QUANT, VAD_DEVICE
     QWEN_GPU_LAYERS = a.qwen_gpu_layers; QWEN_QUANT = a.qwen_quant
     if a.vad_device: VAD_DEVICE = a.vad_device
+    ASR_OPTS.update(compute=a.asr_compute, hallu_filter=a.asr_hallu_filter, hallu_nsp=a.asr_hallu_nsp, hallu_cov=a.asr_hallu_cov, segments=a.asr_segments, seg_min=a.asr_seg_min,
+                    seg_max=a.asr_seg_max, seg_pause=a.asr_seg_pause, seg_db=a.asr_seg_db)
     os.environ["DUB_QA_WHISPER_COMPUTE"] = a.qa_whisper_compute
     os.environ["DUB_TTS_TEXT_NORM"] = a.tts_text_norm
     if a.pause_boundary_only == "on": os.environ["DUB_PAUSE_BOUNDARY_ONLY"] = "1"
+    if a.close_inside_pauses == "on": os.environ["DUB_CLOSE_INSIDE"] = "1"
+    os.environ["DUB_QWEN_SIZE"] = a.qwen_size
+    os.environ["DUB_TTS_FAST_T3"] = "1" if a.tts_fast_t3 == "on" else os.environ.get("DUB_TTS_FAST_T3", "0")
+    if a.qwen_plookup: os.environ["DUB_QWEN_PLOOKUP"] = str(a.qwen_plookup)
     if a.spread_overlap == "on": os.environ["DUB_SPREAD_OVERLAP"] = "1"
     if a.qwen_gpu_layers:
         import llama_cpp
@@ -989,7 +1046,7 @@ def main() -> int:
         print(f"  [vad] {len(speech)} speech intervals, {man['timeline']['speech_seconds']}s speech", flush=True)
 
         with timed(times, "asr"):
-            segments, asr_meta = run_asr(wav16, a.source_lang)
+            segments, asr_meta = run_asr(wav16, a.source_lang, speech)
         src_lang = a.source_lang or asr_meta["language"]
         # r3: diarization BEFORE Qwen is loaded (pyannote ~2.8 GB + Qwen Q8 on all GPU layers 8.3 GB = 11.2 GB peak on the shared GPU); output unchanged
         with timed(times, "diarization"):
@@ -1033,7 +1090,7 @@ def main() -> int:
         if a.alignment == "burst":
             sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "quality"))
             from e1_burst_align import PlaceOpts
-            burst_opts = PlaceOpts(a.atempo_cap, a.hard_cap, True, 0.06, a.fill_slowdown, spill=a.burst_spill == "on", max_lead=a.burst_max_lead); burst_opts.min_burst_s = a.burst_min_s; burst_opts.fallback_frac = a.burst_fallback_frac
+            burst_opts = PlaceOpts(a.atempo_cap, a.hard_cap, True, 0.06, a.fill_slowdown, spill=a.burst_spill == "on", max_lead=a.burst_max_lead); burst_opts.min_burst_s = a.burst_min_s; burst_opts.fallback_frac = a.burst_fallback_frac; burst_opts.unit_gap = a.unit_gap
             burst_opts.spread = {"mode": a.spread, "ok": a.spread_ok, "head_max": a.spread_head_max, "pause_max": a.spread_pause_max, "pause_total_max": a.spread_pause_total_max,
                                  "min_seg": a.spread_min_seg, "src_ivs": [(v["start"], v["end"]) for v in speech]}
         phrase_mode = a.alignment == "burst" and a.tts_mode == "phrase"
@@ -1071,7 +1128,9 @@ def main() -> int:
                                             qa_cfg={"enabled": qa_on, "retries": a.tts_retries, "low_temp": a.qa_temp},
                                             fit_up={"enabled": a.fit_up == "on" and llm is not None, "ratio": a.fit_up_ratio, "rounds": a.fit_up_rounds, "aim": a.fit_up_aim, "guard": a.fit_up_guard == "on", "persist": a.fit_up_persist},
                                             split_retries=a.split_retries, min_part_words=a.phrase_min_part_words, soft_part_words=a.phrase_soft_part_words, part_max_words=a.part_max_words,
-                                            phrase_split=a.phrase_split, phrase_cut=a.phrase_cut, long_pause_func=a.long_pause_func, long_pause_grow=a.long_pause_grow, cut_fade=a.cut_fade, gap_qa=a.tts_gap_qa == "on", pause_mark_mode=a.pause_marks, sentence_flow_gap=a.sentence_flow_gap, log=lambda m_: print(m_, flush=True))
+                                            phrase_split=a.phrase_split, phrase_cut=a.phrase_cut, long_pause_func=a.long_pause_func, long_pause_grow=a.long_pause_grow, cut_fade=a.cut_fade, gap_qa=a.tts_gap_qa == "on", pause_mark_mode=a.pause_marks, sentence_flow_gap=a.sentence_flow_gap,
+                                            dur_cfg={"enabled": a.dur_translate == "on" and llm is not None, "ok_cost": a.dur_ok_cost, "tts_top": a.dur_top, "rounds": a.dur_rounds, "min_score": a.dur_min_score, "cost": a.dur_cost, "gap_qa_cost": a.dur_gap_qa_cost == "on"},
+                                            log=lambda m_: print(m_, flush=True))
             else:
                 man["tts"] = run_tts_burst(units, plans, refs, tgt, work, a.seed, times, opts=burst_opts, llm=llm, src_name=lang_name(src_lang), tgt_name=lang_name(tgt),
                                            fit={"enabled": llm is not None, "rounds": a.fit_rounds, "target_ratio": a.fit_target_ratio},

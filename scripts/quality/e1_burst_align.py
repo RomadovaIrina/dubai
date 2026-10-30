@@ -73,6 +73,12 @@ class PlaceOpts:
         self.spill = spill
 
 
+def _ug(opts) -> float:
+    """r6: the silence kept before the NEXT unit's first burst (the last group's window end); default = opts.gap. A larger unit_gap stops two
+    sentences running together (r5v4 02 u6 -> u7: 20 ms apart, ASR merged them)."""
+    return max(opts.gap, getattr(opts, "unit_gap", 0.0) or 0.0)
+
+
 def place_groups(groups: list, bursts: list, slot: tuple, next_start: float, opts: PlaceOpts, tmp: pathlib.Path, tag: str,
                  sr: int = TTS_SR, labels: list | None = None, prev_end: float | None = None) -> tuple:
     """Fit audio groups (one float32 array per burst, None = nothing for that burst) into their bursts on the unit slot.
@@ -80,7 +86,7 @@ def place_groups(groups: list, bursts: list, slot: tuple, next_start: float, opt
     atempo_cap (hard_cap when the overflow into the next burst would exceed 0.4 s); optional slow-down towards the burst end
     (fill_slowdown < 1); overflow shifts the next group; the slot is never left (cut at slot end). Returns (slot track, placements)."""
     import soundfile as sf
-    slot_s, slot_e = slot; track_e = max(slot_e, next_start - opts.gap) if opts.spill else slot_e
+    slot_s, slot_e = slot; track_e = max(slot_e, next_start - _ug(opts)) if opts.spill else slot_e
     pad = opts.max_lead if (opts.max_lead > 0 and prev_end is not None) else 0.0     # the returned track starts at slot_s - pad (see placements[*]["track_start"])
     n_slot = int(round((track_e - slot_s + pad) * sr)); track = np.zeros(n_slot, dtype=np.float32); cursor = slot_s; placements = []
     for j, (bs, be) in enumerate(bursts):
@@ -89,7 +95,7 @@ def place_groups(groups: list, bursts: list, slot: tuple, next_start: float, opt
             placements.append({"burst": [round(bs, 3), round(be, 3)], "phrases": lab if lab is not None else [], "note": "no phrase assigned"}); continue
         g = len(seg) / sr
         start = max(bs, cursor)
-        win_end = (min(next_start - opts.gap, bursts[j + 1][0] - opts.gap) if j + 1 < len(bursts) else (max(slot_e, next_start - opts.gap) if opts.spill else min(slot_e, next_start - opts.gap))) if opts.extend else min(be, slot_e)
+        win_end = (min(next_start - opts.gap, bursts[j + 1][0] - opts.gap) if j + 1 < len(bursts) else (max(slot_e, next_start - _ug(opts)) if opts.spill else min(slot_e, next_start - _ug(opts)))) if opts.extend else min(be, slot_e)
         win_end = max(win_end, start + 0.2); win = win_end - start; ratio = g / win; tempo = 1.0; lead = 0.0
         if opts.max_lead > 0 and ratio > opts.atempo_cap:
             room = (bs - cursor) if start > cursor else 0.0
@@ -130,7 +136,7 @@ def burst_fit_ratios(groups: list, bursts: list, slot: tuple, next_start: float,
         if seg is None or len(seg) == 0:
             out.append(None); continue
         g = len(seg) / sr; start = max(bs, cursor)
-        win_end = (min(next_start - opts.gap, bursts[j + 1][0] - opts.gap) if j + 1 < len(bursts) else (max(slot_e, next_start - opts.gap) if opts.spill else min(slot_e, next_start - opts.gap))) if opts.extend else min(be, slot_e)
+        win_end = (min(next_start - opts.gap, bursts[j + 1][0] - opts.gap) if j + 1 < len(bursts) else (max(slot_e, next_start - _ug(opts)) if opts.spill else min(slot_e, next_start - _ug(opts)))) if opts.extend else min(be, slot_e)
         win_end = max(win_end, start + 0.2); win = win_end - start; ratio = g / win
         if opts.max_lead > 0 and ratio > opts.atempo_cap:     # same lead rule as place_groups
             room = (bs - cursor) if start > cursor else 0.0
