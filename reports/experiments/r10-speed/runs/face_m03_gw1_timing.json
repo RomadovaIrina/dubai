@@ -1,0 +1,26 @@
+{
+ "variant": "_gw1",
+ "duration_s": 40.5,
+ "seconds": {
+  "face_gen": 243.6,
+  "face_comp": 99.2,
+  "face": 342.8
+ },
+ "s_per_video_min": {
+  "face_gen": 360.9,
+  "face_comp": 147.0,
+  "face": 507.9
+ },
+ "peak_vram_mib": 13022,
+ "gpu_busy_seconds": {
+  "face_gen": 154.1,
+  "face_comp": 12.0,
+  "face": 166.1
+ },
+ "gpu_busy_s_per_video_min": {
+  "face_gen": 228.3,
+  "face_comp": 17.8,
+  "face": 246.1
+ },
+ "gpu_samples": 3423
+}

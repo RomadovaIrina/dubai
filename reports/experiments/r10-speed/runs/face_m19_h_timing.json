@@ -1,0 +1,26 @@
+{
+ "variant": "_h",
+ "duration_s": 17.948438,
+ "seconds": {
+  "face_gen": 99.6,
+  "face_comp": 56.4,
+  "face": 156.0
+ },
+ "s_per_video_min": {
+  "face_gen": 333.0,
+  "face_comp": 188.5,
+  "face": 521.5
+ },
+ "peak_vram_mib": 12994,
+ "gpu_busy_seconds": {
+  "face_gen": 46.0,
+  "face_comp": 9.0,
+  "face": 55.0
+ },
+ "gpu_busy_s_per_video_min": {
+  "face_gen": 153.8,
+  "face_comp": 30.1,
+  "face": 183.9
+ },
+ "gpu_samples": 1558
+}

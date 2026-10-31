@@ -1,0 +1,26 @@
+{
+ "variant": "_r12",
+ "duration_s": 40.5,
+ "seconds": {
+  "face_gen": 202.1,
+  "face_comp": 101.2,
+  "face": 303.4
+ },
+ "s_per_video_min": {
+  "face_gen": 299.4,
+  "face_comp": 149.9,
+  "face": 449.5
+ },
+ "peak_vram_mib": 13158,
+ "gpu_busy_seconds": {
+  "face_gen": 89.9,
+  "face_comp": 14.0,
+  "face": 103.9
+ },
+ "gpu_busy_s_per_video_min": {
+  "face_gen": 133.2,
+  "face_comp": 20.7,
+  "face": 153.9
+ },
+ "gpu_samples": 3029
+}
