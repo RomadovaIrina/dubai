@@ -27,7 +27,7 @@ final mix) COPIED in (md5 identity with the baseline).
         [--skin-texture source] [--silence none|still|orig] [--edge-px 12] [--threads 12]
 """
 from __future__ import annotations
-import argparse, concurrent.futures as cf, json, math, pathlib, subprocess, sys, time
+import argparse, concurrent.futures as cf, json, math, pathlib, subprocess, sys, threading as _th_mod, time
 import numpy as np
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -36,13 +36,64 @@ import temporal_mouth_stabilize as tms   # Flow, interp, poly_mask, lip / oval i
 FPS_M = 25.0; P = 16
 
 
-def decode_source(path: str):
+class WinMiss(Exception):
+    """A frame outside the streaming window was asked for: a window-size bug, never a per-frame failure (re-raised, not counted)."""
+
+
+class SeqWin:
+    """r10 streaming (5-min uploads, 1080p60 = 18k frames): the frames of a video decoded IN ORDER into a bounded window, plus a few PINNED
+    copies (calibration samples). f[k] = the window frame, else the pinned one, else WinMiss. RAM ~ window, independent of the length."""
+    def __init__(self, opener, n):
+        self.opener, self.n = opener, n; self.gen = None; self.buf = {}; self.pin = {}; self.next = 0
+    def __len__(self): return self.n
+    def restart(self):   # a new in-order pass (the window and the decoder start over; pins stay)
+        self.gen = self.opener(); self.buf = {}; self.next = 0
+    def fill(self, upto):
+        upto = min(upto, self.n)
+        if self.gen is None: self.restart()
+        while self.next < upto:
+            self.buf[self.next] = next(self.gen); self.next += 1
+    def evict(self, below):
+        for k_ in [k_ for k_ in self.buf if k_ < below]: del self.buf[k_]
+    def __getitem__(self, k):
+        if k < 0: k += self.n
+        v = self.buf.get(k)
+        if v is None: v = self.pin.get(k)
+        if v is None: raise WinMiss(f"frame {k} not in the window [{min(self.buf) if self.buf else None}, {self.next})")
+        return v
+
+
+def source_stream(path: str):
+    """-> (SeqWin of bgr24 source frames, pts array, time base, average rate): one decode pass for the pts (no pixel conversion), frames on demand."""
     import av
-    c = av.open(path); s = c.streams.video[0]; frames, pts = [], []
-    for fr in c.decode(s):
-        frames.append(fr.to_ndarray(format="bgr24")); pts.append(fr.pts)
-    tb = s.time_base; rate = s.average_rate; c.close()
-    return frames, np.array(pts, np.int64), tb, rate
+    c = av.open(path); s = c.streams.video[0]; pts = [fr.pts for fr in c.decode(s)]; tb = s.time_base; rate = s.average_rate; c.close()
+    def opener():
+        c_ = av.open(path); s_ = c_.streams.video[0]
+        def gen():
+            try:
+                for fr in c_.decode(s_): yield fr.to_ndarray(format="bgr24")
+            finally: c_.close()
+        return gen()
+    return SeqWin(opener, len(pts)), np.array(pts, np.int64), tb, rate
+
+
+def layer_raw_stream(path: str):
+    """-> SeqWin of the raw LatentSync layer frames (cv2, exactly as tms.read_video decodes them), its length from one counting pass."""
+    import cv2
+    cap = cv2.VideoCapture(str(path)); n = 0
+    while cap.grab(): n += 1
+    cap.release()
+    def opener():
+        cap_ = cv2.VideoCapture(str(path))
+        def gen():
+            try:
+                while True:
+                    ok, f = cap_.read()
+                    if not ok: return
+                    yield f
+            finally: cap_.release()
+        return gen()
+    return SeqWin(opener, n)
 
 
 def master_weights(man: dict, n: int, xf_frames: int = 0, shape: str = "linear") -> np.ndarray:
@@ -245,14 +296,18 @@ def main() -> int:
                     "two warped master frames are averaged, which softens the detail on 5 of every 6 frames (a sharpness pulse); nearest = keep the "
                     "interpolation's low frequencies, take the high frequencies (sigma --retime-hf-sigma px) from the nearer warped frame alone")
     ap.add_argument("--retime-hf-sigma", type=float, default=1.5)
+    ap.add_argument("--stream-chunk", type=int, default=32, help="r10 streaming: output frames composited per parallel batch (RAM ~ this + the margins, any video length)")
     a = ap.parse_args()
     global FPS_M; FPS_M = float(a.master_fps)
     t_all = time.perf_counter(); times = {}
     man = json.loads(pathlib.Path(a.manifest).read_text()); work = pathlib.Path(man["work_dir"]); src = man["input"]
-    t0 = time.perf_counter(); S, pts, tb, rate = decode_source(src); times["decode_source"] = round(time.perf_counter() - t0, 2)
-    t0 = time.perf_counter(); L = tms.read_video(a.ls_raw); times["decode_ls"] = round(time.perf_counter() - t0, 2)
-    H, W = S[0].shape[:2]; nm = len(L)
-    if L[0].shape[:2] != (H, W): raise SystemExit(f"LatentSync frames {L[0].shape[:2]} != source {(H, W)}")
+    # r10 STREAMING: no whole-video frame lists. S = the source frames in a window (SeqWin), LR = the raw layer frames in a window; the layer
+    # stages (sanitize, seam, C2 boundaries, joints) are evaluated lazily per master frame from LR (LayerFinal below = L), in the original order of
+    # operations, so the output is identical to the in-memory version. Windows: --stream-chunk output frames per parallel batch + margins.
+    t0 = time.perf_counter(); S, pts, tb, rate = source_stream(src); times["decode_source"] = round(time.perf_counter() - t0, 2)
+    t0 = time.perf_counter(); LR = layer_raw_stream(a.ls_raw); times["decode_ls"] = round(time.perf_counter() - t0, 2)
+    S.fill(1); LR.fill(1); H, W = S[0].shape[:2]; nm = len(LR)
+    if LR[0].shape[:2] != (H, W): raise SystemExit(f"LatentSync frames {LR[0].shape[:2]} != source {(H, W)}")
     mp = np.load(cfs.run_mediapipe(work / "master_25fps.mp4", work / "master_mediapipe.npz"))["lm"][:nm]
     wm = master_weights(man, nm, a.xfade_frames, a.xfade_shape)
     if a.fallback:   # r8 F: confidence fallback (r8_fallback.py): the generator's mouth crossfades back to the source where the artefact score is high
@@ -295,12 +350,22 @@ def main() -> int:
         if msk.sum() < 50 or ga[msk].std() < 1e-3 or gb[msk].std() < 1e-3: return None
         return float(np.corrcoef(ga[msk], gb[msk])[0, 1])
     nguard = 0; nlowconf = 0; nrigid = 0; mr_state = [a.mouth_region]; mr_frames = [0]   # r7 F --mouth-region-closed: current radius, frames widened
+    SAN = {}   # r10 streaming: the sanitize replacements only (few frames); every other layer frame stays in the raw stream
+    class Overlay:
+        def __getitem__(self, k): return SAN[k] if k in SAN else LR[k]
+        def __setitem__(self, k, v): SAN[k] = v
+    L = Overlay()
     if a.sanitize_layer > 0 and mp_ls is not None:   # r3 D: generator outliers (pink blob: the lip line vanishes for 1-3 frames) out of the layer first
         t0 = time.perf_counter(); hf = np.full(nm, np.nan); ct = np.full(nm, np.nan); lu = np.full(nm, np.nan)
         _ms = [m_ for m_ in range(nm) if wm[m_] > 0]   # r9 speed (--pre-threads): independent per frame
+        LR.restart()
         with cf.ThreadPoolExecutor(max_workers=max(1, a.pre_threads)) as ex_:
-            for m_, st_ in zip(_ms, ex_.map(lambda m_: lip_stats(L[m_], mp_ls[m_]), _ms)):
-                if st_ is not None: hf[m_], ct[m_], lu[m_] = st_
+            for c0_ in range(0, nm, 256):   # r10 streaming: stats in chunks of the raw stream
+                c1_ = min(nm, c0_ + 256); LR.fill(c1_); sel_ = [m_ for m_ in _ms if c0_ <= m_ < c1_]
+                for m_, st_ in zip(sel_, ex_.map(lambda m_: lip_stats(LR[m_], mp_ls[m_]), sel_)):
+                    if st_ is not None: hf[m_], ct[m_], lu[m_] = st_
+                LR.evict(c1_)
+        LR.restart()   # the replacement loop below walks forward: the window follows each short run (lo_ .. hi_)
         bad = np.zeros(nm, bool); ratio_ = np.full(nm, np.nan); luma_r = np.full(nm, np.nan); nrepl = 0; repl_frames = []
         for m_ in range(nm):
             if not np.isfinite(hf[m_]): continue
@@ -319,6 +384,7 @@ def main() -> int:
             while e_ < nm and bad[e_]: e_ += 1
             lo_, hi_ = m_ - 1, e_
             if e_ - m_ <= 4 and lo_ >= 0 and hi_ < nm and wm[lo_] > 0 and wm[hi_] > 0:
+                LR.fill(hi_ + 1); LR.evict(lo_)   # r10 streaming: the run and its two good neighbours in the window
                 y_, z_ = L[lo_].astype(np.float32), L[hi_].astype(np.float32)
                 for i_ in range(m_, e_):
                     it_, conf_ = interp_safe(fl0, y_, z_, (i_ - lo_) / (hi_ - lo_), a.safe_d, a.safe_cons, a.safe_scale)
@@ -368,17 +434,18 @@ def main() -> int:
             m_ = e_
         times["sanitize_layer"] = {"seconds": round(time.perf_counter() - t0, 2), "flagged": int(bad.sum()), "replaced": nsan, "guard_kept": nguard, "lowconf_kept": nlowconf, "rigid_fallback": nrigid, "mild_kept": nmild, "mild_frames": mild_frames[:200], "frames": san_frames[:200], "colour_collapsed": nrepl, "colour_collapsed_frames": repl_frames[:200]}
         print(f"  sanitize-layer: {int(bad.sum())} flagged, {nsan} replaced, {nguard} kept by the guard, {nrigid} by the rigid fallback (interpolation confidence < {a.sanitize_min_conf}), {nlowconf} kept, {nmild} mild kept (own lip line, donor misaligned), {nrepl} colour-collapsed (whole interpolation)", flush=True)
-    nseam = 0
-    if a.seam_lf > 0:   # r3: window-joint appearance steps -> ramps
-        t0 = time.perf_counter(); N = a.seam_lf; dis_s = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
+    nseam = 0; SEAM = {}; SEAM_B = {}; LS = L   # LS = the sanitized layer (Overlay): what the seam residuals read, as in the in-memory version
+    _tls = _th_mod.local()
+    def lf_resid(m, roi, sig):
+        if not hasattr(_tls, "dis"): _tls.dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
+        ya, yb, xa, xb = roi; a_ = LS[m - 1][ya:yb, xa:xb].astype(np.float32); b_ = LS[m][ya:yb, xa:xb].astype(np.float32)
+        F = _tls.dis.calc(cv2.cvtColor(LS[m][ya:yb, xa:xb], cv2.COLOR_BGR2GRAY), cv2.cvtColor(LS[m - 1][ya:yb, xa:xb], cv2.COLOR_BGR2GRAY), None)
+        yy, xx = np.mgrid[0:yb - ya, 0:xb - xa].astype(np.float32)
+        wa = cv2.remap(a_, xx + F[..., 0], yy + F[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+        return cv2.GaussianBlur(b_ - wa, (0, 0), sig)
+    if a.seam_lf > 0:   # r3: window-joint appearance steps -> ramps (r10 streaming: the plan here, D(b) lazily from the sanitized layer)
+        t0 = time.perf_counter(); N = a.seam_lf
         STAB = [33, 133, 362, 263, 168, 6, 197, 4, 98, 327, 2, 50, 280]
-        def lf_resid(m, roi, sig):
-            ya, yb, xa, xb = roi; a_ = L[m - 1][ya:yb, xa:xb].astype(np.float32); b_ = L[m][ya:yb, xa:xb].astype(np.float32)
-            F = dis_s.calc(cv2.cvtColor(L[m][ya:yb, xa:xb], cv2.COLOR_BGR2GRAY), cv2.cvtColor(L[m - 1][ya:yb, xa:xb], cv2.COLOR_BGR2GRAY), None)
-            yy, xx = np.mgrid[0:yb - ya, 0:xb - xa].astype(np.float32)
-            wa = cv2.remap(a_, xx + F[..., 0], yy + F[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
-            return cv2.GaussianBlur(b_ - wa, (0, 0), sig)
-        corr = {}
         for s_ in man["lipsync"]["segments"]:
             if s_["action"] != "LATENT_SYNC": continue
             lo, hi = s_["start_frame"], min(s_["end_frame"], nm)
@@ -386,50 +453,79 @@ def main() -> int:
                 if b + 1 >= hi or not np.isfinite(bb[b]).all() or not np.isfinite(mp[b][STAB]).all(): continue
                 x1, y1, x2, y2 = bb[b]; w_ = x2 - x1; pad = 0.3 * w_
                 roi = (int(max(0, y1 - pad)), int(min(H, y2 + pad)), int(max(0, x1 - pad)), int(min(W, x2 + pad))); sig = a.seam_lf_sigma * w_
-                D = lf_resid(b, roi, sig) - 0.5 * (lf_resid(b - 1, roi, sig) + lf_resid(b + 1, roi, sig)); off = np.array([roi[2], roi[0]], np.float64)
+                off = np.array([roi[2], roi[0]], np.float64)
                 for m_ in range(max(lo + 1, b - N), min(hi, b + N)):
                     r_ = (m_ - (b - N) + 0.5) / (2 * N); c_ = r_ if m_ < b else -(1 - r_)
-                    Dm = D
+                    Mr_ = None
                     if m_ != b and np.isfinite(mp[m_][STAB]).all():
                         Mr, _ = cv2.estimateAffinePartial2D(mp[b][STAB].astype(np.float32), mp[m_][STAB].astype(np.float32))
-                        if Mr is not None:
-                            Mr = np.concatenate([Mr[:, :2], (Mr[:, :2] @ off + Mr[:, 2] - off)[:, None]], 1)
-                            Dm = cv2.warpAffine(D, Mr, (roi[3] - roi[2], roi[1] - roi[0]), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
-                    corr.setdefault(m_, []).append((roi, c_ * Dm))
-                nseam += 1
-        for m_, lst in corr.items():
-            f_ = L[m_].astype(np.float32)
-            for (ya, yb, xa, xb), C in lst: f_[ya:yb, xa:xb] += C
-            L[m_] = np.clip(f_ + 0.5, 0, 255).astype(np.uint8)
+                        if Mr is not None: Mr_ = np.concatenate([Mr[:, :2], (Mr[:, :2] @ off + Mr[:, 2] - off)[:, None]], 1)
+                    SEAM.setdefault(m_, []).append((b, c_, Mr_))
+                SEAM_B[b] = (roi, sig); nseam += 1
         times["seam_lf"] = round(time.perf_counter() - t0, 2)
+    # ---- r10 streaming: the remaining layer stages, evaluated lazily per master frame in the original order of operations:
+    #      sanitized (L = Overlay) -> seam corrections (SEAM) -> C2 boundary interpolations (BND) -> segment joints (JNT, in their order)
+    import threading as _th
+    _tl = _th.local()
+    def _flow_c2():   # r10 streaming: the lazy stages run in the worker threads -> one Flow per thread (DIS is deterministic; a shared one segfaults)
+        if not hasattr(_tl, "f"): _tl.f = tms.Flow()
+        return _tl.f
+    CACHE = {}   # (stage, m) -> frame; evicted with the window
+    def cached(key, fn):
+        v = CACHE.get(key)
+        if v is None: v = fn(); CACHE[key] = v
+        return v
+    def seam_D(b):
+        roi, sig = SEAM_B[b]
+        return cached(("D", b), lambda: lf_resid(b, roi, sig) - 0.5 * (lf_resid(b - 1, roi, sig) + lf_resid(b + 1, roi, sig)))
+    def st_seam(m):
+        if m not in SEAM: return LS[m]
+        def f():
+            f_ = LS[m].astype(np.float32)
+            for b, c_, Mr in SEAM[m]:
+                (ya, yb, xa, xb), _ = SEAM_B[b]; D = seam_D(b)
+                Dm = D if Mr is None else cv2.warpAffine(D, Mr, (xb - xa, yb - ya), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+                f_[ya:yb, xa:xb] += c_ * Dm
+            return np.clip(f_ + 0.5, 0, 255).astype(np.uint8)
+        return cached(("seam", m), f)
+    BND = {}
     if a.boundary == "on":
-        t0 = time.perf_counter()
         _bs = [b for s in man["lipsync"]["segments"] if s["action"] == "LATENT_SYNC" for b in range(s["start_frame"] + P, s["end_frame"], P) if b < nm]
-        import threading as _th
-        _tl = _th.local()
-        def _c2(b):
-            if a.pre_threads > 1:
-                if not hasattr(_tl, "f"): _tl.f = tms.Flow()
-                f_ = _tl.f
-            else: f_ = fl0
-            y, z = L[b - 1].astype(np.float32), L[b].astype(np.float32)
-            return np.clip(tms.interp(f_, y, z, 1 / 3), 0, 255).astype(np.uint8), np.clip(tms.interp(f_, y, z, 2 / 3), 0, 255).astype(np.uint8)
-        with cf.ThreadPoolExecutor(max_workers=max(1, a.pre_threads)) as ex_:
-            for b, (p_, q_) in zip(_bs, list(ex_.map(_c2, _bs))):
-                L[b - 1], L[b] = p_, q_; nbnd += 1
-        times["c2_boundaries"] = round(time.perf_counter() - t0, 2)
-    njoint = 0
+        for b in _bs: BND[b - 1] = (b, 1 / 3); BND[b] = (b, 2 / 3)
+        nbnd = len(_bs)
+    def st_bnd(m):
+        if m not in BND: return st_seam(m)
+        b, t_ = BND[m]
+        return cached(("bnd", m), lambda: np.clip(tms.interp(_flow_c2(), st_seam(b - 1).astype(np.float32), st_seam(b).astype(np.float32), t_), 0, 255).astype(np.uint8))
+    njoint = 0; JNT = []
     if a.seg_joint > 0:   # r5 F: two generations meet with no crossfade -> eased interpolation across the joint
-        t0 = time.perf_counter(); N = a.seg_joint
+        N = a.seg_joint
         for b in seg_joints(man):
             lo_, hi_ = b - N - 1, b + N
             if lo_ < 0 or hi_ >= nm or wm[lo_] <= 0 or wm[hi_] <= 0: continue
-            y_, z_ = L[lo_].astype(np.float32), L[hi_].astype(np.float32)
-            for i_ in range(lo_ + 1, hi_):
-                x_ = (i_ - lo_) / (hi_ - lo_); x_ = x_ * x_ * (3 - 2 * x_)
-                L[i_] = np.clip(interp_safe(fl0, y_, z_, x_, a.safe_d, a.safe_cons, a.safe_scale)[0], 0, 255).astype(np.uint8)
-            njoint += 1
-        times["seg_joints"] = {"seconds": round(time.perf_counter() - t0, 2), "joints": njoint}
+            JNT.append((lo_, hi_)); njoint += 1
+        times["seg_joints"] = {"joints": njoint}
+    def st_joint(m, j=None):   # the value of master frame m after the first j joints (the original applied them one after another)
+        j = len(JNT) if j is None else j
+        for jj_ in range(j - 1, -1, -1):
+            lo_, hi_ = JNT[jj_]
+            if lo_ < m < hi_:
+                x_ = (m - lo_) / (hi_ - lo_); x_ = x_ * x_ * (3 - 2 * x_)
+                return cached(("jnt", jj_, m), lambda: np.clip(interp_safe(_flow_c2(), st_joint(lo_, jj_).astype(np.float32), st_joint(hi_, jj_).astype(np.float32), x_,
+                                                                          a.safe_d, a.safe_cons, a.safe_scale)[0], 0, 255).astype(np.uint8))
+        return st_bnd(m)
+    LOOK = 3 + max(a.seam_lf + 2 if a.seam_lf > 0 else 0, a.seg_joint + 2 if a.seg_joint > 0 else 0)   # raw frames a final frame may read, each side
+    FPIN = {}
+    class LayerFinal:   # L[m] = the final layer frame m (all stages), from the raw window; FPIN = pinned calibration frames
+        def __len__(self): return nm
+        def __getitem__(self, m):
+            if m < 0: m += nm
+            if m in FPIN: return FPIN[m]
+            return cached(("f", m), lambda: st_joint(m))
+        def window(self, lo, hi):   # make final frames lo .. hi (inclusive) computable; drop what is behind
+            LR.fill(hi + 1 + LOOK); LR.evict(lo - LOOK)
+            for key in [key for key in CACHE if key[-1] < lo - LOOK]: del CACHE[key]
+    L = LayerFinal()
     tk = pts.astype(np.float64) * float(tb); mpos = tk * FPS_M
     mu_arr = mpos.copy()   # geometry index: nominal (= the old behaviour) unless the true master timing is given
     if a.master_timing:
@@ -466,6 +562,70 @@ def main() -> int:
     def flow():
         if not hasattr(local, "f"): local.f = tms.Flow()
         return local.f
+    # r10 streaming: the source geometry first (pure arithmetic on the landmark arrays; the sharpen calibration below needs lm_at for its samples)
+    lm_f = None; jj = None
+    if a.source_lm:   # r3: geometry from the source frames themselves
+        if not a.master_timing: raise SystemExit("--source-lm needs --master-timing")
+        t0 = time.perf_counter(); lm_s = np.load(a.source_lm)["lm"][:len(S)].astype(np.float64)
+        if len(lm_s) != len(S): raise SystemExit(f"--source-lm has {len(lm_s)} frames, source {len(S)}")
+        rawp = pathlib.Path(a.source_lm).with_name(pathlib.Path(a.source_lm).stem + "_mp.npz"); nheld_drop = 0   # r7 F --max-hold: never carry a face position
+        if rawp.exists():
+            raw_ok = np.isfinite(np.load(rawp)["lm"][:len(S), 0, 0]); held = np.isfinite(lm_s[:, 0, 0]) & ~raw_ok
+            for s_, e_ in af.runs(held):
+                if e_ - s_ > a.max_hold: lm_s[s_:e_] = np.nan; nheld_drop += e_ - s_
+        times["held_frames_dropped"] = nheld_drop
+        rp = pathlib.Path(a.source_lm).with_name(pathlib.Path(a.source_lm).stem + "_rigid.npz")
+        if rp.exists() and len(np.load(rp)["H"]) == len(S): Hs = np.load(rp)["H"]
+        else:
+            class SeqView:   # rigid_motion reads frames 0, 1, 2, ... in order: one streaming pass
+                def __len__(self): return len(S)
+                def __getitem__(self, t): S.fill(t + 1); S.evict(t - 1); return S[t]
+            S.restart(); Hs = af.rigid_motion(SeqView(), lm_s); np.savez_compressed(rp, H=Hs)
+        times["source_rigid_motion"] = round(time.perf_counter() - t0, 2)
+        lm_f = af.filter_landmarks(lm_s, Hs, a.src_anchor) if a.src_anchor != "raw" else lm_s
+        jj = np.clip(jsrc, 0, len(S) - 1)
+        dets_s = cfs.ls_detections(lm_f.astype(np.float32), W, H, calib=True)
+        if a.mask_track == "head":
+            l106 = np.stack([d[1] if d[1] is not None else np.full((106, 2), np.nan, np.float32) for d in dets_s]).astype(np.float64)
+            hb = af.head_locked_boxes(l106, Hs); bb_s = np.array([hb[i] if d[0] is not None else (np.nan,) * 4 for i, d in enumerate(dets_s)], np.float64)
+        else:
+            bb_s = np.array([af.ls_bbox_float(d[1].astype(np.float64)) if d[0] is not None else (np.nan,) * 4 for d in dets_s], np.float64)
+            for c_ in range(4):
+                col = bb_s[:, c_].copy()
+                for i in np.flatnonzero(np.isfinite(col)): bb_s[i, c_] = np.nanmean(col[max(0, i - 3):i + 4])
+        times["source_geometry"] = round(time.perf_counter() - t0, 2)
+    def lm_at(k, mu):   # landmarks of the SHOWN frame
+        return lm_f[k] if lm_f is not None else lerp(mp, mu)
+    def lm_layer(m):    # landmarks of the head pose the LatentSync layer at master position m was generated from
+        if lm_f is None: return lerp(mp, m)
+        m0 = int(np.clip(math.floor(m), 0, nm - 1)); m1 = min(m0 + 1, nm - 1); al = float(m - math.floor(m))
+        return (1 - al) * lm_f[jj[m0]] + al * lm_f[jj[m1]]
+    CH = max(8, a.stream_chunk)
+    def window(k0, k1):   # r10 streaming: source frames k0 .. k1-1 (+-4, the registration prior's js) and the final layer frames they read
+        S.fill(k1 + 4); S.evict(k0 - 4)
+        mlo = int(np.clip(math.floor(mpos[k0]), 0, nm - 1)); mhi = int(np.clip(math.floor(mpos[k1 - 1]) + 2, 0, nm - 1)); L.window(mlo, mhi)
+    def new_pass():
+        S.restart(); LR.restart(); CACHE.clear()
+    if a.sharpen_auto > 0:   # r10 streaming: pin the calibration samples (the picks below and the closed-loop frames) in one pass each
+        js_p = jsrc if a.master_timing else np.round(np.arange(nm) * float(rate) / FPS_M).astype(int)
+        cand_p = [m for m in range(nm) if wm[m] >= 1 and np.isfinite(mp[m]).all() and np.isfinite(bb[m]).all() and 0 <= js_p[m] < len(S)]
+        pick_p = cand_p[:: max(1, len(cand_p) // 48)][:48]
+        ks_p = [k for k in range(len(S)) if wm[int(np.clip(round(mpos[k]), 0, nm - 1))] >= 1 and np.isfinite(lm_at(k, mu_arr[k])).all()]
+        ks_p = ks_p[:: max(1, len(ks_p) // 40)][:40]
+        needS = {int(js_p[m]) for m in pick_p} | set(ks_p); needL = set(pick_p)
+        for k in ks_p:
+            m0_ = int(np.clip(math.floor(mpos[k]), 0, nm - 1)); needL |= {m0_, min(m0_ + 1, nm - 1)}
+            if a.master_timing: needS |= {int(jsrc[m0_]), int(jsrc[min(m0_ + 1, nm - 1)])}
+        new_pass()
+        for k0 in range(0, len(S), CH):
+            k1 = min(len(S), k0 + CH); S.fill(k1); S.evict(k0)
+            for k in needS:
+                if k0 <= k < k1: S.pin[k] = S[k]
+        for m0_ in range(0, nm, CH):
+            m1_ = min(nm, m0_ + CH); L.window(m0_, m1_ - 1)
+            for m in needL:
+                if m0_ <= m < m1_: FPIN[m] = L[m]
+        new_pass(); times["stream_pins"] = {"source": len(S.pin), "layer": len(FPIN)}
     if a.sharpen_auto > 0:   # r3: calibrate the unsharp amounts once per video
         t0 = time.perf_counter(); sig_ = a.ls_sharpen_sigma; js_ = jsrc if a.master_timing else np.round(np.arange(nm) * float(rate) / FPS_M).astype(int)
         cand = [m for m in range(nm) if wm[m] >= 1 and np.isfinite(mp[m]).all() and np.isfinite(bb[m]).all() and 0 <= js_[m] < len(S)]
@@ -489,39 +649,6 @@ def main() -> int:
         a.ls_sharpen = round(auto["skin"], 3); a.ls_sharpen_lips = round(max(0.0, auto["lips"] - a.ls_sharpen), 3)
         times["sharpen_auto"] = round(time.perf_counter() - t0, 2); times["sharpen_auto_amounts"] = {**auto, "ls_sharpen": a.ls_sharpen, "ls_sharpen_lips": a.ls_sharpen_lips}
         print("  sharpen-auto:", times["sharpen_auto_amounts"], flush=True)
-    lm_f = None; jj = None
-    if a.source_lm:   # r3: geometry from the source frames themselves
-        if not a.master_timing: raise SystemExit("--source-lm needs --master-timing")
-        t0 = time.perf_counter(); lm_s = np.load(a.source_lm)["lm"][:len(S)].astype(np.float64)
-        if len(lm_s) != len(S): raise SystemExit(f"--source-lm has {len(lm_s)} frames, source {len(S)}")
-        rawp = pathlib.Path(a.source_lm).with_name(pathlib.Path(a.source_lm).stem + "_mp.npz"); nheld_drop = 0   # r7 F --max-hold: never carry a face position
-        if rawp.exists():
-            raw_ok = np.isfinite(np.load(rawp)["lm"][:len(S), 0, 0]); held = np.isfinite(lm_s[:, 0, 0]) & ~raw_ok
-            for s_, e_ in af.runs(held):
-                if e_ - s_ > a.max_hold: lm_s[s_:e_] = np.nan; nheld_drop += e_ - s_
-        times["held_frames_dropped"] = nheld_drop
-        rp = pathlib.Path(a.source_lm).with_name(pathlib.Path(a.source_lm).stem + "_rigid.npz")
-        if rp.exists() and len(np.load(rp)["H"]) == len(S): Hs = np.load(rp)["H"]
-        else: Hs = af.rigid_motion(S, lm_s); np.savez_compressed(rp, H=Hs)
-        times["source_rigid_motion"] = round(time.perf_counter() - t0, 2)
-        lm_f = af.filter_landmarks(lm_s, Hs, a.src_anchor) if a.src_anchor != "raw" else lm_s
-        jj = np.clip(jsrc, 0, len(S) - 1)
-        dets_s = cfs.ls_detections(lm_f.astype(np.float32), W, H, calib=True)
-        if a.mask_track == "head":
-            l106 = np.stack([d[1] if d[1] is not None else np.full((106, 2), np.nan, np.float32) for d in dets_s]).astype(np.float64)
-            hb = af.head_locked_boxes(l106, Hs); bb_s = np.array([hb[i] if d[0] is not None else (np.nan,) * 4 for i, d in enumerate(dets_s)], np.float64)
-        else:
-            bb_s = np.array([af.ls_bbox_float(d[1].astype(np.float64)) if d[0] is not None else (np.nan,) * 4 for d in dets_s], np.float64)
-            for c_ in range(4):
-                col = bb_s[:, c_].copy()
-                for i in np.flatnonzero(np.isfinite(col)): bb_s[i, c_] = np.nanmean(col[max(0, i - 3):i + 4])
-        times["source_geometry"] = round(time.perf_counter() - t0, 2)
-    def lm_at(k, mu):   # landmarks of the SHOWN frame
-        return lm_f[k] if lm_f is not None else lerp(mp, mu)
-    def lm_layer(m):    # landmarks of the head pose the LatentSync layer at master position m was generated from
-        if lm_f is None: return lerp(mp, m)
-        m0 = int(np.clip(math.floor(m), 0, nm - 1)); m1 = min(m0 + 1, nm - 1); al = float(m - math.floor(m))
-        return (1 - al) * lm_f[jj[m0]] + al * lm_f[jj[m1]]
     edge_meas = []; lip_cov = []; guard_vals = []; guard_skip = []
     only = tuple(int(x) for x in a.only_frames.split(":")) if a.only_frames else None
     def one(k):
@@ -743,9 +870,12 @@ def main() -> int:
         a.ls_sharpen, a.ls_sharpen_lips = best["ls_sharpen"], best["ls_sharpen_lips"]
         if a.sharpen_lips_max > 0: a.ls_sharpen_lips = min(a.ls_sharpen_lips, a.sharpen_lips_max)
         times["sharpen_closed_loop"] = {"iterations": hist, "chosen": best, "seconds": round(time.perf_counter() - t0, 2)}; print("  sharpen closed loop:", best, flush=True)
+    S.pin.clear(); FPIN.clear()   # r10 streaming: the calibration samples are no longer needed
     if a.reg_smooth > 0 and a.register in ("sim", "sim_ring"):   # r10: pass 1 = the per-frame corrections, then a Gaussian average over +-N frames
-        t0 = time.perf_counter(); REG["mode"] = "collect"
-        with cf.ThreadPoolExecutor(max_workers=a.threads) as ex: list(ex.map(one, range(len(S))))
+        t0 = time.perf_counter(); REG["mode"] = "collect"; new_pass()
+        with cf.ThreadPoolExecutor(max_workers=a.threads) as ex:
+            for k0 in range(0, len(S), CH):   # r10 streaming: the collect pass in windows too
+                k1 = min(len(S), k0 + CH); window(k0, k1); list(ex.map(one, range(k0, k1)))
         N = a.reg_smooth; sgw = max(N / 2.0, 0.5); nS = len(S)
         P_ = np.full((nS, 4), np.nan)   # similarity (a, b, tx, ty), full-frame coords
         for k_, M_ in REG["Ms"].items(): P_[k_] = [M_[0, 0], M_[1, 0], M_[0, 2], M_[1, 2]]
@@ -773,37 +903,56 @@ def main() -> int:
         times["reg_smooth"] = {"seconds": round(time.perf_counter() - t0, 2), "n": N, "ms_frames": int(np.isfinite(P_[:, 0]).sum()), "ring_frames": len(Fd)}
         print("  reg-smooth:", times["reg_smooth"], flush=True)
     lip_cov.clear(); edge_meas.clear(); guard_vals.clear(); guard_skip.clear()   # calibration calls of one() do not count
-    t0 = time.perf_counter(); out = [None] * len(S); fails = 0; touched = 0
-    with cf.ThreadPoolExecutor(max_workers=a.threads) as ex:
-        futs = {ex.submit(one, k): k for k in range(len(S))}
-        for fu in cf.as_completed(futs):
-            k = futs[fu]
-            try:
-                o, t_, al_ = fu.result(); out[k] = o; touched += t_
-                if al_ is not None: edge_meas.append(edge_width_px(al_))
-            except Exception as e:   # never crash the worker: previous valid frame, counted
-                out[k] = None; fails += 1
-                if fails <= 3: print(f"  frame {k} failed: {type(e).__name__}: {str(e)[:160]}", flush=True)
-    for k in range(len(out)):
-        if out[k] is None: out[k] = out[k - 1] if k > 0 and out[k - 1] is not None else S[k]
-    guard_applied = []
-    if guard_skip:   # r7 F: a face that is really gone is gone for many frames (a pan); a single low-NCC frame is motion blur on a small face (05 frame 705)
-        fl_ = np.zeros(len(out), bool); fl_[guard_skip] = True
-        for s_, e_ in af.runs(fl_):
-            if e_ - s_ >= a.guard_min_run:
-                for k in range(s_, e_): out[k] = S[k]; guard_applied.append(k)
-        print(f"  paste-guard: {len(guard_skip)} frames below NCC {a.paste_guard}, {len(guard_applied)} passed through (runs >= {a.guard_min_run})", flush=True)
-    times["composite"] = round(time.perf_counter() - t0, 2)
-    # encode with the source time base / pts, then copy the run's own final audio stream in
+    # r10 STREAMING main pass: chunks of --stream-chunk output frames composited in parallel, then encoded IN ORDER with the source time base /
+    # pts. The paste guard's post-pass (runs of >= --guard-min-run flagged frames -> the source frame) works on a pending tail: flagged frames
+    # wait until their run either reaches the minimum (-> source) or ends short (-> their composites). RAM: the windows + that tail.
     import av
-    t0 = time.perf_counter(); outp = pathlib.Path(a.out); outp.parent.mkdir(parents=True, exist_ok=True); vtmp = outp.with_name(".v_" + outp.name)
+    t0 = time.perf_counter(); fails = 0; touched = 0; t_enc = 0.0
+    outp = pathlib.Path(a.out); outp.parent.mkdir(parents=True, exist_ok=True); vtmp = outp.with_name(".v_" + outp.name)
     c = av.open(str(vtmp), "w"); st = c.add_stream("libx264", rate=rate); st.width, st.height = W, H; st.pix_fmt = "yuv420p"; st.time_base = tb
     st.options = {"crf": str(a.crf), "preset": "medium"}; st.codec_context.time_base = tb
-    for k, o in enumerate(out):
-        fr = av.VideoFrame.from_ndarray(o, format="bgr24"); fr.pts = int(pts[k]); fr.time_base = tb
+    def emit(k, o):
+        nonlocal t_enc
+        te = time.perf_counter(); fr = av.VideoFrame.from_ndarray(o, format="bgr24"); fr.pts = int(pts[k]); fr.time_base = tb
         for p in st.encode(fr): c.mux(p)
+        t_enc += time.perf_counter() - te
+    guard_applied = []; flagged = set(); pending = []; in_run = [False]; prev = [None]   # pending: [(k, composite, source)] of the current flagged run
+    def flush_pending(as_source):
+        for k_, o_, s_ in pending:
+            if as_source: emit(k_, s_); guard_applied.append(k_)
+            else: emit(k_, o_)
+        pending.clear()
+    new_pass()
+    with cf.ThreadPoolExecutor(max_workers=a.threads) as ex:
+        for k0 in range(0, len(S), CH):
+            k1 = min(len(S), k0 + CH); window(k0, k1)
+            futs = [ex.submit(one, k) for k in range(k0, k1)]
+            for k, fu in zip(range(k0, k1), futs):
+                try:
+                    o, t_, al_ = fu.result(); touched += t_
+                    if al_ is not None: edge_meas.append(edge_width_px(al_))
+                except WinMiss: raise
+                except Exception as e:   # never crash the worker: previous valid frame, counted
+                    o = None; fails += 1
+                    if fails <= 3: print(f"  frame {k} failed: {type(e).__name__}: {str(e)[:160]}", flush=True)
+                if o is None: o = prev[0] if prev[0] is not None else S[k]
+                prev[0] = o
+                if guard_skip:   # r7 F paste guard: a face that is really gone is gone for many frames; a single low-NCC frame is motion blur
+                    flagged.update(guard_skip); guard_skip.clear()
+                if k in flagged:
+                    if in_run[0]: emit(k, S[k]); guard_applied.append(k); continue
+                    pending.append((k, o, S[k]))
+                    if len(pending) >= a.guard_min_run: flush_pending(True); in_run[0] = True
+                    continue
+                if pending: flush_pending(False)
+                in_run[0] = False; emit(k, o)
+            S.evict(k1 - 4)
+    if pending: flush_pending(len(pending) >= a.guard_min_run)
     for p in st.encode(): c.mux(p)
     c.close()
+    guard_skip = sorted(flagged)
+    if guard_skip: print(f"  paste-guard: {len(guard_skip)} frames below NCC {a.paste_guard}, {len(guard_applied)} passed through (runs >= {a.guard_min_run})", flush=True)
+    times["composite"] = round(time.perf_counter() - t0 - t_enc, 2); t0 = time.perf_counter() - t_enc
     # audio: the run output's own (final-mix) audio stream, copied -> bit-identical to the baseline / clean0 output
     subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(vtmp), "-i", str(man["output"]), "-map", "0:v:0", "-map", "1:a:0", "-c", "copy", str(outp)], check=True)
     vtmp.unlink(missing_ok=True); times["encode_mux"] = round(time.perf_counter() - t0, 2); times["total"] = round(time.perf_counter() - t_all, 2)
