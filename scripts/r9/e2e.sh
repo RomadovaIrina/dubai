@@ -18,6 +18,10 @@ DUB_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"; R=$DUB_ROOT; . $
 IN=$(readlink -f "$1"); OUT=$(mkdir -p "$2" && readlink -f "$2")
 ID=${ID:-$(basename "${IN%.*}" | tr -c 'A-Za-z0-9_\n-' '_')}
 export METRICS=off   # production stages only; every gate / scoring pass runs in the metrics stage below (honest per-stage time)
+case "${R9_FAST_AUDIO:-2}" in   # r9 audio speed (reports/experiments/r9-speed-audio/REPORT.md); default 2 = r9fast-audio (user-approved by ear, 30.10); 0 = the r9 E2E audio path
+  1) export R9_MP_BG=on DUB_S3_BATCH=1 R9_ONEPROC=on;;   # r9fast-audio-safe: background MediaPipe, batched S3Gen, the stage in the pipeline process
+  2) export R9_MP_BG=on DUB_S3_BATCH=1 R9_ONEPROC=on DUB_UNIT_CONC=1 DUB_QWEN_BATCH=1 R9_CHAIN_INPROC=${R9_CHAIN_INPROC:-on} R9_TTS_PRELOAD=${R9_TTS_PRELOAD:-on};;   # r9fast-audio: + units concurrently, batched resident Qwen 14B, the CPU chain in the audio process (round 2; R9_SEP_OVERLAP below)
+esac
 export DUB_ALLOW_NC=1 DUB_ALLOW_NC_BED=1   # CodeFormer + htdemucs: deliberate NC deviation, user-accepted (brief_r9_e2e.md); InsightFace is not used
 A=/workspace/dub/artifacts/r4a; B=/workspace/dub/artifacts/r4m; AT=r9_$ID; HT=r9_${ID}_htd; GT=r9g_$ID; FT=r9f_$ID
 W=$OUT/work; L=$OUT/logs; mkdir -p $W $L; T=$W/stages.tsv; : > $T; STATUS=SUCCESS; FL=(); ER=()
@@ -51,15 +55,27 @@ SRC=$(ls $DUB_INPUTS/$ID.* | head -1)
 
 st audio   # one id, from the raw input; its own tag so nothing of another run is reused (the per-id caches $A/sep/<id> are cleared)
 rm -rf $A/sep/$ID $A/$AT $A/${AT}src $A/${AT}pre
+export DUB_SEP_STEMS=/workspace/dub/r8a
+OVL=${R9_SEP_OVERLAP:-on}   # r9 speed O: the htdemucs stems while the audio stage runs, the demucs remix in parallel with the Spleeter one (same commands = same files)
+if [ "$OVL" = on ]; then
+  rm -rf $DUB_SEP_STEMS/stems_htdemucs/$ID $A/$HT
+  bash scripts/r9/sep_overlap.sh start $ID $DUB_SEP_STEMS/stems_htdemucs $W $L
+  export R9_ON_MIXSRC="bash $DUB_ROOT/scripts/r9/sep_overlap.sh mix $ID $AT $HT $W $L"
+fi
 bash scripts/r8/r8_audio.sh $AT $ID > $L/audio.log 2>&1
+unset R9_ON_MIXSRC
 AD=$A/$AT/$ID
 [ -f $AD/final_mix_aac.m4a ] && [ -f $AD/dubbed_16k.wav ] || { fail audio_failed ERROR "see logs/audio.log"; finish; }
 
 st sep   # htdemucs: stems on the GPU (models loaded once), then the sepH8p remix of the SAME dub on the CPU
-export DUB_SEP_STEMS=/workspace/dub/r8a; rm -rf $DUB_SEP_STEMS/stems_htdemucs/$ID $A/$HT
+if [ "$OVL" = on ] && timeout 900 bash scripts/r9/sep_overlap.sh wait $W; then :   # the demucs mix was made during the audio stage
+elif [ "$OVL" = on ] && [ -f $W/sepmix.done ]; then fail htdemucs_stems_failed PARTIAL_SUCCESS "see logs/sep_stems.log"
+else   # sequential (R9_SEP_OVERLAP=off, or the overlap never started)
+rm -rf $DUB_SEP_STEMS/stems_htdemucs/$ID $A/$HT
 ( export PYTHONPATH=/workspace/dub/sep_pylib:${PYTHONPATH:-}; flock /workspace/dub/gpu.lock python scripts/r8/sep_stems.py --sep htdemucs --out $DUB_SEP_STEMS/stems_htdemucs $ID ) > $L/sep_stems.log 2>&1 \
   || fail htdemucs_stems_failed PARTIAL_SUCCESS "see logs/sep_stems.log"
 SEP_SRC=$AT SEP_PREV=$AT bash scripts/r8/sep_mix.sh $HT htdemucs stems "--bed-pauses source --bed-noise-back on --src-duck-db -3" $ID > $L/sep_mix.log 2>&1
+fi
 [ -f $A/$HT/$ID/final_mix_aac.m4a ] || fail htdemucs_mix_failed PARTIAL_SUCCESS "see logs/sep_mix.log: no demucs file"
 
 VID=""
