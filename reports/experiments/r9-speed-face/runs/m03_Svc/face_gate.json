@@ -1,0 +1,101 @@
+{
+ "tag": "r9f_m03_Svc",
+ "audio": "/workspace/dub/artifacts/r4a/r9_m03",
+ "tolerances": {
+  "twitch_sum": {
+   "better": "low",
+   "tol": "15%"
+  },
+  "skin_sum": {
+   "better": "low",
+   "tol": 1.0
+  },
+  "sync_speech": {
+   "better": "high",
+   "tol": 0.3
+  },
+  "sync_dub_only": {
+   "better": "high",
+   "tol": 0.3
+  },
+  "flash_strong": {
+   "better": "low",
+   "tol": 3
+  },
+  "frame_gate_worst_pct": {
+   "better": "low",
+   "tol": 0.2
+  },
+  "frame_gate_over": {
+   "better": "low",
+   "tol": 0
+  },
+  "pressed_lips_s": {
+   "better": "low",
+   "tol": 0.5
+  },
+  "mouth_audio_mismatch_s": {
+   "better": "low",
+   "tol": 0.5
+  },
+  "joints_resid": {
+   "better": "low",
+   "tol": 0.05
+  },
+  "joints_lowfreq": {
+   "better": "low",
+   "tol": 0.05
+  },
+  "sharp_mouth": {
+   "better": "high",
+   "tol": 0.03
+  },
+  "chin_flicker": {
+   "better": "low",
+   "tol": 0.1
+  },
+  "jaw_jitter": {
+   "better": "low",
+   "tol": 0.1
+  },
+  "colour_worst_1s_dL": {
+   "better": "low",
+   "tol": 1.0
+  },
+  "spec_pass": {
+   "better": "high",
+   "tol": 0
+  },
+  "s_per_video_min": {
+   "better": "low",
+   "tol": 600
+  }
+ },
+ "videos": {
+  "m03": {
+   "twitch_sum": 21.66,
+   "skin_sum": null,
+   "sync_speech": 7.433,
+   "sync_dub_only": null,
+   "flash_strong": 17,
+   "frame_gate_worst_pct": 0.0,
+   "frame_gate_over": 0,
+   "frame_gate_verdict": "PASS",
+   "mouth_audio_mismatch_s": 0.57,
+   "joints_resid": 0.987,
+   "joints_lowfreq": 1.003,
+   "sharp_mouth": 0.965,
+   "chin_flicker": 1.054,
+   "jaw_jitter": 1.018,
+   "colour_worst_1s_dL": 1.36,
+   "spec_pass": 1,
+   "wer_final_mix": 0.0078,
+   "s_per_video_min": 607.6,
+   "face_frames": 1214,
+   "ls_frames": 944,
+   "audio_md5": "2aa26143e9da5097792f53fc2a050899",
+   "pressed_lips_s": 1.1,
+   "open_mouth_dub_silent_s": 2.9
+  }
+ }
+}

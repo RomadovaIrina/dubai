@@ -1,0 +1,26 @@
+{
+ "variant": "_Svw",
+ "duration_s": 40.5,
+ "seconds": {
+  "face_gen": 280.7,
+  "face_comp": 137.1,
+  "face": 417.8
+ },
+ "s_per_video_min": {
+  "face_gen": 415.9,
+  "face_comp": 203.1,
+  "face": 619.0
+ },
+ "peak_vram_mib": 13010,
+ "gpu_busy_seconds": {
+  "face_gen": 151.6,
+  "face_comp": 13.9,
+  "face": 165.6
+ },
+ "gpu_busy_s_per_video_min": {
+  "face_gen": 224.6,
+  "face_comp": 20.6,
+  "face": 245.3
+ },
+ "gpu_samples": 4167
+}

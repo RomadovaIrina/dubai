@@ -29,8 +29,14 @@ if [ -n "${LS_SR_ARGS:-}" ]; then   # phase 2: Real-ESRGAN layer SR (r7_layer_sr
   fi
 fi
 mkdir -p "$O/timing"; TD=$O/timing; [ -n "${FIX30_TD_SHARED:-}" ] && { TD=/workspace/dub/artifacts/r3d/timing; mkdir -p $TD; }   # phase 2: shared source timing / landmark cache (keyed by id + master fps; source-only data)
+nls=$(python -c "import json;print(json.load(open('$VM'))['lipsync']['by_action'].get('LATENT_SYNC',{}).get('frames',0))")
+if [ "${GEN_COMP:-1}" = 0 ] && [ "$nls" -gt 0 ]; then   # r9 speed L1: no source-fps composite here (the r7_m7_comp.sh composite redoes it from the raw layer); the 25 fps run output stands in
+  F=$W/${id}_${TAG}_25fps.mp4; FM=$VM; RAW=$W/${id}_${TAG}_25fps_ls_raw.mp4   # the layer landmarks the skipped composite used to write (read by r8_cf_detail / layer SR / fallback / composite)
+  [ -f "${RAW%.mp4}.mediapipe.npz" ] || python -c "import sys, pathlib; sys.path.insert(0, 'scripts/pilot'); import clean_face_stack as cfs; cfs.run_mediapipe(pathlib.Path('$RAW'), pathlib.Path('${RAW%.mp4}.mediapipe.npz'))" >> "$LOG" 2>&1
+else
 FIX30_MASTER_FPS=${LS_FPS:-25} FIX30_TD=$TD FIX30_MODE=r3fix FIX30_THREADS=${FIX30_THREADS:-16} bash scripts/quality/r3_fix30.sh "$VM" final >> "$LOG" 2>&1
 F=$W/${id}_${TAG}_25fps_final.mp4; FM=$W/${id}_${TAG}_25fps_final.manifest.json
+fi
 [ -f "$F" ] || { echo "FAIL composite $id (see $LOG)"; exit 5; }
 if [ -n "${MUX_AAC:-}" ]; then ffmpeg -loglevel error -y -i "$F" -i "$MUX_AAC" -map 0:v:0 -map 1:a:0 -c copy "$O/${id}_${TAG}.mp4"; else cp "$F" "$O/${id}_${TAG}.mp4"; fi
 cp "$FM" "$O/${id}_${TAG}.manifest.json"; t2=$(date +%s.%N)

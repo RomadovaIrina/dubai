@@ -17,29 +17,33 @@ for id in ${*:-03 01 05 02 04}; do
       if [ "$CFD" = self ]; then BASE=$W/${id}_${ST}_25fps_ls_pre.mp4; BLM=$W/${id}_${ST}_25fps_ls_raw.mediapipe.npz   # this run's pre-CodeFormer dump
       else BW=$B/$CFD/work_${id}_$CFD; BASE=$BW/${id}_${CFD}_25fps_ls_raw.mp4; BLM=$BW/${id}_${CFD}_25fps_ls_raw.mediapipe.npz; fi
       RAW=$W/${id}_${ST}_25fps_ls_cfd_${CFD_LABEL:-cfd}.mp4; SRN=${RAW%.mp4}_$SR.mp4
-      for try in 1 2; do [ -s $RAW ] && break; [ $try = 2 ] && echo "== RETRY cf_detail $id"; python scripts/r8/r8_cf_detail.py --base $BASE --cf $W/${id}_${ST}_25fps_ls_raw.mp4 --lm $BLM --out $RAW ${CFD_ARGS:-} | grep "^=="; done; [ -f $RAW ] && cp $BLM ${RAW%.mp4}.mediapipe.npz   # r9: one retry (sporadic libx264 open EINVAL, not reproducible)
+      for try in 1 2; do [ -s $RAW ] && break; [ $try = 2 ] && echo "== RETRY cf_detail $id"; python scripts/r8/r8_cf_detail.py --base $BASE --cf $W/${id}_${ST}_25fps_ls_raw.mp4 --lm $BLM --out $RAW ${CFD_ARGS:-} ${FAST_ENC:+--preset $FAST_ENC} | grep "^=="; done; [ -f $RAW ] && cp $BLM ${RAW%.mp4}.mediapipe.npz   # r9: one retry (sporadic libx264 open EINVAL, not reproducible)
       LS=$RAW
+    fi
+    FBPID=""; if [ -n "${FB:-}" ] && [ "${FAST_FB_BG:-0}" = 1 ]; then   # r9 speed L4: the fallback scores the CF-detail layer (CPU) while the layer SR runs (GPU)
+      FBN=$W/${id}_${ST}_25fps_fb_$FB.npz; [ -f $FBN ] || { python scripts/r8/r8_fallback.py --work $W --ls $RAW --lm ${RAW%.mp4}.mediapipe.npz --out $FBN ${FB_ARGS:-} | grep "^==" & FBPID=$!; }
     fi
     if [ -n "$SR" ]; then
       LS=$SRN
-      for try in 1 2; do [ -s $LS ] && break; [ $try = 2 ] && echo "== RETRY layer_sr $id"; python scripts/r7/r7_layer_sr.py --ls-raw $RAW --lm ${RAW%.mp4}.mediapipe.npz --out $LS --temporal 1 ${SR_EXTRA:-} | grep "^==" ; done; [ -f $LS ] && cp ${RAW%.mp4}.mediapipe.npz ${LS%.mp4}.mediapipe.npz
+      for try in 1 2; do [ -s $LS ] && break; [ $try = 2 ] && echo "== RETRY layer_sr $id"; python scripts/r7/r7_layer_sr.py --ls-raw $RAW --lm ${RAW%.mp4}.mediapipe.npz --out $LS --temporal 1 ${SR_EXTRA:-} ${FAST_ENC:+--encode-preset $FAST_ENC} | grep "^==" ; done; [ -f $LS ] && cp ${RAW%.mp4}.mediapipe.npz ${LS%.mp4}.mediapipe.npz
     fi
     if [ -n "${DFK:-}" ]; then   # r8 F: layer tone deflicker (inner mouth + lower face), cached per DFK label: DFK=dfk1 DFK_ARGS="--sigma 1.5 ..."
       LSD=${LS%.mp4}_$DFK.mp4; [ -f $LSD ] || { python scripts/r8/r8_layer_deflicker.py --ls $LS --lm ${LS%.mp4}.mediapipe.npz --out $LSD ${DFK_ARGS:-} | grep "^=="; cp ${LS%.mp4}.mediapipe.npz ${LSD%.mp4}.mediapipe.npz; }; LS=$LSD
     fi
     if [ -n "${STAB:-}" ]; then   # r9: mouth-detail temporal stabiliser (flow-aligned median of the high frequencies over +-R frames; m18 texture pops)
-      LSS=${LS%.mp4}_stab${STAB_R:-2}.mp4; [ -s $LSS ] || { python scripts/r9/r9_hf_stabilise.py --ls $LS --lm ${LS%.mp4}.mediapipe.npz --out $LSS --radius ${STAB_R:-2} | grep "^=="; }
+      LSS=${LS%.mp4}_stab${STAB_R:-2}.mp4; [ -s $LSS ] || { python scripts/r9/r9_hf_stabilise.py --ls $LS --lm ${LS%.mp4}.mediapipe.npz --out $LSS --radius ${STAB_R:-2} ${STAB_EXTRA:-} ${FAST_ENC:+--preset $FAST_ENC} | grep "^=="; }
       [ -s $LSS ] && { cp ${LS%.mp4}.mediapipe.npz ${LSS%.mp4}.mediapipe.npz; LS=$LSS; }
     fi
     FBX=""; if [ -n "${FB:-}" ]; then   # r8 F: confidence fallback to the source mouth, FB=<label> FB_ARGS="--thr-wash ..." (score on the raw layer, cached)
+      [ -n "$FBPID" ] && wait $FBPID
       FBN=$W/${id}_${ST}_25fps_fb_$FB.npz; [ -f $FBN ] || python scripts/r8/r8_fallback.py --work $W --ls $RAW --lm ${RAW%.mp4}.mediapipe.npz --out $FBN ${FB_ARGS:-} | grep "^=="; FBX="--fallback $FBN"
     fi
     if [ -n "${REP:-}" ] && [ -n "$FBX" ]; then   # r9: short glitches re-drawn IN the layer (flow interpolation of the good neighbours) instead of a 1-frame swap to the source mouth
       RL=${REP_LABEL:-rep2}; LSR=${LS%.mp4}_$RL.mp4; FBR=${FBN%.npz}_${TAG}_$RL.npz
-      [ -s $LSR ] || python scripts/r9/r9_layer_repair.py --ls $LS --lm ${LS%.mp4}.mediapipe.npz --fb $FBN --src-lm $W/video/master_mediapipe.npz --src-video $W/video/master_25fps.mp4 --out $LSR --fb-out $FBR ${REP_ARGS:-} | grep "^=="
+      [ -s $LSR ] || python scripts/r9/r9_layer_repair.py --ls $LS --lm ${LS%.mp4}.mediapipe.npz --fb $FBN --src-lm $W/video/master_mediapipe.npz --src-video $W/video/master_25fps.mp4 --out $LSR --fb-out $FBR ${REP_ARGS:-} ${FAST_ENC:+--preset $FAST_ENC} | grep "^=="
       [ -s $LSR ] && { LS=$LSR; FBX="--fallback $FBR"; }
     fi
-    FIX30_LS=$LS FIX30_MASTER_FPS=${LS_FPS:-25} FIX30_TD=$B/$ST/timing FIX30_MODE=r3fix FIX30_THREADS=${FIX30_THREADS:-16} FIX30_ARGS="$V1 $EXTRA $FBX" bash scripts/quality/r3_fix30.sh $M $TAG > $B/$TAG/${id}.fix30.log 2>&1
+    FIX30_LS=$LS FIX30_MASTER_FPS=${LS_FPS:-25} FIX30_TD=$B/$ST/timing FIX30_MODE=r3fix FIX30_THREADS=${FIX30_THREADS:-16} FIX30_ARGS="$V1 $EXTRA $FBX ${FC_EXTRA:-}" bash scripts/quality/r3_fix30.sh $M $TAG > $B/$TAG/${id}.fix30.log 2>&1
     F=$W/${id}_${ST}_25fps_$TAG.mp4; [ -f $F ] || { echo "FAIL composite $id (see $B/$TAG/${id}.fix30.log)"; continue; }
     mv $F $B/$TAG/${id}_$TAG.mp4; mv $W/${id}_${ST}_25fps_$TAG.manifest.json $B/$TAG/${id}_$TAG.manifest.json; mv $W/${id}_${ST}_25fps_$TAG.fps_composite.json $B/$TAG/${id}_$TAG.fps_composite.json 2>/dev/null; mv $W/${id}_${ST}_25fps_$TAG.log $B/$TAG/${id}_$TAG.log 2>/dev/null
   else   # no LatentSync frames (02): the m6 output is the source + audio already

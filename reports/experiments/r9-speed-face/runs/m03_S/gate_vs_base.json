@@ -1,0 +1,57 @@
+{
+ "base": "/workspace/dub/r9/face/m03_b0",
+ "verdict": "FAIL",
+ "checks": {
+  "sync -0.3": "PASS",
+  "flashes +2": "PASS",
+  "pressed +0.5s": "PASS",
+  "frame gate": "PASS",
+  "stick/unstick +1": "FAIL",
+  "slides +1": "PASS",
+  "occluder ring": "PASS",
+  "fallback % +1": "PASS"
+ },
+ "base_rows": {
+  "sync_speech": 7.611,
+  "sync_dub_only": null,
+  "flash_strong": 20,
+  "pressed_lips_s": 0.67,
+  "frame_gate_verdict": "PASS",
+  "frame_gate_worst_pct": 0.0,
+  "twitch_sum": 23.2,
+  "stick": 0,
+  "slide": 1,
+  "teeth": 0,
+  "amp": 0,
+  "occl_2x": 0,
+  "fallback_pct": 3.92,
+  "timing": {
+   "face_gen": 676.7,
+   "face_comp": 304.7,
+   "face": 981.5
+  },
+  "duration_s": 40.5
+ },
+ "cand_rows": {
+  "sync_speech": 7.494,
+  "sync_dub_only": null,
+  "flash_strong": 18,
+  "pressed_lips_s": 0.9,
+  "frame_gate_verdict": "PASS",
+  "frame_gate_worst_pct": 0.0,
+  "twitch_sum": 22.35,
+  "stick": 2,
+  "slide": 1,
+  "teeth": 0,
+  "amp": 0,
+  "occl_2x": 0,
+  "fallback_pct": 3.81,
+  "timing": {
+   "face_gen": 429.2,
+   "face_comp": 205.9,
+   "face": 635.1
+  },
+  "duration_s": 40.5
+ },
+ "bit_identical": false
+}
