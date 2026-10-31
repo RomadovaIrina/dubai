@@ -2,7 +2,7 @@
 # r10 FACE WATCH: full-video side by side, LEFT = r9 + fix (what management saw), RIGHT = the r10 face, labelled, the demucs mix, <= 25 MB.
 #   bash scripts/r10/watch.sh <id> <right video> "<right label>"   -> /workspace/dub/outbox/r10_face/<id>_WATCH_r9fix_vs_r10face.mp4
 set -u
-id=$1; RV=$2; RL=${3:-r10 face}; B=/workspace/dub/artifacts/r4m; A=/workspace/dub/artifacts/r4a; O=/workspace/dub/outbox/r10_face; mkdir -p $O
+id=$1; RV=$2; RL=${3:-r10 face (new)}; B=/workspace/dub/artifacts/r4m; A=/workspace/dub/artifacts/r4a; O=/workspace/dub/outbox/r10_face; mkdir -p $O
 LV=$B/r9f_$id/${id}_r9f_$id.mp4; AUD=$A/r9_${id}_htd/$id/final_mix_aac.m4a; [ -f $AUD ] || AUD=$A/r9_$id/$id/final_mix_aac.m4a
 OUT=$O/${id}_WATCH_r9fix_vs_r10face.mp4
 dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 $LV); W=$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 $LV); H=$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 $LV)
