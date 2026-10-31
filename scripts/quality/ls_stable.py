@@ -322,7 +322,10 @@ def unet_compile(pipe):
     mode = os.environ.get("LS_UNET_COMPILE", "")
     if not mode or getattr(pipe.unet, "_r10_compiled", False): return
     import torch._dynamo
-    torch._dynamo.config.cache_size_limit = max(torch._dynamo.config.cache_size_limit, 32)
+    for k_ in ("cache_size_limit", "recompile_limit"):   # one dynamo cache per forward CODE OBJECT: 9 ResNets x widths x batch shapes share it
+        if hasattr(torch._dynamo.config, k_): setattr(torch._dynamo.config, k_, max(getattr(torch._dynamo.config, k_), 512))
+    for k_ in ("accumulated_cache_size_limit", "accumulated_recompile_limit"):
+        if hasattr(torch._dynamo.config, k_): setattr(torch._dynamo.config, k_, max(getattr(torch._dynamo.config, k_), 8192))
     n = 0; u = pipe.unet
     for blk in list(u.down_blocks) + [u.mid_block] + list(u.up_blocks):
         for name in ("resnets", "attentions", "motion_modules"):
