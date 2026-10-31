@@ -49,7 +49,10 @@ def main():
     # is in memory (FrameWin); frames are decoded in order, processed in parallel chunks and encoded in order. RAM is independent of the length.
     def opener(path):
         c_ = av.open(path); s_ = c_.streams.video[0]; s_.thread_type = "AUTO"; return c_, s_
-    c, s = opener(a.video); rate = s.average_rate; tb = s.time_base; H, W = s.codec_context.height, s.codec_context.width; c.close()
+    c, s = opener(a.video); H, W = s.codec_context.height, s.codec_context.width; c.close()
+    # the stream rate of the SOURCE, as fps_composite writes it: the input video's own average rate changes the frame durations in the container
+    # (same pts) and every downstream '-r 25' resample (the gate rows: SyncNet, stick / slide) then picks neighbouring frames
+    c, s = opener(a.src); rate = s.average_rate; tb = s.time_base; c.close()   # + the SOURCE time base and pts (1:1 frames), exactly as fps_composite encodes
     if a.radius_s > 0: a.radius = max(1, int(round(float(rate) * a.radius_s)))
     lm_all = np.load(a.lm)["lm"].astype(np.float64); nan_lm = np.full(lm_all.shape[1:], np.nan)
 
@@ -62,7 +65,7 @@ def main():
                 try: fo = next(self.go); fs = next(self.gs)
                 except StopIteration: self.n = self.next; break
                 o_ = fo.to_ndarray(format="bgr24"); s_ = fs.to_ndarray(format="bgr24")
-                self.buf[self.next] = (o_, s_, fo.pts, bool(np.abs(o_[::4, ::4].astype(np.int16) - s_[::4, ::4].astype(np.int16)).max() > 3)); self.next += 1
+                self.buf[self.next] = (o_, s_, fs.pts, bool(np.abs(o_[::4, ::4].astype(np.int16) - s_[::4, ::4].astype(np.int16)).max() > 3)); self.next += 1
         def evict(self, below):
             for k_ in [k_ for k_ in self.buf if k_ < below]: del self.buf[k_]
         def close(self): self.co.close(); self.cs.close()
