@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """r10 FACE (mgmt: 'the lips flicker'): temporal stabiliser of the mouth detail on the FINAL composite, at the source frame rate.
 
+STREAMING: bounded RAM (a window of --chunk + 2 radius frames), any length / fps.
 r9_hf_stabilise.py works on the 25 fps layer; the composite then adds its own frame-to-frame pops (25 -> 30 retime blends, lip sharpening,
 registration). Here, per output frame k, inside the re-rendered mouth area only (pixels the composite changed vs the source, feathered, within a
 box around the lips): neighbours k-R..k+R are DIS-flow-aligned to k; the frame keeps its own low frequencies (shape / opening / motion = the
@@ -41,18 +42,41 @@ def main():
     ap.add_argument("--region", choices=["lips", "paste"], default="lips", help="lips = near the lips (hull + --dilate); paste = every re-rendered pixel "
                     "from the nose base to below the chin (the chin shading too)")
     ap.add_argument("--crf", type=int, default=13); ap.add_argument("--threads", type=int, default=12)
+    ap.add_argument("--chunk", type=int, default=48, help="frames processed per parallel batch; RAM ~ (chunk + 2 radius) x 2 frames")
     a = ap.parse_args(); t0 = time.perf_counter()
     import av
-    c = av.open(a.video); s = c.streams.video[0]; s.thread_type = "AUTO"; rate = s.average_rate; tb = s.time_base
-    O, pts = [], []
-    for f in c.decode(s): O.append(f.to_ndarray(format="bgr24")); pts.append(f.pts)
-    c.close()
-    c = av.open(a.src); s2 = c.streams.video[0]; s2.thread_type = "AUTO"; S = [f.to_ndarray(format="bgr24") for f in c.decode(s2)]; c.close()
-    n = min(len(O), len(S)); H, W = O[0].shape[:2]
+    # r10 (spec: uploads up to 5 min, 1080p60 = 18k frames): STREAMING. Only a window of --chunk + 2 x radius frames of the output and the source
+    # is in memory (FrameWin); frames are decoded in order, processed in parallel chunks and encoded in order. RAM is independent of the length.
+    def opener(path):
+        c_ = av.open(path); s_ = c_.streams.video[0]; s_.thread_type = "AUTO"; return c_, s_
+    c, s = opener(a.video); rate = s.average_rate; tb = s.time_base; H, W = s.codec_context.height, s.codec_context.width; c.close()
     if a.radius_s > 0: a.radius = max(1, int(round(float(rate) * a.radius_s)))
-    lm = np.load(a.lm)["lm"].astype(np.float64); lm = np.concatenate([lm, np.full((max(0, n - len(lm)),) + lm.shape[1:], np.nan)])[:n]
-    touched = np.zeros(n, bool)
-    for k in range(n): touched[k] = np.abs(O[k][::4, ::4].astype(np.int16) - S[k][::4, ::4].astype(np.int16)).max() > 3
+    lm_all = np.load(a.lm)["lm"].astype(np.float64); nan_lm = np.full(lm_all.shape[1:], np.nan)
+
+    class FrameWin:   # sliding window over two decoders (output, source) in lock-step; frame k -> (O_k, S_k, pts_k, touched_k)
+        def __init__(self):
+            self.co, so = opener(a.video); self.cs, ss = opener(a.src); self.go = self.co.decode(so); self.gs = self.cs.decode(ss)
+            self.buf = {}; self.next = 0; self.n = None
+        def fill(self, upto):   # decode until frame upto-1 is in (or the end)
+            while self.n is None and self.next < upto:
+                try: fo = next(self.go); fs = next(self.gs)
+                except StopIteration: self.n = self.next; break
+                o_ = fo.to_ndarray(format="bgr24"); s_ = fs.to_ndarray(format="bgr24")
+                self.buf[self.next] = (o_, s_, fo.pts, bool(np.abs(o_[::4, ::4].astype(np.int16) - s_[::4, ::4].astype(np.int16)).max() > 3)); self.next += 1
+        def evict(self, below):
+            for k_ in [k_ for k_ in self.buf if k_ < below]: del self.buf[k_]
+        def close(self): self.co.close(); self.cs.close()
+
+    class View:   # O[k] / S[k] / touched[k] on the current window (KeyError outside it = a bug)
+        def __init__(self, win, i): self.win, self.i = win, i
+        def __getitem__(self, k): return self.win.buf[k][self.i]
+    class Touched:
+        def __init__(self, win): self.win = win
+        def __getitem__(self, k): v = self.win.buf.get(k); return bool(v[3]) if v is not None else False
+    win = FrameWin(); O, S, touched = View(win, 0), View(win, 1), Touched(win)
+    class LM:
+        def __getitem__(self, k): return lm_all[k] if 0 <= k < len(lm_all) else nan_lm
+    lm = LM(); n = 10 ** 9   # neighbours beyond the end are absent from the window (touched -> False)
     stats = {"stabilised": 0, "bright_mean_abs": []}
 
     JAW = [172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365, 397]
@@ -69,7 +93,7 @@ def main():
         dl = cv2.distanceTransform(1 - lipm, cv2.DIST_L2, 3); wl = np.clip((dl - 0.05 * iod) / (0.12 * iod), 0, 1)   # 0 at the lips -> 1 at 0.17 IOD below
         return (y0, y1, x0, x1), cm.astype(np.float32) * wl, u, v, iod
 
-    cdisp = np.full((n, 2), np.nan)   # chin displacement source -> output, px, (along u, along v)
+    cdisp = {}   # frame -> chin displacement source -> output, px, (along u, along v)
     if a.chin_reg == "on":
         def chin_d(k):
             if not touched[k]: return None
@@ -83,28 +107,32 @@ def main():
             F = dis_.calc(cv2.cvtColor(S[k][y0:y1, x0:x1], cv2.COLOR_BGR2GRAY), cv2.cvtColor(O[k][y0:y1, x0:x1], cv2.COLOR_BGR2GRAY), None)
             d = np.median(F[sel], 0); return float(d @ u), float(d @ v)
         import concurrent.futures as cf0
+        w1 = FrameWin(); O, S, touched = View(w1, 0), View(w1, 1), Touched(w1); raw = []; k0 = 0   # pass 1 streams too (one frame needed per k)
         with cf0.ThreadPoolExecutor(max_workers=a.threads) as ex0:
-            for k, r_ in zip(range(n), ex0.map(chin_d, range(n))):
-                if r_ is not None: cdisp[k] = r_
-        sm = cdisp.copy()
-        for k in range(n):   # +-1 frame smoothing of the measurement (flow noise)
-            nb = [cdisp[j] for j in (k - 1, k, k + 1) if 0 <= j < n and np.isfinite(cdisp[j]).all()]
-            if np.isfinite(cdisp[k]).all() and nb: sm[k] = np.mean(nb, 0)
+            while True:
+                w1.fill(k0 + a.chunk); k1 = w1.next if w1.n is None else w1.n
+                if k1 <= k0: break
+                raw += list(ex0.map(chin_d, range(k0, k1))); w1.evict(k1); k0 = k1
+        w1.close(); O, S, touched = View(win, 0), View(win, 1), Touched(win)
+        cd = np.array([r_ if r_ is not None else (np.nan, np.nan) for r_ in raw], np.float64).reshape(-1, 2); nn = len(cd); sm = cd.copy()
+        for k in range(nn):   # +-1 frame smoothing of the measurement (flow noise)
+            nb = [cd[j] for j in (k - 1, k, k + 1) if 0 <= j < nn and np.isfinite(cd[j]).all()]
+            if np.isfinite(cd[k]).all() and nb: sm[k] = np.mean(nb, 0)
         if a.chin_reg_vert > 0:
-            w_ = max(2, int(round(0.25 * float(rate)))); vv = sm[:, 1].copy(); base = np.full(n, np.nan)
-            for k in range(n):
+            w_ = max(2, int(round(0.25 * float(rate)))); vv = sm[:, 1].copy(); base = np.full(nn, np.nan)
+            for k in range(nn):
                 seg = vv[max(0, k - w_):k + w_ + 1]; seg = seg[np.isfinite(seg)]
                 if len(seg): base[k] = np.median(seg)
             sm[:, 1] = a.chin_reg_vert * (vv - base)
         else: sm[:, 1] = 0.0
-        cdisp = sm; stats["chin_lat_px_rms"] = round(float(np.sqrt(np.nanmean(cdisp[:, 0] ** 2))), 3)
+        cdisp = {k: sm[k] for k in range(nn) if np.isfinite(sm[k]).all()}; stats["chin_lat_px_rms"] = round(float(np.sqrt(np.nanmean(sm[:, 0] ** 2))), 3)
 
     def chin_fix(k, o):   # warp the output's chin back by the measured displacement (only where the composite changed pixels)
-        if not np.isfinite(cdisp[k]).all(): return o
+        if k not in cdisp: return o
         g_ = chin_geom(k)
         if g_ is None: return o
         (y0, y1, x0, x1), cw, u, v, iod = g_
-        dvec = cdisp[k, 0] * u + cdisp[k, 1] * v
+        dvec = cdisp[k][0] * u + cdisp[k][1] * v
         diff = cv2.GaussianBlur(np.abs(O[k][y0:y1, x0:x1].astype(np.float32) - S[k][y0:y1, x0:x1].astype(np.float32)).max(2), (0, 0), max(1.0, 0.05 * iod))
         wt = cv2.GaussianBlur(cw, (0, 0), max(1.0, 0.06 * iod)) * np.clip((diff - 1.0) / 3.0, 0, 1)
         gy, gx = np.mgrid[0:y1 - y0, 0:x1 - x0].astype(np.float32)
@@ -167,22 +195,27 @@ def main():
         return o, db
 
     import concurrent.futures as cf
-    out = list(O[:n])
-    with cf.ThreadPoolExecutor(max_workers=a.threads) as ex:
-        for k, r_ in zip(range(n), ex.map(one, range(n))):
-            if r_ is not None: out[k] = r_[0]; stats["stabilised"] += 1; stats["bright_mean_abs"].append(abs(r_[1]))
-            if a.chin_reg == "on": out[k] = chin_fix(k, out[k])
     outp = pathlib.Path(a.out); vtmp = outp.with_name(".v_" + outp.name)
     o = av.open(str(vtmp), "w"); st = o.add_stream("libx264", rate=rate); st.width, st.height = W, H; st.pix_fmt = "yuv420p"; st.time_base = tb
     st.options = {"crf": str(a.crf), "preset": "medium"}; st.codec_context.time_base = tb
-    for k, f in enumerate(out):
-        fr = av.VideoFrame.from_ndarray(f, format="bgr24"); fr.pts = int(pts[k]); fr.time_base = tb
-        for pk in st.encode(fr): o.mux(pk)
+    k0 = 0; ntouch = 0
+    with cf.ThreadPoolExecutor(max_workers=a.threads) as ex:
+        while True:
+            win.fill(k0 + a.chunk + a.radius); k1 = min(k0 + a.chunk, win.next if win.n is None else win.n)
+            if k1 <= k0: break
+            res = list(ex.map(one, range(k0, k1)))
+            for k, r_ in zip(range(k0, k1), res):
+                f = O[k]; ntouch += int(touched[k])
+                if r_ is not None: f = r_[0]; stats["stabilised"] += 1; stats["bright_mean_abs"].append(abs(r_[1]))
+                if a.chin_reg == "on": f = chin_fix(k, f)
+                fr = av.VideoFrame.from_ndarray(f, format="bgr24"); fr.pts = int(win.buf[k][2]); fr.time_base = tb
+                for pk in st.encode(fr): o.mux(pk)
+            win.evict(k1 - a.radius); k0 = k1
     for pk in st.encode(): o.mux(pk)
-    o.close()
+    o.close(); win.close(); n = k0; touched_n = ntouch
     r = subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(vtmp), "-i", a.video, "-map", "0:v:0", "-map", "1:a:0?", "-c", "copy", str(outp)])
     vtmp.unlink(missing_ok=True)
-    rep = {"frames": n, "touched": int(touched.sum()), "stabilised": stats["stabilised"], "bright_mean_abs": round(float(np.mean(stats["bright_mean_abs"])), 3) if stats["bright_mean_abs"] else 0, "chin_lat_px_rms": stats.get("chin_lat_px_rms"),
+    rep = {"frames": n, "touched": touched_n, "stabilised": stats["stabilised"], "bright_mean_abs": round(float(np.mean(stats["bright_mean_abs"])), 3) if stats["bright_mean_abs"] else 0, "chin_lat_px_rms": stats.get("chin_lat_px_rms"),
            "seconds": round(time.perf_counter() - t0, 1), "args": vars(a)}
     outp.with_suffix(".ostab.json").write_text(json.dumps(rep, indent=1)); print("== out_stab", json.dumps({k: v for k, v in rep.items() if k != "args"}), flush=True)
     return r.returncode
