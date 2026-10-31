@@ -92,7 +92,7 @@ def edge_width_px(alpha: np.ndarray) -> float | None:
     return round(band / per, 2) if per > 0 else None
 
 
-def interp_safe(fl, y, z, t, d0=3.5, c0=0.95, sc=2.0):
+def interp_safe(fl, y, z, t, d0=3.5, c0=0.95, sc=2.0, hf_sigma=0.0):
     """tms.interp + a confidence: on the pixels that change between the two LatentSync frames (|grey diff| > 10), D = mean |w0 - w1| (the two
     warped candidates disagree -> averaging them gives the double / torn lip contour the user saw) and the forward-backward flow consistency.
     conf = clip(1 - max((D - d0) / sc, (c0 - cons) / 0.1), 0, 1); conf >= 0.6: the interpolation; below: the NEARER frame alone, warped to t
@@ -105,6 +105,9 @@ def interp_safe(fl, y, z, t, d0=3.5, c0=0.95, sc=2.0):
     c01 = fl.consistent(F01, F10); v0 = fl.warp(c01.astype(np.float32), Ft0); v1 = fl.warp(fl.consistent(F10, F01).astype(np.float32), Ft1)
     a0, a1 = (1 - t) * v0, t * v1; s_ = a0 + a1
     it = np.where((s_ > 1e-3)[..., None], (a0[..., None] * w0 + a1[..., None] * w1) / np.maximum(s_, 1e-3)[..., None], (1 - t) * y + t * z)
+    if hf_sigma > 0:   # r10 --retime-hf nearest: the blend's low frequencies + the nearer warped frame's detail (no 5-in-6 softening pulse)
+        import cv2
+        wn = w0 if t < 0.5 else w1; it = cv2.GaussianBlur(it, (0, 0), hf_sigma) + (wn - cv2.GaussianBlur(wn, (0, 0), hf_sigma))
     mov = np.abs(gy_.astype(np.float32) - gz_.astype(np.float32)) > 10
     if mov.sum() < 20: return it, 1.0
     D = float(np.abs(w0 - w1).mean(2)[mov].mean()); cons = float(c01[mov].mean())
@@ -232,6 +235,16 @@ def main() -> int:
     ap.add_argument("--xfade-shape", choices=["linear", "smooth"], default="linear", help="r5 F: crossfade ramp shape (smooth = smoothstep: no velocity step)")
     ap.add_argument("--xfade-morph", choices=["on", "off"], default="off", help="r5 F: inside LS <-> source crossfades, a flow morph instead of an alpha "
                     "blend: both the layer and the source are warped part of the way toward each other (no double jaw / lip contour)")
+    ap.add_argument("--reg-smooth", type=int, default=0, help="r10 (mgmt: 'the chin slides'): the per-frame registration corrections (the flow-RANSAC "
+                    "similarity of --register sim / sim_ring and the ring refinement field) are estimated in a first pass and averaged over +-N output "
+                    "frames (Gaussian, sigma N/2) before they are applied: each frame's independent estimate jitters the pasted lower face; 0 = off")
+    ap.add_argument("--layer-lm-smooth", type=int, default=0, help="r10: the LatentSync layer's own landmarks (lip guard, mouth region hull, lip masks) "
+                    "= the source frame's landmarks + the layer-minus-source offset averaged over +-N master frames (MediaPipe on the generated face "
+                    "jitters, and so did the paste-region boundary on the chin); 0 = off")
+    ap.add_argument("--retime-hf", choices=["blend", "nearest"], default="blend", help="r10 (lip flicker): on interpolated 25 -> 30 fps frames the "
+                    "two warped master frames are averaged, which softens the detail on 5 of every 6 frames (a sharpness pulse); nearest = keep the "
+                    "interpolation's low frequencies, take the high frequencies (sigma --retime-hf-sigma px) from the nearer warped frame alone")
+    ap.add_argument("--retime-hf-sigma", type=float, default=1.5)
     a = ap.parse_args()
     global FPS_M; FPS_M = float(a.master_fps)
     t_all = time.perf_counter(); times = {}
@@ -256,6 +269,12 @@ def main() -> int:
     silent = tms.silent_stretches(man, nm, 0, a.silence_min_s, gaps=tms.load_gaps(a.gaps) if a.gaps else None) if a.silence != "none" else np.zeros(nm, bool)
     sil_w = tms.ramp(silent, a.silence_ramp)
     mp_ls = np.load(cfs.run_mediapipe(pathlib.Path(a.ls_raw), pathlib.Path(a.ls_raw).with_suffix(".mediapipe.npz")))["lm"][:nm] if (a.skin_texture == "source" or a.ls_sharpen_scope == "lips" or a.ls_sharpen_lips > 0 or a.sharpen_auto > 0 or a.lip_guard == "on") else None
+    if mp_ls is not None and a.layer_lm_smooth > 0:   # r10: layer landmarks = master landmarks + the smoothed layer-minus-master offset
+        d_ = (mp_ls - mp).astype(np.float64); ok_ = np.isfinite(d_).all((1, 2)); sm_ = np.full_like(d_, np.nan); N_ = a.layer_lm_smooth
+        for i in np.flatnonzero(ok_):
+            nb = [j for j in range(max(0, i - N_), min(nm, i + N_ + 1)) if ok_[j] and wm[j] > 0] or [i]
+            sm_[i] = d_[nb].mean(0)
+        mp_ls = np.where(ok_[:, None, None], mp + sm_, mp_ls).astype(mp_ls.dtype)
     # C2 on the LatentSync layer (master grid): two frames around every 16-frame window boundary of every LATENT_SYNC segment
     fl0 = tms.Flow(); nbnd = 0; nsan = 0; san_frames = []
     def lip_stats(img, lm_):   # (lip-box high-frequency energy, contrast) of a layer frame, or None
@@ -435,6 +454,7 @@ def main() -> int:
         if not (np.isfinite(arr[m0]).all() and np.isfinite(arr[m1]).all()): return arr[m0] if np.isfinite(arr[m0]).all() else arr[m1]
         return (1 - al) * arr[m0] + al * arr[m1]
     import threading
+    REG = {"mode": None, "Ms": {}, "Fs": {}, "Ms_s": {}, "Fs_s": {}}   # r10 --reg-smooth: None = per-frame (old), collect = pass 1, apply = smoothed
     local = threading.local()
     def flow():
         if not hasattr(local, "f"): local.f = tms.Flow()
@@ -530,7 +550,8 @@ def main() -> int:
         elif al < 0.04 or m1 == m0 or wm[m1] <= 0: Lk = L[m0][ya:yb, xa:xb].astype(np.float32)
         elif al > 0.96 or wm[m0] <= 0: Lk = L[m1][ya:yb, xa:xb].astype(np.float32)
         elif a.retime == "flow_safe":   # r3 D (user defect "torn / whitish lips on single 30 fps frames"): confidence-checked interpolation
-            Lk, conf_k = interp_safe(f, L[m0][ya:yb, xa:xb].astype(np.float32), L[m1][ya:yb, xa:xb].astype(np.float32), al, a.safe_d, a.safe_cons, a.safe_scale)
+            Lk, conf_k = interp_safe(f, L[m0][ya:yb, xa:xb].astype(np.float32), L[m1][ya:yb, xa:xb].astype(np.float32), al, a.safe_d, a.safe_cons, a.safe_scale,
+                                     a.retime_hf_sigma if a.retime_hf == "nearest" else 0.0)
         else: Lk = tms.interp(f, L[m0][ya:yb, xa:xb].astype(np.float32), L[m1][ya:yb, xa:xb].astype(np.float32), al)
         if a.register != "off":
             mn_ = m0 if (al < 0.5 or wm[m1] <= 0) else m1
@@ -550,12 +571,25 @@ def main() -> int:
                     Lt = pose_t - off; iod = creg.face_axes(pose_t)[2]; gs = creg.gray(S[k][ya:yb, xa:xb]); gl = cv2.cvtColor(np.clip(Lk, 0, 255).astype(np.uint8), cv2.COLOR_BGR2GRAY)
                     stab, lip = creg.stable_mask(Lt, (yb - ya, xb - xa), iod, 0.12)
                     F = local.dis(gs, gl); ys, xs = np.nonzero(stab)
+                    if REG["mode"] == "apply":   # r10 --reg-smooth: the temporally averaged correction (full-frame similarity -> crop coords)
+                        Mf = REG["Ms_s"].get(k)
+                        if Mf is not None:
+                            Tm = np.array([[1, 0, -xa], [0, 1, -ya], [0, 0, 1]], np.float64); Tp = np.array([[1, 0, xa], [0, 1, ya], [0, 0, 1]], np.float64)
+                            Mc = (Tm @ np.vstack([Mf, [0, 0, 1]]) @ Tp)[:2]
+                            Lk = cv2.warpAffine(Lk, Mc, (xb - xa, yb - ya), flags=cv2.INTER_CUBIC | cv2.WARP_INVERSE_MAP, borderMode=cv2.BORDER_REPLICATE)
+                        xs = xs[:0]   # skip the per-frame estimate
                     if len(xs) >= 30:
                         P_ = np.stack([xs[::2], ys[::2]], 1).astype(np.float32); Q_ = P_ + F[ys[::2], xs[::2]]
                         Ms, inl = cv2.estimateAffinePartial2D(P_, Q_, method=cv2.RANSAC, ransacReprojThreshold=1.0, maxIters=2000, confidence=0.995, refineIters=10)
                         if Ms is not None and float(inl.mean()) >= 0.4 and abs(math.hypot(Ms[0, 0], Ms[1, 0]) - 1) < 0.04 and np.linalg.norm(Ms[:, 2]) < 0.15 * iod + 5:
                             Lk = cv2.warpAffine(Lk, Ms, (xb - xa, yb - ya), flags=cv2.INTER_CUBIC | cv2.WARP_INVERSE_MAP, borderMode=cv2.BORDER_REPLICATE)
-                    if a.register == "sim_ring":
+                            if REG["mode"] == "collect":   # crop -> full-frame coords
+                                Tm = np.array([[1, 0, -xa], [0, 1, -ya], [0, 0, 1]], np.float64); Tp = np.array([[1, 0, xa], [0, 1, ya], [0, 0, 1]], np.float64)
+                                REG["Ms"][k] = (Tp @ np.vstack([Ms, [0, 0, 1]]) @ Tm)[:2]
+                    if a.register == "sim_ring" and REG["mode"] == "apply" and k in REG["Fs_s"]:   # r10: the temporally averaged ring field
+                        yy, xx = np.mgrid[0:yb - ya, 0:xb - xa].astype(np.float32); Fs = REG["Fs_s"][k](xa, ya, xb - xa, yb - ya)
+                        Lk = cv2.remap(Lk, xx + Fs[..., 0], yy + Fs[..., 1], cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+                    elif a.register == "sim_ring":
                         al_c = np.zeros((yb - ya, xb - xa), np.float32); al_c[roi_r[0] - ya:roi_r[1] - ya, roi_r[2] - xa:roi_r[3] - xa] = alpha
                         F2 = local.dis(gs, cv2.cvtColor(np.clip(Lk, 0, 255).astype(np.uint8), cv2.COLOR_BGR2GRAY)); ringw = int(max(3, 0.35 * iod))
                         band = cv2.dilate(((al_c > 0.02) & (al_c < 0.98)).astype(np.uint8), cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * ringw + 1, 2 * ringw + 1))) > 0
@@ -567,8 +601,12 @@ def main() -> int:
                         den = cv2.GaussianBlur(wgt, (0, 0), sg) + 1e-4
                         Fs = np.stack([cv2.GaussianBlur(F2[..., c_] * wgt, (0, 0), sg) / den for c_ in range(2)], -1)
                         fade = np.clip(creg.lip_distance(lip, lip.shape) / max(0.25 * iod, 1.0), 0, 1).astype(np.float32); Fs *= fade[..., None] * (den > 0.02)[..., None]
+                        if REG["mode"] == "collect":   # quarter resolution (the field is a Gaussian of sigma 0.12 IOD), float16
+                            REG["Fs"][k] = (xa, ya, xb - xa, yb - ya, cv2.resize(Fs, ((xb - xa + 3) // 4, (yb - ya + 3) // 4), interpolation=cv2.INTER_AREA).astype(np.float16))
+                            return S[k], 0, None
                         yy, xx = np.mgrid[0:yb - ya, 0:xb - xa].astype(np.float32)
                         Lk = cv2.remap(Lk, xx + Fs[..., 0], yy + Fs[..., 1], cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+            if REG["mode"] == "collect": return S[k], 0, None
             Lk = Lk[roi_r[0] - ya:roi_r[1] - ya, roi_r[2] - xa:roi_r[3] - xa].astype(np.float32); ya, yb, xa, xb = roi_r
         sk = S[k][ya:yb, xa:xb].astype(np.float32)
         if a.colour_match != "off":   # r3: low-frequency colour match to the source, estimated in the upper border band
@@ -698,6 +736,35 @@ def main() -> int:
         a.ls_sharpen, a.ls_sharpen_lips = best["ls_sharpen"], best["ls_sharpen_lips"]
         if a.sharpen_lips_max > 0: a.ls_sharpen_lips = min(a.ls_sharpen_lips, a.sharpen_lips_max)
         times["sharpen_closed_loop"] = {"iterations": hist, "chosen": best, "seconds": round(time.perf_counter() - t0, 2)}; print("  sharpen closed loop:", best, flush=True)
+    if a.reg_smooth > 0 and a.register in ("sim", "sim_ring"):   # r10: pass 1 = the per-frame corrections, then a Gaussian average over +-N frames
+        t0 = time.perf_counter(); REG["mode"] = "collect"
+        with cf.ThreadPoolExecutor(max_workers=a.threads) as ex: list(ex.map(one, range(len(S))))
+        N = a.reg_smooth; sgw = max(N / 2.0, 0.5); nS = len(S)
+        P_ = np.full((nS, 4), np.nan)   # similarity (a, b, tx, ty), full-frame coords
+        for k_, M_ in REG["Ms"].items(): P_[k_] = [M_[0, 0], M_[1, 0], M_[0, 2], M_[1, 2]]
+        for k_ in range(nS):
+            wsum = 0.0; acc = np.zeros(4)
+            for j in range(max(0, k_ - N), min(nS, k_ + N + 1)):
+                if np.isfinite(P_[j]).all(): w_ = math.exp(-0.5 * ((j - k_) / sgw) ** 2); acc += w_ * P_[j]; wsum += w_
+            if wsum > 0.3:   # some support within +-N
+                q_ = acc / wsum; REG["Ms_s"][k_] = np.array([[q_[0], -q_[1], q_[2]], [q_[1], q_[0], q_[3]]], np.float64)
+        Fd = REG["Fs"]
+        def field_fn(k_):
+            nb = [(j, math.exp(-0.5 * ((j - k_) / sgw) ** 2)) for j in range(k_ - N, k_ + N + 1) if j in Fd]
+            def f_(xa_, ya_, w_, h_):   # the neighbours' fields moved into this crop (box offsets differ by the head motion), weighted mean
+                acc = np.zeros((h_, w_, 2), np.float32); ws = np.zeros((h_, w_), np.float32)
+                for j, wj in nb:
+                    xj, yj, wjw, wjh, Fq = Fd[j]; Fj = cv2.resize(Fq.astype(np.float32), (wjw, wjh), interpolation=cv2.INTER_LINEAR)
+                    T_ = np.float32([[1, 0, xj - xa_], [0, 1, yj - ya_]])
+                    acc += wj * cv2.warpAffine(Fj, T_, (w_, h_), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+                    ws += wj * cv2.warpAffine(np.ones((wjh, wjw), np.float32), T_, (w_, h_), flags=cv2.INTER_NEAREST, borderMode=cv2.BORDER_CONSTANT)
+                return acc / np.maximum(ws, 1e-3)[..., None] * (ws > 0.3)[..., None]
+            return f_
+        for k_ in range(nS):
+            if any(j in Fd for j in range(k_ - N, k_ + N + 1)): REG["Fs_s"][k_] = field_fn(k_)
+        REG["mode"] = "apply"; REG["Ms"].clear()
+        times["reg_smooth"] = {"seconds": round(time.perf_counter() - t0, 2), "n": N, "ms_frames": int(np.isfinite(P_[:, 0]).sum()), "ring_frames": len(Fd)}
+        print("  reg-smooth:", times["reg_smooth"], flush=True)
     lip_cov.clear(); edge_meas.clear(); guard_vals.clear(); guard_skip.clear()   # calibration calls of one() do not count
     t0 = time.perf_counter(); out = [None] * len(S); fails = 0; touched = 0
     with cf.ThreadPoolExecutor(max_workers=a.threads) as ex:
