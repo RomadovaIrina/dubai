@@ -327,15 +327,16 @@ def unet_compile(pipe):
     for k_ in ("accumulated_cache_size_limit", "accumulated_recompile_limit"):
         if hasattr(torch._dynamo.config, k_): setattr(torch._dynamo.config, k_, max(getattr(torch._dynamo.config, k_), 8192))
     n = 0; u = pipe.unet
+    dyn = True if os.environ.get("LS_UNET_COMPILE_DYNAMIC") == "1" else False   # r10: symbolic batch / frame dims = one graph per leaf width for EVERY video (no per-video tail-shape compiles)
     for blk in list(u.down_blocks) + [u.mid_block] + list(u.up_blocks):
         for name in ("resnets", "attentions", "motion_modules"):
             ml = getattr(blk, name, None)
             if ml is None: continue
             for j in range(len(ml)):
                 if ml[j] is None: continue
-                ml[j] = torch.compile(ml[j], mode=None if mode == "default" else mode, dynamic=False); n += 1
+                ml[j] = torch.compile(ml[j], mode=None if mode == "default" else mode, dynamic=dyn); n += 1
     u._r10_compiled = True
-    print(f"  [ls] UNet leaves torch.compile mode={mode}: {n} modules", flush=True)
+    print(f"  [ls] UNet leaves torch.compile mode={mode} dynamic={dyn}: {n} modules", flush=True)
 
 
 def half_rate_fill(src, sub, idx):

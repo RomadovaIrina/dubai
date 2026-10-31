@@ -44,7 +44,7 @@ class Tee:
 def run_job(job, out_log):
     import candidate_video_stage as cvs
     env0, argv0, cwd0 = dict(os.environ), list(sys.argv), os.getcwd()
-    keep = {k: v for k, v in env0.items() if k in ("LS_VAE_COMPILE", "LS_UNET_COMPILE")}   # the resident graphs were built with these
+    keep = {k: v for k, v in env0.items() if k in ("LS_VAE_COMPILE", "LS_UNET_COMPILE", "LS_UNET_COMPILE_DYNAMIC")}   # the resident graphs were built with these
     rc = 1
     with open(out_log, "w", buffering=1) as f:
         fd1, fd2 = os.dup(1), os.dup(2); os.dup2(f.fileno(), 1); os.dup2(f.fileno(), 2)   # subprocesses (ffmpeg) and C-level prints too
