@@ -34,14 +34,19 @@ W=$OUT/work; L=$OUT/logs; mkdir -p $W $L; T=$W/stages.tsv; : > $T; STATUS=SUCCES
 export DUB_INPUTS=$W/in; rm -rf $DUB_INPUTS; mkdir -p $DUB_INPUTS
 echo "r9 e2e $ID E2E_REF=${E2E_REF:-same} E2E_FX=${E2E_FX:-0} commit $(git rev-parse --short HEAD) input $IN out $OUT $(date -Is)" | tee $L/e2e.log
 nvidia-smi --query-gpu=timestamp,memory.used,utilization.gpu --format=csv,noheader,nounits -lms 100 > $W/nvsmi.csv 2>/dev/null & NV=$!
-trap 'kill $NV 2>/dev/null' EXIT
+export R10_JOB=$ID; NVML=${R10_NVML:-$W/nvml.jsonl}; NM=""   # r10: NVML sampler, 100 ms, per-process SM util tagged by R10_JOB (a worker passes its one shared R10_NVML file)
+[ -z "${R10_NVML:-}" ] && [ -x /venv/main/bin/python ] && { rm -f $NVML; /venv/main/bin/python scripts/r10/gpu_sampler.py --out $NVML > $L/gpu_sampler.log 2>&1 & NM=$!; }
+trap 'kill $NV $NM 2>/dev/null' EXIT
 st() { echo -e "$1\t$(date +%s.%N)" >> $T; echo "== $ID stage $1 $(date +%T)" | tee -a $L/e2e.log; }   # stage start; the next st (or 'end') closes it
 fail() { FL+=("$1"); ER+=("$1: ${3:-}"); [ "$2" = ERROR ] && STATUS=ERROR || { [ $STATUS = SUCCESS ] && STATUS=$2; }; echo "== $ID $2: $1 ${3:-}" | tee -a $L/e2e.log; }   # fail <flag> <status> [detail]
 collect() { python scripts/r9/collect.py --id $ID --out $OUT --status $STATUS --flags "${FL[*]:-}" --errors "$(printf '%s\n' "${ER[@]:-}")" --stages $T --nvsmi $W/nvsmi.csv --precheck $W/precheck.json \
     --audio $A/$AT --htd $A/$HT --face $B/$FT --input "$IN"; }
 finish() {
-  st end; kill $NV 2>/dev/null; wait $NV 2>/dev/null
+  st end; kill $NV $NM 2>/dev/null; wait $NV $NM 2>/dev/null
   collect 2>&1 | tee -a $L/e2e.log
+  [ -s $NVML ] && /venv/main/bin/python scripts/r10/gpu_sampler.py --summary $NVML --stages $T --job $ID \
+    --vmin $(python3 -c "import json; print(json.load(open('$OUT/timing.json'))['video_min'] or 1)" 2>/dev/null || echo 1) > $OUT/gpu_time.json 2>> $L/gpu_sampler.log \
+    && python3 -c "import json; t = json.load(open('$OUT/gpu_time.json'))['total']; print('== $ID NVML GPU-busy', t.get('gpu_busy_s_per_vmin'), 's/vmin, weighted', t.get('gpu_weighted_s_per_vmin'), ', wall', t.get('wall_s_per_vmin'))" | tee -a $L/e2e.log
   echo "R9_E2E_DONE $ID $STATUS" | tee -a $L/e2e.log; exit 0
 }
 
@@ -59,6 +64,7 @@ if [[ " $PF " == *" rotated_source "* ]]; then   # the pipeline reads coded fram
 fi
 SRC=$(ls $DUB_INPUTS/$ID.* | head -1)
 
+if [ -n "${R10_HEAVY_LOCK:-}" ]; then st wait_heavy; exec 8>"$R10_HEAVY_LOCK"; flock 8; fi   # r10 worker: audio + sep + face_gen (the heavy GPU stages) hold ONE exclusive lock; the wait is its own stage
 st audio   # one id, from the raw input; its own tag so nothing of another run is reused (the per-id caches $A/sep/<id> are cleared)
 rm -rf $A/sep/$ID $A/$AT $A/${AT}src $A/${AT}pre
 export DUB_SEP_STEMS=/workspace/dub/r8a
@@ -103,7 +109,7 @@ else
     bash scripts/r7/r7_e2e.sh $ID > $L/face_gen.log 2>&1
   [ -n "$SP" ] && wait $SP
   if [ -f $B/$GT/work_${ID}_$GT/${ID}_${GT}_25fps.manifest.json ]; then
-    st face_comp
+    st face_comp; [ -n "${R10_HEAVY_LOCK:-}" ] && flock -u 8   # r10 worker: the composite overlaps the next job's heavy stages
     [ "$E2E_FX" = 1 ] && export REP=1 CFD_LABEL=ia04 CFD_ARGS="--inner-alpha 0.4 ${CFD_EXTRA:-}"   # r9: short mouth glitches re-drawn in the layer, long ones -> smooth source fallback; CodeFormer detail at 0.4 inside the mouth
     [ "$E2E_FX" = 1 ] || { [ -n "${CFD_EXTRA:-}" ] && export CFD_ARGS="${CFD_ARGS:-} $CFD_EXTRA"; }
     SKIP_SCORE=1 TAG=$FT SRC_TAG=$GT CFD=self SR=srt1 SR_EXTRA="--batch 8 --mask down2" FB=fb7 FB_ARGS="$(cat reports/experiments/r8-face/fb7.args)" \
@@ -111,6 +117,7 @@ else
     [ -f $B/$FT/${ID}_$FT.mp4 ] && VID=$B/$FT/${ID}_$FT.mp4 || fail face_comp_failed PARTIAL_SUCCESS "see logs/face_comp.log: source picture used"
   else fail face_gen_failed PARTIAL_SUCCESS "see logs/face_gen.log: source picture used"; fi
 fi
+[ -n "${R10_HEAVY_LOCK:-}" ] && flock -u 8
 [ -n "$VID" ] || VID=$SRC
 
 st mux   # the picture rendered once, muxed with each bed (stream copy: within the pair the video stream is bit-identical)
@@ -145,7 +152,7 @@ export METRICS=on
     python scripts/r9/occl_scan.py --src $SRC --out $B/$FT/${ID}_$FT.mp4 --lm $B/$GT/timing/${ID}_source_lm_F.npz --sheet $W/occlusion_scan.jpg --json $W/occlusion.json | tail -1   # something next to the mouth overwritten
   fi
 } > $L/metrics.log 2>&1
-if [ -f $B/$FT/${ID}_$FT.mp4 ]; then   # the whole-frame gate is one CPU core for ~1 s per frame at 1080p: in the background (next video starts), then the rows again
+if [ "${E2E_FRAME_GATE:-on}" = on ] && [ -f $B/$FT/${ID}_$FT.mp4 ]; then   # the whole-frame gate is one CPU core for ~1 s per frame at 1080p: in the background (next video starts), then the rows again
   ( bash scripts/r7/r7_frame_gate.sh $B/$FT:$FT $ID | grep "^=="; python scripts/r7/r7_baseline.py freeze --tag $FT --audio $A/$AT --ids $ID --out $W/face_gate.json | tail -2
     collect | tail -1; echo "R9_FRAME_GATE_DONE $ID" ) > $L/frame_gate.log 2>&1 < /dev/null &
   disown; fi
