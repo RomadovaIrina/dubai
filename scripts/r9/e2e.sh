@@ -22,12 +22,18 @@ case "${R9_FAST_AUDIO:-2}" in   # r9 audio speed (reports/experiments/r9-speed-a
   1) export R9_MP_BG=on DUB_S3_BATCH=1 R9_ONEPROC=on;;   # r9fast-audio-safe: background MediaPipe, batched S3Gen, the stage in the pipeline process
   2) export R9_MP_BG=on DUB_S3_BATCH=1 R9_ONEPROC=on DUB_UNIT_CONC=1 DUB_QWEN_BATCH=1 R9_CHAIN_INPROC=${R9_CHAIN_INPROC:-on} R9_TTS_PRELOAD=${R9_TTS_PRELOAD:-on};;   # r9fast-audio: + units concurrently, batched resident Qwen 14B, the CPU chain in the audio process (round 2; R9_SEP_OVERLAP below)
 esac
-export DUB_ALLOW_NC=1 DUB_ALLOW_NC_BED=1   # CodeFormer + htdemucs: deliberate NC deviation, user-accepted (brief_r9_e2e.md); InsightFace is not used
+case "${R10_FAST_FACE:-1}" in   # r9 speed FACE (reports/experiments/r9-speed-face/REPORT.md): default 1 = stack S2 (S without the mouth-only decode, stick +2) + VAE compile, gate PASS on m03; 0 = the r9 E2E face path
+  1) export GEN_COMP=${GEN_COMP:-0} FAST_SRCPREP=${FAST_SRCPREP:-1} FAST_FB_BG=${FAST_FB_BG:-1} FAST_ENC=${FAST_ENC:-ultrafast} FAST_MPREUSE=${FAST_MPREUSE:-1} \
+       FC_EXTRA=${FC_EXTRA:---pre-threads=12} LS_VAE_COMPILE=${LS_VAE_COMPILE:-max-autotune-no-cudagraphs} CFD_EXTRA=${CFD_EXTRA:---threads=12};;
+esac
+[ "${E2E_HALF_RATE:-0}" = 1 ] && export LS_HALF_RATE=1   # r9 speed: LatentSync on every other frame (GPU −40 %), odd frames flow-filled; NOT default (sync margin thin, r10 gate pending)
+export E2E_FX=${E2E_FX:-1}   # r10: the r9 + fix look (the management set, and the look the face speed stack was gated on) is the default; E2E_FX=0 = the plain r9 composite
+export DUB_ALLOW_NC=1 DUB_ALLOW_NC_BED=1  # CodeFormer + htdemucs: deliberate NC deviation, user-accepted (brief_r9_e2e.md); InsightFace is not used
 A=/workspace/dub/artifacts/r4a; B=/workspace/dub/artifacts/r4m; AT=r9_$ID; HT=r9_${ID}_htd; GT=r9g_$ID; FT=r9f_$ID
 W=$OUT/work; L=$OUT/logs; mkdir -p $W $L; T=$W/stages.tsv; : > $T; STATUS=SUCCESS; FL=(); ER=()
 export DUB_INPUTS=$W/in; rm -rf $DUB_INPUTS; mkdir -p $DUB_INPUTS
 echo "r9 e2e $ID E2E_REF=${E2E_REF:-same} E2E_FX=${E2E_FX:-0} commit $(git rev-parse --short HEAD) input $IN out $OUT $(date -Is)" | tee $L/e2e.log
-nvidia-smi --query-gpu=timestamp,memory.used,utilization.gpu --format=csv,noheader,nounits -lms 500 > $W/nvsmi.csv 2>/dev/null & NV=$!
+nvidia-smi --query-gpu=timestamp,memory.used,utilization.gpu --format=csv,noheader,nounits -lms 100 > $W/nvsmi.csv 2>/dev/null & NV=$!
 trap 'kill $NV 2>/dev/null' EXIT
 st() { echo -e "$1\t$(date +%s.%N)" >> $T; echo "== $ID stage $1 $(date +%T)" | tee -a $L/e2e.log; }   # stage start; the next st (or 'end') closes it
 fail() { FL+=("$1"); ER+=("$1: ${3:-}"); [ "$2" = ERROR ] && STATUS=ERROR || { [ $STATUS = SUCCESS ] && STATUS=$2; }; echo "== $ID $2: $1 ${3:-}" | tee -a $L/e2e.log; }   # fail <flag> <status> [detail]
@@ -84,11 +90,22 @@ else
   st face_gen
   rm -rf $B/$GT $B/$FT
   REFX=""; [ -n "${E2E_REF:-}" ] && REFX="--ref-mode ${E2E_REF%%:*} --audio-lead ${E2E_REF#*:}"   # r9: E2E_REF=fixed:0.5 = LatentSync reference from a calm closed-mouth clip (no copy of the source mouth) + its half-frame lag compensated
+  unset MP_SOURCE_NPZ; SMP=$A/sep/$ID/source_mediapipe.npz; SP=""   # (as scripts/r9/face_only.sh)
+  if [ "${FAST_MPREUSE:-0}" = 1 ] && [ -f $SMP ]; then   # r9 speed: the generator's master pass from the audio stage's source MediaPipe (frame map; gated) + the composite's source pass IS it
+    export MP_SOURCE_NPZ=$SMP; mkdir -p $B/$GT/timing; cp $SMP $B/$GT/timing/${ID}_source_lm_F_mp.npz; fi
+  if [ "${FAST_SRCPREP:-0}" = 1 ]; then   # r9 speed L4: the source-only composite inputs (master timing, source landmarks, rigid motion) on the CPU while LatentSync runs
+    WV=$B/$GT/work_${ID}_$GT/video; TD=$B/$GT/timing
+    ( for i in $(seq 1800); do [ -s $WV/master_mediapipe.npz ] && break; sleep 2; done; [ -s $WV/master_mediapipe.npz ] || exit 0; mkdir -p $TD; TJ=$TD/${ID}_master_timing_F.json; SL=$TD/${ID}_source_lm_F.npz
+      python scripts/quality/r3_master_timing.py --src $SRC --master $WV/master_25fps.mp4 --vf fps=25 --out $TJ && python scripts/quality/r3_source_lm.py --src $SRC --timing $TJ --out $SL \
+        && python scripts/r9/r9_source_rigid.py --src $SRC --source-lm $SL ) > $L/srcprep.log 2>&1 & SP=$!
+  fi
   AUDIO=$A/$AT TAG=$GT SKIP_SCORE=1 VIDEO_EXTRA="--codeformer optimized --codeformer-w 1.0 --steps 10 --steps-silent 20 --codeformer-parse off --codeformer-batch 16 $REFX" \
     bash scripts/r7/r7_e2e.sh $ID > $L/face_gen.log 2>&1
+  [ -n "$SP" ] && wait $SP
   if [ -f $B/$GT/work_${ID}_$GT/${ID}_${GT}_25fps.manifest.json ]; then
     st face_comp
-    [ "${E2E_FX:-0}" = 1 ] && export REP=1 CFD_LABEL=ia04 CFD_ARGS="--inner-alpha 0.4"   # r9: short mouth glitches re-drawn in the layer, long ones -> smooth source fallback; CodeFormer detail at 0.4 inside the mouth
+    [ "$E2E_FX" = 1 ] && export REP=1 CFD_LABEL=ia04 CFD_ARGS="--inner-alpha 0.4 ${CFD_EXTRA:-}"   # r9: short mouth glitches re-drawn in the layer, long ones -> smooth source fallback; CodeFormer detail at 0.4 inside the mouth
+    [ "$E2E_FX" = 1 ] || { [ -n "${CFD_EXTRA:-}" ] && export CFD_ARGS="${CFD_ARGS:-} $CFD_EXTRA"; }
     SKIP_SCORE=1 TAG=$FT SRC_TAG=$GT CFD=self SR=srt1 SR_EXTRA="--batch 8 --mask down2" FB=fb7 FB_ARGS="$(cat reports/experiments/r8-face/fb7.args)" \
       bash scripts/r7/r7_m7_comp.sh $ID > $L/face_comp.log 2>&1
     [ -f $B/$FT/${ID}_$FT.mp4 ] && VID=$B/$FT/${ID}_$FT.mp4 || fail face_comp_failed PARTIAL_SUCCESS "see logs/face_comp.log: source picture used"
