@@ -315,6 +315,26 @@ def vae_compile(pipe):
     print(f"  [ls] VAE encoder / decoder torch.compile mode={mode} (16-image shape)", flush=True)
 
 
+def unet_compile(pipe):
+    """r10 speed (LS_UNET_COMPILE=<torch.compile mode>): every ResNet / Transformer3D / motion-module LEAF of the UNet blocks compiled on its own
+    (dynamic=False). DeepCache patches the UNet / block forwards (Python skip logic): those stay eager, so full and partial calls reuse the same
+    leaf graphs; each leaf sees a handful of shapes (window / bridge / tail batches), cached on disk by inductor (the first run on a machine pays it)."""
+    mode = os.environ.get("LS_UNET_COMPILE", "")
+    if not mode or getattr(pipe.unet, "_r10_compiled", False): return
+    import torch._dynamo
+    torch._dynamo.config.cache_size_limit = max(torch._dynamo.config.cache_size_limit, 32)
+    n = 0; u = pipe.unet
+    for blk in list(u.down_blocks) + [u.mid_block] + list(u.up_blocks):
+        for name in ("resnets", "attentions", "motion_modules"):
+            ml = getattr(blk, name, None)
+            if ml is None: continue
+            for j in range(len(ml)):
+                if ml[j] is None: continue
+                ml[j] = torch.compile(ml[j], mode=None if mode == "default" else mode, dynamic=False); n += 1
+    u._r10_compiled = True
+    print(f"  [ls] UNet leaves torch.compile mode={mode}: {n} modules", flush=True)
+
+
 def half_rate_fill(src, sub, idx):
     """r9 speed (LS_HALF_RATE): the generated frames at idx (every other frame) + the frames between them: inside the region LatentSync changed
     (|out - in| > 3 on either neighbour, dilated, feathered) the bidirectional DIS-flow interpolation of the two generated neighbours (as
@@ -355,7 +375,7 @@ class StableRunner:
     def __init__(self, window_batch_size=2, deepcache=True, steps=20, guidance=1.5, seed=1247, deepcache_interval=5, stride=None, ref_mode="same", mode="ls", pipe=None,
                  overlap="fuse", window_len=None, bridge_len=0, bridge_steps=0):
         from resident_vram_probe import load_latentsync
-        t0 = time.perf_counter(); pipe = pipe or load_latentsync(); vae_compile(pipe)
+        t0 = time.perf_counter(); pipe = pipe or load_latentsync(); vae_compile(pipe); unet_compile(pipe)
         self.acc = StableLatentSync(pipe, stride=stride, ref_mode=ref_mode, mode=mode, overlap=overlap, window_len=window_len, bridge_len=bridge_len, bridge_steps=bridge_steps,
                                     window_batch_size=window_batch_size,
                                     deepcache=deepcache, steps=steps, guidance=guidance, seed=seed, deepcache_interval=deepcache_interval)
@@ -372,6 +392,15 @@ class StableRunner:
         sa = getattr(self, "silent_all", None); self.acc.silent_seg = sa[start:start + n] if sa is not None else None   # phase 2: dub-silent master frames of this segment
 
     def run_frames(self, frames_rgb, audio_wav, detections=None):
+        prof = os.environ.get("LS_PROFILE", "")   # r10 speed: CUDA kernel table of the FIRST segment -> <file> (torch.profiler; diagnostics only)
+        if prof and not getattr(self, "_profiled", False):
+            self._profiled = True
+            from torch.profiler import profile, ProfilerActivity
+            with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA]) as pr:
+                r = self.run_frames(frames_rgb, audio_wav, detections)
+            with open(prof, "w") as f:
+                print("frames", len(frames_rgb), "seconds", r[1], file=f); print(pr.key_averages().table(sort_by="cuda_time_total", row_limit=45, max_name_column_width=70), file=f)
+            return r
         fps = int(os.environ.get("DUB_LS_FPS", "25")); t0 = time.perf_counter()
         rate = os.environ.get("LS_RATE", "")   # r10 speed: LS_RATE=k/m = LatentSync on k of every m master frames, each with ITS OWN 25 fps audio window (chunk selection), the rest flow-filled
         if rate and len(frames_rgb) >= 32:
