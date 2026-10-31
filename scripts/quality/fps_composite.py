@@ -137,7 +137,7 @@ def main() -> int:
     ap.add_argument("--sanitize-mode", choices=["replace", "texture"], default="replace", help="r3 D: replace = the flagged frame becomes the interpolation of "
                     "its good neighbours; texture = keep the flagged frame's own low frequencies (mouth opening / shape = the lip-sync) and take only the "
                     "high-frequency detail (lip line, texture) from that interpolation (Gaussian split at --sanitize-sigma px)")
-    ap.add_argument("--sanitize-sigma", type=float, default=2.0)
+    ap.add_argument("--sanitize-sigma", type=float, default=2.0); ap.add_argument("--pre-threads", type=int, default=1, help="r9 speed: threads for the sanitize stats, the C2 boundaries and the closed-loop sharpen samples (same output)")
     ap.add_argument("--sanitize-guard", choices=["on", "off"], default="on", help="r6 F: a flagged frame is replaced only if the interpolated neighbours "
                     "are aligned with it on the skin ring around the lip box (grey NCC >= --sanitize-align); otherwise the original stays "
                     "(off = r3 D behaviour: replace every flagged frame)")
@@ -297,10 +297,10 @@ def main() -> int:
     nguard = 0; nlowconf = 0; nrigid = 0; mr_state = [a.mouth_region]; mr_frames = [0]   # r7 F --mouth-region-closed: current radius, frames widened
     if a.sanitize_layer > 0 and mp_ls is not None:   # r3 D: generator outliers (pink blob: the lip line vanishes for 1-3 frames) out of the layer first
         t0 = time.perf_counter(); hf = np.full(nm, np.nan); ct = np.full(nm, np.nan); lu = np.full(nm, np.nan)
-        for m_ in range(nm):
-            if wm[m_] <= 0: continue
-            st_ = lip_stats(L[m_], mp_ls[m_])
-            if st_ is not None: hf[m_], ct[m_], lu[m_] = st_
+        _ms = [m_ for m_ in range(nm) if wm[m_] > 0]   # r9 speed (--pre-threads): independent per frame
+        with cf.ThreadPoolExecutor(max_workers=max(1, a.pre_threads)) as ex_:
+            for m_, st_ in zip(_ms, ex_.map(lambda m_: lip_stats(L[m_], mp_ls[m_]), _ms)):
+                if st_ is not None: hf[m_], ct[m_], lu[m_] = st_
         bad = np.zeros(nm, bool); ratio_ = np.full(nm, np.nan); luma_r = np.full(nm, np.nan); nrepl = 0; repl_frames = []
         for m_ in range(nm):
             if not np.isfinite(hf[m_]): continue
@@ -404,12 +404,19 @@ def main() -> int:
         times["seam_lf"] = round(time.perf_counter() - t0, 2)
     if a.boundary == "on":
         t0 = time.perf_counter()
-        for s in man["lipsync"]["segments"]:
-            if s["action"] != "LATENT_SYNC": continue
-            for b in range(s["start_frame"] + P, s["end_frame"], P):
-                if b >= nm: continue
-                y, z = L[b - 1].astype(np.float32), L[b].astype(np.float32)
-                L[b - 1] = np.clip(tms.interp(fl0, y, z, 1 / 3), 0, 255).astype(np.uint8); L[b] = np.clip(tms.interp(fl0, y, z, 2 / 3), 0, 255).astype(np.uint8); nbnd += 1
+        _bs = [b for s in man["lipsync"]["segments"] if s["action"] == "LATENT_SYNC" for b in range(s["start_frame"] + P, s["end_frame"], P) if b < nm]
+        import threading as _th
+        _tl = _th.local()
+        def _c2(b):
+            if a.pre_threads > 1:
+                if not hasattr(_tl, "f"): _tl.f = tms.Flow()
+                f_ = _tl.f
+            else: f_ = fl0
+            y, z = L[b - 1].astype(np.float32), L[b].astype(np.float32)
+            return np.clip(tms.interp(f_, y, z, 1 / 3), 0, 255).astype(np.uint8), np.clip(tms.interp(f_, y, z, 2 / 3), 0, 255).astype(np.uint8)
+        with cf.ThreadPoolExecutor(max_workers=max(1, a.pre_threads)) as ex_:
+            for b, (p_, q_) in zip(_bs, list(ex_.map(_c2, _bs))):
+                L[b - 1], L[b] = p_, q_; nbnd += 1
         times["c2_boundaries"] = round(time.perf_counter() - t0, 2)
     njoint = 0
     if a.seg_joint > 0:   # r5 F: two generations meet with no crossfade -> eased interpolation across the joint
@@ -713,8 +720,8 @@ def main() -> int:
         ks_ = ks_[:: max(1, len(ks_) // 40)][:40]; hist = []
         def meas():
             rl, rs = [], []
-            for k in ks_:
-                o, t_, _ = one(k)
+            with cf.ThreadPoolExecutor(max_workers=max(1, a.pre_threads)) as ex_: outs_ = list(ex_.map(one, ks_))
+            for k, (o, t_, _) in zip(ks_, outs_):
                 if not t_: continue
                 lk = lm_at(k, mu_arr[k]); box = bb_s[k] if lm_f is not None else lerp(bb, mu_arr[k]); al_, roi_ = ellipse_alpha(box, H, W, a.edge_px)
                 if al_ is None: continue

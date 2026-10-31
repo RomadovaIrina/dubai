@@ -57,7 +57,7 @@ def main():
     ap.add_argument("--red-off", type=float, default=0.065, help="LATERAL lip-colour offset (IOD) that flags a slid mouth (m03: the slides 0.07-0.11, p99 of the video 0.045)"); ap.add_argument("--red-spread", type=float, default=99.0, help="off by default: the spread over-fires on a generator that does not copy the source shape")
     ap.add_argument("--fb-thr", type=float, default=0.5); ap.add_argument("--spike", type=float, default=0.025); ap.add_argument("--slide", type=float, default=0.06)
     ap.add_argument("--spikes", choices=["on", "off"], default="on", help="off = fx-lite: repair only breakages (fallback flags, slides, lip-colour slides), keep 1-2-frame opening spikes")
-    ap.add_argument("--max-run", type=int, default=3); ap.add_argument("--ramp-sigma", type=float, default=2.0); ap.add_argument("--crf", type=int, default=10)
+    ap.add_argument("--max-run", type=int, default=3); ap.add_argument("--ramp-sigma", type=float, default=2.0); ap.add_argument("--crf", type=int, default=10); ap.add_argument("--preset", default="medium", help="x264 preset of this intermediate layer (r9 speed: ultrafast)")
     a = ap.parse_args(); t0 = time.perf_counter()
     import av
     c = av.open(a.ls); s = c.streams.video[0]; s.thread_type = "AUTO"; rate = s.average_rate
@@ -107,7 +107,7 @@ def main():
     if a.ramp_sigma > 0 and fb_out.any():   # smoothed ramps for the source fallback that remains (no 1-frame snap)
         k = np.arange(-int(3 * a.ramp_sigma), int(3 * a.ramp_sigma) + 1); g = np.exp(-0.5 * (k / a.ramp_sigma) ** 2)
         fb_out = np.maximum(fb_out, np.minimum(1.0, np.convolve(fb_out, g / g.max() * 0.999, mode="same")) * lsm).astype(np.float32)
-    o2 = av.open(a.out, "w"); st = o2.add_stream("libx264", rate=rate); st.width, st.height = W, H; st.pix_fmt = "yuv420p"; st.options = {"crf": str(a.crf), "preset": "medium"}
+    o2 = av.open(a.out, "w"); st = o2.add_stream("libx264", rate=rate); st.width, st.height = W, H; st.pix_fmt = "yuv420p"; st.options = {"crf": str(a.crf), "preset": a.preset}
     for f in F:
         for pk in st.encode(av.VideoFrame.from_ndarray(f, format="bgr24")): o2.mux(pk)
     for pk in st.encode(): o2.mux(pk)

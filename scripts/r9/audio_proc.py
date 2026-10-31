@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+"""r9 speed (audio lever L, R9_ONEPROC=on): the r6 pipeline AND the retake -> clause takes -> burst_align stage in ONE process.
+
+Without it the pipeline process exits and r8_tts_stage.py starts a second one that imports everything again and loads Qwen 14B, the TTS QA
+(Whisper large-v3 + wav2vec2) and Chatterbox again (m01: ~14 s of start + loads). Here the pipeline runs as usual (run_clean_pipeline_05.main,
+same argv), its Qwen stays resident (its close() is a no-op until the end) and the stage's mains get it through the r8_tts_stage cache
+and so does its TTS QA; the batched Qwen engine keeps its resident few-shot prefixes. Chatterbox is NOT shared: the pipeline casts its copy to fp16 in
+place, retake / clause takes load their own as before (identical numerics).
+    python scripts/r9/audio_proc.py <run_clean_pipeline_05 argv>     env R9_AFTER_JOBS=<dir with oneproc_jobs_<id>.json>
+After the pipeline: its manifest copied into the work dir (as r4_audio.sh does), the source face tracks waited for (<npz>.done of the background
+MediaPipe, R9_MP_BG), then the jobs exactly as r8_tts_stage.py runs them (logs, <jobs>.times.json)."""
+import json, os, pathlib, shutil, sys, time
+HERE = pathlib.Path(__file__).resolve().parent
+for p in (HERE.parent / "pilot", HERE.parent / "quality", HERE.parent / "r7", HERE.parent / "r8", HERE): sys.path.insert(0, str(p))
+
+
+def _timeline_hooks(rp):
+    """R9_TIMELINE (GPU-busy accounting, scripts/r9/gpu_busy.py): intervals of the pipeline stages and of every GPU call class; outputs unchanged"""
+    import timeline as tl, t3_batch, s3_batch, tts_qa, qwen_batch, r4_pause_logic
+    from llama_cpp import Llama
+    from chatterbox.mtl_tts import ChatterboxMultilingualTTS as CB
+    _t = rp.timed
+    def timed(times, name):
+        c, m = _t(times, name), tl.mark("pipe:" + name)
+        class W:
+            def __enter__(s_): m.__enter__(); return c.__enter__()
+            def __exit__(s_, *e): r = c.__exit__(*e); m.__exit__(*e); return r
+        return W()
+    rp.timed = timed
+    tl.wrap(t3_batch, "decode_batch", "t3"); tl.wrap(t3_batch, "vocode", "s3gen"); tl.wrap(s3_batch, "vocode_batch", "s3gen")
+    tl.wrap(tts_qa.TtsQA, "assess", "qa"); tl.wrap(qwen_batch.Engine, "chat", "qwen"); tl.wrap(Llama, "create_chat_completion", "qwen")
+    tl.wrap(CB, "generate", "tts_sequential"); tl.wrap(r4_pause_logic, "whisper_words", "chain:lip_whisper")
+
+
+def _preload_tts(keep):
+    """lever K: ChatterboxMultilingualTTS.from_local(<models/chatterbox>, "cpu", t3_model="v3") in a thread at the start; the FIRST cuda load (the
+    pipeline's, which it then casts to fp16) runs as before; a LATER one with the same arguments (the stage's fp32 retake / clause model) gets the
+    CPU copy moved to the GPU: the same fp32 weights read from the same files, ~1 s instead of ~5 s"""
+    import threading
+    from chatterbox.mtl_tts import ChatterboxMultilingualTTS as CB
+    fl = CB.from_local.__func__; path = HERE.parents[1] / "models" / "chatterbox"; box = {}
+    def load():
+        try: box["m"] = fl(CB, path, "cpu", t3_model="v3")
+        except Exception as e: box["err"] = repr(e)
+    th = threading.Thread(target=load, daemon=True); th.start(); calls = [0]
+    def from_local(cls, ckpt_dir, device, *a, **k):
+        calls[0] += 1
+        if calls[0] > 1 and str(device) == "cuda" and pathlib.Path(ckpt_dir).resolve() == path.resolve() and k == {"t3_model": "v3"} and not a:
+            th.join()
+            m = box.pop("m", None)
+            if m is not None:
+                for mod in (m.t3, m.s3gen, m.ve): mod.to(device)
+                m.device = device
+                if m.conds is not None: m.conds = m.conds.to(device=device)
+                print("[oneproc] stage Chatterbox from the CPU preload", file=sys.stderr, flush=True)
+                return m
+        return fl(cls, ckpt_dir, device, *a, **k)
+    CB.from_local = classmethod(from_local)
+
+
+KEEP = {}            # the resident objects of this process: Qwen (load_llm), the TTS QA (+ across videos in the audio worker, scripts/r9/audio_worker.py)
+_SETUP = {"done": False}
+
+
+def setup():
+    """once per process: one Qwen, one TTS QA (their close() a no-op), the timeline hooks"""
+    import run_clean_pipeline_05 as rp
+    if _SETUP["done"]: return rp
+    keep = KEEP
+    if os.environ.get("R9_TIMELINE"): _timeline_hooks(rp)
+    _load = rp.load_llm
+    def load_llm(times):   # one Qwen per process; the pipeline's own close() at its end is a no-op (the stage reuses it)
+        if "llm" not in keep:
+            keep["llm"] = _load(times); keep["llm"][0].close = lambda: None   # load_llm -> (Llama, model name)
+        return keep["llm"]
+    rp.load_llm = load_llm
+    import tts_qa
+    _Q = tts_qa.TtsQA
+    class SharedQA:   # one TtsQA per process (the pipeline's model_cache.get("tts_qa", TtsQA) and the stage's TtsQA()): a 2nd Whisper next to the resident
+        def __new__(cls, *a, **k):   # Qwen + its batched engine runs out of VRAM (02); a stage QA of its own gave bit-identical outputs anyway
+            if "qa" not in keep:
+                keep["qa"] = _Q(*a, **k); keep["qa"].close = lambda: None; keep["qa"]._r9_compute = os.environ.get("DUB_QA_WHISPER_COMPUTE", "float16")   # (chain_inproc reuse check)
+            return keep["qa"]
+    tts_qa.TtsQA = SharedQA
+    if os.environ.get("R9_TTS_PRELOAD", "off") == "on":   # r9 speed K: the stage's fp32 Chatterbox loaded on the CPU WHILE the GPU pipeline runs
+        _preload_tts(keep)                                  # (the pipeline casts its own copy to fp16 in place: not shareable)
+    _SETUP["done"] = True
+    return rp
+
+
+def run_job(argv):
+    """one video: the pipeline (its argv), then the stage and the chain (R9_AFTER_JOBS) -> the pipeline's exit code"""
+    rp = setup(); keep = KEEP
+    env0 = dict(os.environ)   # the env the pipeline sets for itself (os.environ) is restored before the stage
+    sys.argv = [str(HERE.parent / "pilot" / "run_clean_pipeline_05.py")] + argv
+    try:
+        rc = rp.main()
+    except SystemExit as e:
+        rc = e.code
+    os.environ.clear(); os.environ.update(env0)
+    if os.environ.get("R9_STAGE_ENV"):   # the env r8_audio.sh starts the stage with (r4_audio.sh exports DUB_CUT_SNAP / DUB_EQPOWER_FADE / ... for the pipeline only)
+        se = json.loads(pathlib.Path(os.environ["R9_STAGE_ENV"]).read_text())
+        jd_ = os.environ.get("R9_AFTER_JOBS"); os.environ.clear(); os.environ.update(se)
+        if jd_: os.environ["R9_AFTER_JOBS"] = jd_
+    if rc not in (None, 0): return rc
+    jd = os.environ.get("R9_AFTER_JOBS")
+    if not jd: return 0
+    out = pathlib.Path(argv[argv.index("--output") + 1]); wdir = pathlib.Path(argv[argv.index("--work-dir") + 1]); id_ = wdir.name
+    J = pathlib.Path(jd) / f"oneproc_jobs_{id_}.json"
+    if not J.exists(): print(f"[oneproc] no jobs for {id_}", file=sys.stderr); return 0
+    w = wdir / f"work_{pathlib.Path(argv[argv.index('--input') + 1]).stem}"
+    shutil.copy(out.with_name(out.stem + ".manifest.json"), w / f"{id_}_r4a.manifest.json")
+    t0 = time.perf_counter()
+    for f in json.loads(J.read_text()).get("wait", []):
+        while not os.path.exists(f + ".done"): time.sleep(0.2)
+    print(f"[oneproc] {id_}: pipeline done, face tracks after {time.perf_counter() - t0:.1f} s; stage in this process", file=sys.stderr, flush=True)
+    import r8_tts_stage
+    jobs = json.loads(J.read_text())["jobs"]; jf = J.with_name(f"oneproc_{id_}.json"); jf.write_text(json.dumps(jobs, indent=1))
+    sys.argv = ["r8_tts_stage", "--jobs", str(jf)]
+    import timeline
+    with timeline.mark("stage"): r8_tts_stage.main()
+    cj = J.with_name(f"chain_{id_}.json")   # r9 speed C (R9_CHAIN_INPROC=on): the CPU chain after the stage in this process (scripts/r9/chain_inproc.py)
+    if cj.exists():
+        import chain_inproc
+        t1 = time.perf_counter(); ok = chain_inproc.run(json.loads(cj.read_text()), keep.get("qa"))
+        print(f"[oneproc] {id_}: chain in-process {'done' if ok else 'FAILED (the bash chain runs)'} in {time.perf_counter() - t1:.1f} s", file=sys.stderr, flush=True)
+    return 0
+
+
+def main():
+    rc = run_job(sys.argv[1:])
+    if rc not in (None, 0): sys.exit(rc)
+
+if __name__ == "__main__":
+    main()

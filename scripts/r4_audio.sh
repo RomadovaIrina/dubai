@@ -15,7 +15,7 @@ TH=$(( 24 / ${PAR:-2} )); [ $TH -lt 2 ] && TH=2
 one() {
   id=$1; src=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1); s=$(date +%s); t_start=$(date +%s.%N)
   if [ -n "${REUSE:-}" ]; then W=$(readlink -f $A/$REUSE/mix_src/$id); else
-    python scripts/pilot/run_clean_pipeline_05.py --input $src --output $O/runs/${id}_r4a.mp4 --target-lang en --alignment burst \
+    python ${R9_PIPE_PY:-scripts/pilot/run_clean_pipeline_05.py} --input $src --output $O/runs/${id}_r4a.mp4 --target-lang en --alignment burst \
       --stop-after audio --codeformer off --face-stack mediapipe --audio-policy r2 --qwen-gpu-layers -1 --tts-text-norm on --qa-whisper-compute int8_float16 \
       ${AUDIO_EXTRA:-} --work-dir $O/runs/$id > $O/runs/${id}.log 2>&1 || { echo "FAIL audio $id"; return; }
     W=$O/runs/$id/work_$(basename ${src%.*}); cp $O/runs/${id}_r4a.manifest.json $W/${id}_r4a.manifest.json
@@ -39,6 +39,7 @@ one() {
     python scripts/r8/soften_edges.py --work $W --out $O/soft/$id > $O/runs/${id}.soft.log 2>&1 && W=$O/soft/$id || echo "WARN final soften $id"; fi
   t_hush=$(date +%s.%N)
   ln -sfn $W $O/mix_src/$id
+  [ -n "${R9_ON_MIXSRC:-}" ] && { ( eval "$R9_ON_MIXSRC" ) < /dev/null > /dev/null 2>&1 & }   # r9 speed O: the final dub exists -> the demucs remix starts (scripts/r9/sep_overlap.sh)
   python scripts/quality/r3_remix.py --src $O/mix_src --out $O ${REMIX_ARGS:-} $id > $O/runs/${id}.remix.log 2>&1 || { echo "FAIL remix $id"; return; }
   t_remix=$(date +%s.%N)
   ffmpeg -loglevel error -y -i $src -i $O/$id/final_mix_aac.m4a -map 0:v:0 -map 1:a:0 -c copy -shortest $O/${id}_over-original.mp4

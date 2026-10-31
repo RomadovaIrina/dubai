@@ -1,0 +1,15 @@
+{
+ "variant": "_Svc",
+ "duration_s": 40.5,
+ "seconds": {
+  "face_gen": 410.2,
+  "face_comp": 136.2,
+  "face": 546.4
+ },
+ "s_per_video_min": {
+  "face_gen": 607.7,
+  "face_comp": 201.8,
+  "face": 809.5
+ },
+ "peak_vram_mib": 13022
+}

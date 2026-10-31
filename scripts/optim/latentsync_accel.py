@@ -125,6 +125,8 @@ class AccelLatentSync:
             from latentsync.utils.image_processor import ImageProcessor, load_fixed_mask
             mask_image = load_fixed_mask(self.resolution, self.mask_image_path)
             self._image_processor = ImageProcessor(self.resolution, device="cuda", mask_image=mask_image)
+            if os.environ.get("LS_ROI") == "1":   # r9 speed L5c: face alignment / paste-back on a crop around the face (scripts/r9/ls_roi.py)
+                sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "r9")); import ls_roi; ls_roi.apply(self._image_processor.restorer)
         self.pipe.image_processor = self._image_processor
         return self._image_processor
 

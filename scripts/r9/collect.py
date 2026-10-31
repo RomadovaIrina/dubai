@@ -31,16 +31,22 @@ def main():
     stages = {}
     for (n, t0), (_, t1) in zip(rows, rows[1:]): stages[n] = stages.get(n, 0.0) + float(t1) - float(t0)
     total = float(rows[-1][1]) - float(rows[0][1]) if len(rows) > 1 else 0.0
-    vram, peak = {}, None
+    vram, peak, busy, wbusy = {}, None, {}, {}
     try:   # nvsmi: "timestamp, used MiB, util"; stage peaks by wall clock
         import datetime as dt
         samp = []
         for l in open(a.nvsmi):
             p = [x.strip() for x in l.split(",")]
-            if len(p) >= 2 and p[1].isdigit(): samp.append((dt.datetime.strptime(p[0], "%Y/%m/%d %H:%M:%S.%f").timestamp(), int(p[1])))
-        peak = max((m for _, m in samp), default=None)
+            if len(p) >= 3 and p[1].isdigit() and p[2].isdigit(): samp.append((dt.datetime.strptime(p[0], "%Y/%m/%d %H:%M:%S.%f").timestamp(), int(p[1]), int(p[2])))
+        peak = max((s_[1] for s_ in samp), default=None)
+        for (n, t0), (_, t1) in zip(rows, rows[1:]):   # r10: GPU-busy per stage (spec 1:5 = GPU-seconds per video-minute): busy = util > 10 % ; weighted = sum util/100 * dt
+            b_ = w_ = 0.0
+            for (ta, _, ua), (tb, _, _) in zip(samp, samp[1:]):
+                lo, hi = max(ta, float(t0)), min(tb, float(t1))
+                if hi > lo: b_ += (hi - lo) if ua > 10 else 0.0; w_ += (hi - lo) * ua / 100
+            busy[n] = busy.get(n, 0.0) + b_; wbusy[n] = wbusy.get(n, 0.0) + w_
         for (n, t0), (_, t1) in zip(rows, rows[1:]):
-            m = max((v for t, v in samp if float(t0) <= t <= float(t1)), default=None)
+            m = max((v for t, v, _ in samp if float(t0) <= t <= float(t1)), default=None)
             if m is not None: vram[n] = max(vram.get(n, 0), m)
     except Exception as e:
         vram["error"] = str(e)
@@ -69,12 +75,15 @@ def main():
     }
     timing = {"id": i_, "duration_s": dur, "video_min": round(vmin, 4) if vmin else None, "stage_wall_s": {k: round(v, 1) for k, v in stages.items()},
               "total_wall_s": round(total, 1), "s_per_video_min": {k: round(v / vmin, 1) for k, v in stages.items()} if vmin else None,
-              "total_s_per_video_min": round(total / vmin, 1) if vmin else None, "vram_peak_mib": peak, "vram_peak_mib_by_stage": vram}
+              "total_s_per_video_min": round(total / vmin, 1) if vmin else None, "vram_peak_mib": peak, "vram_peak_mib_by_stage": vram,
+              "gpu_busy_s": {k: round(v, 1) for k, v in busy.items()}, "gpu_busy_s_per_video_min": {k: round(v / vmin, 1) for k, v in busy.items()} if vmin else None,
+              "gpu_busy_total_s_per_video_min": round(sum(busy.values()) / vmin, 1) if vmin and busy else None,
+              "gpu_util_weighted_s_per_video_min": {k: round(v / vmin, 1) for k, v in wbusy.items()} if vmin else None}
     man = {"id": i_, "input": a.input, "status": a.status, "flags": flags, "errors": [e for e in a.errors.split("\n") if e.strip()], "source": src, "precheck": pc, "outputs": outs, "timing": timing, "metrics": metrics,
            "commit": subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()}
     (out / "timing.json").write_text(json.dumps(timing, indent=1)); (out / "manifest.json").write_text(json.dumps(man, indent=1, default=str))
     print(f"== {i_} {a.status} flags {flags}; total {timing['total_wall_s']} s = {timing['total_s_per_video_min']} s/video-min; VRAM peak {peak} MiB; "
-          + "; ".join(f"{k} {v}" for k, v in (timing['s_per_video_min'] or {}).items()))
+          + "; ".join(f"{k} {v}" for k, v in (timing['s_per_video_min'] or {}).items()) + f"; GPU-busy {timing['gpu_busy_total_s_per_video_min']} s/video-min")
 
 
 if __name__ == "__main__":

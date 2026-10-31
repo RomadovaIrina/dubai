@@ -1,0 +1,26 @@
+{
+ "variant": "_S2",
+ "duration_s": 40.5,
+ "seconds": {
+  "face_gen": 294.7,
+  "face_comp": 138.2,
+  "face": 433.0
+ },
+ "s_per_video_min": {
+  "face_gen": 436.6,
+  "face_comp": 204.7,
+  "face": 641.5
+ },
+ "peak_vram_mib": 14828,
+ "gpu_busy_seconds": {
+  "face_gen": 174.0,
+  "face_comp": 13.5,
+  "face": 187.5
+ },
+ "gpu_busy_s_per_video_min": {
+  "face_gen": 257.8,
+  "face_comp": 20.0,
+  "face": 277.8
+ },
+ "gpu_samples": 4317
+}

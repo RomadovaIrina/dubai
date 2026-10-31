@@ -672,6 +672,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
         qa = qa_obj if qa_cfg.get("enabled") else None
         if tgt_lang == "en":
             aligner = CtcAligner.from_qa(qa_obj)
+    CONC = BATCH and os.environ.get("DUB_UNIT_CONC", "0") == "1"; _CO = []   # r9 speed: units concurrently (needs the batched Chatterbox)
     prev_end_of = {u["id"]: plans[i - 1]["slot"][1] for i, u in enumerate(units) if i > 0}
     stats = {"parts": 0, "attempts": 0, "retried_parts": 0, "retry_success": 0, "final_bad": 0, "fit_parts_rewritten": 0, "fit_parts_merged": 0, "fit_rounds_used": 0, "fit_rewrite_rejected": 0,
              "fit_up_units": 0, "fit_up_rounds": 0, "fit_up_accepted": 0, "fit_up_rejected": 0, "fit_up_candidates": 0, "units_single_burst": 0, "units_qwen_split": 0, "units_single_fallback": 0,
@@ -791,6 +792,30 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
             out.append((a, b))
         return out
 
+    def _many_now(payloads, dtype):   # [(u, [(text, salt, cfg_w)])] -> per payload [(y, rec, spans, speech_seconds)]: ONE gen_sentences batch over all
+        flat = [(u, t_, sl_, cw_) for u, reqs_ in payloads for t_, sl_, cw_ in reqs_]; gens = gen_sentences(flat, dtype) if flat else []; outs, k = [], 0
+        for u, reqs_ in payloads:
+            o = []
+            for t_, _, _ in reqs_:
+                y_, r_ = gens[k]; k += 1; s_ = align(y_, t_)
+                if CLOSE_INSIDE and s_: y_, s_, _ = dur_translate.close_inside_pauses(y_, m.sr, s_, _spk(t_))
+                o.append((y_, r_, s_, speech_seconds(y_, s_)))
+            outs.append(o)
+        return outs
+
+    def _run_units(fn, ups, dtype):
+        """r9 speed (DUB_UNIT_CONC=1): the units of one speaker run as cooperative workers (scripts/r9/coop.py); the Chatterbox takes they ask for
+        (dur_translate synth_many) are made in one batch, their greedy Qwen calls decoded together (DUB_QWEN_BATCH=1: scripts/r9/qwen_batch.py)"""
+        sys.path.insert(0, str(HERE.parent / "r9")); import coop
+        co = coop.Coop({"qwen": coop.qwen_handler, "tts": lambda ps: _many_now(ps, dtype)}, order=("qwen", "tts"), wrap=coop.torch_wrap())
+        _CO[:] = [co]; dur_translate.CHAT_HOOK = lambda l_, ms_, mt_: co.call("qwen", (l_, ms_, mt_)); dur_translate.PMAP = co.map
+        try:
+            co.map(lambda a: fn(*a), [(ui, u, p) for ui, (u, p) in enumerate(ups)])
+        finally:
+            _CO[:] = []; dur_translate.CHAT_HOOK = None; dur_translate.PMAP = None
+        for k_, v_ in co.batches.items(): stats.setdefault("coop_batches", {}).setdefault(k_, []).extend(v_)
+        log(f"  [coop] {len(ups)} units: qwen batches {co.batches['qwen']} tts batches {co.batches['tts']}")
+
     def synth_all(dtype) -> None:
         cast(dtype); by_spk: dict = {}
         for u, p in zip(units, plans):
@@ -801,7 +826,7 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                 if ref: m.prepare_conditionals(ref)
                 else: m.conds = builtin.to(device=dev()); guard.use_builtin()
             firsts = gen_sentences([(u, u["translation"], 0, 0.5) for u, _ in ups], dtype) if BATCH else None   # r8 speed: every first take at once
-            for ui, (u, p) in enumerate(ups):
+            def _unit(ui, u, p):   # one unit (r9: run concurrently by the unit scheduler when DUB_UNIT_CONC=1)
                 text = u["translation"]; u["parts_original"] = [text]; u["fit"] = []; u["fit_up"] = []
                 y, rec = firsts[ui] if BATCH else gen_sentence(u, text, dtype); spans = align(y, text); sp_s = speech_seconds(y, spans)
                 if CLOSE_INSIDE and spans:   # r6: Chatterbox hesitations inside an English phrase shortened in the take (dur_translate.close_inside_pauses)
@@ -817,12 +842,9 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                     def _sim(y_, s_, t_, p=p, prev_end=prev_end, cut_kw=cut_kw):
                         return dur_translate.simulate(y_, m.sr, s_, _spk(t_), p, opts, prev_end, sentence_flow_gap, cut_kw, norm)
                     def _synth_many(reqs_, u=u):   # [(text, salt, cfg_w)] -> [(y, rec, spans, speech_seconds)], the same as _synth one by one
-                        outs = []
-                        for (t_, _, _), (y_, r_) in zip(reqs_, gen_sentences([(u, t_, sl_, cw_) for t_, sl_, cw_ in reqs_], dtype)):
-                            s_ = align(y_, t_)
-                            if CLOSE_INSIDE and s_: y_, s_, _ = dur_translate.close_inside_pauses(y_, m.sr, s_, _spk(t_))
-                            outs.append((y_, r_, s_, speech_seconds(y_, s_)))
-                        return outs
+                        if _CO and _CO[0].current() is not None:   # r9: parked, made in one batch with the other units' takes
+                            return _CO[0].call("tts", (u, reqs_))
+                        return _many_now([(u, reqs_)], dtype)[0]
                     text, y, rec, spans, sp_s = dur_translate.select(u, p, text, (y, rec, spans, sp_s), _synth, _sim, llm, src_name, tgt_name, dur_cfg, _spk, log=log,
                                                                      synth_many=_synth_many if BATCH else None)
                 total_win = max(0.2, p["next_start"] - opts.gap - p["bursts"][0][0])
@@ -1024,6 +1046,11 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
                 log(f"  [tts/phrase] u{u['id']:02d} {spk} 1 gen -> {len(pieces)} spans ({method}) tts {sp_s:.2f}s / source speech {target:.2f}s = {sp_s / max(target, 1e-6):.2f}" +
                     (f" fit-up {[x.get('result') for x in u['fit_up']]}" if u["fit_up"] else "") + (f" fit-down {[x.get('result') for x in u['fit']]}" if u["fit"] else "") +
                     (f" retried ({len(rec['attempts'])} attempts)" if len(rec["attempts"]) > 1 else "") + (" QA-BAD" if rec["qa_bad_final"] else "") + (f" span-merges {merged_spans}" if merged_spans else ""))
+            if CONC and len(ups) > 1:   # r9 speed: every unit of this speaker at once (scripts/r9/coop.py): their Qwen calls / Chatterbox rounds batch together
+                _run_units(_unit, ups, dtype)
+            else:
+                for ui, (u, p) in enumerate(ups):
+                    _unit(ui, u, p)
 
     used = None; t0 = time.perf_counter()
     for dtype in tts_dtypes(torch):
@@ -1041,6 +1068,9 @@ def run_tts_phrase(units: list, plans: list, refs: dict, tgt_lang: str, work: pa
         qa_obj.close()
     empty_cache()
     stats["dur_translate"] = {k_: (round(v_, 2) if isinstance(v_, float) else v_) for k_, v_ in dur_translate.STATS.items()} if dur_cfg.get("enabled") else None
+    if BATCH:   # r9: where the batched Chatterbox time goes (T3 decode / S3Gen / QA) and the batched Qwen engine
+        import t3_batch; stats["t3_batch"] = {k_: (round(v_, 2) if isinstance(v_, float) else v_) for k_, v_ in t3_batch.STATS.items()}
+        if "qwen_batch" in sys.modules: stats["qwen_batch"] = {k_: (round(v_, 2) if isinstance(v_, float) else v_) for k_, v_ in sys.modules["qwen_batch"].STATS.items()}
     stats["judge_calls"] = JUDGE_STATS["calls"]; stats["judge_seconds"] = JUDGE_STATS["seconds"]; stats["pause_marks_seconds"] = round(JUDGE_STATS.pop("pause_marks_s", 0.0), 2)
     for k_ in ("gen_seconds", "qa_seconds", "align_seconds", "fitup_qwen_seconds", "fitdown_qwen_seconds", "fitup_gen_qa_seconds", "judge_seconds", "gap_qa_seconds"):
         if k_ not in stats: continue
