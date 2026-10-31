@@ -27,6 +27,7 @@ case "${R10_FAST_FACE:-1}" in   # r9 speed FACE (reports/experiments/r9-speed-fa
        FC_EXTRA=${FC_EXTRA:---pre-threads=12} LS_VAE_COMPILE=${LS_VAE_COMPILE:-max-autotune-no-cudagraphs} CFD_EXTRA=${CFD_EXTRA:---threads=12};;
 esac
 [ "${E2E_HALF_RATE:-0}" = 1 ] && export LS_HALF_RATE=1   # r9 speed: LatentSync on every other frame (GPU −40 %), odd frames flow-filled; NOT default (sync margin thin, r10 gate pending)
+[ -n "${E2E_LS_RATE:-}" ] && export LS_RATE=$E2E_LS_RATE   # r10 speed: LatentSync on k of every m frames (E2E_LS_RATE=2/3: face GPU −25 %, gated m03 / m19 / old03); half-rate (1/2) fails the flash gate
 export E2E_FX=${E2E_FX:-1}   # r10: the r9 + fix look (the management set, and the look the face speed stack was gated on) is the default; E2E_FX=0 = the plain r9 composite
 export DUB_ALLOW_NC=1 DUB_ALLOW_NC_BED=1  # CodeFormer + htdemucs: deliberate NC deviation, user-accepted (brief_r9_e2e.md); InsightFace is not used
 A=/workspace/dub/artifacts/r4a; B=/workspace/dub/artifacts/r4m; AT=r9_$ID; HT=r9_${ID}_htd; GT=r9g_$ID; FT=r9f_$ID
