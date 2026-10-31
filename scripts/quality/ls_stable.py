@@ -324,9 +324,13 @@ def half_rate_fill(src, sub, idx):
     dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
     def region(k):
         return (np.abs(out[k].astype(np.int16) - src[k].astype(np.int16)).max(2) > 3)
+    gen = np.zeros(n, bool); gen[np.asarray(idx)] = True; nxt = np.full(n + 1, n); prv = np.full(n, -1)   # r10: any keep pattern (LS_RATE k/m); every other frame = the r9 half-rate
+    for k in range(n - 1, -1, -1): nxt[k] = k if gen[k] else nxt[k + 1]
+    for k in range(n): prv[k] = k if gen[k] else (prv[k - 1] if k else -1)
     for k in range(n):
-        if k % 2 == 0: continue
-        p, q = k - 1, k + 1
+        if gen[k]: continue
+        p, q = prv[k], nxt[k]
+        if p < 0: p, q = q, n   # a leading dropped frame: the next generated frame alone
         m = region(p) | (region(q) if q < n else False)
         ys, xs = np.nonzero(m)
         if len(ys) == 0: out[k] = src[k]; continue
@@ -335,9 +339,10 @@ def half_rate_fill(src, sub, idx):
         if q < n:
             Bq = out[q][y0:y1, x0:x1]; ga, gb = cv2.cvtColor(A, cv2.COLOR_RGB2GRAY), cv2.cvtColor(Bq, cv2.COLOR_RGB2GRAY)
             fab, fba = dis.calc(ga, gb, None), dis.calc(gb, ga, None); gy, gx = np.mgrid[0:y1 - y0, 0:x1 - x0].astype(np.float32)
-            wa = cv2.remap(A, gx + 0.5 * fba[..., 0], gy + 0.5 * fba[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
-            wb = cv2.remap(Bq, gx + 0.5 * fab[..., 0], gy + 0.5 * fab[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
-            it = 0.5 * wa.astype(np.float32) + 0.5 * wb.astype(np.float32)
+            a_ = (k - p) / (q - p)   # time of k between the generated neighbours (0.5 for every other frame)
+            wa = cv2.remap(A, gx + a_ * fba[..., 0], gy + a_ * fba[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+            wb = cv2.remap(Bq, gx + (1 - a_) * fab[..., 0], gy + (1 - a_) * fab[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+            it = (1 - a_) * wa.astype(np.float32) + a_ * wb.astype(np.float32)
         else: it = A.astype(np.float32)
         mm = cv2.GaussianBlur(cv2.dilate(m[y0:y1, x0:x1].astype(np.uint8), np.ones((9, 9), np.uint8)).astype(np.float32), (0, 0), 4.0)[..., None]
         f = src[k].copy(); f[y0:y1, x0:x1] = np.clip(mm * it + (1 - mm) * f[y0:y1, x0:x1].astype(np.float32), 0, 255).round().astype(np.uint8); out[k] = f
@@ -368,7 +373,19 @@ class StableRunner:
 
     def run_frames(self, frames_rgb, audio_wav, detections=None):
         fps = int(os.environ.get("DUB_LS_FPS", "25")); t0 = time.perf_counter()
-        if os.environ.get("LS_HALF_RATE") == "1" and len(frames_rgb) >= 32:   # r9 speed: LatentSync on every other frame (12.5 fps, each with its own audio chunk)
+        rate = os.environ.get("LS_RATE", "")   # r10 speed: LS_RATE=k/m = LatentSync on k of every m master frames, each with ITS OWN 25 fps audio window (chunk selection), the rest flow-filled
+        if rate and len(frames_rgb) >= 32:
+            k_, m_ = map(int, rate.split("/")); n = len(frames_rgb); idx = np.array([i for i in range(n) if i % m_ < k_]); ss = self.acc.silent_seg; hk = self.acc.chunk_hook
+            if ss is not None: self.acc.silent_seg = np.asarray(ss)[idx[idx < len(ss)]]
+            def sel(enc, ch, hk=hk):
+                ch = hk(enc, ch) if hk is not None else ch
+                return [ch[i] for i in idx if i < len(ch)]
+            self.acc.chunk_hook = sel
+            try:
+                sub = self.acc.run_frames(np.ascontiguousarray(np.asarray(frames_rgb)[idx]), str(audio_wav), [detections[i] for i in idx] if detections is not None else None, video_fps=fps)
+            finally: self.acc.silent_seg = ss; self.acc.chunk_hook = hk
+            frames = half_rate_fill(np.asarray(frames_rgb), sub, idx)
+        elif os.environ.get("LS_HALF_RATE") == "1" and len(frames_rgb) >= 32:   # r9 speed: LatentSync on every other frame (12.5 fps, each with its own audio chunk)
             n = len(frames_rgb); idx = np.arange(0, n, 2); ss = self.acc.silent_seg
             if ss is not None: self.acc.silent_seg = np.asarray(ss)[idx[idx < len(ss)]]
             try:
