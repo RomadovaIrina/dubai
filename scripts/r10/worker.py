@@ -36,12 +36,16 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--queue", required=True); ap.add_argument("--out", required=True); ap.add_argument("--inflight", type=int, default=2)
     ap.add_argument("--env", nargs="*", default=[]); ap.add_argument("--lock", default="/workspace/dub/r10_heavy.lock")
+    ap.add_argument("--gen-worker", action="store_true", help="one resident face-generator worker for the queue (scripts/r10/gen_worker.sh)")
     a = ap.parse_args()
     out = pathlib.Path(a.out).resolve(); out.mkdir(parents=True, exist_ok=True)
     jobs = [l.split(None, 1) for l in open(a.queue).read().splitlines() if l.strip() and not l.startswith("#")]
     env = dict(os.environ); env.update(dict(kv.split("=", 1) for kv in a.env))
     env["R10_HEAVY_LOCK"] = a.lock; env["R10_COMP_GATE"] = "1";env["R10_NVML"] = str(out / "nvml.jsonl"); env["E2E_FRAME_GATE"] = env.get("E2E_FRAME_GATE", "off")
     (out / "nvml.jsonl").unlink(missing_ok=True)
+    if a.gen_worker:   # r10: one resident generator for the whole queue (LatentSync + compiled graphs loaded once); counted in the queue's GPU time
+        sp = out / "gen_spool"; env["R10_GEN_SPOOL"] = str(sp)
+        subprocess.run(["bash", str(ROOT / "scripts/r10/gen_worker.sh"), "start", str(sp)], env=env, check=True)
     nm = subprocess.Popen(["/venv/main/bin/python", str(HERE / "gpu_sampler.py"), "--out", str(out / "nvml.jsonl")], stdout=subprocess.DEVNULL, stderr=open(out / "gpu_sampler.log", "w"))
     t0 = time.time(); run = {}; done = {}; pending = list(jobs); log = open(out / "worker.log", "a", buffering=1)
     def say(s): log.write(f"{time.strftime('%T')} {s}\n"); print(s, flush=True)
@@ -61,7 +65,9 @@ def main():
             p = subprocess.Popen(["bash", str(ROOT / "scripts/r9/e2e.sh"), inp.strip(), str(o)], env=e, cwd=ROOT, stdout=open(o / "worker_e2e.out", "w"), stderr=subprocess.STDOUT)
             run[i] = (p, o, time.time()); say(f"start {i} ({len(run)} in flight)")
         time.sleep(1)
-    t1 = time.time(); nm.terminate(); nm.wait()
+    t1 = time.time()
+    if a.gen_worker: subprocess.run(["bash", str(ROOT / "scripts/r10/gen_worker.sh"), "stop", env["R10_GEN_SPOOL"]], env=env)
+    nm.terminate(); nm.wait()
     sys.path.insert(0, str(HERE)); import gpu_sampler as G
     smp = G.load(out / "nvml.jsonl"); res = {"jobs": {}, "queue_wall_s": round(t1 - t0, 1), "env": a.env, "inflight": a.inflight}
     vtot = 0.0
