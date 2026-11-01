@@ -40,7 +40,7 @@ for id in ${*:-03 01 05 02 04}; do
     fi
     if [ -n "${REP:-}" ] && [ -n "$FBX" ]; then   # r9: short glitches re-drawn IN the layer (flow interpolation of the good neighbours) instead of a 1-frame swap to the source mouth
       RL=${REP_LABEL:-rep2}; LSR=${LS%.mp4}_$RL.mp4; FBR=${FBN%.npz}_${TAG}_$RL.npz
-      [ -s $LSR ] || python scripts/r9/r9_layer_repair.py --ls $LS --lm ${LS%.mp4}.mediapipe.npz --fb $FBN --src-lm $W/video/master_mediapipe.npz --src-video $W/video/master_25fps.mp4 --out $LSR --fb-out $FBR ${REP_ARGS:-} ${FAST_ENC:+--preset $FAST_ENC} | grep "^=="
+      { [ -s $LSR ] && [ -s $FBR ]; } || python scripts/r9/r9_layer_repair.py --ls $LS --lm ${LS%.mp4}.mediapipe.npz --fb $FBN --src-lm $W/video/master_mediapipe.npz --src-video $W/video/master_25fps.mp4 --out $LSR --fb-out $FBR ${REP_ARGS:-} ${FAST_ENC:+--preset $FAST_ENC} | grep "^=="
       [ -s $LSR ] && { LS=$LSR; FBX="--fallback $FBR"; }
     fi
     FIX30_LS=$LS FIX30_MASTER_FPS=${LS_FPS:-25} FIX30_TD=$B/$ST/timing FIX30_MODE=r3fix FIX30_THREADS=${FIX30_THREADS:-16} FIX30_ARGS="$V1 $EXTRA $FBX ${FC_EXTRA:-}" bash scripts/quality/r3_fix30.sh $M $TAG > $B/$TAG/${id}.fix30.log 2>&1
