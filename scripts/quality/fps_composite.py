@@ -651,6 +651,7 @@ def main() -> int:
         a.ls_sharpen = round(auto["skin"], 3); a.ls_sharpen_lips = round(max(0.0, auto["lips"] - a.ls_sharpen), 3)
         times["sharpen_auto"] = round(time.perf_counter() - t0, 2); times["sharpen_auto_amounts"] = {**auto, "ls_sharpen": a.ls_sharpen, "ls_sharpen_lips": a.ls_sharpen_lips}
         print("  sharpen-auto:", times["sharpen_auto_amounts"], flush=True)
+    LSF = None   # r11 --lip-sharp-follow weights (set after the calibration; one() reads it during the calibration too)
     edge_meas = []; lip_cov = []; guard_vals = []; guard_skip = []
     only = tuple(int(x) for x in a.only_frames.split(":")) if a.only_frames else None
     def one(k):
