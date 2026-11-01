@@ -79,6 +79,16 @@ def main():
     ap.add_argument("--thr-wash", type=float, default=0.12); ap.add_argument("--thr-dark", type=float, default=0.6); ap.add_argument("--knee", type=float, default=0.5, help="a feature counts from knee x thr (0) to thr (1)")
     ap.add_argument("--joint-gain", type=float, default=1.3); ap.add_argument("--dilate", type=int, default=2); ap.add_argument("--ramp-sigma", type=float, default=2.0); ap.add_argument("--merge-gap", type=int, default=6)
     ap.add_argument("--win-frac", type=float, default=0.4); ap.add_argument("--window", type=int, default=16)
+    ap.add_argument("--wash-region", choices=["mouth", "lips"], default="mouth", help="r11 SYNC (m18 / m03: 20 / 25 'wash' flags, nearly all a CLOSED "
+                    "generated mouth over an OPEN source mouth: the source's dark cavity makes the layer look 'brighter'; each flag swapped the source's "
+                    "open mouth in = a sync hit): mouth = luma of the source-lip box (r8); lips = the lip RING only (outer minus inner contour, each "
+                    "frame's own landmarks: layer lips on the layer, source lips on the source), so cavity / teeth never count")
+    ap.add_argument("--dark-transient", choices=["off", "on"], default="off", help="r11 SYNC: the black-hole score counts only its transient part "
+                    "(minus the +-6-frame median over the layer): a held open vowel with a dark cavity is a mouth, a near-black pop is an artefact")
+    ap.add_argument("--open-gate", type=float, default=0.0, help="r11 SYNC: wash / coll flags need the layer and source inner openings (IOD) to differ "
+                    "by less than this (a different opening legitimately changes the mouth box luma / contrast); 0 = off")
+    ap.add_argument("--thr-wash-lips", type=float, default=0.0, help="r11 SYNC, with --open-gate: where the openings differ, the lip-ring brightness "
+                    "transient (layer ring vs source ring, minus its +-6-frame median) >= this flags a washed mouth (+ its neighbours above half); 0 = off")
     a = ap.parse_args(); work = pathlib.Path(a.work)
     lml = np.load(a.lm)["lm"]; lms = np.load(work / "video/master_mediapipe.npz")["lm"]; n = min(len(lml), len(lms))
     ol, yl, al_, apl, n1 = read_feats(a.ls, lml, n); os_, ys, as_, aps, n2 = read_feats(work / "video/master_25fps.mp4", lms, n); n = min(n1, n2)
@@ -90,7 +100,7 @@ def main():
     jerk = np.nan_to_num(hf(ol[:n]) - hf(os_[:n]), nan=0.0)
     tone = np.nan_to_num(tone_hf(yl[:n], ol[:n], al_[:n]) - np.nan_to_num(tone_hf(ys[:n], os_[:n], as_[:n]), nan=0.0), nan=0.0)
     appx = np.nan_to_num(apl[:n] - 1.5 * np.nan_to_num(aps[:n], nan=0.0), nan=0.0)
-    coll = np.zeros(n); wash = np.zeros(n); sp5 = np.full(n, np.nan); lp5 = np.full(n, np.nan)
+    coll = np.zeros(n); wash = np.zeros(n); washl = np.zeros(n); sp5 = np.full(n, np.nan); lp5 = np.full(n, np.nan)
     cl = cv2.VideoCapture(str(a.ls)); cs = cv2.VideoCapture(str(work / "video/master_25fps.mp4"))
     for k in range(n):
         okl, fl = cl.read(); oks, fs = cs.read()
@@ -104,6 +114,16 @@ def main():
         gl = cv2.cvtColor(fl, cv2.COLOR_BGR2GRAY).astype(np.float32)[m]; gs = cv2.cvtColor(fs, cv2.COLOR_BGR2GRAY).astype(np.float32)[m]
         coll[k] = 1 - gl.std() / max(gs.std(), 1.0)                       # lip / cavity contrast lost vs the source (washed blob)
         wash[k] = (gl.mean() - gs.mean()) / max(gs.mean(), 1.0)           # the mouth region brighter than the source (pale / pink pop)
+        if a.wash_region == "lips" or a.thr_wash_lips > 0:   # r11 SYNC: lip ring vs lip ring (each frame's own contours), cavity / teeth excluded
+            def ring(p, shape):
+                if not np.isfinite(p[LIPS_OUTER + LIPS_INNER]).all(): return None
+                r = np.zeros(shape, np.uint8); cv2.fillPoly(r, [np.round(p[LIPS_OUTER, :2]).astype(np.int32)], 1); cv2.fillPoly(r, [np.round(p[LIPS_INNER, :2]).astype(np.int32)], 0)
+                r = cv2.erode(r, np.ones((3, 3), np.uint8)); return r > 0 if r.sum() >= 15 else None
+            rl, rs = ring(lml[k], fs.shape[:2]), ring(q, fs.shape[:2])
+            if rl is not None and rs is not None:
+                ll = cv2.cvtColor(fl, cv2.COLOR_BGR2GRAY).astype(np.float32)[rl]; ls_ = cv2.cvtColor(fs, cv2.COLOR_BGR2GRAY).astype(np.float32)[rs]
+                washl[k] = (ll.mean() - ls_.mean()) / max(ls_.mean(), 1.0)
+            if a.wash_region == "lips": wash[k] = washl[k]
         sp5[k], lp5[k] = np.percentile(gs, 5), np.percentile(gl, 5)
     cl.release(); cs.release()
     # black hole: the layer's darkest mouth pixels vs the source's TYPICAL open-mouth cavity over the video (not the same frame: a dub-open mouth over a
@@ -128,7 +148,18 @@ def main():
     tmed = lambda x: np.array([np.median(x[max(0, k - 6):k + 7]) for k in range(len(x))])   # the transient part (a pop), not a steady offset
     F = {"jerk": sc(jerk, a.thr_jerk), "tone": sc(tone, a.thr_tone), "app": sc(appx, a.thr_app), "geo": sc(geo, a.thr_geo),
          "coll": sc(coll - np.minimum(tmed(coll), 0.15 if a.rel_stats == "off" else 1e9), a.thr_coll),
-         "wash": sc(wash - np.minimum(tmed(wash), 0.05 if a.rel_stats == "off" else 1e9), a.thr_wash), "dark": sc(dark, a.thr_dark)}   # r11 --rel-stats: the whole steady offset removed
+         "wash": sc(wash - np.minimum(tmed(wash), 0.05 if (a.rel_stats == "off" and a.wash_region == "mouth") else 1e9), a.thr_wash), "dark": sc(dark, a.thr_dark)}   # r11 --rel-stats: the whole steady offset removed
+    if a.dark_transient == "on":   # r11 SYNC: the pop, not a held dark cavity
+        dk = np.where(ls_mask[:n], dark, np.nan); dmed = np.array([np.nanmedian(dk[max(0, k - 6):k + 7]) if np.isfinite(dk[max(0, k - 6):k + 7]).any() else 0.0 for k in range(n)])
+        F["dark"] = sc(dark - np.maximum(dmed, 0.0), a.thr_dark)
+    if a.open_gate > 0:   # r11 SYNC: wash / contrast compared only between mouths of a similar opening
+        same = np.nan_to_num(np.abs(ol[:n] - os_[:n]), nan=1.0) < a.open_gate
+        for k_ in ("wash", "coll"): F[k_] = F[k_] * same
+        if a.thr_wash_lips > 0:   # r11 SYNC: where the openings differ, a washed mouth is judged on the lip ring alone (transient part), with
+            # hysteresis: the neighbours of a flagged frame count from half the threshold (m18 410-412: 0.18 / 0.36 / 0.16 = one pale 3-frame pop)
+            wt = washl - tmed(washl); fl_ = sc(wt, a.thr_wash_lips); hi_ = fl_ > 0.5
+            nb_ = np.zeros(n, bool); nb_[1:] |= hi_[:-1]; nb_[:-1] |= hi_[1:]
+            F["washl"] = np.where(nb_ & (wt > 0.5 * a.thr_wash_lips), 1.0, fl_) * ~same
     for k_ in ("jerk", "app"): F[k_] = np.where(joint, np.clip(F[k_] * a.joint_gain, 0, 1), F[k_])
     score = np.max(np.stack(list(F.values()), 1), 1) * ls_mask
     fb = score.copy()

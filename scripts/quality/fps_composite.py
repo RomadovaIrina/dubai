@@ -272,6 +272,18 @@ def main() -> int:
                     "mouth-corner line (alpha > 0.05: nose base, cheeks, upper-lip skin), not only the band")
     ap.add_argument("--fallback", default="", help="r8 F: npz with per-master-frame fb (0..1, r8_fallback.py): master weight x (1 - fb) = crossfade to the source mouth")
     ap.add_argument("--colour-sigma", type=float, default=0.6); ap.add_argument("--colour-max", type=float, default=20.0)
+    ap.add_argument("--cm-mouth-excl", type=float, default=0.0, help="r11 SYNC (--colour-match off = +0.4 SyncNet on m18: its smooth field, estimated "
+                    "on skin that the GENERATED lips / the source's moving mouth reach, re-shades the generated mouth with the source's articulation): the "
+                    "union of the source's and the layer's outer lip contours, dilated by this x mouth width, is left out of the estimation AND gets "
+                    "--cm-mouth-mode inside it (feather --cm-mouth-feather x mouth width); 0 = off (r3 behaviour)")
+    ap.add_argument("--cm-mouth-mode", choices=["mean", "zero", "luma"], default="mean", help="r11 SYNC: correction inside the excluded mouth zone: mean = the "
+                    "frame's one global offset (no spatial shading); zero = none; luma = the global mean of the grey offset only (no hue shift on the lips)")
+    ap.add_argument("--cm-mouth-feather", type=float, default=0.15)
+    ap.add_argument("--retime-mouth", choices=["off", "nearest", "hf"], default="off", help="r11 SYNC (--retime nearest = +0.26 SyncNet on m18: the "
+                    "flow_safe 25 -> 30 fps blend of two generated mouths smears the shape / timing): inside the layer's lips (+ --retime-mouth-dil x "
+                    "mouth width, feathered) the nearer master frame moved by the head's similarity motion (rigid landmarks) replaces the "
+                    "interpolation (nearest) or gives only its high frequencies (hf, sigma --retime-hf-sigma); elsewhere the flow interpolation stays")
+    ap.add_argument("--retime-mouth-dil", type=float, default=0.3)
     ap.add_argument("--sharpen-auto", type=float, default=0.0, help="r3: per-VIDEO unsharp amounts (constant -> no flicker) so that the LatentSync layer's sharpness "
                     "(mean |Laplacian|) reaches TARGET x the source's, calibrated on 48 LatentSync frames against the source frame each was generated from "
                     "(same pose): lips (outer contour, dilated) -> --ls-sharpen-lips, skin in the mask -> --ls-sharpen (0 when --skin-texture source); 0 = off")
@@ -690,6 +702,21 @@ def main() -> int:
             Lk, conf_k = interp_safe(f, L[m0][ya:yb, xa:xb].astype(np.float32), L[m1][ya:yb, xa:xb].astype(np.float32), al, a.safe_d, a.safe_cons, a.safe_scale,
                                      a.retime_hf_sigma if a.retime_hf == "nearest" else 0.0)
         else: Lk = tms.interp(f, L[m0][ya:yb, xa:xb].astype(np.float32), L[m1][ya:yb, xa:xb].astype(np.float32), al)
+        if a.retime_mouth != "off" and a.retime not in ("nearest", "nearest_rigid") and 0.04 <= al <= 0.96 and m1 != m0 and wm[m0] > 0 and wm[m1] > 0 and mp_ls is not None:
+            # r11 SYNC: the generated mouth of the nearer master frame (exact shape), moved rigidly with the head to time m, inside the lips zone
+            mn = m0 if al < 0.5 else m1; tgt_ = lerp(mp, m); src_ = mp[mn]; lq_ = lerp(mp_ls, m)
+            if np.isfinite(tgt_[RIG_POSE]).all() and np.isfinite(src_[RIG_POSE]).all() and np.isfinite(lq_[tms.LIPS_OUTER]).all():
+                off = np.array([xa, ya], np.float64)
+                Mr, _ = cv2.estimateAffinePartial2D((src_[RIG_POSE, :2] - off).astype(np.float32), (tgt_[RIG_POSE, :2] - off).astype(np.float32), method=cv2.LMEDS)
+                if Mr is not None:
+                    M2 = np.concatenate([Mr[:, :2], (Mr[:, 2] - Mr[:, :2] @ off)[:, None]], 1)
+                    Ln = cv2.warpAffine(L[mn], M2, (xb - xa, yb - ya), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE).astype(np.float32)
+                    pz = [lq_[tms.LIPS_OUTER, :2]] + ([(mp_ls[mn][tms.LIPS_OUTER, :2] - off) @ Mr[:, :2].T + Mr[:, 2] + off] if np.isfinite(mp_ls[mn][tms.LIPS_OUTER]).all() else [])
+                    mwq = tms.mouth_width(lq_); hz = cv2.convexHull(np.concatenate(pz).astype(np.float32))[:, 0]
+                    fzr = tms.poly_mask(hz, (ya, yb, xa, xb), a.retime_mouth_dil * mwq, 0.15 * mwq)[..., None]
+                    if a.retime_mouth == "nearest": Lk = Lk + fzr * (Ln - Lk)
+                    else:
+                        s_ = a.retime_hf_sigma; Lk = Lk + fzr * ((Ln - cv2.GaussianBlur(Ln, (0, 0), s_)) - (Lk - cv2.GaussianBlur(Lk, (0, 0), s_)))
         if a.register != "off":
             mn_ = m0 if (al < 0.5 or wm[m1] <= 0) else m1
             pose_l = (mp[mn_] if lm_f is None else lm_f[jj[mn_]]) if a.retime == "nearest" else lm_layer(m); pose_t = lm_at(k, mu)
@@ -751,13 +778,25 @@ def main() -> int:
             if np.isfinite(lm_c[[61, 291, 13]]).all():
                 mwc = tms.mouth_width(lm_c); ymc = float((lm_c[61, 1] + lm_c[291, 1]) / 2) - ya
                 lipm = tms.poly_mask(lm_c[tms.LIPS_OUTER], (ya, yb, xa, xb), 0.25 * mwc, 0)
+                fz = None
+                if a.cm_mouth_excl > 0:   # r11 SYNC: the zone both mouths can reach (source lips + the layer's own lips), feathered
+                    lm_l = lerp(mp_ls, m) if mp_ls is not None else None
+                    pz = [q[tms.LIPS_OUTER, :2] for q in (lm_c, lm_l) if q is not None and np.isfinite(q[tms.LIPS_OUTER]).all()]
+                    if pz:
+                        hz = cv2.convexHull(np.concatenate(pz).astype(np.float32))[:, 0]
+                        fz = tms.poly_mask(hz, (ya, yb, xa, xb), a.cm_mouth_excl * mwc, a.cm_mouth_feather * mwc)
+                        lipm = np.maximum(lipm, tms.poly_mask(hz, (ya, yb, xa, xb), a.cm_mouth_excl * mwc + 2 * a.cm_mouth_feather * mwc, 0))
                 yy_ = np.arange(yb - ya, dtype=np.float32)[:, None]
                 wgt = ((alpha > 0.05) & ((alpha < 0.95) | (a.colour_match == "upper"))).astype(np.float32) * (yy_ < ymc + 0.1 * mwc) * (1 - lipm)
                 if wgt.sum() > 50:
                     sg_ = a.colour_sigma * mwc; d_ = sk - Lk
                     num = cv2.GaussianBlur(d_ * wgt[..., None], (0, 0), sg_); den = cv2.GaussianBlur(wgt, (0, 0), sg_)
                     gm = (d_ * wgt[..., None]).sum((0, 1)) / wgt.sum(); eps = 0.05
-                    Lk = Lk + np.clip((num + eps * gm) / (den[..., None] + eps), -a.colour_max, a.colour_max)
+                    corr = (num + eps * gm) / (den[..., None] + eps)
+                    if fz is not None:
+                        cz = {"mean": gm, "zero": np.zeros(3, np.float32), "luma": np.full(3, float(gm.mean()), np.float32)}[a.cm_mouth_mode]
+                        corr = corr * (1 - fz[..., None]) + np.asarray(cz, np.float32)[None, None, :] * fz[..., None]
+                    Lk = Lk + np.clip(corr, -a.colour_max, a.colour_max)
         if a.paste_guard > 0:   # r7 F: paste only if the CURRENT source frame holds the face here (layer vs source agree outside the lips)
             lm_g = lm_at(k, mu); ring = alpha > 0.5
             if np.isfinite(lm_g[tms.LIPS_OUTER]).all(): ring &= ~(tms.poly_mask(lm_g[tms.LIPS_OUTER], roi, 0.3 * tms.mouth_width(lm_g), 0) > 0.5)
