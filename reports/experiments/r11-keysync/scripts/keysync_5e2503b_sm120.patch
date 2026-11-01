@@ -89,6 +89,20 @@ index 8f656fb..f135c69 100644
              # NOTE: workaround for
              # https://github.com/facebookresearch/xformers/issues/845
              max_bs = 32768
+diff --git a/sgm/modules/diffusionmodules/discretizer.py b/sgm/modules/diffusionmodules/discretizer.py
+index 19b5617..f9dcc32 100644
+--- a/sgm/modules/diffusionmodules/discretizer.py
++++ b/sgm/modules/diffusionmodules/discretizer.py
+@@ -58,7 +58,8 @@ class AYSDiscretization(Discretization):
+         return interped_ys
+ 
+     def get_sigmas(self, n, device="cpu"):
+-        assert n >= 10, "Number of timesteps must be greater than 10 for AYS discretization."
++        if n < 10:  # keysync bake-off: fewer steps = the AYS schedule log-linearly resampled to n steps (n + 1 sigmas)
++            return torch.from_numpy(self.loglinear_interp(self.base_sigmas, n + 1)).to(device)
+         if n > 10:
+             sigmas = self.loglinear_interp(self.base_sigmas, n)
+         else:
 diff --git a/sgm/modules/encoders/modules.py b/sgm/modules/encoders/modules.py
 index bdc238d..3d50ccb 100644
 --- a/sgm/modules/encoders/modules.py
@@ -107,3 +121,7 @@ index bdc238d..3d50ccb 100644
  
  
  class AbstractEmbModel(nn.Module):
+?? scripts/sampling/configs/interpolation_s6.yaml
+?? scripts/sampling/configs/interpolation_s8.yaml
+?? scripts/sampling/configs/keyframe_s6.yaml
+?? scripts/sampling/configs/keyframe_s8.yaml

@@ -51,3 +51,42 @@
 
 ## Clips
 /workspace/dub/outbox/r11_keysync/{m18,old03}_2panel_{1x,0.5x}.mp4: 7 s at the most mouth movement, face crop, left r9+fix, right KeySync, about 9.2-9.4 MB each.
+
+# Round 2 (01.11, the user reopened KeySync): KeySync as the layer in our composite
+
+## What changed
+- **Sync offset:** KeySync's output has a constant AV offset per video: m18 −1 frame, old03 +1 frame (58 of 58 speech seconds at +1).
+  - `ks_mkgen.sh` (`KS_SHIFT=auto`) measures it with SyncNet on KeySync's own output and shifts the layer.
+- **Layer:** `ks_layer.py` puts the crop into the master_25fps frames, Lab mean/std colour match to the source box (±12 frames).
+- **Composite:** `r7_m7_comp.sh` runs unchanged with the r9+fix recipe (SR=srt1, FB=fb7, tex-tau 1000), **without REP**.
+  - r9_layer_repair flags KeySync's lips as landmark_slide / lip_colour.
+  - With REP=1, m18 fell back to the source mouth on 143 of 475 frames (29.6 %).
+  - There is no CodeFormer-detail stage, because KeySync has no pre-CF dump.
+
+## Gate (KeySync in composite / r9+fix): FAIL on both videos
+| metric | m18 (ksfn_q18) | old03 (ksfa_qo3) |
+|---|---|---|
+| SyncNet dub speech | 6.70 / 7.74 | 5.69 / 7.18 |
+| strong flashes | 6 / 8 | 33 / 35 |
+| colour worst 1 s | 2.76 / 1.37 | 1.23 / 1.38 |
+| chin wave 2 s | 9.25 / 3.79 | 2.33 / 1.24 |
+| twitch mouth | 1.20 / 1.18 | 1.43 / 1.01 |
+| jaw jitter | 1.13 / 1.05 | 1.08 / 0.93 |
+| mouth / dub mismatch s | 0.0 / 2.6 | 1.47 / 1.67 |
+
+- SyncNet on m18 by stage: KeySync layer 7.83 → final 6.70.
+- LatentSync for comparison: layer 8.72 → final 7.74.
+
+## Steps vs cost (m18; GPU-busy for the KeySync stage only; the composite is extra)
+| config | sampler iterations | sampling s | GPU-busy s | s/vmin | SyncNet (composite) | chin wave |
+|---|---|---|---|---|---|---|
+| default 10 | 12 | 266 | 327 | 979 | 6.70 | 9.25 |
+| 8 | 10 | 220 | 282 | 845 | 6.79 | 9.19 |
+| 6 | 8 | 192 | 262 | 783 | 6.76 | 9.16 |
+
+- Quality is flat from 6 to 10 steps.
+- The fixed part (model load, landmarks, VAE, HuBERT/WavLM) is ~60-70 s per 20 s video, about 200 s/vmin.
+- So the generator stage alone stays above 700 s/vmin. LatentSync's generator stage is ~210-230 s/vmin.
+
+## Clips
+`m18_comp_2panel_{1x,0.5x}.mp4` and `old03_comp_2panel_{1x,0.5x}.mp4`: r9+fix | KeySync in our composite (10 steps), the same crop on both panels.
