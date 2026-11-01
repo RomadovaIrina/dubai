@@ -1,0 +1,109 @@
+diff --git a/scripts/sampling/dubbing_pipeline_raw.py b/scripts/sampling/dubbing_pipeline_raw.py
+index 4b4ac96..9ec7e54 100644
+--- a/scripts/sampling/dubbing_pipeline_raw.py
++++ b/scripts/sampling/dubbing_pipeline_raw.py
+@@ -1611,7 +1611,7 @@ def main(
+         model_size="Base+",
+         feed_as_frames=False,
+         merge_type="None",
+-        model_path="/vol/paramonos2/projects/antoni/code/Personal/code_prep/keysync/pretrained_models/checkpoints/WavLM-Base+.pt",
++        model_path="pretrained_models/checkpoints/WavLM-Base+.pt",
+     ).cuda()
+     vae_model = VaeWrapper("video")
+     landmarks_model = LandmarksExtractor()
+diff --git a/scripts/util/vae_wrapper.py b/scripts/util/vae_wrapper.py
+index 57da183..68505ee 100644
+--- a/scripts/util/vae_wrapper.py
++++ b/scripts/util/vae_wrapper.py
+@@ -7,7 +7,7 @@ from diffusers import AutoencoderKL, AutoencoderKLTemporalDecoder, StableDiffusi
+ 
+ def load_stable_model(model_path):
+     vae_model = StableDiffusionPipeline.from_pretrained(model_path)
+-    vae_model.set_use_memory_efficient_attention_xformers(True)
++    pass  # keysync bake-off: no xformers wheel for cu128; diffusers falls back to torch SDPA
+     return vae_model.vae
+ 
+ 
+@@ -23,7 +23,7 @@ class VaeWrapper(nn.Module):
+         if latent_type == "stable":
+             vae_model = load_stable_model("stabilityai/stable-diffusion-x4-upscaler")
+             vae_model.enable_slicing()
+-            vae_model.set_use_memory_efficient_attention_xformers(True)
++            pass  # keysync bake-off: no xformers wheel for cu128; diffusers falls back to torch SDPA
+             self.down_factor = 4
+         elif latent_type == "video":
+             vae_model = AutoencoderKLTemporalDecoder.from_pretrained(
+@@ -32,14 +32,14 @@ class VaeWrapper(nn.Module):
+                 torch_dtype=torch.float16 if variant == "fp16" else torch.float32,
+                 variant="fp16" if variant == "fp16" else None,
+             )
+-            vae_model.set_use_memory_efficient_attention_xformers(True)
++            pass  # keysync bake-off: no xformers wheel for cu128; diffusers falls back to torch SDPA
+             self.down_factor = 8
+         elif latent_type == "refiner":
+             vae_model = AutoencoderKL.from_pretrained(
+                 "stabilityai/stable-diffusion-xl-refiner-1.0", subfolder="vae", revision=None
+             )
+             vae_model.enable_slicing()
+-            vae_model.set_use_memory_efficient_attention_xformers(True)
++            pass  # keysync bake-off: no xformers wheel for cu128; diffusers falls back to torch SDPA
+             self.down_factor = 8
+         elif latent_type == "ldm":
+             assert False, "Not implemented"
+diff --git a/sgm/models/diffusion.py b/sgm/models/diffusion.py
+index 8aa46e8..2833a9c 100644
+--- a/sgm/models/diffusion.py
++++ b/sgm/models/diffusion.py
+@@ -223,7 +223,9 @@ class DiffusionEngine(pl.LightningModule):
+         if path.endswith("ckpt"):
+             sd = torch.load(path, map_location="cpu")["state_dict"]
+         elif path.endswith("pt"):
+-            sd = torch.load(path, map_location="cpu")["module"]
++            import numpy as _np  # keysync bake-off: torch>=2.6 weights_only; allow only the numpy scalar metadata in the ckpt
++            torch.serialization.add_safe_globals([(_np._core.multiarray.scalar, "numpy.core.multiarray.scalar"), _np.dtype, type(_np.dtype("float64")), type(_np.dtype("int64")), type(_np.dtype("float32"))])
++            sd = torch.load(path, map_location="cpu", weights_only=True)["module"]
+             # Remove leading _forward_module from keys
+             sd = {k.replace("_forward_module.", ""): v for k, v in sd.items()}
+         elif path.endswith("bin"):
+diff --git a/sgm/modules/attention.py b/sgm/modules/attention.py
+index 8f656fb..f135c69 100644
+--- a/sgm/modules/attention.py
++++ b/sgm/modules/attention.py
+@@ -299,7 +299,7 @@ class CrossAttention(nn.Module):
+ 
+         # Ensure skip_attention is a B×1 boolean tensor
+         if skip_attention is None:
+-            skip_attention = torch.zeros_like(x[:, :1], dtype=torch.bool)
++            skip_attention = torch.zeros(x.shape[0], 1, dtype=torch.bool, device=x.device)  # keysync bake-off: B x 1 (zeros_like(x[:, :1]) is B x 1 x C)
+ 
+         assert isinstance(skip_attention, torch.Tensor)
+         assert skip_attention.shape[1] == 1 and skip_attention.dtype == torch.bool
+@@ -491,7 +491,9 @@ class MemoryEfficientCrossAttention(nn.Module):
+             v = v.to(q.dtype)
+ 
+         # actually compute the attention, what we cannot get enough of
+-        if version.parse(xformers.__version__) >= version.parse("0.0.21"):
++        if not XFORMERS_IS_AVAILABLE:  # keysync bake-off: no working xformers on sm_120 (5090); same math via torch SDPA
++            out = F.scaled_dot_product_attention(q, k, v)
++        elif version.parse(xformers.__version__) >= version.parse("0.0.21"):
+             # NOTE: workaround for
+             # https://github.com/facebookresearch/xformers/issues/845
+             max_bs = 32768
+diff --git a/sgm/modules/encoders/modules.py b/sgm/modules/encoders/modules.py
+index bdc238d..3d50ccb 100644
+--- a/sgm/modules/encoders/modules.py
++++ b/sgm/modules/encoders/modules.py
+@@ -36,8 +36,11 @@ from ...util import (
+     instantiate_from_config,
+ )
+ 
+-from facenet_pytorch import MTCNN, InceptionResnetV1
+-from insightface.app import FaceAnalysis
++try:  # keysync bake-off: face-ID embedders are training-only (not in the sampling configs)
++    from facenet_pytorch import MTCNN, InceptionResnetV1
++    from insightface.app import FaceAnalysis
++except ImportError:
++    MTCNN = InceptionResnetV1 = FaceAnalysis = None
+ 
+ 
+ class AbstractEmbModel(nn.Module):
