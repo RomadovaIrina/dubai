@@ -9,7 +9,9 @@ fps = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show
 n = int(subprocess.run(["ffprobe", "-v", "error", "-count_packets", "-select_streams", "v:0", "-show_entries", "stream=nb_read_packets", "-of", "csv=p=0", src], capture_output=True, text=True).stdout.strip())
 rd = lambda cmd, sh: subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=sh * 4)
 A = rd(["ffmpeg", "-v", "error", "-i", src, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], W * H * 3)
-K = rd(["ffmpeg", "-v", "error", "-i", ks, "-vf", (f"fps={fps},scale" if os.environ.get("KS_NEAREST") == "1" else f"minterpolate=fps={fps}:mi_mode=mci,scale") + f"={s}:{s}:flags=lanczos", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], s * s * 3)
+sh = int(os.environ.get("KS_SHIFT", "0"))   # KeySync AV offset fix in 25 fps frames: >0 delay (first frame cloned), <0 advance (frames dropped at the start)
+pre = f"tpad=start={sh}:start_mode=clone," if sh > 0 else (f"trim=start_frame={-sh},setpts=PTS-STARTPTS," if sh < 0 else "")
+K = rd(["ffmpeg", "-v", "error", "-i", ks, "-vf", pre + (f"fps={fps},scale" if os.environ.get("KS_NEAREST") == "1" else f"minterpolate=fps={fps}:mi_mode=mci,scale") + f"={s}:{s}:flags=lanczos", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], s * s * 3)
 w = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", fps, "-i", "-", "-i", aud, "-map", "0:v", "-map", "1:a",
                       "-c:v", "libx264", "-crf", "16", "-preset", "medium", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-shortest", out], stdin=subprocess.PIPE)
 def ramp(lo_edge, hi_edge):   # 24 px feather, none on a box side that lies on the frame border (nothing to blend with there)

@@ -90,3 +90,58 @@
 
 ## Clips
 `m18_comp_2panel_{1x,0.5x}.mp4` and `old03_comp_2panel_{1x,0.5x}.mp4`: r9+fix | KeySync in our composite (10 steps), the same crop on both panels.
+
+# Round 3 (01.11): KeySync speed on one 5090. The user prefers KeySync
+
+## Method
+- Resident worker `ks_fast.py`: models loaded once; the authors' `sample()` runs unchanged with the infer_raw.sh arguments; per-stage cuda-synced timing.
+- s/vmin = worker wall per video-minute. The GPU is ~94 % busy across the run (NVML), so this is ~GPU-seconds.
+- Covers KeySync only, not the rest of the pipeline.
+- Gate vs the **KeySync baseline**, per `ks_eval.sh`:
+  - SyncNet AV offset of the raw output → paste with that shift → SyncNet on dub-speech seconds at offset 0, on a 25 fps rendition;
+  - strong lip flashes (r3_flash).
+  - Rule: SyncNet ≥ base − 0.3; flashes no worse (noise across identical-quality arms is ±1-2).
+
+## Lever table (m18 unless noted)
+| arm | s/vmin | SyncNet @0 | flashes | verdict |
+|---|---|---|---|---|
+| authors' settings, my first port (3-D SDPA) | 1002 (old03 955) | 7.68 (old03 7.54) | 5 (22) | baseline |
+| SDPA 4-D fix (flash kernel; 3-D input fell to MATH) | 971 (old03 921) | 7.68 (7.53) | 6 (22) | = (new baseline) |
+| resident worker (model load) | load is 7.7 s per process | - | - | negligible |
+| VAE decode 7 frames / call (fp32; 14 = OOM) | 1011 | 7.72 | 6 | no gain |
+| interpolation chunk 6 segments / call (authors 2) | 998 | 7.68 | 6 | no gain (GPU saturated) |
+| 6 steps (8 sampler iterations) | 714 | 7.81 | 5 | pass |
+| DeepCache 2:0 (KS_DC) | 659 | 7.70 | 5 | pass |
+| DeepCache 3:0 | 549 | 7.57 | 8 | borderline flashes, not taken |
+| 6 steps + DeepCache 2:0 | 520 | 7.26 | 11 | **FAIL** |
+| DeepCache 2:0 + fp16 VAE decode | 629 | 7.68 | 6 | pass (decode 38 -> 29 s) |
+| + attention fast path (no index copy / scatter / sync) | 611 | 7.70 | 4 | pass |
+| 8 steps + DeepCache 2:0 + fp16 VAE | 554 | 7.75 | 5 | pass |
+| DeepCache 2:0 + fp16 VAE + torch.compile UNet (warm) | 531 | 7.71 | 5 | pass |
+| **best: 8 steps + DC 2:0 + fp16 VAE + fast path + compile UNet (warm)** | **450 (old03 444)** | **7.71 (old03 7.72)** | **5 (22)** | **pass** |
+| torch.compile of the VAE decoder | - | - | - | fails (temporal decoder attribute) |
+| landmark batch 40 | = | - | - | no gain (5.5 s warm) |
+| skip silent + closed-mouth spans | m18 0 %, old03 7.7 % of frames skippable | - | - | small, not built |
+| keyframe density | - | - | - | not a lever: interpolation generates every frame in 14-frame windows |
+
+- Warm compile: the first video in a fresh process pays the compile; m18 then took 565 s/vmin.
+- Inductor caches kernels across runs (/tmp/torchinductor_root).
+
+## Where the best arm's time goes (old03, 669 s for 90.3 s)
+| stage | s |
+|---|---|
+| interpolation sampling | 422 |
+| interpolation VAE decode | 133 |
+| keyframes | 45 |
+| landmarks | 26 |
+| VAE encode | ~25 |
+| save | ~11 |
+
+## Bottom line
+- KeySync alone is **~445 GPU-s/vmin** at baseline-equal quality, down from 921-1002. On m18 the arm runs about 2.2x faster.
+- Add the rest of the pipeline: audio + sep ~55, the composite GPU part ~25-35. End to end that is ~530 s/vmin vs the 300 norm.
+- Untried levers that could still matter:
+  - CFG-pass caching: the uncond pass every other step, ~-15 %.
+  - A compiled / fp16 temporal VAE decoder: decode is ~20 % now.
+  - TensorRT for the UNet.
+  - Step distillation, which needs training.
