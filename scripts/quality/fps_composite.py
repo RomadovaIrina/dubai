@@ -296,6 +296,8 @@ def main() -> int:
                     "two warped master frames are averaged, which softens the detail on 5 of every 6 frames (a sharpness pulse); nearest = keep the "
                     "interpolation's low frequencies, take the high frequencies (sigma --retime-hf-sigma px) from the nearer warped frame alone")
     ap.add_argument("--retime-hf-sigma", type=float, default=1.5)
+    ap.add_argument("--lip-sharp-follow", choices=["off", "on"], default="off", help="r11 FACE: the lip unsharp amount per frame x the SOURCE mouth sharpness weight "
+                    "(Laplacian variance vs the video median: <= 0.5 x -> 0, >= 1 x -> 1, smoothed +-2 frames): no drawn outline on a motion-blurred source frame")
     ap.add_argument("--stream-chunk", type=int, default=32, help="r10 streaming: output frames composited per parallel batch (RAM ~ this + the margins, any video length)")
     a = ap.parse_args()
     global FPS_M; FPS_M = float(a.master_fps)
@@ -775,7 +777,7 @@ def main() -> int:
             if a.ls_sharpen_scope == "lips": amt = a.ls_sharpen * ex
             if a.ls_sharpen_lips > 0:
                 lm_l2 = lerp(mp_ls, m) if mp_ls is not None else lerp(mp, m); mw2 = tms.mouth_width(lm_l2)   # LatentSync layer's own lips (its pose)
-                amt = amt + a.ls_sharpen_lips * tms.poly_mask(lm_l2[tms.LIPS_OUTER], roi, 0.08 * mw2, 0.08 * mw2)
+                amt = amt + a.ls_sharpen_lips * (float(LSF[k]) if LSF is not None else 1.0) * tms.poly_mask(lm_l2[tms.LIPS_OUTER], roi, 0.08 * mw2, 0.08 * mw2)
             Lk = Lk + (amt * conf_k)[..., None] * det   # r3 D: a low-confidence (partly nearest-frame) layer is never sharpened more than a real one
         if a.skin_texture == "source":
             Lk = tms.skin_texture_transfer(f, [Lk], [sk], [ex], a.tex_sigma, a.tex_tau)[0]
@@ -871,6 +873,22 @@ def main() -> int:
         if a.sharpen_lips_max > 0: a.ls_sharpen_lips = min(a.ls_sharpen_lips, a.sharpen_lips_max)
         times["sharpen_closed_loop"] = {"iterations": hist, "chosen": best, "seconds": round(time.perf_counter() - t0, 2)}; print("  sharpen closed loop:", best, flush=True)
     S.pin.clear(); FPIN.clear()   # r10 streaming: the calibration samples are no longer needed
+    LSF = None
+    if a.lip_sharp_follow == "on" and lm_f is not None:   # r11 FACE: the source mouth sharpness per frame (one streaming pass, cheap)
+        t0 = time.perf_counter(); shp = np.full(len(S), np.nan); new_pass()
+        for k0 in range(0, len(S), CH):
+            k1 = min(len(S), k0 + CH); S.fill(k1); S.evict(k0)
+            for k in range(k0, k1):
+                q_ = lm_f[k]
+                if not np.isfinite(q_[tms.LIPS_OUTER]).all(): continue
+                lw_ = tms.mouth_width(q_); c_ = q_[tms.LIPS_OUTER, :2].mean(0); r_ = int(0.9 * lw_)
+                y0_, y1_, x0_, x1_ = max(0, int(c_[1] - r_)), min(H, int(c_[1] + r_)), max(0, int(c_[0] - r_)), min(W, int(c_[0] + r_))
+                if y1_ - y0_ < 8 or x1_ - x0_ < 8: continue
+                shp[k] = float(cv2.Laplacian(cv2.cvtColor(S[k][y0_:y1_, x0_:x1_], cv2.COLOR_BGR2GRAY).astype(np.float32), cv2.CV_32F).var())
+        rr = shp / np.nanmedian(shp); w_ = np.clip((rr - 0.5) / 0.5, 0, 1); w_ = np.where(np.isfinite(w_), w_, 1.0)
+        kk = np.exp(-0.5 * (np.arange(-3, 4) / 1.5) ** 2); LSF = np.convolve(np.pad(w_, 3, mode="edge"), kk / kk.sum(), "valid")
+        times["lip_sharp_follow"] = {"seconds": round(time.perf_counter() - t0, 2), "weight_mean": round(float(LSF.mean()), 3), "frames_lt_05": int((LSF < 0.5).sum())}
+        print("  lip-sharp-follow:", times["lip_sharp_follow"], flush=True)
     if a.reg_smooth > 0 and a.register in ("sim", "sim_ring"):   # r10: pass 1 = the per-frame corrections, then a Gaussian average over +-N frames
         t0 = time.perf_counter(); REG["mode"] = "collect"; new_pass()
         with cf.ThreadPoolExecutor(max_workers=a.threads) as ex:

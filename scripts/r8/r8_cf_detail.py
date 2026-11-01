@@ -22,7 +22,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base", required=True); ap.add_argument("--cf", required=True); ap.add_argument("--lm", required=True); ap.add_argument("--out", required=True)
     ap.add_argument("--alpha", type=float, default=1.0); ap.add_argument("--beta", type=float, default=0.0); ap.add_argument("--sigma", type=float, default=0.12)
-    ap.add_argument("--dilate", type=float, default=0.25); ap.add_argument("--inner-alpha", type=float, default=1.0, help="r9: detail weight inside the inner-lip polygon (teeth / cavity; CodeFormer draws them sharper and brighter than the source: m03 x1.5)"); ap.add_argument("--temporal", type=int, default=1); ap.add_argument("--crf", type=int, default=10); ap.add_argument("--preset", default="medium", help="x264 preset of this intermediate layer (r8 speed: veryfast)"); ap.add_argument("--threads", type=int, default=1, help="r9 speed: frames processed in parallel (same output)")
+    ap.add_argument("--dilate", type=float, default=0.25); ap.add_argument("--src-follow", default="", help="r11 FACE (default off): the SOURCE master video; the detail weight per frame follows the source mouth sharpness (Laplacian variance vs the video median: <= --follow-lo x median -> 0, >= 1 x -> 1, smoothed +-2 frames), so a motion-blurred source frame gets no drawn lip detail (the sharp <-> soft contrast jumps the eye follows)"); ap.add_argument("--follow-lo", type=float, default=0.5); ap.add_argument("--inner-alpha", type=float, default=1.0, help="r9: detail weight inside the inner-lip polygon (teeth / cavity; CodeFormer draws them sharper and brighter than the source: m03 x1.5)"); ap.add_argument("--temporal", type=int, default=1); ap.add_argument("--crf", type=int, default=10); ap.add_argument("--preset", default="medium", help="x264 preset of this intermediate layer (r8 speed: veryfast)"); ap.add_argument("--threads", type=int, default=1, help="r9 speed: frames processed in parallel (same output)")
     a = ap.parse_args(); lm = np.load(a.lm)["lm"]; t0 = time.perf_counter()
     cb, cc = av.open(a.base), av.open(a.cf); sb = cb.streams.video[0]; sb.thread_type = "AUTO"; cc.streams.video[0].thread_type = "AUTO"
     rate = sb.average_rate   # r9: read while the container is open (after cb.close() the stream reads freed memory: random rate -> libx264 "timebase is not set", m15 / m19 / m20)
@@ -52,6 +52,22 @@ def main():
         sg = max(0.8, a.sigma * mw); lf = cv2.GaussianBlur(D, (0, 0), sg)
         ring = (m < 0.02)
         return (y0, y1, x0, x1, m), (D - lf, lf), (float(np.abs(D[ring]).mean()) if ring.any() else 0.0)
+    FW = None; follow_rep = None   # r11 FACE --src-follow: per-frame detail weight from the SOURCE sharpness (computed after the box pass below)
+    def follow_weights():
+        import av as av_
+        cs_ = av_.open(a.src_follow); S_ = [f.to_ndarray(format="gray") for f in cs_.decode(video=0)]; cs_.close()
+        ss = np.full(n, np.nan); ls_ = np.full(n, np.nan)
+        for k in range(min(n, len(S_))):
+            if boxes[k] is None: continue
+            y0, y1, x0, x1, _ = boxes[k]
+            ss[k] = float(cv2.Laplacian(S_[k][y0:y1, x0:x1].astype(np.float32), cv2.CV_32F).var())
+            ls_[k] = float(cv2.Laplacian(cv2.cvtColor(B[k][y0:y1, x0:x1], cv2.COLOR_BGR2GRAY).astype(np.float32), cv2.CV_32F).var())
+        r = ss / np.nanmedian(ss); w = np.clip((r - a.follow_lo) / (1 - a.follow_lo), 0, 1); w = np.where(np.isfinite(w), w, 1.0)
+        k_ = np.exp(-0.5 * (np.arange(-3, 4) / 1.5) ** 2); w = np.convolve(np.pad(w, 3, mode="edge"), k_ / k_.sum(), "valid")
+        rl = ls_ / np.nanmedian(ls_); ok = np.isfinite(r) & np.isfinite(rl)
+        rep_ = {"frames_weight_lt_05": int((w < 0.5).sum()), "weight_mean": round(float(w.mean()), 3),
+                "src_sharp_layer_soft": int((ok & (r >= 1.0) & (rl < 0.6)).sum()), "src_blur_frames": int((ok & (r < a.follow_lo)).sum())}
+        return w, rep_
     def second(k):
         img = B[k]
         if boxes[k] is not None:
@@ -68,13 +84,14 @@ def main():
                     hfj[oy0 - y0:oy1 - y0, ox0 - x0:ox1 - x0] = det[j][0][oy0 - jy0:oy1 - jy0, ox0 - jx0:ox1 - jx0]
                     gy, gx = np.mgrid[0:y1 - y0, 0:x1 - x0].astype(np.float32)
                     acc += cv2.remap(hfj, gx + F[..., 0], gy + F[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE); wsum += 1.0
-            add = (a.alpha * acc / wsum + a.beta * lf) * m[..., None]
+            add = (a.alpha * acc / wsum + a.beta * lf) * m[..., None] * (float(FW[k]) if FW is not None else 1.0)
             img = img.copy(); img[y0:y1, x0:x1] = np.clip(img[y0:y1, x0:x1].astype(np.float32) + add, 0, 255).round().astype(np.uint8)
         return img
     o = av.open(a.out, "w"); st = o.add_stream("libx264", rate=rate); st.width, st.height = W, H; st.pix_fmt = "yuv420p"; st.options = {"crf": str(a.crf), "preset": a.preset}
     with cf.ThreadPoolExecutor(max_workers=max(1, a.threads)) as ex:
         for k, r_ in enumerate(ex.map(first, range(n))):
             if r_ is not None: boxes[k], det[k] = r_[0], r_[1]; outside.append(r_[2])
+        if a.src_follow: FW, follow_rep = follow_weights(); print('  src-follow:', follow_rep, flush=True)
         CH = 64   # bounded: at most CH finished frames wait for the in-order encoder
         for c0 in range(0, n, CH):
             for img in ex.map(second, range(c0, min(n, c0 + CH))):
@@ -82,7 +99,7 @@ def main():
     for pk in st.encode(): o.mux(pk)
     o.close()
     rep = {"frames": n, "mouth_frames": int(sum(b is not None for b in boxes)), "cf_minus_base_outside_mouth_mad": round(float(np.median(outside)), 3) if outside else None,
-           "seconds": round(time.perf_counter() - t0, 1), "args": vars(a)}
+           "src_follow": follow_rep, "seconds": round(time.perf_counter() - t0, 1), "args": vars(a)}
     pathlib.Path(a.out).with_suffix(".cfd.json").write_text(json.dumps(rep, indent=1)); print("== cf_detail", json.dumps({k: v for k, v in rep.items() if k != "args"}), flush=True)
 
 

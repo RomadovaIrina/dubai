@@ -128,11 +128,20 @@ class StableLatentSync(AccelLatentSync):
                 if ref_faces is not None:
                     rp, _, _ = ip.prepare_masks_and_masked_images(ref_faces, affine_transform=False)
                     ref_lat16 = pipe.prepare_image_latents(rp, device, weight_dtype, generator, False)          # (1, 4, R, h, w)
+                ref_px = cur_px; sharp_r = int(os.environ.get("LS_REF_SHARP", "0") or 0)
+                if sharp_r > 0 and ref_faces is None:
+                    # r11 FACE LS_REF_SHARP=R (default off): the UNet reference of frame i = the SHARPEST aligned crop within +-R frames (Laplacian
+                    # variance of the mouth rows 256-435 of the 512 crop). The current-frame reference copies the source's motion blur on head turns
+                    # (the pale / mushy lip frames); the crops are pose-normalised by the affine, so a near neighbour keeps the pose.
+                    g_ = cur_px[:, :, 256:436, 96:416].float().mean(1, keepdim=True)
+                    lap = torch.nn.functional.conv2d(g_, torch.tensor([[[[0., 1., 0.], [1., -4., 1.], [0., 1., 0.]]]], device=g_.device))
+                    sh = lap.flatten(1).var(1).cpu().numpy(); idx = [max(range(max(0, i - sharp_r), min(n, i + sharp_r + 1)), key=lambda j: sh[j]) for i in range(n)]
+                    ref_px = cur_px[idx]; self.last_ref_sharp = {"radius": sharp_r, "changed": int(sum(j != i for i, j in enumerate(idx)))}
                 for a in range(0, n, nf):
                     mk, mi = pipe.prepare_mask_latents(masks[a:a + nf], masked_px[a:a + nf], H, W, weight_dtype, device, generator, False)
                     m_l.append(mk); mi_l.append(mi)
                     if ref_faces is None:
-                        r_l.append(pipe.prepare_image_latents(cur_px[a:a + nf], device, weight_dtype, generator, False))
+                        r_l.append(pipe.prepare_image_latents(ref_px[a:a + nf], device, weight_dtype, generator, False))
                 mask_lat, masked_lat = torch.cat(m_l, 2), torch.cat(mi_l, 2)
                 if ref_faces is None:
                     ref_lat = torch.cat(r_l, 2)

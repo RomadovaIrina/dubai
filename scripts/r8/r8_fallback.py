@@ -75,6 +75,7 @@ def main():
     ap.add_argument("--ls", required=True); ap.add_argument("--lm", required=True); ap.add_argument("--out", required=True)
     ap.add_argument("--thr-jerk", type=float, default=0.05); ap.add_argument("--thr-tone", type=float, default=14.0); ap.add_argument("--thr-app", type=float, default=9.0)
     ap.add_argument("--thr-geo", type=float, default=0.12); ap.add_argument("--thr-coll", type=float, default=0.45)
+    ap.add_argument("--rel-stats", choices=["off", "on"], default="off", help="r11 FACE: wash / coll / dark relative to the LAYER's own statistics (its steady offset vs the source, its own typical cavity), not absolute: for generator variants with another tone (a tighter generation mask)")
     ap.add_argument("--thr-wash", type=float, default=0.12); ap.add_argument("--thr-dark", type=float, default=0.6); ap.add_argument("--knee", type=float, default=0.5, help="a feature counts from knee x thr (0) to thr (1)")
     ap.add_argument("--joint-gain", type=float, default=1.3); ap.add_argument("--dilate", type=int, default=2); ap.add_argument("--ramp-sigma", type=float, default=2.0); ap.add_argument("--merge-gap", type=int, default=6)
     ap.add_argument("--win-frac", type=float, default=0.4); ap.add_argument("--window", type=int, default=16)
@@ -109,6 +110,9 @@ def main():
     # closed source mouth is a legitimate dark cavity; a near-black slot darker than this person's cavity ever is, is not)
     so_ = np.isfinite(os_[:n]) & (os_[:n] > 0.06) & np.isfinite(sp5)
     ref_cav = float(np.median(sp5[so_])) if so_.sum() > 10 else float(np.nanpercentile(sp5, 10))
+    if a.rel_stats == "on":   # r11 FACE: a generator that renders a consistently darker cavity (a tighter mask: LS_MASK=mask3.png) is not a black hole;
+        lt_ = np.isfinite(lp5) & (ls_mask[:n] > 0) if len(ls_mask) >= n else np.isfinite(lp5)   # only the darker of the source's cavity and the layer's OWN typical one counts
+        if lt_.sum() > 10: ref_cav = min(ref_cav, float(np.nanpercentile(lp5[lt_], 10)))
     dark = np.where(np.isfinite(lp5), (ref_cav - lp5) / (ref_cav + 10.0), 0.0)
     geo = np.zeros(n)
     for k in range(n):
@@ -123,7 +127,8 @@ def main():
     sc = lambda x, t: np.clip((x - a.knee * t) / ((1 - a.knee) * t), 0, 1)
     tmed = lambda x: np.array([np.median(x[max(0, k - 6):k + 7]) for k in range(len(x))])   # the transient part (a pop), not a steady offset
     F = {"jerk": sc(jerk, a.thr_jerk), "tone": sc(tone, a.thr_tone), "app": sc(appx, a.thr_app), "geo": sc(geo, a.thr_geo),
-         "coll": sc(coll - np.minimum(tmed(coll), 0.15), a.thr_coll), "wash": sc(wash - np.minimum(tmed(wash), 0.05), a.thr_wash), "dark": sc(dark, a.thr_dark)}
+         "coll": sc(coll - np.minimum(tmed(coll), 0.15 if a.rel_stats == "off" else 1e9), a.thr_coll),
+         "wash": sc(wash - np.minimum(tmed(wash), 0.05 if a.rel_stats == "off" else 1e9), a.thr_wash), "dark": sc(dark, a.thr_dark)}   # r11 --rel-stats: the whole steady offset removed
     for k_ in ("jerk", "app"): F[k_] = np.where(joint, np.clip(F[k_] * a.joint_gain, 0, 1), F[k_])
     score = np.max(np.stack(list(F.values()), 1), 1) * ls_mask
     fb = score.copy()
