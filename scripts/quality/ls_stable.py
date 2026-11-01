@@ -34,6 +34,21 @@ sys.path.insert(0, str(HERE.parent / "optim")); sys.path.insert(0, str(HERE.pare
 from latentsync_accel import LS, AccelLatentSync, _ReplayDetector, _sdpa_context   # noqa: E402
 
 
+def _paste_w(masks):
+    """paste-back weight of the generated pixels: 1 - mask (upstream, a hard edge). r11 FACE LS_MASK_FEATHER=sigma (px of the 512 crop, default off):
+    the generated region is eroded by 2 sigma and blurred by sigma, so the soft ramp lies INSIDE it (never the hallucinated outside); the UNet
+    still sees the binary mask. For a tighter generation mask (LS_MASK=mask3.png) whose hard edge draws a seam on the chin."""
+    g = 1 - masks
+    sg = float(os.environ.get("LS_MASK_FEATHER", "0") or 0)
+    if sg <= 0: return g
+    import torch.nn.functional as Fn
+    from torchvision.transforms.functional import gaussian_blur
+    r = max(1, int(round(2 * sg))); x = g.float()
+    x = -Fn.max_pool2d(-x, 2 * r + 1, stride=1, padding=r)          # erode by r
+    k = 2 * int(math.ceil(3 * sg)) + 1
+    return gaussian_blur(x, [k, k], [sg, sg]).clamp(0, 1).to(g.dtype)
+
+
 class StableLatentSync(AccelLatentSync):
     def __init__(self, pipe, *, stride: int | None = None, ref_mode: str = "same", mode: str = "ls", overlap: str = "fuse", window_len: int | None = None,
                  bridge_len: int = 0, bridge_steps: int = 0, **kw):
@@ -103,7 +118,7 @@ class StableLatentSync(AccelLatentSync):
                 for a in range(0, n, nf):
                     lat = pipe.prepare_image_latents(cur_px[a:a + nf], device, weight_dtype, generator, False)
                     dec = pipe.decode_latents(lat)
-                    out.append(pipe.paste_surrounding_pixels_back(dec, cur_px[a:a + nf], 1 - masks[a:a + nf], device, weight_dtype))
+                    out.append(pipe.paste_surrounding_pixels_back(dec, cur_px[a:a + nf], _paste_w(masks[a:a + nf]), device, weight_dtype))
                 synced = torch.cat(out); t_vae = time.perf_counter() - t0
             else:
                 latents = pipe.prepare_latents(n, pipe.vae.config.latent_channels, H, W, weight_dtype, device, generator)   # (1, 4, n, h, w), same noise per frame
@@ -281,7 +296,7 @@ class StableLatentSync(AccelLatentSync):
                         part = pipe.decode_latents(latents[:, :, a:a + nf, r0:]); dec = cur_px[a:a + nf].to(device=part.device, dtype=part.dtype).clone(); dec[:, :, r0 * 8:] = part
                     else:
                         dec = pipe.decode_latents(latents[:, :, a:a + nf])
-                    out.append(pipe.paste_surrounding_pixels_back(dec, cur_px[a:a + nf], 1 - masks[a:a + nf], device, weight_dtype))
+                    out.append(pipe.paste_surrounding_pixels_back(dec, cur_px[a:a + nf], _paste_w(masks[a:a + nf]), device, weight_dtype))
                 synced = torch.cat(out); torch.cuda.synchronize(); t_vae += time.perf_counter() - t0
             t0 = time.perf_counter(); frames = pipe.restore_video(synced, video_frames, boxes, affine); t_res = time.perf_counter() - t0
             # seams = first frame of NEW content after a previous window (segment-relative): window starts (none / fuse) or previous window ends (continue)
