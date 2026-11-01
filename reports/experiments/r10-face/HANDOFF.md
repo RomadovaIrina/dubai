@@ -197,3 +197,9 @@ r11-sync notes for the KeySync resume (its branch `experiment/r11-composite-sync
   - `--retime-mouth` (+10-13 flashes on the 30 fps in-between frames);
   - `--mouth-region 0.55` (occluder ring 0 → 4).
 - Its old03 numbers use its own fresh baseline (r9g_old03 / r9f_old03, gate base `r10/gate/old03base`). The KeySync gate above uses the same base.
+- **Exact k5 recipe** (r11-sync, `origin/experiment/r11-composite-sync` @ 430e3a1, checkout `/workspace/dub/r11_sync`):
+  - r8_fallback: `$(cat reports/experiments/r8-face/fb7.args) --open-gate 0.04 --dark-transient on --thr-wash-lips 0.2`
+  - r9_layer_repair: `--spikes off`
+  - fps_composite: V1 + `--cm-mouth-excl 0.5 --mouth-region 0.55 --tex-tau 1000 --tex-sigma 2.5`
+  - NOT `--retime-mouth` or `--cm-mouth-mode zero`.
+  - Driver: `scripts/r11s/fb_arm.sh`. It assumes the r9g_<id> layer names; copy it and change the layer paths for KeySync.
