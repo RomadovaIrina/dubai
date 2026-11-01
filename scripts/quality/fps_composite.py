@@ -143,7 +143,7 @@ def edge_width_px(alpha: np.ndarray) -> float | None:
     return round(band / per, 2) if per > 0 else None
 
 
-def interp_safe(fl, y, z, t, d0=3.5, c0=0.95, sc=2.0, hf_sigma=0.0):
+def interp_safe(fl, y, z, t, d0=3.5, c0=0.95, sc=2.0, hf_sigma=0.0, near_out=None):
     """tms.interp + a confidence: on the pixels that change between the two LatentSync frames (|grey diff| > 10), D = mean |w0 - w1| (the two
     warped candidates disagree -> averaging them gives the double / torn lip contour the user saw) and the forward-backward flow consistency.
     conf = clip(1 - max((D - d0) / sc, (c0 - cons) / 0.1), 0, 1); conf >= 0.6: the interpolation; below: the NEARER frame alone, warped to t
@@ -156,6 +156,7 @@ def interp_safe(fl, y, z, t, d0=3.5, c0=0.95, sc=2.0, hf_sigma=0.0):
     c01 = fl.consistent(F01, F10); v0 = fl.warp(c01.astype(np.float32), Ft0); v1 = fl.warp(fl.consistent(F10, F01).astype(np.float32), Ft1)
     a0, a1 = (1 - t) * v0, t * v1; s_ = a0 + a1
     it = np.where((s_ > 1e-3)[..., None], (a0[..., None] * w0 + a1[..., None] * w1) / np.maximum(s_, 1e-3)[..., None], (1 - t) * y + t * z)
+    if near_out is not None: near_out.append(w0 if t < 0.5 else w1)   # r11 --retime-mouth warp: the nearer frame warped to t (no blend)
     if hf_sigma > 0:   # r10 --retime-hf nearest: the blend's low frequencies + the nearer warped frame's detail (no 5-in-6 softening pulse)
         import cv2
         wn = w0 if t < 0.5 else w1; it = cv2.GaussianBlur(it, (0, 0), hf_sigma) + (wn - cv2.GaussianBlur(wn, (0, 0), hf_sigma))
@@ -276,13 +277,15 @@ def main() -> int:
                     "on skin that the GENERATED lips / the source's moving mouth reach, re-shades the generated mouth with the source's articulation): the "
                     "union of the source's and the layer's outer lip contours, dilated by this x mouth width, is left out of the estimation AND gets "
                     "--cm-mouth-mode inside it (feather --cm-mouth-feather x mouth width); 0 = off (r3 behaviour)")
-    ap.add_argument("--cm-mouth-mode", choices=["mean", "zero", "luma"], default="mean", help="r11 SYNC: correction inside the excluded mouth zone: mean = the "
-                    "frame's one global offset (no spatial shading); zero = none; luma = the global mean of the grey offset only (no hue shift on the lips)")
+    ap.add_argument("--cm-mouth-mode", choices=["mean", "zero", "luma", "field"], default="mean", help="r11 SYNC: correction inside the excluded mouth zone: mean = the "
+                    "frame's one global offset (no spatial shading; +9 / +3 strong flashes on old03 / old05: the per-frame offset flickers); zero = none; "
+                    "luma = the global mean of the grey offset only (no hue shift on the lips); field = the zone is only left out of the ESTIMATION, the smooth field is applied as before")
     ap.add_argument("--cm-mouth-feather", type=float, default=0.15)
-    ap.add_argument("--retime-mouth", choices=["off", "nearest", "hf"], default="off", help="r11 SYNC (--retime nearest = +0.26 SyncNet on m18: the "
+    ap.add_argument("--retime-mouth", choices=["off", "nearest", "hf", "warp"], default="off", help="r11 SYNC (--retime nearest = +0.26 SyncNet on m18: the "
                     "flow_safe 25 -> 30 fps blend of two generated mouths smears the shape / timing): inside the layer's lips (+ --retime-mouth-dil x "
                     "mouth width, feathered) the nearer master frame moved by the head's similarity motion (rigid landmarks) replaces the "
-                    "interpolation (nearest) or gives only its high frequencies (hf, sigma --retime-hf-sigma); elsewhere the flow interpolation stays")
+                    "interpolation (nearest; +0.17 on m18 but +13 strong flashes: the 1-in-6 frame step) or gives only its high frequencies (hf, sigma "
+                    "--retime-hf-sigma); warp = the nearer master frame flow-warped to t (no two-mouth average, motion continuous); elsewhere the flow interpolation stays")
     ap.add_argument("--retime-mouth-dil", type=float, default=0.3)
     ap.add_argument("--sharpen-auto", type=float, default=0.0, help="r3: per-VIDEO unsharp amounts (constant -> no flicker) so that the LatentSync layer's sharpness "
                     "(mean |Laplacian|) reaches TARGET x the source's, calibrated on 48 LatentSync frames against the source frame each was generated from "
@@ -699,10 +702,15 @@ def main() -> int:
         elif al < 0.04 or m1 == m0 or wm[m1] <= 0: Lk = L[m0][ya:yb, xa:xb].astype(np.float32)
         elif al > 0.96 or wm[m0] <= 0: Lk = L[m1][ya:yb, xa:xb].astype(np.float32)
         elif a.retime == "flow_safe":   # r3 D (user defect "torn / whitish lips on single 30 fps frames"): confidence-checked interpolation
+            wn_ = [] if a.retime_mouth == "warp" else None
             Lk, conf_k = interp_safe(f, L[m0][ya:yb, xa:xb].astype(np.float32), L[m1][ya:yb, xa:xb].astype(np.float32), al, a.safe_d, a.safe_cons, a.safe_scale,
-                                     a.retime_hf_sigma if a.retime_hf == "nearest" else 0.0)
+                                     a.retime_hf_sigma if a.retime_hf == "nearest" else 0.0, wn_)
+            if wn_ and mp_ls is not None and np.isfinite(lerp(mp_ls, m)[tms.LIPS_OUTER]).all():   # r11 SYNC: inside the lips, the nearer frame flow-warped to t
+                lq_ = lerp(mp_ls, m); mwq = tms.mouth_width(lq_)
+                fzr = tms.poly_mask(cv2.convexHull(lq_[tms.LIPS_OUTER, :2].astype(np.float32))[:, 0], (ya, yb, xa, xb), a.retime_mouth_dil * mwq, 0.15 * mwq)[..., None]
+                Lk = Lk + fzr * (wn_[0] - Lk)
         else: Lk = tms.interp(f, L[m0][ya:yb, xa:xb].astype(np.float32), L[m1][ya:yb, xa:xb].astype(np.float32), al)
-        if a.retime_mouth != "off" and a.retime not in ("nearest", "nearest_rigid") and 0.04 <= al <= 0.96 and m1 != m0 and wm[m0] > 0 and wm[m1] > 0 and mp_ls is not None:
+        if a.retime_mouth in ("nearest", "hf") and a.retime not in ("nearest", "nearest_rigid") and 0.04 <= al <= 0.96 and m1 != m0 and wm[m0] > 0 and wm[m1] > 0 and mp_ls is not None:
             # r11 SYNC: the generated mouth of the nearer master frame (exact shape), moved rigidly with the head to time m, inside the lips zone
             mn = m0 if al < 0.5 else m1; tgt_ = lerp(mp, m); src_ = mp[mn]; lq_ = lerp(mp_ls, m)
             if np.isfinite(tgt_[RIG_POSE]).all() and np.isfinite(src_[RIG_POSE]).all() and np.isfinite(lq_[tms.LIPS_OUTER]).all():
@@ -793,7 +801,7 @@ def main() -> int:
                     num = cv2.GaussianBlur(d_ * wgt[..., None], (0, 0), sg_); den = cv2.GaussianBlur(wgt, (0, 0), sg_)
                     gm = (d_ * wgt[..., None]).sum((0, 1)) / wgt.sum(); eps = 0.05
                     corr = (num + eps * gm) / (den[..., None] + eps)
-                    if fz is not None:
+                    if fz is not None and a.cm_mouth_mode != "field":
                         cz = {"mean": gm, "zero": np.zeros(3, np.float32), "luma": np.full(3, float(gm.mean()), np.float32)}[a.cm_mouth_mode]
                         corr = corr * (1 - fz[..., None]) + np.asarray(cz, np.float32)[None, None, :] * fz[..., None]
                     Lk = Lk + np.clip(corr, -a.colour_max, a.colour_max)

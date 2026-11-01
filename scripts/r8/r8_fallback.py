@@ -87,6 +87,8 @@ def main():
                     "(minus the +-6-frame median over the layer): a held open vowel with a dark cavity is a mouth, a near-black pop is an artefact")
     ap.add_argument("--open-gate", type=float, default=0.0, help="r11 SYNC: wash / coll flags need the layer and source inner openings (IOD) to differ "
                     "by less than this (a different opening legitimately changes the mouth box luma / contrast); 0 = off")
+    ap.add_argument("--og-short", type=int, default=0, help="r11 SYNC, with --open-gate: layer closures (opening < 0.04 IOD) of <= this many frames "
+                    "between open frames (> 0.07) keep the r8 wash / coll test (gate-safe: the flash detector counts them); 0 = off")
     ap.add_argument("--thr-wash-lips", type=float, default=0.0, help="r11 SYNC, with --open-gate: where the openings differ, the lip-ring brightness "
                     "transient (layer ring vs source ring, minus its +-6-frame median) >= this flags a washed mouth (+ its neighbours above half); 0 = off")
     a = ap.parse_args(); work = pathlib.Path(a.work)
@@ -154,6 +156,15 @@ def main():
         F["dark"] = sc(dark - np.maximum(dmed, 0.0), a.thr_dark)
     if a.open_gate > 0:   # r11 SYNC: wash / contrast compared only between mouths of a similar opening
         same = np.nan_to_num(np.abs(ol[:n] - os_[:n]), nan=1.0) < a.open_gate
+        if a.og_short > 0:   # r11 SYNC: a SHORT closure of the layer between open frames over an open source keeps the r8 wash test (the gate's
+            # flash detector counts these 2-3-frame closures; m03 92-94 / 361-362 / 517-518 / 528-529)
+            o_ = np.nan_to_num(ol[:n], nan=1.0); cl_ = o_ < 0.04; k = 0
+            while k < n:
+                if not cl_[k]: k += 1; continue
+                e = k
+                while e < n and cl_[e]: e += 1
+                if e - k <= a.og_short and o_[max(0, k - 2):k].max(initial=0) > 0.07 and o_[e:e + 2].max(initial=0) > 0.07: same[k:e] = True
+                k = e
         for k_ in ("wash", "coll"): F[k_] = F[k_] * same
         if a.thr_wash_lips > 0:   # r11 SYNC: where the openings differ, a washed mouth is judged on the lip ring alone (transient part), with
             # hysteresis: the neighbours of a flagged frame count from half the threshold (m18 410-412: 0.18 / 0.36 / 0.16 = one pale 3-frame pop)
