@@ -272,6 +272,9 @@ def main() -> int:
                     "mouth-corner line (alpha > 0.05: nose base, cheeks, upper-lip skin), not only the band")
     ap.add_argument("--fallback", default="", help="r8 F: npz with per-master-frame fb (0..1, r8_fallback.py): master weight x (1 - fb) = crossfade to the source mouth")
     ap.add_argument("--colour-sigma", type=float, default=0.6); ap.add_argument("--colour-max", type=float, default=20.0)
+    ap.add_argument("--colour-mouth-flat", type=float, default=0.0, help="r11 FACE (the colour match costs ~0.4 SyncNet: its smooth field carries the "
+                    "SOURCE mouth's shading into the generated mouth): inside the layer's outer lip contour dilated by this x mouth width, the correction "
+                    "is flattened to its global mean (ramp 0.15 mouth width), and the estimation band also excludes that zone; 0 = off (r3 behaviour)")
     ap.add_argument("--sharpen-auto", type=float, default=0.0, help="r3: per-VIDEO unsharp amounts (constant -> no flicker) so that the LatentSync layer's sharpness "
                     "(mean |Laplacian|) reaches TARGET x the source's, calibrated on 48 LatentSync frames against the source frame each was generated from "
                     "(same pose): lips (outer contour, dilated) -> --ls-sharpen-lips, skin in the mask -> --ls-sharpen (0 when --skin-texture source); 0 = off")
@@ -750,14 +753,20 @@ def main() -> int:
             lm_c = lm_at(k, mu)
             if np.isfinite(lm_c[[61, 291, 13]]).all():
                 mwc = tms.mouth_width(lm_c); ymc = float((lm_c[61, 1] + lm_c[291, 1]) / 2) - ya
-                lipm = tms.poly_mask(lm_c[tms.LIPS_OUTER], (ya, yb, xa, xb), 0.25 * mwc, 0)
+                lipm = tms.poly_mask(lm_c[tms.LIPS_OUTER], (ya, yb, xa, xb), max(0.25, a.colour_mouth_flat) * mwc, 0)
                 yy_ = np.arange(yb - ya, dtype=np.float32)[:, None]
                 wgt = ((alpha > 0.05) & ((alpha < 0.95) | (a.colour_match == "upper"))).astype(np.float32) * (yy_ < ymc + 0.1 * mwc) * (1 - lipm)
                 if wgt.sum() > 50:
                     sg_ = a.colour_sigma * mwc; d_ = sk - Lk
                     num = cv2.GaussianBlur(d_ * wgt[..., None], (0, 0), sg_); den = cv2.GaussianBlur(wgt, (0, 0), sg_)
                     gm = (d_ * wgt[..., None]).sum((0, 1)) / wgt.sum(); eps = 0.05
-                    Lk = Lk + np.clip((num + eps * gm) / (den[..., None] + eps), -a.colour_max, a.colour_max)
+                    corr = (num + eps * gm) / (den[..., None] + eps)
+                    if a.colour_mouth_flat > 0:   # r11: the generated mouth gets one constant offset, not the source mouth's shading
+                        lm_l = lerp(mp_ls, m) if mp_ls is not None else None
+                        zl = lm_l if (lm_l is not None and np.isfinite(lm_l[tms.LIPS_OUTER]).all()) else lm_c
+                        fz = tms.poly_mask(zl[tms.LIPS_OUTER], (ya, yb, xa, xb), a.colour_mouth_flat * mwc, 0.15 * mwc)
+                        corr = corr * (1 - fz[..., None]) + gm * fz[..., None]
+                    Lk = Lk + np.clip(corr, -a.colour_max, a.colour_max)
         if a.paste_guard > 0:   # r7 F: paste only if the CURRENT source frame holds the face here (layer vs source agree outside the lips)
             lm_g = lm_at(k, mu); ring = alpha > 0.5
             if np.isfinite(lm_g[tms.LIPS_OUTER]).all(): ring &= ~(tms.poly_mask(lm_g[tms.LIPS_OUTER], roi, 0.3 * tms.mouth_width(lm_g), 0) > 0.5)
