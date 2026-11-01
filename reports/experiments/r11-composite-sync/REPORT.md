@@ -7,6 +7,11 @@
 - **Gate:** the r9-speed-face rule, `scripts/r10/gate.sh` + `gate_cmp.py` vs `<id>base`.
 - **Repro:** `scripts/r11s/arm.sh` reproduces the gate SyncNet. m18 7.757 vs 7.743, m03 7.655 vs 7.651, old03 7.188 vs 7.198. Noise is about ±0.02.
 
+## User verdict (01.11, m03 + m18 clips: r9+fix vs k5)
+- Quote: "да, лучше, но всё ещё не идеально. но реально лучше. артефактов как будто тоже поменьше".
+- **k5 is ACCEPTED as the direction**, including the m03 closures that the flash counter flags (the eye reads them as fine).
+- The eye overrides the m03 flash count; the old03 / old05 gate rows below are still open.
+
 ## Where the ~1.1 goes
 | m18 / m03 | SyncNet |
 |---|---|
@@ -78,6 +83,41 @@ REP_ARGS="--spikes off"                                                         
 - `m03_r9fix_vs_sync_s3w.mp4`, `m18_r9fix_vs_sync_s3w.mp4`: the recommended set (fix 3).
 - `*_k5.mp4`: the higher-sync stack.
 - `*_k7.mp4`: fix 3 + mouth region 0.55.
+
+k0 (fb7 unchanged + `--cm-mouth-excl 0.5 --mouth-region 0.55`), SyncNet / fast strong flashes:
+- m18 8.078 (+0.32)
+- m03 7.719 (+0.07)
+- old03 7.451 (+0.26) / 41 (base 35)
+- old05 4.069 (+0.19) / 6 (base 3)
+
+## Left mid-test / next (not done)
+1. **E2E wiring:** wire k5 into `scripts/r9/e2e.sh` as `E2E_SYNC=1` (default off):
+   - `FB_ARGS` += `--open-gate 0.04 --dark-transient on --thr-wash-lips 0.2`;
+   - `REP_ARGS="--spikes off"` (r7_m7_comp.sh passes `REP_ARGS`);
+   - `EXTRA` += `--cm-mouth-excl 0.5 --mouth-region 0.55`;
+   - `REP_LABEL` ≠ rep2 so the caches don't collide.
+   - Then show E2E_FX=1 E2E_SYNC=1 on m18 = 8.33.
+2. **Remaining old03 / old05 failures with k5:**
+   - old03: occluder ring 0→1 (from the mouth region 0.55).
+   - old05: flashes 3→11 (from the colour exclusion); slides fail on every arm.
+   - Candidates: k5 with `--mouth-region 0.45`, or with a temporally smoothed colour match.
+3. **More gain:**
+   - the remaining source fallback: old05 5 % from the repair's lip_colour / slide classes; m03 2.5 % from long runs;
+   - the CodeFormer detail inner alpha (0.4) vs sync;
+   - sanitize-layer (replaces about 6 % of layer frames on m18; off = +0.04);
+   - paste guard / face clip (KeySync saw gains from turning them off).
+4. **Use the existing baselines:** old03 / old05 also exist on r11-s as qo3 / qo5 (face agent). My old03 / old05 here are fresh E2E_FX=1 runs on r11-q (`r9g_old03` etc.), which is fine for relative numbers.
+5. **Face agent's `--colour-mouth-flat`:** committed as 204a1aa in /workspace/dub/dubai, equivalent to `--cm-mouth-excl D --cm-mouth-mode mean`. Not cherry-picked, to avoid a duplicate flag.
+
+## Resume commands (r11-q)
+```
+cd /workspace/dub/r11_sync     # branch experiment/r11-composite-sync
+FA="--open-gate 0.04 --dark-transient on --thr-wash-lips 0.2"
+bash scripts/r11s/fb_arm.sh <id> k5 "$FA" "--spikes off" "--cm-mouth-excl 0.5 --mouth-region 0.55"   # composite + SyncNet
+bash scripts/r11s/flash.sh <id> s0base k5                                                         # fast strong flashes
+bash scripts/r11s/gate_arm.sh <id> k5                                                             # full gate vs r10/gate/<id>base
+bash scripts/r11s/clip2.sh <id> k5 "r9+fix + sync fixes"                                          # 2-panel user clip -> outbox/r11_sync
+```
 
 ## Tools (`scripts/r11s/`)
 - `arm.sh <id> <tag> "<flags>"`: composite + SyncNet.
