@@ -89,6 +89,9 @@ class AccelLatentSync:
         self.num_frames = int(self.cfg.data.num_frames)
         self.resolution = int(self.cfg.data.resolution)
         self.mask_image_path = str(LS / self.cfg.data.mask_image_path)
+        if os.environ.get("LS_MASK"):   # r11 FACE (flag, default off): another generation mask, e.g. LS_MASK=mask3.png (rows 256-435, cols 78-435 of the
+            # 512 crop: the mouth without the chin bottom / jaw sides -> the source chin and jaw outline are kept; mask.png regenerates rows 190-485)
+            self.mask_image_path = str(LS / "latentsync/utils" / os.environ["LS_MASK"])
         self.deepcache_helper = None
         self.deepcache_interval = int(deepcache_interval) if deepcache else None
         if deepcache:

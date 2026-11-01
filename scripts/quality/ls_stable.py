@@ -188,12 +188,19 @@ class StableLatentSync(AccelLatentSync):
                             ts_g = timesteps
                             if gsteps.get(id(grp), self.steps) != self.steps:   # this group's own schedule (DeepCache indexes the current scheduler timesteps)
                                 pipe.scheduler.set_timesteps(gsteps[id(grp)], device=device); ts_g = pipe.scheduler.timesteps
-                            for t in ts_g:
+                            ema_a = float(os.environ.get("LS_X0_EMA", "0") or 0); ema_k = int(os.environ.get("LS_X0_EMA_STEPS", "3") or 3)   # r11 FACE (flag, default off)
+                            for si_, t in enumerate(ts_g):
                                 x2 = torch.cat([x] * 2) if do_cfg else x
                                 npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1
                                 if do_cfg:
                                     nu, na = npred.chunk(2); npred = nu + self.guidance * (na - nu)
                                 x = pipe.scheduler.step(npred, t, x, **extra).prev_sample
+                                if ema_a > 0 and si_ >= len(ts_g) - ema_k and x.shape[2] >= 3:
+                                    # r11 FACE LS_X0_EMA=a, LS_X0_EMA_STEPS=K: in the last K steps, a +-1-frame temporal filter on the window's latents
+                                    # (x <- (1 - 2a) x + a x[f-1] + a x[f+1], edges replicated). The initial noise is the same frame repeated, so this
+                                    # smooths the per-frame CONTENT drift (the lip definition jumping sharp -> mushy -> sharp), not the noise.
+                                    xp = torch.cat([x[:, :, :1], x[:, :, :-1]], 2); xn = torch.cat([x[:, :, 1:], x[:, :, -1:]], 2)
+                                    x = ((1 - 2 * ema_a) * x.float() + ema_a * (xp.float() + xn.float())).to(x.dtype)
                             for k, (a, b) in enumerate(grp):
                                 latents[:, :, a:b] = x[k:k + 1]
                             if ts_g is not timesteps: pipe.scheduler.set_timesteps(self.steps, device=device); timesteps = pipe.scheduler.timesteps
