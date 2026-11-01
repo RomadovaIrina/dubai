@@ -25,12 +25,13 @@ h = int(y1 - y0) // 2 * 2; w = int(h * 0.75) // 2 * 2; x0 = int(max(0, min(W - w
 ph = 720 if not a.mid else 640; pw = int(w * ph / h) // 2 * 2
 F = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 lab = lambda t: f"drawtext=fontfile={F}:text='{t}':x=10:y=10:fontsize=26:fontcolor=white:box=1:boxcolor=black@0.6:boxborderw=6"
+kf0 = int(round(a.start * fps)); kf1 = kf0 + int(round(a.dur * fps)) - 1   # frame-index selection: inputs with different time bases stay frame-aligned
 rep = {"start_s": round(a.start, 2), "dur_s": a.dur, "crop": [x0, y0, w, h]}
 for speed, tag in ((1.0, "1x"), (0.5, "0.5x")):
     dur_out = a.dur / speed; vb = int(a.max_mb * 8 * 1000 / dur_out - (96 if speed == 1 else 0)); out = f"{a.out}_{tag}.mp4"
-    flt = (f"[0:v]trim=start={a.start}:duration={a.dur},setpts=(PTS-STARTPTS)/{speed},crop={w}:{h}:{x0}:{y0},scale={pw}:{ph}:flags=lanczos,{lab(a.ll)}[l];"
-           f"[1:v]trim=start={a.start}:duration={a.dur},setpts=(PTS-STARTPTS)/{speed},crop={w}:{h}:{x0}:{y0},scale={pw}:{ph}:flags=lanczos,{lab(a.rl)}[r];"
-           + (f"[2:v]trim=start={a.start}:duration={a.dur},setpts=(PTS-STARTPTS)/{speed},crop={w}:{h}:{x0}:{y0},scale={pw}:{ph}:flags=lanczos,{lab(a.ml)}[m];[l][m][r]hstack=inputs=3[v]" if a.mid else "[l][r]hstack=inputs=2[v]"))
+    flt = (f"[0:v]select=between(n\,{kf0}\,{kf1}),setpts=N/({fps}*{speed})/TB,crop={w}:{h}:{x0}:{y0},scale={pw}:{ph}:flags=lanczos,{lab(a.ll)}[l];"
+           f"[1:v]select=between(n\,{kf0}\,{kf1}),setpts=N/({fps}*{speed})/TB,crop={w}:{h}:{x0}:{y0},scale={pw}:{ph}:flags=lanczos,{lab(a.rl)}[r];"
+           + (f"[2:v]select=between(n\,{kf0}\,{kf1}),setpts=N/({fps}*{speed})/TB,crop={w}:{h}:{x0}:{y0},scale={pw}:{ph}:flags=lanczos,{lab(a.ml)}[m];[l][m][r]hstack=inputs=3[v]" if a.mid else "[l][r]hstack=inputs=2[v]"))
     cmd = ["ffmpeg", "-loglevel", "error", "-y", "-i", a.left, "-i", a.right] + (["-i", a.mid] if a.mid else [])
     if speed == 1:
         cmd += ["-ss", str(a.start), "-t", str(a.dur), "-i", a.audio, "-filter_complex", flt, "-map", "[v]", "-map", f"{3 if a.mid else 2}:a:0", "-c:a", "aac", "-b:a", "96k"]
