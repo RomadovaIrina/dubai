@@ -16,7 +16,7 @@ trap 'kill $NV 2>/dev/null' EXIT
 t0=$(date +%s.%N)
 GEN=${GEN_ARGS:-"--anchor-filter flow:4 --anchor-round off --affine-precision fp32 --mask-track head --master-timing-mode fps --guidance 2.0 --bridge-len 8 --bridge-steps 4 --max-ls-frames 400"}
 [ -n "${LS_FPS:-}" ] && GEN="$GEN --ls-fps $LS_FPS"   # LatentSync on a master at LS_FPS (30 = the source frames; the composite then needs no retime)
-flock /workspace/dub/gpu.lock python scripts/quality/candidate_video_stage.py --id $id --tag ${TAG}_25fps --manifest "$AM" --dubbed-dir "$AD" --out "$W" --work-out "$W/video" \
+flock /workspace/dub/gpu.lock python ${R10_GEN_PY:-scripts/quality/candidate_video_stage.py} --id $id --tag ${TAG}_25fps --manifest "$AM" --dubbed-dir "$AD" --out "$W" --work-out "$W/video" \
    --mux final_mix --gate-merge-gap-s 1.2 --mouth-only-pasteback on --mask-smooth 3 --ls-landmark-smooth 2 --codeformer-scope mouth --codeformer off \
    --face-stack mediapipe --dump-ls-raw on $GEN ${VIDEO_ARGS:-} >> "$LOG" 2>&1 || { echo "FAIL video $id (see $LOG)"; exit 4; }
 VM=$W/${id}_${TAG}_25fps.manifest.json; t1=$(date +%s.%N)

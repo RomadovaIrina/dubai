@@ -1,0 +1,62 @@
+{
+ "id": "03",
+ "duration_s": 90.333333,
+ "video_min": 1.5056,
+ "stage_wall_s": {
+  "precheck": 4.1,
+  "audio": 116.1,
+  "sep": 2.5,
+  "face_gen": 446.7,
+  "face_comp": 165.2,
+  "mux": 0.1,
+  "metrics": 0.0
+ },
+ "total_wall_s": 734.8,
+ "s_per_video_min": {
+  "precheck": 2.7,
+  "audio": 77.1,
+  "sep": 1.7,
+  "face_gen": 296.7,
+  "face_comp": 109.8,
+  "mux": 0.1,
+  "metrics": 0.0
+ },
+ "total_s_per_video_min": 488.1,
+ "vram_peak_mib": 30214,
+ "vram_peak_mib_by_stage": {
+  "precheck": 36,
+  "audio": 30214,
+  "sep": 20,
+  "face_gen": 13178,
+  "face_comp": 3598,
+  "mux": 20
+ },
+ "gpu_busy_s": {
+  "precheck": 0.0,
+  "audio": 82.0,
+  "sep": 0.0,
+  "face_gen": 353.2,
+  "face_comp": 20.1,
+  "mux": 0.0,
+  "metrics": 0.0
+ },
+ "gpu_busy_s_per_video_min": {
+  "precheck": 0.0,
+  "audio": 54.5,
+  "sep": 0.0,
+  "face_gen": 234.6,
+  "face_comp": 13.4,
+  "mux": 0.0,
+  "metrics": 0.0
+ },
+ "gpu_busy_total_s_per_video_min": 302.4,
+ "gpu_util_weighted_s_per_video_min": {
+  "precheck": 0.0,
+  "audio": 40.0,
+  "sep": 0.0,
+  "face_gen": 223.9,
+  "face_comp": 7.1,
+  "mux": 0.0,
+  "metrics": 0.0
+ }
+}

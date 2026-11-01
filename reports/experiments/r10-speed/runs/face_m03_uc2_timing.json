@@ -1,0 +1,26 @@
+{
+ "variant": "_uc2",
+ "duration_s": 40.5,
+ "seconds": {
+  "face_gen": 262.7,
+  "face_comp": 100.9,
+  "face": 363.6
+ },
+ "s_per_video_min": {
+  "face_gen": 389.2,
+  "face_comp": 149.5,
+  "face": 538.7
+ },
+ "peak_vram_mib": 13032,
+ "gpu_busy_seconds": {
+  "face_gen": 139.0,
+  "face_comp": 12.0,
+  "face": 151.0
+ },
+ "gpu_busy_s_per_video_min": {
+  "face_gen": 205.9,
+  "face_comp": 17.8,
+  "face": 223.7
+ },
+ "gpu_samples": 3630
+}

@@ -1,0 +1,26 @@
+{
+ "variant": "_h",
+ "duration_s": 40.5,
+ "seconds": {
+  "face_gen": 204.6,
+  "face_comp": 101.8,
+  "face": 306.5
+ },
+ "s_per_video_min": {
+  "face_gen": 303.1,
+  "face_comp": 150.8,
+  "face": 454.1
+ },
+ "peak_vram_mib": 13158,
+ "gpu_busy_seconds": {
+  "face_gen": 92.0,
+  "face_comp": 13.0,
+  "face": 105.0
+ },
+ "gpu_busy_s_per_video_min": {
+  "face_gen": 136.3,
+  "face_comp": 19.3,
+  "face": 155.6
+ },
+ "gpu_samples": 3060
+}

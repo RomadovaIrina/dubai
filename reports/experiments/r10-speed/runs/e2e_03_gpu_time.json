@@ -1,0 +1,69 @@
+{
+ "stages": {
+  "precheck": {
+   "wall_s": 4.1,
+   "gpu_busy_s": 0.0,
+   "gpu_weighted_s": 0.0,
+   "wall_s_per_vmin": 2.7,
+   "gpu_busy_s_per_vmin": 0.0,
+   "gpu_weighted_s_per_vmin": 0.0
+  },
+  "audio": {
+   "wall_s": 116.1,
+   "gpu_busy_s": 81.9,
+   "gpu_weighted_s": 60.2,
+   "wall_s_per_vmin": 77.1,
+   "gpu_busy_s_per_vmin": 54.4,
+   "gpu_weighted_s_per_vmin": 40.0
+  },
+  "sep": {
+   "wall_s": 2.5,
+   "gpu_busy_s": 0.0,
+   "gpu_weighted_s": 0.0,
+   "wall_s_per_vmin": 1.7,
+   "gpu_busy_s_per_vmin": 0.0,
+   "gpu_weighted_s_per_vmin": 0.0
+  },
+  "face_gen": {
+   "wall_s": 446.7,
+   "gpu_busy_s": 353.1,
+   "gpu_weighted_s": 337.1,
+   "wall_s_per_vmin": 296.7,
+   "gpu_busy_s_per_vmin": 234.5,
+   "gpu_weighted_s_per_vmin": 223.9
+  },
+  "face_comp": {
+   "wall_s": 165.2,
+   "gpu_busy_s": 19.0,
+   "gpu_weighted_s": 10.1,
+   "wall_s_per_vmin": 109.8,
+   "gpu_busy_s_per_vmin": 12.6,
+   "gpu_weighted_s_per_vmin": 6.7
+  },
+  "mux": {
+   "wall_s": 0.1,
+   "gpu_busy_s": 0.0,
+   "gpu_weighted_s": 0.0,
+   "wall_s_per_vmin": 0.1,
+   "gpu_busy_s_per_vmin": 0.0,
+   "gpu_weighted_s_per_vmin": 0.0
+  },
+  "metrics": {
+   "wall_s": 0.0,
+   "gpu_busy_s": 0.0,
+   "gpu_weighted_s": 0.0,
+   "wall_s_per_vmin": 0.0,
+   "gpu_busy_s_per_vmin": 0.0,
+   "gpu_weighted_s_per_vmin": 0.0
+  }
+ },
+ "interval_ms": 100.0,
+ "total": {
+  "wall_s": 734.8,
+  "gpu_busy_s": 454.0,
+  "gpu_weighted_s": 407.4,
+  "wall_s_per_vmin": 488.1,
+  "gpu_busy_s_per_vmin": 301.5,
+  "gpu_weighted_s_per_vmin": 270.6
+ }
+}

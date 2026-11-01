@@ -1,0 +1,26 @@
+{
+ "variant": "_r23",
+ "duration_s": 17.948438,
+ "seconds": {
+  "face_gen": 109.1,
+  "face_comp": 56.3,
+  "face": 165.4
+ },
+ "s_per_video_min": {
+  "face_gen": 364.7,
+  "face_comp": 188.2,
+  "face": 552.9
+ },
+ "peak_vram_mib": 12996,
+ "gpu_busy_seconds": {
+  "face_gen": 57.0,
+  "face_comp": 9.0,
+  "face": 66.0
+ },
+ "gpu_busy_s_per_video_min": {
+  "face_gen": 190.5,
+  "face_comp": 30.1,
+  "face": 220.6
+ },
+ "gpu_samples": 1652
+}
