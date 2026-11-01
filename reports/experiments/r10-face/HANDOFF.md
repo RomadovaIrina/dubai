@@ -186,3 +186,14 @@ bash scripts/r11/ks/gate_ksp.sh                                                 
 python scripts/r11/upper_lip.py --src <master_25fps> --src-lm <source_lm_F> --ls <LS layer> --ls-lm <its mediapipe> --ks-lm ${P}_ls_srt1.mediapipe.npz \
   --rend ks=${P}_ls_srt1.mp4 --rend fix=${P}_ls_kfglt.mp4 --frames 224,440,790,856,894,1634,2022,2112,2194,2196,2208 --out DIR --tag step2
 ```
+
+r11-sync notes for the KeySync resume (its branch `experiment/r11-composite-sync` @ f5f6856, `reports/experiments/r11-sync/REPORT.md`):
+- `--colour-mouth-flat D` ≈ its `--cm-mouth-excl D --cm-mouth-mode mean`.
+  - On LatentSync: +0.08 / +0.14 SyncNet, but strong flashes rise on the old videos (old03 35 → 44).
+  - Check flashes before using it on KeySync.
+- Fallback = the biggest lever: fb7 + `--open-gate 0.04 --dark-transient on --thr-wash-lips 0.2`, r9_layer_repair `--spikes off` (m18 7.74 → 8.01 PASS).
+  - Try it as the per-event KeySync → source fallback that the soft paste needs: the teeth / slide / stick events.
+- Rejected on LatentSync:
+  - `--retime-mouth` (+10-13 flashes on the 30 fps in-between frames);
+  - `--mouth-region 0.55` (occluder ring 0 → 4).
+- Its old03 numbers use its own fresh baseline (r9g_old03 / r9f_old03, gate base `r10/gate/old03base`). The KeySync gate above uses the same base.
