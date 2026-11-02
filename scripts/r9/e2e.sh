@@ -34,7 +34,7 @@ export DUB_ALLOW_NC=1 DUB_ALLOW_NC_BED=1  # CodeFormer + htdemucs: deliberate NC
 A=/workspace/dub/artifacts/r4a; B=/workspace/dub/artifacts/r4m; AT=r9_$ID; HT=r9_${ID}_htd; GT=r9g_$ID; FT=r9f_$ID
 W=$OUT/work; L=$OUT/logs; mkdir -p $W $L; T=$W/stages.tsv; : > $T; STATUS=SUCCESS; FL=(); ER=()
 export DUB_INPUTS=$W/in; rm -rf $DUB_INPUTS; mkdir -p $DUB_INPUTS
-echo "r9 e2e $ID E2E_REF=${E2E_REF:-same} E2E_FX=${E2E_FX:-0} commit $(git rev-parse --short HEAD) input $IN out $OUT $(date -Is)" | tee $L/e2e.log
+echo "r9 e2e $ID E2E_REF=${E2E_REF:-same} E2E_FX=${E2E_FX:-0} E2E_SYNC=${E2E_SYNC:-0} commit $(git rev-parse --short HEAD) input $IN out $OUT $(date -Is)" | tee $L/e2e.log
 nvidia-smi --query-gpu=timestamp,memory.used,utilization.gpu --format=csv,noheader,nounits -lms 100 > $W/nvsmi.csv 2>/dev/null & NV=$!
 export R10_JOB=$ID; NVML=${R10_NVML:-$W/nvml.jsonl}; NM=""   # r10: NVML sampler, 100 ms, per-process SM util tagged by R10_JOB (a worker passes its one shared R10_NVML file)
 [ -z "${R10_NVML:-}" ] && [ -x /venv/main/bin/python ] && { rm -f $NVML; /venv/main/bin/python scripts/r10/gpu_sampler.py --out $NVML > $L/gpu_sampler.log 2>&1 & NM=$!; }
@@ -116,7 +116,12 @@ else
     st face_comp
     [ "$E2E_FX" = 1 ] && export REP=1 CFD_LABEL=ia04 CFD_ARGS="--inner-alpha 0.4 ${CFD_EXTRA:-}"   # r9: short mouth glitches re-drawn in the layer, long ones -> smooth source fallback; CodeFormer detail at 0.4 inside the mouth
     [ "$E2E_FX" = 1 ] || { [ -n "${CFD_EXTRA:-}" ] && export CFD_ARGS="${CFD_ARGS:-} $CFD_EXTRA"; }
-    SKIP_SCORE=1 TAG=$FT SRC_TAG=$GT CFD=self SR=srt1 SR_EXTRA="--batch 8 --mask down2" FB=fb7 FB_ARGS="$(cat reports/experiments/r8-face/fb7.args)" \
+    FBL=fb7; FBA="$(cat reports/experiments/r8-face/fb7.args)"; SYX=""
+    case "${E2E_SYNC:-0}" in   # r12: the r11 composite sync fix (reports/experiments/r11-composite-sync): k5 (user: "реально лучше") / k7 (k5 without the colour-match exclusion, gate-safer); needs E2E_FX=1 (the layer repair)
+      1|k5|k7) FBL=fb7s; FBA="$FBA --open-gate 0.04 --dark-transient on --thr-wash-lips 0.2"; export REP_ARGS="--spikes off ${REP_ARGS:-}" REP_LABEL=rep2s
+               SYX="--mouth-region 0.55"; [ "$E2E_SYNC" = k7 ] || SYX="$SYX --cm-mouth-excl 0.5";;
+    esac
+    SKIP_SCORE=1 TAG=$FT SRC_TAG=$GT CFD=self SR=srt1 SR_EXTRA="--batch 8 --mask down2" FB=$FBL FB_ARGS="$FBA" EXTRA="--tex-tau 1000 --tex-sigma 2.5 $SYX" \
       bash scripts/r7/r7_m7_comp.sh $ID > $L/face_comp.log 2>&1
     [ -f $B/$FT/${ID}_$FT.mp4 ] && VID=$B/$FT/${ID}_$FT.mp4 || fail face_comp_failed PARTIAL_SUCCESS "see logs/face_comp.log: source picture used"
   else fail face_gen_failed PARTIAL_SUCCESS "see logs/face_gen.log: source picture used"; fi
