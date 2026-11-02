@@ -1,0 +1,1 @@
+SYNC m03 auto {'conf': 3.624, 'av_offset': 6} 7.614

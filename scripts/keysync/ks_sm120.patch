@@ -1,0 +1,291 @@
+diff --git a/scripts/sampling/dubbing_pipeline_raw.py b/scripts/sampling/dubbing_pipeline_raw.py
+index 4b4ac96..e79f16b 100644
+--- a/scripts/sampling/dubbing_pipeline_raw.py
++++ b/scripts/sampling/dubbing_pipeline_raw.py
+@@ -819,8 +819,8 @@ def sample_interpolation(
+                 f"Audio: {audio_cond.shape}, Video: {shape}, Additional inputs: {additional_model_inputs}"
+             )
+ 
+-            if chunk_size is not None:
+-                chunk_size = chunk_size * num_frames
++            if chunk_size is not None:  # keysync speed: KS_ICHUNK = segments per interpolation UNet call (authors: 2)
++                chunk_size = int(os.environ.get("KS_ICHUNK", chunk_size)) * num_frames
+ 
+             def denoiser(
+                 input: torch.Tensor, sigma: torch.Tensor, c: Dict[str, torch.Tensor]
+@@ -886,7 +886,7 @@ def extract_video_landmarks(video_frames, landmarks_model):
+     """Extract landmarks from video frames"""
+     print("Extracting landmarks from video frames")
+     landmarks = []
+-    batch_size = 10
++    batch_size = int(os.environ.get("KS_LMK_BS", 10))  # keysync speed: landmark batch (authors: 10)
+ 
+     for i in tqdm(range(0, len(video_frames), batch_size), desc="Extracting landmarks"):
+         batch = video_frames[i : i + batch_size]
+@@ -1611,7 +1611,7 @@ def main(
+         model_size="Base+",
+         feed_as_frames=False,
+         merge_type="None",
+-        model_path="/vol/paramonos2/projects/antoni/code/Personal/code_prep/keysync/pretrained_models/checkpoints/WavLM-Base+.pt",
++        model_path="pretrained_models/checkpoints/WavLM-Base+.pt",
+     ).cuda()
+     vae_model = VaeWrapper("video")
+     landmarks_model = LandmarksExtractor()
+diff --git a/scripts/util/vae_wrapper.py b/scripts/util/vae_wrapper.py
+index 57da183..68505ee 100644
+--- a/scripts/util/vae_wrapper.py
++++ b/scripts/util/vae_wrapper.py
+@@ -7,7 +7,7 @@ from diffusers import AutoencoderKL, AutoencoderKLTemporalDecoder, StableDiffusi
+ 
+ def load_stable_model(model_path):
+     vae_model = StableDiffusionPipeline.from_pretrained(model_path)
+-    vae_model.set_use_memory_efficient_attention_xformers(True)
++    pass  # keysync bake-off: no xformers wheel for cu128; diffusers falls back to torch SDPA
+     return vae_model.vae
+ 
+ 
+@@ -23,7 +23,7 @@ class VaeWrapper(nn.Module):
+         if latent_type == "stable":
+             vae_model = load_stable_model("stabilityai/stable-diffusion-x4-upscaler")
+             vae_model.enable_slicing()
+-            vae_model.set_use_memory_efficient_attention_xformers(True)
++            pass  # keysync bake-off: no xformers wheel for cu128; diffusers falls back to torch SDPA
+             self.down_factor = 4
+         elif latent_type == "video":
+             vae_model = AutoencoderKLTemporalDecoder.from_pretrained(
+@@ -32,14 +32,14 @@ class VaeWrapper(nn.Module):
+                 torch_dtype=torch.float16 if variant == "fp16" else torch.float32,
+                 variant="fp16" if variant == "fp16" else None,
+             )
+-            vae_model.set_use_memory_efficient_attention_xformers(True)
++            pass  # keysync bake-off: no xformers wheel for cu128; diffusers falls back to torch SDPA
+             self.down_factor = 8
+         elif latent_type == "refiner":
+             vae_model = AutoencoderKL.from_pretrained(
+                 "stabilityai/stable-diffusion-xl-refiner-1.0", subfolder="vae", revision=None
+             )
+             vae_model.enable_slicing()
+-            vae_model.set_use_memory_efficient_attention_xformers(True)
++            pass  # keysync bake-off: no xformers wheel for cu128; diffusers falls back to torch SDPA
+             self.down_factor = 8
+         elif latent_type == "ldm":
+             assert False, "Not implemented"
+diff --git a/sgm/models/diffusion.py b/sgm/models/diffusion.py
+index 8aa46e8..2833a9c 100644
+--- a/sgm/models/diffusion.py
++++ b/sgm/models/diffusion.py
+@@ -223,7 +223,9 @@ class DiffusionEngine(pl.LightningModule):
+         if path.endswith("ckpt"):
+             sd = torch.load(path, map_location="cpu")["state_dict"]
+         elif path.endswith("pt"):
+-            sd = torch.load(path, map_location="cpu")["module"]
++            import numpy as _np  # keysync bake-off: torch>=2.6 weights_only; allow only the numpy scalar metadata in the ckpt
++            torch.serialization.add_safe_globals([(_np._core.multiarray.scalar, "numpy.core.multiarray.scalar"), _np.dtype, type(_np.dtype("float64")), type(_np.dtype("int64")), type(_np.dtype("float32"))])
++            sd = torch.load(path, map_location="cpu", weights_only=True)["module"]
+             # Remove leading _forward_module from keys
+             sd = {k.replace("_forward_module.", ""): v for k, v in sd.items()}
+         elif path.endswith("bin"):
+diff --git a/sgm/modules/attention.py b/sgm/modules/attention.py
+index 8f656fb..1ecd4b6 100644
+--- a/sgm/modules/attention.py
++++ b/sgm/modules/attention.py
+@@ -299,7 +299,7 @@ class CrossAttention(nn.Module):
+ 
+         # Ensure skip_attention is a B×1 boolean tensor
+         if skip_attention is None:
+-            skip_attention = torch.zeros_like(x[:, :1], dtype=torch.bool)
++            skip_attention = torch.zeros(x.shape[0], 1, dtype=torch.bool)  # keysync bake-off: B x 1 (zeros_like(x[:, :1]) is B x 1 x C); keysync speed: on the CPU (no GPU sync on .any())
+ 
+         assert isinstance(skip_attention, torch.Tensor)
+         assert skip_attention.shape[1] == 1 and skip_attention.dtype == torch.bool
+@@ -321,7 +321,8 @@ class CrossAttention(nn.Module):
+             return self.to_out(out_skip)
+ 
+         # Process non-skip samples with attention
+-        x_non_skip = x[non_skip_indices]
++        _ks_all = not bool(skip_indices.any())  # keysync speed: nothing skipped -> no index copy / scatter
++        x_non_skip = x if _ks_all else x[non_skip_indices]
+         q = self.to_q(x_non_skip)
+         context = default(context, x_non_skip)
+         k = self.to_k(context)
+@@ -349,10 +350,13 @@ class CrossAttention(nn.Module):
+         out = rearrange(out, "b h n d -> b n (h d)", h=h)
+ 
+         # Combine skip and non-skip results
+-        combined_out = torch.zeros(
++        if _ks_all:
++            combined_out = out
++        else:
++          combined_out = torch.zeros(
+             (x.shape[0], out.shape[1], out.shape[2]), dtype=out.dtype, device=out.device
+-        )
+-        combined_out[non_skip_indices] = out
++          )
++          combined_out[non_skip_indices] = out
+         if skip_indices.any():
+             combined_out[skip_indices] = out_skip
+ 
+@@ -448,7 +452,8 @@ class MemoryEfficientCrossAttention(nn.Module):
+                 out_skip = out_skip[:, n_tokens_to_mask:]
+             return self.to_out(out_skip)
+ 
+-        x_non_skip = x[non_skip_indices]
++        _ks_all = not bool(skip_indices.any())  # keysync speed: nothing skipped -> no index copy / scatter
++        x_non_skip = x if _ks_all else x[non_skip_indices]
+         q = self.to_q(x_non_skip)
+         if not self.use_reference:
+             context = default(context, x_non_skip)
+@@ -491,7 +496,10 @@ class MemoryEfficientCrossAttention(nn.Module):
+             v = v.to(q.dtype)
+ 
+         # actually compute the attention, what we cannot get enough of
+-        if version.parse(xformers.__version__) >= version.parse("0.0.21"):
++        if not XFORMERS_IS_AVAILABLE:  # keysync bake-off: no working xformers on sm_120 (5090); same math via torch SDPA
++            # 4-D (batch, heads, tokens, dim): 3-D input makes SDPA fall back to the MATH kernel (22x slower at 4096 tokens on sm_120)
++            out = F.scaled_dot_product_attention(*(t.view(b, self.heads, t.shape[1], self.dim_head) for t in (q, k, v))).reshape(b * self.heads, q.shape[1], self.dim_head)
++        elif version.parse(xformers.__version__) >= version.parse("0.0.21"):
+             # NOTE: workaround for
+             # https://github.com/facebookresearch/xformers/issues/845
+             max_bs = 32768
+@@ -525,10 +533,13 @@ class MemoryEfficientCrossAttention(nn.Module):
+             .reshape(b, out.shape[1], self.heads * self.dim_head)
+         )
+         # Combine skip and non-skip results
+-        combined_out = torch.zeros(
++        if _ks_all:
++            combined_out = out
++        else:
++          combined_out = torch.zeros(
+             (x.shape[0], out.shape[1], out.shape[2]), dtype=out.dtype, device=out.device
+-        )
+-        combined_out[non_skip_indices] = out
++          )
++          combined_out[non_skip_indices] = out
+         if skip_indices.any():
+             combined_out[skip_indices] = out_skip
+         else:
+diff --git a/sgm/modules/diffusionmodules/discretizer.py b/sgm/modules/diffusionmodules/discretizer.py
+index 19b5617..f9dcc32 100644
+--- a/sgm/modules/diffusionmodules/discretizer.py
++++ b/sgm/modules/diffusionmodules/discretizer.py
+@@ -58,7 +58,8 @@ class AYSDiscretization(Discretization):
+         return interped_ys
+ 
+     def get_sigmas(self, n, device="cpu"):
+-        assert n >= 10, "Number of timesteps must be greater than 10 for AYS discretization."
++        if n < 10:  # keysync bake-off: fewer steps = the AYS schedule log-linearly resampled to n steps (n + 1 sigmas)
++            return torch.from_numpy(self.loglinear_interp(self.base_sigmas, n + 1)).to(device)
+         if n > 10:
+             sigmas = self.loglinear_interp(self.base_sigmas, n)
+         else:
+diff --git a/sgm/modules/diffusionmodules/video_model.py b/sgm/modules/diffusionmodules/video_model.py
+index f42555f..221d203 100644
+--- a/sgm/modules/diffusionmodules/video_model.py
++++ b/sgm/modules/diffusionmodules/video_model.py
+@@ -1,3 +1,4 @@
++import os
+ from functools import partial
+ from typing import List, Optional, Union
+ 
+@@ -645,12 +646,33 @@ class VideoUNet(nn.Module):
+             emb = emb + self.map_aug(aug_labels)
+ 
+         h = x
++        # keysync speed: DeepCache (KS_DC=N[:B]): every N-th denoising step runs the whole UNet; the others run only input blocks 0..B and
++        # output blocks L-1-B..L-1 and reuse the deep features (the input to output block L-1-B) cached on the last full step.
++        # A new sampling run = the timestep goes up again (sigma falls within a run) or the batch shape changes -> full step.
++        _dc = os.environ.get("KS_DC", "")
++        _dcn, _dcb = (int(_dc.split(":")[0]), int(_dc.split(":")[1]) if ":" in _dc else 0) if _dc else (0, 0)
++        _full = True
++        if _dcn > 1:
++            # the denoiser may call the UNet several times per step (chunk_network: chunks of the segment batch) -> one cache per call k
++            st = getattr(self, "_ks_dc", None); tcur = float(timesteps.flatten()[0])
++            if st is None or tcur > st["t"]:
++                st = {"n": 0, "k": 0, "c": {}}
++            elif tcur == st["t"]:
++                st["k"] += 1
++            else:
++                st["n"] += 1; st["k"] = 0
++            st["t"] = tcur; self._ks_dc = st
++            _ck = st["c"].get(st["k"])
++            _full = st["n"] % _dcn == 0 or _ck is None or _ck["shape"] != tuple(x.shape)
++        _L = len(self.output_blocks)
+ 
+         if self.encode_landmarks:
+             landmarks_emb = self.face_locator(landmarks)
+             landmarks_emb = rearrange(landmarks_emb, "b c t h w -> (b t) c h w")
+             # print("landmarks_emb:", landmarks_emb.shape)
+         for i, module in enumerate(self.input_blocks):
++            if not _full and i > _dcb:
++                break
+             # print(image_only_indicator.shape, num_video_frames, h.shape)
+             if i == 1 and self.encode_landmarks:
+                 h = h + landmarks_emb
+@@ -694,24 +716,32 @@ class VideoUNet(nn.Module):
+         skip_temporal_attention = self.get_skip_attention_at(
+             skip_temporal_attention_at, curr_context_idx, x.shape[0], num_video_frames
+         )
+-        h, is_attention = self.middle_block(
+-            h,
+-            emb,
+-            context=context,
+-            reference_context=reference_context[curr_context_idx]
+-            if reference_context is not None
+-            else None,
+-            audio_context=audio_emb
+-            if "cross_attention" in self.audio_cond_method
+-            else None,
+-            image_only_indicator=image_only_indicator,
+-            time_context=time_context,
+-            num_video_frames=num_video_frames,
+-            skip_spatial_attention=skip_spatial_attention,
+-            skip_temporal_attention=skip_temporal_attention,
+-        )
+-        curr_context_idx = None if curr_context_idx is None else curr_context_idx + 1
++        if _full:
++          h, is_attention = self.middle_block(
++              h,
++              emb,
++              context=context,
++              reference_context=reference_context[curr_context_idx]
++              if reference_context is not None
++              else None,
++              audio_context=audio_emb
++              if "cross_attention" in self.audio_cond_method
++              else None,
++              image_only_indicator=image_only_indicator,
++              time_context=time_context,
++              num_video_frames=num_video_frames,
++              skip_spatial_attention=skip_spatial_attention,
++              skip_temporal_attention=skip_temporal_attention,
++          )
++          curr_context_idx = None if curr_context_idx is None else curr_context_idx + 1
+         for i, module in enumerate(self.output_blocks):
++            if _dcn > 1 and i == _L - 1 - _dcb:
++                if _full:
++                    self._ks_dc["c"][self._ks_dc["k"]] = {"h": h, "ci": curr_context_idx, "shape": tuple(x.shape)}
++                else:
++                    h, curr_context_idx = _ck["h"], _ck["ci"]
++            elif not _full and i < _L - 1 - _dcb:
++                continue
+             skip_x = hs.pop()
+             if self.adapter is not None:
+                 skip_x = self.adapter[i](
+diff --git a/sgm/modules/encoders/modules.py b/sgm/modules/encoders/modules.py
+index bdc238d..3d50ccb 100644
+--- a/sgm/modules/encoders/modules.py
++++ b/sgm/modules/encoders/modules.py
+@@ -36,8 +36,11 @@ from ...util import (
+     instantiate_from_config,
+ )
+ 
+-from facenet_pytorch import MTCNN, InceptionResnetV1
+-from insightface.app import FaceAnalysis
++try:  # keysync bake-off: face-ID embedders are training-only (not in the sampling configs)
++    from facenet_pytorch import MTCNN, InceptionResnetV1
++    from insightface.app import FaceAnalysis
++except ImportError:
++    MTCNN = InceptionResnetV1 = FaceAnalysis = None
+ 
+ 
+ class AbstractEmbModel(nn.Module):
