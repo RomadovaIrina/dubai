@@ -30,5 +30,7 @@ except Exception: ls = []
 print("== gpu", {k: {"busy_s_per_vmin": v.get("gpu_busy_s_per_vmin"), "wall_s": round(v["wall_s"], 1)} for k, v in s.items()}, "total busy s/vmin", g["total"].get("gpu_busy_s_per_vmin"))
 PY
 [ -f $B/$FT/${id}_$FT.mp4 ] || { echo "== arm $id$arm FAILED (see $O/$id$arm.gen.log / comp.log)"; exit 1; }
+if [ "${QUICK:-0}" = 1 ]; then   # QUICK=1: the gate SyncNet only (scripts/r11/sync_speech.py), no full gate
+  flock /workspace/dub/gpu.lock python scripts/r11/sync_speech.py --video $B/$FT/${id}_$FT.mp4 --audio $A/r9_${id}_htd/$id/dubbed_16k.wav --label "$id $arm"; exit 0; fi
 bash scripts/r10/gate.sh $id Y$arm $B/$FT/${id}_$FT.mp4 > $O/$id$arm.gate.log 2>&1
 python scripts/r10/gate_cmp.py --base /workspace/dub/r10/gate/${id}base --cand /workspace/dub/r10/gate/${id}Y$arm --md /workspace/dub/r12/gate.md | head -n 3
