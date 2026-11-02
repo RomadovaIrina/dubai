@@ -35,6 +35,17 @@ from latentsync_accel import LS, AccelLatentSync, _ReplayDetector, _sdpa_context
 from latentsync_accel import _tree_half   # noqa: E402
 
 
+def _cond_step(acc, dc, pipe, x, t, mk, mi, rl, au):
+    """r12 LS_CFG_DELTA: one DeepCache SKIP step on the conditional half only. The cached deep features (batch 2B, from the last full step)
+    are viewed as their conditional half for this call and restored afterwards (the shallow blocks this call writes are never read across steps)."""
+    sv = dc.cached_output; dc.cached_output = {k_: _tree_half(v_) for k_, v_ in sv.items()}
+    try:
+        h = lambda v_: v_.chunk(2)[1]
+        return acc.unet(torch.cat([pipe.scheduler.scale_model_input(x, t), h(mk), h(mi), h(rl)], dim=1), t, encoder_hidden_states=h(au)).sample
+    finally:
+        dc.cached_output = sv
+
+
 def _dc_half(dc):
     """r12 LS_CFG_TRUNC: at the CFG -> conditional-only switch, the DeepCache features cached by the last full step keep their conditional half."""
     if dc is not None: dc.cached_output = {k_: _tree_half(v_) for k_, v_ in dc.cached_output.items()}
@@ -220,13 +231,17 @@ class StableLatentSync(AccelLatentSync):
                                 pipe.scheduler.set_timesteps(gsteps[id(grp)], device=device); ts_g = pipe.scheduler.timesteps
                             ema_a = float(os.environ.get("LS_X0_EMA", "0") or 0); ema_k = int(os.environ.get("LS_X0_EMA_STEPS", "3") or 3)   # r11 FACE (flag, default off)
                             cfg_g = do_cfg; kt_ = round(self.cfg_trunc * len(ts_g) / max(1, self.steps)) if self.cfg_trunc > 0 else 0   # r12 LS_CFG_TRUNC (scaled to this group's schedule)
+                            dl_ = None   # r12 LS_CFG_DELTA: the guidance delta (cond - uncond) of the last full step
                             for si_, t in enumerate(ts_g):
                                 if cfg_g and 0 < kt_ <= si_:
                                     cfg_g = False; mk, mi, rl, au = [v_.chunk(2)[1] for v_ in (mk, mi, rl, au)]; _dc_half(dc)
-                                x2 = torch.cat([x] * 2) if cfg_g else x
-                                npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1; unet_rows += x2.shape[0]
-                                if cfg_g:
-                                    nu, na = npred.chunk(2); npred = nu + self.guidance * (na - nu)
+                                if cfg_g and dl_ is not None and self.cfg_delta and dc is not None and si_ % self.deepcache_interval != 0:
+                                    npred = _cond_step(self, dc, pipe, x, t, mk, mi, rl, au) + (self.guidance - 1) * dl_; unet_calls += 1; unet_rows += x.shape[0]
+                                else:
+                                    x2 = torch.cat([x] * 2) if cfg_g else x
+                                    npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1; unet_rows += x2.shape[0]
+                                    if cfg_g:
+                                        nu, na = npred.chunk(2); dl_ = na - nu; npred = nu + self.guidance * dl_
                                 x = pipe.scheduler.step(npred, t, x, **extra).prev_sample
                                 if ema_a > 0 and si_ >= len(ts_g) - ema_k and x.shape[2] >= 3:
                                     # r11 FACE LS_X0_EMA=a, LS_X0_EMA_STEPS=K: in the last K steps, a +-1-frame temporal filter on the window's latents
@@ -293,14 +308,17 @@ class StableLatentSync(AccelLatentSync):
                                 mk, mi, rl, au = torch.cat([mk] * 2), torch.cat([mi] * 2), torch.cat([rl] * 2), torch.cat([torch.zeros_like(au), au])
                             if dc is not None:
                                 dc.cached_output = {}
-                            cfg_b = do_cfg
+                            cfg_b = do_cfg; dlb_ = None
                             for j_, t in enumerate(timesteps[k0:]):
                                 if cfg_b and 0 < self.cfg_trunc <= k0 + j_:   # r12 LS_CFG_TRUNC: the same global step rule inside the bridges
                                     cfg_b = False; mk, mi, rl, au = [v_.chunk(2)[1] for v_ in (mk, mi, rl, au)]; _dc_half(dc)
-                                x2 = torch.cat([x] * 2) if cfg_b else x
-                                npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1; unet_rows += x2.shape[0]
-                                if cfg_b:
-                                    nu, na = npred.chunk(2); npred = nu + self.guidance * (na - nu)
+                                if cfg_b and dlb_ is not None and self.cfg_delta and dc is not None and j_ % self.deepcache_interval != 0:   # r12 LS_CFG_DELTA (bridges: DeepCache counts from k0)
+                                    npred = _cond_step(self, dc, pipe, x, t, mk, mi, rl, au) + (self.guidance - 1) * dlb_; unet_calls += 1; unet_rows += x.shape[0]
+                                else:
+                                    x2 = torch.cat([x] * 2) if cfg_b else x
+                                    npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1; unet_rows += x2.shape[0]
+                                    if cfg_b:
+                                        nu, na = npred.chunk(2); dlb_ = na - nu; npred = nu + self.guidance * dlb_
                                 x = pipe.scheduler.step(npred, t, x, **extra).prev_sample
                             for j, (a_, b_) in enumerate(bt):
                                 L_ = b_ - a_; w = torch.tensor([min(i + 1, L_ - i) for i in range(L_)], device=device, dtype=torch.float32)
@@ -327,7 +345,7 @@ class StableLatentSync(AccelLatentSync):
                 seams = [w[0] for w in windows[1:]] if windows else list(range(nf, n, nf))
             stats = {"frames": int(frames.shape[0]), "windows": len(windows), "seams": seams, "full_windows": len([w for w in windows if w[1] - w[0] == nf]),
                      "partial_windows": len([w for w in windows if w[1] - w[0] != nf]), "groups": unet_calls // max(len(timesteps), 1) if windows else 0,
-                     "window_batch_size": self.B, "unet_calls": unet_calls, "unet_rows": unet_rows, "cfg_trunc": self.cfg_trunc, "silent_windows": n_sil_windows if windows else 0, "steps_silent": self.steps_silent, "stride": self.stride, "ref_mode": self.ref_mode, "mode": self.mode,
+                     "window_batch_size": self.B, "unet_calls": unet_calls, "unet_rows": unet_rows, "cfg_trunc": self.cfg_trunc, "cfg_delta": self.cfg_delta, "silent_windows": n_sil_windows if windows else 0, "steps_silent": self.steps_silent, "stride": self.stride, "ref_mode": self.ref_mode, "mode": self.mode,
                      "overlap": self.overlap, "window_len": self.num_frames, "bridge": {"len": self.bridge_len, "steps": self.bridge_steps},
                      "detector": "replayed_verify_pass" if replay is not None else "latentsync_internal", "detector_fallback_calls": replay.fallbacks if replay else 0,
                      "seconds": {"preprocess_audio_video": round(t_pre, 3), "affine": round(t_aff, 3), "vae_and_cond": round(t_vae, 3), "unet_denoise": round(t_unet, 3),

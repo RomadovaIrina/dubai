@@ -60,6 +60,7 @@ def _tree_half(v):
     """r12 LS_CFG_TRUNC: the conditional half (second half of dim 0) of a cached DeepCache block output (tensor / nested tuple)."""
     if torch.is_tensor(v): return v.chunk(2)[1] if v.shape[0] % 2 == 0 else v
     if isinstance(v, (tuple, list)): return type(v)(_tree_half(x) for x in v)
+    if isinstance(v, dict): return type(v)(**{k: _tree_half(x) for k, x in v.items()})   # diffusers BaseOutput (Transformer3DModelOutput)
     return v
 
 
@@ -100,7 +101,8 @@ class AccelLatentSync:
             # 512 crop: the mouth without the chin bottom / jaw sides -> the source chin and jaw outline are kept; mask.png regenerates rows 190-485)
             self.mask_image_path = str(LS / "latentsync/utils" / os.environ["LS_MASK"])
         self.deepcache_helper = None
-        self.cfg_trunc = int(os.environ.get("LS_CFG_TRUNC", "0") or 0)   # r12 speed lever (default 0 = off): CFG in the first k denoising steps only
+        self.cfg_trunc = int(os.environ.get("LS_CFG_TRUNC", "0") or 0)
+        self.cfg_delta = os.environ.get("LS_CFG_DELTA", "0") == "1"   # r12 speed lever (default off, ls_stable plain windows + bridges): CFG only on DeepCache full steps, the skip steps reuse its guidance delta   # r12 speed lever (default 0 = off): CFG in the first k denoising steps only
         self.deepcache_interval = int(deepcache_interval) if deepcache else None
         if deepcache:
             from DeepCache import DeepCacheSDHelper
