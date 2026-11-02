@@ -1,0 +1,3 @@
+{"load_s": 7.8, "cfg": "", "decoding_t": 1, "compile": "unet", "vae_half": true, "KS_DC": "2:0"}
+KS_JOB {"tag": "q18", "video_s": 20.04, "wall_s": 221.4, "s_per_vmin": 662.9, "stages_s": {"compute_video_embedding": 6.8, "get_audio_embeddings": 0.2, "extract_video_landmarks": 12.7, "vae_decode_kf": 3.3, "sample_keyframes": 29.5, "vae_decode_interp": 29.1, "sample_interpolation": 168.3, "save_audio_video": 2.7}, "peak_vram_gb": 29.6}
+KS_JOB {"tag": "q18", "video_s": 20.04, "wall_s": 177.5, "s_per_vmin": 531.5, "stages_s": {"compute_video_embedding": 5.4, "get_audio_embeddings": 0.0, "extract_video_landmarks": 5.6, "vae_decode_kf": 3.1, "sample_keyframes": 15.5, "vae_decode_interp": 29.2, "sample_interpolation": 146.9, "save_audio_video": 2.7}, "peak_vram_gb": 29.6}

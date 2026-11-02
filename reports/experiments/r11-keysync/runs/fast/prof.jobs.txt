@@ -1,0 +1,2 @@
+{"load_s": 7.9, "cfg": "", "decoding_t": 1, "compile": "none", "vae_half": false, "KS_DC": "2:0"}
+KS_JOB {"tag": "q18", "video_s": 20.04, "wall_s": 220.9, "s_per_vmin": 661.4, "stages_s": {"compute_video_embedding": 6.8, "get_audio_embeddings": 0.2, "extract_video_landmarks": 12.6, "vae_decode_kf": 4.6, "sample_keyframes": 20.2, "vae_decode_interp": 37.6, "sample_interpolation": 177.3, "save_audio_video": 2.6}, "peak_vram_gb": 29.6}
