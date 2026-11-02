@@ -56,6 +56,13 @@ def _sdpa_context(name: str):
     return sdpa_kernel(be)
 
 
+def _tree_half(v):
+    """r12 LS_CFG_TRUNC: the conditional half (second half of dim 0) of a cached DeepCache block output (tensor / nested tuple)."""
+    if torch.is_tensor(v): return v.chunk(2)[1] if v.shape[0] % 2 == 0 else v
+    if isinstance(v, (tuple, list)): return type(v)(_tree_half(x) for x in v)
+    return v
+
+
 class _ReplayDetector:
     """Replays LatentSync FaceDetector results that were computed earlier on the SAME frames (the verify pass of the
     face-aware wrapper), in frame order. LatentSync's affine_transform_video() calls the detector exactly once per frame,
@@ -93,6 +100,7 @@ class AccelLatentSync:
             # 512 crop: the mouth without the chin bottom / jaw sides -> the source chin and jaw outline are kept; mask.png regenerates rows 190-485)
             self.mask_image_path = str(LS / "latentsync/utils" / os.environ["LS_MASK"])
         self.deepcache_helper = None
+        self.cfg_trunc = int(os.environ.get("LS_CFG_TRUNC", "0") or 0)   # r12 speed lever (default 0 = off): CFG in the first k denoising steps only
         self.deepcache_interval = int(deepcache_interval) if deepcache else None
         if deepcache:
             from DeepCache import DeepCacheSDHelper
@@ -181,7 +189,7 @@ class AccelLatentSync:
             groups = [full[k:k + self.B] for k in range(0, len(full), self.B)] + [[i] for i in partial]
 
             synced = [None] * num_inf
-            t_unet = 0.0; t_vae = 0.0; unet_calls = 0
+            t_unet = 0.0; t_vae = 0.0; unet_calls = 0; unet_rows = 0
             for grp in groups:
                 # ---- per-window conditioning, in upstream order (window-major; mask encode then ref encode) ----
                 t0 = time.perf_counter()
@@ -209,14 +217,20 @@ class AccelLatentSync:
 
                 # ---- denoising loop for the whole group ----
                 t0 = time.perf_counter()
+                cfg_on = do_cfg
                 with _sdpa_context(self.sdpa):
-                    for t in timesteps:
-                        unet_input = torch.cat([latents] * 2) if do_cfg else latents
+                    for si, t in enumerate(timesteps):
+                        if cfg_on and 0 < self.cfg_trunc <= si:   # r12 LS_CFG_TRUNC=k: guidance only in the first k steps, then the conditional half alone
+                            cfg_on = False; half = lambda x: x.chunk(2)[1]
+                            mask_latents, masked_image_latents, ref_latents, audio_embeds = map(half, (mask_latents, masked_image_latents, ref_latents, audio_embeds))
+                            if self.deepcache_helper is not None:   # the cached deep features of the skipped steps: keep their conditional half
+                                self.deepcache_helper.cached_output = {k_: _tree_half(v_) for k_, v_ in self.deepcache_helper.cached_output.items()}
+                        unet_input = torch.cat([latents] * 2) if cfg_on else latents
                         unet_input = pipe.scheduler.scale_model_input(unet_input, t)
                         unet_input = torch.cat([unet_input, mask_latents, masked_image_latents, ref_latents], dim=1)
                         noise_pred = self.unet(unet_input, t, encoder_hidden_states=audio_embeds).sample
-                        unet_calls += 1
-                        if do_cfg:
+                        unet_calls += 1; unet_rows += unet_input.shape[0]
+                        if cfg_on:
                             n_unc, n_aud = noise_pred.chunk(2)
                             noise_pred = n_unc + self.guidance * (n_aud - n_unc)
                         latents = pipe.scheduler.step(noise_pred, t, latents, **extra).prev_sample
@@ -234,7 +248,7 @@ class AccelLatentSync:
             synced_video_frames = pipe.restore_video(torch.cat(synced), video_frames, boxes, affine_matrices)
             t_restore = time.perf_counter() - t0
             stats = {"frames": int(synced_video_frames.shape[0]), "windows": num_inf, "full_windows": len(full),
-                     "partial_windows": len(partial), "groups": len(groups), "window_batch_size": self.B, "unet_calls": unet_calls,
+                     "partial_windows": len(partial), "groups": len(groups), "window_batch_size": self.B, "unet_calls": unet_calls, "unet_rows": unet_rows, "cfg_trunc": self.cfg_trunc,
                      "detector": "replayed_verify_pass" if replay is not None else "latentsync_internal",
                      "detector_fallback_calls": replay.fallbacks if replay is not None else 0,
                      "seconds": {"preprocess_audio_video": round(t_pre, 3), "affine": round(t_affine, 3), "vae_and_cond": round(t_vae, 3),
