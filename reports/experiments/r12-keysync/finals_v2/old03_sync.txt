@@ -1,0 +1,2 @@
+SYNC old03 /workspace/dub/outbox/r12_ks/final/old03_KeySync.mp4 {'conf': 6.051, 'av_offset': 0} 7.261
+SYNC old03 /workspace/dub/outbox/r12_ks/final_v2/old03_KeySync.mp4 {'conf': 5.836, 'av_offset': 0} 6.971
