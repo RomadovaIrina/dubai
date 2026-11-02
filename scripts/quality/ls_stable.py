@@ -410,7 +410,11 @@ class StableRunner:
     def __init__(self, window_batch_size=2, deepcache=True, steps=20, guidance=1.5, seed=1247, deepcache_interval=5, stride=None, ref_mode="same", mode="ls", pipe=None,
                  overlap="fuse", window_len=None, bridge_len=0, bridge_steps=0):
         from resident_vram_probe import load_latentsync
-        t0 = time.perf_counter(); pipe = pipe or load_latentsync(); vae_compile(pipe); unet_compile(pipe)
+        t0 = time.perf_counter(); pipe = pipe or load_latentsync()
+        if os.environ.get("LS_LORA"):   # r11 FACE (default off): a per-speaker LoRA (scripts/r11/ft_speaker.py) merged into the UNet weights before compile
+            sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "r11")); import ls_lora
+            nl = ls_lora.merge_lora(pipe.unet, os.environ["LS_LORA"], float(os.environ.get("LS_LORA_STRENGTH", "1") or 1)); print(f"  LS_LORA merged {nl} adapters from {os.environ['LS_LORA']}", flush=True)
+        vae_compile(pipe); unet_compile(pipe)
         self.acc = StableLatentSync(pipe, stride=stride, ref_mode=ref_mode, mode=mode, overlap=overlap, window_len=window_len, bridge_len=bridge_len, bridge_steps=bridge_steps,
                                     window_batch_size=window_batch_size,
                                     deepcache=deepcache, steps=steps, guidance=guidance, seed=seed, deepcache_interval=deepcache_interval)
