@@ -46,7 +46,7 @@ Jerk = the ks_lag spike rate. SyncNet = speech seconds, offset 0, 25 fps.
 | arm | s/vmin | m18 | m03 | old03 |
 |---|---|---|---|---|
 | f_base: 10 steps, the authors' settings | ~990 | 7.446 / 5 / 13.0 % | 7.583 / 2 / 11.9 % | 7.026 / 16 / 18.1 % |
-| **f_s8: 8 steps + DC2:0 + fp16 VAE + compile UNet, full 3-way CFG** | **~496** | **7.567 / 7 / 13.6 %** | **7.619 / 5 / 11.8 %** | see `speed/f_s8_eval_ts_qo3.json` if it landed |
+| **f_s8: 8 steps + DC2:0 + fp16 VAE + compile UNet, full 3-way CFG** | **~496** | **7.567 / 7 / 13.6 %** | **7.619 / 5 / 11.8 %** | **7.254 / 15 / 20.7 %** |
 | f_t3: f_s8 + trunc:3 interp guidance | ~385 (old03 cold 433) | 7.155 / 4 / 12.5 % | 7.071 / 4 / 8.2 % | 6.633 / 8 / 15.7 % |
 | f_t2: trunc:2 | ~351 | 6.841 / 4 / 12.0 % | 6.904 (unsmoothed) | – |
 | f_t3dc3: trunc:3 + DC3 | ~316 | 6.095 / 8 | 6.471 / 9 | – |
@@ -56,7 +56,7 @@ Findings:
   - f_t3 is −0.51 vs f_base on m03, with and without the smoothing (same shift).
   - It is −0.29 on m18 and −0.39 on old03.
   - The r11 "trunc:3 PASS" was measured on m18 / old03 without the smoothing; it does not generalise.
-- **f_s8 (full CFG) holds sync** on m18 and m03 (≥ f_base) at ~2× the speed of f_base. It is the fastest KeySync that keeps sync so far.
+- **f_s8 (full CFG) holds sync** on all 3 videos (≥ f_base) at ~2× the speed of f_base. It is the fastest KeySync that keeps sync so far.
 - ~496 s/vmin is still above the ≤ 300 GPU-s/vmin E2E target.
 
 ## Not run (fixed in ks_fast.py, queued, server stopped)
