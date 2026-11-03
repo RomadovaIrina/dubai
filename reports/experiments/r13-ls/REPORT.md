@@ -1,4 +1,28 @@
-# r13 LS (LatentSync speed + quality) report (03.11.2026, r13-l)
+# r13 LS (LatentSync speed + quality) HANDOFF (04.11.2026, r13-l; destroyed after this push; LS work paused by the user)
+
+## Status in one screen
+- **q2 = the LatentSync quality stack: gated, to keep.**
+  - Flags (all default off): `LS_CMS_READ=1 FC_CMS=1` + `FC_EXTRA="--pre-threads=12 --sharpen-luma on --sharpen-auto 1.05 --sharpen-lips-max 0.2"`.
+  - Use 0.2: the 0.5 lip cap gave m18 lips 1.68 x the source.
+  - Full gate PASS on m03 / old03. m18 trips only the occluder ring 0 -> 1, which the plain k5 control does too.
+  - User on the per-channel-sharpen version "q": "цвета немного поплыли, но само по себе стало лучше". q2 is the luma-only + capped answer to that; not yet judged by eye.
+- **E2E (one command, audio + face, single video, no gen worker), q2**, NVML GPU-busy (util-weighted) / wall s/vmin:
+  - m03: 341 (304) / 1023;
+  - old03: 346 (309) / 712;
+  - m18: 359 (316) / 1259.
+  - Over the 300 norm by 15-20 %. q2 costs no GPU vs k5.
+- **LS_RATE (frame skipping) is NOT accepted:**
+  - plain 2/3: "лицо подергивается и дрожит";
+  - adaptive: "да, лицо дрожит";
+  - even 2/3: "подрагивает, но сильно лучше";
+  - **even 3/4 + q2 (e34q): "ой блять это пиздец"** on m03 at 0:02 of the 0.5x crop.
+- **The grotesque mouth: analysed** (`m03_e34q_bad_mouth_566-572.jpg`; rows = source / k5 / q2 / even 3/4 / even 3/4 + q2, source frames 556-574):
+  - At 566-572 both even-cadence arms show the wrong mouth: a flat teeth band, a torn dark left corner at 570, then pursed lips.
+  - k5 and q2-only show the correct round "o".
+  - **Cause: the even-cadence resampling (`LS_RATE_EVEN`), not q2.** Either the flow-interpolated half-step input frame (which LatentSync then lip-syncs) or the flow fill between generated frames tears at the corner. The audio window at the half-step time may also differ from the frame's true time.
+  - The dark corner gap may be the same kind of thing as the management's "кончики губ" defect; that is still unconfirmed (no timestamps).
+  - Not done: a scan of all e34q videos for mouth-shape outliers (per-frame mouth landmarks vs k5).
+- **E2E with q2 + even 3/4:** started and stopped at the wrap-up (old03 was in face_gen). No numbers.
 
 - **Branch:** `experiment/r13`. All levers are behind flags, default off.
 - **Gate:** the r9-speed-face gate vs the k5 base of each video, `r10/gate/<id>base`.
@@ -51,11 +75,44 @@ Jitter metrics (`scripts/r12/`):
 | m03 | 8.202 (8.168) | 19 (18) | −0.65 / +0.58 (+1.75 / +4.70) | 1.10 (0.98) |
 | old03 | 7.557 (7.534) | 30 (42) | −0.99 / +0.63 (−0.19 / +2.55) | 0.79 (0.67) |
 
+m18:
+- q2 (cmsr): face GPU 301, SyncNet 8.041 (the k5 control rerun 8.073), flashes 5, occluder 0 -> 1.
+- q2 + even 3/4: 249, SyncNet 8.005, flashes 3, gate PASS on every row.
+
+## NEXT (when LS resumes)
+1. **Eye check of q2 alone** (lip cap 0.2) on m03 / old03 / m18, then make q2 the LS default: `E2E_Q2=1` in `scripts/r9/e2e.sh` setting the three flags + FC_EXTRA.
+2. **Speed without frame skipping:**
+   - the resident gen worker (`scripts/r10/worker.py --gen-worker`) on the q2 E2E;
+   - measure the queue's GPU-busy vs 300.
+   - r10 had 308 with the worker; q2 single-video is 341-359.
+3. **LS_RATE_EVEN (if retried):**
+   - scan for mouth-shape outliers (layer landmarks vs the k5 layer: per-frame lip-contour distance / IOD, top spikes);
+   - check the audio chunk times at the half-step frames;
+   - try generating on the TRUE source frames nearest the even grid, instead of flow-interpolated inputs.
+   - Until then it is rejected.
+4. **Lip corners:** management timestamps -> `scripts/r12/corner_sheet.py` (source | layer | final) -> generator vs composite.
+5. **m03 flash count with the lossless layers (LS_LAYER_RGB):** +4-6. If the lossless layers are ever wanted for colour, add temporal HF consistency on the layer first.
+
+## Resume
+```
+git checkout experiment/r13; bash scripts/r9/r9_models.sh; uv pip install --python /venv/main/bin/python nvidia-ml-py
+NOFX=1 bash scripts/r12/ls_base.sh m03 old03 m18                      # k5 baselines + gate bases
+export LS_CMS_READ=1 FC_CMS=1 FC_EXTRA_ADD="--sharpen-luma on --sharpen-auto 1.05 --sharpen-lips-max 0.2"
+QUICK=1 bash scripts/r12/ls_arm.sh m03 q2 ""                           # q2 arm (drop QUICK for the full gate)
+bash scripts/r12/clip_ls.sh m03 q2 "k5 + q2"                            # 2-panel + 0.5x mouth clip
+# E2E: see reports/experiments/r13-ls/queues/e2eq.sh
+```
+
+## Not in git
+On r13-l only, gone with the box:
+- the clips in `/workspace/dub/outbox/r13_ls/`;
+- the artefact caches.
+
 ## Open
-- **The eye:** even 3/4 (m03_k5_vs_e34*, e34q*) and q2 (m03 / old03 _k5_vs_cmsr*).
-- **m18:** q2 / e34q (running at this commit).
-- **E2E with the gen worker** on the final stack.
-- **The lip-corner defect:** a corner close-up sheet (`corner_sheet.py`) shows no obvious composite artefact on m03; timestamps from management are needed.
+- The eye on q2 (cap 0.2).
+- The gen-worker E2E.
+- The lip-corner timestamps.
+- The e34q outlier scan.
 
 ## Clips
 `/workspace/dub/outbox/r13_ls/` on r13-l. Each `<id>_k5_vs_<arm>.mp4` is full length; `_mouth05x` is 0.5x, the window where the two differ most.
