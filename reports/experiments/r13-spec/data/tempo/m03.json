@@ -1,0 +1,370 @@
+{
+ "run": "/workspace/dub/artifacts/r4a/r9_m03/m03",
+ "corridor": [
+  0.75,
+  1.25
+ ],
+ "placements": 7,
+ "measured": 7,
+ "tempo_p5_p50_p95": [
+  0.958,
+  0.977,
+  1.045
+ ],
+ "phrase_violations": [],
+ "span_violations": [],
+ "local_violations": [],
+ "local_windows": 107,
+ "recorded_atempo_violations": [],
+ "librosa_time_stretch": "not used by the current chain (ffmpeg atempo only)",
+ "rows": [
+  {
+   "unit": 0,
+   "placed": [
+    1.42,
+    7.45
+   ],
+   "text": "Good day! I sincerely want to thank the developers of the \"Mama Chris\" app for f",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 8.28,
+   "matched_words": "23/23",
+   "tempo_span": 0.955,
+   "tempo": 0.959,
+   "local_max": [
+    1.028,
+    1.45,
+    2.71,
+    "good day i sincerely"
+   ],
+   "local_min": [
+    0.889,
+    5.77,
+    6.51,
+    "work for moms on"
+   ]
+  },
+  {
+   "unit": 1,
+   "placed": [
+    7.7,
+    9.96
+   ],
+   "text": "I am a stay-at-home mom on maternity leave.",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 9.5,
+   "matched_words": "10/10",
+   "tempo_span": 0.992,
+   "tempo": 0.987,
+   "local_max": [
+    1.002,
+    8.05,
+    8.68,
+    "a stay at home"
+   ],
+   "local_min": [
+    0.955,
+    8.38,
+    9.08,
+    "at home mom on"
+   ]
+  },
+  {
+   "unit": 2,
+   "placed": [
+    10.88,
+    17.54
+   ],
+   "text": "Thanks to this app, I was actually able to find a suitable job for myself in jus",
+   "atempo_recorded": 1.031,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 9.38,
+   "matched_words": "30/30",
+   "tempo_span": 1.03,
+   "tempo": 1.051,
+   "local_max": [
+    1.117,
+    14.02,
+    14.58,
+    "in just half an"
+   ],
+   "local_min": [
+    1.0,
+    10.89,
+    11.67,
+    "thanks to this app"
+   ]
+  },
+  {
+   "unit": 3,
+   "placed": [
+    17.7,
+    22.09
+   ],
+   "text": "So now I am able to take care of all my needs right here at home without ever ha",
+   "atempo_recorded": 0.99,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 9.17,
+   "matched_words": "21/21",
+   "tempo_span": 0.974,
+   "tempo": 1.03,
+   "local_max": [
+    1.095,
+    19.21,
+    19.93,
+    "of all my needs"
+   ],
+   "local_min": [
+    1.0,
+    17.83,
+    18.65,
+    "now i am able"
+   ]
+  },
+  {
+   "unit": 4,
+   "placed": [
+    22.82,
+    29.02
+   ],
+   "text": "Dear ladies, mothers, and girls, from the bottom of my heart, I truly recommend ",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.58,
+   "matched_words": "23/23",
+   "tempo_span": 0.954,
+   "tempo": 0.968,
+   "local_max": [
+    1.026,
+    27.91,
+    28.91,
+    "use of this application"
+   ],
+   "local_min": [
+    0.922,
+    22.85,
+    24.18,
+    "dear ladies mothers and"
+   ]
+  },
+  {
+   "unit": 5,
+   "placed": [
+    29.26,
+    33.61
+   ],
+   "text": "You are sure to find a suitable vacancy there, as there are a large number of th",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 8.38,
+   "matched_words": "17/17",
+   "tempo_span": 0.921,
+   "tempo": 0.958,
+   "local_max": [
+    0.972,
+    32.58,
+    33.5,
+    "large number of them"
+   ],
+   "local_min": [
+    0.944,
+    32.06,
+    32.54,
+    "as there are a"
+   ]
+  },
+  {
+   "unit": 6,
+   "placed": [
+    35.87,
+    38.38
+   ],
+   "text": "And once again, thank you to the developers!",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.97,
+   "matched_words": "8/8",
+   "tempo_span": 0.952,
+   "tempo": 0.977,
+   "local_max": [
+    1.052,
+    36.92,
+    37.58,
+    "thank you to the"
+   ],
+   "local_min": [
+    0.939,
+    35.94,
+    37.1,
+    "and once again thank"
+   ]
+  }
+ ],
+ "rate_median_sps": 8.38,
+ "rate_peaks": [
+  {
+   "unit": 2,
+   "sps": 13.89,
+   "t0": 12.4,
+   "t1": 12.9,
+   "words": "able to find a"
+  },
+  {
+   "unit": 3,
+   "sps": 13.85,
+   "t0": 17.83,
+   "t1": 18.65,
+   "words": "now i am able"
+  },
+  {
+   "unit": 2,
+   "sps": 13.44,
+   "t0": 11.79,
+   "t1": 12.54,
+   "words": "i was actually able"
+  },
+  {
+   "unit": 2,
+   "sps": 13.02,
+   "t0": 11.59,
+   "t1": 12.32,
+   "words": "app i was actually"
+  },
+  {
+   "unit": 5,
+   "sps": 12.5,
+   "t0": 32.06,
+   "t1": 32.54,
+   "words": "as there are a"
+  },
+  {
+   "unit": 2,
+   "sps": 12.48,
+   "t0": 11.87,
+   "t1": 12.64,
+   "words": "was actually able to"
+  },
+  {
+   "unit": 2,
+   "sps": 12.46,
+   "t0": 11.15,
+   "t1": 11.81,
+   "words": "to this app i"
+  },
+  {
+   "unit": 2,
+   "sps": 12.46,
+   "t0": 11.29,
+   "t1": 11.95,
+   "words": "this app i was"
+  },
+  {
+   "unit": 3,
+   "sps": 11.9,
+   "t0": 18.29,
+   "t1": 18.97,
+   "words": "am able to take"
+  },
+  {
+   "unit": 4,
+   "sps": 11.85,
+   "t0": 24.78,
+   "t1": 25.34,
+   "words": "the bottom of my"
+  }
+ ],
+ "phrase_rate": [
+  {
+   "unit": 1,
+   "placed": [
+    7.7,
+    9.96
+   ],
+   "sps": 9.5,
+   "x_median": 1.13,
+   "tempo": 0.987,
+   "text": "I am a stay-at-home mom on maternity leave."
+  },
+  {
+   "unit": 2,
+   "placed": [
+    10.88,
+    17.54
+   ],
+   "sps": 9.38,
+   "x_median": 1.12,
+   "tempo": 1.051,
+   "text": "Thanks to this app, I was actually able to find a suitable job for myself in jus"
+  },
+  {
+   "unit": 3,
+   "placed": [
+    17.7,
+    22.09
+   ],
+   "sps": 9.17,
+   "x_median": 1.09,
+   "tempo": 1.03,
+   "text": "So now I am able to take care of all my needs right here at home without ever ha"
+  },
+  {
+   "unit": 5,
+   "placed": [
+    29.26,
+    33.61
+   ],
+   "sps": 8.38,
+   "x_median": 1.0,
+   "tempo": 0.958,
+   "text": "You are sure to find a suitable vacancy there, as there are a large number of th"
+  },
+  {
+   "unit": 0,
+   "placed": [
+    1.42,
+    7.45
+   ],
+   "sps": 8.28,
+   "x_median": 0.99,
+   "tempo": 0.959,
+   "text": "Good day! I sincerely want to thank the developers of the \"Mama Chris\" app for f"
+  },
+  {
+   "unit": 6,
+   "placed": [
+    35.87,
+    38.38
+   ],
+   "sps": 7.97,
+   "x_median": 0.95,
+   "tempo": 0.977,
+   "text": "And once again, thank you to the developers!"
+  },
+  {
+   "unit": 4,
+   "placed": [
+    22.82,
+    29.02
+   ],
+   "sps": 7.58,
+   "x_median": 0.9,
+   "tempo": 0.968,
+   "text": "Dear ladies, mothers, and girls, from the bottom of my heart, I truly recommend "
+  }
+ ]
+}

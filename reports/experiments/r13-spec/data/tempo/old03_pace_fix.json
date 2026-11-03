@@ -1,0 +1,37 @@
+{
+ "k": 1.25,
+ "median_sps": 7.65,
+ "fixed": [
+  {
+   "unit": 2,
+   "placement": 0,
+   "why": "rate x1.37 median",
+   "slot_s": 0.73,
+   "budget_syll": 5,
+   "before": "In general,",
+   "after": "In brief,",
+   "natural_s": 1.04,
+   "atempo": 1.05,
+   "rate_before": 10.47,
+   "rate_after": 2.37
+  },
+  {
+   "unit": 5,
+   "placement": 1,
+   "why": "rate x1.33 median",
+   "slot_s": 0.96,
+   "budget_syll": 6,
+   "before": "everything will be fine.",
+   "after": "All will be well.",
+   "natural_s": 1.32,
+   "atempo": 1.05,
+   "rate_before": 10.17,
+   "rate_after": 4.91
+  }
+ ],
+ "outside_identical": {
+  "old03": true,
+  "old03_htd": true
+ },
+ "seconds": 21.4
+}
