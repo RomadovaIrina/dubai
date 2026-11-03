@@ -1,0 +1,481 @@
+{
+ "old03": {
+  "status": "PARTIAL_SUCCESS",
+  "flags": [
+   "low_res",
+   "long_video",
+   "subs_failed"
+  ],
+  "spec": {
+   "voice_policy": {
+    "max_voices": 2,
+    "unit_speakers": 1,
+    "speech_s": {
+     "SPEAKER_00": 85.58
+    },
+    "applied": false
+   },
+   "speakers": [
+    "SPEAKER_00"
+   ],
+   "faces": {
+    "max_faces": 2,
+    "tracks": 1
+   },
+   "pose": {
+    "available": true,
+    "yaw_p1_p50_p99": [
+     -2.4,
+     0.1,
+     5.4
+    ],
+    "abs_yaw_max": 8.3,
+    "precheck": {
+     "yaw_deg": 30.0,
+     "max_fraction": 0.3,
+     "fraction_over": 0.0,
+     "enabled": true,
+     "voice_only": false
+    },
+    "gate": {
+     "yaw_deg": 0.0,
+     "hold_frames": 3,
+     "gated_frames": 0
+    }
+   },
+   "video_status": {
+    "status": "SUCCESS",
+    "eligible_lipsync_frames": 2125,
+    "held_landmark_frames": 0,
+    "latentsync_failed_frames": 0,
+    "degraded_ratio": 0.0,
+    "voice_only": false,
+    "rule": "SUCCESS if degraded <= 2 % of eligible frames; voice-only fallback = PARTIAL_SUCCESS"
+   }
+  },
+  "outputs": {
+   "demucs": {
+    "width": 464,
+    "height": 848,
+    "fps": 30.011,
+    "duration_s": 90.333,
+    "a_duration_s": 90.333,
+    "vcodec": "h264",
+    "size_mb": 44.58,
+    "file": "old03_DabAI_r9_demucs.mp4",
+    "matches_source": true
+   },
+   "spleeter": {
+    "width": 464,
+    "height": 848,
+    "fps": 30.011,
+    "duration_s": 90.333,
+    "a_duration_s": 90.333,
+    "vcodec": "h264",
+    "size_mb": 44.54,
+    "file": "old03_DabAI_r9_spleeter.mp4",
+    "matches_source": true
+   }
+  },
+  "timing": {
+   "total_wall_s": 961.9,
+   "vram_peak_mib": 30180,
+   "vram_peak_mib_by_stage": {
+    "precheck": 18,
+    "audio": 30180,
+    "sep": 2,
+    "face_gen": 13750,
+    "face_comp": 7441,
+    "subs": 2,
+    "mux": 2
+   },
+   "gpu_busy_total_s_per_video_min": 425.4
+  }
+ },
+ "m18": {
+  "status": "SUCCESS",
+  "flags": [],
+  "spec": {
+   "voice_policy": {
+    "max_voices": 2,
+    "unit_speakers": 1,
+    "speech_s": {
+     "SPEAKER_00": 19.26
+    },
+    "applied": false
+   },
+   "speakers": [
+    "SPEAKER_00"
+   ],
+   "faces": {
+    "max_faces": 2,
+    "tracks": 1
+   },
+   "pose": {
+    "available": true,
+    "yaw_p1_p50_p99": [
+     -10.4,
+     -2.6,
+     3.9
+    ],
+    "abs_yaw_max": 13.3,
+    "precheck": {
+     "yaw_deg": 30.0,
+     "max_fraction": 0.3,
+     "fraction_over": 0.0,
+     "enabled": true,
+     "voice_only": false
+    },
+    "gate": {
+     "yaw_deg": 0.0,
+     "hold_frames": 3,
+     "gated_frames": 0
+    }
+   },
+   "video_status": {
+    "status": "SUCCESS",
+    "eligible_lipsync_frames": 475,
+    "held_landmark_frames": 0,
+    "latentsync_failed_frames": 0,
+    "degraded_ratio": 0.0,
+    "voice_only": false,
+    "rule": "SUCCESS if degraded <= 2 % of eligible frames; voice-only fallback = PARTIAL_SUCCESS"
+   }
+  },
+  "outputs": {
+   "demucs": {
+    "width": 720,
+    "height": 1280,
+    "fps": 30.0,
+    "duration_s": 20.053,
+    "a_duration_s": 20.053,
+    "vcodec": "h264",
+    "size_mb": 8.57,
+    "file": "m18_DabAI_r9_demucs.mp4",
+    "matches_source": true
+   },
+   "spleeter": {
+    "width": 720,
+    "height": 1280,
+    "fps": 30.0,
+    "duration_s": 20.053,
+    "a_duration_s": 20.053,
+    "vcodec": "h264",
+    "size_mb": 8.56,
+    "file": "m18_DabAI_r9_spleeter.mp4",
+    "matches_source": true
+   }
+  },
+  "timing": {
+   "total_wall_s": 319.7,
+   "vram_peak_mib": 26478,
+   "vram_peak_mib_by_stage": {
+    "precheck": 18,
+    "audio": 26478,
+    "sep": 2,
+    "face_gen": 13134,
+    "face_comp": 13113,
+    "subs": 2,
+    "mux": 2
+   },
+   "gpu_busy_total_s_per_video_min": 357.3
+  }
+ },
+ "m03": {
+  "status": "SUCCESS",
+  "flags": [
+   "two_faces"
+  ],
+  "spec": {
+   "voice_policy": {
+    "max_voices": 2,
+    "unit_speakers": 1,
+    "speech_s": {
+     "SPEAKER_00": 33.72
+    },
+    "applied": false
+   },
+   "speakers": [
+    "SPEAKER_00",
+    "SPEAKER_01"
+   ],
+   "faces": {
+    "max_faces": 2,
+    "tracks": 2,
+    "assignment": {
+     "mapping": {
+      "SPEAKER_00": 0,
+      "SPEAKER_01": 1
+     },
+     "scores": {
+      "SPEAKER_00->face0": 0.415,
+      "SPEAKER_00->face1": 0.054,
+      "SPEAKER_01->face0": 0.019,
+      "SPEAKER_01->face1": 0.105
+     },
+     "faces": [
+      0,
+      1
+     ]
+    },
+    "selected_face_frames": {
+     "0": 985,
+     "1": 28
+    }
+   },
+   "pose": {
+    "available": true,
+    "yaw_p1_p50_p99": [
+     -13.7,
+     -5.8,
+     5.3
+    ],
+    "abs_yaw_max": 17.3,
+    "precheck": {
+     "yaw_deg": 30.0,
+     "max_fraction": 0.3,
+     "fraction_over": 0.0,
+     "enabled": true,
+     "voice_only": false
+    },
+    "gate": {
+     "yaw_deg": 0.0,
+     "hold_frames": 3,
+     "gated_frames": 0
+    }
+   },
+   "video_status": {
+    "status": "SUCCESS",
+    "eligible_lipsync_frames": 950,
+    "held_landmark_frames": 0,
+    "latentsync_failed_frames": 0,
+    "degraded_ratio": 0.0,
+    "voice_only": false,
+    "rule": "SUCCESS if degraded <= 2 % of eligible frames; voice-only fallback = PARTIAL_SUCCESS"
+   }
+  },
+  "outputs": {
+   "demucs": {
+    "width": 720,
+    "height": 1280,
+    "fps": 30.0,
+    "duration_s": 40.5,
+    "a_duration_s": 40.5,
+    "vcodec": "h264",
+    "size_mb": 18.19,
+    "file": "m03_DabAI_r9_demucs.mp4",
+    "matches_source": true
+   },
+   "spleeter": {
+    "width": 720,
+    "height": 1280,
+    "fps": 30.0,
+    "duration_s": 40.5,
+    "a_duration_s": 40.5,
+    "vcodec": "h264",
+    "size_mb": 18.18,
+    "file": "m03_DabAI_r9_spleeter.mp4",
+    "matches_source": true
+   }
+  },
+  "timing": {
+   "total_wall_s": 519.2,
+   "vram_peak_mib": 30410,
+   "vram_peak_mib_by_stage": {
+    "precheck": 18,
+    "audio": 30410,
+    "sep": 2,
+    "face_gen": 13080,
+    "face_comp": 10233,
+    "subs": 2,
+    "mux": 2
+   },
+   "gpu_busy_total_s_per_video_min": 346.5
+  }
+ },
+ "spk3": {
+  "status": "SUCCESS",
+  "flags": [
+   "low_res",
+   "lipsync_off_by_request",
+   "many_speakers_one_voice"
+  ],
+  "spec": {
+   "voice_policy": {
+    "max_voices": 2,
+    "unit_speakers": 3,
+    "speech_s": {
+     "SPEAKER_00": 25.82,
+     "SPEAKER_01": 14.18,
+     "SPEAKER_02": 13.76
+    },
+    "applied": true,
+    "voice": "SPEAKER_00",
+    "message": "3 speakers detected: dubbed with one voice (SPEAKER_00)"
+   },
+   "speakers": [
+    "SPEAKER_00",
+    "SPEAKER_01",
+    "SPEAKER_02"
+   ],
+   "faces": null,
+   "pose": null,
+   "video_status": null
+  },
+  "outputs": {
+   "demucs": {
+    "width": 464,
+    "height": 848,
+    "fps": 30.0,
+    "duration_s": 54.0,
+    "a_duration_s": 54.0,
+    "vcodec": "h264",
+    "size_mb": 22.16,
+    "file": "spk3_DabAI_r9_demucs.mp4",
+    "matches_source": true
+   },
+   "spleeter": {
+    "width": 464,
+    "height": 848,
+    "fps": 30.0,
+    "duration_s": 54.0,
+    "a_duration_s": 54.0,
+    "vcodec": "h264",
+    "size_mb": 22.12,
+    "file": "spk3_DabAI_r9_spleeter.mp4",
+    "matches_source": true
+   }
+  },
+  "timing": {
+   "total_wall_s": 120.8,
+   "vram_peak_mib": 30864,
+   "vram_peak_mib_by_stage": {
+    "precheck": 18,
+    "audio": 30864,
+    "sep": 2,
+    "mux": 2
+   },
+   "gpu_busy_total_s_per_video_min": 87.8
+  }
+ },
+ "spk3off": {
+  "status": "SUCCESS",
+  "flags": [
+   "low_res",
+   "lipsync_off_by_request"
+  ],
+  "spec": {
+   "voice_policy": {
+    "max_voices": 0,
+    "unit_speakers": 3,
+    "speech_s": {
+     "SPEAKER_00": 25.82,
+     "SPEAKER_01": 14.18,
+     "SPEAKER_02": 13.76
+    },
+    "applied": false
+   },
+   "speakers": [
+    "SPEAKER_00",
+    "SPEAKER_01",
+    "SPEAKER_02"
+   ],
+   "faces": null,
+   "pose": null,
+   "video_status": null
+  },
+  "outputs": {
+   "demucs": {
+    "width": 464,
+    "height": 848,
+    "fps": 30.0,
+    "duration_s": 54.0,
+    "a_duration_s": 54.0,
+    "vcodec": "h264",
+    "size_mb": 22.15,
+    "file": "spk3off_DabAI_r9_demucs.mp4",
+    "matches_source": true
+   },
+   "spleeter": {
+    "width": 464,
+    "height": 848,
+    "fps": 30.0,
+    "duration_s": 54.0,
+    "a_duration_s": 54.0,
+    "vcodec": "h264",
+    "size_mb": 22.12,
+    "file": "spk3off_DabAI_r9_spleeter.mp4",
+    "matches_source": true
+   }
+  },
+  "timing": {
+   "total_wall_s": 113.9,
+   "vram_peak_mib": 30152,
+   "vram_peak_mib_by_stage": {
+    "precheck": 18,
+    "audio": 30152,
+    "sep": 2,
+    "mux": 2
+   },
+   "gpu_busy_total_s_per_video_min": 85.0
+  }
+ },
+ "old05turn": {
+  "status": "SUCCESS",
+  "flags": [
+   "low_res",
+   "no_face",
+   "face_skipped_no_face"
+  ],
+  "spec": {
+   "voice_policy": {
+    "max_voices": 2,
+    "unit_speakers": 1,
+    "speech_s": {
+     "SPEAKER_00": 3.58
+    },
+    "applied": false
+   },
+   "speakers": [
+    "SPEAKER_00"
+   ],
+   "faces": null,
+   "pose": null,
+   "video_status": null
+  },
+  "outputs": {
+   "demucs": {
+    "width": 464,
+    "height": 848,
+    "fps": 30.0,
+    "duration_s": 4.0,
+    "a_duration_s": 4.0,
+    "vcodec": "h264",
+    "size_mb": 3.87,
+    "file": "old05turn_DabAI_r9_demucs.mp4",
+    "matches_source": true
+   },
+   "spleeter": {
+    "width": 464,
+    "height": 848,
+    "fps": 30.0,
+    "duration_s": 4.0,
+    "a_duration_s": 4.0,
+    "vcodec": "h264",
+    "size_mb": 3.87,
+    "file": "old05turn_DabAI_r9_spleeter.mp4",
+    "matches_source": true
+   }
+  },
+  "timing": {
+   "total_wall_s": 38.7,
+   "vram_peak_mib": 29414,
+   "vram_peak_mib_by_stage": {
+    "precheck": 18,
+    "audio": 29414,
+    "mux": 2
+   },
+   "gpu_busy_total_s_per_video_min": 202.9
+  }
+ }
+}

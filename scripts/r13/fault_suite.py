@@ -13,7 +13,7 @@ import dabai_job  # noqa: E402
 
 GEN = str(HERE / "fault_gen.py")
 JOBS = {"f_one": ({"DUB_FAULT": "calls:1"}, {"SUCCESS", "PARTIAL_SUCCESS"}), "f_many": ({"DUB_FAULT": "calls:0,1,2,3"}, {"PARTIAL_SUCCESS"}),
-        "f_oom": ({"DUB_FAULT": "oom:1"}, {"SUCCESS"}), "f_crash": ({"DUB_FAULT": "crash"}, {"PARTIAL_SUCCESS"}), "f_bad": ({}, {"ERROR"})}
+        "f_oom": ({"DUB_FAULT": "oom:1", "DUB_STAGE_LOG": "/workspace/dub/r13s/vram/stage_log_04.jsonl"}, {"SUCCESS"}), "f_crash": ({"DUB_FAULT": "crash"}, {"PARTIAL_SUCCESS"}), "f_bad": ({}, {"ERROR"})}
 
 
 def main():

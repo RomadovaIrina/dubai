@@ -1,0 +1,136 @@
+{
+ "long4": {
+  "pieces": [
+   [
+    0.0,
+    105.9
+   ],
+   [
+    105.9,
+    164.3
+   ],
+   [
+    164.3,
+    254.3
+   ],
+   [
+    254.3,
+    389.1
+   ]
+  ],
+  "cuts": [
+   {
+    "t": 105.9,
+    "kind": "pause_long_piece",
+    "pause": [
+     105.2,
+     106.6
+    ],
+    "pause_s": 1.4,
+    "pause_db": -42.3,
+    "in_speech": false
+   },
+   {
+    "t": 164.3,
+    "kind": "pause",
+    "pause": [
+     161.4,
+     167.2
+    ],
+    "pause_s": 5.8,
+    "pause_db": -48.4,
+    "in_speech": false
+   },
+   {
+    "t": 254.3,
+    "kind": "pause",
+    "pause": [
+     253.7,
+     254.9
+    ],
+    "pause_s": 1.2,
+    "pause_db": -40.6,
+    "in_speech": false
+   },
+   {
+    "t": null,
+    "kind": "no_pause",
+    "searched_from": 299.3
+   }
+  ]
+ },
+ "m_long86": {
+  "pieces": [
+   [
+    0.0,
+    86.3
+   ]
+  ],
+  "cuts": []
+ },
+ "01_16k": {
+  "pieces": [
+   [
+    0.0,
+    101.7
+   ]
+  ],
+  "cuts": [
+   {
+    "t": null,
+    "kind": "no_pause",
+    "searched_from": 45.0
+   }
+  ]
+ },
+ "02_16k": {
+  "pieces": [
+   [
+    0.0,
+    62.6
+   ],
+   [
+    62.6,
+    110.9
+   ]
+  ],
+  "cuts": [
+   {
+    "t": 62.65,
+    "kind": "pause",
+    "pause": [
+     59.8,
+     65.5
+    ],
+    "pause_s": 5.7,
+    "pause_db": -48.4,
+    "in_speech": false
+   }
+  ]
+ },
+ "03_16k": {
+  "pieces": [
+   [
+    0.0,
+    45.3
+   ],
+   [
+    45.3,
+    90.3
+   ]
+  ],
+  "cuts": [
+   {
+    "t": 45.3,
+    "kind": "pause",
+    "pause": [
+     44.3,
+     46.3
+    ],
+    "pause_s": 2.0,
+    "pause_db": -40.5,
+    "in_speech": false
+   }
+  ]
+ }
+}

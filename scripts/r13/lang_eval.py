@@ -162,11 +162,28 @@ def cmd_report(a):
     pathlib.Path(a.out, "langs_table.md").write_text("\n".join(L) + "\n"); print("\n".join(L))
 
 
+# 6.5 routing proposal from the measurements (thresholds = the EN numbers of the same test, which the user accepted by ear, with a margin)
+ROUTE_RULES = {"mt_external_if": "adequacy < 4.0 or chrF(back) < 0.85 x EN or wrong script in > 1 sentence",
+               "tts_donor_if": "TTS CER mean > 0.10 or > 25 % of the sentences with CER > 0.20"}
+
+
+def cmd_routes(a):
+    rows = {r["lang"]: r for r in json.loads(pathlib.Path(a.out, "langs_table.json").read_text())}; en = rows.get("en", {})
+    table = {"source": "r13 local measurements (scripts/r13/lang_eval.py; LANGS.md)", "rules": ROUTE_RULES, "langs": {}}
+    for lg, r in rows.items():
+        if "adequacy" not in r: continue
+        mt_bad = (r["adequacy"] < 4.0 or (en.get("chrf_back") and r["chrf_back"] < 0.85 * en["chrf_back"]) or r.get("script_bad", 0) > 1)
+        tts_bad = "cer_mean" in r and (r["cer_mean"] > 0.10 or r["cer_bad"] > 0.25 * r["tts_n"])
+        table["langs"][lg] = {"mt": "openai" if mt_bad else "qwen", "tts": "donor_vc" if tts_bad else "chatterbox",
+                              "adequacy": r["adequacy"], "chrf_back": r["chrf_back"], "cer_mean": r.get("cer_mean")}
+    pathlib.Path(a.out, "lang_routes.json").write_text(json.dumps(table, indent=1)); print(json.dumps(table["langs"], indent=0)[:3000])
+
+
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument("cmd", choices=["sents", "mt", "tts", "report"]); ap.add_argument("--out", required=True)
+    ap = argparse.ArgumentParser(); ap.add_argument("cmd", choices=["sents", "mt", "tts", "report", "routes"]); ap.add_argument("--out", required=True)
     ap.add_argument("--langs", default=""); ap.add_argument("--n", type=int, default=24); ap.add_argument("--ref"); ap.add_argument("wavs", nargs="*")
     a = ap.parse_args(); pathlib.Path(a.out).mkdir(parents=True, exist_ok=True)
-    {"sents": cmd_sents, "mt": cmd_mt, "tts": cmd_tts, "report": cmd_report}[a.cmd](a)
+    {"sents": cmd_sents, "mt": cmd_mt, "tts": cmd_tts, "report": cmd_report, "routes": cmd_routes}[a.cmd](a)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,130 @@
+{
+ "long4": {
+  "duration_s": 389.11,
+  "speech_s": 292.5,
+  "segments_off": 85,
+  "segments_on": 118,
+  "words_off": 657,
+  "words_on": 650,
+  "dropped": [],
+  "trimmed": [],
+  "flagged_kept": [],
+  "vad_segments": {
+   "pieces": [
+    [
+     0.0,
+     105.9
+    ],
+    [
+     105.9,
+     164.3
+    ],
+    [
+     164.3,
+     254.3
+    ],
+    [
+     254.3,
+     384.8
+    ],
+    [
+     384.8,
+     389.114
+    ]
+   ],
+   "cuts": [
+    {
+     "t": 105.9,
+     "kind": "pause_long_piece",
+     "pause": [
+      105.2,
+      106.6
+     ],
+     "pause_s": 1.4,
+     "pause_db": -42.3,
+     "in_speech": false
+    },
+    {
+     "t": 164.3,
+     "kind": "pause",
+     "pause": [
+      161.4,
+      167.2
+     ],
+     "pause_s": 5.8,
+     "pause_db": -48.4,
+     "in_speech": false
+    },
+    {
+     "t": 254.3,
+     "kind": "pause",
+     "pause": [
+      253.7,
+      254.9
+     ],
+     "pause_s": 1.2,
+     "pause_db": -40.6,
+     "in_speech": false
+    },
+    {
+     "t": 384.8,
+     "kind": "pause_long_piece",
+     "pause": [
+      384.5,
+      385.1
+     ],
+     "pause_s": 0.6,
+     "pause_db": -57.7,
+     "in_speech": false
+    }
+   ],
+   "word_changes_vs_whole": 52,
+   "words": 650,
+   "diff": [
+    "шоу-рум -> шоурум",
+    "все -> ",
+    "и -> ",
+    "но -> ",
+    "за банный -> забавный",
+    "все -> всех",
+    "но -> ну",
+    " -> то есть",
+    "баню -> бане",
+    "холодильник -> холодильничек",
+    "минералочки зона -> минерал очки зону",
+    "комната -> ",
+    "с -> ",
+    "наверное -> наверно",
+    "точка начала ->  начало",
+    "и -> ",
+    "и во взаимодействии -> ибо в земные действия",
+    "в -> ",
+    "я -> ",
+    "я -> и"
+   ]
+  }
+ },
+ "m_long86": {
+  "duration_s": 86.26,
+  "speech_s": 83.2,
+  "segments_off": 21,
+  "segments_on": 21,
+  "words_off": 186,
+  "words_on": 186,
+  "dropped": [],
+  "trimmed": [],
+  "flagged_kept": [],
+  "vad_segments": {
+   "pieces": [
+    [
+     0.0,
+     86.261
+    ]
+   ],
+   "cuts": [],
+   "word_changes_vs_whole": 0,
+   "words": 186,
+   "diff": []
+  }
+ }
+}
