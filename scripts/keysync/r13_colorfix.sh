@@ -5,7 +5,7 @@
 #   r13_colorfix.sh [tag] (env CF_LAYER / CF_FIX override the flags)
 cd /workspace/dub/keysync; T=${1:-cf}; id=qo3; SRC=/workspace/dub/inputs/test_videos_raw/03.mp4; OUT=/workspace/dub/outbox/r13_ks/colorfix; A=/workspace/dub/artifacts/r4a/r9_${id}_htd/$id
 O=/workspace/dub/keysync/final/${id}_$T; mkdir -p $O $OUT qc/$id; ln -sfn /workspace/dub/keysync/final/$id/ks $O/ks; cp final/$id/raw_sync.json final/$id/src.mediapipe.npz $O/
-KS_CMS=1 KS_TSMOOTH=0 KS_REDO=${CF_REDO-1} KS_FINALDIR=$O KS_OUTDIR=$OUT KS_LAYERARGS="${CF_LAYER:---end-fade 12}" KS_FIXARGS="${CF_FIX:---skin-cm 12 --cm-robust 1 --guard-fade 10}" \
+KS_CMS=1 KS_TSMOOTH=${CF_TS:-0} KS_REDO=${CF_REDO-1} KS_FINALDIR=$O KS_OUTDIR=$OUT KS_LAYERARGS="${CF_LAYER:---end-fade 12}" KS_FIXARGS="${CF_FIX:---skin-cm 12 --cm-robust 1 --guard-fade 10}" \
   bash ks_final.sh $id $SRC old03_$T > $O/final.log 2>&1 || { echo FINAL_FAIL; tail -5 $O/final.log; exit 1; }
 grep -a "==" $O/final.log | cut -c1-200; F=$OUT/old03_${T}_KeySync.mp4; echo "FINAL_READY $F $(stat -c %s $F)"
 meas() {  # <video> <tag>

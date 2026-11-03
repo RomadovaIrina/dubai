@@ -45,15 +45,15 @@ def main():
         g8 = PerTensor()
         if os.environ.get("KS_FP8_BF16") == "1":
             for m in (model, model_kf): m.model.diffusion_model.to(torch.bfloat16)
-            g8 = PerRow()
+            g8 = PerTensor() if os.environ.get("KS_FP8_GRAN") == "tensor" else PerRow()   # sm120 + this torch: no rowwise scaled_mm
         f16 = lambda mod, fqn: isinstance(mod, torch.nn.Linear) and mod.in_features % 16 == 0 and mod.out_features % 16 == 0 and mod.weight.dtype in (torch.float16, torch.bfloat16) and (mod.bias is None or mod.bias.dtype == mod.weight.dtype)   # float8 GEMM: 16-aligned, half bias
         for m in (model, model_kf): print("FP8_LAYERS", sum(1 for n_, mod in m.model.diffusion_model.named_modules() if f16(mod, n_)), "of", sum(1 for mod in m.model.diffusion_model.modules() if isinstance(mod, torch.nn.Linear)), {str(mod.weight.dtype) for mod in m.model.diffusion_model.modules() if isinstance(mod, torch.nn.Linear)}, flush=True)
-        for m in (model, model_kf): quantize_(m.model.diffusion_model, float8_dynamic_activation_float8_weight(granularity=g8), filter_fn=f16)
         if os.environ.get("KS_FP8_BF16") == "1":   # autocast leaves the time embedding / layernorm outputs in fp32 -> PerRow asserts: cast the quantized linears' input to bf16
             _bf = lambda mod, args: (args[0].to(torch.bfloat16),) + tuple(args[1:])
             for m in (model, model_kf):
                 for n_, mod in m.model.diffusion_model.named_modules():
-                    if isinstance(mod, torch.nn.Linear) and type(mod.weight).__name__ != "Parameter" or (isinstance(mod, torch.nn.Linear) and type(mod.weight.data).__name__ != "Tensor"): mod.register_forward_pre_hook(_bf)
+                    if f16(mod, n_): mod.register_forward_pre_hook(_bf)   # the same filter as quantize_ (checked before quantize_ changes the weight dtype)
+        for m in (model, model_kf): quantize_(m.model.diffusion_model, float8_dynamic_activation_float8_weight(granularity=g8), filter_fn=f16)
     if a.compile == "all":   # + the VAE decoders (temporal decoder, one frame per call)
         for m in (model, model_kf): m.first_stage_model.decoder = torch.compile(m.first_stage_model.decoder, mode="max-autotune-no-cudagraphs", dynamic=False)
     if a.compile in ("unet", "all"):
@@ -70,6 +70,14 @@ def main():
         for m in (model, model_kf): m.disable_first_stage_autocast = False
     torch.cuda.synchronize(); load_s = time.perf_counter() - t0
     print(json.dumps({"load_s": round(load_s, 1), "cfg": a.cfg, "decoding_t": a.decoding_t, "compile": a.compile, "vae_half": a.vae_half, "cudnn_bench": a.cudnn_bench, "fp8": a.fp8, "vae_cl": a.vae_cl, "KS_DC": os.environ.get("KS_DC", "")}), flush=True)
+    if os.environ.get("KS_LMK_CACHE"):   # r13 speed lever: landmarks off the critical path (prod: computed during TTS / separation); keyed by the frames' content
+        import hashlib, numpy as _np; _xl = d.extract_video_landmarks; _cd = os.environ["KS_LMK_CACHE"]; os.makedirs(_cd, exist_ok=True)
+        def _lmk(video_frames, landmarks_model):
+            v = video_frames; key = hashlib.md5((str(tuple(v.shape)) + str(v[:: max(1, len(v) // 16)].float().mean().item()) + str(v[-1].float().sum().item())).encode()).hexdigest()
+            f = os.path.join(_cd, key + ".npy")
+            if os.path.exists(f): return _np.load(f, allow_pickle=True)
+            r = _xl(video_frames, landmarks_model); _np.save(f, _np.asarray(r)); return r
+        d.extract_video_landmarks = _lmk
     for n in ("compute_video_embedding", "get_audio_embeddings", "extract_video_landmarks", "sample_keyframes", "sample_interpolation", "save_audio_video"):
         setattr(d, n, timed(n, getattr(d, n)))
     for m, tag in ((model, "interp"), (model_kf, "kf")):
