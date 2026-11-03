@@ -10,7 +10,7 @@ From the local measurements (LANGS.md), **13 of 22 languages need nothing extern
 | translation only | sw | OpenAI chat translation |
 | voice only | da | OpenAI TTS donor + local ChatterboxVC (the user's timbre) |
 | both | he, ar, ko, el, fi | translation + donor voice |
-| odd sentence (proposed) | tr, pl | a sentence still mixed after the local guard → external translation. **Not wired yet**: the per-sentence switch needs a small hook in `polyglot.py` |
+| odd sentence | tr, pl (any language) | a sentence still mixed after the local guard → that sentence goes to the external translation (`polyglot.py`); without a key it is kept and the job is flagged `mixed_language_sentence_kept` |
 
 ## What is ready (code, tested against the mock)
 - `scripts/r13/donor.py`:

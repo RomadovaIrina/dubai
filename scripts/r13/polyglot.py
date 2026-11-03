@@ -89,6 +89,12 @@ def main():
         texts[k], gi = lang_guard.guarded(lambda msgs, temp: llm.create_chat_completion(msgs, max_tokens=400, temperature=temp)["choices"][0]["message"]["content"],
                                           u["text"], L, Ln, first=first)
         if gi["tries"] > 1: print(f"  [polyglot] u{k:02d} {L} guard {gi}", flush=True)
+        if gi.get("final_defects") and os.environ.get("OPENAI_API_KEY"):   # 6.5 per-sentence fallback (tr / pl): still mixed after the local guard -> this sentence external
+            try:
+                texts[k] = DONOR.translate(u["text"], "Russian", Ln, f"Make it about as long, when spoken, as this English version: \"{en}\""); u["mt_engine"] = "openai_sentence_fallback"
+            except D_.DonorUnavailable as e:
+                FLAGS.add("external_mt_unavailable_fallback"); print(f"  [polyglot] u{k:02d} {L} sentence fallback unavailable: {e}", flush=True)
+        elif gi.get("final_defects"): FLAGS.add("mixed_language_sentence_kept")
     del llm
     import torch
     from chatterbox.mtl_tts import ChatterboxMultilingualTTS
