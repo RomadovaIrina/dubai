@@ -48,8 +48,8 @@ def _env(p: dict) -> dict:
     """job params -> the e2e.sh environment (every switch default = the accepted pipeline)"""
     e = {"ID": p["job_id"], "E2E_METRICS": "off", "E2E_FRAME_GATE": "off", "E2E_SYNC": str(p.get("sync", "1")), "DUB_MAX_VOICES": str(p.get("max_voices", 2))}
     tl = p.get("target_lang", "en")
-    if tl != "en": e["DUB_TGT_LANG"] = tl
-    if p.get("polyglot"): e["DUB_POLYGLOT"] = json.dumps(p["polyglot"], ensure_ascii=False)
+    pg = p.get("polyglot") or ({"mode": "all", "lang": tl} if tl != "en" else None)   # non-English target = every sentence re-voiced (scripts/r13/polyglot.py)
+    if pg: e["DUB_POLYGLOT"] = json.dumps(pg, ensure_ascii=False)
     s = p.get("subs") or {}
     if s.get("enabled"):
         e.update(E2E_SUBS="on", E2E_SUBS_LANG=s.get("lang", "dub"), E2E_SUBS_STYLE=s.get("style", "yellow"), E2E_SUBS_KARAOKE="on" if s.get("karaoke", True) else "off")

@@ -93,6 +93,13 @@ SEP_SRC=$AT SEP_PREV=$AT bash scripts/r8/sep_mix.sh $HT htdemucs stems "--bed-pa
 fi
 [ -f $A/$HT/$ID/final_mix_aac.m4a ] || fail htdemucs_mix_failed PARTIAL_SUCCESS "see logs/sep_mix.log: no demucs file"
 
+if [ -n "${DUB_POLYGLOT:-}" ]; then   # r13 8d / non-English target: the units the map assigns another language re-voiced in place on the accepted
+  st polyglot                        # English timing (scripts/r13/polyglot.py), BEFORE the face (the lips follow the new speech); default off
+  if ! python scripts/r13/polyglot.py --run $AD --htd $A/$HT/$ID > $L/polyglot.log 2>&1; then
+    for d in $AD $A/$HT/$ID; do for f in $d/en_*; do [ -f "$f" ] && { b=$(basename $f); rm -f $d/${b#en_}; cp $f $d/${b#en_}; }; done; done
+    fail polyglot_failed PARTIAL_SUCCESS "see logs/polyglot.log: the English dub kept"; fi
+fi
+
 VID=""
 if [ "${E2E_LIPSYNC:-on}" = off ]; then FL+=("lipsync_off_by_request")   # r13 interface: the user asked for a voice-only dub
 elif [[ " $PF " == *" no_face "* ]]; then FL+=("face_skipped_no_face")
@@ -111,7 +118,7 @@ else
   fi
   AUDIO=$A/$AT TAG=$GT SKIP_SCORE=1 VIDEO_EXTRA="--codeformer optimized --codeformer-w 1.0 --steps 10 --steps-silent 20 --codeformer-parse off --codeformer-batch 16 $REFX" \
     bash scripts/r7/r7_e2e.sh $ID > $L/face_gen.log 2>&1
-  [ -n "$SP" ] && wait $SP
+  if [ -n "$SP" ]; then [ -f $B/$GT/work_${ID}_$GT/${ID}_${GT}_25fps.manifest.json ] || kill $SP 2>/dev/null; wait $SP 2>/dev/null; fi   # r13: no generator output -> stop the source prep (it would wait 1 h for the master)
   if [ -f $B/$GT/work_${ID}_$GT/${ID}_${GT}_25fps.manifest.json ]; then
     [ -n "${R10_HEAVY_LOCK:-}" ] && flock -u 8   # r10 worker: the next job's audio + face_gen may start
     if [ -n "${R10_COMP_GATE:-}" ]; then st wait_comp; touch $W/comp_ready; until [ -f $W/comp_go ]; do sleep 1; done; fi   # r10 worker: the composite (~12 GB) starts only once no other job is in its audio stage (~30 GB)
