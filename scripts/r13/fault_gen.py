@@ -35,7 +35,7 @@ if M:
     class FaultyRunner(faa.AccelRunner):
         n = 0
 
-        def __call__(self, *a, **k):
+        def _maybe_fail(self):
             i = FaultyRunner.n; FaultyRunner.n += 1
             if kind == "calls" and i in calls or kind == "p" and RNG.random() < float(arg):
                 print(f"[fault] injected RuntimeError in LatentSync call {i}", flush=True)
@@ -44,7 +44,12 @@ if M:
                 calls.discard(i); import torch
                 print(f"[fault] injected CUDA OOM in LatentSync call {i}", flush=True)
                 raise torch.cuda.OutOfMemoryError(f"[fault] injected OOM in call {i}")
-            return super().__call__(*a, **k)
+
+        def __call__(self, *a, **k):   # the file path (segment files)
+            self._maybe_fail(); return super().__call__(*a, **k)
+
+        def run_frames(self, *a, **k):   # the in-memory path (process_video default)
+            self._maybe_fail(); return super().run_frames(*a, **k)
 
     faa.AccelRunner = FaultyRunner
 target = ROOT / "scripts" / "quality" / "candidate_video_stage.py"

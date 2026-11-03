@@ -182,7 +182,7 @@ def cmd_routes(a):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("cmd", choices=["sents", "mt", "tts", "report", "routes"]); ap.add_argument("--out", required=True)
     ap.add_argument("--langs", default=""); ap.add_argument("--n", type=int, default=24); ap.add_argument("--ref"); ap.add_argument("wavs", nargs="*")
-    a = ap.parse_args(); pathlib.Path(a.out).mkdir(parents=True, exist_ok=True)
+    a = ap.parse_intermixed_args(); pathlib.Path(a.out).mkdir(parents=True, exist_ok=True)
     {"sents": cmd_sents, "mt": cmd_mt, "tts": cmd_tts, "report": cmd_report, "routes": cmd_routes}[a.cmd](a)
 
 

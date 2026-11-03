@@ -26,7 +26,7 @@ def main():
         p = {"input": str(bad if j == "f_bad" else a.input), "out_dir": str(out / j), "job_id": j, "target_lang": "en",
              "debug_env": {"R10_GEN_PY": GEN, **env} if env else {}}
         st = dabai_job.run_job(p)   # never raises: the loop must reach the next job whatever happened
-        gl = next(iter((out / j / "e2e").glob("logs/face_gen.log")), None)
+        gl = next(iter(pathlib.Path("/workspace/dub/artifacts/r4m").glob(f"r9g_{j}/{j}_r9g_{j}.log")), None)   # the generator log (r4_video.sh)
         faults = sum(1 for l in open(gl) if l.startswith("[fault] injected")) if gl and gl.exists() else 0
         gm = (st.get("spec") or {}).get("video_status") or {}
         res[j] = {"status": st["status"], "expected": sorted(want), "ok": st["status"] in want, "flags": st["flags"], "messages": [m["en"] for m in st["messages"]],
