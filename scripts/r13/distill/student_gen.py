@@ -13,6 +13,8 @@ LORA = os.environ["R13_STUDENT_LORA"]; orig = UNet3DConditionModel.from_pretrain
 
 def from_pretrained(cls, *a, **k):
     unet, info = orig(cls, *a, **k)
+    if LORA == "none":   # the control: the same 4-step / no-CFG sampler with the ORIGINAL weights
+        print("[student] control: no LoRA (original weights, 4 steps, no CFG)", flush=True); return unet, info
     d = torch.load(LORA, map_location="cpu"); sd = d["lora"]; merged = 0
     mods = dict(unet.named_modules())
     for name in d["names"]:   # W <- W + B @ A (alpha = rank: scale 1)

@@ -1,0 +1,46 @@
+{
+ "base4_untrained": 0.07269177790731192,
+ "teacher10_cfg2": 0.008316636236850172,
+ "sync_teacher20": 0.8022082850337029,
+ "curve": [
+  {
+   "step": 0,
+   "val_mse_student4": 0.07269177790731192,
+   "val_mse_base4_untrained": 0.07269177790731192,
+   "val_sync_student4": 0.8602613300085068,
+   "val_sync_base4_untrained": 0.8602613300085068,
+   "val_sync_teacher20_cfg2": 0.8022082850337029,
+   "val_mse_teacher10_cfg2": 0.008316636236850172
+  },
+  {
+   "step": 250,
+   "val_mse_student4": 0.06537798549979926,
+   "val_sync_student4": 0.8167142510414124
+  },
+  {
+   "step": 500,
+   "val_mse_student4": 0.060898765176534655,
+   "val_sync_student4": 0.8106874495744705
+  },
+  {
+   "step": 750,
+   "val_mse_student4": 0.057931462116539476,
+   "val_sync_student4": 0.8372277528047561
+  },
+  {
+   "step": 1000,
+   "val_mse_student4": 0.06176053136587143,
+   "val_sync_student4": 0.8048723369836808
+  },
+  {
+   "step": 1250,
+   "val_mse_student4": 0.06686581633985042,
+   "val_sync_student4": 0.8242683857679367
+  },
+  {
+   "step": 1500,
+   "val_mse_student4": 0.07865518555045128,
+   "val_sync_student4": 0.8029796868562699
+  }
+ ]
+}
