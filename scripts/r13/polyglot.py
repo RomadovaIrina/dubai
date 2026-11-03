@@ -75,7 +75,11 @@ def main():
     texts = {}
     for k, u, L in todo:
         en = u.get("translation_fitted") or u.get("translation") or ""; Ln = P.lang_name(L)
-        texts[k] = chat(f"Translate from Russian to {Ln} for dubbing. Make it about as long, when spoken, as this English version: \"{en}\"\nRussian:\n{u['text']}")
+        first = chat(f"Translate from Russian to {Ln} for dubbing. Make it about as long, when spoken, as this English version: \"{en}\"\nRussian:\n{u['text']}")
+        import lang_guard   # r13: the mixed-script retry for every language (LANGS.md: Qwen code-switches on tr / pl / pt / ...)
+        texts[k], gi = lang_guard.guarded(lambda msgs, temp: llm.create_chat_completion(msgs, max_tokens=400, temperature=temp)["choices"][0]["message"]["content"],
+                                          u["text"], L, Ln, first=first)
+        if gi["tries"] > 1: print(f"  [polyglot] u{k:02d} {L} guard {gi}", flush=True)
     del llm
     import torch
     from chatterbox.mtl_tts import ChatterboxMultilingualTTS

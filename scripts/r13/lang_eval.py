@@ -115,12 +115,15 @@ def cmd_mt(a):
         if f.exists(): continue
         L = P.lang_name(lg); rows = []; t0 = time.time()
         for s in sents:
-            tr = chat(m, [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": f"Translate from Russian to {L}:\n{s['ru']}"}])
+            tr = chat(m, [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": f"Translate from Russian to {L}:\n{s['ru']}"}]); gi = None
+            if a.guard == "on":   # r13: the mixed-script retry (scripts/r13/lang_guard.py)
+                import lang_guard
+                tr, gi = lang_guard.guarded(lambda msgs, temp: m.create_chat_completion(msgs, max_tokens=400, temperature=temp)["choices"][0]["message"]["content"], s["ru"], lg, L, first=tr)
             back = chat(m, [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": f"Translate from {L} to Russian:\n{tr}"}])
             j = chat(m, [{"role": "user", "content": JUDGE.format(L=L, S=s["ru"], T=tr)}], 10); nums = [int(x) for x in re.findall(r"[1-5]", j)[:2]]
             sh, cy = script_share(tr, lg)
             rows.append({"ru": s["ru"], "tr": tr, "back": back, "chrf_back": chrf(back, s["ru"]), "script_ok": sh, "cyrillic": cy,
-                         "judge": nums if len(nums) == 2 else None, "preamble": bool(re.match(r"(?i)(here is|translation:|sure|voici|hier ist|aquí)", tr))})
+                         "judge": nums if len(nums) == 2 else None, "guard": gi, "preamble": bool(re.match(r"(?i)(here is|translation:|sure|voici|hier ist|aquí)", tr))})
         pathlib.Path(f).write_text(json.dumps({"lang": lg, "name": L, "s": round(time.time() - t0, 1), "rows": rows}, ensure_ascii=False, indent=1))
         js = [r["judge"] for r in rows if r["judge"]]
         print(f"== mt {lg}: chrF(back) {sum(r['chrf_back'] for r in rows) / len(rows):.1f}  adequacy {sum(x[0] for x in js) / max(1, len(js)):.2f} "
@@ -200,7 +203,7 @@ def cmd_routes(a):
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("cmd", choices=["sents", "mt", "tts", "report", "routes"]); ap.add_argument("--out", required=True)
-    ap.add_argument("--langs", default=""); ap.add_argument("--n", type=int, default=24); ap.add_argument("--ref"); ap.add_argument("wavs", nargs="*")
+    ap.add_argument("--langs", default=""); ap.add_argument("--n", type=int, default=24); ap.add_argument("--ref"); ap.add_argument("--guard", choices=["on", "off"], default="off"); ap.add_argument("wavs", nargs="*")
     a = ap.parse_intermixed_args(); pathlib.Path(a.out).mkdir(parents=True, exist_ok=True)
     {"sents": cmd_sents, "mt": cmd_mt, "tts": cmd_tts, "report": cmd_report, "routes": cmd_routes}[a.cmd](a)
 
