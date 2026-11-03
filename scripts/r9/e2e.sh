@@ -42,13 +42,14 @@ trap 'kill $NV $NM 2>/dev/null' EXIT
 st() { echo -e "$1\t$(date +%s.%N)" >> $T; echo "== $ID stage $1 $(date +%T)" | tee -a $L/e2e.log; }   # stage start; the next st (or 'end') closes it
 fail() { FL+=("$1"); ER+=("$1: ${3:-}"); [ "$2" = ERROR ] && STATUS=ERROR || { [ $STATUS = SUCCESS ] && STATUS=$2; }; echo "== $ID $2: $1 ${3:-}" | tee -a $L/e2e.log; }   # fail <flag> <status> [detail]
 collect() { python scripts/r9/collect.py --id $ID --out $OUT --status $STATUS --flags "${FL[*]:-}" --errors "$(printf '%s\n' "${ER[@]:-}")" --stages $T --nvsmi $W/nvsmi.csv --precheck $W/precheck.json \
-    --audio $A/$AT --htd $A/$HT --face $B/$FT --input "$IN"; }
+    --audio $A/$AT --htd $A/$HT --face $B/$FT --gen $B/$GT --input "$IN"; }
 finish() {
   st end; kill $NV $NM 2>/dev/null; wait $NV $NM 2>/dev/null
   collect 2>&1 | tee -a $L/e2e.log
   [ -s $NVML ] && /venv/main/bin/python scripts/r10/gpu_sampler.py --summary $NVML --stages $T --job $ID \
     --vmin $(python3 -c "import json; print(json.load(open('$OUT/timing.json'))['video_min'] or 1)" 2>/dev/null || echo 1) > $OUT/gpu_time.json 2>> $L/gpu_sampler.log \
     && python3 -c "import json; t = json.load(open('$OUT/gpu_time.json'))['total']; print('== $ID NVML GPU-busy', t.get('gpu_busy_s_per_vmin'), 's/vmin, weighted', t.get('gpu_weighted_s_per_vmin'), ', wall', t.get('wall_s_per_vmin'))" | tee -a $L/e2e.log
+  STATUS=$(python3 -c "import json; print(json.load(open('$OUT/manifest.json'))['status'])" 2>/dev/null || echo $STATUS)   # r13: collect folds in the stage verdicts (11.3 2 % rule)
   echo "R9_E2E_DONE $ID $STATUS" | tee -a $L/e2e.log; exit 0
 }
 

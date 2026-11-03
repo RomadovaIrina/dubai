@@ -492,6 +492,21 @@ def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict
     return meta
 
 
+def voice_policy(units: list[dict], man: dict, max_voices: int) -> None:
+    """spec 6.3: more than max_voices dubbed speakers -> ONE voice (the speaker with the most unit speech) for every unit, flag
+    many_speakers_one_voice for the job status / the user message. max_voices 0 = off. <= max_voices speakers: nothing changes."""
+    by: dict = {}
+    for u in units: by[u["speaker"]] = round(by.get(u["speaker"], 0.0) + (u["end"] - u["start"]), 3)
+    pol = {"max_voices": max_voices, "unit_speakers": len(by), "speech_s": by, "applied": False}
+    if max_voices and len(by) > max_voices:
+        main = max(by, key=by.get)
+        for u in units: u["speaker_diarized"] = u["speaker"]; u["speaker"] = main
+        pol.update(applied=True, voice=main, message=f"{len(by)} speakers detected: dubbed with one voice ({main})")
+        man["result_flags"] = sorted(set(man.get("result_flags", [])) | {"many_speakers_one_voice"})
+        print(f"  [voices] {len(by)} speakers > {max_voices}: one voice = {main} {by}", flush=True)
+    man["voice_policy"] = pol
+
+
 def speaker_references(units: list[dict], turns: list[dict], wav16: pathlib.Path, work: pathlib.Path) -> dict:
     """Per speaker: up to REF_MAX_S seconds of that speaker's own diarized speech, longest turns first, written in
     chronological order as a 16 kHz mono wav. Speakers with < REF_MIN_S s fall back to Chatterbox's built-in voice."""
@@ -973,6 +988,8 @@ def main() -> int:
                     help="optimized backend: mediapipe = clean face stack (scripts/pilot/clean_face_stack.py, Apache-2.0 MediaPipe Face Landmarker in /venv/mediapipe) "
                          "for the router, LatentSync's crop / verify detections and the mouth-mask landmarks; InsightFace / RetinaFace loaders are blocked. "
                          "insightface = previous stack (non-commercial weights, needs DUB_ALLOW_NC=1). Default since 2026-10-16 (CLEAN-ONLY)")
+    ap.add_argument("--max-voices", type=int, default=int(os.environ.get("DUB_MAX_VOICES", "0")), help="spec 6.3: more dubbed speakers than this -> one voice "
+                    "+ result flag many_speakers_one_voice (0 = off; env DUB_MAX_VOICES)")
     ap.add_argument("--max-faces", type=int, default=2, help="spec 8.2: faces tracked per frame; with >= 2 faces only the active speaker's face (diarization <-> mouth motion) is lip-synced")
     ap.add_argument("--pose-precheck", choices=["on", "off"], default="on", help="spec 5.4: > 30 %% of face frames with |yaw| > 30 deg -> voice-only result (no lip-sync), flagged")
     ap.add_argument("--pose-gate-deg", type=float, default=0.0, help="spec 5.5 test: frames with |yaw| above this go to pass-through (held +-3 frames, eased by the crossfade); 0 = off")
@@ -1075,6 +1092,7 @@ def main() -> int:
 
         assign_speakers(units, turns)
         man["diarization"] = {"model": "pyannote/speaker-diarization-3.1", "turns": turns, "speakers": sorted({t["speaker"] for t in turns})}
+        voice_policy(units, man, a.max_voices)   # spec 6.3: > max_voices speakers -> one voice + a result flag (the turns stay for the face binding 8.2)
         print(f"  [diarization] {len(turns)} turns, speakers={man['diarization']['speakers']}", flush=True)
         man["tiny_unit_merge"] = {"enabled": False}
         if a.alignment == "burst" and a.tiny_unit_merge == "on":

@@ -24,7 +24,7 @@ def vinfo(p):
 
 def main():
     ap = argparse.ArgumentParser()
-    for k in ("id", "out", "status", "flags", "errors", "stages", "nvsmi", "precheck", "audio", "htd", "face", "input"): ap.add_argument("--" + k, default="")
+    for k in ("id", "out", "status", "flags", "errors", "stages", "nvsmi", "precheck", "audio", "htd", "face", "gen", "input"): ap.add_argument("--" + k, default="")
     a = ap.parse_args(); out = pathlib.Path(a.out); pc = jl(a.precheck) or {}
     dur = (pc.get("probe") or {}).get("duration_s") or 0.0; vmin = dur / 60 if dur else None
     rows = [l.rstrip("\n").split("\t") for l in open(a.stages) if "\t" in l]
@@ -79,10 +79,22 @@ def main():
               "gpu_busy_s": {k: round(v, 1) for k, v in busy.items()}, "gpu_busy_s_per_video_min": {k: round(v / vmin, 1) for k, v in busy.items()} if vmin else None,
               "gpu_busy_total_s_per_video_min": round(sum(busy.values()) / vmin, 1) if vmin and busy else None,
               "gpu_util_weighted_s_per_video_min": {k: round(v / vmin, 1) for k, v in wbusy.items()} if vmin else None}
-    man = {"id": i_, "input": a.input, "status": a.status, "flags": flags, "errors": [e for e in a.errors.split("\n") if e.strip()], "source": src, "precheck": pc, "outputs": outs, "timing": timing, "metrics": metrics,
+    # r13 spec 5.5 / 6.3 / 11.3: the stage manifests' own verdicts -> the job status + flags (the backend shows them to the user)
+    am = jl(next(iter(sorted(glob.glob(str(ad / i_ / f"{i_}_*.manifest.json")))), "")) or {}
+    gm = jl(next(iter(sorted(glob.glob(str(pathlib.Path(a.gen) / f"work_{i_}_*" / f"{i_}_*_25fps.manifest.json")))), "")) or {} if a.gen else {}
+    status = a.status; vs = gm.get("video_status") or {}
+    for f in (am.get("result_flags") or []) + (vs.get("flags") or []):
+        if f not in flags: flags.append(f)
+    if vs.get("status") == "PARTIAL_SUCCESS" and status == "SUCCESS": status = "PARTIAL_SUCCESS"
+    if vs.get("voice_only") and "no_lipsync_head_pose" not in flags: flags.append("no_lipsync_head_pose")   # spec 5.5: > 30 % of face frames |yaw| > 30 deg
+    if vs.get("degraded_ratio", 0) > 0.02 and "frames_substituted_over_2pct" not in flags: flags.append("frames_substituted_over_2pct")
+    fs = gm.get("face_stack") or {}
+    spec = {"voice_policy": am.get("voice_policy"), "speakers": (am.get("diarization") or {}).get("speakers"),
+            "faces": fs.get("faces"), "pose": fs.get("pose"), "video_status": vs or None}
+    man = {"id": i_, "input": a.input, "status": status, "flags": flags, "spec": spec, "errors": [e for e in a.errors.split("\n") if e.strip()], "source": src, "precheck": pc, "outputs": outs, "timing": timing, "metrics": metrics,
            "commit": subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()}
     (out / "timing.json").write_text(json.dumps(timing, indent=1)); (out / "manifest.json").write_text(json.dumps(man, indent=1, default=str))
-    print(f"== {i_} {a.status} flags {flags}; total {timing['total_wall_s']} s = {timing['total_s_per_video_min']} s/video-min; VRAM peak {peak} MiB; "
+    print(f"== {i_} {status} flags {flags}; total {timing['total_wall_s']} s = {timing['total_s_per_video_min']} s/video-min; VRAM peak {peak} MiB; "
           + "; ".join(f"{k} {v}" for k, v in (timing['s_per_video_min'] or {}).items()) + f"; GPU-busy {timing['gpu_busy_total_s_per_video_min']} s/video-min")
 
 
