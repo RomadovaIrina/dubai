@@ -87,7 +87,7 @@ def pose_from_matrix(M: np.ndarray) -> np.ndarray:
     return out
 
 
-POSE_PRECHECK = {"yaw_deg": 30.0, "max_fraction": 0.30}
+POSE_PRECHECK = {"yaw_deg": float(os.environ.get("DUB_POSE_YAW", "30")), "max_fraction": float(os.environ.get("DUB_POSE_FRAC", "0.30"))}   # spec 5.5 (r13: env override for the branch test only)
 HOLD_GAP_FRAMES = 5   # spec 11: missing landmarks for <= 5 frames (0.2 s) inside a face run -> previous valid frame   # spec 5.4: > 30 % of face frames with |yaw| > 30 deg -> voice-only result, flagged
 
 

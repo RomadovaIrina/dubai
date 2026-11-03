@@ -37,6 +37,10 @@ MESSAGES = {   # flag -> (user message EN, RU); only flags the user should see
     "audio_failed": ("The speech could not be dubbed.", "Не удалось озвучить речь."),
     "no_output": ("The final video could not be assembled.", "Не удалось собрать итоговое видео."),
     "htdemucs_stems_failed": None, "htdemucs_mix_failed": None,
+    "two_faces": ("Two people are on screen: only the active speaker’s lips are synced.", "В кадре два человека: губы синхронизированы только у того, кто говорит."),
+    "donor_unavailable_fallback": ("The external voice service was unavailable: this language was voiced by the built-in engine; quality may be lower.",
+                                   "Внешний сервис озвучки был недоступен: язык озвучен встроенным движком, качество может быть ниже."),
+    "lipsync_off_by_request": None,
 }
 
 
@@ -111,7 +115,7 @@ def run_job(p: dict) -> dict:
                   messages=[{"flag": f, "en": MESSAGES[f][0], "ru": MESSAGES[f][1]} for f in flags if MESSAGES.get(f)],
                   gpu_busy_s=round((man.get("timing", {}).get("gpu_busy_total_s_per_video_min") or 0) * vmin, 1) if vmin else None,
                   wall_s=(man.get("timing") or {}).get("total_wall_s"), spec=man.get("spec"), output_format=(man.get("outputs") or {}).get(bed),
-                  refund_suggested=status != "SUCCESS")
+                  refund_suggested=status != "SUCCESS" or "no_face" in flags)   # spec 5.5: no faces -> refund; 11.4: PARTIAL_SUCCESS -> refund (the backend decides)
     except Exception as ex:   # the interface itself failed: still a status, never an exception for the caller
         st.update(status="ERROR", errors=st["errors"] + [f"{type(ex).__name__}: {ex}", traceback.format_exc()[-1500:]], refund_suggested=True)
     st["finished_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z"); _write(sp, st)
