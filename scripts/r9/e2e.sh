@@ -66,6 +66,12 @@ if [[ " $PF " == *" rotated_source "* ]]; then   # the pipeline reads coded fram
     && { rm -f $DUB_INPUTS/$ID.*; mv $W/upright.mp4 $DUB_INPUTS/$ID.mp4; } || fail upright_failed PARTIAL_SUCCESS "rotation bake failed"
 fi
 SRC=$(ls $DUB_INPUTS/$ID.* | head -1)
+if [[ " $PF " == *" variable_fps "* ]]; then   # r13: a VFR phone clip -> constant rate at its AVERAGE rate (the same frame count, even timing), near-lossless;
+  st cfr                                     # the composite assumes a constant rate (edge suite: VFR 22.5 avg / 30 nominal -> face_comp_failed)
+  AFR=$(ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate -of csv=p=0 "$SRC")
+  ffmpeg -loglevel error -y -i "$SRC" -map 0:v:0 -map 0:a:0 -fps_mode cfr -r "$AFR" -c:v libx264 -preset medium -crf 12 -pix_fmt yuv420p -c:a copy $W/cfr.mp4 \
+    && { rm -f $DUB_INPUTS/$ID.*; mv $W/cfr.mp4 $DUB_INPUTS/$ID.mp4; SRC=$DUB_INPUTS/$ID.mp4; } || fail cfr_failed PARTIAL_SUCCESS "VFR -> constant frame rate failed"
+fi
 
 if [ -n "${R10_HEAVY_LOCK:-}" ]; then st wait_heavy; exec 8>"$R10_HEAVY_LOCK"; flock 8; fi   # r10 worker: audio + sep + face_gen (the heavy GPU stages) hold ONE exclusive lock; the wait is its own stage
 st audio   # one id, from the raw input; its own tag so nothing of another run is reused (the per-id caches $A/sep/<id> are cleared)
@@ -80,7 +86,9 @@ fi
 bash scripts/r8/r8_audio.sh $AT $ID > $L/audio.log 2>&1
 unset R9_ON_MIXSRC
 AD=$A/$AT/$ID
-[ -f $AD/final_mix_aac.m4a ] && [ -f $AD/dubbed_16k.wav ] || { fail audio_failed ERROR "see logs/audio.log"; finish; }
+if ! { [ -f $AD/final_mix_aac.m4a ] && [ -f $AD/dubbed_16k.wav ]; }; then   # r13: a clip with no speech (silence / music only) is its own, clear ERROR
+  if grep -qs "ASR produced no speech units" $A/${AT}pre/runs/$ID.log $L/audio.log; then fail no_speech ERROR "no speech found in the audio: nothing to dub"
+  else fail audio_failed ERROR "see logs/audio.log"; fi; finish; fi
 
 st sep   # htdemucs: stems on the GPU (models loaded once), then the sepH8p remix of the SAME dub on the CPU
 if [ "$OVL" = on ] && timeout 900 bash scripts/r9/sep_overlap.sh wait $W; then :   # the demucs mix was made during the audio stage
@@ -123,8 +131,13 @@ else
       python scripts/quality/r3_master_timing.py --src $SRC --master $WV/master_25fps.mp4 --vf fps=25 --out $TJ && python scripts/quality/r3_source_lm.py --src $SRC --timing $TJ --out $SL \
         && python scripts/r9/r9_source_rigid.py --src $SRC --source-lm $SL ) > $L/srcprep.log 2>&1 & SP=$!
   fi
+  export R13_GPU_DONE_FILE=$W/gen_gpu_done; rm -f $R13_GPU_DONE_FILE   # read by the resident generator only (R10_GEN_EARLY_RELEASE)
   AUDIO=$A/$AT TAG=$GT SKIP_SCORE=1 VIDEO_EXTRA="--codeformer optimized --codeformer-w 1.0 --steps 10 --steps-silent 20 --codeformer-parse off --codeformer-batch 16 $REFX" \
-    bash scripts/r7/r7_e2e.sh $ID > $L/face_gen.log 2>&1
+    bash scripts/r7/r7_e2e.sh $ID > $L/face_gen.log 2>&1 & GENP=$!
+  if [ "${R10_GEN_EARLY_RELEASE:-0}" = 1 ] && [ -n "${R10_HEAVY_LOCK:-}" ]; then   # r13: the resident generator signals the end of its GPU work (scripts/r10/gen_worker.py)
+    while kill -0 $GENP 2>/dev/null; do [ -f $W/gen_gpu_done ] && { flock -u 8; echo "== $ID heavy lock released early: generator GPU done $(date +%T)" | tee -a $L/e2e.log; break; }; sleep 0.5; done
+  fi
+  wait $GENP
   if [ -n "$SP" ]; then [ -f $B/$GT/work_${ID}_$GT/${ID}_${GT}_25fps.manifest.json ] || kill $SP 2>/dev/null; wait $SP 2>/dev/null; fi   # r13: no generator output -> stop the source prep (it would wait 1 h for the master)
   if [ -f $B/$GT/work_${ID}_$GT/${ID}_${GT}_25fps.manifest.json ]; then
     [ -n "${R10_HEAVY_LOCK:-}" ] && flock -u 8   # r10 worker: the next job's audio + face_gen may start

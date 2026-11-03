@@ -65,6 +65,24 @@ def run_job(job, out_log):
     return rc
 
 
+def early_release(pipe, off):
+    """r13 (R10_GEN_EARLY_RELEASE=1, default off): the generator's GPU work of a job ends where process_video() starts its final assembly (CPU:
+    the frames written + muxed). At that call the pipe is parked on the CPU (as after the job) and $R13_GPU_DONE_FILE (set per job by e2e.sh)
+    is touched, so e2e.sh releases the heavy lock and the next job's audio starts during this job's assembly. The computation is unchanged:
+    assemble_frames gets the same arguments; only the parking moves earlier."""
+    import face_aware_latentsync_accel as faa, torch
+    orig = faa.assemble_frames
+    def assemble_frames(*a, **k):
+        f = os.environ.get("R13_GPU_DONE_FILE")
+        if f:
+            if off: pipe.to("cpu")
+            torch.cuda.synchronize(); torch.cuda.empty_cache()
+            print(f"[gen_worker] early release: GPU done, torch allocated {torch.cuda.memory_allocated() / 2**20:.0f} MiB, reserved {torch.cuda.memory_reserved() / 2**20:.0f} MiB", flush=True)
+            pathlib.Path(f).touch()
+        return orig(*a, **k)
+    faa.assemble_frames = assemble_frames
+
+
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--spool", required=True); a = ap.parse_args()
     d = pathlib.Path(a.spool); (d / "jobs").mkdir(parents=True, exist_ok=True); (d / "out").mkdir(exist_ok=True)
@@ -77,6 +95,7 @@ def main():
     import torch
     off = os.environ.get("R10_GEN_OFFLOAD", "1") == "1"   # the pipe parked on the CPU between jobs (in place: the compiled graphs keep their parameters)
     if off: pipe.to("cpu"); torch.cuda.empty_cache()
+    if os.environ.get("R10_GEN_EARLY_RELEASE") == "1": early_release(pipe, off)
     print(f"[gen_worker] up: spool {d}, LS_VAE_COMPILE={os.environ.get('LS_VAE_COMPILE', '')} LS_UNET_COMPILE={os.environ.get('LS_UNET_COMPILE', '')} offload {off}", flush=True)
     n = 0
     while not (d / "stop").exists():

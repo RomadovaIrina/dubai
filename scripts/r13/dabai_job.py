@@ -34,6 +34,7 @@ MESSAGES = {   # flag -> (user message EN, RU); only flags the user should see
                          "Синхронизация губ не удалась: видео озвучено переведённым голосом с исходной картинкой."),
     "subs_failed": ("Subtitles could not be added; the dubbed video is delivered without them.", "Субтитры добавить не удалось; видео отдано без них."),
     "no_usable_input": ("The file has no readable video or no audio track.", "В файле нет читаемого видео или звуковой дорожки."),
+    "no_speech": ("No speech was found in the video (silence or music only): there is nothing to dub.", "В видео не найдено речи (тишина или только музыка): озвучивать нечего."),
     "audio_failed": ("The speech could not be dubbed.", "Не удалось озвучить речь."),
     "no_output": ("The final video could not be assembled.", "Не удалось собрать итоговое видео."),
     "htdemucs_stems_failed": None, "htdemucs_mix_failed": None,
