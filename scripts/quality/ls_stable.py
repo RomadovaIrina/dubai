@@ -428,6 +428,13 @@ def half_rate_fill(src, sub, idx):
             wa = cv2.remap(A, gx + a_ * fba[..., 0], gy + a_ * fba[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
             wb = cv2.remap(Bq, gx + (1 - a_) * fab[..., 0], gy + (1 - a_) * fab[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
             it = (1 - a_) * wa.astype(np.float32) + a_ * wb.astype(np.float32)
+            fm = os.environ.get("LS_RATE_FILL", "blend")   # r13 (user on m03 LS_RATE 2/3: "лицо подергивается и дрожит" = an 8.3 Hz mouth pulse: the blended
+            # fill frame is softer than its generated neighbours): hf = the blend's low frequencies + the nearer warped frame's detail; near = the nearer warped frame alone
+            if fm in ("hf", "near"):
+                wn = (wa if a_ <= 0.5 else wb).astype(np.float32)
+                if fm == "near": it = wn
+                else:
+                    sg = float(os.environ.get("LS_RATE_FILL_SIGMA", "1.5")); it = cv2.GaussianBlur(it, (0, 0), sg) + (wn - cv2.GaussianBlur(wn, (0, 0), sg))
         else: it = A.astype(np.float32)
         mm = cv2.GaussianBlur(cv2.dilate(m[y0:y1, x0:x1].astype(np.uint8), np.ones((9, 9), np.uint8)).astype(np.float32), (0, 0), 4.0)[..., None]
         f = src[k].copy(); f[y0:y1, x0:x1] = np.clip(mm * it + (1 - mm) * f[y0:y1, x0:x1].astype(np.float32), 0, 255).round().astype(np.uint8); out[k] = f
