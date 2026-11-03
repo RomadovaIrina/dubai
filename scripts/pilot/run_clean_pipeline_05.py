@@ -195,7 +195,7 @@ def run_vad(wav16: pathlib.Path) -> list[dict]:
     return [{"start": round(float(t["start"]), 3), "end": round(float(t["end"]), 3)} for t in ts]
 
 
-ASR_OPTS = {"hallu_filter": "on", "hallu_nsp": 0.6, "hallu_cov": 0.5, "segments": "off", "seg_min": 45.0, "seg_max": 90.0, "seg_pause": 0.5, "seg_db": -40.0}   # r7 --asr-*
+ASR_OPTS = {"hallu_filter": "on", "hallu_nsp": 0.6, "hallu_cov": 0.5, "hallu_cr": 2.4, "hallu_lp": -1.0, "hallu_novad": 0.1, "segments": "off", "seg_min": 45.0, "seg_max": 90.0, "seg_pause": 0.5, "seg_db": -40.0}   # r7 --asr-*
 
 
 def run_asr(wav16: pathlib.Path, language: str | None, speech: list[dict] | None = None) -> tuple[list[dict], dict]:
@@ -223,7 +223,7 @@ def run_asr(wav16: pathlib.Path, language: str | None, speech: list[dict] | None
             "audio_duration_s": round(float(info.duration) if len(chunks) == 1 else chunks[-1][1], 3), "compute_type": m.model.compute_type,
             "chunks": {"mode": ASR_OPTS["segments"], "pieces": [[round(a, 3), round(b, 3) if b is not None else None] for a, b in chunks], "cuts": cuts}}
     if ASR_OPTS["hallu_filter"] == "on" and speech is not None:   # r7 spec 6.2
-        out, rep = asr_guard.guard(out, speech, ASR_OPTS["hallu_nsp"], ASR_OPTS["hallu_cov"])
+        out, rep = asr_guard.guard(out, speech, ASR_OPTS["hallu_nsp"], ASR_OPTS["hallu_cov"], ASR_OPTS["hallu_cr"], ASR_OPTS["hallu_lp"], ASR_OPTS["hallu_novad"])
         meta["hallu_filter"] = rep
     free_cuda(m)
     return out, meta
@@ -880,6 +880,9 @@ def main() -> int:
     ap.add_argument("--asr-hallu-filter", choices=["on", "off"], default="on", help="r7 spec 6.2: drop Whisper segments flagged as hallucinated (no_speech_prob > --asr-hallu-nsp, "
                     "stock subtitle / outro phrase, looped phrase) where Silero VAD covers < --asr-hallu-cov of the span (asr_guard.py); report in manifest asr.hallu_filter")
     ap.add_argument("--asr-hallu-nsp", type=float, default=0.6); ap.add_argument("--asr-hallu-cov", type=float, default=0.5)
+    ap.add_argument("--asr-hallu-cr", type=float, default=2.4, help="r13 6.2: compression_ratio above this = looped text (0 = off)")
+    ap.add_argument("--asr-hallu-lp", type=float, default=-1.0, help="r13 6.2: avg_logprob below this = low-confidence text")
+    ap.add_argument("--asr-hallu-novad", type=float, default=0.1, help="r13 6.2: Silero coverage of the span below this = no speech heard (0 = off)")
     ap.add_argument("--asr-compute", choices=["int8_float16", "float16"], default="int8_float16", help="faster-whisper compute type of the source ASR. On the RTX 5090 "
                     "(ctranslate2 4.8.2) int8_float16 loses case / punctuation and some words (05: 'тестим' -> 'с этим'), which moves the sentence segmentation; "
                     "float16 reproduces the r6v1 transcripts (made with int8_float16 on the r6 server)")
@@ -985,7 +988,7 @@ def main() -> int:
     global QWEN_GPU_LAYERS, QWEN_QUANT, VAD_DEVICE
     QWEN_GPU_LAYERS = a.qwen_gpu_layers; QWEN_QUANT = a.qwen_quant
     if a.vad_device: VAD_DEVICE = a.vad_device
-    ASR_OPTS.update(compute=a.asr_compute, hallu_filter=a.asr_hallu_filter, hallu_nsp=a.asr_hallu_nsp, hallu_cov=a.asr_hallu_cov, segments=a.asr_segments, seg_min=a.asr_seg_min,
+    ASR_OPTS.update(compute=a.asr_compute, hallu_filter=a.asr_hallu_filter, hallu_nsp=a.asr_hallu_nsp, hallu_cov=a.asr_hallu_cov, hallu_cr=a.asr_hallu_cr, hallu_lp=a.asr_hallu_lp, hallu_novad=a.asr_hallu_novad, segments=a.asr_segments, seg_min=a.asr_seg_min,
                     seg_max=a.asr_seg_max, seg_pause=a.asr_seg_pause, seg_db=a.asr_seg_db)
     os.environ["DUB_QA_WHISPER_COMPUTE"] = a.qa_whisper_compute
     os.environ["DUB_TTS_TEXT_NORM"] = a.tts_text_norm

@@ -46,14 +46,21 @@ def loops(words: list[dict], min_rep: int = 3, max_n: int = 8) -> set[int]:
     return drop
 
 
-def guard(segments: list[dict], speech: list[dict], nsp: float = 0.6, cov_max: float = 0.5) -> tuple[list[dict], dict]:
-    """segments carry no_speech_prob / avg_logprob / compression_ratio (run_asr). Returns (kept segments, report)."""
-    rep = {"rules": {"no_speech_prob_gt": nsp, "vad_coverage_lt": cov_max, "phrases": len(PHRASES), "loop_min_repeats": 3}, "dropped": [], "trimmed": [], "flagged_kept": []}
+def guard(segments: list[dict], speech: list[dict], nsp: float = 0.6, cov_max: float = 0.5, cr_max: float = 2.4, lp_min: float = -1.0, novad_max: float = 0.1) -> tuple[list[dict], dict]:
+    """segments carry no_speech_prob / avg_logprob / compression_ratio (run_asr). Returns (kept segments, report).
+    r13: + the stock Whisper guards on what survives decoding: compression_ratio > cr_max (a repetitive / looped text) and avg_logprob < lp_min
+    (a low-confidence text); like no_speech they drop only where Silero covers < cov_max of the span. no_vad: Silero hears (almost) no speech in the
+    span (< novad_max): r13 stress test, Whisper wrote "и" into digital silence with no_speech_prob 0.05 / avg_logprob -0.88 (no Whisper score flags it)."""
+    rep = {"rules": {"no_speech_prob_gt": nsp, "vad_coverage_lt": cov_max, "compression_ratio_gt": cr_max, "avg_logprob_lt": lp_min, "no_vad_coverage_lt": novad_max, "phrases": len(PHRASES),
+                     "loop_min_repeats": 3}, "dropped": [], "trimmed": [], "flagged_kept": []}
     out = []
     # a whole segment that repeats the previous kept one word for word (the cross-segment loop) counts as a loop
     for sg in segments:
         cov = coverage(sg["start"], sg["end"], speech); why = []
         if sg.get("no_speech_prob", 0.0) > nsp: why.append("no_speech")
+        if cr_max and sg.get("compression_ratio", 0.0) > cr_max: why.append("compression")
+        if lp_min is not None and sg.get("avg_logprob", 0.0) < lp_min: why.append("low_logprob")
+        if novad_max and cov < novad_max: why.append("no_vad")
         if PHRASE_RE.search(sg["text"]): why.append("phrase")
         if out and sg["text"] and _norm(sg["text"]) == _norm(out[-1]["text"]) and len(sg["text"].split()) >= 1: why.append("repeat_segment")
         rec = {"id": sg["id"], "start": sg["start"], "end": sg["end"], "text": sg["text"], "no_speech_prob": sg.get("no_speech_prob"),
