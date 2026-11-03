@@ -53,6 +53,7 @@ def _env(p: dict) -> dict:
     if w.get("enabled"):
         e.update(E2E_WATERMARK=w.get("image") or f"text:{w.get('text', 'DabAI')}", E2E_WM_CORNER=w.get("corner", "br"), E2E_WM_OPACITY=str(w.get("opacity", 0.6)))
     if p.get("lipsync") == "off": e["E2E_LIPSYNC"] = "off"
+    e.update({k: str(v) for k, v in (p.get("debug_env") or {}).items()})   # tests only (fault injection: R10_GEN_PY / DUB_FAULT)
     return {k: v for k, v in e.items() if v is not None}
 
 

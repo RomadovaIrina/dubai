@@ -94,7 +94,8 @@ fi
 [ -f $A/$HT/$ID/final_mix_aac.m4a ] || fail htdemucs_mix_failed PARTIAL_SUCCESS "see logs/sep_mix.log: no demucs file"
 
 VID=""
-if [[ " $PF " == *" no_face "* ]]; then FL+=("face_skipped_no_face")
+if [ "${E2E_LIPSYNC:-on}" = off ]; then FL+=("lipsync_off_by_request")   # r13 interface: the user asked for a voice-only dub
+elif [[ " $PF " == *" no_face "* ]]; then FL+=("face_skipped_no_face")
 else
   st face_gen
   rm -rf $B/$GT $B/$FT

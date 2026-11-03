@@ -46,13 +46,16 @@ def dub_words(man):
             p0, p1 = pl["placed"]
             for pi in pl.get("phrases", []):
                 if pi >= len(tparts): continue
-                tp = tparts[pi]; a, b = tp["clip_span"]
-                words = tp["text"].split()
+                tp = tparts[pi]; words = tp["text"].split()
                 if not words: continue
-                sp = [s for s in spans if a - 0.02 <= s["start"] < b]
+                # r13: parts re-made by the r8 chain (clause takes / retake) carry only their text: no clip span -> no word spans, the
+                # placement (exact, after the stretch) is split by characters
+                ln = lambda j: (tparts[j]["clip_span"][1] - tparts[j]["clip_span"][0]) if "clip_span" in tparts[j] else len(tparts[j]["text"]) * 0.07
+                a, b = tp["clip_span"] if "clip_span" in tp else (0.0, ln(pi))
+                sp = [s for s in spans if a - 0.02 <= s["start"] < b] if "clip_span" in tp else []
                 if len(pl.get("phrases", [])) > 1:  # several phrases share one placement: split it by clip length
-                    tot = sum(tparts[j]["clip_span"][1] - tparts[j]["clip_span"][0] for j in pl["phrases"])
-                    off = sum(tparts[j]["clip_span"][1] - tparts[j]["clip_span"][0] for j in pl["phrases"] if j < pi)
+                    tot = sum(ln(j) for j in pl["phrases"] if j < len(tparts))
+                    off = sum(ln(j) for j in pl["phrases"] if j < pi)
                     q0 = p0 + (p1 - p0) * off / tot; q1 = q0 + (p1 - p0) * (b - a) / tot
                 else:
                     q0, q1 = p0, p1

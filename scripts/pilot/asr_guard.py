@@ -104,7 +104,7 @@ def vad_chunks(audio: np.ndarray, sr: int, speech: list[dict], min_s: float = 45
         for kind, cand in (("pause", [g for g in inwin(lo, hi_bal) if ok(g)]), ("pause_short_tail", [g for g in inwin(lo, hi) if ok(g)])):
             if cand: pick = (kind, max(cand, key=lambda g: g[1] - g[0])); break
         if not pick:
-            late = [g for g in inwin(hi, D) if ok(g)]
+            late = [g for g in inwin(hi, D) if ok(g) and D - (g[0] + g[1]) / 2 >= min_s]   # r13: no late cut that leaves a tail < min_s (long4: a 4.3 s last piece)
             if late: pick = ("pause_long_piece", min(late))
         if not pick:
             cuts.append({"t": None, "kind": "no_pause", "searched_from": round(lo, 3)}); break
