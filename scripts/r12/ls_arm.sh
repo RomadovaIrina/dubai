@@ -9,7 +9,7 @@ id=$1; arm=$2; VX=${3:-}; shift 3
 cd /workspace/dub/dubai; . scripts/env.sh >/dev/null; export DUB_ROOT=/workspace/dub/dubai DUB_ALLOW_NC=1 METRICS=off DUB_INPUTS=/workspace/dub/r10/runs/$id/work/in R10_JOB=$id$arm
 A=/workspace/dub/artifacts/r4a; B=/workspace/dub/artifacts/r4m; GT=r9g_$id$arm; FT=r9f_$id$arm; O=/workspace/dub/r12/arms; mkdir -p $O
 [ -n "$VX" ] || VX="--codeformer optimized --codeformer-w 1.0 --steps 10 --steps-silent 20 --codeformer-parse off --codeformer-batch 16"
-export GEN_COMP=0 FAST_SRCPREP=0 FAST_FB_BG=1 FAST_ENC=ultrafast FC_EXTRA=--pre-threads=12 LS_VAE_COMPILE=${LS_VAE_COMPILE:-max-autotune-no-cudagraphs} CFD_EXTRA=--threads=12   # the e2e R10_FAST_FACE=1 preset
+export GEN_COMP=0 FAST_SRCPREP=0 FAST_FB_BG=1 FAST_ENC=ultrafast FC_EXTRA="--pre-threads=12 ${FC_EXTRA_ADD:-}" LS_VAE_COMPILE=${LS_VAE_COMPILE:-max-autotune-no-cudagraphs} CFD_EXTRA=--threads=12   # the e2e R10_FAST_FACE=1 preset
 NV=$O/$id$arm.nv.jsonl; ST=$O/$id$arm.stages.tsv; : > $ST; rm -f $NV
 /venv/main/bin/python scripts/r10/gpu_sampler.py --out $NV > /dev/null 2>&1 & SP=$!
 echo -e "face_gen\t$(date +%s.%N)" >> $ST
