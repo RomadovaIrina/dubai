@@ -195,6 +195,8 @@ def main() -> int:
     ap.add_argument("--tex-sigma", type=float, default=1.5); ap.add_argument("--tex-tau", type=float, default=12.0); ap.add_argument("--lip-dilate", type=float, default=0.12)
     ap.add_argument("--silence", choices=["none", "still", "orig"], default="none"); ap.add_argument("--silence-min-s", type=float, default=0.3); ap.add_argument("--silence-ramp", type=int, default=6)
     ap.add_argument("--gaps", default=None, help="residual-gap JSON (temporal_mouth_stabilize.load_gaps; e.g. track C's list); default: computed from the manifest")
+    ap.add_argument("--sharpen-luma", choices=["off", "on"], default="off", help="r13: the layer unsharp mask (--ls-sharpen / --ls-sharpen-lips, incl. "
+                    "--sharpen-auto) on the luma only: a*/b* (lip colour) untouched; off = per BGR channel (r3)")
     ap.add_argument("--sharpen-lips-max", type=float, default=0.0, help="r3 D: cap of the EXTRA lip unsharp amount after --sharpen-auto (the closed loop "
                     "chased the source's open-mouth texture up to 1.6 on 04 and drew a hard pink edge); 0 = no cap")
     ap.add_argument("--sanitize-layer", type=float, default=0.0, help="r3 D (user: 'washed-out pink lips / torn lips'): raw LatentSync frames whose lip-box "
@@ -843,7 +845,10 @@ def main() -> int:
             ex = tms.poly_mask(lm_l[idx] if lm_l is not None else None, roi, a.lip_dilate * mw_, 0.08 * mw_)
             if a.lip_texture == "off": ex = np.maximum(ex, tms.poly_mask(lm_s[idx], roi, a.lip_dilate * mw_, 0.08 * mw_))
         if a.ls_sharpen > 0 or a.ls_sharpen_lips > 0:   # deterministic spatial unsharp mask of the (soft) LatentSync layer
-            det = Lk - cv2.GaussianBlur(Lk, (0, 0), a.ls_sharpen_sigma); amt = np.full(Lk.shape[:2], a.ls_sharpen, np.float32)
+            if a.sharpen_luma == "on":   # r13 (user on k5 + colour + sharpen: "цвета немного поплыли"): the unsharp detail of the LUMA only, added equally to B, G, R
+                gy_ = Lk @ np.array([0.0722, 0.7152, 0.2126], np.float32); det = (gy_ - cv2.GaussianBlur(gy_, (0, 0), a.ls_sharpen_sigma))[..., None]   # BT.709 luma of BGR
+            else: det = Lk - cv2.GaussianBlur(Lk, (0, 0), a.ls_sharpen_sigma)
+            amt = np.full(Lk.shape[:2], a.ls_sharpen, np.float32)
             if a.ls_sharpen_scope == "lips": amt = a.ls_sharpen * ex
             if a.ls_sharpen_lips > 0:
                 lm_l2 = lerp(mp_ls, m) if mp_ls is not None else lerp(mp, m); mw2 = tms.mouth_width(lm_l2)   # LatentSync layer's own lips (its pose)
