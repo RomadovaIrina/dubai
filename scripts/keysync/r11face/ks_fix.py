@@ -9,8 +9,9 @@
   --chin tex|src  below the layer's lower lip down to the jaw line: tex = the layer's low frequencies (shape, shading) + the source's luma detail
                 and chroma; src = the source pixels (mask5-like: the source chin under the KeySync mouth)
     ks_fix.py --layer L.mp4 --master master_25fps.mp4 --box box.json --layer-lm L.mediapipe.npz --src-lm source_lm_F.npz --out OUT.mp4 [flags]"""
-import argparse, json, subprocess
+import argparse, json, os, subprocess, sys
 import numpy as np, cv2
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))); import ks_cms
 
 LIPS_O = [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291, 375, 321, 405, 314, 17, 84, 181, 91, 146]
 INNER = [78, 191, 80, 81, 82, 13, 312, 311, 310, 415, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95]
@@ -22,13 +23,16 @@ ap = argparse.ArgumentParser()
 for k in ["layer", "master", "box", "layer_lm", "src_lm", "out"]: ap.add_argument("--" + k.replace("_", "-"), required=True)
 ap.add_argument("--guard", type=float, default=0); ap.add_argument("--skin-cm", type=int, default=0); ap.add_argument("--lip-chroma", type=float, default=0)
 ap.add_argument("--chin", choices=["off", "tex", "src"], default="off"); ap.add_argument("--chin-sigma", type=float, default=0.05)
-ap.add_argument("--guard-report", default=""); a = ap.parse_args()
+ap.add_argument("--guard-report", default="")
+ap.add_argument("--guard-fade", type=int, default=3, help="r13: guard cross-fade length in frames on each side (3 = the r11 behaviour)")
+ap.add_argument("--cm-robust", type=int, default=0, help="r13: skin-cm gains = running median +-S then mean +-S/2 (a guard / explosion frame does not drag the match)")
+a = ap.parse_args()
 b = json.load(open(a.box)); x0, y0, s = b["x"], b["y"], b["side"]
 pr = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0", a.master], capture_output=True, text=True)
 W, H = [int(v) for v in pr.stdout.strip().split(",")]
 
 def frames(p):
-    r = subprocess.run(["ffmpeg", "-v", "error", "-i", p, "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True, check=True).stdout
+    r = subprocess.run(["ffmpeg", "-v", "error", "-i", p] + ks_cms.dec() + ["-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True, check=True).stdout
     return np.frombuffer(r, np.uint8).reshape(-1, H, W, 3)
 
 M, Lr = frames(a.master), frames(a.layer); n = min(len(M), len(Lr))
@@ -55,9 +59,10 @@ if a.guard > 0:
     bad = (d > a.guard * np.maximum(med, 0.5)) | (eye > 0.08)
     core = np.where(bad)[0]
     for i in core:
-        for k in range(-4, 5):
+        gf = a.guard_fade
+        for k in range(-2 - gf + 1, 2 + gf):
             j = i + k
-            if 0 <= j < n: gw[j] = max(gw[j], 1.0 if abs(k) <= 2 else (1.0 - (abs(k) - 2) / 3))
+            if 0 <= j < n: gw[j] = max(gw[j], 1.0 if abs(k) <= 2 else (1.0 - (abs(k) - 2) / gf))
     if a.guard_report: json.dump({"frames": core.tolist(), "d": d.round(2).tolist(), "eye": eye.round(3).tolist()}, open(a.guard_report, "w"))
     print(f"== guard: {len(core)} frames flagged {core.tolist()[:30]}; median upper-face diff {np.median(d):.2f}", flush=True)
 
@@ -75,7 +80,11 @@ if a.skin_cm > 0 or a.lip_chroma > 0:
             lk = poly(KL[i, LIPS_O]) & ~poly(KL[i, INNER]); ls_ = poly(SL[i, LIPS_O]) & ~poly(SL[i, INNER])
             if lk.sum() > 30 and ls_.sum() > 30:
                 lipd[i] = np.median(Lm[ls_][:, 1:], 0); lipk[i] = np.median(Lk[lk][:, 1:], 0); lip_ok[i] = True
-    if a.skin_cm > 0: cm = np.stack([smooth(st[:, 0], a.skin_cm), smooth(st[:, 1], a.skin_cm)], 1)
+    if a.skin_cm > 0 and a.cm_robust:
+        med = lambda v, r: np.median(np.lib.stride_tricks.sliding_window_view(np.pad(v, ((r, r), (0, 0)), mode="edge"), 2 * r + 1, axis=0), -1)
+        cm = np.stack([smooth(med(st[:, 0], a.skin_cm), max(1, a.skin_cm // 2)), smooth(med(st[:, 1], a.skin_cm), max(1, a.skin_cm // 2))], 1)
+        print(f"== skin-cm robust +-{a.skin_cm}: L gain {cm[:, 0, 0].mean():.3f} [{cm[:, 0, 0].min():.3f}, {cm[:, 0, 0].max():.3f}] L offset {cm[:, 1, 0].mean():+.2f}", flush=True)
+    elif a.skin_cm > 0: cm = np.stack([smooth(st[:, 0], a.skin_cm), smooth(st[:, 1], a.skin_cm)], 1)
     if a.lip_chroma > 0:
         idx = np.where(lip_ok)[0]
         lipd = lipd - (lipk * cm[:, 0, 1:] + cm[:, 1, 1:])                          # source lip chroma - the layer's AFTER the skin colour match
@@ -85,7 +94,7 @@ if a.skin_cm > 0 or a.lip_chroma > 0:
 
 # ---- write
 w = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "25", "-i", "-", "-c:v", "libx264", "-crf", "10",
-                      "-preset", "medium", "-pix_fmt", "yuv420p", a.out], stdin=subprocess.PIPE)
+                      "-preset", "medium"] + ks_cms.enc() + [a.out], stdin=subprocess.PIPE)
 for i in range(len(Lr)):
     f = Lr[i].copy()
     if i < n:

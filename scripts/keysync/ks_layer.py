@@ -4,12 +4,13 @@ composite (r7_m7_comp.sh): the crop is scaled back to its box and placed into th
   --shift 1 : KeySync frame i is shown at master frame i+1 (its output leads the audio by one 25 fps frame: SyncNet best offset -1 -> 0)
   --cm S    : colour match of the box to the master box, Lab mean / std per channel, the gains smoothed over +-S frames (0 = off)
     ks_layer.py --ks KS.mp4 --master master_25fps.mp4 --box box.json --out LAYER.mp4 [--shift 1 --cm 12]"""
-import argparse, json, subprocess, numpy as np, cv2
+import argparse, json, subprocess, numpy as np, cv2, ks_cms
 ap = argparse.ArgumentParser(); ap.add_argument("--ks", required=True); ap.add_argument("--master", required=True); ap.add_argument("--box", required=True)
-ap.add_argument("--out", required=True); ap.add_argument("--shift", type=int, default=1); ap.add_argument("--cm", type=int, default=12); a = ap.parse_args()
+ap.add_argument("--out", required=True); ap.add_argument("--shift", type=int, default=1); ap.add_argument("--cm", type=int, default=12)
+ap.add_argument("--end-fade", type=int, default=0, help="cross-fade KeySync -> master over N frames before KeySync's output ends (it is a few frames short)"); a = ap.parse_args()
 b = json.load(open(a.box)); x, y, s = b["x"], b["y"], b["side"]
 def frames(p, w, h, vf=None):
-    c = ["ffmpeg", "-v", "error", "-i", p] + (["-vf", vf] if vf else []) + ["-f", "rawvideo", "-pix_fmt", "bgr24", "-"]
+    c = ["ffmpeg", "-v", "error", "-i", p] + ks_cms.dec(vf) + ["-f", "rawvideo", "-pix_fmt", "bgr24", "-"]
     r = subprocess.run(c, capture_output=True, check=True).stdout; return np.frombuffer(r, np.uint8).reshape(-1, h, w, 3)
 pr = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0", a.master], capture_output=True, text=True).stdout.strip().split(",")
 W, H = int(pr[0]), int(pr[1])
@@ -26,12 +27,15 @@ if a.cm > 0:   # per-frame gains: master box stats / KeySync box stats, smoothed
     st = np.array(st); k = np.ones(2 * a.cm + 1) / (2 * a.cm + 1)
     for j in range(2):
         for c in range(3): g[:, j, c] = np.convolve(np.pad(st[:, j, c], a.cm, mode="edge"), k, mode="valid")
-w = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "25", "-i", "-", "-c:v", "libx264", "-crf", "10", "-preset", "medium", "-pix_fmt", "yuv420p", a.out], stdin=subprocess.PIPE)
+w = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "25", "-i", "-", "-c:v", "libx264", "-crf", "10", "-preset", "medium"] + ks_cms.enc() + [a.out], stdin=subprocess.PIPE)
 for i in range(n):
     f = M[i].copy()
     if valid[i]:
         kk = K[idx[i]]
         if a.cm > 0: kk = cv2.cvtColor(np.clip(lab(kk) * g[i, 0] + g[i, 1], 0, 255).astype(np.uint8), cv2.COLOR_LAB2BGR)
+        lv = int(valid.sum()) - 1                                                    # the last frame with KeySync content
+        if a.end_fade > 0 and lv < n - 1 and i > lv - a.end_fade:
+            e = (lv - i + 1) / (a.end_fade + 1); kk = np.clip(kk.astype(np.float32) * e + M[i][y:y + s, x:x + s].astype(np.float32) * (1 - e) + 0.5, 0, 255).astype(np.uint8)
         f[y:y + s, x:x + s] = kk
     w.stdin.write(f.tobytes())
 w.stdin.close(); w.wait()

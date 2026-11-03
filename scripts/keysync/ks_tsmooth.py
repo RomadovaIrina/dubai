@@ -7,13 +7,13 @@ For frame t: Farneback flow t->t-1 (F-) and t->t+1 (F+) inside the lower face; d
 (--src-lm: landmarks of the 25 fps master, same frames) in a --win frame window centred on t (spike = ks_lag.py's: jerk > 4 x the source median),
 gaussian-smoothed; so only the stretches where KeySync jitters more than the source get smoothed, the rest stays untouched.
     ks_tsmooth.py --layer L.mp4 --lm L.mediapipe.npz --out OUT.mp4 [--alpha 0.7 | --alpha auto --src-lm MASTER.mediapipe.npz] [--passes 1]"""
-import argparse, json, subprocess, numpy as np, cv2
+import argparse, json, subprocess, numpy as np, cv2, ks_cms
 ap = argparse.ArgumentParser(); ap.add_argument("--layer"); ap.add_argument("--lm"); ap.add_argument("--out"); ap.add_argument("--alpha", default="0.7")
 ap.add_argument("--passes", type=int, default=1); ap.add_argument("--src-lm"); ap.add_argument("--amax", type=float, default=0.8)
 ap.add_argument("--win", type=int, default=25); ap.add_argument("--ramp", type=float, default=0.1); a = ap.parse_args()
 pr = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0", a.layer], capture_output=True, text=True).stdout.strip().split(",")
 W, H = int(pr[0]), int(pr[1])
-F = np.frombuffer(subprocess.run(["ffmpeg", "-v", "error", "-i", a.layer, "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True, check=True).stdout, np.uint8).reshape(-1, H, W, 3).copy()
+F = np.frombuffer(subprocess.run(["ffmpeg", "-v", "error", "-i", a.layer] + ks_cms.dec() + ["-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True, check=True).stdout, np.uint8).reshape(-1, H, W, 3).copy()
 d = np.load(a.lm); lm = d["lm"][..., :2].astype(np.float32)
 if lm.max() < 2: lm = lm * np.array([W, H], np.float32)
 n = min(len(F), len(lm))
@@ -48,5 +48,5 @@ for _ in range(a.passes):
         w = cv2.remap(F[t][y0:y1, x0:x1], xx - dd[..., 0], yy - dd[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
         mm = m[y0:y1, x0:x1, None]; out[t][y0:y1, x0:x1] = (F[t][y0:y1, x0:x1] * (1 - mm) + w * mm + 0.5).astype(np.uint8)
     F = out
-p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "25", "-i", "-", "-c:v", "libx264", "-crf", "10", "-pix_fmt", "yuv420p", a.out], stdin=subprocess.PIPE)
+p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "25", "-i", "-", "-c:v", "libx264", "-crf", "10"] + ks_cms.enc() + [a.out], stdin=subprocess.PIPE)
 p.stdin.write(F.tobytes()); p.stdin.close(); p.wait(); print(f"== ks_tsmooth {n} frames alpha {a.alpha} (mean {AL.mean():.3f}) passes {a.passes} -> {a.out}")
