@@ -27,5 +27,5 @@ def from_pretrained(cls, *a, **k):
 
 UNet3DConditionModel.from_pretrained = classmethod(from_pretrained)
 target = ROOT / "scripts" / "quality" / "candidate_video_stage.py"
-sys.argv[0] = str(target); sys.argv += ["--steps", "4", "--steps-silent", "4", "--guidance", "1.0", "--no-deepcache", "--bridge-steps", "1"]
+sys.argv[0] = str(target); N = os.environ.get("R13_STUDENT_STEPS", "4"); sys.argv += ["--steps", N, "--steps-silent", N, "--guidance", "1.0", "--no-deepcache", "--bridge-steps", "1"]
 runpy.run_path(str(target), run_name="__main__")
