@@ -1,0 +1,308 @@
+[
+ {
+  "id": "base_old03",
+  "vmin": 1.5056,
+  "audio_sep_wall_s": 124.1,
+  "gpu_busy_s": 62.9,
+  "fg": {
+   "other (start / loads outside a stage / bash / CPU chain)": {
+    "wall": 19.9,
+    "busy": 2.8
+   },
+   "pipe:audio_extract": {
+    "wall": 0.1,
+    "busy": 0.0
+   },
+   "pipe:vad": {
+    "wall": 0.7,
+    "busy": 0.0
+   },
+   "pipe:asr": {
+    "wall": 5.8,
+    "busy": 1.5
+   },
+   "pipe:diarization": {
+    "wall": 2.7,
+    "busy": 0.4
+   },
+   "pipe:translation_load": {
+    "wall": 1.6,
+    "busy": 0.4
+   },
+   "qwen": {
+    "wall": 23.4,
+    "busy": 20.5
+   },
+   "t3": {
+    "wall": 12.8,
+    "busy": 9.1
+   },
+   "s3gen": {
+    "wall": 13.9,
+    "busy": 10.7
+   },
+   "qa": {
+    "wall": 21.4,
+    "busy": 13.9
+   },
+   "tts_sequential": {
+    "wall": 1.5,
+    "busy": 0.8
+   },
+   "pipe:alignment": {
+    "wall": 0.6,
+    "busy": 0.0
+   },
+   "pipe:dubbed_track": {
+    "wall": 0.8,
+    "busy": 0.0
+   },
+   "pipe:background_sep": {
+    "wall": 0.5,
+    "busy": 0.0
+   },
+   "pipe:background_mix": {
+    "wall": 3.3,
+    "busy": 0.1
+   },
+   "stage": {
+    "wall": 1.3,
+    "busy": 1.0
+   },
+   "chain:close_inner": {
+    "wall": 0.1,
+    "busy": 0.1
+   },
+   "chain:soften_edges": {
+    "wall": 0.2,
+    "busy": 0.1
+   },
+   "chain:lip_place": {
+    "wall": 0.6,
+    "busy": 0.1
+   },
+   "chain:lip_whisper": {
+    "wall": 2.5,
+    "busy": 1.3
+   },
+   "chain:hush_placed": {
+    "wall": 0.1,
+    "busy": 0.1
+   },
+   "chain:r3_remix": {
+    "wall": 10.3,
+    "busy": 0.1
+   }
+  },
+  "bg": {
+   "bg:sep_stems": {
+    "wall": 4.3,
+    "busy_shared": 0.8
+   },
+   "bg:mediapipe": {
+    "wall": 40.9,
+    "busy_shared": 17.3
+   },
+   "bg:sep_remix": {
+    "wall": 15.1,
+    "busy_shared": 0.1
+   }
+  }
+ },
+ {
+  "id": "base_m03",
+  "vmin": 0.675,
+  "audio_sep_wall_s": 72.0,
+  "gpu_busy_s": 31.5,
+  "fg": {
+   "other (start / loads outside a stage / bash / CPU chain)": {
+    "wall": 17.0,
+    "busy": 2.2
+   },
+   "pipe:audio_extract": {
+    "wall": 0.1,
+    "busy": 0.0
+   },
+   "pipe:vad": {
+    "wall": 0.3,
+    "busy": 0.0
+   },
+   "pipe:asr": {
+    "wall": 5.1,
+    "busy": 1.0
+   },
+   "pipe:diarization": {
+    "wall": 2.4,
+    "busy": 0.3
+   },
+   "pipe:translation_load": {
+    "wall": 1.7,
+    "busy": 0.6
+   },
+   "qwen": {
+    "wall": 14.9,
+    "busy": 12.6
+   },
+   "t3": {
+    "wall": 6.5,
+    "busy": 4.4
+   },
+   "s3gen": {
+    "wall": 5.4,
+    "busy": 3.7
+   },
+   "qa": {
+    "wall": 8.8,
+    "busy": 5.3
+   },
+   "pipe:alignment": {
+    "wall": 0.2,
+    "busy": 0.0
+   },
+   "pipe:dubbed_track": {
+    "wall": 0.5,
+    "busy": 0.0
+   },
+   "pipe:background_sep": {
+    "wall": 0.3,
+    "busy": 0.0
+   },
+   "pipe:background_mix": {
+    "wall": 1.5,
+    "busy": 0.1
+   },
+   "stage": {
+    "wall": 0.7,
+    "busy": 0.5
+   },
+   "chain:soften_edges": {
+    "wall": 0.2,
+    "busy": 0.1
+   },
+   "chain:lip_place": {
+    "wall": 0.2,
+    "busy": 0.1
+   },
+   "chain:lip_whisper": {
+    "wall": 1.5,
+    "busy": 0.6
+   },
+   "chain:r3_remix": {
+    "wall": 4.8,
+    "busy": 0.1
+   }
+  },
+  "bg": {
+   "bg:sep_stems": {
+    "wall": 4.0,
+    "busy_shared": 0.7
+   },
+   "bg:mediapipe": {
+    "wall": 19.8,
+    "busy_shared": 6.4
+   },
+   "bg:sep_remix": {
+    "wall": 8.0,
+    "busy_shared": 0.3
+   }
+  }
+ },
+ {
+  "id": "base_m18",
+  "vmin": 0.3342,
+  "audio_sep_wall_s": 48.0,
+  "gpu_busy_s": 15.3,
+  "fg": {
+   "other (start / loads outside a stage / bash / CPU chain)": {
+    "wall": 16.6,
+    "busy": 1.6
+   },
+   "pipe:audio_extract": {
+    "wall": 0.1,
+    "busy": 0.0
+   },
+   "pipe:vad": {
+    "wall": 0.2,
+    "busy": 0.0
+   },
+   "pipe:asr": {
+    "wall": 4.1,
+    "busy": 0.4
+   },
+   "pipe:diarization": {
+    "wall": 1.6,
+    "busy": 0.3
+   },
+   "pipe:translation_load": {
+    "wall": 2.1,
+    "busy": 0.2
+   },
+   "qwen": {
+    "wall": 7.3,
+    "busy": 6.0
+   },
+   "pipe:segmentation": {
+    "wall": 0.1,
+    "busy": 0.1
+   },
+   "t3": {
+    "wall": 4.8,
+    "busy": 2.4
+   },
+   "s3gen": {
+    "wall": 2.5,
+    "busy": 2.2
+   },
+   "qa": {
+    "wall": 3.0,
+    "busy": 1.6
+   },
+   "pipe:alignment": {
+    "wall": 0.2,
+    "busy": 0.0
+   },
+   "pipe:dubbed_track": {
+    "wall": 0.2,
+    "busy": 0.0
+   },
+   "pipe:background_sep": {
+    "wall": 0.3,
+    "busy": 0.0
+   },
+   "pipe:background_mix": {
+    "wall": 0.8,
+    "busy": 0.0
+   },
+   "chain:soften_edges": {
+    "wall": 0.2,
+    "busy": 0.2
+   },
+   "chain:lip_place": {
+    "wall": 0.1,
+    "busy": 0.1
+   },
+   "chain:lip_whisper": {
+    "wall": 0.8,
+    "busy": 0.2
+   },
+   "chain:r3_remix": {
+    "wall": 2.9,
+    "busy": 0.1
+   }
+  },
+  "bg": {
+   "bg:sep_stems": {
+    "wall": 3.5,
+    "busy_shared": 0.4
+   },
+   "bg:mediapipe": {
+    "wall": 8.5,
+    "busy_shared": 1.0
+   },
+   "bg:sep_remix": {
+    "wall": 4.7,
+    "busy_shared": 0.1
+   }
+  }
+ }
+]

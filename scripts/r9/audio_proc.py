@@ -68,6 +68,9 @@ def setup():
     if _SETUP["done"]: return rp
     keep = KEEP
     if os.environ.get("R9_TIMELINE"): _timeline_hooks(rp)
+    if os.environ.get("R13_S3_COMPILE") == "1":   # r13 0.5 lever (default off): torch.compile of the S3Gen CFM estimator (the U-Net run 10 x 2 rows per take)
+        import torch, chatterbox.models.s3gen.decoder as _D
+        _D.ConditionalDecoder.forward = torch.compile(_D.ConditionalDecoder.forward, dynamic=True)
     _load = rp.load_llm
     def load_llm(times):   # one Qwen per process; the pipeline's own close() at its end is a no-op (the stage reuses it)
         if "llm" not in keep:

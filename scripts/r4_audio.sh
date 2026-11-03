@@ -16,7 +16,7 @@ one() {
   id=$1; src=$(ls ${DUB_INPUTS:-/workspace/dub/inputs/test_videos_raw}/$id.* | head -1); s=$(date +%s); t_start=$(date +%s.%N)
   if [ -n "${REUSE:-}" ]; then W=$(readlink -f $A/$REUSE/mix_src/$id); else
     python ${R9_PIPE_PY:-scripts/pilot/run_clean_pipeline_05.py} --input $src --output $O/runs/${id}_r4a.mp4 --target-lang ${DUB_TGT_LANG:-en} --alignment burst \
-      --stop-after audio --codeformer off --face-stack mediapipe --audio-policy r2 --qwen-gpu-layers -1 --tts-text-norm on --qa-whisper-compute int8_float16 \
+      --stop-after audio --codeformer off --face-stack mediapipe --audio-policy r2 --qwen-gpu-layers -1 --tts-text-norm on --qa-whisper-compute ${DUB_QA_COMPUTE:-int8_float16} \
       ${AUDIO_EXTRA:-} --work-dir $O/runs/$id > $O/runs/${id}.log 2>&1 || { echo "FAIL audio $id"; return; }
     W=$O/runs/$id/work_$(basename ${src%.*}); cp $O/runs/${id}_r4a.manifest.json $W/${id}_r4a.manifest.json
   fi

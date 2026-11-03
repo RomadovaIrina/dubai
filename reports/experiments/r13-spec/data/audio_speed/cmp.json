@@ -1,0 +1,106 @@
+{
+ "old03/s3c": {
+  "asr_same": true,
+  "translations_differ": 1,
+  "placed_texts_same": false,
+  "dub_bit_identical": false,
+  "dub_len_s": [
+   90.33,
+   90.33
+  ],
+  "dub_diff_snr_db": -2.6,
+  "mix_diff_snr_db": -2.5,
+  "mix_htd_diff_snr_db": -2.5
+ },
+ "old03/qa1": {
+  "asr_same": true,
+  "translations_differ": 0,
+  "placed_texts_same": true,
+  "dub_bit_identical": true,
+  "dub_len_s": [
+   90.33,
+   90.33
+  ],
+  "dub_diff_snr_db": 241.7,
+  "mix_diff_snr_db": 119.8,
+  "mix_htd_diff_snr_db": 33.4
+ },
+ "m03/base": {
+  "asr_same": true,
+  "translations_differ": 0,
+  "placed_texts_same": true,
+  "dub_bit_identical": true,
+  "dub_len_s": [
+   40.5,
+   40.5
+  ],
+  "dub_diff_snr_db": 233.7,
+  "mix_diff_snr_db": 118.9,
+  "mix_htd_diff_snr_db": 34.5
+ },
+ "m03/s3c": {
+  "asr_same": true,
+  "translations_differ": 0,
+  "placed_texts_same": true,
+  "dub_bit_identical": false,
+  "dub_len_s": [
+   40.5,
+   40.5
+  ],
+  "dub_diff_snr_db": 6.6,
+  "mix_diff_snr_db": 6.6,
+  "mix_htd_diff_snr_db": 6.6
+ },
+ "m03/qa1": {
+  "asr_same": true,
+  "translations_differ": 0,
+  "placed_texts_same": true,
+  "dub_bit_identical": true,
+  "dub_len_s": [
+   40.5,
+   40.5
+  ],
+  "dub_diff_snr_db": 233.7,
+  "mix_diff_snr_db": 120.1,
+  "mix_htd_diff_snr_db": 30.5
+ },
+ "m18/base": {
+  "asr_same": true,
+  "translations_differ": 0,
+  "placed_texts_same": true,
+  "dub_bit_identical": true,
+  "dub_len_s": [
+   20.05,
+   20.05
+  ],
+  "dub_diff_snr_db": 229.3,
+  "mix_diff_snr_db": 120.4,
+  "mix_htd_diff_snr_db": 46.9
+ },
+ "m18/s3c": {
+  "asr_same": true,
+  "translations_differ": 0,
+  "placed_texts_same": true,
+  "dub_bit_identical": false,
+  "dub_len_s": [
+   20.05,
+   20.05
+  ],
+  "dub_diff_snr_db": -3.5,
+  "mix_diff_snr_db": -3.0,
+  "mix_htd_diff_snr_db": -3.0
+ },
+ "m18/qa1": {
+  "asr_same": true,
+  "translations_differ": 0,
+  "placed_texts_same": true,
+  "dub_bit_identical": true,
+  "dub_len_s": [
+   20.05,
+   20.05
+  ],
+  "dub_diff_snr_db": 229.3,
+  "mix_diff_snr_db": 120.9,
+  "mix_htd_diff_snr_db": 46.7
+ }
+}
