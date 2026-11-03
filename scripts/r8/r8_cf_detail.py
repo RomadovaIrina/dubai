@@ -12,6 +12,7 @@ The low frequencies (mouth shape, opening, motion = what SyncNet and the mismatc
 from __future__ import annotations
 import argparse, json, pathlib, sys, time
 import numpy as np, cv2
+_LRGB = __import__("os").environ.get("LS_LAYER_RGB", "0") == "1"  # r13 LS_LAYER_RGB=1: lossless RGB layer (each yuv420p round trip lost ~0.7 L / +0.4 b*)
 cv2.setNumThreads(4)
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from r8_mouth_flicker import LIPS_OUTER, LIPS_INNER
@@ -87,7 +88,7 @@ def main():
             add = (a.alpha * acc / wsum + a.beta * lf) * m[..., None] * (float(FW[k]) if FW is not None else 1.0)
             img = img.copy(); img[y0:y1, x0:x1] = np.clip(img[y0:y1, x0:x1].astype(np.float32) + add, 0, 255).round().astype(np.uint8)
         return img
-    o = av.open(a.out, "w"); st = o.add_stream("libx264", rate=rate); st.width, st.height = W, H; st.pix_fmt = "yuv420p"; st.options = {"crf": str(a.crf), "preset": a.preset}
+    o = av.open(a.out, "w"); st = o.add_stream("libx264rgb" if _LRGB else "libx264", rate=rate); st.width, st.height = W, H; st.pix_fmt = "bgr24" if _LRGB else "yuv420p"; st.options = ({"qp": "0", "preset": a.preset} if _LRGB else {"crf": str(a.crf), "preset": a.preset})
     with cf.ThreadPoolExecutor(max_workers=max(1, a.threads)) as ex:
         for k, r_ in enumerate(ex.map(first, range(n))):
             if r_ is not None: boxes[k], det[k] = r_[0], r_[1]; outside.append(r_[2])
