@@ -11,7 +11,7 @@ Timing source (9.1/9.2):
   python scripts/r7/r7_subs.py ass  --manifest M --lang dub --style karaoke_yellow --out x.ass
   python scripts/r7/r7_subs.py burn --video in.mp4 --manifest M [--lang dub] [--style S] [--watermark wm.png --wm-corner br --wm-opacity 0.6] --out out.mp4
 """
-import argparse, json, os, re, subprocess, sys
+import argparse, json, os, pathlib, re, subprocess, sys
 
 THREADS = os.environ.get("SUBS_THREADS", "4")
 # ASS colours are &HAABBGGRR. Primary = sung/highlighted colour for \kf, Secondary = not yet sung.
@@ -37,38 +37,65 @@ def _norm(w):
     return re.sub(r"[^\w']", "", w.lower())
 
 
-def dub_words(man):
-    """[(word_text, start, end)] on the final timeline."""
-    out = []
+def _ctc_words(words, spans, t0):
+    """display words <- CTC spans of their normalised tokens (tts_qa.norm may split / drop tokens: '28th,' -> twenty eighth)"""
+    from tts_qa import norm
+    out, k = [], 0
+    for w in words:
+        n = len(norm(w))
+        if n == 0:   # punctuation only: zero length at the previous end
+            t = out[-1][2] if out else t0 + spans[0]["start"]; out.append((w, t, t)); continue
+        if k + n > len(spans): return None
+        out.append((w, t0 + spans[k]["start"], t0 + spans[k + n - 1]["end"])); k += n
+    return out if k == len(spans) else None
+
+
+def dub_words(man, audio=None, sr=16000, aligner=None, stats=None):
+    """[(word_text, start, end)] on the final timeline (9.1 / 9.2). Per placement: its own text (placements[].text, what the r8 chain really
+    placed) on its placed interval (exact: after the fit / atempo / burst align / lip placement); inside it, the words come from a CTC forced
+    alignment of that text on the final dub track (wav2vec2-base-960h, English) when `aligner` is given, else the interval is split by
+    characters. r13: the r7 mapping through tts_parts[phrases] + clip spans is wrong after the r8 burst align (it re-splits the phrases:
+    old03 u4 placement 0 = 18 words, tts_parts[0] = 7 words -> subtitles up to 7 s late)."""
+    out = []; st = stats if stats is not None else {}
     for u in man["units"]:
-        al = u.get("alignment") or {}; tparts = u.get("tts_parts") or []; spans = (u.get("tts") or {}).get("word_spans") or []
+        al = u.get("alignment") or {}; tparts = u.get("tts_parts") or []
         for pl in al.get("placements", []):
+            if not pl.get("placed"): continue
             p0, p1 = pl["placed"]
-            for pi in pl.get("phrases", []):
-                if pi >= len(tparts): continue
-                tp = tparts[pi]; words = tp["text"].split()
-                if not words: continue
-                # r13: parts re-made by the r8 chain (clause takes / retake) carry only their text: no clip span -> no word spans, the
-                # placement (exact, after the stretch) is split by characters
-                ln = lambda j: (tparts[j]["clip_span"][1] - tparts[j]["clip_span"][0]) if "clip_span" in tparts[j] else len(tparts[j]["text"]) * 0.07
-                a, b = tp["clip_span"] if "clip_span" in tp else (0.0, ln(pi))
-                sp = [s for s in spans if a - 0.02 <= s["start"] < b] if "clip_span" in tp else []
-                if len(pl.get("phrases", [])) > 1:  # several phrases share one placement: split it by clip length
-                    tot = sum(ln(j) for j in pl["phrases"] if j < len(tparts))
-                    off = sum(ln(j) for j in pl["phrases"] if j < pi)
-                    q0 = p0 + (p1 - p0) * off / tot; q1 = q0 + (p1 - p0) * (b - a) / tot
-                else:
-                    q0, q1 = p0, p1
-                k = (q1 - q0) / max(b - a, 1e-3)
-                if len(sp) == len(words):
-                    for w, s in zip(words, sp):
-                        out.append((w, q0 + (s["start"] - a) * k, q0 + (min(s["end"], b) - a) * k))
-                else:  # proportional split by characters
-                    tot = sum(len(w) + 1 for w in words); t = q0
-                    for w in words:
-                        d = (q1 - q0) * (len(w) + 1) / tot; out.append((w, t, t + d)); t += d
+            text = pl.get("text") or " ".join(tparts[j]["text"] for j in pl.get("phrases", []) if j < len(tparts))
+            words = text.split()
+            if not words: continue
+            got = None
+            if aligner is not None and audio is not None:
+                a0 = max(0.0, p0 - 0.25); seg = audio[int(a0 * sr):int((p1 + 0.25) * sr)]
+                sp = aligner.align(seg, sr, text) if len(seg) > sr // 5 else None
+                got = _ctc_words(words, sp, a0) if sp else None
+            if got is None:
+                tot = sum(len(w) + 1 for w in words); t = p0; got = []
+                for w in words:
+                    d = (p1 - p0) * (len(w) + 1) / tot; got.append((w, t, t + d)); t += d
+                st["chars"] = st.get("chars", 0) + 1
+            else:
+                st["ctc"] = st.get("ctc", 0) + 1
+            out += got
     out.sort(key=lambda x: x[1])
     return out
+
+
+def dub_aligner(man, manifest_path, dub_audio=None, mode="auto"):
+    """(audio16k, aligner) for the CTC word timing, or (None, None): English dub only (wav2vec2-base-960h is English), CPU (no GPU lock)"""
+    if mode == "off" or (man.get("target_lang") or "en") != "en": return None, None
+    wav = pathlib.Path(dub_audio) if dub_audio else pathlib.Path(manifest_path).parent / "dubbed_16k.wav"
+    if not wav.exists(): return None, None
+    try:
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "pilot"))
+        import soundfile as sf
+        from tts_align import CtcAligner
+        y, sr = sf.read(str(wav), dtype="float32")
+        if y.ndim > 1: y = y.mean(axis=1)
+        return (y, sr), CtcAligner.standalone("cpu")
+    except Exception as e:
+        print(f"WARN ctc aligner unavailable ({type(e).__name__}: {e}): character timing", file=sys.stderr); return None, None
 
 
 def src_words(man):
@@ -197,15 +224,21 @@ def main():
     ap.add_argument("--watermark", help="PNG path, or text:<mark> for a rendered text mark"); ap.add_argument("--wm-corner", choices=["tl", "tr", "bl", "br"], default="br")
     ap.add_argument("--wm-opacity", type=float, default=0.6); ap.add_argument("--t", type=float, default=15.0)
     ap.add_argument("--no-subs", action="store_true")
+    ap.add_argument("--dub-audio", help="the final dub track (default: dubbed_16k.wav next to the manifest)"); ap.add_argument("--align", choices=["auto", "off"], default="auto")
     a = ap.parse_args()
     ass = None
     if not a.no_subs:
-        man = json.load(open(a.manifest)); words = dub_words(man) if a.lang == "dub" else src_words(man)
+        man = json.load(open(a.manifest)); st = {}
+        if a.lang == "dub":
+            au, al = dub_aligner(man, a.manifest, a.dub_audio, a.align)
+            words = dub_words(man, au[0] if au else None, au[1] if au else 16000, al, st)
+        else:
+            words = src_words(man)
         if a.video: w, h, _ = probe(a.video)
         else: w, h = man["source"]["video"]["width"], man["source"]["video"]["height"]
         ass = a.out + ".ass" if a.cmd != "ass" else a.out
         open(ass, "w").write(make_ass(words, w, h, a.style, a.karaoke == "on"))
-        print(f"ass {ass}: {len(words)} words", file=sys.stderr)
+        print(f"ass {ass}: {len(words)} words, placements by method {st}", file=sys.stderr)
     if a.watermark and a.watermark.startswith("text:"):  # --watermark text:DabAI = the default text mark, no asset needed
         a.watermark = text_watermark(a.out + ".wm.png", a.watermark[5:] or "DabAI")
     if a.cmd == "burn": burn(a.video, a.out, ass, a.watermark, a.wm_corner, a.wm_opacity)

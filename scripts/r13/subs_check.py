@@ -25,7 +25,8 @@ def naive_words(man):
             p0 = pl["placed"][0]; off = 0.0
             for pi in pl.get("phrases", []):
                 if pi >= len(tparts): continue
-                a, b = tparts[pi]["clip_span"]; words = tparts[pi]["text"].split(); sp = [s for s in spans if a - 0.02 <= s["start"] < b]
+                words = tparts[pi]["text"].split(); a, b = tparts[pi].get("clip_span") or (0.0, len(tparts[pi]["text"]) * 0.07)   # r8-chain parts: no clip span
+                sp = [s for s in spans if a - 0.02 <= s["start"] < b] if "clip_span" in tparts[pi] else []
                 if len(sp) == len(words):
                     out += [(w, p0 + off + s["start"] - a, p0 + off + s["end"] - a) for w, s in zip(words, sp)]
                 else:
@@ -58,9 +59,10 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--manifest", required=True); ap.add_argument("--dub16", required=True)
     ap.add_argument("--lang", default="en"); ap.add_argument("--out", required=True); a = ap.parse_args()
     man = json.load(open(a.manifest)); ref = asr_words(a.dub16, a.lang)
-    sub = r7_subs.dub_words(man); nv = naive_words(man)
+    au, al = r7_subs.dub_aligner(man, a.manifest, a.dub16); st = {}
+    sub = r7_subs.dub_words(man, au[0] if au else None, au[1] if au else 16000, al, st); nv = naive_words(man); ch = r7_subs.dub_words(man)
     ats = [pl.get("atempo", 1.0) for u in man["units"] for pl in (u.get("alignment") or {}).get("placements", []) if pl.get("placed")]
-    r = {"subs": score(sub, ref), "naive_no_stretch": score(nv, ref), "placements": len(ats),
+    r = {"subs": score(sub, ref), "subs_methods": st, "chars_only": score(ch, ref), "naive_no_stretch": score(nv, ref), "placements": len(ats),
          "atempo": {"min": round(min(ats), 3), "max": round(max(ats), 3), "share_ne_1": round(float(np.mean([abs(x - 1) > 0.02 for x in ats])), 3)} if ats else None}
     pathlib.Path(a.out).write_text(json.dumps(r, indent=1)); print(json.dumps(r))
 
