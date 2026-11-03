@@ -1,0 +1,692 @@
+{
+ "run": "/workspace/dub/artifacts/r4a/r9_old04/old04",
+ "corridor": [
+  0.75,
+  1.25
+ ],
+ "placements": 13,
+ "measured": 9,
+ "tempo_p5_p50_p95": [
+  0.741,
+  0.844,
+  1.033
+ ],
+ "phrase_violations": [
+  {
+   "unit": 3,
+   "placed": [
+    40.91,
+    42.61
+   ],
+   "text": "with other people as well.",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 6.81,
+   "matched_words": "5/5",
+   "tempo_span": 0.641,
+   "tempo": 0.701,
+   "local_max": [
+    0.738,
+    41.0,
+    42.05,
+    "with other people as"
+   ],
+   "local_min": [
+    0.7,
+    41.27,
+    42.47,
+    "other people as well"
+   ]
+  }
+ ],
+ "span_violations": [
+  {
+   "unit": 3,
+   "placed": [
+    37.26,
+    40.35
+   ],
+   "text": "and not just among bloggers, but also",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 6.65,
+   "matched_words": "7/7",
+   "tempo_span": 0.556,
+   "tempo": 0.801,
+   "local_max": [
+    1.0,
+    37.37,
+    39.02,
+    "and not just among"
+   ],
+   "local_min": [
+    0.751,
+    38.86,
+    40.22,
+    "among bloggers but also"
+   ]
+  },
+  {
+   "unit": 3,
+   "placed": [
+    40.91,
+    42.61
+   ],
+   "text": "with other people as well.",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 6.81,
+   "matched_words": "5/5",
+   "tempo_span": 0.641,
+   "tempo": 0.701,
+   "local_max": [
+    0.738,
+    41.0,
+    42.05,
+    "with other people as"
+   ],
+   "local_min": [
+    0.7,
+    41.27,
+    42.47,
+    "other people as well"
+   ]
+  }
+ ],
+ "local_violations": [
+  {
+   "unit": 3,
+   "tempo": 0.7,
+   "t0": 41.27,
+   "t1": 42.47,
+   "words": "other people as well"
+  },
+  {
+   "unit": 3,
+   "tempo": 0.738,
+   "t0": 41.0,
+   "t1": 42.05,
+   "words": "with other people as"
+  }
+ ],
+ "local_windows": 56,
+ "recorded_atempo_violations": [],
+ "librosa_time_stretch": "not used by the current chain (ffmpeg atempo only)",
+ "rows": [
+  {
+   "unit": 0,
+   "placed": [
+    2.3,
+    6.2
+   ],
+   "text": "Let's make a video with the glasses, watch it once more,",
+   "atempo_recorded": 0.954,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 6.04,
+   "matched_words": "11/11",
+   "tempo_span": 0.993,
+   "tempo": 0.95,
+   "local_max": [
+    1.068,
+    3.54,
+    4.58,
+    "video with the glasses"
+   ],
+   "local_min": [
+    0.774,
+    5.04,
+    6.19,
+    "watch it once more"
+   ]
+  },
+  {
+   "unit": 0,
+   "placed": [
+    6.74,
+    11.25
+   ],
+   "text": "and test how our application is going to respond to everything we've done, alrig",
+   "atempo_recorded": 0.953,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 6.94,
+   "matched_words": "14/14",
+   "tempo_span": 0.907,
+   "tempo": 0.91,
+   "local_max": [
+    0.948,
+    9.74,
+    10.74,
+    "to everything we've done"
+   ],
+   "local_min": [
+    0.818,
+    8.73,
+    9.66,
+    "is going to respond"
+   ]
+  },
+  {
+   "unit": 1,
+   "placed": [
+    14.6,
+    15.67
+   ],
+   "text": "City of Sochi",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 7.73,
+   "matched_words": "3/3",
+   "tempo_span": 0.865,
+   "tempo": 0.813
+  },
+  {
+   "unit": 1,
+   "placed": [
+    17.59,
+    18.9
+   ],
+   "text": "on August twenty-eight.",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 8.52,
+   "matched_words": "4/4",
+   "tempo_span": 0.906,
+   "tempo": 1.089,
+   "local_max": [
+    1.089,
+    17.72,
+    18.77,
+    "on august twenty eight"
+   ],
+   "local_min": [
+    1.089,
+    17.72,
+    18.77,
+    "on august twenty eight"
+   ]
+  },
+  {
+   "unit": 2,
+   "placed": [
+    19.0,
+    19.57
+   ],
+   "text": "Today",
+   "atempo_recorded": 0.9,
+   "close_inner": null,
+   "clause_tempo": [
+    0.9,
+    1.0,
+    0.9
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 3.94,
+   "matched_words": "1/1",
+   "tempo": null,
+   "why": "too few matched words"
+  },
+  {
+   "unit": 2,
+   "placed": [
+    22.14,
+    29.36
+   ],
+   "text": "we are starting the work processes to create our magical app, which is going to ",
+   "atempo_recorded": 0.9186,
+   "close_inner": [
+    [
+     25.07,
+     0.54
+    ]
+   ],
+   "clause_tempo": [
+    0.9,
+    1.0,
+    0.9
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 5.52,
+   "matched_words": "18/18",
+   "tempo_span": 0.892,
+   "tempo": 0.844,
+   "local_max": [
+    1.043,
+    26.46,
+    27.18,
+    "app which is going"
+   ],
+   "local_min": [
+    0.76,
+    24.58,
+    26.24,
+    "to create our magical"
+   ]
+  },
+  {
+   "unit": 2,
+   "placed": [
+    29.44,
+    30.52
+   ],
+   "text": "for people.",
+   "atempo_recorded": 0.9,
+   "close_inner": null,
+   "clause_tempo": [
+    0.9,
+    1.0,
+    0.9
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 4.1,
+   "matched_words": "2/2",
+   "tempo": null,
+   "why": "too few matched words"
+  },
+  {
+   "unit": 3,
+   "placed": [
+    33.1,
+    37.16
+   ],
+   "text": "Which I really hope will be popular among bloggers from all around the world,",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 7.78,
+   "matched_words": "14/14",
+   "tempo_span": 0.811,
+   "tempo": 0.897,
+   "local_max": [
+    1.0,
+    36.3,
+    37.05,
+    "all around the world"
+   ],
+   "local_min": [
+    0.816,
+    33.43,
+    34.4,
+    "i really hope will"
+   ]
+  },
+  {
+   "unit": 3,
+   "placed": [
+    37.26,
+    40.35
+   ],
+   "text": "and not just among bloggers, but also",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 6.65,
+   "matched_words": "7/7",
+   "tempo_span": 0.556,
+   "tempo": 0.801,
+   "local_max": [
+    1.0,
+    37.37,
+    39.02,
+    "and not just among"
+   ],
+   "local_min": [
+    0.751,
+    38.86,
+    40.22,
+    "among bloggers but also"
+   ]
+  },
+  {
+   "unit": 3,
+   "placed": [
+    40.91,
+    42.61
+   ],
+   "text": "with other people as well.",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 6.81,
+   "matched_words": "5/5",
+   "tempo_span": 0.641,
+   "tempo": 0.701,
+   "local_max": [
+    0.738,
+    41.0,
+    42.05,
+    "with other people as"
+   ],
+   "local_min": [
+    0.7,
+    41.27,
+    42.47,
+    "other people as well"
+   ]
+  },
+  {
+   "unit": 4,
+   "placed": [
+    44.5,
+    45.3
+   ],
+   "text": "So here you go",
+   "atempo_recorded": 1.1,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 10.47,
+   "matched_words": "2/4",
+   "tempo": null,
+   "why": "too few matched words"
+  },
+  {
+   "unit": 4,
+   "placed": [
+    46.7,
+    49.57
+   ],
+   "text": "this is such a wonderful video great weather",
+   "atempo_recorded": 0.9,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 6.63,
+   "matched_words": "7/8",
+   "tempo_span": 0.848,
+   "tempo": 0.831,
+   "local_max": [
+    0.912,
+    47.23,
+    48.48,
+    "such a wonderful video"
+   ],
+   "local_min": [
+    0.8,
+    47.57,
+    49.58,
+    "wonderful video great weather"
+   ]
+  },
+  {
+   "unit": 4,
+   "placed": [
+    51.7,
+    52.44
+   ],
+   "text": "what's next",
+   "atempo_recorded": 0.9,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 4.28,
+   "matched_words": "2/2",
+   "tempo": null,
+   "why": "too few matched words"
+  }
+ ],
+ "rate_median_sps": 6.65,
+ "rate_peaks": [
+  {
+   "unit": 0,
+   "sps": 11.29,
+   "t0": 3.48,
+   "t1": 4.1,
+   "words": "a video with the"
+  },
+  {
+   "unit": 4,
+   "sps": 10.47,
+   "t0": 44.61,
+   "t1": 45.19,
+   "words": "so here you go"
+  },
+  {
+   "unit": 3,
+   "sps": 9.98,
+   "t0": 36.02,
+   "t1": 36.77,
+   "words": "from all around the"
+  },
+  {
+   "unit": 4,
+   "sps": 9.93,
+   "t0": 46.83,
+   "t1": 47.49,
+   "words": "this is such a"
+  },
+  {
+   "unit": 3,
+   "sps": 9.24,
+   "t0": 37.37,
+   "t1": 39.02,
+   "words": "and not just among"
+  },
+  {
+   "unit": 0,
+   "sps": 9.19,
+   "t0": 9.74,
+   "t1": 10.74,
+   "words": "to everything we've done"
+  },
+  {
+   "unit": 2,
+   "sps": 9.09,
+   "t0": 26.66,
+   "t1": 27.32,
+   "words": "which is going to"
+  },
+  {
+   "unit": 0,
+   "sps": 8.87,
+   "t0": 3.23,
+   "t1": 4.0,
+   "words": "make a video with"
+  },
+  {
+   "unit": 4,
+   "sps": 8.77,
+   "t0": 47.09,
+   "t1": 48.0,
+   "words": "is such a wonderful"
+  },
+  {
+   "unit": 2,
+   "sps": 8.7,
+   "t0": 26.46,
+   "t1": 27.18,
+   "words": "app which is going"
+  }
+ ],
+ "phrase_rate": [
+  {
+   "unit": 4,
+   "placed": [
+    44.5,
+    45.3
+   ],
+   "sps": 10.47,
+   "x_median": 1.57,
+   "tempo": null,
+   "text": "So here you go"
+  },
+  {
+   "unit": 1,
+   "placed": [
+    17.59,
+    18.9
+   ],
+   "sps": 8.52,
+   "x_median": 1.28,
+   "tempo": 1.089,
+   "text": "on August twenty-eight."
+  },
+  {
+   "unit": 3,
+   "placed": [
+    33.1,
+    37.16
+   ],
+   "sps": 7.78,
+   "x_median": 1.17,
+   "tempo": 0.897,
+   "text": "Which I really hope will be popular among bloggers from all around the world,"
+  },
+  {
+   "unit": 1,
+   "placed": [
+    14.6,
+    15.67
+   ],
+   "sps": 7.73,
+   "x_median": 1.16,
+   "tempo": 0.813,
+   "text": "City of Sochi"
+  },
+  {
+   "unit": 0,
+   "placed": [
+    6.74,
+    11.25
+   ],
+   "sps": 6.94,
+   "x_median": 1.04,
+   "tempo": 0.91,
+   "text": "and test how our application is going to respond to everything we've done, alrig"
+  },
+  {
+   "unit": 3,
+   "placed": [
+    40.91,
+    42.61
+   ],
+   "sps": 6.81,
+   "x_median": 1.02,
+   "tempo": 0.701,
+   "text": "with other people as well."
+  },
+  {
+   "unit": 3,
+   "placed": [
+    37.26,
+    40.35
+   ],
+   "sps": 6.65,
+   "x_median": 1.0,
+   "tempo": 0.801,
+   "text": "and not just among bloggers, but also"
+  },
+  {
+   "unit": 4,
+   "placed": [
+    46.7,
+    49.57
+   ],
+   "sps": 6.63,
+   "x_median": 1.0,
+   "tempo": 0.831,
+   "text": "this is such a wonderful video great weather"
+  },
+  {
+   "unit": 0,
+   "placed": [
+    2.3,
+    6.2
+   ],
+   "sps": 6.04,
+   "x_median": 0.91,
+   "tempo": 0.95,
+   "text": "Let's make a video with the glasses, watch it once more,"
+  },
+  {
+   "unit": 2,
+   "placed": [
+    22.14,
+    29.36
+   ],
+   "sps": 5.52,
+   "x_median": 0.83,
+   "tempo": 0.844,
+   "text": "we are starting the work processes to create our magical app, which is going to "
+  },
+  {
+   "unit": 4,
+   "placed": [
+    51.7,
+    52.44
+   ],
+   "sps": 4.28,
+   "x_median": 0.64,
+   "tempo": null,
+   "text": "what's next"
+  },
+  {
+   "unit": 2,
+   "placed": [
+    29.44,
+    30.52
+   ],
+   "sps": 4.1,
+   "x_median": 0.62,
+   "tempo": null,
+   "text": "for people."
+  },
+  {
+   "unit": 2,
+   "placed": [
+    19.0,
+    19.57
+   ],
+   "sps": 3.94,
+   "x_median": 0.59,
+   "tempo": null,
+   "text": "Today"
+  }
+ ]
+}

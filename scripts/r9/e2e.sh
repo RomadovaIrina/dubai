@@ -100,6 +100,13 @@ if [ -n "${DUB_POLYGLOT:-}" ]; then   # r13 8d / non-English target: the units t
     fail polyglot_failed PARTIAL_SUCCESS "see logs/polyglot.log: the English dub kept"; fi
 fi
 
+if [ "${DUB_PACE_FIX:-0}" = 1 ] && [ -z "${DUB_POLYGLOT:-}" ]; then   # r13 7.3 (default off): a phrase heard as rushed (speech rate > 1.25 x the video median,
+  st pace_fix                  # or its tempo outside x0.75-1.25) is re-said shorter at natural pace in the same slot; the rest of the mix stays bit-identical
+  if ! python scripts/r13/pace_fix.py --run $AD --htd $A/$HT/$ID > $L/pace_fix.log 2>&1; then
+    for d in $AD $A/$HT/$ID; do for f in $d/pre_pace_*; do [ -f "$f" ] && { b=$(basename $f); rm -f $d/${b#pre_pace_}; cp $f $d/${b#pre_pace_}; }; done; done
+    fail pace_fix_failed PARTIAL_SUCCESS "see logs/pace_fix.log: the accepted dub kept"; fi
+fi
+
 VID=""
 if [ "${E2E_LIPSYNC:-on}" = off ]; then FL+=("lipsync_off_by_request")   # r13 interface: the user asked for a voice-only dub
 elif [[ " $PF " == *" no_face "* ]]; then FL+=("face_skipped_no_face")

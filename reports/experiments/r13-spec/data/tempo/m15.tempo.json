@@ -1,0 +1,375 @@
+{
+ "run": "/workspace/dub/artifacts/r4a/r9_m15/m15",
+ "corridor": [
+  0.75,
+  1.25
+ ],
+ "placements": 7,
+ "measured": 7,
+ "tempo_p5_p50_p95": [
+  0.928,
+  0.956,
+  1.002
+ ],
+ "phrase_violations": [],
+ "span_violations": [],
+ "local_violations": [],
+ "local_windows": 60,
+ "recorded_atempo_violations": [],
+ "librosa_time_stretch": "not used by the current chain (ffmpeg atempo only)",
+ "rows": [
+  {
+   "unit": 0,
+   "placed": [
+    0.54,
+    3.32
+   ],
+   "text": "Hello everyone, my name is Karina, I have three kids...",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.92,
+   "matched_words": "10/10",
+   "tempo_span": 0.97,
+   "tempo": 0.977,
+   "local_max": [
+    1.029,
+    2.34,
+    3.19,
+    "i have three kids"
+   ],
+   "local_min": [
+    0.933,
+    1.62,
+    2.59,
+    "is karina i have"
+   ]
+  },
+  {
+   "unit": 1,
+   "placed": [
+    4.7,
+    7.25
+   ],
+   "text": "When it was time to come back from maternity leave,",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.21,
+   "matched_words": "10/10",
+   "tempo_span": 0.975,
+   "tempo": 1.012,
+   "local_max": [
+    1.157,
+    4.95,
+    5.55,
+    "it was time to"
+   ],
+   "local_min": [
+    0.966,
+    5.81,
+    7.16,
+    "back from maternity leave"
+   ]
+  },
+  {
+   "unit": 1,
+   "placed": [
+    7.6,
+    12.65
+   ],
+   "text": "I didn't know how to balance working in the office with taking care of my childr",
+   "atempo_recorded": 0.955,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 6.98,
+   "matched_words": "16/16",
+   "tempo_span": 0.939,
+   "tempo": 0.934,
+   "local_max": [
+    0.974,
+    9.82,
+    10.86,
+    "working in the office"
+   ],
+   "local_min": [
+    0.873,
+    11.6,
+    12.62,
+    "care of my children"
+   ]
+  },
+  {
+   "unit": 2,
+   "placed": [
+    13.16,
+    19.49
+   ],
+   "text": "I am very happy that I came across the \"Mom Chris\" app, where I found remote wor",
+   "atempo_recorded": 0.956,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.18,
+   "matched_words": "19/19",
+   "tempo_span": 0.959,
+   "tempo": 0.939,
+   "local_max": [
+    0.976,
+    15.59,
+    16.69,
+    "across the mom chris"
+   ],
+   "local_min": [
+    0.897,
+    16.43,
+    17.71,
+    "chris app where i"
+   ]
+  },
+  {
+   "unit": 3,
+   "placed": [
+    19.74,
+    23.05
+   ],
+   "text": "Now I don't rush to work every single morning",
+   "atempo_recorded": 0.955,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 6.89,
+   "matched_words": "9/9",
+   "tempo_span": 0.949,
+   "tempo": 0.956,
+   "local_max": [
+    0.996,
+    20.45,
+    21.32,
+    "i don't rush to"
+   ],
+   "local_min": [
+    0.94,
+    20.91,
+    21.96,
+    "rush to work every"
+   ]
+  },
+  {
+   "unit": 3,
+   "placed": [
+    23.56,
+    29.05
+   ],
+   "text": "and I spend my time more calmly, raising my children and earning money.",
+   "atempo_recorded": 0.9182,
+   "close_inner": [
+    [
+     25.95,
+     0.36
+    ]
+   ],
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 6.06,
+   "matched_words": "13/13",
+   "tempo_span": 0.984,
+   "tempo": 0.925,
+   "local_max": [
+    0.978,
+    26.9,
+    28.52,
+    "my children and earning"
+   ],
+   "local_min": [
+    0.845,
+    24.05,
+    24.85,
+    "and i spend my"
+   ]
+  },
+  {
+   "unit": 4,
+   "placed": [
+    30.3,
+    31.61
+   ],
+   "text": "Thank you, \"Mom Chris\".",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 5.85,
+   "matched_words": "4/4",
+   "tempo_span": 1.021,
+   "tempo": 0.977,
+   "local_max": [
+    0.977,
+    30.33,
+    31.5,
+    "thank you mom chris"
+   ],
+   "local_min": [
+    0.977,
+    30.33,
+    31.5,
+    "thank you mom chris"
+   ]
+  }
+ ],
+ "rate_median_sps": 6.98,
+ "rate_peaks": [
+  {
+   "unit": 1,
+   "sps": 10.5,
+   "t0": 4.95,
+   "t1": 5.55,
+   "words": "it was time to"
+  },
+  {
+   "unit": 2,
+   "sps": 9.66,
+   "t0": 13.37,
+   "t1": 14.89,
+   "words": "i am very happy"
+  },
+  {
+   "unit": 0,
+   "sps": 9.4,
+   "t0": 0.53,
+   "t1": 1.56,
+   "words": "hello everyone my name"
+  },
+  {
+   "unit": 0,
+   "sps": 9.29,
+   "t0": 1.62,
+   "t1": 2.59,
+   "words": "is karina i have"
+  },
+  {
+   "unit": 3,
+   "sps": 9.16,
+   "t0": 21.23,
+   "t1": 22.3,
+   "words": "to work every single"
+  },
+  {
+   "unit": 0,
+   "sps": 9.01,
+   "t0": 1.42,
+   "t1": 2.39,
+   "words": "name is karina i"
+  },
+  {
+   "unit": 2,
+   "sps": 8.81,
+   "t0": 14.25,
+   "t1": 15.19,
+   "words": "very happy that i"
+  },
+  {
+   "unit": 0,
+   "sps": 8.76,
+   "t0": 0.77,
+   "t1": 1.68,
+   "words": "everyone my name is"
+  },
+  {
+   "unit": 1,
+   "sps": 8.7,
+   "t0": 5.49,
+   "t1": 6.13,
+   "words": "to come back from"
+  },
+  {
+   "unit": 1,
+   "sps": 8.68,
+   "t0": 4.73,
+   "t1": 5.43,
+   "words": "when it was time"
+  }
+ ],
+ "phrase_rate": [
+  {
+   "unit": 0,
+   "placed": [
+    0.54,
+    3.32
+   ],
+   "sps": 7.92,
+   "x_median": 1.13,
+   "tempo": 0.977,
+   "text": "Hello everyone, my name is Karina, I have three kids..."
+  },
+  {
+   "unit": 1,
+   "placed": [
+    4.7,
+    7.25
+   ],
+   "sps": 7.21,
+   "x_median": 1.03,
+   "tempo": 1.012,
+   "text": "When it was time to come back from maternity leave,"
+  },
+  {
+   "unit": 2,
+   "placed": [
+    13.16,
+    19.49
+   ],
+   "sps": 7.18,
+   "x_median": 1.03,
+   "tempo": 0.939,
+   "text": "I am very happy that I came across the \"Mom Chris\" app, where I found remote wor"
+  },
+  {
+   "unit": 1,
+   "placed": [
+    7.6,
+    12.65
+   ],
+   "sps": 6.98,
+   "x_median": 1.0,
+   "tempo": 0.934,
+   "text": "I didn't know how to balance working in the office with taking care of my childr"
+  },
+  {
+   "unit": 3,
+   "placed": [
+    19.74,
+    23.05
+   ],
+   "sps": 6.89,
+   "x_median": 0.99,
+   "tempo": 0.956,
+   "text": "Now I don't rush to work every single morning"
+  },
+  {
+   "unit": 3,
+   "placed": [
+    23.56,
+    29.05
+   ],
+   "sps": 6.06,
+   "x_median": 0.87,
+   "tempo": 0.925,
+   "text": "and I spend my time more calmly, raising my children and earning money."
+  },
+  {
+   "unit": 4,
+   "placed": [
+    30.3,
+    31.61
+   ],
+   "sps": 5.85,
+   "x_median": 0.84,
+   "tempo": 0.977,
+   "text": "Thank you, \"Mom Chris\"."
+  }
+ ]
+}

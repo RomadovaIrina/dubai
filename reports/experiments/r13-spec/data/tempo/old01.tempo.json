@@ -1,0 +1,1181 @@
+{
+ "run": "/workspace/dub/artifacts/r4a/r9_old01/old01",
+ "corridor": [
+  0.75,
+  1.25
+ ],
+ "placements": 27,
+ "measured": 26,
+ "tempo_p5_p50_p95": [
+  0.835,
+  0.968,
+  1.023
+ ],
+ "phrase_violations": [],
+ "span_violations": [],
+ "local_violations": [
+  {
+   "unit": 12,
+   "tempo": 0.614,
+   "t0": 47.62,
+   "t1": 49.45,
+   "words": "mdf featuring a premium"
+  },
+  {
+   "unit": 12,
+   "tempo": 0.658,
+   "t0": 47.06,
+   "t1": 49.02,
+   "words": "density mdf featuring a"
+  },
+  {
+   "unit": 12,
+   "tempo": 0.668,
+   "t0": 46.82,
+   "t1": 48.82,
+   "words": "high density mdf featuring"
+  },
+  {
+   "unit": 12,
+   "tempo": 0.69,
+   "t0": 48.36,
+   "t1": 49.87,
+   "words": "featuring a premium quality"
+  },
+  {
+   "unit": 12,
+   "tempo": 0.709,
+   "t0": 46.58,
+   "t1": 48.04,
+   "words": "from high density mdf"
+  },
+  {
+   "unit": 11,
+   "tempo": 0.728,
+   "t0": 39.97,
+   "t1": 41.12,
+   "words": "for twenty to twenty"
+  },
+  {
+   "unit": 12,
+   "tempo": 0.745,
+   "t0": 49.01,
+   "t1": 50.19,
+   "words": "a premium quality finish"
+  }
+ ],
+ "local_windows": 192,
+ "recorded_atempo_violations": [],
+ "librosa_time_stretch": "not used by the current chain (ffmpeg atempo only)",
+ "rows": [
+  {
+   "unit": 0,
+   "placed": [
+    0.0,
+    1.41
+   ],
+   "text": "Neometria Prime Finish.",
+   "atempo_recorded": 0.982,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 5.71,
+   "matched_words": "3/3",
+   "tempo_span": 1.002,
+   "tempo": 1.022
+  },
+  {
+   "unit": 1,
+   "placed": [
+    1.52,
+    5.32
+   ],
+   "text": "Let's take a look at what the repair work offered by the developer includes.",
+   "atempo_recorded": 0.902,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.92,
+   "matched_words": "14/14",
+   "tempo_span": 0.862,
+   "tempo": 0.865,
+   "local_max": [
+    0.942,
+    2.09,
+    2.68,
+    "a look at what"
+   ],
+   "local_min": [
+    0.81,
+    2.9,
+    4.02,
+    "repair work offered by"
+   ]
+  },
+  {
+   "unit": 2,
+   "placed": [
+    5.38,
+    10.0
+   ],
+   "text": "You can order it at the time of purchasing an apartment in our Flora residential",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 8.41,
+   "matched_words": "16/16",
+   "tempo_span": 1.005,
+   "tempo": 1.007,
+   "local_max": [
+    1.047,
+    8.34,
+    9.91,
+    "our flora residential complex"
+   ],
+   "local_min": [
+    0.948,
+    5.89,
+    6.47,
+    "order it at the"
+   ]
+  },
+  {
+   "unit": 3,
+   "placed": [
+    10.24,
+    13.1
+   ],
+   "text": "The ceiling is a stretched one, it's white and has a matte finish.",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 8.17,
+   "matched_words": "13/13",
+   "tempo_span": 0.954,
+   "tempo": 0.942,
+   "local_max": [
+    0.996,
+    12.33,
+    13.01,
+    "has a matte finish"
+   ],
+   "local_min": [
+    0.884,
+    11.64,
+    12.43,
+    "it's white and has"
+   ]
+  },
+  {
+   "unit": 4,
+   "placed": [
+    13.18,
+    16.41
+   ],
+   "text": "In each room, the lifespan is more than ten years, to be exact.",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 8.07,
+   "matched_words": "13/13",
+   "tempo_span": 0.959,
+   "tempo": 0.964,
+   "local_max": [
+    1.032,
+    13.35,
+    14.65,
+    "each room the lifespan"
+   ],
+   "local_min": [
+    0.893,
+    15.25,
+    15.95,
+    "ten years to be"
+   ]
+  },
+  {
+   "unit": 5,
+   "placed": [
+    17.26,
+    17.79
+   ],
+   "text": "Walls.",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 2.75,
+   "matched_words": "1/1",
+   "tempo": null,
+   "why": "too few matched words"
+  },
+  {
+   "unit": 5,
+   "placed": [
+    18.08,
+    20.48
+   ],
+   "text": "Primer paintable wallpaper on a fiberglass base.",
+   "atempo_recorded": 1.116,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 6.89,
+   "matched_words": "7/7",
+   "tempo_span": 1.007,
+   "tempo": 0.99,
+   "local_max": [
+    1.128,
+    19.04,
+    20.15,
+    "wallpaper on a fiberglass"
+   ],
+   "local_min": [
+    0.855,
+    19.54,
+    20.65,
+    "on a fiberglass base"
+   ]
+  },
+  {
+   "unit": 6,
+   "placed": [
+    20.52,
+    26.62
+   ],
+   "text": "The relief texture featuring a vertical string design helps to create the necess",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.72,
+   "matched_words": "20/20",
+   "tempo_span": 1.0,
+   "tempo": 1.009,
+   "local_max": [
+    1.049,
+    23.0,
+    24.26,
+    "design helps to create"
+   ],
+   "local_min": [
+    0.968,
+    25.36,
+    26.17,
+    "added volume of the"
+   ]
+  },
+  {
+   "unit": 7,
+   "placed": [
+    26.64,
+    30.5
+   ],
+   "text": "Such wallpaper can withstand up to ten paint applications. Floor.",
+   "atempo_recorded": 0.9663,
+   "close_inner": [
+    [
+     29.92,
+     0.12
+    ]
+   ],
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 5.99,
+   "matched_words": "10/10",
+   "tempo_span": 1.001,
+   "tempo": 0.948,
+   "local_max": [
+    0.955,
+    28.56,
+    30.41,
+    "ten paint applications floor"
+   ],
+   "local_min": [
+    0.895,
+    28.24,
+    29.12,
+    "up to ten paint"
+   ]
+  },
+  {
+   "unit": 8,
+   "placed": [
+    30.66,
+    32.47
+   ],
+   "text": "Laminate thirty-three class.",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 5.53,
+   "matched_words": "4/4",
+   "tempo_span": 0.955,
+   "tempo": 0.991,
+   "local_max": [
+    0.991,
+    30.81,
+    32.4,
+    "laminate thirty three class"
+   ],
+   "local_min": [
+    0.991,
+    30.81,
+    32.4,
+    "laminate thirty three class"
+   ]
+  },
+  {
+   "unit": 9,
+   "placed": [
+    33.4,
+    34.48
+   ],
+   "text": "Egger with backing.",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 6.88,
+   "matched_words": "3/3",
+   "tempo_span": 1.006,
+   "tempo": 0.977
+  },
+  {
+   "unit": 10,
+   "placed": [
+    34.82,
+    38.84
+   ],
+   "text": "Has high thermal, moisture, and sound insulation properties.",
+   "atempo_recorded": 0.9145,
+   "close_inner": [
+    [
+     36.55,
+     0.14
+    ]
+   ],
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 5.89,
+   "matched_words": "8/8",
+   "tempo_span": 0.908,
+   "tempo": 0.917,
+   "local_max": [
+    0.971,
+    37.12,
+    38.73,
+    "and sound insulation properties"
+   ],
+   "local_min": [
+    0.859,
+    35.05,
+    37.18,
+    "high thermal moisture and"
+   ]
+  },
+  {
+   "unit": 11,
+   "placed": [
+    39.04,
+    43.08
+   ],
+   "text": "And it is designed for 20 to 25 years of active use.",
+   "atempo_recorded": 0.9,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.06,
+   "matched_words": "12/13",
+   "tempo_span": 0.954,
+   "tempo": 0.825,
+   "local_max": [
+    0.834,
+    41.18,
+    42.64,
+    "five years of active"
+   ],
+   "local_min": [
+    0.728,
+    39.97,
+    41.12,
+    "for twenty to twenty"
+   ]
+  },
+  {
+   "unit": 12,
+   "placed": [
+    43.6,
+    50.34
+   ],
+   "text": "Interior doors... A minimalist panel constructed from high-density MDF, featurin",
+   "atempo_recorded": 0.9169,
+   "close_inner": [
+    [
+     44.71,
+     0.27
+    ],
+    [
+     48.15,
+     0.27
+    ]
+   ],
+   "clause_tempo": null,
+   "natural_src": "realigned_raw_take",
+   "rate_sps": 6.63,
+   "matched_words": "15/15",
+   "tempo_span": 0.779,
+   "tempo": 0.795,
+   "local_max": [
+    1.002,
+    44.29,
+    45.86,
+    "doors a minimalist panel"
+   ],
+   "local_min": [
+    0.614,
+    47.62,
+    49.45,
+    "mdf featuring a premium"
+   ]
+  },
+  {
+   "unit": 13,
+   "placed": [
+    50.9,
+    56.67
+   ],
+   "text": "Bathroom... Matte large-format ceramic granit six hundred by six hundred thick n",
+   "atempo_recorded": 0.977,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 5.52,
+   "matched_words": "14/14",
+   "tempo_span": 0.99,
+   "tempo": 0.982,
+   "local_max": [
+    1.018,
+    55.11,
+    56.52,
+    "hundred thick nine millimeters"
+   ],
+   "local_min": [
+    0.94,
+    51.85,
+    53.31,
+    "matte large format ceramic"
+   ]
+  },
+  {
+   "unit": 14,
+   "placed": [
+    56.76,
+    60.88
+   ],
+   "text": "It has a moisture absorption rate that is less than zero point five percent.",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.34,
+   "matched_words": "12/14",
+   "tempo_span": 0.949,
+   "tempo": 1.052,
+   "local_max": [
+    1.223,
+    59.58,
+    60.75,
+    "zero point five percent"
+   ],
+   "local_min": [
+    0.935,
+    56.87,
+    57.88,
+    "it has a moisture"
+   ]
+  },
+  {
+   "unit": 15,
+   "placed": [
+    61.1,
+    63.65
+   ],
+   "text": "And that means, it is sufficiently strong.",
+   "atempo_recorded": 0.9187,
+   "close_inner": [
+    [
+     62.08,
+     0.12
+    ]
+   ],
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 6.3,
+   "matched_words": "7/7",
+   "tempo_span": 0.978,
+   "tempo": 0.927,
+   "local_max": [
+    0.964,
+    61.29,
+    62.44,
+    "that means it is"
+   ],
+   "local_min": [
+    0.897,
+    61.13,
+    62.3,
+    "and that means it"
+   ]
+  },
+  {
+   "unit": 16,
+   "placed": [
+    63.7,
+    68.72
+   ],
+   "text": "All necessary plumbing fixtures, including a toilet, a micro-lift, and super-dur",
+   "atempo_recorded": 0.9781,
+   "close_inner": [
+    [
+     67.25,
+     0.1
+    ]
+   ],
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.69,
+   "matched_words": "14/14",
+   "tempo_span": 1.0,
+   "tempo": 0.972,
+   "local_max": [
+    1.0,
+    66.56,
+    67.48,
+    "a micro lift and"
+   ],
+   "local_min": [
+    0.945,
+    65.4,
+    66.58,
+    "including a toilet a"
+   ]
+  },
+  {
+   "unit": 17,
+   "placed": [
+    68.88,
+    71.85
+   ],
+   "text": "Bathroom or shower area, whichever you find more suitable.",
+   "atempo_recorded": 0.979,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.97,
+   "matched_words": "9/9",
+   "tempo_span": 0.995,
+   "tempo": 1.001,
+   "local_max": [
+    1.086,
+    70.8,
+    71.72,
+    "you find more suitable"
+   ],
+   "local_min": [
+    0.939,
+    69.01,
+    70.26,
+    "bathroom or shower area"
+   ]
+  },
+  {
+   "unit": 18,
+   "placed": [
+    71.98,
+    74.32
+   ],
+   "text": "Vanity with a high-strength brass faucet...",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 6.28,
+   "matched_words": "7/7",
+   "tempo_span": 0.999,
+   "tempo": 1.011,
+   "local_max": [
+    1.038,
+    72.76,
+    73.42,
+    "with a high strength"
+   ],
+   "local_min": [
+    0.997,
+    72.92,
+    73.73,
+    "a high strength brass"
+   ]
+  },
+  {
+   "unit": 19,
+   "placed": [
+    74.68,
+    78.36
+   ],
+   "text": "Balcony... Ceiling and wall covering in the area of the glazed balcony...",
+   "atempo_recorded": 0.934,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.83,
+   "matched_words": "12/12",
+   "tempo_span": 0.884,
+   "tempo": 0.882,
+   "local_max": [
+    1.0,
+    76.99,
+    77.53,
+    "the area of the"
+   ],
+   "local_min": [
+    0.872,
+    77.37,
+    78.27,
+    "of the glazed balcony"
+   ]
+  },
+  {
+   "unit": 20,
+   "placed": [
+    78.72,
+    81.53
+   ],
+   "text": "Plaster with white matte water-resistant paint over it.",
+   "atempo_recorded": 0.999,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.26,
+   "matched_words": "9/9",
+   "tempo_span": 1.01,
+   "tempo": 1.023,
+   "local_max": [
+    1.029,
+    79.21,
+    80.24,
+    "with white matte water"
+   ],
+   "local_min": [
+    1.001,
+    79.98,
+    81.28,
+    "water resistant paint over"
+   ]
+  },
+  {
+   "unit": 21,
+   "placed": [
+    81.9,
+    85.22
+   ],
+   "text": "This coating is resistant to water vapor and high humidity.",
+   "atempo_recorded": 0.975,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.85,
+   "matched_words": "10/10",
+   "tempo_span": 0.976,
+   "tempo": 0.956,
+   "local_max": [
+    0.974,
+    82.55,
+    83.46,
+    "is resistant to water"
+   ],
+   "local_min": [
+    0.938,
+    83.14,
+    84.28,
+    "to water vapor and"
+   ]
+  },
+  {
+   "unit": 22,
+   "placed": [
+    85.28,
+    86.45
+   ],
+   "text": "When used properly.",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.1,
+   "matched_words": "3/3",
+   "tempo_span": 1.01,
+   "tempo": 1.01
+  },
+  {
+   "unit": 23,
+   "placed": [
+    86.66,
+    89.19
+   ],
+   "text": "Waterproof paints can last up to ten years.",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 5.93,
+   "matched_words": "8/8",
+   "tempo_span": 0.96,
+   "tempo": 0.942,
+   "local_max": [
+    0.944,
+    86.79,
+    88.1,
+    "waterproof paints can last"
+   ],
+   "local_min": [
+    0.862,
+    87.69,
+    88.4,
+    "can last up to"
+   ]
+  },
+  {
+   "unit": 24,
+   "placed": [
+    90.02,
+    93.71
+   ],
+   "text": "You can find even more details about the Prime deal from the sales department ma",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 8.14,
+   "matched_words": "15/15",
+   "tempo_span": 0.958,
+   "tempo": 0.953,
+   "local_max": [
+    1.004,
+    91.88,
+    92.52,
+    "prime deal from the"
+   ],
+   "local_min": [
+    0.9,
+    90.17,
+    91.01,
+    "can find even more"
+   ]
+  },
+  {
+   "unit": 25,
+   "placed": [
+    93.96,
+    96.78
+   ],
+   "text": "Come to our showroom and see for yourself the quality of the finishes.",
+   "atempo_recorded": 0.971,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 9.08,
+   "matched_words": "13/13",
+   "tempo_span": 0.969,
+   "tempo": 0.962,
+   "local_max": [
+    1.002,
+    94.9,
+    95.64,
+    "and see for yourself"
+   ],
+   "local_min": [
+    0.915,
+    95.7,
+    96.29,
+    "the quality of the"
+   ]
+  }
+ ],
+ "rate_median_sps": 7.1,
+ "rate_peaks": [
+  {
+   "unit": 19,
+   "sps": 15.58,
+   "t0": 76.9,
+   "t1": 77.41,
+   "words": "in the area of"
+  },
+  {
+   "unit": 19,
+   "sps": 14.62,
+   "t0": 76.99,
+   "t1": 77.53,
+   "words": "the area of the"
+  },
+  {
+   "unit": 2,
+   "sps": 13.12,
+   "t0": 5.89,
+   "t1": 6.47,
+   "words": "order it at the"
+  },
+  {
+   "unit": 2,
+   "sps": 12.5,
+   "t0": 5.59,
+   "t1": 6.35,
+   "words": "can order it at"
+  },
+  {
+   "unit": 25,
+   "sps": 12.37,
+   "t0": 95.7,
+   "t1": 96.29,
+   "words": "the quality of the"
+  },
+  {
+   "unit": 2,
+   "sps": 11.36,
+   "t0": 5.45,
+   "t1": 6.23,
+   "words": "you can order it"
+  },
+  {
+   "unit": 3,
+   "sps": 11.26,
+   "t0": 10.33,
+   "t1": 10.92,
+   "words": "the ceiling is a"
+  },
+  {
+   "unit": 1,
+   "sps": 11.05,
+   "t0": 2.09,
+   "t1": 2.68,
+   "words": "a look at what"
+  },
+  {
+   "unit": 3,
+   "sps": 10.99,
+   "t0": 12.21,
+   "t1": 12.71,
+   "words": "and has a matte"
+  },
+  {
+   "unit": 19,
+   "sps": 10.56,
+   "t0": 76.46,
+   "t1": 77.33,
+   "words": "covering in the area"
+  }
+ ],
+ "phrase_rate": [
+  {
+   "unit": 25,
+   "placed": [
+    93.96,
+    96.78
+   ],
+   "sps": 9.08,
+   "x_median": 1.28,
+   "tempo": 0.962,
+   "text": "Come to our showroom and see for yourself the quality of the finishes."
+  },
+  {
+   "unit": 2,
+   "placed": [
+    5.38,
+    10.0
+   ],
+   "sps": 8.41,
+   "x_median": 1.18,
+   "tempo": 1.007,
+   "text": "You can order it at the time of purchasing an apartment in our Flora residential"
+  },
+  {
+   "unit": 3,
+   "placed": [
+    10.24,
+    13.1
+   ],
+   "sps": 8.17,
+   "x_median": 1.15,
+   "tempo": 0.942,
+   "text": "The ceiling is a stretched one, it's white and has a matte finish."
+  },
+  {
+   "unit": 24,
+   "placed": [
+    90.02,
+    93.71
+   ],
+   "sps": 8.14,
+   "x_median": 1.15,
+   "tempo": 0.953,
+   "text": "You can find even more details about the Prime deal from the sales department ma"
+  },
+  {
+   "unit": 4,
+   "placed": [
+    13.18,
+    16.41
+   ],
+   "sps": 8.07,
+   "x_median": 1.14,
+   "tempo": 0.964,
+   "text": "In each room, the lifespan is more than ten years, to be exact."
+  },
+  {
+   "unit": 17,
+   "placed": [
+    68.88,
+    71.85
+   ],
+   "sps": 7.97,
+   "x_median": 1.12,
+   "tempo": 1.001,
+   "text": "Bathroom or shower area, whichever you find more suitable."
+  },
+  {
+   "unit": 1,
+   "placed": [
+    1.52,
+    5.32
+   ],
+   "sps": 7.92,
+   "x_median": 1.12,
+   "tempo": 0.865,
+   "text": "Let's take a look at what the repair work offered by the developer includes."
+  },
+  {
+   "unit": 21,
+   "placed": [
+    81.9,
+    85.22
+   ],
+   "sps": 7.85,
+   "x_median": 1.11,
+   "tempo": 0.956,
+   "text": "This coating is resistant to water vapor and high humidity."
+  },
+  {
+   "unit": 19,
+   "placed": [
+    74.68,
+    78.36
+   ],
+   "sps": 7.83,
+   "x_median": 1.1,
+   "tempo": 0.882,
+   "text": "Balcony... Ceiling and wall covering in the area of the glazed balcony..."
+  },
+  {
+   "unit": 6,
+   "placed": [
+    20.52,
+    26.62
+   ],
+   "sps": 7.72,
+   "x_median": 1.09,
+   "tempo": 1.009,
+   "text": "The relief texture featuring a vertical string design helps to create the necess"
+  },
+  {
+   "unit": 16,
+   "placed": [
+    63.7,
+    68.72
+   ],
+   "sps": 7.69,
+   "x_median": 1.08,
+   "tempo": 0.972,
+   "text": "All necessary plumbing fixtures, including a toilet, a micro-lift, and super-dur"
+  },
+  {
+   "unit": 14,
+   "placed": [
+    56.76,
+    60.88
+   ],
+   "sps": 7.34,
+   "x_median": 1.03,
+   "tempo": 1.052,
+   "text": "It has a moisture absorption rate that is less than zero point five percent."
+  },
+  {
+   "unit": 20,
+   "placed": [
+    78.72,
+    81.53
+   ],
+   "sps": 7.26,
+   "x_median": 1.02,
+   "tempo": 1.023,
+   "text": "Plaster with white matte water-resistant paint over it."
+  },
+  {
+   "unit": 22,
+   "placed": [
+    85.28,
+    86.45
+   ],
+   "sps": 7.1,
+   "x_median": 1.0,
+   "tempo": 1.01,
+   "text": "When used properly."
+  },
+  {
+   "unit": 11,
+   "placed": [
+    39.04,
+    43.08
+   ],
+   "sps": 7.06,
+   "x_median": 0.99,
+   "tempo": 0.825,
+   "text": "And it is designed for 20 to 25 years of active use."
+  },
+  {
+   "unit": 5,
+   "placed": [
+    18.08,
+    20.48
+   ],
+   "sps": 6.89,
+   "x_median": 0.97,
+   "tempo": 0.99,
+   "text": "Primer paintable wallpaper on a fiberglass base."
+  },
+  {
+   "unit": 9,
+   "placed": [
+    33.4,
+    34.48
+   ],
+   "sps": 6.88,
+   "x_median": 0.97,
+   "tempo": 0.977,
+   "text": "Egger with backing."
+  },
+  {
+   "unit": 12,
+   "placed": [
+    43.6,
+    50.34
+   ],
+   "sps": 6.63,
+   "x_median": 0.93,
+   "tempo": 0.795,
+   "text": "Interior doors... A minimalist panel constructed from high-density MDF, featurin"
+  },
+  {
+   "unit": 15,
+   "placed": [
+    61.1,
+    63.65
+   ],
+   "sps": 6.3,
+   "x_median": 0.89,
+   "tempo": 0.927,
+   "text": "And that means, it is sufficiently strong."
+  },
+  {
+   "unit": 18,
+   "placed": [
+    71.98,
+    74.32
+   ],
+   "sps": 6.28,
+   "x_median": 0.88,
+   "tempo": 1.011,
+   "text": "Vanity with a high-strength brass faucet..."
+  },
+  {
+   "unit": 7,
+   "placed": [
+    26.64,
+    30.5
+   ],
+   "sps": 5.99,
+   "x_median": 0.84,
+   "tempo": 0.948,
+   "text": "Such wallpaper can withstand up to ten paint applications. Floor."
+  },
+  {
+   "unit": 23,
+   "placed": [
+    86.66,
+    89.19
+   ],
+   "sps": 5.93,
+   "x_median": 0.84,
+   "tempo": 0.942,
+   "text": "Waterproof paints can last up to ten years."
+  },
+  {
+   "unit": 10,
+   "placed": [
+    34.82,
+    38.84
+   ],
+   "sps": 5.89,
+   "x_median": 0.83,
+   "tempo": 0.917,
+   "text": "Has high thermal, moisture, and sound insulation properties."
+  },
+  {
+   "unit": 0,
+   "placed": [
+    0.0,
+    1.41
+   ],
+   "sps": 5.71,
+   "x_median": 0.8,
+   "tempo": 1.022,
+   "text": "Neometria Prime Finish."
+  },
+  {
+   "unit": 8,
+   "placed": [
+    30.66,
+    32.47
+   ],
+   "sps": 5.53,
+   "x_median": 0.78,
+   "tempo": 0.991,
+   "text": "Laminate thirty-three class."
+  },
+  {
+   "unit": 13,
+   "placed": [
+    50.9,
+    56.67
+   ],
+   "sps": 5.52,
+   "x_median": 0.78,
+   "tempo": 0.982,
+   "text": "Bathroom... Matte large-format ceramic granit six hundred by six hundred thick n"
+  },
+  {
+   "unit": 5,
+   "placed": [
+    17.26,
+    17.79
+   ],
+   "sps": 2.75,
+   "x_median": 0.39,
+   "tempo": null,
+   "text": "Walls."
+  }
+ ]
+}
