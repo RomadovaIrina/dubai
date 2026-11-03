@@ -1,0 +1,131 @@
+{
+ "mturn": {
+  "status": "PARTIAL_SUCCESS",
+  "flags": [
+   "high_fps",
+   "odd_fps",
+   "variable_fps",
+   "no_lipsync_head_pose"
+  ],
+  "spec": {
+   "voice_policy": {
+    "max_voices": 2,
+    "unit_speakers": 1,
+    "speech_s": {
+     "SPEAKER_00": 20.2
+    },
+    "applied": false
+   },
+   "speakers": [
+    "SPEAKER_00"
+   ],
+   "faces": {
+    "max_faces": 2,
+    "tracks": 1
+   },
+   "pose": {
+    "available": true,
+    "yaw_p1_p50_p99": [
+     -29.8,
+     -5.2,
+     7.6
+    ],
+    "abs_yaw_max": 34.6,
+    "precheck": {
+     "yaw_deg": 10.0,
+     "max_fraction": 0.2,
+     "fraction_over": 0.2761,
+     "enabled": true,
+     "voice_only": true
+    },
+    "gate": {
+     "yaw_deg": 0.0,
+     "hold_frames": 3,
+     "gated_frames": 0
+    }
+   },
+   "video_status": {
+    "status": "PARTIAL_SUCCESS",
+    "eligible_lipsync_frames": 0,
+    "held_landmark_frames": 0,
+    "latentsync_failed_frames": 0,
+    "degraded_ratio": 0.0,
+    "voice_only": true,
+    "rule": "SUCCESS if degraded <= 2 % of eligible frames; voice-only fallback = PARTIAL_SUCCESS"
+   }
+  },
+  "outputs": {
+   "demucs": {
+    "width": 1072,
+    "height": 1920,
+    "fps": 40.0,
+    "duration_s": 21.466,
+    "a_duration_s": 21.466,
+    "vcodec": "h264",
+    "size_mb": 18.38,
+    "file": "mturn_DabAI_r9_demucs.mp4",
+    "matches_source": true
+   },
+   "spleeter": {
+    "width": 1072,
+    "height": 1920,
+    "fps": 40.0,
+    "duration_s": 21.466,
+    "a_duration_s": 21.466,
+    "vcodec": "h264",
+    "size_mb": 18.37,
+    "file": "mturn_DabAI_r9_spleeter.mp4",
+    "matches_source": true
+   }
+  }
+ },
+ "old02": {
+  "status": "SUCCESS",
+  "flags": [
+   "low_res",
+   "long_video",
+   "no_face",
+   "face_skipped_no_face"
+  ],
+  "spec": {
+   "voice_policy": {
+    "max_voices": 2,
+    "unit_speakers": 1,
+    "speech_s": {
+     "SPEAKER_00": 109.56
+    },
+    "applied": false
+   },
+   "speakers": [
+    "SPEAKER_00"
+   ],
+   "faces": null,
+   "pose": null,
+   "video_status": null
+  },
+  "outputs": {
+   "demucs": {
+    "width": 464,
+    "height": 848,
+    "fps": 29.982,
+    "duration_s": 110.867,
+    "a_duration_s": 110.866,
+    "vcodec": "h264",
+    "size_mb": 25.09,
+    "file": "old02_DabAI_r9_demucs.mp4",
+    "matches_source": true
+   },
+   "spleeter": {
+    "width": 464,
+    "height": 848,
+    "fps": 29.982,
+    "duration_s": 110.867,
+    "a_duration_s": 110.866,
+    "vcodec": "h264",
+    "size_mb": 25.06,
+    "file": "old02_DabAI_r9_spleeter.mp4",
+    "matches_source": true
+   }
+  }
+ }
+}

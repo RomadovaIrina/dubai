@@ -78,3 +78,46 @@ The automatic rule in `lang_eval.py routes` ("mixed lines ≥ 2, or adequacy < E
 - **da:** only the voice.
 
 `scripts/r13/lang_routes.json` holds this curated table; the router (`scripts/r13/donor.py`) falls back to the local path, flagged, while there is no key.
+
+
+## Update: the mixed-script guard for every language (`scripts/r13/lang_guard.py`)
+
+Same 16 / 8 sentences, re-measured with `lang_eval.py mt --guard on`.
+
+**How the guard works:**
+- It detects letters of a foreign script (neither the target's nor Latin), character loops and "Note:" asides.
+- It retries twice with a strict prompt (greedy, then temperature 0.3) and keeps the cleanest candidate.
+- If the best one still ends in an appended remark, the remark is cut off. The clean head is kept when it is ≥ 60 % of the source length (sv: a Chinese comment after a correct sentence; no: an English "Note: …").
+- It is used by `polyglot.py`, i.e. every non-English dub. Raw data: `data/lang_guard/`.
+
+| lang | mixed lines before → after guard | adequacy before → after | TTS CER before → after | Result |
+|---|---|---|---|---|
+| pt | 2 → **0** | 4.0 → 4.0 | 0.035 → **0.000** | **local** |
+| sv | 1 → **0** (trim) | 3.62 → 3.62 | 0.093 → 0.093 | **local** |
+| no | 3 → **0** (trim) | 3.5 → 3.5 | 0.079 → **0.016** | **local** |
+| ms | 0 → 0 | 3.31 → 3.31 | 0.046 → 0.046 | **local** (adequacy 3.3: worth one native check) |
+| hi | 3 → **0** | 3.0 → 3.31 | 0.090 → 0.088 | **local** (adequacy 3.3: worth one native check) |
+| tr | 3 → **1** | 3.38 → 3.5 | 0.089 → 0.076 | local + per-sentence external fallback |
+| pl | 4 → **2** | 3.56 → 3.56 | 0.104 → 0.081 | local + per-sentence external fallback |
+
+What is left in tr / pl: Russian words in the MIDDLE of a sentence on the hardest unpunctuated colloquial lines. Examples:
+- tr: "ayrıca территорииnde banyo kompleksi…"
+- pl: "już teraz zaczнутся parzenia…"
+
+These cannot be trimmed. The guard reports them (`final_defects`). Proposal: such a SENTENCE goes to the external translator when a key exists, otherwise it is kept and the job gets a flag. That is 1–2 of 16 sentences instead of the whole language.
+
+## Updated routing proposal (supersedes the table above)
+
+| Group | Languages | Translation | Voice |
+|---|---|---|---|
+| **local** | en, de, es, fr, it, nl, zh, ja, **pt, sv, no, ms, hi** | Qwen 14B + guard | Chatterbox |
+| **local + per-sentence external fallback** | **tr, pl** | Qwen 14B + guard; a still-mixed sentence → external | Chatterbox |
+| **external translation** | sw | external API | Chatterbox |
+| **external voice only** | da | Qwen 14B + guard | donor TTS + ChatterboxVC |
+| **external translation + voice** | he, ar, ko, el, fi | external API | donor TTS + ChatterboxVC |
+
+**Answer to "is OpenAI needed?":**
+- **13 of 22 languages: no.**
+- **tr, pl:** only for the odd sentence.
+- **For sw, da, he, ar, ko, el, fi: yes.** (sw translation, da voice, the other five both.)
+- he / ar / ko / el / fi were not re-measured with the guard. Their problems are deeper (whole lines mixed, low adequacy, CER 0.16–0.74), so the guard alone will not fix them.

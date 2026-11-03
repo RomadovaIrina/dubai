@@ -38,6 +38,21 @@ def defects(text: str, lang: str) -> list[str]:
     return d
 
 
+def trim_tail(text: str, lang: str, src: str = "", min_keep: float = 0.6) -> str | None:
+    """a clean translation followed by an appended comment (Chinese remark, English "Note: ...") -> the clean head, when the head is at least
+    min_keep of the SOURCE length (an appended remark can be longer than the translation) and itself defect-free; else None"""
+    want = SCRIPT.get(lang, "LATIN"); ok = {"LATIN", "CJK", "KANA"} if want == "JA" else {"LATIN", want}
+    cut = len(text)
+    for i, ch in enumerate(text):
+        if ch.isalpha() and script_of(ch) not in ok and script_of(ch) != "OTHER": cut = i; break
+    m = re.search(r"(?i)\(?\bnote:|\(note|translation:", text)
+    if m: cut = min(cut, m.start())
+    head = text[:cut].rstrip(" ,;:-(")
+    if cut < len(text) and len(head) >= min_keep * len(src or text) and head and not defects(head, lang):
+        return head if head[-1] in ".!?…" else head + "."
+    return None
+
+
 def _clean(t: str) -> str:
     t = " ".join(t.split()).strip()
     return t[1:-1].strip() if len(t) >= 2 and t[0] in "\"«“" and t[-1] in "\"»”" else t
@@ -54,5 +69,10 @@ def guarded(chat, ru: str, lang: str, lang_name: str, src_name: str = "Russian",
             t = _clean(chat([{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": strict}], temp)); d = defects(t, lang)
             cands.append((t, d))
             if not d: break
-    best = min(range(len(cands)), key=lambda i: (len(cands[i][1]), i))
-    return cands[best][0], {"first_defects": cands[0][1], "tries": len(cands), "used": best, "final_defects": cands[best][1]}
+    best = min(range(len(cands)), key=lambda i: (len(cands[i][1]), i)); text = cands[best][0]; info = {"first_defects": cands[0][1], "tries": len(cands), "used": best}
+    if cands[best][1]:   # still defective: an appended comment is cut off (the translation before it is kept)
+        for t, _ in [cands[best]] + cands:
+            h = trim_tail(t, lang, ru)
+            if h: text, info["trimmed"] = h, True; break
+    info["final_defects"] = defects(text, lang)
+    return text, info

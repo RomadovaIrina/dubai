@@ -1,0 +1,311 @@
+{
+ "lang": "ms",
+ "name": "Malay",
+ "s": 8.4,
+ "rows": [
+  {
+   "ru": "Отделка Prime от Neometria.",
+   "tr": "Penyelenggaraan Prime daripada Neometria.",
+   "back": "Организация Prime из Neometria.",
+   "chrf_back": 45.3,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    2,
+    3
+   ],
+   "guard": {
+    "first_defects": [],
+    "tries": 1,
+    "used": 0,
+    "final_defects": []
+   },
+   "preamble": false
+  },
+  {
+   "ru": "также на территории у нас банный комплекс все готово к первым парением через 3-4 дня буквально",
+   "tr": "juga di kawasan tersebut kami mempunyai kompleks basuhan dan segala sesuatu sudah siap untuk pertama kali mandi uap dalam masa 3-4 hari sahaja",
+   "back": "также в этом районе у нас есть комплекс саун, и всё готово для первого раза паровой бани уже через 3-4 дня",
+   "chrf_back": 38.2,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "guard": {
+    "first_defects": [],
+    "tries": 1,
+    "used": 0,
+    "final_defects": []
+   },
+   "preamble": false
+  },
+  {
+   "ru": "друзья ну что всем привет запишу первое видео такое ознакомительно целью познакомиться наверно",
+   "tr": "kawan-kawan hai semua saya akan menghasilkan video pertama ini yang bersifat penerangan supaya kita dapat berkenaan",
+   "back": "друзья мои, всем привет, я создам первый видео, который будет ознакомительным, чтобы мы могли обсудить эту тему",
+   "chrf_back": 38.0,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    3,
+    4
+   ],
+   "guard": {
+    "first_defects": [],
+    "tries": 1,
+    "used": 0,
+    "final_defects": []
+   },
+   "preamble": false
+  },
+  {
+   "ru": "сделаем видео с очками посмотрим опять же потестируем как наше приложение будет на это",
+   "tr": "kita buat video dengan kacamata, kita lihat lagi, kita uji lagi bagaimana aplikasi kita akan berfungsi untuk ini",
+   "back": "мы делаем видео с очками, мы снова смотрим, мы снова проверяем, как будет работать наша программа для этого",
+   "chrf_back": 39.7,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    4
+   ],
+   "guard": {
+    "first_defects": [],
+    "tries": 1,
+    "used": 0,
+    "final_defects": []
+   },
+   "preamble": false
+  },
+  {
+   "ru": "Давайте протестируем еще вот такой формат съемки видео",
+   "tr": "Mari kita uji format pengambilan video yang begini lagi.",
+   "back": "Давайте проверим этот формат записи видео.",
+   "chrf_back": 37.8,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "guard": {
+    "first_defects": [],
+    "tries": 1,
+    "used": 0,
+    "final_defects": []
+   },
+   "preamble": false
+  },
+  {
+   "ru": "Давайте посмотрим, что включает в себя ремонт, предлагаемый застройщиком.",
+   "tr": "Mari kita lihat apa yang termasuk dalam perbaikan yang diusulkan oleh pembina.",
+   "back": "Давайте посмотрим, что включено в предложенные подрядчиком исправления.",
+   "chrf_back": 46.5,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "guard": {
+    "first_defects": [],
+    "tries": 1,
+    "used": 0,
+    "final_defects": []
+   },
+   "preamble": false
+  },
+  {
+   "ru": "уже тут начнутся парения сейчас покажу бассейн вот такие вот у нас тут разные штуки зона для",
+   "tr": "ini sudah mulakan pemanasan di sini sekarang akan tunjukkan kolam renang beginilah apa yang kita ada di sini benda-benda berbeza zon untuk",
+   "back": "это уже начало разминки здесь сейчас я покажу бассейн вот что у нас здесь различные зоны для",
+   "chrf_back": 38.3,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    3,
+    4
+   ],
+   "guard": {
+    "first_defects": [],
+    "tries": 1,
+    "used": 0,
+    "final_defects": []
+   },
+   "preamble": false
+  },
+  {
+   "ru": "больше в общем что хочу сказать рад знакомству с вами рад сотрудничеству сегодня пятница 28",
+   "tr": "lebih banyak secara keseluruhan apa yang saya mahu katakan adalah bahagia bertemu dengan anda bahagia bekerjasama hari ini adalah Jumaat 28",
+   "back": "более много в целом то, что я хочу сказать, это рад встрече с вами, рад сотрудничеству сегодня пятница 28",
+   "chrf_back": 60.9,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    3,
+    4
+   ],
+   "guard": {
+    "first_defects": [],
+    "tries": 1,
+    "used": 0,
+    "final_defects": []
+   },
+   "preamble": false
+  },
+  {
+   "ru": "все реагировать город сочи 28 августа сегодня и мы начинаем рабочие процессы по созданию нашего",
+   "tr": "semua merespon bandar sochi 28 august today dan kita memulakan proses kerja untuk mencipta milik kita",
+   "back": "все отвечают на сообщение о сочи 28 августа сегодня, и мы начинаем процесс работы для создания нашего собственного",
+   "chrf_back": 54.1,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    3,
+    4
+   ],
+   "guard": {
+    "first_defects": [],
+    "tries": 1,
+    "used": 0,
+    "final_defects": []
+   },
+   "preamble": false
+  },
+  {
+   "ru": "Все-таки современные телефоны уже позволяют это делать",
+   "tr": "Barangkali telefon telefon semasa sudah membolehkan melakukan perkara ini.",
+   "back": "Возможно, современные телефоны уже позволяют делать это.",
+   "chrf_back": 72.0,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    3,
+    2
+   ],
+   "guard": {
+    "first_defects": [],
+    "tries": 1,
+    "used": 0,
+    "final_defects": []
+   },
+   "preamble": false
+  },
+  {
+   "ru": "Его вы можете заказать на момент покупки квартиры в нашем жилом комплексе Flora.",
+   "tr": "Anda boleh mengorderinya pada masa membeli unit apartemen dalam kompleks perumahan Flora kami.",
+   "back": "Вы можете заказать его при покупке квартиры в нашем жилом комплексе Флора.",
+   "chrf_back": 68.5,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "guard": {
+    "first_defects": [],
+    "tries": 1,
+    "used": 0,
+    "final_defects": []
+   },
+   "preamble": false
+  },
+  {
+   "ru": "переодевания бочки шезлонги здесь у нас финская сауна покажу русскую баню русская",
+   "tr": "pakaian semula tangki sofa taman di sini kami mempunyai sauna Finland kubur bath rumah mandi Russia Russia",
+   "back": "переодеть танки для диванов на открытых террасах здесь у нас есть финская сауна кремационный душ русская баня Russia Russia",
+   "chrf_back": 40.8,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    2,
+    3
+   ],
+   "guard": {
+    "first_defects": [],
+    "tries": 1,
+    "used": 0,
+    "final_defects": []
+   },
+   "preamble": false
+  },
+  {
+   "ru": "августа будем считать что это . начало нашего сотрудничества что хочется сказать пусть это",
+   "tr": "pada bulan Ogos, kita akan anggap ini sebagai permulaan kerjasama kita. apa yang saya mahu katakan ialah biarlah ini",
+   "back": "в августе мы будем считать это началом нашего сотрудничества. то, что я хочу сказать, это пусть это будет",
+   "chrf_back": 63.0,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    3,
+    4
+   ],
+   "guard": {
+    "first_defects": [],
+    "tries": 1,
+    "used": 0,
+    "final_defects": []
+   },
+   "preamble": false
+  },
+  {
+   "ru": "магического приложения которое облегчит жизнь людям которая я надеюсь будет пользоваться",
+   "tr": "aplikasi sihir yang akan memudahkan kehidupan orang yang saya harapkan akan digunakan",
+   "back": "волшебное приложение, которое облегчит жизнь человека, которого я надеюсь использовать",
+   "chrf_back": 55.7,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    3
+   ],
+   "guard": {
+    "first_defects": [],
+    "tries": 1,
+    "used": 0,
+    "final_defects": []
+   },
+   "preamble": false
+  },
+  {
+   "ru": "И такая функция добавляет, конечно же, у нас популярности и возможностей",
+   "tr": "Fungsi seperti itu menambahkan, tentu sajanya, populariti dan peluang kami.",
+   "back": "Такие функции, конечно, добавляют нашей популярности и возможностям.",
+   "chrf_back": 61.7,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "guard": {
+    "first_defects": [],
+    "tries": 1,
+    "used": 0,
+    "final_defects": []
+   },
+   "preamble": false
+  },
+  {
+   "ru": "Потолок натяжной, белый, матовый.",
+   "tr": "Langit memanjang, putih, tidak mengkilat.",
+   "back": "Небо тянется, белое, не блестящее.",
+   "chrf_back": 13.6,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    3,
+    4
+   ],
+   "guard": {
+    "first_defects": [],
+    "tries": 1,
+    "used": 0,
+    "final_defects": []
+   },
+   "preamble": false
+  }
+ ]
+}

@@ -1,119 +1,118 @@
 {
- "source": "r13 local measurements, curated (reports/experiments/r13-spec/LANGS.md); auto-rule output: data/lang/lang_routes_auto.json",
+ "source": "r13 local measurements + the mixed-script guard (reports/experiments/r13-spec/LANGS.md)",
+ "guard": "scripts/r13/lang_guard.py (all languages)",
  "langs": {
   "en": {
    "mt": "qwen",
    "tts": "chatterbox",
-   "group": "A"
+   "group": "local"
   },
   "de": {
    "mt": "qwen",
    "tts": "chatterbox",
-   "group": "A"
+   "group": "local"
   },
   "es": {
    "mt": "qwen",
    "tts": "chatterbox",
-   "group": "A"
+   "group": "local"
   },
   "fr": {
    "mt": "qwen",
    "tts": "chatterbox",
-   "group": "A"
+   "group": "local"
   },
   "it": {
    "mt": "qwen",
    "tts": "chatterbox",
-   "group": "A"
+   "group": "local"
   },
   "nl": {
    "mt": "qwen",
    "tts": "chatterbox",
-   "group": "A"
+   "group": "local"
   },
   "zh": {
    "mt": "qwen",
    "tts": "chatterbox",
-   "group": "A"
+   "group": "local"
   },
   "ja": {
    "mt": "qwen",
    "tts": "chatterbox",
-   "group": "A"
+   "group": "local"
   },
   "pt": {
    "mt": "qwen",
    "tts": "chatterbox",
-   "group": "B",
-   "guard": "mixed_script_retry"
+   "group": "local"
   },
   "sv": {
    "mt": "qwen",
    "tts": "chatterbox",
-   "group": "B",
-   "guard": "mixed_script_retry"
+   "group": "local"
   },
   "no": {
    "mt": "qwen",
    "tts": "chatterbox",
-   "group": "B",
-   "guard": "mixed_script_retry"
+   "group": "local"
   },
   "ms": {
    "mt": "qwen",
    "tts": "chatterbox",
-   "group": "B",
-   "guard": "mixed_script_retry"
-  },
-  "tr": {
-   "mt": "openai",
-   "tts": "chatterbox",
-   "group": "C"
-  },
-  "pl": {
-   "mt": "openai",
-   "tts": "chatterbox",
-   "group": "C"
+   "group": "local"
   },
   "hi": {
-   "mt": "openai",
+   "mt": "qwen",
    "tts": "chatterbox",
-   "group": "C"
+   "group": "local"
+  },
+  "tr": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "group": "local_sentence_fallback",
+   "sentence_fallback": "openai"
+  },
+  "pl": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "group": "local_sentence_fallback",
+   "sentence_fallback": "openai"
   },
   "sw": {
    "mt": "openai",
    "tts": "chatterbox",
-   "group": "C"
+   "group": "external_mt"
   },
   "da": {
    "mt": "qwen",
    "tts": "donor_vc",
-   "group": "D"
+   "group": "external_voice"
   },
   "he": {
    "mt": "openai",
    "tts": "donor_vc",
-   "group": "E"
+   "group": "external_both"
   },
   "ar": {
    "mt": "openai",
    "tts": "donor_vc",
-   "group": "E"
+   "group": "external_both"
   },
   "ko": {
    "mt": "openai",
    "tts": "donor_vc",
-   "group": "E"
+   "group": "external_both"
   },
   "el": {
    "mt": "openai",
    "tts": "donor_vc",
-   "group": "E"
+   "group": "external_both"
   },
   "fi": {
    "mt": "openai",
    "tts": "donor_vc",
-   "group": "E"
+   "group": "external_both"
   }
  }
 }
