@@ -1,0 +1,78 @@
+{
+ "ref": "/workspace/dub/r13s/lang/ref_old03.wav",
+ "rows": {
+  "de": {
+   "engine": "openai_tts+chatterbox_vc",
+   "sim_user_vs_donor": 0.554,
+   "sim_user_vs_vc": 0.872,
+   "cer_donor": 0.0,
+   "cer_vc": 0.0
+  },
+  "fr": {
+   "engine": "openai_tts+chatterbox_vc",
+   "sim_user_vs_donor": 0.585,
+   "sim_user_vs_vc": 0.811,
+   "cer_donor": 0.0,
+   "cer_vc": 0.0
+  },
+  "hi": {
+   "engine": "openai_tts+chatterbox_vc",
+   "sim_user_vs_donor": 0.628,
+   "sim_user_vs_vc": 0.781,
+   "cer_donor": 0.016,
+   "cer_vc": 0.049
+  },
+  "ar": {
+   "engine": "openai_tts+chatterbox_vc",
+   "sim_user_vs_donor": 0.565,
+   "sim_user_vs_vc": 0.785,
+   "cer_donor": 0.074,
+   "cer_vc": 0.074
+  },
+  "ja": {
+   "engine": "openai_tts+chatterbox_vc",
+   "sim_user_vs_donor": 0.622,
+   "sim_user_vs_vc": 0.824,
+   "cer_donor": 0.04,
+   "cer_vc": 0.12
+  }
+ },
+ "mock_log": [
+  {
+   "t": 1238005.202,
+   "code": 429,
+   "auth": true,
+   "chars": 66
+  },
+  {
+   "t": 1238006.003,
+   "code": 200,
+   "auth": true,
+   "chars": 66
+  },
+  {
+   "t": 1238007.551,
+   "code": 200,
+   "auth": true,
+   "chars": 73
+  },
+  {
+   "t": 1238008.81,
+   "code": 200,
+   "auth": true,
+   "chars": 62
+  },
+  {
+   "t": 1238010.153,
+   "code": 200,
+   "auth": true,
+   "chars": 55
+  },
+  {
+   "t": 1238011.526,
+   "code": 200,
+   "auth": true,
+   "chars": 28
+  }
+ ]
+}
