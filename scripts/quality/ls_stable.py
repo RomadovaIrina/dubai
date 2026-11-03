@@ -501,12 +501,12 @@ class StableRunner:
         self.acc.chunk_hook = self.silence_mix.hook(start, n) if self.silence_mix is not None else None
         sa = getattr(self, "silent_all", None); self.acc.silent_seg = sa[start:start + n] if sa is not None else None   # phase 2: dub-silent master frames of this segment
 
-    def _even_rate(self, frames, audio_wav, detections, fps):
+    def _even_rate(self, frames, audio_wav, detections, fps, rate="2/3"):
         """r13 LS_RATE=2/3 LS_RATE_EVEN=1 (user on m03 LS_RATE 2/3: "лицо подергивается и дрожит"; the skip pattern feeds the generator uneven steps):
         LatentSync on an EVEN 50/3 fps grid (master times 0, 1.5, 3, ...; the half-step input frames are flow-interpolated from the source, their
         detections averaged; the audio chunks are taken at the same times: video_fps just under 50/3), then flow-interpolated back to the master grid."""
         import cv2
-        n = len(frames); pos = np.arange(0, n - 1e-6, 1.5); dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM); gin = []; dets = [] if detections is not None else None
+        k_, m_ = map(int, rate.split("/")); n = len(frames); pos = np.arange(0, n - 1e-6, m_ / k_); dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM); gin = []; dets = [] if detections is not None else None
         for t in pos:
             a = int(np.floor(t)); f_ = t - a
             if f_ < 1e-6 or a + 1 >= n: gin.append(frames[a]); d_ = detections[a] if detections is not None else None
@@ -521,10 +521,10 @@ class StableRunner:
         ss = self.acc.silent_seg
         if ss is not None: self.acc.silent_seg = np.asarray(ss)[np.minimum(np.round(pos).astype(int), len(ss) - 1)]
         try:
-            gen = self.acc.run_frames(np.ascontiguousarray(np.stack(gin)), audio_wav, dets, video_fps=(50.0 / 3) * (1 - 1e-9))
+            gen = self.acc.run_frames(np.ascontiguousarray(np.stack(gin)), audio_wav, dets, video_fps=(25.0 * k_ / m_) * (1 - 1e-9))
         finally: self.acc.silent_seg = ss
         gen = np.asarray(gen)[:len(pos)]
-        print(f"  [ls_rate] even 50/3 fps: {len(pos)} generated for {n} master frames", flush=True)
+        print(f"  [ls_rate] even {25 * k_ / m_:.2f} fps: {len(pos)} generated for {n} master frames", flush=True)
         return even_fill(frames, gen, np.stack(gin)[:len(gen)], pos[:len(gen)])
 
     def run_frames(self, frames_rgb, audio_wav, detections=None):
@@ -539,8 +539,8 @@ class StableRunner:
             return r
         fps = int(os.environ.get("DUB_LS_FPS", "25")); t0 = time.perf_counter()
         rate = os.environ.get("LS_RATE", "")   # r10 speed: LS_RATE=k/m = LatentSync on k of every m master frames, each with ITS OWN 25 fps audio window (chunk selection), the rest flow-filled
-        if rate == "2/3" and os.environ.get("LS_RATE_EVEN") == "1" and len(frames_rgb) >= 32:
-            frames = self._even_rate(np.asarray(frames_rgb), str(audio_wav), detections, fps)
+        if rate and os.environ.get("LS_RATE_EVEN") == "1" and len(frames_rgb) >= 32:   # r13: any k/m on an even grid (user: even 2/3 "стало сильно лучше", slight tremble left)
+            frames = self._even_rate(np.asarray(frames_rgb), str(audio_wav), detections, fps, rate)
         elif rate and len(frames_rgb) >= 32:
             k_, m_ = map(int, rate.split("/")); n = len(frames_rgb); idx = np.array([i for i in range(n) if i % m_ < k_]); ss = self.acc.silent_seg; hk = self.acc.chunk_hook
             aq = float(os.environ.get("LS_RATE_ADAPT", "0") or 0)

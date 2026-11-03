@@ -8,7 +8,7 @@ import argparse, json, pathlib
 import numpy as np, cv2
 LIPS = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185]
 ap = argparse.ArgumentParser(); ap.add_argument("--video", required=True); ap.add_argument("--src", required=True); ap.add_argument("--src-lm", required=True)
-ap.add_argument("--label", default=""); ap.add_argument("--dil", type=float, default=0.3); ap.add_argument("--thr", type=float, default=4.0); ap.add_argument("--json", default="")
+ap.add_argument("--label", default=""); ap.add_argument("--dil", type=float, default=0.3); ap.add_argument("--thr", type=float, default=4.0); ap.add_argument("--json", default=""); ap.add_argument("--cad-hz", type=float, default=25 / 3)
 a = ap.parse_args(); lm = np.load(a.src_lm)["lm"].astype(np.float64); dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
 
 
@@ -42,7 +42,7 @@ def series(F):
 Fv, fps = frames(a.video); Fs, _ = frames(a.src); pv, ps = series(Fv), series(Fs); n = min(len(pv), len(ps)); pv, ps = pv[:n], ps[:n]
 ok = np.isfinite(pv) & np.isfinite(ps); x = pv - ps
 xs = np.where(ok, pv, np.nanmean(pv)); xs = xs - xs.mean(); P = np.abs(np.fft.rfft(xs * np.hanning(len(xs)))) ** 2; f = np.fft.rfftfreq(len(xs), 1 / fps)
-band = (f >= 2) & (f <= 15); cad = band & (np.abs(f - 25 / 3) <= 0.6)
+band = (f >= 2) & (f <= 15); cad = band & (np.abs(f - a.cad_hz) <= 0.6)
 res = {"label": a.label, "pop_mean": round(float(pv[ok].mean()), 3), "pop_p95": round(float(np.percentile(pv[ok], 95)), 3), "src_pop_mean": round(float(ps[ok].mean()), 3),
        "excess_mean": round(float(x[ok].mean()), 3), "rate_gt_thr": round(float((pv[ok] > a.thr).mean()), 3), "cadence_share": round(float(P[cad].sum() / max(P[band].sum(), 1e-12)), 3)}
 print("== mouth_pop", json.dumps(res), flush=True)
