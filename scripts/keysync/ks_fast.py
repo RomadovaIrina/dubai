@@ -41,7 +41,8 @@ def main():
     if a.fp8:
         # PerRow needs bf16 weights; the UNets are fp16 -> PerTensor; only the Linear layers with in / out % 16 == 0 (float8 GEMM shapes)
         from torchao.quantization import quantize_, float8_dynamic_activation_float8_weight, PerTensor
-        f16 = lambda mod, fqn: isinstance(mod, torch.nn.Linear) and mod.in_features % 16 == 0 and mod.out_features % 16 == 0
+        f16 = lambda mod, fqn: isinstance(mod, torch.nn.Linear) and mod.in_features % 16 == 0 and mod.out_features % 16 == 0 and mod.weight.dtype in (torch.float16, torch.bfloat16) and (mod.bias is None or mod.bias.dtype == mod.weight.dtype)   # float8 GEMM: 16-aligned, half bias
+        for m in (model, model_kf): print("FP8_LAYERS", sum(1 for n_, mod in m.model.diffusion_model.named_modules() if f16(mod, n_)), "of", sum(1 for mod in m.model.diffusion_model.modules() if isinstance(mod, torch.nn.Linear)), {str(mod.weight.dtype) for mod in m.model.diffusion_model.modules() if isinstance(mod, torch.nn.Linear)}, flush=True)
         for m in (model, model_kf): quantize_(m.model.diffusion_model, float8_dynamic_activation_float8_weight(granularity=PerTensor()), filter_fn=f16)
     if a.compile == "all":   # + the VAE decoders (temporal decoder, one frame per call)
         for m in (model, model_kf): m.first_stage_model.decoder = torch.compile(m.first_stage_model.decoder, mode="max-autotune-no-cudagraphs", dynamic=False)
@@ -53,7 +54,8 @@ def main():
     if a.vae_cl:
         for m in (model, model_kf):   # the temporal decoder has 5-D (Conv3d) weights: channels_last on the 2-D convs only
             for mod in m.first_stage_model.decoder.modules():
-                if isinstance(mod, torch.nn.Conv2d): mod.to(memory_format=torch.channels_last)
+                if isinstance(mod, torch.nn.Conv2d) and mod.weight.dim() == 4:   # own weight only: AE3DConv (a Conv2d) holds a Conv3d child
+                    mod.weight.data = mod.weight.data.contiguous(memory_format=torch.channels_last)
     if a.vae_half:
         for m in (model, model_kf): m.disable_first_stage_autocast = False
     torch.cuda.synchronize(); load_s = time.perf_counter() - t0
