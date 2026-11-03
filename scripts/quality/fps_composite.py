@@ -63,6 +63,18 @@ class SeqWin:
         return v
 
 
+CMS = __import__("os").environ.get("FC_CMS", "0") == "1"   # r13 (KeySync KS_CMS finding): explicit BT.709 decode / encode + BT.709-tagged output. Off = the old
+# conversions: PyAV's defaults + an UNTAGGED output, which a player / reader decodes with another matrix than the BT.709-tagged source
+# (measured on k5 finals vs the source, same reader: m03 background +1.0 L / +3.2 b*, old03 -1.4 L)
+CMS_CS = ["ITU709"]   # the source's matrix, set by the first decoded frame
+
+
+def _cs_of(fr):
+    cs = getattr(fr, "colorspace", None)   # libav AVCOL_SPC: 1 = BT.709, 5 / 6 = BT.601; unspecified -> BT.709 for HD, BT.601 for SD
+    name = "ITU709" if cs == 1 else ("ITU601" if cs in (5, 6) else ("ITU709" if fr.height >= 720 else "ITU601"))
+    CMS_CS[0] = name; return name
+
+
 def source_stream(path: str):
     """-> (SeqWin of bgr24 source frames, pts array, time base, average rate): one decode pass for the pts (no pixel conversion), frames on demand."""
     import av
@@ -71,7 +83,9 @@ def source_stream(path: str):
         c_ = av.open(path); s_ = c_.streams.video[0]
         def gen():
             try:
-                for fr in c_.decode(s_): yield fr.to_ndarray(format="bgr24")
+                for fr in c_.decode(s_):
+                    if CMS: yield fr.reformat(format="bgr24", src_colorspace=_cs_of(fr), src_color_range="MPEG").to_ndarray()   # r13 FC_CMS=1
+                    else: yield fr.to_ndarray(format="bgr24")
             finally: c_.close()
         return gen()
     return SeqWin(opener, len(pts)), np.array(pts, np.int64), tb, rate
@@ -985,9 +999,13 @@ def main() -> int:
     outp = pathlib.Path(a.out); outp.parent.mkdir(parents=True, exist_ok=True); vtmp = outp.with_name(".v_" + outp.name)
     c = av.open(str(vtmp), "w"); st = c.add_stream("libx264", rate=rate); st.width, st.height = W, H; st.pix_fmt = "yuv420p"; st.time_base = tb
     st.options = {"crf": str(a.crf), "preset": "medium"}; st.codec_context.time_base = tb
+    if CMS:   # r13 FC_CMS=1: the output tagged like the source (BT.709 tv range)
+        st.options = {**st.options, "x264-params": "colorprim=bt709:transfer=bt709:colormatrix=" + ("bt709" if CMS_CS[0] == "ITU709" else "smpte170m")}
     def emit(k, o):
         nonlocal t_enc
-        te = time.perf_counter(); fr = av.VideoFrame.from_ndarray(o, format="bgr24"); fr.pts = int(pts[k]); fr.time_base = tb
+        te = time.perf_counter(); fr = av.VideoFrame.from_ndarray(o, format="bgr24")
+        if CMS: fr = fr.reformat(format="yuv420p", dst_colorspace=CMS_CS[0], dst_color_range="MPEG")
+        fr.pts = int(pts[k]); fr.time_base = tb
         for p in st.encode(fr): c.mux(p)
         t_enc += time.perf_counter() - te
     guard_applied = []; flagged = set(); pending = []; in_run = [False]; prev = [None]   # pending: [(k, composite, source)] of the current flagged run
