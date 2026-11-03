@@ -129,6 +129,18 @@ fi
 [ -n "${R10_HEAVY_LOCK:-}" ] && flock -u 8
 [ -n "$VID" ] || VID=$SRC
 
+SUBS=${E2E_SUBS:-off}; WM=${E2E_WATERMARK:-}   # r13 spec block 9: burned subtitles (ASS, word timing on the stretched dub, 4 styles + karaoke) and / or a watermark; default off
+if [ "$SUBS" != off ] || [ -n "$WM" ]; then   # E2E_SUBS=on E2E_SUBS_LANG=dub|src E2E_SUBS_STYLE=white|yellow|trendy|outline E2E_SUBS_KARAOKE=on|off; E2E_WATERMARK=<png>|text:DabAI E2E_WM_CORNER E2E_WM_OPACITY
+  st subs   # CPU (libass + libx264 at the source size / fps); the picture is re-encoded ONCE, then muxed with each bed below
+  SA=(--no-subs)
+  if [ "$SUBS" != off ]; then MAN=$(ls $AD/${ID}_*.manifest.json 2>/dev/null | head -1)
+    SA=(--manifest "$MAN" --lang ${E2E_SUBS_LANG:-dub} --style ${E2E_SUBS_STYLE:-yellow} --karaoke ${E2E_SUBS_KARAOKE:-on}); fi
+  [ -n "$WM" ] && SA+=(--watermark "$WM" --wm-corner ${E2E_WM_CORNER:-br} --wm-opacity ${E2E_WM_OPACITY:-0.6})
+  if SUBS_THREADS=${SUBS_THREADS:-8} python scripts/r7/r7_subs.py burn --video $VID "${SA[@]}" --out $W/final_subs.mp4 > $L/subs.log 2>&1; then
+    VID=$W/final_subs.mp4; [ -f $W/final_subs.mp4.ass ] && cp $W/final_subs.mp4.ass $OUT/${ID}.ass   # the ASS for a player / the backend (soft subs)
+  else fail subs_failed PARTIAL_SUCCESS "see logs/subs.log: the output has no subtitles / watermark"; fi
+fi
+
 st mux   # the picture rendered once, muxed with each bed (stream copy: within the pair the video stream is bit-identical)
 for v in demucs:$A/$HT/$ID/final_mix_aac.m4a spleeter:$AD/final_mix_aac.m4a; do
   n=${v%%:*}; m=${v#*:}; o=$OUT/${ID}_DabAI_r9_$n.mp4; rm -f $o
