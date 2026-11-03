@@ -55,6 +55,9 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--run", required=True); ap.add_argument("--htd"); ap.add_argument("--map", default=os.environ.get("DUB_POLYGLOT", ""))
     ap.add_argument("--seed", type=int, default=1234); a = ap.parse_args()
     import run_clean_pipeline_05 as P
+    import donor as D_
+    global ROUTER, DONOR, FLAGS, VC
+    ROUTER, DONOR, FLAGS, VC = D_.Router(), D_.OpenAITTSDonor(), set(), [None]
     pm = json.loads(a.map); D = pathlib.Path(a.run); mp = next(iter(sorted(D.glob("*_r4b.manifest.json"))), None) or next(iter(sorted(D.glob("*.manifest.json"))))
     man = json.loads(mp.read_text()); units = man["units"]; t0 = time.time()
     plan = [(k, u, lang_of(pm, k, u)) for k, u in enumerate(units)]; todo = [(k, u, l) for k, u, l in plan if l != "en" and slot_of(u)]
@@ -75,6 +78,12 @@ def main():
     texts = {}
     for k, u, L in todo:
         en = u.get("translation_fitted") or u.get("translation") or ""; Ln = P.lang_name(L)
+        route = ROUTER.route(L); u["route"] = route
+        if route["mt"] == "openai":   # 6.5: the external translation for this language (key present); DonorUnavailable -> Qwen below + a flag
+            try:
+                texts[k] = DONOR.translate(u["text"], "Russian", Ln, f"Make it about as long, when spoken, as this English version: \"{en}\""); u["mt_engine"] = "openai"; continue
+            except D_.DonorUnavailable as e:
+                u["mt_engine"] = "qwen_fallback"; FLAGS.add("external_mt_unavailable_fallback"); print(f"  [polyglot] u{k:02d} {L} external MT unavailable: {e}", flush=True)
         first = chat(f"Translate from Russian to {Ln} for dubbing. Make it about as long, when spoken, as this English version: \"{en}\"\nRussian:\n{u['text']}")
         import lang_guard   # r13: the mixed-script retry for every language (LANGS.md: Qwen code-switches on tr / pl / pt / ...)
         texts[k], gi = lang_guard.guarded(lambda msgs, temp: llm.create_chat_completion(msgs, max_tokens=400, temperature=temp)["choices"][0]["message"]["content"],
@@ -90,7 +99,16 @@ def main():
         s0, s1, pls = slot_of(u); slot = s1 - s0; nxt = min([t for t in starts if t > s0 + 1e-3], default=len(voice) / sr); ref = D / f"ref_{u['speaker']}.wav"
         if not ref.exists(): ref = next(iter(sorted(D.glob("ref_*.wav"))))
         tts.prepare_conditionals(str(ref)); torch.manual_seed(a.seed + k)
-        txt = texts[k]; y = tts.generate(txt, language_id=L).squeeze(0).cpu().numpy(); retried = False
+        txt = texts[k]; retried = False
+        if (u.get("route") or {}).get("tts") == "donor_vc":   # 7.4 / 7.5: donor TTS -> the user's timbre (ChatterboxVC); unavailable -> Chatterbox + a flag
+            if VC[0] is None: VC[0] = D_.VoiceConverter("cuda")
+            tmp = pathlib.Path(a.run) / f"poly_u{k:02d}.wav"
+            rec = D_.synth_with_fallback(txt, L, tmp, ref, DONOR, VC[0], lambda t_, l_, p_: sf.write(p_, tts.generate(t_, language_id=l_).squeeze(0).cpu().numpy(), tts.sr))
+            y, ysr = sf.read(str(tmp), dtype="float32"); y = y if ysr == sr else np.interp(np.arange(int(len(y) * sr / ysr)) / sr, np.arange(len(y)) / ysr, y).astype(np.float32)
+            u["tts_engine"] = rec["engine"]
+            if rec.get("flag"): FLAGS.add(rec["flag"])
+        else:
+            y = tts.generate(txt, language_id=L).squeeze(0).cpu().numpy()
         if len(y) / sr > slot * 1.25 + 0.3:   # too long even at x1.25: one shorter translation
             retried = True
             llm2 = Llama(model_path=sorted(glob.glob(str(ROOT / "models" / "qwen2.5-14b-instruct-gguf" / "*q5_k_m*.gguf")))[0], n_ctx=4096, n_gpu_layers=-1, n_threads=8, verbose=False)
@@ -130,6 +148,9 @@ def main():
         mix = bed * duck + v
         sf.write(put(d / "final_mix_44k.wav"), mix, bsr, subtype="FLOAT"); put(d / "final_mix_aac.m4a")
         rep[f"loudness_{'htd' if a.htd and d == pathlib.Path(a.htd) else 'spleeter'}"] = static_loudness(d / "final_mix_44k.wav", d / "final_mix_aac.m4a", -16.0, -1.5)
+    rep["routes"] = {L: ROUTER.route(L) for L in sorted({l for _, _, l in todo})}; rep["engines"] = {k: [u.get("mt_engine", "qwen"), u.get("tts_engine", "chatterbox")] for k, u, _ in todo}
+    rep["external_stats"] = DONOR.stats
+    if FLAGS: man["result_flags"] = sorted(set(man.get("result_flags", [])) | FLAGS)
     man["polyglot"] = {**rep, "seconds": round(time.time() - t0, 1)}; man["target_lang"] = pm.get("lang", "multi") if pm.get("mode") == "all" else "multi"
     put(mp).write_text(json.dumps(man, indent=1, ensure_ascii=False))
     if a.htd:

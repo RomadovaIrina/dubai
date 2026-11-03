@@ -62,17 +62,15 @@ class OpenAITTSDonor:
         if not k: raise DonorUnavailable("OPENAI_API_KEY is not set")
         return k
 
-    def synth(self, text: str, out_wav: pathlib.Path, instructions: str | None = None) -> pathlib.Path:
+    def _request(self, path: str, body: dict):
+        """POST <base>/<path> with the limiter, exponential backoff + full jitter, Retry-After; returns the 200 response or raises DonorUnavailable"""
         import requests
-        body = {"model": self.model, "voice": self.voice, "input": text, "response_format": "wav"}
-        if instructions: body["instructions"] = instructions
         last = ""
         for attempt in range(self.max_retries + 1):
             self.stats["limiter_wait_s"] += self.limiter.acquire(); self.stats["requests"] += 1; retry_after = None
             try:
-                r = requests.post(f"{self.base}/audio/speech", json=body, timeout=self.timeout, headers={"Authorization": f"Bearer {self._key()}"})
-                if r.status_code == 200 and r.content:
-                    out_wav = pathlib.Path(out_wav); out_wav.write_bytes(r.content); return out_wav
+                r = requests.post(f"{self.base}/{path}", json=body, timeout=self.timeout, headers={"Authorization": f"Bearer {self._key()}"})
+                if r.status_code == 200 and r.content: return r
                 last = f"HTTP {r.status_code}: {r.text[:200]}"
                 if r.status_code not in self.RETRY: raise DonorUnavailable(f"donor refused the request ({last})")   # 400 / 401 / 403: retrying will not help
                 self.stats["429" if r.status_code == 429 else "5xx"] += 1
@@ -88,6 +86,21 @@ class OpenAITTSDonor:
             if retry_after: d = max(d, retry_after)
             self.stats["retries"] += 1; self.stats["backoff_s"] += d; time.sleep(d)
         raise DonorUnavailable(f"donor unavailable after {self.max_retries + 1} attempts: {last}")
+
+    def synth(self, text: str, out_wav: pathlib.Path, instructions: str | None = None) -> pathlib.Path:
+        body = {"model": self.model, "voice": self.voice, "input": text, "response_format": "wav"}
+        if instructions: body["instructions"] = instructions
+        out_wav = pathlib.Path(out_wav); out_wav.write_bytes(self._request("audio/speech", body).content); self.stats["tts_chars"] = self.stats.get("tts_chars", 0) + len(text)
+        return out_wav
+
+    def translate(self, text: str, src_name: str, tgt_name: str, hint: str = "") -> str:
+        """6.5: the external translation (chat completions, DABAI_OPENAI_MT_MODEL, default gpt-4o-mini), the production prompt; same limiter / retries"""
+        body = {"model": os.environ.get("DABAI_OPENAI_MT_MODEL", "gpt-4o-mini"), "temperature": 0,
+                "messages": [{"role": "system", "content": "You are a professional translator. Return only the translation, with no explanation."},
+                             {"role": "user", "content": f"Translate from {src_name} to {tgt_name}{' for dubbing. ' + hint if hint else ''}:\n{text}"}]}
+        j = self._request("chat/completions", body).json(); u = j.get("usage") or {}
+        self.stats["mt_tokens_in"] = self.stats.get("mt_tokens_in", 0) + int(u.get("prompt_tokens", 0)); self.stats["mt_tokens_out"] = self.stats.get("mt_tokens_out", 0) + int(u.get("completion_tokens", 0))
+        return " ".join(j["choices"][0]["message"]["content"].split()).strip().strip("\"«»“”")
 
 
 class VoiceConverter:
@@ -138,8 +151,8 @@ def _wav_bytes(y, sr) -> bytes:
 class MockOpenAI:
     """local stand-in for POST /v1/audio/speech. schedule: list of status codes for the first requests (e.g. [429, 429, 500]),
     then `p429` random 429s; audio = stand_in(text) -> (float32 numpy, sr) (default: 1 s of silence)."""
-    def __init__(self, schedule=(), p429: float = 0.0, retry_after: float | None = 1.0, stand_in=None, seed: int = 0, rpm_cap: float | None = None):
-        self.schedule = list(schedule); self.p429 = p429; self.retry_after = retry_after; self.stand_in = stand_in; self.rng = random.Random(seed)
+    def __init__(self, schedule=(), p429: float = 0.0, retry_after: float | None = 1.0, stand_in=None, seed: int = 0, rpm_cap: float | None = None, stand_in_text=None):
+        self.schedule = list(schedule); self.p429 = p429; self.stand_in_text = stand_in_text; self.retry_after = retry_after; self.stand_in = stand_in; self.rng = random.Random(seed)
         self.log = []; self.lock = threading.Lock(); self.rpm_cap = rpm_cap; self.times = []
         outer = self
 
@@ -153,7 +166,11 @@ class MockOpenAI:
                     over = outer.rpm_cap and sum(1 for t in outer.times if now - t < 60) > outer.rpm_cap
                     code = outer.schedule.pop(0) if outer.schedule else (429 if over or outer.rng.random() < outer.p429 else 200)
                     outer.log.append({"t": round(now, 3), "code": code, "auth": self.headers.get("Authorization", "").startswith("Bearer "), "chars": len(body.get("input", ""))})
-                if self.path != "/v1/audio/speech": code = 404
+                if code == 200 and self.path == "/v1/chat/completions":
+                    msg = body["messages"][-1]["content"]; txt = outer.stand_in_text(msg) if outer.stand_in_text else "[mock] " + msg.split("\n", 1)[-1]
+                    data = json.dumps({"choices": [{"message": {"content": txt}}], "usage": {"prompt_tokens": len(msg) // 4, "completion_tokens": len(txt) // 4}}).encode()
+                    self.send_response(200); self.send_header("Content-Type", "application/json"); self.send_header("Content-Length", str(len(data))); self.end_headers(); self.wfile.write(data); return
+                if self.path not in ("/v1/audio/speech", "/v1/chat/completions"): code = 404
                 if code != 200:
                     self.send_response(code)
                     if code == 429 and outer.retry_after: self.send_header("Retry-After", str(outer.retry_after))
