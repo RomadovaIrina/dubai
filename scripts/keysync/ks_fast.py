@@ -40,10 +40,20 @@ def main():
     vae = d.VaeWrapper("video"); lmk = d.LandmarksExtractor()
     if a.fp8:
         # PerRow needs bf16 weights; the UNets are fp16 -> PerTensor; only the Linear layers with in / out % 16 == 0 (float8 GEMM shapes)
-        from torchao.quantization import quantize_, float8_dynamic_activation_float8_weight, PerTensor
+        from torchao.quantization import quantize_, float8_dynamic_activation_float8_weight, PerTensor, PerRow
+        # r13: the UNets load in fp32 (sampling runs under fp16 autocast), so nothing passed the half filter -> KS_FP8_BF16=1 casts the UNets to bf16 first, PerRow
+        g8 = PerTensor()
+        if os.environ.get("KS_FP8_BF16") == "1":
+            for m in (model, model_kf): m.model.diffusion_model.to(torch.bfloat16)
+            g8 = PerRow()
         f16 = lambda mod, fqn: isinstance(mod, torch.nn.Linear) and mod.in_features % 16 == 0 and mod.out_features % 16 == 0 and mod.weight.dtype in (torch.float16, torch.bfloat16) and (mod.bias is None or mod.bias.dtype == mod.weight.dtype)   # float8 GEMM: 16-aligned, half bias
         for m in (model, model_kf): print("FP8_LAYERS", sum(1 for n_, mod in m.model.diffusion_model.named_modules() if f16(mod, n_)), "of", sum(1 for mod in m.model.diffusion_model.modules() if isinstance(mod, torch.nn.Linear)), {str(mod.weight.dtype) for mod in m.model.diffusion_model.modules() if isinstance(mod, torch.nn.Linear)}, flush=True)
-        for m in (model, model_kf): quantize_(m.model.diffusion_model, float8_dynamic_activation_float8_weight(granularity=PerTensor()), filter_fn=f16)
+        for m in (model, model_kf): quantize_(m.model.diffusion_model, float8_dynamic_activation_float8_weight(granularity=g8), filter_fn=f16)
+        if os.environ.get("KS_FP8_BF16") == "1":   # autocast leaves the time embedding / layernorm outputs in fp32 -> PerRow asserts: cast the quantized linears' input to bf16
+            _bf = lambda mod, args: (args[0].to(torch.bfloat16),) + tuple(args[1:])
+            for m in (model, model_kf):
+                for n_, mod in m.model.diffusion_model.named_modules():
+                    if isinstance(mod, torch.nn.Linear) and type(mod.weight).__name__ != "Parameter" or (isinstance(mod, torch.nn.Linear) and type(mod.weight.data).__name__ != "Tensor"): mod.register_forward_pre_hook(_bf)
     if a.compile == "all":   # + the VAE decoders (temporal decoder, one frame per call)
         for m in (model, model_kf): m.first_stage_model.decoder = torch.compile(m.first_stage_model.decoder, mode="max-autotune-no-cudagraphs", dynamic=False)
     if a.compile in ("unet", "all"):
