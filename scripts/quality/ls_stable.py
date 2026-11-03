@@ -481,6 +481,17 @@ class StableRunner:
         rate = os.environ.get("LS_RATE", "")   # r10 speed: LS_RATE=k/m = LatentSync on k of every m master frames, each with ITS OWN 25 fps audio window (chunk selection), the rest flow-filled
         if rate and len(frames_rgb) >= 32:
             k_, m_ = map(int, rate.split("/")); n = len(frames_rgb); idx = np.array([i for i in range(n) if i % m_ < k_]); ss = self.acc.silent_seg; hk = self.acc.chunk_hook
+            aq = float(os.environ.get("LS_RATE_ADAPT", "0") or 0)
+            if aq > 0:   # r13 (user on m03 LS_RATE 2/3: "лицо подергивается и дрожит"): skip frames only in LOW-motion blocks; a block (4 x m frames) whose
+                # frame-to-frame change (grey, quarter resolution, whole frame = mostly the head) is above the aq quantile of the segment keeps every frame
+                import cv2
+                g = [cv2.resize(cv2.cvtColor(np.asarray(f_), cv2.COLOR_RGB2GRAY), None, fx=0.25, fy=0.25, interpolation=cv2.INTER_AREA).astype(np.float32) for f_ in frames_rgb]
+                mo = np.array([0.0] + [float(np.abs(g[i] - g[i - 1]).mean()) for i in range(1, n)]); L_ = 4 * m_
+                bm = np.array([mo[b:b + L_].mean() for b in range(0, n, L_)]); thr_ = np.quantile(bm, aq)
+                keep = np.zeros(n, bool)
+                for bi, b in enumerate(range(0, n, L_)):
+                    keep[b:b + L_] = True if bm[bi] > thr_ else (np.arange(b, min(n, b + L_)) % m_ < k_)
+                idx = np.flatnonzero(keep); print(f"  [ls_rate] adapt q={aq}: {n - len(idx)} of {n} frames skipped ({100 * (n - len(idx)) / n:.1f} %)", flush=True)
             if ss is not None: self.acc.silent_seg = np.asarray(ss)[idx[idx < len(ss)]]
             def sel(enc, ch, hk=hk):
                 ch = hk(enc, ch) if hk is not None else ch
