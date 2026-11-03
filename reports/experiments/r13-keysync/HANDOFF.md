@@ -13,7 +13,7 @@ The server r13-k is destroyed after this push.
 | m18_s8cfhf_KeySync.mp4 | f_s8 | cfhf + α 0.8 | 7.652 | 3 | 15.5 % (11.0 %) |
 | m03_s8cfhf_KeySync.mp4 | f_s8 | cfhf + α 0.8 | 7.302 | 7 | 10.9 % (16.1 %) |
 | old03_s8cfhf_KeySync.mp4 | f_s8 | cfhf, no smoothing | 7.434 | 27 | 24.0 % (24.3 %) |
-| old03_s8cfts_KeySync.mp4 | f_s8 | cfhf + α 0.8 | see the r13_s8final.log tail | | 17.9 % |
+| old03_s8cfts_KeySync.mp4 | f_s8 | cfhf + α 0.8 | 7.150 | 24 | 17.9 % (24.3 %) |
 
 - The earlier 10-step finals with cfhf are in `outbox/r13_ks/colorfix/`.
   - m18: 7.404 / 4
@@ -24,7 +24,9 @@ The server r13-k is destroyed after this push.
 - The m03 global SyncNet reads av_offset 6 on every m03 version (10-step and s8, v2 and cfhf). The speech-at0 number is fine, but m03 sync has never been eye-checked for this.
 
 **OPEN, the user's choice:** old03 with smoothing or without.
-- cfts (α 0.8): fewer flashes and smoother motion (10-step: 28 → 20 flashes, jerk 22 → 16 %). On 10-step it cost ~0.36 SyncNet vs cfhf.
+- cfts (α 0.8): fewer flashes and smoother motion.
+  - f_s8: 27 → 24 flashes, jerk 24.0 → 17.9 %, SyncNet −0.28 (within the gate).
+  - 10-step: 28 → 20 flashes, −0.36.
 - cfhf (no smoothing): what the viewer saw, colour + detail fixed.
 - 0.5x clip: `colorfix/old03_cfhf_vs_cfts_crop_28.5s_halfspeed.mp4`
 
