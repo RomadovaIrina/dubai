@@ -1,0 +1,215 @@
+{
+ "lang": "tr",
+ "name": "Turkish",
+ "s": 8.9,
+ "rows": [
+  {
+   "ru": "Отделка Prime от Neometria.",
+   "tr": "Neometria Prime Dış Kaplama.",
+   "back": "Неометрия Прим Экзоскелет.",
+   "chrf_back": 6.3,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    3,
+    4
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "также на территории у нас банный комплекс все готово к первым парением через 3-4 дня буквально",
+   "tr": "ayrıca территорииnde banyo kompleksi var, ilk tuzaklamaları 3-4 gün içinde hazıractlyır буквально",
+   "back": "кроме того, на территории есть банный комплекс, первые ловушки можно подготовить за 3-4 дня буквально",
+   "chrf_back": 53.2,
+   "script_ok": 0.768,
+   "cyrillic": 0.232,
+   "judge": [
+    3,
+    2
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "друзья ну что всем привет запишу первое видео такое ознакомительно целью познакомиться наверно",
+   "tr": "arkadaşlar, nasılsınız herkese selam, ilk videosumu yapacağım, tanıtıcı bir video, biliyorum ki tanışmak istiyorum",
+   "back": "друзья, как вы?, привет всем, я сниму свой первый видео, представительский видео, знаю, что хочу познакомиться",
+   "chrf_back": 38.5,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "сделаем видео с очками посмотрим опять же потестируем как наше приложение будет на это",
+   "tr": "görseli gözlüklerle yapalım tekrar inceleyelim test edelim uygulamamızın bu durumda nasıl çalışacağına",
+   "back": "давайте сделаем снимок в очках, еще раз проверим, протестируем, как работает наша программа в этой ситуации",
+   "chrf_back": 32.5,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "Давайте протестируем еще вот такой формат съемки видео",
+   "tr": "Bu video çekim formатуnu da test edelim",
+   "back": "Пусть эта видеосъемка тоже пройдет тестирование",
+   "chrf_back": 30.8,
+   "script_ok": 0.909,
+   "cyrillic": 0.091,
+   "judge": [
+    4,
+    3
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "Давайте посмотрим, что включает в себя ремонт, предлагаемый застройщиком.",
+   "tr": "İşte inşaat firması tarafından önerilen onarımın içeriği ne olduğunu birlikte inceleyelim.",
+   "back": "Давайте вместе рассмотрим содержание ремонтных работ, предложенных строительной компанией.",
+   "chrf_back": 35.1,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "уже тут начнутся парения сейчас покажу бассейн вот такие вот у нас тут разные штуки зона для",
+   "tr": "burada hamamlar başlayacak şimdi bavuluyu gösteriyorum bize ait banyo bu şekilde burada çeşitli şeyler var bölge için",
+   "back": "здесь начнутся бани сейчас покажу чемодан наша ванная комната выглядит так в этом месте есть разные вещи для района",
+   "chrf_back": 35.8,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    2,
+    3
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "больше в общем что хочу сказать рад знакомству с вами рад сотрудничеству сегодня пятница 28",
+   "tr": "genelde daha fazla söylemek istiyorum, sizlerle tanıştığımımdan ve bugün sizlerle işbirliği yapmaktan memnuniyet duydum, bugün cuma günü 28",
+   "back": "обычно я хотел бы сказать больше, я был доволен знакомством с вами и сотрудничеством с вами сегодня, сегодня пятница, 28",
+   "chrf_back": 52.8,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    3,
+    4
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "все реагировать город сочи 28 августа сегодня и мы начинаем рабочие процессы по созданию нашего",
+   "tr": "herkes今天的索契市做出反应8月28日今天我们开始创建我们自己的工作流程",
+   "back": "все сегодня отреагировали в Сочи 28 августа сегодня мы начинаем создавать собственные рабочие процессы",
+   "chrf_back": 63.5,
+   "script_ok": 0.171,
+   "cyrillic": 0.0,
+   "judge": [
+    2,
+    3
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "Все-таки современные телефоны уже позволяют это делать",
+   "tr": "Yine de modern telefönler bunu yapmaya izin veriyorlar",
+   "back": "Все равно современные телефоны позволяют это делать",
+   "chrf_back": 73.6,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "Его вы можете заказать на момент покупки квартиры в нашем жилом комплексе Flora.",
+   "tr": "Bu konut kompleksi olan Flora'da bir daire satın aldığınızda sipariş verebilirsiniz.",
+   "back": "Когда вы покупаете квартиру в этом жилом комплексе под названием Flora, вы можете сделать заказ.",
+   "chrf_back": 49.7,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "переодевания бочки шезлонги здесь у нас финская сауна покажу русскую баню русская",
+   "tr": "koniği şezlonglarla değiştiriyoruz burada finli saunaımız var ruskanya banyasını göstereceğim ruskanya",
+   "back": "мы меняем коврик на лежаки, здесь у нас финская сауна, покажу русскую баню",
+   "chrf_back": 54.1,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    3,
+    4
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "августа будем считать что это . начало нашего сотрудничества что хочется сказать пусть это",
+   "tr": "ağustos'u şuna dönüştüreceğiz ki bu işbirliğimizin başlangıcıdır ve söylemek istediğimiz şu ki bu",
+   "back": "август превратим в то, чем он станет началом нашей кооперации, и то, что мы хотим сказать, это то, что",
+   "chrf_back": 29.6,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    3,
+    4
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "магического приложения которое облегчит жизнь людям которая я надеюсь будет пользоваться",
+   "tr": "büyülü bir uygulama hakkında konuşuyorum ki hayatları kolaylaşsın ve umarım ki bu uygulama insanlar tarafından kullanılsın",
+   "back": "я говорю о волшебном приложении, которое должно облегчить жизнь людям, и надеюсь, что это приложение будет использоваться людьми",
+   "chrf_back": 53.2,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    3,
+    4
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "И такая функция добавляет, конечно же, у нас популярности и возможностей",
+   "tr": "Ve bu fonksiyon, tabii ki, popülerliğimize ve fırsatlarımızıza katkıda bulunuyor.",
+   "back": "И эта функция, конечно же, вносит свой вклад в нашу популярность и наши возможности.",
+   "chrf_back": 55.0,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "Потолок натяжной, белый, матовый.",
+   "tr": "Gökyüzü kanvası, beyaz, mat.",
+   "back": "Небо - холст белый, матовый.",
+   "chrf_back": 47.0,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  }
+ ]
+}

@@ -1,0 +1,85 @@
+{
+ "lang": "da",
+ "rows": [
+  {
+   "i": 0,
+   "text": "Prime-udstyring fra Neometria.",
+   "wav": "/workspace/dub/r13s/lang/wav/da_00.wav",
+   "dur_s": 2.84,
+   "gen_s": 0.83,
+   "asr": "Prime Ute Styrene fra Neometria.",
+   "cer": 0.2143,
+   "s_per_char": 0.1014
+  },
+  {
+   "i": 1,
+   "text": "derudover har vi en badbygning på området, og alt er klar til de første badture på ca. 3-4 dageคณะกรรม councill",
+   "wav": "/workspace/dub/r13s/lang/wav/da_01.wav",
+   "dur_s": 7.44,
+   "gen_s": 1.85,
+   "asr": "Derudover har vi en badbejning på området og alt er klart til de første badture på tjekker 3-4 dage.",
+   "cer": 0.2407,
+   "s_per_char": 0.0689
+  },
+  {
+   "i": 2,
+   "text": "venner, så her er jeg, jeg vil lave mit første video, et introducerende, for at komme i kontakt med jer alle",
+   "wav": "/workspace/dub/r13s/lang/wav/da_02.wav",
+   "dur_s": 7.6,
+   "gen_s": 1.85,
+   "asr": "Venner, så her er jeg. Jeg vil lave mit første video og introducere det for at komme i kontakt med jer alle.",
+   "cer": 0.0385,
+   "s_per_char": 0.0731
+  },
+  {
+   "i": 3,
+   "text": "lader os lave et video med briller, se det igen og testere, hvordan vores app fungerer til dette",
+   "wav": "/workspace/dub/r13s/lang/wav/da_03.wav",
+   "dur_s": 6.64,
+   "gen_s": 1.68,
+   "asr": "Lad os lave et video med briller, sædækken og testere, hvor dem vores opfungerer til dette.",
+   "cer": 0.1596,
+   "s_per_char": 0.0706
+  },
+  {
+   "i": 4,
+   "text": "Lad os teste endnu denne videooptagelsesformat.",
+   "wav": "/workspace/dub/r13s/lang/wav/da_04.wav",
+   "dur_s": 3.52,
+   "gen_s": 0.98,
+   "asr": "Lad os teste endnu denne video opdagelsesformat.",
+   "cer": 0.0435,
+   "s_per_char": 0.0765
+  },
+  {
+   "i": 5,
+   "text": "Lad os se, hvad reparationen, der er foreslået af byggevirksomheden, indeholder.",
+   "wav": "/workspace/dub/r13s/lang/wav/da_05.wav",
+   "dur_s": 6.56,
+   "gen_s": 1.65,
+   "asr": "Lad os se, hvad reparationen, der er foreslået af byggevirksomheden, indeholder.",
+   "cer": 0.0,
+   "s_per_char": 0.0863
+  },
+  {
+   "i": 6,
+   "text": "allerede vil der begynde at blive ved med at dannede kulmure her nu viser jeg basen det her er forskellige ting vi har her spilområde for",
+   "wav": "/workspace/dub/r13s/lang/wav/da_06.wav",
+   "dur_s": 8.08,
+   "gen_s": 1.99,
+   "asr": "Alle reddebilleder begynder at blive ved med at danne det kulmur her,  nu viser jeg bare sådan det her forskellige ting, vi har her i Spilung Rodefod.",
+   "cer": 0.2044,
+   "s_per_char": 0.059
+  },
+  {
+   "i": 7,
+   "text": "mere i alt, hvad jeg vil sige, er at jeg er glad for at komme i kontakt med jer og er glad for samarbejdet. i dag er fredag den 28.",
+   "wav": "/workspace/dub/r13s/lang/wav/da_07.wav",
+   "dur_s": 9.88,
+   "gen_s": 2.27,
+   "asr": "Mere i alt, hvad Jay vil sige, er at Jay er glad for at komme i kontakt med Jer og er glad for samarbejdet.  I dag er fredag den 20. uge vores skimte.",
+   "cer": 0.1732,
+   "s_per_char": 0.0778
+  }
+ ]
+}

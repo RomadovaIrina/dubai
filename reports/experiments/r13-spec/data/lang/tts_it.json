@@ -1,0 +1,85 @@
+{
+ "lang": "it",
+ "rows": [
+  {
+   "i": 0,
+   "text": "Doppiamento Prime da Neometria.",
+   "wav": "/workspace/dub/r13s/lang/wav/it_00.wav",
+   "dur_s": 2.64,
+   "gen_s": 0.76,
+   "asr": "Doppiamento prime da neometria.",
+   "cer": 0.0,
+   "s_per_char": 0.088
+  },
+  {
+   "i": 1,
+   "text": "anche sul territorio abbiamo un complesso termale tutto pronto per i primi bagni caldi entro 3-4 giorni circa",
+   "wav": "/workspace/dub/r13s/lang/wav/it_01.wav",
+   "dur_s": 7.24,
+   "gen_s": 1.82,
+   "asr": "Anche sul territorio abbiamo un complesso termale tutto pronto per i primi bagni caldi entro 3-4 giorni circa.",
+   "cer": 0.0,
+   "s_per_char": 0.067
+  },
+  {
+   "i": 2,
+   "text": "amici, ecco un saluto a tutti, sto registrando il mio primo video di presentazione, l'obiettivo è conoscervi meglio",
+   "wav": "/workspace/dub/r13s/lang/wav/it_02.wav",
+   "dur_s": 6.68,
+   "gen_s": 1.68,
+   "asr": "Amici, ecco un saluto a tutti. Sto registrando il mio primo video di presentazione. L'obiettivo è conoscervi meglio.",
+   "cer": 0.0,
+   "s_per_char": 0.0602
+  },
+  {
+   "i": 3,
+   "text": "faremo un video con gli occhiali, guarderemo di nuovo, testeremo come si comporterà la nostra applicazione in questa situazione",
+   "wav": "/workspace/dub/r13s/lang/wav/it_03.wav",
+   "dur_s": 7.6,
+   "gen_s": 1.87,
+   "asr": "Faremo un video con gli occhiali, guarderemo di nuovo, testeremo come si comporterà la nostra applicazione in questa situazione.",
+   "cer": 0.0,
+   "s_per_char": 0.0608
+  },
+  {
+   "i": 4,
+   "text": "Proviamo questo formato di registrazione video.",
+   "wav": "/workspace/dub/r13s/lang/wav/it_04.wav",
+   "dur_s": 3.32,
+   "gen_s": 0.95,
+   "asr": "Proviamo questo formato di registrazione video.",
+   "cer": 0.0,
+   "s_per_char": 0.0722
+  },
+  {
+   "i": 5,
+   "text": "D'accordo, vediamo cosa include il riparazione proposta dal costruttore. Note: There is a slight inaccuracy in the translation due to the context. A more accurate translation would be: \"Permettetemi di vedere cosa include la riparazione proposta dal costruttore.\" However, sticking strictly to the instruction of providing only the translation without explanation, the initial translation is provided.",
+   "wav": "/workspace/dub/r13s/lang/wav/it_05.wav",
+   "dur_s": 21.88,
+   "gen_s": 5.14,
+   "asr": "D'accordo, vediamo cosa include riparazione proposta dal costruttore.  Note, there is a slight inaccuracy in the translation due to the context.  A more accurate translation would be  Permettetemi di vedere cosa include la riparazione proposta dal costruttore.  However, sticking strictly to the instruction of providing only the translation without explanation,  the initial translation is provided.",
+   "cer": 0.0077,
+   "s_per_char": 0.0562
+  },
+  {
+   "i": 6,
+   "text": "qui inizieranno le bagnature, ora vi mostro la piscina, ecco, qui abbiamo varie cose, zona per",
+   "wav": "/workspace/dub/r13s/lang/wav/it_06.wav",
+   "dur_s": 6.2,
+   "gen_s": 1.57,
+   "asr": "Qui inizieranno le bagnature, ora vi mostro la piscina, ecco qui abbiamo varie cose, zona per.",
+   "cer": 0.0,
+   "s_per_char": 0.0689
+  },
+  {
+   "i": 7,
+   "text": "più in generale, quello che voglio dire è che sono felice di conoscervi, sono felice della collaborazione, oggi è venerdì 28.",
+   "wav": "/workspace/dub/r13s/lang/wav/it_07.wav",
+   "dur_s": 7.96,
+   "gen_s": 1.95,
+   "asr": "Più in generale, quello che voglio dire è che sono felice di conoscervi.  Sono felice della collaborazione. Oggi è venerdì ventocio.",
+   "cer": 0.0661,
+   "s_per_char": 0.0658
+  }
+ ]
+}

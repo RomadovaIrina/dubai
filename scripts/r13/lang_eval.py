@@ -35,6 +35,14 @@ def script_share(text, lang):
     return round(ok / tot, 3), round(c["CYRILLIC"] / tot, 3)
 
 
+def foreign_share(text, lang):
+    """letters in a script that is neither the target's nor Latin (brand names in Latin are fine): Cyrillic left untranslated,
+    Chinese / Korean / Arabic leaking into another language = Qwen's code-switching failure"""
+    want = SCRIPT.get(lang, "LATIN"); ok = {"LATIN", "CJK", "KANA"} if want == "JA" else {"LATIN", want}
+    c = Counter(script_of(ch) for ch in text if ch.isalpha()); tot = sum(c.values()) or 1
+    return round(sum(v for k, v in c.items() if k not in ok and k != "OTHER") / tot, 3)
+
+
 def chrf(hyp, ref, n=6, beta=2.0):
     """chrF (character n-grams 1..6, beta 2), whitespace removed, as sacrebleu's default"""
     h, r = re.sub(r"\s+", "", hyp.lower()), re.sub(r"\s+", "", ref.lower()); P = R = 0.0; k = 0
@@ -80,11 +88,19 @@ def cmd_sents(a):
     out = []; seen = set()
     for w in a.wavs:
         speech = P.run_vad(pathlib.Path(w)); P.ASR_OPTS.update(hallu_filter="on", segments="off"); segs, _ = P.run_asr(pathlib.Path(w), "ru", speech)
-        text = " ".join(s["text"] for s in segs)
-        for s in re.split(r"(?<=[.!?…])\s+", text):
-            s = s.strip(); k = norm_txt(s, "ru")
-            if 4 <= len(s.split()) <= 30 and k not in seen: seen.add(k); out.append({"src": pathlib.Path(w).stem, "ru": s})
-    pathlib.Path(a.out, "sents.json").write_text(json.dumps(out, ensure_ascii=False, indent=1)); print(f"{len(out)} sentences")
+        text = " ".join(s["text"] for s in segs); cand = [x.strip() for x in re.split(r"(?<=[.!?…])\s+", text)]
+        if sum(4 <= len(x.split()) <= 30 for x in cand) < 4:   # r13: an unpunctuated transcript (02-05) -> the Whisper segments, long ones cut at 25 words
+            cand = []
+            for sg in segs:
+                ws = sg["text"].split()
+                cand += [" ".join(ws[i:i + 25]) for i in range(0, len(ws), 25)]
+        for x in cand:
+            k = norm_txt(x, "ru")
+            if 4 <= len(x.split()) <= 30 and k not in seen: seen.add(k); out.append({"src": pathlib.Path(w).stem, "ru": x})
+    by = {}
+    for x in out: by.setdefault(x["src"], []).append(x)
+    rr = [q[i] for i in range(max(map(len, by.values()))) for q in by.values() if i < len(q)]   # round-robin over the videos: --n takes from all
+    pathlib.Path(a.out, "sents.json").write_text(json.dumps(rr, ensure_ascii=False, indent=1)); print(f"{len(rr)} sentences", {k: len(v) for k, v in by.items()})
 
 
 JUDGE = ("You grade a translation from Russian to {L}. Source (Russian): {S}\nTranslation ({L}): {T}\n"
@@ -149,13 +165,15 @@ def cmd_report(a):
         r = {"lang": lg, "name": P.lang_name(lg)}
         if mt:
             R = mt["rows"]; js = [x["judge"] for x in R if x["judge"]]
+            fs = [foreign_share(x["tr"], lg) for x in R]; loops = sum(bool(re.search(r"(.)\1{7,}", x["tr"])) for x in R)
             r.update(n=len(R), chrf_back=round(sum(x["chrf_back"] for x in R) / len(R), 1), adequacy=round(sum(x[0] for x in js) / max(1, len(js)), 2),
-                     fluency=round(sum(x[1] for x in js) / max(1, len(js)), 2), script_bad=sum(x["script_ok"] < 0.95 for x in R), preamble=sum(x["preamble"] for x in R))
+                     fluency=round(sum(x[1] for x in js) / max(1, len(js)), 2), script_bad=sum(f > 0.02 for f in fs) + loops, foreign_max=max(fs),
+                     note_lines=sum(bool(re.search(r"(?i)\bnote:|\(note", x["tr"])) for x in R), preamble=sum(x["preamble"] for x in R))
         if tt:
             c = [x["cer"] for x in tt["rows"]]; r.update(tts_n=len(c), cer_mean=round(sum(c) / len(c), 3), cer_median=sorted(c)[len(c) // 2], cer_bad=sum(x > 0.2 for x in c))
         rows.append(r)
     json.dump(rows, open(pathlib.Path(a.out, "langs_table.json"), "w"), indent=1)
-    L = ["| lang | chrF back | adequacy | fluency | wrong script | TTS CER mean | median | bad >0.2 |", "|---|---|---|---|---|---|---|---|"]
+    L = ["| lang | chrF back | adequacy | fluency | mixed-language lines | TTS CER mean | median | bad >0.2 |", "|---|---|---|---|---|---|---|---|"]
     for r in rows:
         L.append(f"| {r['lang']} {r['name']} | {r.get('chrf_back', '–')} | {r.get('adequacy', '–')} | {r.get('fluency', '–')} | {r.get('script_bad', '–')}/{r.get('n', '–')} "
                  f"| {r.get('cer_mean', '–')} | {r.get('cer_median', '–')} | {r.get('cer_bad', '–')}/{r.get('tts_n', '–')} |")
@@ -163,8 +181,9 @@ def cmd_report(a):
 
 
 # 6.5 routing proposal from the measurements (thresholds = the EN numbers of the same test, which the user accepted by ear, with a margin)
-ROUTE_RULES = {"mt_external_if": "adequacy < 4.0 or chrF(back) < 0.85 x EN or wrong script in > 1 sentence",
-               "tts_donor_if": "TTS CER mean > 0.10 or > 25 % of the sentences with CER > 0.20"}
+ROUTE_RULES = {"mt_external_if": "wrong-script / mixed-language output in >= 2 of the sentences, or judge adequacy < EN - 0.5, or chrF(back) < 0.85 x EN",
+               "tts_donor_if": "TTS CER mean > max(0.10, 2 x EN), or > 25 % of the sentences with CER > 0.20",
+               "note": "relative to EN = the accepted language measured by the same test (the 14B self-judge gives EN itself 4.0 / 5)"}
 
 
 def cmd_routes(a):
@@ -172,8 +191,8 @@ def cmd_routes(a):
     table = {"source": "r13 local measurements (scripts/r13/lang_eval.py; LANGS.md)", "rules": ROUTE_RULES, "langs": {}}
     for lg, r in rows.items():
         if "adequacy" not in r: continue
-        mt_bad = (r["adequacy"] < 4.0 or (en.get("chrf_back") and r["chrf_back"] < 0.85 * en["chrf_back"]) or r.get("script_bad", 0) > 1)
-        tts_bad = "cer_mean" in r and (r["cer_mean"] > 0.10 or r["cer_bad"] > 0.25 * r["tts_n"])
+        mt_bad = (r.get("script_bad", 0) >= 2 or r["adequacy"] < en.get("adequacy", 4.0) - 0.5 or (en.get("chrf_back") and r["chrf_back"] < 0.85 * en["chrf_back"]))
+        tts_bad = "cer_mean" in r and (r["cer_mean"] > max(0.10, 2 * en.get("cer_mean", 0.05)) or r["cer_bad"] > 0.25 * r["tts_n"])
         table["langs"][lg] = {"mt": "openai" if mt_bad else "qwen", "tts": "donor_vc" if tts_bad else "chatterbox",
                               "adequacy": r["adequacy"], "chrf_back": r["chrf_back"], "cer_mean": r.get("cer_mean")}
     pathlib.Path(a.out, "lang_routes.json").write_text(json.dumps(table, indent=1)); print(json.dumps(table["langs"], indent=0)[:3000])

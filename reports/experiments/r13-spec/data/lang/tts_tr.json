@@ -1,0 +1,85 @@
+{
+ "lang": "tr",
+ "rows": [
+  {
+   "i": 0,
+   "text": "Neometria Prime Dış Kaplama.",
+   "wav": "/workspace/dub/r13s/lang/wav/tr_00.wav",
+   "dur_s": 2.48,
+   "gen_s": 0.73,
+   "asr": "Neometriyapşime dış kaplama",
+   "cer": 0.1111,
+   "s_per_char": 0.0919
+  },
+  {
+   "i": 1,
+   "text": "ayrıca территорииnde banyo kompleksi var, ilk tuzaklamaları 3-4 gün içinde hazıractlyır буквально",
+   "wav": "/workspace/dub/r13s/lang/wav/tr_01.wav",
+   "dur_s": 7.44,
+   "gen_s": 1.85,
+   "asr": "Ayrıca teriterinde banyo kompleksi var.  İlk tuzaklamaları triko boyunun içinde hazır haklı bir buku ayna.",
+   "cer": 0.4105,
+   "s_per_char": 0.0783
+  },
+  {
+   "i": 2,
+   "text": "arkadaşlar, nasılsınız herkese selam, ilk videosumu yapacağım, tanıtıcı bir video, biliyorum ki tanışmak istiyorum",
+   "wav": "/workspace/dub/r13s/lang/wav/tr_02.wav",
+   "dur_s": 7.56,
+   "gen_s": 1.88,
+   "asr": "Arkadaşlar nasılsınız? Herkese selam. İlk videosumu yapacağım.  Tanıtıcı bir video. Biliyorum ki tanışmak istiyorum.",
+   "cer": 0.0091,
+   "s_per_char": 0.0687
+  },
+  {
+   "i": 3,
+   "text": "görseli gözlüklerle yapalım tekrar inceleyelim test edelim uygulamamızın bu durumda nasıl çalışacağına",
+   "wav": "/workspace/dub/r13s/lang/wav/tr_03.wav",
+   "dur_s": 7.32,
+   "gen_s": 1.81,
+   "asr": "Gövseli gözlüklerle yapalım.  Tekrar inceleyelim, test edelim uygulamamızın bu durumda nasıl çalışacağına.",
+   "cer": 0.0098,
+   "s_per_char": 0.0718
+  },
+  {
+   "i": 4,
+   "text": "Bu video çekim formатуnu da test edelim",
+   "wav": "/workspace/dub/r13s/lang/wav/tr_04.wav",
+   "dur_s": 3.32,
+   "gen_s": 0.94,
+   "asr": "Bu video çekim formatını da test edelim.",
+   "cer": 0.1026,
+   "s_per_char": 0.0851
+  },
+  {
+   "i": 5,
+   "text": "İşte inşaat firması tarafından önerilen onarımın içeriği ne olduğunu birlikte inceleyelim.",
+   "wav": "/workspace/dub/r13s/lang/wav/tr_05.wav",
+   "dur_s": 6.48,
+   "gen_s": 1.64,
+   "asr": "İşte inşaat firması tarafından önerilen onarımın içeriği ne olduğunu birlikte inceleyelim.",
+   "cer": 0.0,
+   "s_per_char": 0.072
+  },
+  {
+   "i": 6,
+   "text": "burada hamamlar başlayacak şimdi bavuluyu gösteriyorum bize ait banyo bu şekilde burada çeşitli şeyler var bölge için",
+   "wav": "/workspace/dub/r13s/lang/wav/tr_06.wav",
+   "dur_s": 8.2,
+   "gen_s": 2.0,
+   "asr": "Burada hamamlar başlayacak. Şimdi bavuluyu gösteriyorum. Bize ait banyo bu şekilde. Burada çeşitli şeyler var bölge için.",
+   "cer": 0.0,
+   "s_per_char": 0.0701
+  },
+  {
+   "i": 7,
+   "text": "genelde daha fazla söylemek istiyorum, sizlerle tanıştığımımdan ve bugün sizlerle işbirliği yapmaktan memnuniyet duydum, bugün cuma günü 28",
+   "wav": "/workspace/dub/r13s/lang/wav/tr_07.wav",
+   "dur_s": 9.4,
+   "gen_s": 2.28,
+   "asr": "Genelde daha fazla söylemek istiyorum sizlerle tanıştığımdan ve bugün sizlerle işbirliği yapmaktan memnuniyet duydum.  Bugün Cuma günü Otosody.",
+   "cer": 0.0657,
+   "s_per_char": 0.0686
+  }
+ ]
+}

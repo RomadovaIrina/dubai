@@ -1,0 +1,215 @@
+{
+ "lang": "it",
+ "name": "Italian",
+ "s": 9.3,
+ "rows": [
+  {
+   "ru": "Отделка Prime от Neometria.",
+   "tr": "Doppiamento Prime da Neometria.",
+   "back": "Дублирование Prime от Neometria.",
+   "chrf_back": 67.6,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    2,
+    3
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "также на территории у нас банный комплекс все готово к первым парением через 3-4 дня буквально",
+   "tr": "anche sul territorio abbiamo un complesso termale tutto pronto per i primi bagni caldi entro 3-4 giorni circa",
+   "back": "даже на территории у нас есть термальный комплекс, готовый для первых горячих ванн примерно через 3-4 дня",
+   "chrf_back": 54.4,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "друзья ну что всем привет запишу первое видео такое ознакомительно целью познакомиться наверно",
+   "tr": "amici, ecco un saluto a tutti, sto registrando il mio primo video di presentazione, l'obiettivo è conoscervi meglio",
+   "back": "друзья, это приветствие для всех, я записываю свой первый видеообзор, цель которого -更好地了解你们",
+   "chrf_back": 24.6,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "сделаем видео с очками посмотрим опять же потестируем как наше приложение будет на это",
+   "tr": "faremo un video con gli occhiali, guarderemo di nuovo, testeremo come si comporterà la nostra applicazione in questa situazione",
+   "back": "мы сделаем видео с очками, еще раз посмотрим, протестируем, как будет вести себя наше приложение в этой ситуации",
+   "chrf_back": 63.1,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "Давайте протестируем еще вот такой формат съемки видео",
+   "tr": "Proviamo questo formato di registrazione video.",
+   "back": "Попробуем этот формат записи видео.",
+   "chrf_back": 24.3,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "Давайте посмотрим, что включает в себя ремонт, предлагаемый застройщиком.",
+   "tr": "D'accordo, vediamo cosa include il riparazione proposta dal costruttore. Note: There is a slight inaccuracy in the translation due to the context. A more accurate translation would be: \"Permettetemi di vedere cosa include la riparazione proposta dal costruttore.\" However, sticking strictly to the instruction of providing only the translation without explanation, the initial translation is provided.",
+   "back": "Хорошо, давайте посмотрим, что включает в себя предлагаемый ремонт производителем.",
+   "chrf_back": 70.5,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    2,
+    3
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "уже тут начнутся парения сейчас покажу бассейн вот такие вот у нас тут разные штуки зона для",
+   "tr": "qui inizieranno le bagnature, ora vi mostro la piscina, ecco, qui abbiamo varie cose, zona per",
+   "back": "здесь начнутся обливания, сейчас я покажу бассейн, вот, здесь у нас есть разные вещи, зона для",
+   "chrf_back": 44.5,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    3,
+    4
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "больше в общем что хочу сказать рад знакомству с вами рад сотрудничеству сегодня пятница 28",
+   "tr": "più in generale, quello che voglio dire è che sono felice di conoscervi, sono felice della collaborazione, oggi è venerdì 28.",
+   "back": "в общем, то, что я хочу сказать, это то, что я рад вас встретить, я рад сотрудничеству, сегодня пятница, двадцать восьмое.",
+   "chrf_back": 53.4,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "все реагировать город сочи 28 августа сегодня и мы начинаем рабочие процессы по созданию нашего",
+   "tr": "tutti reagiscono alla città di Sochi il 28 agosto oggi e iniziamo i processi di lavoro per la creazione del nostro",
+   "back": "все реагируют на город Сочи 28 августа сегодня, и мы начинаем процессы работы для создания нашего",
+   "chrf_back": 67.2,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "Все-таки современные телефоны уже позволяют это делать",
+   "tr": "In fondo, i cellulari moderni permettono già di fare questo.",
+   "back": "В конце концов, современные мобильные телефоны уже позволяют это делать.",
+   "chrf_back": 77.5,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "Его вы можете заказать на момент покупки квартиры в нашем жилом комплексе Flora.",
+   "tr": "Lo può ordinare al momento dell'acquisto dell'appartamento nel nostro complesso residenziale Flora.",
+   "back": "Вы можете заказать это при покупке квартиры в нашем жилом комплексе Флора.",
+   "chrf_back": 67.5,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "переодевания бочки шезлонги здесь у нас финская сауна покажу русскую баню русская",
+   "tr": "le trasformazioni della botte, le sdraio, qui abbiamo un sauna finlandese, mostrerò una sauna russa, russa",
+   "back": "преобразования бочки, лежаки, здесь у нас финская сауна, я покажу русскую сауну, русскую",
+   "chrf_back": 60.8,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "августа будем считать что это . начало нашего сотрудничества что хочется сказать пусть это",
+   "tr": "nell'agosto considereremo che questo è l'inizio della nostra collaborazione, quello che voglio dire è che прекраснозвучит",
+   "back": "в августе мы рассмотрим это как начало нашей сотрудничества, то, что я хочу сказать, это что это звучит прекрасно",
+   "chrf_back": 47.6,
+   "script_ok": 0.854,
+   "cyrillic": 0.146,
+   "judge": [
+    3,
+    2
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "магического приложения которое облегчит жизнь людям которая я надеюсь будет пользоваться",
+   "tr": "un'applicazione magica che renderà la vita più facile alle persone, che spero utilizzeranno",
+   "back": "волшебное приложение, которое сделает жизнь людей easier to translate this correctly, the word \"easier\" seems out of place and likely a leftover from the source text. The correct translation should be: \"волшебное приложение, которое сделает жизнь людей easier to use, which I hope they will utilize\" should be translated as \"волшебное приложение, которое сделает жизнь людей более удобной, надеюсь, они будут использовать\"",
+   "chrf_back": 27.6,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "И такая функция добавляет, конечно же, у нас популярности и возможностей",
+   "tr": "E questa funzione aggiunge, naturalmente, popolarità e opportunità per noi.",
+   "back": "И эта функция, конечно, добавляет популярность и возможности для нас.",
+   "chrf_back": 61.0,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "Потолок натяжной, белый, матовый.",
+   "tr": "Soffitto tendono, bianco, opaco.",
+   "back": "Тентовый потолок, белый, матовый.",
+   "chrf_back": 63.5,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  }
+ ]
+}

@@ -1,0 +1,215 @@
+{
+ "lang": "es",
+ "name": "Spanish",
+ "s": 14.3,
+ "rows": [
+  {
+   "ru": "Отделка Prime от Neometria.",
+   "tr": "La decoración Prime de Neometria.",
+   "back": "Пременная декорация Нейометрии.",
+   "chrf_back": 6.0,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    3,
+    4
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "также на территории у нас банный комплекс все готово к первым парением через 3-4 дня буквально",
+   "tr": "también en el terreno tenemos un complejo de baños, todo está listo para los primeros baños en aproximadamente 3-4 días literalmente",
+   "back": "также на территории у нас есть комплекс душевых, всё готово для первых принятий душа примерно через 3-4 дня буквально",
+   "chrf_back": 62.0,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "друзья ну что всем привет запишу первое видео такое ознакомительно целью познакомиться наверно",
+   "tr": "amigos, bueno, salud a todos, voy a grabar el primer video, así que informativo, con la intención de conocernos probablemente",
+   "back": "друзья, хорошо, здоровья всем, я сниму первое видео, поэтому информативное, с целью, вероятно, познакомиться",
+   "chrf_back": 41.2,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "сделаем видео с очками посмотрим опять же потестируем как наше приложение будет на это",
+   "tr": "haremos un video con los anteojos, volveremos a ver, probaremos de nuevo cómo será nuestra aplicación con esto",
+   "back": "мы сделаем видео с очками, пересмотрим его, снова проверим, как будет работать наша программа с этим",
+   "chrf_back": 41.9,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "Давайте протестируем еще вот такой формат съемки видео",
+   "tr": "Vamos a probar este otro formato de grabación de video.",
+   "back": "Давайте проверим этот другой формат записи видео.",
+   "chrf_back": 42.1,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "Давайте посмотрим, что включает в себя ремонт, предлагаемый застройщиком.",
+   "tr": "Vamos a ver qué incluye la reparación que propone el constructor.",
+   "back": "Давайте посмотрим, что включает в себя ремонт, который предлагает производитель.",
+   "chrf_back": 72.3,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "уже тут начнутся парения сейчас покажу бассейн вот такие вот у нас тут разные штуки зона для",
+   "tr": "ya comenzarán las inhalaciones aquí, ahora mostraré la piscina, así que tenemos diferentes cosas aquí, zona para",
+   "back": "сначала мы начнем ингаляции здесь, сейчас я покажу бассейн, так что у нас здесь разные вещи, зона для",
+   "chrf_back": 38.9,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    3,
+    4
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "больше в общем что хочу сказать рад знакомству с вами рад сотрудничеству сегодня пятница 28",
+   "tr": "más o menos lo que quiero decir es que estoy contento de conocerte, contento de la cooperación, hoy es viernes, el 28",
+   "back": "более или менее то, что я хочу сказать, это что я рад с вами познакомиться, рад сотрудничеству, сегодня пятница, двадцать восьмое",
+   "chrf_back": 55.5,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "все реагировать город сочи 28 августа сегодня и мы начинаем рабочие процессы по созданию нашего",
+   "tr": "todos reaccionarán en el ciudad sochi el 28 de agosto hoy y comenzamos los procesos de trabajo para crear nuestro",
+   "back": "все будут реагировать в городе Сочи 28 августа сегодня, и мы начинаем процессы работы для создания нашего",
+   "chrf_back": 66.2,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    3,
+    2
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "Все-таки современные телефоны уже позволяют это делать",
+   "tr": "Después de todo, los teléfonos actuales ya permiten hacer esto.",
+   "back": "В конце концов, современные телефоны уже позволяют это делать.",
+   "chrf_back": 81.3,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    5,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "Его вы можете заказать на момент покупки квартиры в нашем жилом комплексе Flora.",
+   "tr": "Puede ordenarlo en el momento de la compra del apartamento en nuestro complejo residencial Flora.",
+   "back": "Вы можете заказать его при покупке квартиры в нашем жилом комплексе Флора.",
+   "chrf_back": 68.5,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "переодевания бочки шезлонги здесь у нас финская сауна покажу русскую баню русская",
+   "tr": "las tinas de barril aquí tenemos una sauna finlandesa muestro el baño ruso ruso",
+   "back": "ванна в бочке, у нас здесь есть финская сауна, я показываю русскую баню",
+   "chrf_back": 43.2,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    3,
+    4
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "августа будем считать что это . начало нашего сотрудничества что хочется сказать пусть это",
+   "tr": "en agosto consideremos que esto es el comienzo de nuestra cooperación, quiero decir quePropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParams",
+   "back": "PropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParamsPropertyParams",
+   "chrf_back": 0.0,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "магического приложения которое облегчит жизнь людям которая я надеюсь будет пользоваться",
+   "tr": "una aplicación mágica que facilitará la vida de las personas, que espero que sea utilizada",
+   "back": "волшебное приложение, которое облегчит жизнь людей, надеюсь, что оно будет использоваться",
+   "chrf_back": 59.4,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "И такая функция добавляет, конечно же, у нас популярности и возможностей",
+   "tr": "Y esta función nos añade, por supuesto, popularidad y oportunidades.",
+   "back": "И эта функция добавляет нам, конечно же, популярность и возможности.",
+   "chrf_back": 69.2,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    4,
+    5
+   ],
+   "preamble": false
+  },
+  {
+   "ru": "Потолок натяжной, белый, матовый.",
+   "tr": "Cielo rígido, blanco, mate.",
+   "back": "Твердое белое матовое небо.",
+   "chrf_back": 17.3,
+   "script_ok": 1.0,
+   "cyrillic": 0.0,
+   "judge": [
+    3,
+    4
+   ],
+   "preamble": false
+  }
+ ]
+}

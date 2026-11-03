@@ -1,1 +1,119 @@
-{"source": "placeholder: replaced by the r13 measurements (LANGS.md)", "langs": {"en": {"mt": "qwen", "tts": "chatterbox"}, "de": {"mt": "qwen", "tts": "chatterbox"}}}
+{
+ "source": "r13 local measurements, curated (reports/experiments/r13-spec/LANGS.md); auto-rule output: data/lang/lang_routes_auto.json",
+ "langs": {
+  "en": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "group": "A"
+  },
+  "de": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "group": "A"
+  },
+  "es": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "group": "A"
+  },
+  "fr": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "group": "A"
+  },
+  "it": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "group": "A"
+  },
+  "nl": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "group": "A"
+  },
+  "zh": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "group": "A"
+  },
+  "ja": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "group": "A"
+  },
+  "pt": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "group": "B",
+   "guard": "mixed_script_retry"
+  },
+  "sv": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "group": "B",
+   "guard": "mixed_script_retry"
+  },
+  "no": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "group": "B",
+   "guard": "mixed_script_retry"
+  },
+  "ms": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "group": "B",
+   "guard": "mixed_script_retry"
+  },
+  "tr": {
+   "mt": "openai",
+   "tts": "chatterbox",
+   "group": "C"
+  },
+  "pl": {
+   "mt": "openai",
+   "tts": "chatterbox",
+   "group": "C"
+  },
+  "hi": {
+   "mt": "openai",
+   "tts": "chatterbox",
+   "group": "C"
+  },
+  "sw": {
+   "mt": "openai",
+   "tts": "chatterbox",
+   "group": "C"
+  },
+  "da": {
+   "mt": "qwen",
+   "tts": "donor_vc",
+   "group": "D"
+  },
+  "he": {
+   "mt": "openai",
+   "tts": "donor_vc",
+   "group": "E"
+  },
+  "ar": {
+   "mt": "openai",
+   "tts": "donor_vc",
+   "group": "E"
+  },
+  "ko": {
+   "mt": "openai",
+   "tts": "donor_vc",
+   "group": "E"
+  },
+  "el": {
+   "mt": "openai",
+   "tts": "donor_vc",
+   "group": "E"
+  },
+  "fi": {
+   "mt": "openai",
+   "tts": "donor_vc",
+   "group": "E"
+  }
+ }
+}
