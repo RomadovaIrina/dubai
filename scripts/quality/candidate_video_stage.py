@@ -271,10 +271,14 @@ def main() -> int:
         man["speech_gate"] = {**man.get("speech_gate", {}), "intervals": gate, "skip_silent": {"cuts_s": [[round(c0, 2), round(c1, 2)] for c0, c1 in cuts], "gate_seconds_before": round(g0, 2),
                               "gate_seconds_after": round(g1, 2), "skipped_seconds": round(g0 - g1, 2), "skipped_pct_of_video": round(100 * (g0 - g1) / duration, 2)}}
         print(f"  [skip-silent] {len(cuts)} cuts, gate {g0:.1f} -> {g1:.1f} s ({100 * (g0 - g1) / duration:.1f} % of the video)", flush=True)
-    if a.ref_mode != "same" or a.bridge_len:   # round 3: generator variants (ls_stable.StableLatentSync; same call interface)
+    ls_stride = int(os.environ.get("LS_STRIDE", "0") or 0) or None   # r14 F (mouth flicker): overlapping 16-frame windows (stride < 16), default off;
+    ls_overlap = os.environ.get("LS_OVERLAP", "fuse")                   # fuse = per-step latent blending over the overlap (MultiDiffusion along time; needs --no-deepcache),
+    # continue = each window's overlap pinned to the previous window's result at every noise level (DeepCache OK); bridges are skipped with a stride
+    if a.ref_mode != "same" or a.bridge_len or ls_stride:   # round 3: generator variants (ls_stable.StableLatentSync; same call interface)
         from ls_stable import StableRunner
         with rp.timed(times, "latentsync_load"): runner = StableRunner(a.window_batch_size, not a.no_deepcache, a.steps, a.guidance, 1247, a.deepcache_interval, ref_mode=a.ref_mode,
-                                                                       bridge_len=a.bridge_len, bridge_steps=a.bridge_steps)
+                                                                       bridge_len=a.bridge_len, bridge_steps=a.bridge_steps, stride=ls_stride, overlap=ls_overlap)
+        if ls_stride: man["ls_overlap"] = {"stride": ls_stride, "overlap": ls_overlap}
         runner.acc.audio_lead = a.audio_lead; man["audio_lead"] = a.audio_lead
         if a.steps_silent > 0 and cut_energy is not None:   # phase 2: per-master-frame dub silence for the adaptive step count
             import numpy as _np
