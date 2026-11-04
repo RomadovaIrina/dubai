@@ -7,7 +7,7 @@ export E2E_METRICS=off DUB_ALLOW_NC=1 LS_CMS_READ=1 FC_CMS=1 FC_EXTRA="--pre-thr
 until grep -q SETUP_DONE /workspace/dub/setup.log; do sleep 30; done; echo "== setup done $(date +%T)"
 [ -f /workspace/dub/r9_models.done ] || { bash scripts/r9/r9_models.sh > /workspace/dub/r9_models.log 2>&1 && touch /workspace/dub/r9_models.done; }; tail -1 /workspace/dub/r9_models.log
 /venv/main/bin/python -c "import pynvml" 2>/dev/null || uv pip install --python /venv/main/bin/python nvidia-ml-py 2>&1 | tail -1
-M=/workspace/dub/inputs/mamakris; T=/workspace/dub/inputs/test_videos_raw; R=/workspace/dub/r10/runs; B=/workspace/dub/artifacts/r4m
+M=/workspace/dub/inputs/mamakris; T=/workspace/dub/inputs/test_videos_raw; R=/workspace/dub/r10/runs; B=/workspace/dub/artifacts/r4m; mkdir -p $R
 declare -A F=([m03]=$M/story-1774249919482-367803614.MOV [m18]=$M/story-1774250817106-616905094.mp4 [old03]=$T/03.mp4)
 declare -A WIN=([old03]="3-4,5-6,20.8-21,24,27-28" [m03]="")
 ready() { local f=$1 s0 s1; [ -f $f ] || return 1; s0=$(stat -c %s $f); sleep 60; s1=$(stat -c %s $f); [ "$s0" = "$s1" ] && ffprobe -v error -show_entries format=duration -of csv=p=0 $f > /dev/null 2>&1; }
