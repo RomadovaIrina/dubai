@@ -7,6 +7,7 @@ set -u
 cd /workspace/dub/dubai; export DUB_ROOT=/workspace/dub/dubai; . scripts/env.sh >/dev/null
 X=/workspace/dub/r14d/eval; OB=/workspace/dub/outbox/r14_d; mkdir -p $X $OB; A=/workspace/dub/artifacts/r4a
 TAG=${TAG:-s4}; STEPS=${STEPS:-4}; LORA=${LORA:?LORA=<ckpt>}
+[ -f $X/skip_$TAG ] && { echo "skip $TAG ($X/skip_$TAG)"; exit 0; }   # arms dropped while the chain runs
 # both arms: q2 (reports/experiments/r13-ls/REPORT.md: BT.709 colour management + luma-only capped lip sharpen) + F3 (r14 agent F: --reg-smooth 4 --mouth-region 0.45)
 COMMON='"LS_CMS_READ": "1", "FC_CMS": "1", "FC_EXTRA": "--pre-threads=12 --sharpen-luma on --sharpen-auto 1.05 --sharpen-lips-max 0.2 --reg-smooth 4 --mouth-region 0.45"'
 declare -A SRC=([old03]=/workspace/dub/inputs/test_videos_raw/03.mp4 [m03]=/workspace/dub/inputs/mamakris/story-1774249919482-367803614.MOV [m18]=/workspace/dub/inputs/mamakris/story-1774250817106-616905094.mp4)
