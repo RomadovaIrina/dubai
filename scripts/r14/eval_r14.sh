@@ -2,7 +2,7 @@
 # r14 student eval on the held-out videos: the one-command E2E (dabai_job) with the production LatentSync stack q2 + agent F's F3 composite
 # flags, and the same with the student merged into the generator; SyncNet (sync_speech, the gate's), flicker (scripts/r14/flicker_metric.py,
 # the user's old03 timestamps), 2-panels q2 | student (full + 0.5x mouth crop) -> outbox/r14_d/.
-#   LORA=<ckpt.pt> STEPS=4 TAG=s4 bash scripts/r14/eval_r14.sh [old03 m03 m18]      (BASE=1: the q2 + F3 baseline too, when missing)
+#   LORA=<ckpt.pt> STEPS=4 TAG=s4 [XENV='"LS_STRIDE": "8", "LS_OVERLAP": "fuse"'] bash scripts/r14/eval_r14.sh [old03 m03 m18]      (BASE=1: the q2 + F3 baseline too, when missing)
 set -u
 cd /workspace/dub/dubai; export DUB_ROOT=/workspace/dub/dubai; . scripts/env.sh >/dev/null
 X=/workspace/dub/r14d/eval; OB=/workspace/dub/outbox/r14_d; mkdir -p $X $OB; A=/workspace/dub/artifacts/r4a
@@ -19,7 +19,7 @@ job(){   # job <name> <input> [debug_env json]
 for id in ${*:-old03 m03 m18}; do
   in=${SRC[$id]}
   [ -n "${BASE:-1}" ] && job q2_$id $in "{$COMMON}"
-  job ${TAG}_$id $in "{$COMMON, \"R10_GEN_PY\": \"/workspace/dub/dubai/scripts/r13/distill/student_gen.py\", \"R13_STUDENT_LORA\": \"$LORA\", \"R13_STUDENT_STEPS\": \"$STEPS\"}"
+  job ${TAG}_$id $in "{$COMMON, \"R10_GEN_PY\": \"/workspace/dub/dubai/scripts/r13/distill/student_gen.py\", \"R13_STUDENT_LORA\": \"$LORA\", \"R13_STUDENT_STEPS\": \"$STEPS\"${XENV:+, $XENV}}"
   for n in q2_$id ${TAG}_$id; do
     v=$(ls $X/$n/$n.mp4 2>/dev/null); w=$(ls $A/r9_$n/$n/dubbed_16k.wav 2>/dev/null | head -1)
     [ -n "$v" ] && [ -n "$w" ] && [ ! -s $X/$n.sync.txt ] && flock /workspace/dub/gpu.lock python scripts/r11/sync_speech.py --video $v --audio $w --label $n 2>&1 | grep "^== sync" > $X/$n.sync.txt
