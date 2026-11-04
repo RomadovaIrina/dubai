@@ -30,6 +30,16 @@ for id in ${*:-old03 m03 m18}; do
     python scripts/r13/distill/mouth_2panel.py --left $X/k5_$id/k5_$id.mp4 --right $X/${TAG}_$id/${TAG}_$id.mp4 --lm $lm --out $OB/${id}_mouth_k5_vs_${TAG}.mp4 --labels "k5 (production)" "student $TAG"
     ffmpeg -v error -y -i $OB/${id}_mouth_k5_vs_${TAG}.mp4 -filter_complex "[0:v]setpts=2*PTS[v];[0:a]atempo=0.5[a]" -map "[v]" -map "[a]" -c:v libx264 -crf 18 -preset fast $OB/${id}_mouth_k5_vs_${TAG}_half_speed.mp4
     ffmpeg -v error -y -i $X/k5_$id/k5_$id.mp4 -i $X/${TAG}_$id/${TAG}_$id.mp4 -filter_complex "[0:v]scale=-2:720[l];[1:v]scale=-2:720[r];[l][r]hstack=inputs=2[v]" -map "[v]" -map 0:a -c:v libx264 -crf 20 -preset fast -c:a aac $OB/${id}_full_k5_vs_${TAG}.mp4
+    if [ $id = old03 ]; then   # the user's flicker timestamps: each span (+-0.25 s) at 0.5x with its time burnt in, concatenated
+      parts=""; k=0
+      for span in 2.75:4.25 4.75:6.25 20.55:21.25 23.5:24.5 26.75:28.25; do
+        s=${span%:*}; e=${span#*:}; k=$((k+1))
+        ffmpeg -v error -y -ss $s -to $e -i $OB/${id}_mouth_k5_vs_${TAG}.mp4 -filter_complex "[0:v]setpts=2*PTS,drawtext=text='t=$s-$e s (0.5x)':x=(w-tw)/2:y=h-30:fontsize=20:fontcolor=white:box=1:boxcolor=black@0.6[v];[0:a]atempo=0.5[a]" \
+          -map "[v]" -map "[a]" -c:v libx264 -crf 18 -preset fast -c:a aac -ar 48000 $X/ts_$k.mp4 && parts="$parts -i $X/ts_$k.mp4"
+      done
+      n=$(echo $parts | grep -o "\-i" | wc -l)
+      ffmpeg -v error -y $parts -filter_complex "$(for i in $(seq 0 $((n-1))); do echo -n "[$i:v][$i:a]"; done)concat=n=$n:v=1:a=1[v][a]" -map "[v]" -map "[a]" -c:v libx264 -crf 18 -preset fast -c:a aac $OB/${id}_mouth_k5_vs_${TAG}_user_timestamps_half_speed.mp4
+    fi
   else echo "no landmarks for $id (flicker / 2-panel skipped)"; fi
 done
 echo "EVAL_DONE $TAG"
