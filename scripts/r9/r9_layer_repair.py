@@ -13,6 +13,7 @@ bidirectional, blended by time); their landmarks are interpolated likewise. Long
 from __future__ import annotations
 import argparse, json, pathlib, sys, time
 import numpy as np, cv2
+_LRGB = __import__("os").environ.get("LS_LAYER_RGB", "0") == "1"  # r13 LS_LAYER_RGB=1: lossless RGB layer (each yuv420p round trip lost ~0.7 L / +0.4 b*)
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "r8"))
 from r8_mouth_flicker import LIPS_OUTER
 
@@ -107,7 +108,7 @@ def main():
     if a.ramp_sigma > 0 and fb_out.any():   # smoothed ramps for the source fallback that remains (no 1-frame snap)
         k = np.arange(-int(3 * a.ramp_sigma), int(3 * a.ramp_sigma) + 1); g = np.exp(-0.5 * (k / a.ramp_sigma) ** 2)
         fb_out = np.maximum(fb_out, np.minimum(1.0, np.convolve(fb_out, g / g.max() * 0.999, mode="same")) * lsm).astype(np.float32)
-    o2 = av.open(a.out, "w"); st = o2.add_stream("libx264", rate=rate); st.width, st.height = W, H; st.pix_fmt = "yuv420p"; st.options = {"crf": str(a.crf), "preset": a.preset}
+    o2 = av.open(a.out, "w"); st = o2.add_stream("libx264rgb" if _LRGB else "libx264", rate=rate); st.width, st.height = W, H; st.pix_fmt = "bgr24" if _LRGB else "yuv420p"; st.options = ({"qp": "0", "preset": a.preset} if _LRGB else {"crf": str(a.crf), "preset": a.preset})
     for f in F:
         for pk in st.encode(av.VideoFrame.from_ndarray(f, format="bgr24")): o2.mux(pk)
     for pk in st.encode(): o2.mux(pk)

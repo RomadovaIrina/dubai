@@ -428,9 +428,50 @@ def half_rate_fill(src, sub, idx):
             wa = cv2.remap(A, gx + a_ * fba[..., 0], gy + a_ * fba[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
             wb = cv2.remap(Bq, gx + (1 - a_) * fab[..., 0], gy + (1 - a_) * fab[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
             it = (1 - a_) * wa.astype(np.float32) + a_ * wb.astype(np.float32)
+            fm = os.environ.get("LS_RATE_FILL", "blend")   # r13 (user on m03 LS_RATE 2/3: "лицо подергивается и дрожит" = an 8.3 Hz mouth pulse: the blended
+            # fill frame is softer than its generated neighbours): hf = the blend's low frequencies + the nearer warped frame's detail; near = the nearer warped frame alone
+            if fm in ("hf", "near"):
+                wn = (wa if a_ <= 0.5 else wb).astype(np.float32)
+                if fm == "near": it = wn
+                else:
+                    sg = float(os.environ.get("LS_RATE_FILL_SIGMA", "1.5")); it = cv2.GaussianBlur(it, (0, 0), sg) + (wn - cv2.GaussianBlur(wn, (0, 0), sg))
         else: it = A.astype(np.float32)
         mm = cv2.GaussianBlur(cv2.dilate(m[y0:y1, x0:x1].astype(np.uint8), np.ones((9, 9), np.uint8)).astype(np.float32), (0, 0), 4.0)[..., None]
         f = src[k].copy(); f[y0:y1, x0:x1] = np.clip(mm * it + (1 - mm) * f[y0:y1, x0:x1].astype(np.float32), 0, 255).round().astype(np.uint8); out[k] = f
+    return out
+
+
+def _flow_mid(dis, a, b, t):
+    """r13 LS_RATE_EVEN: the frame at time t (0..1) between RGB frames a and b, bidirectional DIS flow (as half_rate_fill)."""
+    import cv2
+    ga, gb = cv2.cvtColor(a, cv2.COLOR_RGB2GRAY), cv2.cvtColor(b, cv2.COLOR_RGB2GRAY); fab, fba = dis.calc(ga, gb, None), dis.calc(gb, ga, None)
+    gy, gx = np.mgrid[0:a.shape[0], 0:a.shape[1]].astype(np.float32)
+    wa = cv2.remap(a, gx + t * fba[..., 0], gy + t * fba[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+    wb = cv2.remap(b, gx + (1 - t) * fab[..., 0], gy + (1 - t) * fab[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+    return np.clip((1 - t) * wa.astype(np.float32) + t * wb.astype(np.float32), 0, 255).round().astype(np.uint8)
+
+
+def even_fill(src, gen, gin, pos):
+    """r13 LS_RATE_EVEN: generated frames gen[j] (made from the input frames gin[j] at master time pos[j], evenly spaced) -> every master frame k:
+    inside the region the generator changed (|gen - gin| > 3 on either neighbour, dilated, feathered) the flow interpolation of the two generated
+    neighbours at k's time, outside it the source frame's own pixels; a master frame that IS a generated time takes that frame."""
+    import cv2
+    n = len(src); out = np.empty_like(src); dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM); pos = np.asarray(pos, np.float64)
+    reg = [np.abs(g.astype(np.int16) - i.astype(np.int16)).max(2) > 3 for g, i in zip(gen, gin)]
+    for k in range(n):
+        j = int(np.searchsorted(pos, k, side="right") - 1); j = max(0, min(j, len(pos) - 1))
+        if abs(pos[j] - k) < 1e-6 or j + 1 >= len(pos):
+            r = reg[j]; it = gen[j] if abs(pos[j] - k) < 1e-6 else gen[j]
+            m = r
+        else:
+            t = (k - pos[j]) / (pos[j + 1] - pos[j]); m = reg[j] | reg[j + 1]; it = None
+        ys, xs = np.nonzero(m)
+        if len(ys) == 0: out[k] = src[k]; continue
+        H, W = m.shape; pad = 24; y0, y1, x0, x1 = max(0, ys.min() - pad), min(H, ys.max() + pad + 1), max(0, xs.min() - pad), min(W, xs.max() + pad + 1)
+        if it is None: it = _flow_mid(dis, np.ascontiguousarray(gen[j][y0:y1, x0:x1]), np.ascontiguousarray(gen[j + 1][y0:y1, x0:x1]), t)
+        else: it = it[y0:y1, x0:x1]
+        mm = cv2.GaussianBlur(cv2.dilate(m[y0:y1, x0:x1].astype(np.uint8), np.ones((9, 9), np.uint8)).astype(np.float32), (0, 0), 4.0)[..., None]
+        f = src[k].copy(); f[y0:y1, x0:x1] = np.clip(mm * it.astype(np.float32) + (1 - mm) * f[y0:y1, x0:x1].astype(np.float32), 0, 255).round().astype(np.uint8); out[k] = f
     return out
 
 
@@ -460,6 +501,32 @@ class StableRunner:
         self.acc.chunk_hook = self.silence_mix.hook(start, n) if self.silence_mix is not None else None
         sa = getattr(self, "silent_all", None); self.acc.silent_seg = sa[start:start + n] if sa is not None else None   # phase 2: dub-silent master frames of this segment
 
+    def _even_rate(self, frames, audio_wav, detections, fps, rate="2/3"):
+        """r13 LS_RATE=2/3 LS_RATE_EVEN=1 (user on m03 LS_RATE 2/3: "лицо подергивается и дрожит"; the skip pattern feeds the generator uneven steps):
+        LatentSync on an EVEN 50/3 fps grid (master times 0, 1.5, 3, ...; the half-step input frames are flow-interpolated from the source, their
+        detections averaged; the audio chunks are taken at the same times: video_fps just under 50/3), then flow-interpolated back to the master grid."""
+        import cv2
+        k_, m_ = map(int, rate.split("/")); n = len(frames); pos = np.arange(0, n - 1e-6, m_ / k_); dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM); gin = []; dets = [] if detections is not None else None
+        for t in pos:
+            a = int(np.floor(t)); f_ = t - a
+            if f_ < 1e-6 or a + 1 >= n: gin.append(frames[a]); d_ = detections[a] if detections is not None else None
+            else:
+                gin.append(_flow_mid(dis, frames[a], frames[a + 1], f_))
+                d_ = None
+                if detections is not None:
+                    da, db = detections[a], detections[a + 1]
+                    if da is None or db is None or any(x is None for x in tuple(da) + tuple(db)): d_ = da if da is not None else db
+                    else: d_ = type(da)((np.asarray(x, np.float64) + np.asarray(y, np.float64)) / 2 for x, y in zip(da, db))
+            if dets is not None: dets.append(d_)
+        ss = self.acc.silent_seg
+        if ss is not None: self.acc.silent_seg = np.asarray(ss)[np.minimum(np.round(pos).astype(int), len(ss) - 1)]
+        try:
+            gen = self.acc.run_frames(np.ascontiguousarray(np.stack(gin)), audio_wav, dets, video_fps=(25.0 * k_ / m_) * (1 - 1e-9))
+        finally: self.acc.silent_seg = ss
+        gen = np.asarray(gen)[:len(pos)]
+        print(f"  [ls_rate] even {25 * k_ / m_:.2f} fps: {len(pos)} generated for {n} master frames", flush=True)
+        return even_fill(frames, gen, np.stack(gin)[:len(gen)], pos[:len(gen)])
+
     def run_frames(self, frames_rgb, audio_wav, detections=None):
         prof = os.environ.get("LS_PROFILE", "")   # r10 speed: CUDA kernel table of the FIRST segment -> <file> (torch.profiler; diagnostics only)
         if prof and not getattr(self, "_profiled", False):
@@ -472,8 +539,21 @@ class StableRunner:
             return r
         fps = int(os.environ.get("DUB_LS_FPS", "25")); t0 = time.perf_counter()
         rate = os.environ.get("LS_RATE", "")   # r10 speed: LS_RATE=k/m = LatentSync on k of every m master frames, each with ITS OWN 25 fps audio window (chunk selection), the rest flow-filled
-        if rate and len(frames_rgb) >= 32:
+        if rate and os.environ.get("LS_RATE_EVEN") == "1" and len(frames_rgb) >= 32:   # r13: any k/m on an even grid (user: even 2/3 "стало сильно лучше", slight tremble left)
+            frames = self._even_rate(np.asarray(frames_rgb), str(audio_wav), detections, fps, rate)
+        elif rate and len(frames_rgb) >= 32:
             k_, m_ = map(int, rate.split("/")); n = len(frames_rgb); idx = np.array([i for i in range(n) if i % m_ < k_]); ss = self.acc.silent_seg; hk = self.acc.chunk_hook
+            aq = float(os.environ.get("LS_RATE_ADAPT", "0") or 0)
+            if aq > 0:   # r13 (user on m03 LS_RATE 2/3: "лицо подергивается и дрожит"): skip frames only in LOW-motion blocks; a block (4 x m frames) whose
+                # frame-to-frame change (grey, quarter resolution, whole frame = mostly the head) is above the aq quantile of the segment keeps every frame
+                import cv2
+                g = [cv2.resize(cv2.cvtColor(np.asarray(f_), cv2.COLOR_RGB2GRAY), None, fx=0.25, fy=0.25, interpolation=cv2.INTER_AREA).astype(np.float32) for f_ in frames_rgb]
+                mo = np.array([0.0] + [float(np.abs(g[i] - g[i - 1]).mean()) for i in range(1, n)]); L_ = 4 * m_
+                bm = np.array([mo[b:b + L_].mean() for b in range(0, n, L_)]); thr_ = np.quantile(bm, aq)
+                keep = np.zeros(n, bool)
+                for bi, b in enumerate(range(0, n, L_)):
+                    keep[b:b + L_] = True if bm[bi] > thr_ else (np.arange(b, min(n, b + L_)) % m_ < k_)
+                idx = np.flatnonzero(keep); print(f"  [ls_rate] adapt q={aq}: {n - len(idx)} of {n} frames skipped ({100 * (n - len(idx)) / n:.1f} %)", flush=True)
             if ss is not None: self.acc.silent_seg = np.asarray(ss)[idx[idx < len(ss)]]
             def sel(enc, ch, hk=hk):
                 ch = hk(enc, ch) if hk is not None else ch
