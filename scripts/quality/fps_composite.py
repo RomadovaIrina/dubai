@@ -283,7 +283,7 @@ def main() -> int:
                     "(motion-compensated residual, Gaussian --seam-lf-sigma x box width, minus the mean of the neighbouring frames' residuals) is spread "
                     "linearly over +-N master frames, moved with the head (landmark similarity); 0 = off. Runs before --boundary")
     ap.add_argument("--seam-lf-sigma", type=float, default=0.06)
-    ap.add_argument("--colour-match", choices=["off", "band", "upper"], default="off", help="r3: per output frame, low-frequency colour / brightness correction of the "
+    ap.add_argument("--colour-match", choices=["off", "band", "upper", "all"], default="off", help="r3: per output frame, low-frequency colour / brightness correction of the "
                     "LatentSync layer towards the source frame, estimated in the mask border band above the mouth-corner line (lips excluded; normalised "
                     "Gaussian, sigma --colour-sigma x mouth width) and extended over the whole pasted region; upper = estimated on ALL mask skin above the "
                     "mouth-corner line (alpha > 0.05: nose base, cheeks, upper-lip skin), not only the band")
@@ -814,7 +814,11 @@ def main() -> int:
                         fz = tms.poly_mask(hz, (ya, yb, xa, xb), a.cm_mouth_excl * mwc, a.cm_mouth_feather * mwc)
                         lipm = np.maximum(lipm, tms.poly_mask(hz, (ya, yb, xa, xb), a.cm_mouth_excl * mwc + 2 * a.cm_mouth_feather * mwc, 0))
                 yy_ = np.arange(yb - ya, dtype=np.float32)[:, None]
-                wgt = ((alpha > 0.05) & ((alpha < 0.95) | (a.colour_match == "upper"))).astype(np.float32) * (yy_ < ymc + 0.1 * mwc) * (1 - lipm)
+                if a.colour_match == "all":   # r14 F (old03 "the lower face blinks" = the generated cheek / chin tone jumping at the 16-frame window seams):
+                    # estimated on ALL pasted skin, chin and jaw too (the mouth zone excluded), so the low-frequency tone follows the source everywhere
+                    wgt = (alpha > 0.05).astype(np.float32) * (1 - lipm)
+                else:
+                    wgt = ((alpha > 0.05) & ((alpha < 0.95) | (a.colour_match == "upper"))).astype(np.float32) * (yy_ < ymc + 0.1 * mwc) * (1 - lipm)
                 if wgt.sum() > 50:
                     sg_ = a.colour_sigma * mwc; d_ = sk - Lk
                     num = cv2.GaussianBlur(d_ * wgt[..., None], (0, 0), sg_); den = cv2.GaussianBlur(wgt, (0, 0), sg_)
