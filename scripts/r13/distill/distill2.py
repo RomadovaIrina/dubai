@@ -57,6 +57,45 @@ def temporal_loss(ms, mt, mr=None):
     return l_d1 + F.relu(jitter(ms) - ref).mean()
 
 
+def plot_curve(logp, ck, a):
+    """ck/curve.png (train terms smoothed; val EMA metrics with the teacher-20 references dashed) + ck/latest.txt (one line); never raises"""
+    try:
+        import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
+        rows = [json.loads(l) for l in open(logp) if l.strip()]; tr = [r for r in rows if "loss" in r]; vl = [r for r in rows if "val_mse_ema" in r]
+        ref = next((r for r in rows if "val_sync_teacher20" in r), {})
+        def sm(key):   # EMA-smoothed series over the steps where the term applies
+            xs, ys, m = [], [], None
+            for r in tr:
+                v = r.get(key)
+                if v is None: continue
+                m = v if m is None else 0.98 * m + 0.02 * v; xs.append(r["step"]); ys.append(m)
+            return xs, ys
+        ck.mkdir(parents=True, exist_ok=True); fig, ax = plt.subplots(2, 3, figsize=(15, 8)); ax = ax.ravel()
+        for i, (k, w) in enumerate((("loss", 1), ("mse", 1), ("sync", a.sync_w), ("pix", a.pix_w), ("lpips", a.lpips_w), ("temp", a.temp_w))):
+            xs, ys = sm(k); ax[i].plot(xs, ys, color="C0"); ax[i].set_title(f"train {k}" + (f" (x{w} in loss)" if k != "loss" else " (total)")); ax[i].grid(alpha=.3)
+        fig.suptitle(f"{a.run}: {a.student_steps}-step student, lr {a.lr}, sync_w {a.sync_w}, pix_w {a.pix_w}, lpips_w {a.lpips_w}, temp_w {a.temp_w}")
+        fig.tight_layout(); fig.savefig(ck / "curve_train.png", dpi=80); plt.close(fig)
+        fig, ax = plt.subplots(1, 3, figsize=(15, 4))
+        for i, (k, rk, lab) in enumerate((("val_mse_ema", None, "val latent MSE to the teacher"), ("val_sync_ema", "val_sync_teacher20", "val stable-SyncNet sim (higher = better)"),
+                                          ("val_jitter_ema", "val_jitter_teacher20", "val mouth jitter (lower = less flicker)"))):
+            ax[i].plot([r["step"] for r in vl], [r[k] for r in vl], "o-", label="student (EMA)")
+            u = ref.get(k.replace("_ema", "_untrained"))
+            if u is not None: ax[i].axhline(u, color="gray", ls=":", label="untrained 4-step")
+            if rk and ref.get(rk) is not None: ax[i].axhline(ref[rk], color="C3", ls="--", label="teacher 20 steps + CFG")
+            ax[i].set_title(lab); ax[i].grid(alpha=.3); ax[i].legend(fontsize=8)
+        fig.tight_layout(); fig.savefig(ck / "curve_val.png", dpi=80); plt.close(fig)
+        from PIL import Image
+        A, B = Image.open(ck / "curve_train.png"), Image.open(ck / "curve_val.png"); W = max(A.width, B.width)
+        C = Image.new("RGB", (W, A.height + B.height), "white"); C.paste(A, (0, 0)); C.paste(B, (0, A.height)); C.save(ck / "curve.png")
+        last = tr[-1] if tr else {}; v = vl[-1] if vl else {}
+        (ck / "latest.txt").write_text(f"{a.run} step {last.get('step')}/{a.steps} ({last.get('s', 0) / 60:.0f} min): loss {sm('loss')[1][-1] if tr else float('nan'):.4f} | "
+                                       f"last val @ {v.get('step')}: mse {v.get('val_mse_ema', float('nan')):.4f}, sync {v.get('val_sync_ema') or float('nan'):.3f} "
+                                       f"(teacher {ref.get('val_sync_teacher20') or float('nan'):.3f}), jitter {v.get('val_jitter_ema', float('nan')):.4f} "
+                                       f"(teacher {ref.get('val_jitter_teacher20') or float('nan'):.4f})\n")
+    except Exception as e:
+        print(f"[plot] skipped: {e}", flush=True)
+
+
 def cmd_train(a):
     import lpips
     out = pathlib.Path(a.out); fs = sorted(glob.glob(str(out / "t" / "*.pt"))); random.Random(1).shuffle(fs)
@@ -65,7 +104,9 @@ def cmd_train(a):
     srcs = sorted({cache[f]["src"] for f in fs}); random.Random(2).shuffle(srcs)
     vsrc = [s for s in srcs if (lambda d: d.get("mel") is not None and d["cond"].shape[1] == 16)(torch.load(s))][:a.val_max]
     val = [f for f in fs if cache[f]["src"] in set(vsrc) and not cache[f].get("flip")]; tr = [f for f in fs if cache[f]["src"] not in set(vsrc)]
-    print(f"[train] {len(tr)} train / {len(val)} val windows ({sum(cache[f].get('flip', False) for f in tr)} flipped in train), student {a.student_steps} steps", flush=True)
+    tr16 = [f for f in tr if cache[f].get("mel") is not None and cache[f]["cond"].shape[1] == 16]
+    print(f"[train] {len(tr)} train / {len(val)} val windows ({sum(cache[f].get('flip', False) for f in tr)} flipped in train; {len(tr16)} with SyncNet, drawn with p {a.p16}), "
+          f"student {a.student_steps} steps", flush=True)
     unet = D.load_unet(); unet.requires_grad_(False)
     if hasattr(unet, "enable_gradient_checkpointing"): unet.enable_gradient_checkpointing()
     names = D.add_lora(unet, a.rank, a.rank); params = [p for n, p in unet.named_parameters() if n.endswith(".A") or n.endswith(".B")]
@@ -105,12 +146,14 @@ def cmd_train(a):
     unet.train(); run = None
     for step in range(1, a.steps + 1):
         for g in opt.param_groups: g["lr"] = lr_at(step)
-        d = cache[random.choice(tr)]; cond = d["cond"].cuda()[None]; au = d["audio"].cuda()[None]; z = d["z"].cuda()[None].float(); x0t = d["x0_teacher"].cuda()[None].float()
+        # SyncNet needs a 16-frame window with its mel (42 % of the windows; the rest are 8-frame bridges / segment tails): draw one with
+        # probability --p16, so the sync term acts on that share of the steps instead of 42 %
+        d = cache[random.choice(tr16 if tr16 and random.random() < a.p16 else tr)]; cond = d["cond"].cuda()[None]; au = d["audio"].cuda()[None]; z = d["z"].cuda()[None].float(); x0t = d["x0_teacher"].cuda()[None].float()
         k = random.randrange(len(TS)); t = TS[k]; x = z if k == 0 else sS.add_noise(x0t, z, t.reshape(1))
         with torch.autocast("cuda", dtype=torch.float16):
             eps = unet(torch.cat([sS.scale_model_input(x.half(), t), cond], 1), t, encoder_hidden_states=D.flat_audio(au)).sample.float()
         at = ac[t]; x0s = (x - (1 - at).sqrt() * eps) / at.sqrt()
-        lmse = F.mse_loss(x0s, x0t); lsync = lpix = llp = ltmp = torch.zeros((), device="cuda")
+        lmse = F.mse_loss(x0s, x0t); lsync = lpix = llp = ltmp = torch.zeros((), device="cuda"); has_sync = has_tmp = False
         if a.sync_w > 0 or a.pix_w > 0 or a.lpips_w > 0 or a.temp_w > 0:
             ps = D.decode(vae, x0s, grad=True).float()
             with torch.no_grad(): pt = D.decode(vae, x0t.half(), grad=False).float()
@@ -120,22 +163,25 @@ def cmd_train(a):
                 mr = None
                 if d.get("orig_audio"):   # the window's own audio: the real frames (the reference latents of the same frames) set the jitter floor
                     with torch.no_grad(): pr = D.decode(vae, cond[:, 5:9].half(), grad=False).float(); mr = pr[:, :, h:]
-                ltmp = temporal_loss(ms, mt, mr)
+                ltmp = temporal_loss(ms, mt, mr); has_tmp = True
             if a.lpips_w > 0: llp = lp(F.interpolate(ms, scale_factor=0.5, mode="bilinear"), F.interpolate(mt, scale_factor=0.5, mode="bilinear")).mean()
             if a.sync_w > 0 and d.get("mel") is not None and x0s.shape[2] == 16:
                 px = F.interpolate(ps, size=(sc.data.resolution, sc.data.resolution), mode="bilinear", align_corners=False)[:, :, sc.data.resolution // 2:, :]
                 m_ = d["mel"].cuda().half(); m_ = m_[None] if m_.dim() == 3 else m_
                 ve, ae = syncnet(px.reshape(1, -1, px.shape[2], px.shape[3]).half(), m_)
-                sim = F.cosine_similarity(ve.float(), ae.float()); lsync = F.binary_cross_entropy(sim.clamp(1e-6, 1 - 1e-6), torch.ones_like(sim))
+                sim = F.cosine_similarity(ve.float(), ae.float()); lsync = F.binary_cross_entropy(sim.clamp(1e-6, 1 - 1e-6), torch.ones_like(sim)); has_sync = True
         loss = lmse + a.sync_w * lsync + a.pix_w * lpix + a.lpips_w * llp + a.temp_w * ltmp
         opt.zero_grad(set_to_none=True); loss.backward(); torch.nn.utils.clip_grad_norm_(params, 1.0); opt.step()
         with torch.no_grad():
             dec = min(a.ema, (1 + step) / (10 + step))   # EMA warm-up: the early average is not dominated by the zero-initialised LoRA
             for p, e in zip(params, ema): e.mul_(dec).add_(p.detach(), alpha=1 - dec)
         run = loss.item() if run is None else 0.98 * run + 0.02 * loss.item()
-        if step % 25 == 0:
-            log.write(json.dumps({"step": step, "loss": loss.item(), "mse": lmse.item(), "sync": lsync.item(), "pix": lpix.item(), "lpips": llp.item(), "temp": ltmp.item(), "lr": lr_at(step),
-                                  "s": round(time.time() - t0, 1), "vram_gb": round(torch.cuda.max_memory_allocated() / 2**30, 1)}) + "\n"); log.flush()
+        # every step logged (cheap): "sync" / "temp" are null on the steps where the term does not apply (8-frame windows / < 3 frames), not 0
+        log.write(json.dumps({"step": step, "F": int(x0s.shape[2]), "loss": loss.item(), "mse": lmse.item(), "sync": lsync.item() if has_sync else None, "pix": lpix.item(),
+                              "lpips": llp.item(), "temp": ltmp.item() if has_tmp else None, "lr": lr_at(step), "s": round(time.time() - t0, 1),
+                              "vram_gb": round(torch.cuda.max_memory_allocated() / 2**30, 1)}) + "\n")
+        if step % 25 == 0: log.flush()
+        if step % 250 == 0: log.flush(); plot_curve(out / "train_log.jsonl", pathlib.Path(a.ckpt_root) / a.run, a)
         if step % 100 == 0: print(f"[train] step {step} loss_ema {run:.4f} lr {lr_at(step):.2e} {time.time() - t0:.0f} s peak {torch.cuda.max_memory_allocated() / 2**30:.1f} GB", flush=True)
         if step % a.val_every == 0 or step == a.steps:
             # checkpoints (LoRA only, fp16, ~30 MB each): ckpt/<run>/step_XXXXX.pt (live), step_XXXXX_ema.pt, step_XXXXX.json; best.pt = the EMA with the lowest val MSE
@@ -146,7 +192,7 @@ def cmd_train(a):
             r = {"step": step, "val_mse_ema": v["mse"], "val_sync_ema": v["sync"], "val_jitter_ema": v["jitter"]}; curve.append(r)
             if v["mse"] <= min(c.get("val_mse_ema", 9e9) for c in curve): torch.save(meta(), ck / "best.pt"); r["best"] = True
             swap_ema(); (ck / f"step_{step:05d}.json").write_text(json.dumps({**r, "config": vars(a)}, indent=1))
-            print(f"[val] {r} -> {ck}", flush=True); log.write(json.dumps(r) + "\n")
+            print(f"[val] {r} -> {ck}", flush=True); log.write(json.dumps(r) + "\n"); log.flush(); plot_curve(out / "train_log.jsonl", ck, a)
     (out / "val.json").write_text(json.dumps({"curve": curve, "args": vars(a)}, indent=1)); print(f"[train] done {a.steps} steps in {time.time() - t0:.0f} s", flush=True)
 
 
@@ -156,7 +202,7 @@ def main():
     ap.add_argument("--steps", type=int, default=3000); ap.add_argument("--student-steps", type=int, default=4); ap.add_argument("--rank", type=int, default=32)
     ap.add_argument("--lr", type=float, default=1e-4); ap.add_argument("--ema", type=float, default=0.999); ap.add_argument("--val-every", type=int, default=500)
     ap.add_argument("--val-max", type=int, default=24); ap.add_argument("--sync-w", type=float, default=0.15); ap.add_argument("--pix-w", type=float, default=0.5)
-    ap.add_argument("--lpips-w", type=float, default=0.2); ap.add_argument("--temp-w", type=float, default=1.0)
+    ap.add_argument("--lpips-w", type=float, default=0.2); ap.add_argument("--temp-w", type=float, default=1.0); ap.add_argument("--p16", type=float, default=0.7)
     ap.add_argument("--run", default="r2_s4"); ap.add_argument("--ckpt-root", default="/workspace/dub/r14d/ckpt")
     a = ap.parse_args()
     torch.manual_seed(0); random.seed(0)
