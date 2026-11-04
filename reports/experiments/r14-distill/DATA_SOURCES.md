@@ -6,7 +6,6 @@ no clip is republished. The held-out test clips old03 / m03 / m18 are never used
 | id | source | URL | licence | attribution |
 |---|---|---|---|---|
 | own_* | our own pipeline inputs (the 11 non-test clips) | – | own | – |
-| grid_s1 | GRID Audio-Visual Speech Corpus, speaker s1 | https://zenodo.org/records/3625687 | CC BY 4.0 | M. Cooke, J. Barker, S. Cunningham, X. Shao, "The Grid Audio-Visual Speech Corpus" (2006), Zenodo, doi:10.5281/zenodo.3625687, CC BY 4.0 |
 | x_n01 | NASA Image and Video Library: iss061m262811941_Nick_Hague_Post_Flight_Interview_2019_1008 | https://images.nasa.gov/details/iss061m262811941_Nick_Hague_Post_Flight_Interview_2019_1008 | US public domain (NASA media usage guidelines) | NASA / JSC, "iss061m262811941_Nick_Hague_Post_Flight_Interview_2019_1008" (2019-10-08), images.nasa.gov |
 | x_n02 | NASA Image and Video Library: Artemis Interviews with NASA Astronaut Jeanette Epps - October 4, 2019 | https://images.nasa.gov/details/iss061m2627771232_Live_Interviews_Jeanette_Epps_191004 | US public domain (NASA media usage guidelines) | NASA / JSC, "Artemis Interviews with NASA Astronaut Jeanette Epps - October 4, 2019" (2019-10-04), images.nasa.gov |
 | x_n03 | NASA Image and Video Library: iss060m262551229_Expedition_60_Live_Interviews_Doug_Wheelock_2019_0912 | https://images.nasa.gov/details/iss060m262551229_Expedition_60_Live_Interviews_Doug_Wheelock_2019_0912 | US public domain (NASA media usage guidelines) | NASA / JSC, "iss060m262551229_Expedition_60_Live_Interviews_Doug_Wheelock_2019_0912" (2019-09-12), images.nasa.gov |
@@ -23,4 +22,4 @@ no clip is republished. The held-out test clips old03 / m03 / m18 are never used
 Notes:
 - **NASA:** the material is not copyrighted in the US. The NASA media guidelines ask not to imply endorsement and to respect the likeness of identifiable people: training use only. NASA IDs and file URLs are in `data/nasa/selected.json` on the server.
 - **EC Audiovisual Service:** approved (CC BY 4.0 / © European Union only), **not used yet**. The site serves the licence notice and the files through a JS API, so each item needs its own licence check before download.
-- **Downloaded so far:** NASA 2.8 GB, GRID 0.4 GB (limit ~50 GB in total).
+- **Downloaded so far:** NASA 11.0 GB, GRID 0.4 GB (limit ~50 GB in total).
