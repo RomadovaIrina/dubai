@@ -33,11 +33,26 @@ def cmd_teacher(a):
             with torch.autocast("cuda", dtype=torch.float16):
                 x0 = D.sample(unet, s20, z, cond, au, cfg=2.0)
             for j, (d, (i, f, fl)) in enumerate(zip(ds, grp)):
-                torch.save({"cond": cond[j].cpu(), "audio": d["audio"], "mel": d.get("mel"), "z": z[j].cpu(), "x0_teacher": x0[j].to(torch.float16).cpu(), "src": f, "flip": fl, "job": d.get("job")},
+                torch.save({"cond": cond[j].cpu(), "audio": d["audio"], "mel": d.get("mel"), "z": z[j].cpu(), "x0_teacher": x0[j].to(torch.float16).cpu(), "src": f, "flip": fl, "job": d.get("job"), "orig_audio": d.get("orig_audio", False)},
                            out / "t" / (pathlib.Path(f).stem + ("_f" if fl else "") + ".pt"))
             done += len(grp)
             if done % 40 < a.tbatch: print(f"[teacher] {done}/{len(todo)} {time.time() - t0:.0f} s ({(time.time() - t0) / done:.2f} s / window)", flush=True)
     print(f"[teacher] done {done} windows in {time.time() - t0:.0f} s; peak VRAM {torch.cuda.max_memory_allocated() / 2**30:.1f} GB", flush=True)
+
+
+def jitter(m):
+    """frame-to-frame flicker of a decoded mouth half (F, 3, H, W): |second temporal difference| after a 4x average pool (shape / brightness
+    jumps, not texture); one value per inner frame (F - 2). Smooth motion (opening at a steady rate) scores ~0, a one-frame jump scores high."""
+    p = F.avg_pool2d(m, 4); return (p[2:] - 2 * p[1:-1] + p[:-2]).abs().mean(dim=(1, 2, 3))
+
+
+def temporal_loss(ms, mt, mr=None):
+    """anti-flicker: (1) the student's frame-to-frame changes follow the teacher's (L1 of first differences, pooled);
+    (2) hinge on the jitter ABOVE the reference: the teacher's, or the real frames' when the window carries its original audio (mr)"""
+    ps, pt = F.avg_pool2d(ms, 4), F.avg_pool2d(mt, 4)
+    l_d1 = F.l1_loss(ps[1:] - ps[:-1], pt[1:] - pt[:-1])
+    ref = jitter(mt) if mr is None else torch.minimum(jitter(mt), jitter(mr))
+    return l_d1 + F.relu(jitter(ms) - ref).mean()
 
 
 def cmd_train(a):
@@ -67,20 +82,23 @@ def cmd_train(a):
     def evaluate(lora_on=True):
         for m in unet.modules():
             if isinstance(m, D.LoRA): m.scale = 1.0 if lora_on else 0.0
-        unet.eval(); errs, sims = [], []
+        unet.eval(); errs, sims, jits = [], [], []
         for f in val:
             d = cache[f]; cond = d["cond"].cuda()[None]; au = d["audio"].cuda()[None]; z = d["z"].cuda()[None]
             with torch.autocast("cuda", dtype=torch.float16):
                 x = D.sample(unet, sS, z, cond, au, cfg=1.0)
             errs.append(F.mse_loss(x.float(), d["x0_teacher"].cuda()[None].float()).item())
             if d.get("mel") is not None and x.shape[2] == 16: sims.append(D.sync_sim(syncnet, sc, vae, x, d["mel"]).item())
+            px = D.decode(vae, x.half(), grad=False).float(); jits.append(jitter(px[:, :, px.shape[2] // 2:]).mean().item())
         for m in unet.modules():
             if isinstance(m, D.LoRA): m.scale = 1.0
-        unet.train(); return {"mse": sum(errs) / len(errs), "sync": sum(sims) / len(sims) if sims else None}
+        unet.train(); return {"mse": sum(errs) / len(errs), "sync": sum(sims) / len(sims) if sims else None, "jitter": sum(jits) / len(jits)}
 
     with torch.no_grad():
         tsims = [D.sync_sim(syncnet, sc, vae, cache[f]["x0_teacher"].cuda()[None], cache[f]["mel"]).item() for f in val if cache[f].get("mel") is not None and cache[f]["x0_teacher"].shape[1] == 16]
-    b = evaluate(lora_on=False); r = {"step": 0, "val_mse_untrained": b["mse"], "val_sync_untrained": b["sync"], "val_sync_teacher20": sum(tsims) / max(1, len(tsims))}
+        tj = [(lambda px: jitter(px[:, :, px.shape[2] // 2:]).mean().item())(D.decode(vae, cache[f]["x0_teacher"].cuda()[None].half(), grad=False).float()) for f in val]
+    b = evaluate(lora_on=False); r = {"step": 0, "val_mse_untrained": b["mse"], "val_sync_untrained": b["sync"], "val_sync_teacher20": sum(tsims) / max(1, len(tsims)),
+                                      "val_jitter_untrained": b["jitter"], "val_jitter_teacher20": sum(tj) / max(1, len(tj))}
     print(f"[val] {r}", flush=True); log.write(json.dumps(r) + "\n"); curve = [r]
     unet.train(); run = None
     for step in range(1, a.steps + 1):
@@ -90,26 +108,31 @@ def cmd_train(a):
         with torch.autocast("cuda", dtype=torch.float16):
             eps = unet(torch.cat([sS.scale_model_input(x.half(), t), cond], 1), t, encoder_hidden_states=au).sample.float()
         at = ac[t]; x0s = (x - (1 - at).sqrt() * eps) / at.sqrt()
-        lmse = F.mse_loss(x0s, x0t); lsync = lpix = llp = torch.zeros((), device="cuda")
-        if a.sync_w > 0 or a.pix_w > 0 or a.lpips_w > 0:
+        lmse = F.mse_loss(x0s, x0t); lsync = lpix = llp = ltmp = torch.zeros((), device="cuda")
+        if a.sync_w > 0 or a.pix_w > 0 or a.lpips_w > 0 or a.temp_w > 0:
             ps = D.decode(vae, x0s, grad=True).float()
             with torch.no_grad(): pt = D.decode(vae, x0t.half(), grad=False).float()
             h = ps.shape[2] // 2; ms, mt = ps[:, :, h:], pt[:, :, h:]          # the mouth half of the face crop
             lpix = F.l1_loss(ms, mt)
+            if a.temp_w > 0 and ms.shape[0] >= 3:
+                mr = None
+                if d.get("orig_audio"):   # the window's own audio: the real frames (the reference latents of the same frames) set the jitter floor
+                    with torch.no_grad(): pr = D.decode(vae, cond[:, 5:9].half(), grad=False).float(); mr = pr[:, :, h:]
+                ltmp = temporal_loss(ms, mt, mr)
             if a.lpips_w > 0: llp = lp(F.interpolate(ms, scale_factor=0.5, mode="bilinear"), F.interpolate(mt, scale_factor=0.5, mode="bilinear")).mean()
             if a.sync_w > 0 and d.get("mel") is not None and x0s.shape[2] == 16:
                 px = F.interpolate(ps, size=(sc.data.resolution, sc.data.resolution), mode="bilinear", align_corners=False)[:, :, sc.data.resolution // 2:, :]
                 m_ = d["mel"].cuda().half(); m_ = m_[None] if m_.dim() == 3 else m_
                 ve, ae = syncnet(px.reshape(1, -1, px.shape[2], px.shape[3]).half(), m_)
                 sim = F.cosine_similarity(ve.float(), ae.float()); lsync = F.binary_cross_entropy(sim.clamp(1e-6, 1 - 1e-6), torch.ones_like(sim))
-        loss = lmse + a.sync_w * lsync + a.pix_w * lpix + a.lpips_w * llp
+        loss = lmse + a.sync_w * lsync + a.pix_w * lpix + a.lpips_w * llp + a.temp_w * ltmp
         opt.zero_grad(set_to_none=True); loss.backward(); torch.nn.utils.clip_grad_norm_(params, 1.0); opt.step()
         with torch.no_grad():
             dec = min(a.ema, (1 + step) / (10 + step))   # EMA warm-up: the early average is not dominated by the zero-initialised LoRA
             for p, e in zip(params, ema): e.mul_(dec).add_(p.detach(), alpha=1 - dec)
         run = loss.item() if run is None else 0.98 * run + 0.02 * loss.item()
         if step % 25 == 0:
-            log.write(json.dumps({"step": step, "loss": loss.item(), "mse": lmse.item(), "sync": lsync.item(), "pix": lpix.item(), "lpips": llp.item(), "lr": lr_at(step),
+            log.write(json.dumps({"step": step, "loss": loss.item(), "mse": lmse.item(), "sync": lsync.item(), "pix": lpix.item(), "lpips": llp.item(), "temp": ltmp.item(), "lr": lr_at(step),
                                   "s": round(time.time() - t0, 1), "vram_gb": round(torch.cuda.max_memory_allocated() / 2**30, 1)}) + "\n"); log.flush()
         if step % 100 == 0: print(f"[train] step {step} loss_ema {run:.4f} lr {lr_at(step):.2e} {time.time() - t0:.0f} s peak {torch.cuda.max_memory_allocated() / 2**30:.1f} GB", flush=True)
         if step % a.val_every == 0 or step == a.steps:
@@ -118,7 +141,7 @@ def cmd_train(a):
             meta = lambda: {"lora": {k: v.half() for k, v in D.lora_state(unet).items()}, "rank": a.rank, "names": names, "step": step, "ema": a.ema, "student_steps": a.student_steps}
             torch.save(meta(), ck / f"step_{step:05d}.pt")
             swap_ema(); v = evaluate(); torch.save(meta(), ck / f"step_{step:05d}_ema.pt"); torch.save(meta(), out / "lora.pt")
-            r = {"step": step, "val_mse_ema": v["mse"], "val_sync_ema": v["sync"]}; curve.append(r)
+            r = {"step": step, "val_mse_ema": v["mse"], "val_sync_ema": v["sync"], "val_jitter_ema": v["jitter"]}; curve.append(r)
             if v["mse"] <= min(c.get("val_mse_ema", 9e9) for c in curve): torch.save(meta(), ck / "best.pt"); r["best"] = True
             swap_ema(); (ck / f"step_{step:05d}.json").write_text(json.dumps({**r, "config": vars(a)}, indent=1))
             print(f"[val] {r} -> {ck}", flush=True); log.write(json.dumps(r) + "\n")
@@ -131,7 +154,8 @@ def main():
     ap.add_argument("--steps", type=int, default=3000); ap.add_argument("--student-steps", type=int, default=4); ap.add_argument("--rank", type=int, default=32)
     ap.add_argument("--lr", type=float, default=1e-4); ap.add_argument("--ema", type=float, default=0.999); ap.add_argument("--val-every", type=int, default=500)
     ap.add_argument("--val-max", type=int, default=24); ap.add_argument("--sync-w", type=float, default=0.15); ap.add_argument("--pix-w", type=float, default=0.5)
-    ap.add_argument("--lpips-w", type=float, default=0.2); ap.add_argument("--run", default="r2_s4"); ap.add_argument("--ckpt-root", default="/workspace/dub/r13s/distill/ckpt")
+    ap.add_argument("--lpips-w", type=float, default=0.2); ap.add_argument("--temp-w", type=float, default=1.0)
+    ap.add_argument("--run", default="r2_s4"); ap.add_argument("--ckpt-root", default="/workspace/dub/r14d/ckpt")
     a = ap.parse_args()
     torch.manual_seed(0); random.seed(0)
     {"teacher": cmd_teacher, "train": cmd_train}[a.cmd](a)
