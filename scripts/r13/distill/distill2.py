@@ -29,11 +29,13 @@ def cmd_teacher(a):
             grp = its[k:k + a.tbatch]; ds = [torch.load(f) for _, f, _ in grp]
             cond = torch.stack([(d["cond"].flip(-1) if fl else d["cond"]) for d, (_, _, fl) in zip(ds, grp)]).cuda()
             au = torch.stack([d["audio"] for d in ds]).cuda()
-            z = torch.stack([torch.randn((4,) + cond.shape[2:], generator=torch.Generator(device="cuda").manual_seed(1000 + i), device="cuda", dtype=torch.float16) for i, _, _ in grp])
+            # the SAME noise for every frame of a window, as LatentSync's prepare_latents (randn(b, c, 1, h, w).repeat over frames): with i.i.d.
+            # per-frame noise the UNet leaves the mouth as noise (the r13 pilot's teacher targets were that: mouth jitter 0.59 vs 0.008)
+            z = torch.stack([torch.randn((4, 1) + cond.shape[3:], generator=torch.Generator(device="cuda").manual_seed(1000 + i), device="cuda", dtype=torch.float16).repeat(1, cond.shape[2], 1, 1) for i, _, _ in grp])
             with torch.autocast("cuda", dtype=torch.float16):
                 x0 = D.sample(unet, s20, z, cond, au, cfg=2.0)
             for j, (d, (i, f, fl)) in enumerate(zip(ds, grp)):
-                torch.save({"cond": cond[j].cpu(), "audio": d["audio"], "mel": d.get("mel"), "z": z[j].cpu(), "x0_teacher": x0[j].to(torch.float16).cpu(), "src": f, "flip": fl, "job": d.get("job"), "orig_audio": d.get("orig_audio", False)},
+                torch.save({"cond": cond[j].cpu(), "audio": d["audio"], "mel": d.get("mel"), "z": z[j].cpu(), "x0_teacher": x0[j].to(torch.float16).cpu(), "src": f, "flip": fl, "job": d.get("job"), "orig_audio": d.get("orig_audio", str(d.get("job", "")).startswith("x_"))},   # external clips (job x_*) carry their own audio
                            out / "t" / (pathlib.Path(f).stem + ("_f" if fl else "") + ".pt"))
             done += len(grp)
             if done % 40 < a.tbatch: print(f"[teacher] {done}/{len(todo)} {time.time() - t0:.0f} s ({(time.time() - t0) / done:.2f} s / window)", flush=True)
@@ -106,7 +108,7 @@ def cmd_train(a):
         d = cache[random.choice(tr)]; cond = d["cond"].cuda()[None]; au = d["audio"].cuda()[None]; z = d["z"].cuda()[None].float(); x0t = d["x0_teacher"].cuda()[None].float()
         k = random.randrange(len(TS)); t = TS[k]; x = z if k == 0 else sS.add_noise(x0t, z, t.reshape(1))
         with torch.autocast("cuda", dtype=torch.float16):
-            eps = unet(torch.cat([sS.scale_model_input(x.half(), t), cond], 1), t, encoder_hidden_states=au).sample.float()
+            eps = unet(torch.cat([sS.scale_model_input(x.half(), t), cond], 1), t, encoder_hidden_states=D.flat_audio(au)).sample.float()
         at = ac[t]; x0s = (x - (1 - at).sqrt() * eps) / at.sqrt()
         lmse = F.mse_loss(x0s, x0t); lsync = lpix = llp = ltmp = torch.zeros((), device="cuda")
         if a.sync_w > 0 or a.pix_w > 0 or a.lpips_w > 0 or a.temp_w > 0:

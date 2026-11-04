@@ -87,8 +87,14 @@ def lora_state(unet):
     return {n: p.detach().cpu() for n, p in unet.named_parameters() if n.endswith(".A") or n.endswith(".B")}
 
 
+def flat_audio(au):
+    return au.reshape(-1, *au.shape[-2:]) if au.dim() == 4 else au
+
+
 def sample(unet, s, z, cond, au, cfg=1.0):
     """DDIM sampling from z (production order: [uncond, cond] rows with CFG)"""
+    au = flat_audio(au)   # LatentSync UNet takes (B*F, 50, 384), frames of each window contiguous (lipsync_pipeline.py); a 4-D (B, F, 50, 384) input
+                          # is silently mis-read (the r13 pilot did that: its teacher targets were noise in the mouth)
     x = z * s.init_noise_sigma
     for t in s.timesteps:
         if cfg > 1.0:
