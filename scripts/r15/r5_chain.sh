@@ -20,7 +20,7 @@ STEPS=${R5_STEPS:-2000}; IDS2=${R5_IDS:-m03 m18}   # budget knobs: train steps, 
 ARGS="--student-steps 4 --sync-w 0.15 --pix-w 0.5 --lpips-w 0.2 --temp-w 0.5 --temp-nolips --lip-box 0.25,0.538,0.747,0.787 --ema 0.999 --lr 1e-4 --p16 0.7"
 
 # 0. setup check (no GPU work): the stack, the data, the inputs; nothing is printed from /workspace/.env
-if ! done_check; then
+if ! done_ check; then
   nvidia-smi --query-gpu=name,memory.total --format=csv,noheader | tee -a $N
   [ $(df -BG --output=avail /workspace | tail -1 | tr -dc 0-9) -ge 40 ] || die "less than 40 GB free on /workspace"
   for p in /venv/dabai/bin/python /venv/mediapipe/bin/python third_party/latentsync/checkpoints/latentsync_unet.pt /workspace/.env $P2 \
@@ -33,7 +33,7 @@ if ! done_check; then
 fi
 
 # 1. the 1817 selected r14 windows: own (distill_cache.tar -> $X/own/cap) + external (cap_ext -> $X/cap_ext), as symlinks in $X/sel
-if ! done_sel; then
+if ! done_ sel; then
   mkdir -p $X/sel; miss=0
   while read rel; do s=$X/$rel; [ -f $s ] || { miss=$((miss + 1)); continue; }; ln -sfn $s $X/sel/$(basename $rel); done < scripts/r15/r5_sel_list.txt
   [ $miss = 0 ] && [ $(ls $X/sel | wc -l) = 1817 ] || die "sel: $miss of 1817 windows missing (own/cap from distill_cache.tar, cap_ext/ from the laptop)"
@@ -41,7 +41,7 @@ if ! done_sel; then
 fi
 
 # 2. teacher targets with the production q2 generator settings (~1 h; resumable: finished windows are skipped)
-if ! done_teacher; then
+if ! done_ teacher; then
   mkdir -p $T
   # an optional GPU window for another agent first: $X/gate.env sets GATE_FILE (its done marker) and GATE_UNTIL (epoch s, the cap)
   if [ -f $X/gate.env ]; then . $X/gate.env; note "teacher waits for ${GATE_FILE} or $(date -d @${GATE_UNTIL} +%T)"
@@ -53,7 +53,7 @@ if ! done_teacher; then
 fi
 
 # 3. smoke (30 steps), 4. train (2000 steps, val + ckpt every 250)
-if ! done_train; then
+if ! done_ train; then
   S=$X/smoke_r5; mkdir -p $S; ln -sfn $T/t $S/t
   flock /workspace/dub/gpu.lock python scripts/r13/distill/distill2.py train --out $S $ARGS --steps 30 --val-every 30 --val-max 4 --run smoke_r5 --ckpt-root $S/ckpt > $X/smoke_r5.log 2>&1
   grep -q "\[train\] done" $X/smoke_r5.log || die "smoke failed: $(tail -1 $X/smoke_r5.log | cut -c1-200)"
@@ -64,7 +64,7 @@ if ! done_train; then
 fi
 
 # 5. checkpoint pick: opening >= 1.03, then within 20 % of the lowest MSE the highest val sync (ckpt_val.py --mse-tol)
-if ! done_pick; then
+if ! done_ pick; then
   flock /workspace/dub/gpu.lock python scripts/r14/ckpt_val.py --out $T --ckpt $C --student-steps 4 --mse-tol 0.2 > $X/ckpt_val_r5.log 2>&1 || die "ckpt_val failed"
   mark pick; note "pick: $(python3 -c "import json; d=json.load(open('$C/ckpt_val.json')); print(d['pick'], '-', d['pick_reason'])")"
 fi
