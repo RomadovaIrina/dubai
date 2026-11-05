@@ -10,21 +10,20 @@ kids(){ for c in $(ps -o pid= --ppid $1); do kids $c; echo $c; done; }
 gstep(){   # gstep <name> <command...>: run under the rules, retry when pre-empted by a marker
   local name=$1; shift
   while true; do clear_wait; echo "== $name start $(date +%T)"
-    flock /workspace/dub/gpu.lock "$@" > $L/$name.log 2>&1 & local P=$!
+    if [ "${NOLOCK:-0}" = 1 ]; then "$@" > $L/$name.log 2>&1 & else flock /workspace/dub/gpu.lock "$@" > $L/$name.log 2>&1 & fi; local P=$!   # gates lock only their own GPU commands (gate_f.sh gw)
     while kill -0 $P 2>/dev/null; do if mk; then kill $(kids $P) $P 2>/dev/null; sleep 2; kill -9 $(kids $P) $P 2>/dev/null; echo "== $name PRE-EMPTED $(date +%T)"; break; fi; sleep 5; done
     wait $P 2>/dev/null; local rc=$?
     mk && continue
     echo "== $name done rc=$rc $(date +%T)"; return $rc
   done; }
 gate(){ local id=$1 ST=$2 base=$3 sx=$4; local G=/workspace/dub/r15f/gate/$id$sx
-  [ -s $G/face_gate.json ] && [ "${REGATE:-0}" = 0 ] || { rm -rf $G; gstep gate_$id$sx env GT=$ST bash scripts/r15/gate_f.sh $id $sx; tail -n 1 $L/gate_$id$sx.log; }
+  [ -s $G/face_gate.json ] && [ "${REGATE:-0}" = 0 ] || { rm -rf $G; NOLOCK=1 gstep gate_$id$sx env GT=$ST bash scripts/r15/gate_f.sh $id $sx; tail -n 1 $L/gate_$id$sx.log; }
   python scripts/r10/gate_cmp.py --base /workspace/dub/r15f/gate/$id$base --cand $G --md $MD | head -n 3; }
-for i in $(seq 1 45); do mk && break; sleep 20; done   # agent T is restarting its run: give its marker up to 15 min to appear first
 # 0. base gates (production a), only if missing
 for x in q2_old03:r9g_q2_old03:c0 q2_m18:r9g_q2_m18:c0 q2_m03:r9g_q2_m03fu:fu; do IFS=: read id ST A <<< "$x"; G=/workspace/dub/r15f/gate/$id$A
-  [ -s $G/face_gate.json ] || { rm -rf $G; gstep gate_$id$A env GT=$ST bash scripts/r15/gate_f.sh $id $A; }; done
+  [ -s $G/face_gate.json ] || { rm -rf $G; NOLOCK=1 gstep gate_$id$A env GT=$ST bash scripts/r15/gate_f.sh $id $A; }; done
 # 1. the clean candidate first: b + adaptive lipcon on all three
-until [ -s $B/r9f_q2_m18bla/q2_m18_r9f_q2_m18bla.mp4 ]; do sleep 30; done
+gate q2_m03 r9g_q2_m03fu fu fublab5; gate q2_old03 r9g_q2_old03 c0 blab5; gate q2_m18 r9g_q2_m18 c0 blab5   # the clean RECIPE first
 gate q2_m03 r9g_q2_m03fu fu fubla; gate q2_old03 r9g_q2_old03 c0 bla; gate q2_m18 r9g_q2_m18 c0 bla
 touch /workspace/dub/r15f2/GATES_CLEAN_DONE
 # 2. the rest of F2 (b / c, fixed lipcon, c + adaptive)
