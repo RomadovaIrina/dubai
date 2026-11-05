@@ -1,0 +1,9 @@
+bon2e_m03      N=2 early windows  115  pick != seed0   68 (59 %)  hist [47, 68]  141 s (scoring 31 s)  deciding term {'sync': 32, 'open': 2, 'sharp': 15, 'jump': 19}
+bon2e_m18      N=2 early windows   59  pick != seed0   12 (20 %)  hist [47, 12]  73 s (scoring 16 s)  deciding term {'sync': 5, 'open': 0, 'sharp': 3, 'jump': 4}
+bon2e_old03    N=2 early windows  247  pick != seed0   94 (38 %)  hist [153, 94]  301 s (scoring 66 s)  deciding term {'sync': 37, 'open': 0, 'sharp': 12, 'jump': 45}
+bon3_m03       N=3       windows  115  pick != seed0  105 (91 %)  hist [10, 12, 93]  273 s (scoring 47 s)  deciding term {'sync': 20, 'open': 0, 'sharp': 51, 'jump': 34}
+bon3_m18       N=3       windows   59  pick != seed0   46 (78 %)  hist [13, 14, 32]  141 s (scoring 23 s)  deciding term {'sync': 15, 'open': 0, 'sharp': 5, 'jump': 26}
+bon3_old03     N=3       windows  247  pick != seed0  158 (64 %)  hist [89, 30, 128]  646 s (scoring 162 s)  deciding term {'sync': 39, 'open': 1, 'sharp': 49, 'jump': 69}
+bon3e_m03      N=3 early windows  115  pick != seed0   97 (84 %)  hist [18, 28, 69]  177 s (scoring 47 s)  deciding term {'sync': 36, 'open': 0, 'sharp': 36, 'jump': 25}
+bon3e_m18      N=3 early windows   59  pick != seed0   44 (75 %)  hist [15, 9, 35]  91 s (scoring 24 s)  deciding term {'sync': 20, 'open': 0, 'sharp': 3, 'jump': 21}
+bon3e_old03    N=3 early windows  247  pick != seed0  122 (49 %)  hist [125, 61, 61]  382 s (scoring 103 s)  deciding term {'sync': 48, 'open': 0, 'sharp': 16, 'jump': 58}

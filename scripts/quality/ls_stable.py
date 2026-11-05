@@ -139,6 +139,10 @@ class StableLatentSync(AccelLatentSync):
                 synced = torch.cat(out); t_vae = time.perf_counter() - t0
             else:
                 latents = pipe.prepare_latents(n, pipe.vae.config.latent_channels, H, W, weight_dtype, device, generator)   # (1, 4, n, h, w), same noise per frame
+                ns_ = os.environ.get("LS_NOISE_SEED", "")   # r15 W1b (default off): the initial noise from this seed (cuda generator, one draw repeated over
+                if ns_:                                     # the frames = scripts/r15/bon.py's candidate k for seed 1247 + 7919 k; candidate 2 won most windows)
+                    g_ = torch.Generator(device=device).manual_seed(int(ns_))
+                    latents = torch.randn((1, latents.shape[1], 1) + tuple(latents.shape[3:]), generator=g_, device=device, dtype=latents.dtype).repeat(1, 1, n, 1, 1) * pipe.scheduler.init_noise_sigma
                 eps_init = latents.clone()   # the exact initial noise of this trajectory (bridges re-noise with it)
                 # per-frame conditioning latents, encoded once (chunks of 16, original order)
                 t0 = time.perf_counter(); m_l, mi_l, r_l = [], [], []
@@ -194,7 +198,12 @@ class StableLatentSync(AccelLatentSync):
                     return torch.tensor([min(i + 1, Lw - i) for i in range(Lw)], device=device, dtype=torch.float32)
                 caches = [{} for _ in groups]; dc = self.deepcache_helper
                 t0 = time.perf_counter()
-                if self.overlap == "continue" and self.stride is not None:
+                if self.overlap == "continue" and self.stride is not None and int(os.environ.get("LS_BON", "1") or 1) > 1:
+                    # r15 W1 LS_BON=N (default off): best-of-N candidates per window, picked sequentially (scripts/r15/bon.py)
+                    sys.path.insert(0, str(HERE.parent / "r15")); import bon as _bon
+                    latents, self.last_bon = _bon.continue_bon(self, pipe, windows, latents, mask_lat, masked_lat, ref_lat, audio_all, timesteps, extra, do_cfg, audio_path, video_fps)
+                    timesteps_done = True
+                elif self.overlap == "continue" and self.stride is not None:
                     eps0 = latents.clone(); final = torch.empty_like(latents); done = 0
                     # r14 F LS_CFG_EARLY=g:frac (default off): guidance g in the first frac of the steps, then self.guidance (CFG 3 on every step flickered)
                     ce_ = os.environ.get("LS_CFG_EARLY", ""); g_hi, k_hi = (float(ce_.split(":")[0]), round(float(ce_.split(":")[1]) * len(timesteps))) if ce_ else (self.guidance, 0)
@@ -541,7 +550,11 @@ class StableRunner:
             return r
         fps = int(os.environ.get("DUB_LS_FPS", "25")); t0 = time.perf_counter()
         rate = os.environ.get("LS_RATE", "")   # r10 speed: LS_RATE=k/m = LatentSync on k of every m master frames, each with ITS OWN 25 fps audio window (chunk selection), the rest flow-filled
-        if rate and os.environ.get("LS_RATE_EVEN") == "1" and len(frames_rgb) >= 32:   # r13: any k/m on an even grid (user: even 2/3 "стало сильно лучше", slight tremble left)
+        kf = int(os.environ.get("LS_KF", "0") or 0)   # r15 W2 (default off): keyframes every kf frames + RIFE in the aligned crop space (scripts/r15/kf.py)
+        if kf > 1 and len(frames_rgb) >= 2 * kf + 1:
+            sys.path.insert(0, str(HERE.parent / "r15")); import kf as _kf
+            frames = _kf.run(self, np.asarray(frames_rgb), str(audio_wav), detections, fps, kf)
+        elif rate and os.environ.get("LS_RATE_EVEN") == "1" and len(frames_rgb) >= 32:   # r13: any k/m on an even grid (user: even 2/3 "стало сильно лучше", slight tremble left)
             frames = self._even_rate(np.asarray(frames_rgb), str(audio_wav), detections, fps, rate)
         elif rate and len(frames_rgb) >= 32:
             k_, m_ = map(int, rate.split("/")); n = len(frames_rgb); idx = np.array([i for i in range(n) if i % m_ < k_]); ss = self.acc.silent_seg; hk = self.acc.chunk_hook
