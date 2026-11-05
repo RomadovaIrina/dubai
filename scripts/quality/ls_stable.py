@@ -196,6 +196,8 @@ class StableLatentSync(AccelLatentSync):
                 t0 = time.perf_counter()
                 if self.overlap == "continue" and self.stride is not None:
                     eps0 = latents.clone(); final = torch.empty_like(latents); done = 0
+                    # r14 F LS_CFG_EARLY=g:frac (default off): guidance g in the first frac of the steps, then self.guidance (CFG 3 on every step flickered)
+                    ce_ = os.environ.get("LS_CFG_EARLY", ""); g_hi, k_hi = (float(ce_.split(":")[0]), round(float(ce_.split(":")[1]) * len(timesteps))) if ce_ else (self.guidance, 0)
                     with _sdpa_context(self.sdpa):
                         for a_, b_ in windows:
                             o = max(0, done - a_); x = eps0[:, :, a_:b_].clone(); known = final[:, :, a_:a_ + o] if o > 0 else None
@@ -204,13 +206,13 @@ class StableLatentSync(AccelLatentSync):
                                 mk, mi, rl, au = torch.cat([mk] * 2), torch.cat([mi] * 2), torch.cat([rl] * 2), torch.cat([torch.zeros_like(au), au])
                             if dc is not None:
                                 dc.cached_output = {}
-                            for t in timesteps:
+                            for si_, t in enumerate(timesteps):
                                 if o > 0:   # pin the shared frames to the previous window's result at this noise level
                                     x[:, :, :o] = pipe.scheduler.add_noise(known, eps0[:, :, a_:a_ + o], t.reshape(1))
                                 x2 = torch.cat([x] * 2) if do_cfg else x
                                 npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1
                                 if do_cfg:
-                                    nu, na = npred.chunk(2); npred = nu + self.guidance * (na - nu)
+                                    nu, na = npred.chunk(2); npred = nu + (g_hi if si_ < k_hi else self.guidance) * (na - nu)
                                 x = pipe.scheduler.step(npred, t, x, **extra).prev_sample
                             if o > 0:
                                 x[:, :, :o] = known

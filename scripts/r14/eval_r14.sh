@@ -26,10 +26,12 @@ for id in ${*:-old03 m03 m18}; do
     [ -n "$v" ] && [ -n "$w" ] && [ ! -s $X/$n.sync.txt ] && flock /workspace/dub/gpu.lock python scripts/r11/sync_speech.py --video $v --audio $w --label $n 2>&1 | grep "^== sync" > $X/$n.sync.txt
     echo "$(cat $X/$n.sync.txt 2>/dev/null)"
   done
-  lm=$(find /workspace/dub/artifacts -path "*q2_$id*" -name "source_lm*.npz" 2>/dev/null | head -1)
+  # the composite's MediaPipe source landmarks, written by the q2 job: artifacts/r4m/r9g_q2_<id>/timing/q2_<id>_source_lm_F.npz
+  lm=$(find /workspace/dub/artifacts -path "*q2_$id*" -name "*source_lm_F.npz" 2>/dev/null | head -1)
   if [ -n "$lm" ]; then
     AT=""; [ $id = old03 ] && AT="--at 3.5 5.5 20.9 24 27.5"
     python scripts/r14/flicker_metric.py --lm $lm --video src=$in q2=$X/q2_$id/q2_$id.mp4 $TAG=$X/${TAG}_$id/${TAG}_$id.mp4 $AT --json $X/${TAG}_$id.flicker.json
+    python scripts/r14/mouth_open.py --wav $A/r9_q2_$id/q2_$id/dubbed_16k.wav --video q2=$X/q2_$id/q2_$id.mp4 $TAG=$X/${TAG}_$id/${TAG}_$id.mp4 --json $X/${TAG}_$id.mouth.json
     python scripts/r13/distill/mouth_2panel.py --left $X/q2_$id/q2_$id.mp4 --right $X/${TAG}_$id/${TAG}_$id.mp4 --lm $lm --out $OB/${id}_mouth_q2_vs_${TAG}.mp4 --labels "q2 + F3 (production)" "student $TAG"
     ffmpeg -v error -y -i $OB/${id}_mouth_q2_vs_${TAG}.mp4 -filter_complex "[0:v]setpts=2*PTS[v];[0:a]atempo=0.5[a]" -map "[v]" -map "[a]" -c:v libx264 -crf 18 -preset fast $OB/${id}_mouth_q2_vs_${TAG}_half_speed.mp4
     ffmpeg -v error -y -i $X/q2_$id/q2_$id.mp4 -i $X/${TAG}_$id/${TAG}_$id.mp4 -filter_complex "[0:v]scale=-2:720[l];[1:v]scale=-2:720[r];[l][r]hstack=inputs=2[v]" -map "[v]" -map 0:a -c:v libx264 -crf 20 -preset fast -c:a aac $OB/${id}_full_q2_vs_${TAG}.mp4

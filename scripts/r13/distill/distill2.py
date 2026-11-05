@@ -48,13 +48,25 @@ def jitter(m):
     p = F.avg_pool2d(m, 4); return (p[2:] - 2 * p[1:-1] + p[:-2]).abs().mean(dim=(1, 2, 3))
 
 
-def temporal_loss(ms, mt, mr=None):
+def temporal_loss(ms, mt, mr=None, keep=None):
     """anti-flicker: (1) the student's frame-to-frame changes follow the teacher's (L1 of first differences, pooled);
-    (2) hinge on the jitter ABOVE the reference: the teacher's, or the real frames' when the window carries its original audio (mr)"""
+    (2) hinge on the jitter ABOVE the reference: the teacher's, or the real frames' when the window carries its original audio (mr).
+    keep: (H, W) 0/1 mask of the pixels the term sees (round 3: the lower face without the lips, so it cannot damp the lip motion)"""
+    if keep is not None: ms, mt, mr = ms * keep, mt * keep, (None if mr is None else mr * keep)
     ps, pt = F.avg_pool2d(ms, 4), F.avg_pool2d(mt, 4)
     l_d1 = F.l1_loss(ps[1:] - ps[:-1], pt[1:] - pt[:-1])
     ref = jitter(mt) if mr is None else torch.minimum(jitter(mt), jitter(mr))
     return l_d1 + F.relu(jitter(ms) - ref).mean()
+
+
+def opening(m, box):
+    """differentiable mouth-opening proxy on full decoded crops m (F, 3, H, W) in [-1, 1]: the share of 'dark cavity' pixels inside the lip
+    box (fractions x0, y0, x1, y1 of the aligned crop; scripts/r14/lipbox.py finds it and checks the proxy against MediaPipe's inner-lip gap):
+    luma below 0.55 x the lower-face median (skin, detached), soft (sigmoid, 0.04)"""
+    H, W = m.shape[-2:]; y = (0.299 * m[:, 0] + 0.587 * m[:, 1] + 0.114 * m[:, 2] + 1) / 2
+    skin = y[:, H // 2:].flatten(1).median(1).values.detach()
+    b = y[:, int(box[1] * H):int(box[3] * H), int(box[0] * W):int(box[2] * W)]
+    return torch.sigmoid((0.55 * skin[:, None, None] - b) / 0.04).mean((1, 2))
 
 
 def plot_curve(logp, ck, a):
@@ -70,15 +82,19 @@ def plot_curve(logp, ck, a):
                 if v is None: continue
                 m = v if m is None else 0.98 * m + 0.02 * v; xs.append(r["step"]); ys.append(m)
             return xs, ys
-        ck.mkdir(parents=True, exist_ok=True); fig, ax = plt.subplots(2, 3, figsize=(15, 8)); ax = ax.ravel()
-        for i, (k, w) in enumerate((("loss", 1), ("mse", 1), ("sync", a.sync_w), ("pix", a.pix_w), ("lpips", a.lpips_w), ("temp", a.temp_w))):
+        ck.mkdir(parents=True, exist_ok=True); fig, ax = plt.subplots(2, 4, figsize=(20, 8)); ax = ax.ravel()
+        for i, (k, w) in enumerate((("loss", 1), ("mse", 1), ("sync", a.sync_w), ("pix", a.pix_w), ("lpips", a.lpips_w), ("temp", a.temp_w), ("open", a.open_w))):
             xs, ys = sm(k); ax[i].plot(xs, ys, color="C0"); ax[i].set_title(f"train {k}" + (f" (x{w} in loss)" if k != "loss" else " (total)")); ax[i].grid(alpha=.3)
-        fig.suptitle(f"{a.run}: {a.student_steps}-step student, lr {a.lr}, sync_w {a.sync_w}, pix_w {a.pix_w}, lpips_w {a.lpips_w}, temp_w {a.temp_w}")
+        ax[7].axis("off")
+        fig.suptitle(f"{a.run}: {a.student_steps}-step student, lr {a.lr}, sync_w {a.sync_w}, pix_w {a.pix_w}, lpips_w {a.lpips_w}, temp_w {a.temp_w}"
+                     f"{' (lower face, lips excluded)' if a.temp_nolips else ''}, open_w {a.open_w}")
         fig.tight_layout(); fig.savefig(ck / "curve_train.png", dpi=80); plt.close(fig)
-        fig, ax = plt.subplots(1, 3, figsize=(15, 4))
+        fig, ax = plt.subplots(1, 4, figsize=(20, 4))
         for i, (k, rk, lab) in enumerate((("val_mse_ema", None, "val latent MSE to the teacher"), ("val_sync_ema", "val_sync_teacher20", "val stable-SyncNet sim (higher = better)"),
-                                          ("val_jitter_ema", "val_jitter_teacher20", "val mouth jitter (lower = less flicker)"))):
-            ax[i].plot([r["step"] for r in vl], [r[k] for r in vl], "o-", label="student (EMA)")
+                                          ("val_jitter_ema", "val_jitter_teacher20", "val mouth jitter (lower = less flicker)"),
+                                          ("val_open_ratio_ema", "val_open_ratio_teacher20", "val mouth opening / teacher's (1 = as wide)"))):
+            pts = [(r["step"], r[k]) for r in vl if r.get(k) is not None]
+            if pts: ax[i].plot(*zip(*pts), "o-", label="student (EMA)")
             u = ref.get(k.replace("_ema", "_untrained"))
             if u is not None: ax[i].axhline(u, color="gray", ls=":", label="untrained 4-step")
             if rk and ref.get(rk) is not None: ax[i].axhline(ref[rk], color="C3", ls="--", label="teacher 20 steps + CFG")
@@ -91,7 +107,8 @@ def plot_curve(logp, ck, a):
         (ck / "latest.txt").write_text(f"{a.run} step {last.get('step')}/{a.steps} ({last.get('s', 0) / 60:.0f} min): loss {sm('loss')[1][-1] if tr else float('nan'):.4f} | "
                                        f"last val @ {v.get('step')}: mse {v.get('val_mse_ema', float('nan')):.4f}, sync {v.get('val_sync_ema') or float('nan'):.3f} "
                                        f"(teacher {ref.get('val_sync_teacher20') or float('nan'):.3f}), jitter {v.get('val_jitter_ema', float('nan')):.4f} "
-                                       f"(teacher {ref.get('val_jitter_teacher20') or float('nan'):.4f})\n")
+                                       f"(teacher {ref.get('val_jitter_teacher20') or float('nan'):.4f}), mouth opening / teacher {v.get('val_open_ratio_ema') or float('nan'):.3f} "
+                                       f"(untrained {ref.get('val_open_ratio_untrained') or float('nan'):.3f})\n")
     except Exception as e:
         print(f"[plot] skipped: {e}", flush=True)
 
@@ -125,7 +142,7 @@ def cmd_train(a):
     def evaluate(lora_on=True):
         for m in unet.modules():
             if isinstance(m, D.LoRA): m.scale = 1.0 if lora_on else 0.0
-        unet.eval(); errs, sims, jits = [], [], []
+        unet.eval(); errs, sims, jits, os_, ot_ = [], [], [], [], []
         for f in val:
             d = cache[f]; cond = d["cond"].cuda()[None]; au = d["audio"].cuda()[None]; z = d["z"].cuda()[None]
             with torch.autocast("cuda", dtype=torch.float16):
@@ -133,15 +150,25 @@ def cmd_train(a):
             errs.append(F.mse_loss(x.float(), d["x0_teacher"].cuda()[None].float()).item())
             if d.get("mel") is not None and x.shape[2] == 16: sims.append(D.sync_sim(syncnet, sc, vae, x, d["mel"]).item())
             px = D.decode(vae, x.half(), grad=False).float(); jits.append(jitter(px[:, :, px.shape[2] // 2:]).mean().item())
+            os_.append(opening(px, obox).sum().item()); ot_.append(open_t[f])
         for m in unet.modules():
             if isinstance(m, D.LoRA): m.scale = 1.0
-        unet.train(); return {"mse": sum(errs) / len(errs), "sync": sum(sims) / len(sims) if sims else None, "jitter": sum(jits) / len(jits)}
+        unet.train(); return {"mse": sum(errs) / len(errs), "sync": sum(sims) / len(sims) if sims else None, "jitter": sum(jits) / len(jits),
+                              "open_ratio": sum(os_) / max(1e-6, sum(ot_))}
 
+    box = [float(v) for v in a.lip_box.split(",")]; obox = [float(v) for v in a.open_box.split(",")]; H = 512
+    # the temporal term's pixel mask on the mouth half (rows H/2..H): everything but the lip box (round 3), or everything
+    keep = torch.ones(H // 2, H, device="cuda")
+    if a.temp_nolips: keep[max(0, int(box[1] * H) - H // 2):int(box[3] * H) - H // 2, int(box[0] * H):int(box[2] * H)] = 0
     with torch.no_grad():
         tsims = [D.sync_sim(syncnet, sc, vae, cache[f]["x0_teacher"].cuda()[None], cache[f]["mel"]).item() for f in val if cache[f].get("mel") is not None and cache[f]["x0_teacher"].shape[1] == 16]
-        tj = [(lambda px: jitter(px[:, :, px.shape[2] // 2:]).mean().item())(D.decode(vae, cache[f]["x0_teacher"].cuda()[None].half(), grad=False).float()) for f in val]
+        tj, open_t = [], {}
+        for f in val:
+            px = D.decode(vae, cache[f]["x0_teacher"].cuda()[None].half(), grad=False).float(); tj.append(jitter(px[:, :, px.shape[2] // 2:]).mean().item())
+            open_t[f] = opening(px, obox).sum().item()
     b = evaluate(lora_on=False); r = {"step": 0, "val_mse_untrained": b["mse"], "val_sync_untrained": b["sync"], "val_sync_teacher20": sum(tsims) / max(1, len(tsims)),
-                                      "val_jitter_untrained": b["jitter"], "val_jitter_teacher20": sum(tj) / max(1, len(tj))}
+                                      "val_jitter_untrained": b["jitter"], "val_jitter_teacher20": sum(tj) / max(1, len(tj)),
+                                      "val_open_ratio_untrained": b["open_ratio"], "val_open_ratio_teacher20": 1.0}
     print(f"[val] {r}", flush=True); log.write(json.dumps(r) + "\n"); curve = [r]
     unet.train(); run = None
     for step in range(1, a.steps + 1):
@@ -153,8 +180,8 @@ def cmd_train(a):
         with torch.autocast("cuda", dtype=torch.float16):
             eps = unet(torch.cat([sS.scale_model_input(x.half(), t), cond], 1), t, encoder_hidden_states=D.flat_audio(au)).sample.float()
         at = ac[t]; x0s = (x - (1 - at).sqrt() * eps) / at.sqrt()
-        lmse = F.mse_loss(x0s, x0t); lsync = lpix = llp = ltmp = torch.zeros((), device="cuda"); has_sync = has_tmp = False
-        if a.sync_w > 0 or a.pix_w > 0 or a.lpips_w > 0 or a.temp_w > 0:
+        lmse = F.mse_loss(x0s, x0t); lsync = lpix = llp = ltmp = lopen = torch.zeros((), device="cuda"); has_sync = has_tmp = False
+        if a.sync_w > 0 or a.pix_w > 0 or a.lpips_w > 0 or a.temp_w > 0 or a.open_w > 0:
             ps = D.decode(vae, x0s, grad=True).float()
             with torch.no_grad(): pt = D.decode(vae, x0t.half(), grad=False).float()
             h = ps.shape[2] // 2; ms, mt = ps[:, :, h:], pt[:, :, h:]          # the mouth half of the face crop
@@ -163,14 +190,18 @@ def cmd_train(a):
                 mr = None
                 if d.get("orig_audio"):   # the window's own audio: the real frames (the reference latents of the same frames) set the jitter floor
                     with torch.no_grad(): pr = D.decode(vae, cond[:, 5:9].half(), grad=False).float(); mr = pr[:, :, h:]
-                ltmp = temporal_loss(ms, mt, mr); has_tmp = True
+                ltmp = temporal_loss(ms, mt, mr, keep if a.temp_nolips else None); has_tmp = True
+            # round 3: the student's mouth must open at least as wide as the teacher's (hinge per frame: zero when the teacher's is closed)
+            # r3b (--open-sym): |student - teacher| instead (r3's one-sided hinge was gamed: opening 1.3-1.4x the teacher's, MSE 2x untrained)
+            if a.open_w > 0:
+                do = opening(pt, obox) - opening(ps, obox); lopen = (do.abs() if a.open_sym else F.relu(do - a.open_margin)).mean()
             if a.lpips_w > 0: llp = lp(F.interpolate(ms, scale_factor=0.5, mode="bilinear"), F.interpolate(mt, scale_factor=0.5, mode="bilinear")).mean()
             if a.sync_w > 0 and d.get("mel") is not None and x0s.shape[2] == 16:
                 px = F.interpolate(ps, size=(sc.data.resolution, sc.data.resolution), mode="bilinear", align_corners=False)[:, :, sc.data.resolution // 2:, :]
                 m_ = d["mel"].cuda().half(); m_ = m_[None] if m_.dim() == 3 else m_
                 ve, ae = syncnet(px.reshape(1, -1, px.shape[2], px.shape[3]).half(), m_)
                 sim = F.cosine_similarity(ve.float(), ae.float()); lsync = F.binary_cross_entropy(sim.clamp(1e-6, 1 - 1e-6), torch.ones_like(sim)); has_sync = True
-        loss = lmse + a.sync_w * lsync + a.pix_w * lpix + a.lpips_w * llp + a.temp_w * ltmp
+        loss = lmse + a.sync_w * lsync + a.pix_w * lpix + a.lpips_w * llp + a.temp_w * ltmp + a.open_w * lopen
         opt.zero_grad(set_to_none=True); loss.backward(); torch.nn.utils.clip_grad_norm_(params, 1.0); opt.step()
         with torch.no_grad():
             dec = min(a.ema, (1 + step) / (10 + step))   # EMA warm-up: the early average is not dominated by the zero-initialised LoRA
@@ -178,7 +209,7 @@ def cmd_train(a):
         run = loss.item() if run is None else 0.98 * run + 0.02 * loss.item()
         # every step logged (cheap): "sync" / "temp" are null on the steps where the term does not apply (8-frame windows / < 3 frames), not 0
         log.write(json.dumps({"step": step, "F": int(x0s.shape[2]), "loss": loss.item(), "mse": lmse.item(), "sync": lsync.item() if has_sync else None, "pix": lpix.item(),
-                              "lpips": llp.item(), "temp": ltmp.item() if has_tmp else None, "lr": lr_at(step), "s": round(time.time() - t0, 1),
+                              "lpips": llp.item(), "temp": ltmp.item() if has_tmp else None, "open": lopen.item(), "lr": lr_at(step), "s": round(time.time() - t0, 1),
                               "vram_gb": round(torch.cuda.max_memory_allocated() / 2**30, 1)}) + "\n")
         if step % 25 == 0: log.flush()
         if step % 250 == 0: log.flush(); plot_curve(out / "train_log.jsonl", pathlib.Path(a.ckpt_root) / a.run, a)
@@ -189,7 +220,7 @@ def cmd_train(a):
             meta = lambda: {"lora": {k: v.half() for k, v in D.lora_state(unet).items()}, "rank": a.rank, "names": names, "step": step, "ema": a.ema, "student_steps": a.student_steps}
             torch.save(meta(), ck / f"step_{step:05d}.pt")
             swap_ema(); v = evaluate(); torch.save(meta(), ck / f"step_{step:05d}_ema.pt"); torch.save(meta(), out / "lora.pt")
-            r = {"step": step, "val_mse_ema": v["mse"], "val_sync_ema": v["sync"], "val_jitter_ema": v["jitter"]}; curve.append(r)
+            r = {"step": step, "val_mse_ema": v["mse"], "val_sync_ema": v["sync"], "val_jitter_ema": v["jitter"], "val_open_ratio_ema": v["open_ratio"]}; curve.append(r)
             if v["mse"] <= min(c.get("val_mse_ema", 9e9) for c in curve): torch.save(meta(), ck / "best.pt"); r["best"] = True
             swap_ema(); (ck / f"step_{step:05d}.json").write_text(json.dumps({**r, "config": vars(a)}, indent=1))
             print(f"[val] {r} -> {ck}", flush=True); log.write(json.dumps(r) + "\n"); log.flush(); plot_curve(out / "train_log.jsonl", ck, a)
@@ -204,6 +235,11 @@ def main():
     ap.add_argument("--val-max", type=int, default=24); ap.add_argument("--sync-w", type=float, default=0.15); ap.add_argument("--pix-w", type=float, default=0.5)
     ap.add_argument("--lpips-w", type=float, default=0.2); ap.add_argument("--temp-w", type=float, default=1.0); ap.add_argument("--p16", type=float, default=0.7)
     ap.add_argument("--run", default="r2_s4"); ap.add_argument("--ckpt-root", default="/workspace/dub/r14d/ckpt")
+    # round 3 (r2_s4 under-opened the mouth ~20 % on old03): the temporal term off the lips, a hinge on the mouth opening vs the teacher's
+    ap.add_argument("--temp-nolips", action="store_true"); ap.add_argument("--open-w", type=float, default=0.0); ap.add_argument("--open-margin", type=float, default=0.0)
+    ap.add_argument("--open-sym", action="store_true")
+    ap.add_argument("--lip-box", default="0.25,0.538,0.747,0.787", help="the lips + margin, x0,y0,x1,y1 fractions of the aligned 512 crop: excluded from the temporal term (scripts/r14/lipbox.py, MediaPipe on 275 decoded crops)")
+    ap.add_argument("--open-box", default="0.35,0.56,0.65,0.72", help="the mouth-opening proxy box (lipbox.py: within-face correlation 0.72 with the MediaPipe inner-lip gap)")
     a = ap.parse_args()
     torch.manual_seed(0); random.seed(0)
     {"teacher": cmd_teacher, "train": cmd_train}[a.cmd](a)

@@ -289,10 +289,19 @@ def main() -> int:
             import cv2, numpy as np
             from ls_window_ab import pick_reference
             LM = np.stack([np.asarray(d[1], np.float32) if d[0] is not None else np.full((106, 2), np.nan, np.float32) for d in prep.ls_dets]); ok = np.isfinite(LM[:, 0, 0])
-            cost, rs = pick_reference(LM, ok, a.ref_select, 16)
-            runner.acc.set_reference(np.stack([cv2.cvtColor(f, cv2.COLOR_BGR2RGB) for f in prep.frames[rs:rs + 16]]), list(prep.ls_dets[rs:rs + 16]))
-            man["reference"] = {"select": a.ref_select, "start_frame": int(rs), "t": round(rs / 25, 2), "cost": round(cost, 4)}
-            print(f"  [ref] fixed reference frames {rs}-{rs + 16} ({rs / 25:.2f}s)", flush=True)
+            idx_ = None
+            if os.environ.get("LS_REF_SMART") == "1":   # r14 F night P2 (default off): 16 smart source frames (open mouth, teeth, sharp, frontal, median light)
+                sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "r12")); import ref_smart
+                lm_ = np.load(work / "master_mediapipe.npz")["lm"][:len(prep.frames)].copy(); lm_[~ok[:len(lm_)]] = np.nan
+                idx_, rinfo_ = ref_smart.pick(prep.frames, lm_); print(f"  [ref] smart {rinfo_}", flush=True)
+            if idx_:
+                runner.acc.set_reference(np.stack([cv2.cvtColor(prep.frames[i], cv2.COLOR_BGR2RGB) for i in idx_]), [prep.ls_dets[i] for i in idx_])
+                man["reference"] = {"select": "smart", **rinfo_}
+            else:
+                cost, rs = pick_reference(LM, ok, a.ref_select, 16)
+                runner.acc.set_reference(np.stack([cv2.cvtColor(f, cv2.COLOR_BGR2RGB) for f in prep.frames[rs:rs + 16]]), list(prep.ls_dets[rs:rs + 16]))
+                man["reference"] = {"select": a.ref_select, "start_frame": int(rs), "t": round(rs / 25, 2), "cost": round(cost, 4)}
+                print(f"  [ref] fixed reference frames {rs}-{rs + 16} ({rs / 25:.2f}s)", flush=True)
     else:
         with rp.timed(times, "latentsync_load"): runner = faa.AccelRunner(a.window_batch_size, not a.no_deepcache, "none", "auto", steps=a.steps, guidance=a.guidance, deepcache_interval=a.deepcache_interval)
     if a.silence_mix > 0:   # round 3: dub-silent mouth (r3_lipsync.SilenceMix), stretches in absolute master frames
