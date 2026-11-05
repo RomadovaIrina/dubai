@@ -232,7 +232,7 @@ def main() -> int:
         import clean_face_stack as cfs
         cfs.guard_nc()
         with rp.timed(times, "face_stack_mediapipe"): prep = cfs.CleanPrep(src, work, a.face_min_w, a.face_min_h, calib=a.mp_anchor_calib == "on", pose_precheck=a.pose_precheck == "on", pose_gate_deg=a.pose_gate_deg,
-                                     max_faces=a.max_faces, turns=(man.get("diarization") or {}).get("turns"),
+                                     max_faces=a.max_faces, turns=cfs.face_turns(man),
                                      anchor_filter=a.anchor_filter, mask_track=a.mask_track)
         router = prep.router; man["face_stack"] = {**prep.info, "times": prep.times, "ls_geometry": geom}; man["frame_map"] = prep.frame_map
         if a.prep_only:

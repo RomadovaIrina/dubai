@@ -1228,7 +1228,7 @@ def main() -> int:
                 cfs.guard_nc()
                 with timed(times, "face_stack_mediapipe"):
                     prep = cfs.CleanPrep(src, work, a.face_min_w, a.face_min_h, calib=a.mp_anchor_calib == "on", pose_precheck=a.pose_precheck == "on", pose_gate_deg=a.pose_gate_deg,
-                                     max_faces=a.max_faces, turns=(man.get("diarization") or {}).get("turns"))
+                                     max_faces=a.max_faces, turns=cfs.face_turns(man))
                 man["face_stack"] = {**prep.info, "times": prep.times}; man["frame_map"] = prep.frame_map
                 if prep.voice_only:
                     flag = "voice_only_face_stack_failed" if prep.face_stack_failed else "voice_only_pose_precheck"
