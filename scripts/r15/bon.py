@@ -20,6 +20,22 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
+
+_CFG_RESCALE = float(os.environ.get("LS_CFG_RESCALE", "0") or 0)
+_CFG_TSMOOTH = float(os.environ.get("LS_CFG_TSMOOTH", "0") or 0)   # r15 Z: temporal smoothing of the CFG amplification term
+
+
+def _ls_cfg(nu, na, g):
+    """classifier-free guidance, the same as ls_stable._cfg (r15 Z LS_CFG_RESCALE=phi: per-frame guidance rescale, Lin et al. 2023)"""
+    out = nu + g * (na - nu)
+    if _CFG_TSMOOTH > 0 and out.ndim == 5 and out.shape[2] >= 3:   # (b, c, f, h, w): smooth (na - nu) over f, keep na exact
+        d = (na - nu).float(); dp = torch.cat([d[:, :, :1], d[:, :, :-1]], 2); dn = torch.cat([d[:, :, 1:], d[:, :, -1:]], 2)
+        out = (na.float() + (g - 1) * ((1 - 2 * _CFG_TSMOOTH) * d + _CFG_TSMOOTH * (dp + dn))).to(out.dtype)
+    if _CFG_RESCALE <= 0: return out
+    dims = (1, 3, 4) if out.ndim == 5 else tuple(range(1, out.ndim)); o = out.float()
+    s_c = na.float().std(dim=dims, keepdim=True); s_o = o.std(dim=dims, keepdim=True)
+    return (_CFG_RESCALE * o * (s_c / s_o.clamp_min(1e-6)) + (1 - _CFG_RESCALE) * o).to(out.dtype)
+
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 OBOX = (0.35, 0.56, 0.65, 0.72); LBOX = (0.25, 0.538, 0.747, 0.787); Y0 = 224   # decoded crop rows [224, 512) of the 512 crop = latent rows [28, 64)
 W_SYNC, W_OPEN, W_SHARP, W_JUMP = 1.0, 0.5, 0.5, 0.5; S_SYNC, S_OPEN, S_SHARP, S_JUMP = 0.03, 0.05, 0.15, 0.30
@@ -134,7 +150,7 @@ def continue_bon_sel(acc, pipe, windows, eps0, mask_lat, masked_lat, ref_lat, au
         x2 = torch.cat([x] * 2) if do_cfg else x
         npred = acc.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample
         if do_cfg:
-            nu, na = npred.chunk(2); npred = nu + acc.guidance * (na - nu)
+            nu, na = npred.chunk(2); npred = _ls_cfg(nu, na, acc.guidance)
         st_ = pipe.scheduler.step(npred, t, x, **extra); x0 = st_.pred_original_sample.clone()
         if o > 0: x0[:, :, :o] = known.expand(K, *known.shape[1:])
         return st_.prev_sample, x0
@@ -201,7 +217,7 @@ def continue_ens(acc, pipe, windows, eps0, mask_lat, masked_lat, ref_lat, audio_
                 x2 = torch.cat([x] * 2) if do_cfg else x
                 npred = acc.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample
                 if do_cfg:
-                    nu, na = npred.chunk(2); npred = nu + acc.guidance * (na - nu)
+                    nu, na = npred.chunk(2); npred = _ls_cfg(nu, na, acc.guidance)
                 a_t = ac[int(t)].to(npred.dtype); x0 = (x - (1 - a_t).sqrt() * npred) / a_t.sqrt()
                 x0m = x0.float().mean(0, keepdim=True).to(x0.dtype)
                 eps = (x - a_t.sqrt() * x0m) / (1 - a_t).sqrt()          # the epsilon each trajectory needs to land on the shared x0
@@ -239,7 +255,7 @@ def continue_bon(acc, pipe, windows, eps0, mask_lat, masked_lat, ref_lat, audio_
                 x2 = torch.cat([x] * 2) if do_cfg else x
                 npred = acc.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample
                 if do_cfg:
-                    nu, na = npred.chunk(2); npred = nu + acc.guidance * (na - nu)
+                    nu, na = npred.chunk(2); npred = _ls_cfg(nu, na, acc.guidance)
                 st_ = pipe.scheduler.step(npred, t, x, **extra); x = st_.prev_sample
                 if early and si == 0 and K > 1 and len(timesteps) > 1 and getattr(st_, "pred_original_sample", None) is not None:   # pick on the first step's x0 preview
                     x0 = st_.pred_original_sample.clone()

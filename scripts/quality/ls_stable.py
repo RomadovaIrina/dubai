@@ -46,6 +46,24 @@ def _cond_step(acc, dc, pipe, x, t, mk, mi, rl, au):
         dc.cached_output = sv
 
 
+_CFG_RESCALE = float(os.environ.get("LS_CFG_RESCALE", "0") or 0)
+_CFG_TSMOOTH = float(os.environ.get("LS_CFG_TSMOOTH", "0") or 0)   # r15 Z: temporal smoothing of the CFG amplification term
+
+
+def _cfg(nu, na, g):
+    """classifier-free guidance nu + g (na - nu). r15 Z LS_CFG_RESCALE=phi (default 0 = off): Lin et al. 2023 guidance rescale PER FRAME:
+    the guided prediction's std over (C, H, W) of each frame is matched to the conditional prediction's and blended by phi. The guidance
+    direction (mouth shape / sync) is kept; its per-frame brightness / colour overshoot (the lip "blinks", which CFG drives) is not."""
+    out = nu + g * (na - nu)
+    if _CFG_TSMOOTH > 0 and out.ndim == 5 and out.shape[2] >= 3:   # (b, c, f, h, w): smooth (na - nu) over f, keep na exact
+        d = (na - nu).float(); dp = torch.cat([d[:, :, :1], d[:, :, :-1]], 2); dn = torch.cat([d[:, :, 1:], d[:, :, -1:]], 2)
+        out = (na.float() + (g - 1) * ((1 - 2 * _CFG_TSMOOTH) * d + _CFG_TSMOOTH * (dp + dn))).to(out.dtype)
+    if _CFG_RESCALE <= 0: return out
+    dims = (1, 3, 4) if out.ndim == 5 else tuple(range(1, out.ndim)); o = out.float()
+    s_c = na.float().std(dim=dims, keepdim=True); s_o = o.std(dim=dims, keepdim=True)
+    return (_CFG_RESCALE * o * (s_c / s_o.clamp_min(1e-6)) + (1 - _CFG_RESCALE) * o).to(out.dtype)
+
+
 def _dc_half(dc):
     """r12 LS_CFG_TRUNC: at the CFG -> conditional-only switch, the DeepCache features cached by the last full step keep their conditional half."""
     if dc is not None: dc.cached_output = {k_: _tree_half(v_) for k_, v_ in dc.cached_output.items()}
@@ -263,7 +281,7 @@ class StableLatentSync(AccelLatentSync):
                                     x2 = torch.cat([x] * 2) if cfg_g else x
                                     npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1; unet_rows += x2.shape[0]
                                     if cfg_g:
-                                        nu, na = npred.chunk(2); dl_ = na - nu; npred = nu + self.guidance * dl_
+                                        nu, na = npred.chunk(2); dl_ = na - nu; npred = _cfg(nu, na, self.guidance)
                                 x = pipe.scheduler.step(npred, t, x, **extra).prev_sample
                                 if ema_a > 0 and si_ >= len(ts_g) - ema_k and x.shape[2] >= 3:
                                     # r11 FACE LS_X0_EMA=a, LS_X0_EMA_STEPS=K: in the last K steps, a +-1-frame temporal filter on the window's latents
@@ -295,7 +313,7 @@ class StableLatentSync(AccelLatentSync):
                                 dc.cached_output = caches[gi]                                                    # per-group DeepCache state
                             npred = self.unet(inp, t, encoder_hidden_states=au).sample; unet_calls += 1
                             if do_cfg:
-                                nu, na = npred.chunk(2); npred = nu + self.guidance * (na - nu)
+                                nu, na = npred.chunk(2); npred = _cfg(nu, na, self.guidance)
                             for k, (a, b) in enumerate(grp):
                                 w = tri(b - a) if self.stride is not None else torch.ones(b - a, device=device)
                                 eps_sum[:, :, a:b] += npred[k:k + 1].float() * w.view(1, 1, -1, 1, 1); w_sum[a:b] += w
@@ -340,7 +358,7 @@ class StableLatentSync(AccelLatentSync):
                                     x2 = torch.cat([x] * 2) if cfg_b else x
                                     npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1; unet_rows += x2.shape[0]
                                     if cfg_b:
-                                        nu, na = npred.chunk(2); dlb_ = na - nu; npred = nu + self.guidance * dlb_
+                                        nu, na = npred.chunk(2); dlb_ = na - nu; npred = _cfg(nu, na, self.guidance)
                                 x = pipe.scheduler.step(npred, t, x, **extra).prev_sample
                             for j, (a_, b_) in enumerate(bt):
                                 L_ = b_ - a_; w = torch.tensor([min(i + 1, L_ - i) for i in range(L_)], device=device, dtype=torch.float32)

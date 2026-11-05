@@ -23,7 +23,7 @@ lab(){ echo "drawtext=text='$1':x=8:y=8:fontsize=18:fontcolor=yellow:box=1:boxco
 ffmpeg -v error -y -i $A -i $B -i $C -filter_complex "[0:v]crop=$s:$s:$x0:$y0,scale=-2:360,$(lab "$LA")[a];[1:v]crop=$s:$s:$x0:$y0,scale=-2:360,$(lab "$LB")[b];[2:v]crop=$s:$s:$x0:$y0,scale=-2:360,fps=30,$(lab "$LC")[c];[a][b][c]hstack=inputs=3[v]" \
   -map "[v]" -map 0:a -c:v libx264 -crf 18 -preset fast -c:a aac -shortest $T/m.mp4
 parts=""; k=0
-for span in ${SP[$id]}; do s0=${span%:*}; e0=${span#*:}; k=$((k+1))
+for span in ${SPOTS:-${SP[$id]}}; do s0=${span%:*}; e0=${span#*:}; k=$((k+1))
   ffmpeg -v error -y -ss $s0 -to $e0 -i $T/m.mp4 -filter_complex "[0:v]setpts=2*PTS,drawtext=text='t=$s0-$e0 s (0.5x)':x=(w-tw)/2:y=h-30:fontsize=20:fontcolor=white:box=1:boxcolor=black@0.6[v];[0:a]atempo=0.5[a]" \
     -map "[v]" -map "[a]" -c:v libx264 -crf 18 -preset fast -c:a aac -ar 48000 $T/ts_$k.mp4 && parts="$parts -i $T/ts_$k.mp4"; done
 n=$(echo $parts | grep -o "\-i" | wc -l)
