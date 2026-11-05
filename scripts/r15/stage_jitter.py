@@ -106,7 +106,8 @@ def placement(d, master_lm):
     if np.nanmax(M) <= 1.5:
         W, H = (int(x) for x in str(z["size"]).split(",")) if "size" in z.files else (None, None)
     hf, lf = [], []
-    for npz in sorted(glob.glob(f"{d}/seg_*.npz")):
+    import re
+    for npz in sorted(f for f in glob.glob(f"{d}/seg_*.npz") if re.fullmatch(r"seg_\d+\.npz", pathlib.Path(f).name)):   # not the landmark caches
         s = np.load(npz); A = s["affine"]; st = int(s["start"]); n = len(A)
         lm, ok = landmarks(npz.replace(".npz", "_in.mp4"))
         if ok.sum() < 8 or st + n > len(M): continue

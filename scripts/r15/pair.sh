@@ -8,7 +8,7 @@ cd /workspace/dub/dubai; export DUB_ROOT=/workspace/dub/dubai; . scripts/env.sh 
 X=/workspace/dub/r15w/eval; OB=/workspace/dub/outbox/r15_w; mkdir -p $OB; id=$1; L=$2; R=$3; LL=${4:-$L}; RL=${5:-$R}
 declare -A SP=([old03]="2.75:4.25 4.75:6.25 20.55:21.25 23.5:24.5 26.75:28.25" [m03]="16.5:21.5" [m18]="1.5:6.5")
 vid(){ [ "$1" = q2 ] && echo $X/q2_$id/q2_$id.mp4 || echo $X/${1}_$id/${1}_$id.mp4; }
-lv=$(vid $L); rv=$(vid $R); LM=$(find /workspace/dub/artifacts/r4m -path "*r9g_q2_${id}/*" -name "q2_${id}_source_lm_F.npz" | head -1); T=$(mktemp -d)
+lv=$(vid $L); rv=$(vid $R); LM=$(find /workspace/dub/artifacts/r4m -path "*r9g_q2_${id}*/*" -name "q2_${id}_source_lm_F.npz" | head -1); T=$(mktemp -d)
 ffmpeg -v error -y -i $lv -i $rv -filter_complex "[0:v]scale=-2:720,drawtext=text='$LL':x=10:y=10:fontsize=22:fontcolor=white:box=1:boxcolor=black@0.6[l];[1:v]scale=-2:720,drawtext=text='$RL':x=10:y=10:fontsize=22:fontcolor=white:box=1:boxcolor=black@0.6[r];[l][r]hstack=inputs=2[v]" \
   -map "[v]" -map 0:a -c:v libx264 -crf 20 -preset fast -c:a aac $OB/${id}_full_${L}_vs_${R}.mp4
 python scripts/r13/distill/mouth_2panel.py --left $lv --right $rv --lm $LM --out $T/m.mp4 --labels "$LL" "$RL" > /dev/null

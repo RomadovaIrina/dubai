@@ -7,7 +7,7 @@ cd /workspace/dub/dubai; X=/workspace/dub/r15w/eval; OB=/workspace/dub/outbox/r1
 declare -A SP=([old03]="2.75:4.25 4.75:6.25 20.55:21.25 23.5:24.5 26.75:28.25" [m03]="16.5:21.5" [m18]="1.5:6.5")
 vid(){ [ "$1" = q2 ] && echo $X/q2_$id/q2_$id.mp4 || echo $X/${1}_$id/${1}_$id.mp4; }
 A=$(vid $1); B=$(vid $2); C=$(vid $3); LA=$4; LB=$5; LC=$6; T=$(mktemp -d)
-LM=$(find /workspace/dub/artifacts/r4m -path "*r9g_q2_${id}/*" -name "q2_${id}_source_lm_F.npz" | head -1)
+LM=$(find /workspace/dub/artifacts/r4m -path "*r9g_q2_${id}*/*" -name "q2_${id}_source_lm_F.npz" | head -1)
 IFS=, read W H < <(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 $A)
 read x0 y0 s < <(python3 - "$LM" "$W" "$H" <<'PY'
 import sys, numpy as np

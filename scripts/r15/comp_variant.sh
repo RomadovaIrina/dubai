@@ -7,8 +7,10 @@
 set -u
 cd /workspace/dub/dubai; export DUB_ROOT=/workspace/dub/dubai; . scripts/env.sh >/dev/null
 export DUB_ALLOW_NC=1 DUB_ALLOW_NC_BED=1 METRICS=off GEN_COMP=0 FAST_FB_BG=1 FAST_ENC=ultrafast CFD_EXTRA=--threads=12 FC_CMS=1
-SRC=${SRC:?SRC=<arm with the generator layer>}; V=${V:?V=<new arm>}; MR=${MR:-0}; X=/workspace/dub/r15w/eval; A=/workspace/dub/artifacts/r4a; B=/workspace/dub/artifacts/r4m
-export FC_EXTRA="--pre-threads=12 --sharpen-luma on --sharpen-auto 1.05 --sharpen-lips-max 0.2 --reg-smooth 4 --mouth-region $MR"
+SRC=${SRC:?SRC=<arm with the generator layer>}; V=${V:?V=<new arm>}; X=/workspace/dub/r15w/eval; A=/workspace/dub/artifacts/r4a; B=/workspace/dub/artifacts/r4m
+MR_FC=${MR_FC:-${MR:-0.45}}; MR=${MR:-0.55}   # production: FC_EXTRA (F3) 0.45, EXTRA (k5) 0.55; MR=0 = the whole lower face (TBDub test)
+# LT_ARGS (+ LT_LABEL) pass through to r7_m7_comp.sh: agent F's lip temporal stabilisation (scripts/r15/lip_temporal.py, e.g. "--mode color")
+export FC_EXTRA="--pre-threads=12 --sharpen-luma on --sharpen-auto 1.05 --sharpen-lips-max 0.2 --reg-smooth 4 --mouth-region $MR_FC"
 for id in "$@"; do
   ID=q2_$id; GT=r9g_${ID}_$SRC; FT=r9f_${ID}_$V; O=$X/${V}_$id; L=$O/logs; mkdir -p $L; rm -rf $B/$FT
   export DUB_INPUTS=$X/$ID/e2e/work/in

@@ -9,7 +9,7 @@ X=/workspace/dub/r15w/eval; A=/workspace/dub/artifacts/r4a; id=$1; shift
 declare -A AT=([old03]="3.5 5.5 20.9 24 27.5" [m03]="17.5 18.5 19.5 20.5" [m18]="2.5 3.5 4.5 5.5")
 vid(){ [ "$1" = q2 ] && echo $X/q2_$id/q2_$id.mp4 || echo $X/${1}_$id/${1}_$id.mp4; }
 WAV=$A/r9_q2_$id/q2_$id/dubbed_16k.wav; SRC=$(ls $X/q2_$id/e2e/work/in/q2_$id.* | head -1)
-LM=$(find /workspace/dub/artifacts/r4m -path "*r9g_q2_${id}/*" -name "q2_${id}_source_lm_F.npz" | head -1)
+LM=$(find /workspace/dub/artifacts/r4m -path "*r9g_q2_${id}*/*" -name "q2_${id}_source_lm_F.npz" | head -1)
 VS=(); for a in "$@"; do v=$(vid $a); [ -s $v ] || { echo "missing $a ($v)"; continue; }; VS+=("$a=$v")
   [ -s $X/${a}_$id.sync.txt ] || flock /workspace/dub/gpu.lock python scripts/r11/sync_speech.py --video $v --audio $WAV --label ${a}_$id 2>&1 | grep "^== sync" > $X/${a}_$id.sync.txt; done
 { for a in "$@"; do cat $X/${a}_$id.sync.txt 2>/dev/null; done
