@@ -187,7 +187,9 @@ Each comes with a ready user message in English and Russian. `flags[]` also list
   - Above `E2E_LONG_AUDIO_S` (120 s), the TTS stage (retake → clause takes → burst align) runs in its own process after the pipeline. Flag: `audio_stage_own_process`.
   - The retake decodes its per-speaker ladder batch in slices of ≤ 16 units.
   - Named-entity extraction runs in windows of ≤ 3000 tokens; a single call still fits up to ~3.4k tokens.
-  - A 5-minute job still failed in the retake at the end of r15. The likely cause is another agent's GPU work on the shared research server; see REPORT.md.
+  - Above 120 s the stage also waits for the pipeline process to free its VRAM, and synthesises its takes one by one (retake slices of 4).
+  - Result: a 5-minute job passes the whole audio stage (with and without lip-sync).
+  - Limits still open: the generator's RAM (~9 GB per video minute) and disk (≥ 10 GB per video minute); see section 7.
 - **Rotated phone clips:**
   - The precheck now probes the picture as displayed (r15 fix). Before, sideways frames could read as "no face".
   - The rotation is baked into the output.
@@ -206,8 +208,8 @@ Each comes with a ready user message in English and Russian. `flags[]` also list
 | GPU time (short clips) | 20–30 s clips, quality: 234 GPU-s for 30 s (old03), 146 for 20 s (m03), 145 for the 20 s 4K clip. Fixed load times dominate, so these are 430–470 GPU-s per video minute; the steady-state rate needs a long run (REPORT.md). Mode `fast`: face_gen GPU −25 %. Clean profile: −13…−17 % in total (no CodeFormer, no htdemucs). |
 | Wall time | 20 s 720p clip ≈ 8–9.5 min; 30 s 464×848 ≈ 13 min; 20 s 4K ≈ 22 min. Per video-second (face stages, measured): face_gen ~9 s at 720p / ~14 s at 1080p; composite ~6 s at 720p / ~33 s at 1080p. Audio stage of a 5-min video ≈ 6 min (pipeline) + the TTS stage. |
 | Timeout (TZ 3.8) | Default `max(1800, 1200 × video minutes)` s. It holds for 720p face work; a 1080p source at face size 1920 needs ~45 s per video-second, so use 1280 for 1080p (section 6). |
-| RAM | Peak RSS of the job: 20–26 GB (20–30 s clips), 31.6 GB (4K at face size 1920), 19.5 GB (5-min audio). The container needs ≥ 64 GB (64 CPUs / 85 GiB on r14-d). |
-| Disk | Weights 23.2 GB (`infra/docker/models.lock.json`). Image ~14–18 GB (estimate, not built). Per job: ~4 GB intermediates for a 20 s 1080p face job, scaling with frames × pixels (plan ~30–60 GB free for 5–15 min 1080p). Freed after the job unless `keep_intermediate` (the logs stay). |
+| RAM | Peak RSS of the job: 20–26 GB (20–30 s clips), 31.6 GB (4K at face size 1920), 15–20 GB (5-min audio only). **The generator keeps all frames: ~9 GB per video minute at a 720×1280 face size** (44.7 GB at 4.5 min of a 5-min job; job total 55–60 GB). With 85 GiB that is ~8–9 video minutes, so `DABAI_MAX_VIDEO_MIN=15` is not safe until the generator streams its frames (open follow-up). |
+| Disk | Weights 23.2 GB (`infra/docker/models.lock.json`). Image ~14–18 GB (estimate, not built). **Per job ≥ 10 GB per video minute at a 720p face size** (two uncompressed frame memmaps + the stage videos: the 5-min job had 41 GB when the shared disk filled up). Plan ≥ 60 GB free for 5 min and ~150 GB for 15 min. Freed after the job unless `keep_intermediate` (the logs stay). |
 | CPU | 16 threads used (`DUB_THREADS=16`); the composite and hires_merge are CPU-bound and scale with threads. |
 
 ## 8. The image (`infra/docker/`)
@@ -270,7 +272,7 @@ docker run -d --gpus '"device=0"' --shm-size 16g -p 8000:8000 -e DABAI_API_TOKEN
 | A burst of 10 jobs; a hard restart mid-job | `scripts/job/test_load.sh` (stand-in pipeline) | 9 / 9: FIFO, never two at once, none lost; after kill -9: running → E_WORKER_RESTART + orphan killed, queued → resumed in order |
 | The install recipe | `install_env.sh` in a clean room on r14-d | All imports OK; the freeze of all 3 venvs == the locks |
 | Real GPU jobs through v2: quality (old03 30 s, m03 20 s), fast + subs + watermark (m03), clean profile in the clean room (old03, m03: HF offline, no token, check.sh OK), 4K vertical 2160×3840 | r14-d | All SUCCESS, 0 failed lip-sync frames, output = source size / fps |
-| A 5-min 1080p job end to end | r14-d | **NOT passed.** The audio stage passes its main pass (341 s), but the retake (QA Whisper) ran out of VRAM in 3 runs. Separation OOM, NER overflow, in-process memory and batch size are fixed; the remaining suspect is another agent's GPU work on the shared server (REPORT.md) |
+| A 5-min 1080p job | r14-d | Audio path **SUCCESS** end to end (lipsync off: both beds 1080×1920, 300 s, matches_source) after 7 long-video fixes. With lip-sync (face 1280): the audio stage and face_gen of all 300 s passed (face_gen 41 min, generator RAM 45 GB); then the job died at the end of face_gen on a full shared disk (41 GB of intermediates). **Composite / hires_merge / mux on 5 min NOT validated** |
 | A 10-min job | – | **NOT run** to the end (budget). Its audio stage hit the separation OOM, now fixed |
 | **`docker build` itself** | – | **NOT run** (no Docker on vast; a ~20 GB build was not to be made on the laptop without asking). The Dockerfile was reviewed by hand. |
 | The llama.cpp CUDA build with nvcc 12.8 | – | **NOT re-run** (r14-d has nvcc 13.0). The clean room reused the sm_120 build of the same recipe (`scripts/setup_llama_cuda.sh`, r13). |
