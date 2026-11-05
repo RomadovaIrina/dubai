@@ -177,10 +177,23 @@ Each comes with a ready user message in English and Russian. `flags[]` also list
   - Everything outside the mouth keeps the source pixels; the output is at the source resolution.
   - This is the fix for the r13 failure (`res4k_vertical`: `face_gen_failed` on 2160×3840). Flag: `face_work_downscaled`.
   - Root cause (r15 repro, `E2E_FACE_MAXSIDE=0`): at full 4K the generator's frame preparation runs on the CPU. A 20 s clip took 15 min with the GPU at 0 % (13 GB VRAM parked) and 28–45 GB RSS; the repro was stopped at that point. RAM and time grow with length, so a 1-minute 4K clip would pass the container's memory limit (85 GiB on r14-d).
+- **1080p sources and long videos: OPEN DECISION.**
+  - At a 1080×1920 face-work size the composite costs ~33 s per video-second (from the 4K job), against ~6 at 720×1280.
+  - So at the default `E2E_FACE_MAXSIDE=1920`, a 5-minute 1080p job would exceed the TZ timeout (section 7).
+  - `E2E_FACE_MAXSIDE=1280` renders the mouth of 1080p sources at 720p, the resolution of every eye-approved clip, and merges it back onto the 1080p frames.
+  - The default is NOT flipped (the user decides).
+- **Long videos (r15 fixes, all recovery-only: a clip that already worked runs exactly as before):**
+  - The Spleeter bed: on a CUDA OOM it frees the cache and retries, then falls back to the CPU.
+  - Above `E2E_LONG_AUDIO_S` (120 s), the TTS stage (retake → clause takes → burst align) runs in its own process after the pipeline. Flag: `audio_stage_own_process`.
+  - The retake decodes its per-speaker ladder batch in slices of ≤ 16 units.
+  - Named-entity extraction runs in windows of ≤ 3000 tokens; a single call still fits up to ~3.4k tokens.
+  - A 5-minute job still failed in the retake at the end of r15. The likely cause is another agent's GPU work on the shared research server; see REPORT.md.
 - **Rotated phone clips:**
   - The precheck now probes the picture as displayed (r15 fix). Before, sideways frames could read as "no face".
   - The rotation is baked into the output.
-- **Short-lived workers:** `keep_intermediate=false` (the default) frees the work files after each job.
+- **Short-lived workers:**
+  - `keep_intermediate=false` (the default) frees the work files after each job.
+  - The stage logs are kept in `e2e/logs/artifacts/`, so a failed job stays debuggable.
 - **GPU accounting:**
   - `gpu_busy_s` comes from NVML. It is exact on a dedicated GPU.
   - On a GPU shared with other processes it includes their load.
@@ -189,12 +202,13 @@ Each comes with a ready user message in English and Russian. `flags[]` also list
 
 | Resource | Need |
 |---|---|
-| GPU | One 32 GB card (RTX 5090, sm_120, driver ≥ 570). VRAM peak 27.5 GB (audio stage: Qwen 14B + Chatterbox); face_gen ~14 GB; composite ~9–13 GB. |
-| GPU time | ≈ 300–375 GPU-s per video minute (quality mode, short clips; the TZ norm is 300). 10-minute and 4K runs: REPORT.md. |
-| Wall time | ≈ 9–10 min for a 20 s clip (short clips are dominated by fixed load times); long videos: REPORT.md. |
-| RAM | See REPORT.md (peak RSS of the job's processes: 20 s clip, 4K, 10 min). The container needs ≥ 64 GB. |
-| Disk | Weights 23.2 GB (`infra/docker/models.lock.json`); image ~14–18 GB (estimate from the clean-room venvs: /venv/dabai 8.3 GB + mediapipe 0.9 GB + the CUDA runtime base; not built); per job during the run see REPORT.md, freed after the job unless `keep_intermediate`. |
-| CPU | 16 threads used (`DUB_THREADS=16`); more helps the composite. |
+| GPU | One 32 GB card (RTX 5090, sm_120, driver ≥ 570). VRAM peak 30–32 GB in the audio stage (Qwen 14B + Chatterbox + QA), face_gen 13–14 GB, composite 4–13 GB. Nothing else may use the card while a job runs. |
+| GPU time (short clips) | 20–30 s clips, quality: 234 GPU-s for 30 s (old03), 146 for 20 s (m03), 145 for the 20 s 4K clip. Fixed load times dominate, so these are 430–470 GPU-s per video minute; the steady-state rate needs a long run (REPORT.md). Mode `fast`: face_gen GPU −25 %. Clean profile: −13…−17 % in total (no CodeFormer, no htdemucs). |
+| Wall time | 20 s 720p clip ≈ 8–9.5 min; 30 s 464×848 ≈ 13 min; 20 s 4K ≈ 22 min. Per video-second (face stages, measured): face_gen ~9 s at 720p / ~14 s at 1080p; composite ~6 s at 720p / ~33 s at 1080p. Audio stage of a 5-min video ≈ 6 min (pipeline) + the TTS stage. |
+| Timeout (TZ 3.8) | Default `max(1800, 1200 × video minutes)` s. It holds for 720p face work; a 1080p source at face size 1920 needs ~45 s per video-second, so use 1280 for 1080p (section 6). |
+| RAM | Peak RSS of the job: 20–26 GB (20–30 s clips), 31.6 GB (4K at face size 1920), 19.5 GB (5-min audio). The container needs ≥ 64 GB (64 CPUs / 85 GiB on r14-d). |
+| Disk | Weights 23.2 GB (`infra/docker/models.lock.json`). Image ~14–18 GB (estimate, not built). Per job: ~4 GB intermediates for a 20 s 1080p face job, scaling with frames × pixels (plan ~30–60 GB free for 5–15 min 1080p). Freed after the job unless `keep_intermediate` (the logs stay). |
+| CPU | 16 threads used (`DUB_THREADS=16`); the composite and hires_merge are CPU-bound and scale with threads. |
 
 ## 8. The image (`infra/docker/`)
 
@@ -228,7 +242,7 @@ Each comes with a ready user message in English and Russian. `flags[]` also list
 | Profile | Face | Background bed | Non-commercial parts | Where they come from |
 |---|---|---|---|---|
 | `current` | The servers' production path: LatentSync + **CodeFormer detail** (S-Lab NC) + Real-ESRGAN | **htdemucs** (no weights licence, NC data) + Spleeter second file | Yes: the deviation the user accepted on 29.10 | A SEPARATE NC volume at `/opt/dabai-nc` (`fetch-models` with `DUB_PROFILE=current` fills it; the entrypoint links it; the warning is printed at every start). Never baked into the image or the models volume. |
-| `clean` | LatentSync + Real-ESRGAN layer SR, no CodeFormer | Spleeter only | None (GREY items remain: pyannote / Spleeter / Real-ESRGAN data) | – |
+| `clean` | LatentSync + Real-ESRGAN layer SR, no CodeFormer. Optional adaptive lip-contrast repair (agent F2), `DUB_CLEAN_LIPCON=1`: the eye says "about like prod CF". Default 0 until F's gates pass | Spleeter only | None (GREY items remain: pyannote / Spleeter / Real-ESRGAN data) | – |
 
 - The licence inventory of every component: `reports/experiments/r15-tz/LICENCES_PROD_PATH.md`.
 - The look of both profiles: the A/B clips in `outbox/r15_t/` (old03 30 s, m03 20 s) and REPORT.md.
@@ -255,7 +269,9 @@ docker run -d --gpus '"device=0"' --shm-size 16g -p 8000:8000 -e DABAI_API_TOKEN
 | The HTTP API: auth, 202 / 409 / 422, cancel while queued, events, files, path traversal, token never logged, restart closes a stale RUNNING job | same script | pass |
 | A burst of 10 jobs; a hard restart mid-job | `scripts/job/test_load.sh` (stand-in pipeline) | 9 / 9: FIFO, never two at once, none lost; after kill -9: running → E_WORKER_RESTART + orphan killed, queued → resumed in order |
 | The install recipe | `install_env.sh` in a clean room on r14-d | All imports OK; the freeze of all 3 venvs == the locks |
-| Real GPU jobs through v2 (quality, fast, clean profile, 4K, 10 min, the clean room with HF offline and no token) | r14-d | REPORT.md |
+| Real GPU jobs through v2: quality (old03 30 s, m03 20 s), fast + subs + watermark (m03), clean profile in the clean room (old03, m03: HF offline, no token, check.sh OK), 4K vertical 2160×3840 | r14-d | All SUCCESS, 0 failed lip-sync frames, output = source size / fps |
+| A 5-min 1080p job end to end | r14-d | **NOT passed.** The audio stage passes its main pass (341 s), but the retake (QA Whisper) ran out of VRAM in 3 runs. Separation OOM, NER overflow, in-process memory and batch size are fixed; the remaining suspect is another agent's GPU work on the shared server (REPORT.md) |
+| A 10-min job | – | **NOT run** to the end (budget). Its audio stage hit the separation OOM, now fixed |
 | **`docker build` itself** | – | **NOT run** (no Docker on vast; a ~20 GB build was not to be made on the laptop without asking). The Dockerfile was reviewed by hand. |
 | The llama.cpp CUDA build with nvcc 12.8 | – | **NOT re-run** (r14-d has nvcc 13.0). The clean room reused the sm_120 build of the same recipe (`scripts/setup_llama_cuda.sh`, r13). |
 | `fetch-models` from zero | – | **NOT run** (a 24 GB download). Its steps are the r13-validated `download_models.sh` + `r9_models.sh` pieces. |
