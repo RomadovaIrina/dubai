@@ -42,7 +42,11 @@ fi
 
 # 2. teacher targets with the production q2 generator settings (~1 h; resumable: finished windows are skipped)
 if ! done_teacher; then
-  mkdir -p $T; idle; note "teacher q2-matched (10 steps, CFG 2.0, DeepCache 5) start"
+  mkdir -p $T
+  # an optional GPU window for another agent first: $X/gate.env sets GATE_FILE (its done marker) and GATE_UNTIL (epoch s, the cap)
+  if [ -f $X/gate.env ]; then . $X/gate.env; note "teacher waits for ${GATE_FILE} or $(date -d @${GATE_UNTIL} +%T)"
+    until [ -f "${GATE_FILE}" ] || [ $(date +%s) -ge ${GATE_UNTIL} ]; do sleep 30; done; note "gate open ($([ -f "${GATE_FILE}" ] && echo marker || echo cap))"; fi
+  idle; note "teacher q2-matched (10 steps, CFG 2.0, DeepCache 5) start"
   flock /workspace/dub/gpu.lock python scripts/r13/distill/distill2.py teacher --cap $X/sel --out $T --tbatch 4 --teacher-steps 10 --teacher-cfg 2.0 --teacher-deepcache 5 > $X/teacher_r5.log 2>&1
   n=$(ls $T/t | wc -l); [ $n = 1817 ] || die "teacher: $n of 1817 targets ($(tail -1 $X/teacher_r5.log | cut -c1-200))"
   mark teacher; note "teacher: $(grep '\[teacher\] done' $X/teacher_r5.log)"
