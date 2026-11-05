@@ -4,7 +4,7 @@
 #   bash scripts/r15/gate_f.sh <run, e.g. q2_m03> <sfx>
 set -u
 R=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd); cd $R; . scripts/env.sh >/dev/null; export DUB_ROOT=$R DUB_ALLOW_NC=1 METRICS=on
-id=$1; sx=$2; B=/workspace/dub/artifacts/r4m; A=/workspace/dub/artifacts/r4a; GT=r9g_$id; FT=r9f_$id$sx; AT=r9_$id
+id=$1; sx=$2; B=/workspace/dub/artifacts/r4m; A=/workspace/dub/artifacts/r4a; GT=${GT:-r9g_$id}; FT=r9f_$id$sx; AT=r9_$id
 export DUB_INPUTS=/workspace/dub/r14d/eval/$id/e2e/work/in; SRC=$(ls $DUB_INPUTS/$id.* | head -1)
 OUT=/workspace/dub/r15f/gate/$id$sx; mkdir -p $OUT/logs /workspace/dub/r9/diag
 ln -sfn $B/$GT/timing $B/$FT/timing 2>/dev/null
