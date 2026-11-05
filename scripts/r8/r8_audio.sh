@@ -84,7 +84,8 @@ elif [ "${R8_ONEPROC:-on}" = on ]; then   # speed L5: retake -> clause takes -> 
     for w_ in $(seq 120); do                        # hold ~16 GB for seconds ("[python] <defunct>", 5-min job): the stage's first allocations then OOM -> wait until it is freed
       u_=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -d ' '); [ -z "$u_" ] || [ "$u_" -lt "$R8_STAGE_WAIT_VRAM" ] && break; sleep 1; done
     echo "== stage start: VRAM ${u_:-?} MiB after ${w_:-0} s wait" >> $S/times.txt; fi
-  PYTHONPATH=$DUB_ROOT/third_party/llama_cuda:${PYTHONPATH:-} python scripts/r8/r8_tts_stage.py --jobs $J > $S/oneproc.log 2>&1 || echo "WARN oneproc (see $S/oneproc.log)"
+  DUB_TTS_BATCH=${R8_STAGE_TTS_BATCH:-$DUB_TTS_BATCH} DUB_S3_BATCH=${R8_STAGE_TTS_BATCH:-${DUB_S3_BATCH:-0}} \
+  PYTHONPATH=$DUB_ROOT/third_party/llama_cuda:${PYTHONPATH:-} python scripts/r8/r8_tts_stage.py --jobs $J > $S/oneproc.log 2>&1 || echo "WARN oneproc (see $S/oneproc.log)"   # r15 T: R8_STAGE_TTS_BATCH=0 (long videos) = the stage's takes one by one
   echo "ONEPROC_DONE $(python3 -c "import time;print(round(time.time()-$t0p,1))") s" >> $S/times.txt
 fi
 IDS_CHAIN=""   # the ids whose chain still has to run here (R9_CHAIN_INPROC: done inside the audio process -> skipped)
