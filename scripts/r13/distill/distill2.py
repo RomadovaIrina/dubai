@@ -138,6 +138,7 @@ def cmd_train(a):
     if hasattr(unet, "enable_gradient_checkpointing"): unet.enable_gradient_checkpointing()
     names = D.add_lora(unet, a.rank, a.rank); params = [p for n, p in unet.named_parameters() if n.endswith(".A") or n.endswith(".B")]
     for p in params: p.requires_grad_(True)
+    loras = [m for m in unet.modules() if isinstance(m, D.LoRA)]   # r6: scale 0 = the frozen teacher for the CFG-distillation term
     ema = [p.detach().clone() for p in params]
     opt = torch.optim.AdamW(params, lr=a.lr, weight_decay=0.0)
     lr_at = lambda s: a.lr * (s / 100 if s < 100 else 0.5 * (1 + math.cos(math.pi * (s - 100) / max(1, a.steps - 100))) * 0.95 + 0.05)
@@ -190,6 +191,20 @@ def cmd_train(a):
         with torch.autocast("cuda", dtype=torch.float16):
             eps = unet(torch.cat([sS.scale_model_input(x.half(), t), cond], 1), t, encoder_hidden_states=D.flat_audio(au)).sample.float()
         at = ac[t]; x0s = (x - (1 - at).sqrt() * eps) / at.sqrt()
+        # r6 (r15 lever b, --cfg-w): CFG distillation. The student's eps at (x_t, t) also matches the GUIDED eps of the frozen teacher
+        # (the same UNet with the LoRA scaled to 0) at the same point: eps_u + g (eps_c - eps_u), uncond = zero audio as production.
+        # The x0 target only says where the 10-step guided sampler ends; this term carries the guidance at every student timestep.
+        lcfg = torch.zeros((), device="cuda")
+        if a.cfg_w > 0:
+            with torch.no_grad():
+                for m in loras: m.scale = 0.0
+                fa = D.flat_audio(au)
+                with torch.autocast("cuda", dtype=torch.float16):
+                    e2 = unet(torch.cat([sS.scale_model_input(torch.cat([x, x]).half(), t), torch.cat([cond, cond])], 1), t,
+                              encoder_hidden_states=torch.cat([torch.zeros_like(fa), fa])).sample.float()
+                for m in loras: m.scale = 1.0
+                eu, ec = e2.chunk(2); eg = eu + a.cfg_g * (ec - eu)
+            lcfg = F.mse_loss(eps, eg)
         lmse = F.mse_loss(x0s, x0t); lsync = lpix = llp = ltmp = lopen = torch.zeros((), device="cuda"); has_sync = has_tmp = False
         if a.sync_w > 0 or a.pix_w > 0 or a.lpips_w > 0 or a.temp_w > 0 or a.open_w > 0:
             ps = D.decode(vae, x0s, grad=True).float()
@@ -211,7 +226,7 @@ def cmd_train(a):
                 m_ = d["mel"].cuda().half(); m_ = m_[None] if m_.dim() == 3 else m_
                 ve, ae = syncnet(px.reshape(1, -1, px.shape[2], px.shape[3]).half(), m_)
                 sim = F.cosine_similarity(ve.float(), ae.float()); lsync = F.binary_cross_entropy(sim.clamp(1e-6, 1 - 1e-6), torch.ones_like(sim)); has_sync = True
-        loss = lmse + a.sync_w * lsync + a.pix_w * lpix + a.lpips_w * llp + a.temp_w * ltmp + a.open_w * lopen
+        loss = lmse + a.sync_w * lsync + a.pix_w * lpix + a.lpips_w * llp + a.temp_w * ltmp + a.open_w * lopen + a.cfg_w * lcfg
         opt.zero_grad(set_to_none=True); loss.backward(); torch.nn.utils.clip_grad_norm_(params, 1.0); opt.step()
         with torch.no_grad():
             dec = min(a.ema, (1 + step) / (10 + step))   # EMA warm-up: the early average is not dominated by the zero-initialised LoRA
@@ -219,7 +234,7 @@ def cmd_train(a):
         run = loss.item() if run is None else 0.98 * run + 0.02 * loss.item()
         # every step logged (cheap): "sync" / "temp" are null on the steps where the term does not apply (8-frame windows / < 3 frames), not 0
         log.write(json.dumps({"step": step, "F": int(x0s.shape[2]), "loss": loss.item(), "mse": lmse.item(), "sync": lsync.item() if has_sync else None, "pix": lpix.item(),
-                              "lpips": llp.item(), "temp": ltmp.item() if has_tmp else None, "open": lopen.item(), "lr": lr_at(step), "s": round(time.time() - t0, 1),
+                              "lpips": llp.item(), "temp": ltmp.item() if has_tmp else None, "open": lopen.item(), "cfg": lcfg.item(), "lr": lr_at(step), "s": round(time.time() - t0, 1),
                               "vram_gb": round(torch.cuda.max_memory_allocated() / 2**30, 1)}) + "\n")
         if step % 25 == 0: log.flush()
         if step % 250 == 0: log.flush(); plot_curve(out / "train_log.jsonl", pathlib.Path(a.ckpt_root) / a.run, a)
@@ -250,6 +265,8 @@ def main():
     # round 3 (r2_s4 under-opened the mouth ~20 % on old03): the temporal term off the lips, a hinge on the mouth opening vs the teacher's
     ap.add_argument("--temp-nolips", action="store_true"); ap.add_argument("--open-w", type=float, default=0.0); ap.add_argument("--open-margin", type=float, default=0.0)
     ap.add_argument("--open-sym", action="store_true")
+    ap.add_argument("--cfg-w", type=float, default=0.0, help="r6: weight of the CFG-distillation term (student eps vs the frozen teacher's guided eps at the same x_t, t)")
+    ap.add_argument("--cfg-g", type=float, default=2.0, help="r6: the guidance of that teacher eps (production q2: 2.0)")
     ap.add_argument("--lip-box", default="0.25,0.538,0.747,0.787", help="the lips + margin, x0,y0,x1,y1 fractions of the aligned 512 crop: excluded from the temporal term (scripts/r14/lipbox.py, MediaPipe on 275 decoded crops)")
     ap.add_argument("--open-box", default="0.35,0.56,0.65,0.72", help="the mouth-opening proxy box (lipbox.py: within-face correlation 0.72 with the MediaPipe inner-lip gap)")
     a = ap.parse_args()
