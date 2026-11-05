@@ -1,6 +1,6 @@
 # HANDOFF_F: agent F (r15-F / F2 / F3) final report, 05.11.2026
 
-Branch **experiment/r15-repair**, head **60c783f** (bundle `r15-repair.bundle` here, which requires d189fb5; origin had f74f9b4 pushed earlier).
+Branch **experiment/r15-repair**, head **78b28e5** (bundle `r15-repair.bundle` here, which requires d189fb5; origin had f74f9b4 pushed earlier).
 Worktree on r14-d: /workspace/dub/dubai-f. Everything is on the cached q2 layers of old03 / m03 (face-units run r9g_q2_m03fu) / m18.
 
 ## Кратко по-русски
@@ -127,6 +127,13 @@ The aud arm = `--retime-hf nearest --cm-mouth-mode luma --skin-texture off --bou
 5. The CF w sweep (w 0.5 / 0.7) is half done: the cfd_w05 / w07 layers exist, but SR and the composite do not.
 
 ## 7. NEXT STEPS (ranked)
+0. **LatentSync plain / registration-free paste A/B** (D's find, 06.11).
+   - The m03 explosion the user saw at 8.64–8.71 s (source frames 259–261: torn, doubled lips with dark / teeth fragments) is born in the COMPOSITE. It is in every final (prod q2u, students, q2u + recipe) and in NO generator layer: q2pre / r6pre / r6raw / rep2s all show clean closed lips.
+   - The source has an open mouth with teeth at 8.61–8.64 s, and the composite drags the clean closed mouth onto that open-mouth geometry.
+   - Suspects: F3 `--reg-smooth 4 --mouth-region 0.45` and the k5 `--mouth-region 0.55` registration. D is testing F3="".
+   - This matches the KeySync finding: per-frame registration / warps in the paste create floats and tears, and a plain inverse-crop paste removed them.
+   - So: A/B the composite with registration off / the plain inverse-crop paste (comp_f2.sh F3="" and EXTRA without `--mouth-region`; fps_composite `--register` off).
+   - Re-run explode.py with the stage list to confirm. My m03 attribution counted "composite / retime" events as weak, and this one may be among them: check the event list at 8.6–8.7 s.
 1. Eye-check recipe v2 (videos/m03_recipe_v2_05x.mp4). Run v2 on old03 + m18 (CPU: comp_f2.sh with the LT_ARGS above), then the GPU gates on all 3 (gate_f.sh).
 2. Fix the explosions AT THE SOURCE: the generator's shape snaps. Candidates (generator agents): steps hysteresis (audit 6), the student + lock (calmest m03: 0.19 / 28 jumps), a temporal consistency term / larger overlap at the windows.
 3. If the composite has to carry it: a shape-aware easing. Only on snap frames whose opening jumps against BOTH neighbours AND where the dub audio does not have a plosive / onset there, so sync-relevant closures are kept.
