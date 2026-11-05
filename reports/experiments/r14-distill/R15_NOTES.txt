@@ -1,0 +1,14 @@
+07:20:06 SMOKE_OK r4: [val] {'step': 30, 'val_mse_ema': 0.00393366877688095, 'val_sync_ema': 0.9342400282621384, 'val_jitter_ema': 0.030995216220617294, 'val_open_ratio_ema': 0.8594826328405141, 'best': True} -> /workspace/dub/r14d/smoke_r4/ckpt/smoke_r4
+09:04:59 r4_s6 trained: r4_s6 step 2000/2000 (103 min): loss 0.0205 | last val @ 2000: mse 0.0064, sync 0.946 (teacher 0.927), jitter 0.0297 (teacher 0.0338), mouth opening / teacher 0.945 (untrained 0.887)
+09:18:59 GPU yield to F over after 14 min (F's GPU_DONE)
+09:29:22 r4 eval checkpoint step_00500_ema.pt: opening ratio 1.072 >= 1.03, lowest MSE (0.0047) of the 3 that wide
+09:33:34 s6c8 old03: no output video
+09:33:34 s6c8 m03: no output video
+09:33:34 s6c8 m18: no output video
+09:33:49 extra arm s6fc8 = r4_s6 step 2000 EMA + c8, old03 (the pick step 500 has val sync .936 vs .946 at 2000)
+09:36:03 E2E retry (09:29 runs: audio_failed under VRAM contention; moved to /workspace/dub/r14d/failed_0933)
+09:38:47 E2E retry (09:29 runs: audio_failed under VRAM contention; moved to /workspace/dub/r14d/failed_0933)
+09:40:47 E2E retry (09:29 runs: audio_failed under VRAM contention; moved to /workspace/dub/r14d/failed_0933)
+10:08:34 s6c8 m03: no output video ()
+10:45:38 m03 rerun with LS_FACE_UNITS=1 (F's fix 90fd069): q2u, s4p1500c8u, s6c8u
+11:18:38 s6c8u m03: no output video ()
