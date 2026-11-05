@@ -95,7 +95,7 @@ def main():
                     "(scripts/r15/lipcon.py, layer as a fraction of the source at the same frame) below this AND >= --lipcon-drop under its +-6-frame median "
                     "flags the frame (1 at thr - 0.1, 0.5 at thr), with --lipcon-same on only where the layer and source openings match (a different opening "
                     "legitimately changes the lip line, old03): a pale / vanished lip pop, re-drawn by the layer repair or faded to the source; 0 = off")
-    ap.add_argument("--joint-seg", choices=["off", "on"], default="off", help="r15 F3 (audit): window joints / whole-window fallback per segment (off = the r8 stepping from each segment start to the END OF THE VIDEO, mixing the phases of later segments)")
+    ap.add_argument("--joint-seg", choices=["off", "on"], default="on", help="r15 F3 (audit): window joints / whole-window fallback per segment (off = the r8 stepping from each segment start to the END OF THE VIDEO, mixing the phases of later segments)")
     ap.add_argument("--lipcon-drop", type=float, default=0.1); ap.add_argument("--lipcon-same", choices=["off", "on"], default="off", help="r15 F2: lipcon only where the openings match (--open-gate)")
     ap.add_argument("--lipcon-mode", choices=["drop", "adaptive"], default="drop", help="r15 F2: drop = below thr AND --lipcon-drop under the +-6-frame "
                     "median; adaptive = below thr AND below --lipcon-rel x the video's own +-(--lipcon-win)-frame median ratio (a transient dip of this video)")

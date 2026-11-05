@@ -15,16 +15,17 @@ INNER = [78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308, 415, 310, 311, 312, 1
 
 
 def stats(img, p):
-    if p is None or not np.isfinite(p[OUTER + INNER + [33, 263], :2]).all(): return np.nan, np.nan, np.nan
+    if p is None or not np.isfinite(p[OUTER + INNER + [33, 263], :2]).all(): return np.nan, np.nan, np.nan, np.nan
     o = np.round(p[OUTER, :2]).astype(np.int32); x0, y0 = np.maximum(o.min(0) - 4, 0); x1, y1 = o.max(0) + 4
     c = img[y0:y1, x0:x1]
-    if c.size == 0: return np.nan, np.nan, np.nan
+    if c.size == 0: return np.nan, np.nan, np.nan, np.nan
     m = np.zeros(c.shape[:2], np.uint8); cv2.fillPoly(m, [o - [x0, y0]], 1); cv2.fillPoly(m, [np.round(p[INNER, :2]).astype(np.int32) - [x0, y0]], 0)
     m = cv2.erode(m, np.ones((3, 3), np.uint8)) > 0
-    if m.sum() < 20: return np.nan, np.nan, np.nan
+    if m.sum() < 20: return np.nan, np.nan, np.nan, np.nan
     lab = cv2.cvtColor(c, cv2.COLOR_BGR2LAB).astype(np.float32)[m]
     op = np.linalg.norm(p[13, :2] - p[14, :2]) / max(np.linalg.norm(p[33, :2] - p[263, :2]), 1)
-    return float(lab[:, 0].mean()), float(lab[:, 1].mean()), float(op)
+    lv = float(cv2.Laplacian(cv2.cvtColor(c, cv2.COLOR_BGR2GRAY).astype(np.float32), cv2.CV_32F)[m].var())
+    return float(lab[:, 0].mean()), float(lab[:, 1].mean()), float(op), lv
 
 
 def blinks(X, thr_l, thr_a, op_thr, fps):
@@ -53,10 +54,19 @@ def main():
     # |dL| above the SOURCE's p99 |dL| (the source itself has ~1 % by construction)
     vF, vS = np.isfinite(np.diff(F[:, 0])), np.isfinite(np.diff(S[:, 0])); aF, aS = np.abs(np.diff(F[:, 0])), np.abs(np.diff(S[:, 0]))
     p99 = float(np.percentile(aS[vS], 99)) if vS.any() else np.nan
+    # r15 audit item 1: the 25 -> 30 SHARPNESS pulse: lip-ring Laplacian variance (/ its +-15-frame running median) on the source frames that
+    # ARE a master frame (|mu - round(mu)| < 0.08) vs the interpolated ones (> 0.25); 1.0 = no pulse (the source's own ratio is the floor)
+    pulse = {}
+    mu = np.load(a.src_lm)["mu"] if "mu" in np.load(a.src_lm).files else None
+    if mu is not None:
+        n_ = min(len(mu), len(F)); dist = np.abs(mu[:n_] - np.round(mu[:n_]))
+        for nm, X in (("final", F), ("source", S)):
+            lv = X[:n_, 3]; rm = np.array([np.nanmedian(lv[max(0, k - 15):k + 16]) for k in range(n_)]); lvn = lv / np.maximum(rm, 1e-6)
+            r0, r1 = np.nanmedian(lvn[dist < 0.08]), np.nanmedian(lvn[dist > 0.25]); pulse[nm] = round(float(r0 / r1), 3)
     sc = np.where(eF, np.maximum(dlF / a.thr_l, daF / a.thr_a), 0); top = [i for i in np.argsort(-sc)[:12] if sc[i] > 0]
     r = {"label": a.label, "frames": int(len(F)), "blinks": int(eF.sum()), "blinks_per_10s": round(10 * eF.sum() / dur, 2), "src_blinks": int(eS.sum()),
          "excess_per_10s": round(10 * (eF.sum() - eS.sum()) / dur, 2),
-         "W_excess_dL": round(float(aF[vF].mean() - aS[vS].mean()), 3), "W_jumps_p99": int((aF[vF] > p99).sum()), "W_src_jumps_p99": int((aS[vS] > p99).sum()), "src_p99_dL": round(p99, 2),
+         "W_excess_dL": round(float(aF[vF].mean() - aS[vS].mean()), 3), "W_jumps_p99": int((aF[vF] > p99).sum()), "W_src_jumps_p99": int((aS[vS] > p99).sum()), "src_p99_dL": round(p99, 2), "sharp_pulse_raw_vs_interp": pulse,
          "dL_steady": round(float(dlF[okF].mean()), 3), "da_steady": round(float(daF[okF].mean()), 3),
          "src_dL_steady": round(float(dlS[okS].mean()), 3), "src_da_steady": round(float(daS[okS].mean()), 3),
          "top": [[round((i + 1) / fps, 2), round(float(dlF[i]), 1), round(float(daF[i]), 1)] for i in sorted(top)]}
