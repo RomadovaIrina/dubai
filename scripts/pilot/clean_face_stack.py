@@ -120,7 +120,7 @@ def mouth_open(lm478: np.ndarray) -> np.ndarray:
 
 
 def face_turns(man: dict):
-    """Turns for the speaker -> face selection. LS_FACE_UNITS=1 (r15 F): the dubbed units (speaker, start, end) replace the raw
+    """Turns for the speaker -> face selection. r15 F, default ON (LS_FACE_UNITS=0 = raw turns): the dubbed units (speaker, start, end) replace the raw
     diarization turns, so a short overlap turn of a speaker with no dubbed line (m03 19 s: the child) never moves LatentSync's crop."""
     turns = (man.get("diarization") or {}).get("turns")
     if os.environ.get("LS_FACE_UNITS", "1") != "1": return turns
@@ -331,6 +331,8 @@ class CleanPrep:
             else:
                 Hrig = af.rigid_motion(self.frames, lm); np.savez_compressed(rp, H=Hrig)
             self.times["prep_rigid_motion"] = round(time.perf_counter() - t1, 3)
+            rv_ = float(os.environ.get("LS_RIGID_VALIDATE", "0") or 0)   # r15 F (default off): the rigid track checked against the landmarks (m03 19 s doubled mouth)
+            if rv_ > 0: Hrig, self.anchor_info["rigid_validate"] = af.validate_motion(Hrig, lm, rv_, return_info=True); print(f"  [rigid] validate {self.anchor_info['rigid_validate']}", flush=True)
             if anchor_filter: lm_ls = af.filter_landmarks(lm, Hrig, anchor_filter).astype(np.float32)
         self.ls_dets = ls_detections(lm_ls, W, H, calib)
         if mask_track == "head":   # mouth-mask boxes locked to the head motion (LatentSync reads the bbox only as a presence flag)
