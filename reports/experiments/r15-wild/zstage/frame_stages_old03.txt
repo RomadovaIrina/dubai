@@ -1,0 +1,50 @@
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1793892132.340191 2122414 gl_context_egl.cc:85] Successfully initialized EGL. Major : 1 Minor: 5
+I0000 00:00:1793892132.422199 2122433 gl_context.cc:369] GL version: 3.2 (OpenGL ES 3.2 NVIDIA 580.173.02), renderer: NVIDIA GeForce RTX 5090/PCIe/SSE2
+W0000 00:00:1793892132.422519 2122414 face_landmarker_graph.cc:174] Sets FaceBlendshapesGraph acceleration to xnnpack by default.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1793892132.429436 2122446 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1793892132.445487 2122440 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1793892149.081403 2122488 gl_context_egl.cc:85] Successfully initialized EGL. Major : 1 Minor: 5
+I0000 00:00:1793892149.195870 2122507 gl_context.cc:369] GL version: 3.2 (OpenGL ES 3.2 NVIDIA 580.173.02), renderer: NVIDIA GeForce RTX 5090/PCIe/SSE2
+W0000 00:00:1793892149.196204 2122488 face_landmarker_graph.cc:174] Sets FaceBlendshapesGraph acceleration to xnnpack by default.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1793892149.203951 2122510 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1793892149.219323 2122514 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1793892170.369548 2122662 gl_context_egl.cc:85] Successfully initialized EGL. Major : 1 Minor: 5
+I0000 00:00:1793892170.446381 2122681 gl_context.cc:369] GL version: 3.2 (OpenGL ES 3.2 NVIDIA 580.173.02), renderer: NVIDIA GeForce RTX 5090/PCIe/SSE2
+W0000 00:00:1793892170.446707 2122662 face_landmarker_graph.cc:174] Sets FaceBlendshapesGraph acceleration to xnnpack by default.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1793892170.451063 2122689 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1793892170.464251 2122691 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1793892193.394263 2123011 gl_context_egl.cc:85] Successfully initialized EGL. Major : 1 Minor: 5
+I0000 00:00:1793892193.470870 2123055 gl_context.cc:369] GL version: 3.2 (OpenGL ES 3.2 NVIDIA 580.173.02), renderer: NVIDIA GeForce RTX 5090/PCIe/SSE2
+W0000 00:00:1793892193.471375 2123011 face_landmarker_graph.cc:174] Sets FaceBlendshapesGraph acceleration to xnnpack by default.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1793892193.475456 2123069 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1793892193.491409 2123060 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1793892212.224674 2123306 gl_context_egl.cc:85] Successfully initialized EGL. Major : 1 Minor: 5
+I0000 00:00:1793892212.300825 2123325 gl_context.cc:369] GL version: 3.2 (OpenGL ES 3.2 NVIDIA 580.173.02), renderer: NVIDIA GeForce RTX 5090/PCIe/SSE2
+W0000 00:00:1793892212.301158 2123306 face_landmarker_graph.cc:174] Sets FaceBlendshapesGraph acceleration to xnnpack by default.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1793892212.308505 2123339 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1793892212.321809 2123336 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1793892230.102284 2123465 gl_context_egl.cc:85] Successfully initialized EGL. Major : 1 Minor: 5
+I0000 00:00:1793892230.180336 2123484 gl_context.cc:369] GL version: 3.2 (OpenGL ES 3.2 NVIDIA 580.173.02), renderer: NVIDIA GeForce RTX 5090/PCIe/SSE2
+W0000 00:00:1793892230.180787 2123465 face_landmarker_graph.cc:174] Sets FaceBlendshapesGraph acceleration to xnnpack by default.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1793892230.185170 2123498 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1793892230.198696 2123485 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+a_source               fps 30.0  hf_x1000 0.58  anchor_hf_x1000 0.1  lf_std_x1000 22.23  dL 0.772  da 0.427  dL_excess 0.0  da_excess 0.0  colour_jumps 56
+a25_master             fps 25.0  hf_x1000 0.81  anchor_hf_x1000 0.14  lf_std_x1000 22.3  lf_excess_x1000 0.68  dL 0.874  da 0.426  dL_excess 0.102  da_excess -0.001  colour_jumps 61
+d_raw_paste            fps 25.0  hf_x1000 0.66  anchor_hf_x1000 0.14  lf_std_x1000 22.22  lf_excess_x1000 2.14  dL 1.665  da 0.457  dL_excess 0.893  da_excess 0.03  colour_jumps 181
+e1_codeformer          fps 25.0  hf_x1000 0.68  anchor_hf_x1000 0.12  lf_std_x1000 21.95  lf_excess_x1000 2.33  dL 1.572  da 0.567  dL_excess 0.8  da_excess 0.14  colour_jumps 188
+e2_cf_detail           fps 25.0  hf_x1000 0.63  anchor_hf_x1000 0.14  lf_std_x1000 22.23  lf_excess_x1000 2.21  dL 1.678  da 0.469  dL_excess 0.906  da_excess 0.042  colour_jumps 188
+e3_sr                  fps 25.0  hf_x1000 0.64  anchor_hf_x1000 0.13  lf_std_x1000 22.25  lf_excess_x1000 2.29  dL 1.661  da 0.472  dL_excess 0.889  da_excess 0.045  colour_jumps 186
+f_repair               fps 25.0  hf_x1000 0.62  anchor_hf_x1000 0.13  lf_std_x1000 22.28  lf_excess_x1000 2.38  dL 1.605  da 0.463  dL_excess 0.833  da_excess 0.036  colour_jumps 175
+g_final                fps 30.01  hf_x1000 0.35  anchor_hf_x1000 0.09  lf_std_x1000 22.21  lf_excess_x1000 2.23  dL 1.172  da 0.419  dL_excess 0.4  da_excess -0.008  colour_jumps 99

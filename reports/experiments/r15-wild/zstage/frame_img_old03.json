@@ -1,0 +1,57 @@
+{
+ "a_source": {
+  "fps": 30.0,
+  "hf_x1000": 1.67,
+  "anchor_hf_x1000": 0.61,
+  "lf_std_x1000": 23.27
+ },
+ "a25_master": {
+  "fps": 25.0,
+  "hf_x1000": 2.1,
+  "anchor_hf_x1000": 0.74,
+  "lf_std_x1000": 23.22,
+  "lf_excess_x1000": 0.69
+ },
+ "d_raw_paste": {
+  "fps": 25.0,
+  "hf_x1000": 1.76,
+  "anchor_hf_x1000": 0.74,
+  "lf_std_x1000": 23.1,
+  "lf_excess_x1000": 2.25
+ },
+ "e1_codeformer": {
+  "fps": 25.0,
+  "hf_x1000": 1.95,
+  "anchor_hf_x1000": 0.71,
+  "lf_std_x1000": 23.02,
+  "lf_excess_x1000": 2.44
+ },
+ "e2_cf_detail": {
+  "fps": 25.0,
+  "hf_x1000": 1.71,
+  "anchor_hf_x1000": 0.71,
+  "lf_std_x1000": 23.3,
+  "lf_excess_x1000": 2.34
+ },
+ "e3_sr": {
+  "fps": 25.0,
+  "hf_x1000": 1.75,
+  "anchor_hf_x1000": 0.7,
+  "lf_std_x1000": 23.24,
+  "lf_excess_x1000": 2.45
+ },
+ "f_repair": {
+  "fps": 25.0,
+  "hf_x1000": 1.73,
+  "anchor_hf_x1000": 0.69,
+  "lf_std_x1000": 23.23,
+  "lf_excess_x1000": 2.51
+ },
+ "g_final": {
+  "fps": 30.01,
+  "hf_x1000": 1.23,
+  "anchor_hf_x1000": 0.58,
+  "lf_std_x1000": 23.17,
+  "lf_excess_x1000": 2.38
+ }
+}

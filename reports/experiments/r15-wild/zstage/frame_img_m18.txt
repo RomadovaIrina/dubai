@@ -1,0 +1,64 @@
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1793892164.980622 2122588 gl_context_egl.cc:85] Successfully initialized EGL. Major : 1 Minor: 5
+I0000 00:00:1793892165.054912 2122607 gl_context.cc:369] GL version: 3.2 (OpenGL ES 3.2 NVIDIA 580.173.02), renderer: NVIDIA GeForce RTX 5090/PCIe/SSE2
+W0000 00:00:1793892165.055244 2122588 face_landmarker_graph.cc:174] Sets FaceBlendshapesGraph acceleration to xnnpack by default.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1793892165.059222 2122611 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1793892165.072082 2122620 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1793892171.442029 2122722 gl_context_egl.cc:85] Successfully initialized EGL. Major : 1 Minor: 5
+I0000 00:00:1793892171.513652 2122741 gl_context.cc:369] GL version: 3.2 (OpenGL ES 3.2 NVIDIA 580.173.02), renderer: NVIDIA GeForce RTX 5090/PCIe/SSE2
+W0000 00:00:1793892171.513975 2122722 face_landmarker_graph.cc:174] Sets FaceBlendshapesGraph acceleration to xnnpack by default.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1793892171.517754 2122751 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1793892171.530671 2122748 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1793892176.716014 2122782 gl_context_egl.cc:85] Successfully initialized EGL. Major : 1 Minor: 5
+I0000 00:00:1793892176.778500 2122801 gl_context.cc:369] GL version: 3.2 (OpenGL ES 3.2 NVIDIA 580.173.02), renderer: NVIDIA GeForce RTX 5090/PCIe/SSE2
+W0000 00:00:1793892176.778833 2122782 face_landmarker_graph.cc:174] Sets FaceBlendshapesGraph acceleration to xnnpack by default.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1793892176.782588 2122804 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1793892176.795502 2122807 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1793892182.116544 2122842 gl_context_egl.cc:85] Successfully initialized EGL. Major : 1 Minor: 5
+I0000 00:00:1793892182.190098 2122861 gl_context.cc:369] GL version: 3.2 (OpenGL ES 3.2 NVIDIA 580.173.02), renderer: NVIDIA GeForce RTX 5090/PCIe/SSE2
+W0000 00:00:1793892182.190440 2122842 face_landmarker_graph.cc:174] Sets FaceBlendshapesGraph acceleration to xnnpack by default.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1793892182.194345 2122870 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1793892182.211018 2122873 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1793892187.547534 2122902 gl_context_egl.cc:85] Successfully initialized EGL. Major : 1 Minor: 5
+I0000 00:00:1793892187.620578 2122921 gl_context.cc:369] GL version: 3.2 (OpenGL ES 3.2 NVIDIA 580.173.02), renderer: NVIDIA GeForce RTX 5090/PCIe/SSE2
+W0000 00:00:1793892187.620876 2122902 face_landmarker_graph.cc:174] Sets FaceBlendshapesGraph acceleration to xnnpack by default.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1793892187.624748 2122926 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1793892187.637476 2122933 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1793892192.967858 2122977 gl_context_egl.cc:85] Successfully initialized EGL. Major : 1 Minor: 5
+I0000 00:00:1793892193.063317 2122996 gl_context.cc:369] GL version: 3.2 (OpenGL ES 3.2 NVIDIA 580.173.02), renderer: NVIDIA GeForce RTX 5090/PCIe/SSE2
+W0000 00:00:1793892193.063673 2122977 face_landmarker_graph.cc:174] Sets FaceBlendshapesGraph acceleration to xnnpack by default.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1793892193.067588 2123001 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1793892193.080356 2122997 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1793892198.207403 2123096 gl_context_egl.cc:85] Successfully initialized EGL. Major : 1 Minor: 5
+I0000 00:00:1793892198.277857 2123115 gl_context.cc:369] GL version: 3.2 (OpenGL ES 3.2 NVIDIA 580.173.02), renderer: NVIDIA GeForce RTX 5090/PCIe/SSE2
+W0000 00:00:1793892198.278190 2123096 face_landmarker_graph.cc:174] Sets FaceBlendshapesGraph acceleration to xnnpack by default.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1793892198.281884 2123124 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1793892198.297982 2123123 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1793892203.431074 2123156 gl_context_egl.cc:85] Successfully initialized EGL. Major : 1 Minor: 5
+I0000 00:00:1793892203.504517 2123175 gl_context.cc:369] GL version: 3.2 (OpenGL ES 3.2 NVIDIA 580.173.02), renderer: NVIDIA GeForce RTX 5090/PCIe/SSE2
+W0000 00:00:1793892203.504832 2123156 face_landmarker_graph.cc:174] Sets FaceBlendshapesGraph acceleration to xnnpack by default.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1793892203.508750 2123185 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1793892203.521920 2123181 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+a_source               fps 30.01  hf_x1000 1.94  anchor_hf_x1000 2.63  lf_std_x1000 55.42
+a25_master             fps 25.0  hf_x1000 2.21  anchor_hf_x1000 3.41  lf_std_x1000 55.5  lf_excess_x1000 1.36
+d_raw_paste            fps 25.0  hf_x1000 2.3  anchor_hf_x1000 3.48  lf_std_x1000 56.3  lf_excess_x1000 4.49
+e1_codeformer          fps 25.0  hf_x1000 2.4  anchor_hf_x1000 3.55  lf_std_x1000 57.6  lf_excess_x1000 4.78
+e2_cf_detail           fps 25.0  hf_x1000 2.28  anchor_hf_x1000 3.36  lf_std_x1000 56.37  lf_excess_x1000 4.01
+e3_sr                  fps 25.0  hf_x1000 2.26  anchor_hf_x1000 3.34  lf_std_x1000 56.25  lf_excess_x1000 3.99
+f_repair               fps 25.0  hf_x1000 2.25  anchor_hf_x1000 3.19  lf_std_x1000 56.31  lf_excess_x1000 4.03
+g_final                fps 30.02  hf_x1000 1.85  anchor_hf_x1000 2.65  lf_std_x1000 56.07  lf_excess_x1000 3.44

@@ -178,6 +178,40 @@ def continue_bon_sel(acc, pipe, windows, eps0, mask_lat, masked_lat, ref_lat, au
     return final, st
 
 
+def continue_ens(acc, pipe, windows, eps0, mask_lat, masked_lat, ref_lat, audio_all, timesteps, extra, do_cfg):
+    """r15 Z LS_ENS=K (default off; the 'continue' overlap path): a K-noise LATENT ENSEMBLE against per-frame sampling texture noise
+    (the lip colour / brightness jumps born in the raw generator layer, not on window seams). The K trajectories (noise 0 = the
+    trajectory's own, k = seed 1247 + 7919 k) are denoised as one batch; at EVERY step their x0 predictions are averaged and each
+    trajectory steps with the epsilon implied by the shared x0 (DDIM, epsilon prediction), so they agree on one x0 = the average of K
+    independent samples' estimates; the window keeps trajectory 0. Cost x K UNet rows (pair it with LS_KF=2)."""
+    K = int(os.environ.get("LS_ENS", "1")); dev = eps0.device; n = eps0.shape[2]; t0_ = time.perf_counter()
+    E = [eps0]
+    for k in range(1, K):
+        g = torch.Generator(device=dev).manual_seed(1247 + 7919 * k)
+        E.append(torch.randn((1,) + tuple(eps0.shape[1:2]) + (1,) + tuple(eps0.shape[3:]), generator=g, device=dev, dtype=eps0.dtype).repeat(1, 1, n, 1, 1) * pipe.scheduler.init_noise_sigma)
+    E = torch.cat(E); final = torch.empty_like(eps0); done = 0; ac = pipe.scheduler.alphas_cumprod.to(dev)
+    with torch.no_grad():
+        for a_, b_ in windows:
+            o = max(0, done - a_); x = E[:, :, a_:b_].clone(); known = final[:, :, a_:a_ + o] if o > 0 else None
+            mk, mi, rl = [v[:, :, a_:b_].expand(K, *v.shape[1:2], b_ - a_, *v.shape[3:]).contiguous() for v in (mask_lat, masked_lat, ref_lat)]
+            au = audio_all[a_:b_].repeat(K, 1, 1)
+            if do_cfg: mk, mi, rl, au = torch.cat([mk] * 2), torch.cat([mi] * 2), torch.cat([rl] * 2), torch.cat([torch.zeros_like(au), au])
+            for t in timesteps:
+                if o > 0: x[:, :, :o] = pipe.scheduler.add_noise(known.expand(K, *known.shape[1:]), E[:, :, a_:a_ + o], t.reshape(1))
+                x2 = torch.cat([x] * 2) if do_cfg else x
+                npred = acc.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample
+                if do_cfg:
+                    nu, na = npred.chunk(2); npred = nu + acc.guidance * (na - nu)
+                a_t = ac[int(t)].to(npred.dtype); x0 = (x - (1 - a_t).sqrt() * npred) / a_t.sqrt()
+                x0m = x0.float().mean(0, keepdim=True).to(x0.dtype)
+                eps = (x - a_t.sqrt() * x0m) / (1 - a_t).sqrt()          # the epsilon each trajectory needs to land on the shared x0
+                x = pipe.scheduler.step(eps, t, x, **extra).prev_sample
+            if o > 0: x[:, :, :o] = known.expand(K, *known.shape[1:])
+            final[:, :, a_:b_] = x[:1]; done = b_
+    print(f"  [ens] K={K} windows {len(windows)}, {time.perf_counter() - t0_:.1f} s", flush=True)
+    return final, {"K": K, "windows": len(windows)}
+
+
 def continue_bon(acc, pipe, windows, eps0, mask_lat, masked_lat, ref_lat, audio_all, timesteps, extra, do_cfg, audio_path, video_fps, cur_px=None):
     if os.environ.get("LS_BON_SEL") == "1":
         return continue_bon_sel(acc, pipe, windows, eps0, mask_lat, masked_lat, ref_lat, audio_all, timesteps, extra, do_cfg, audio_path, video_fps, cur_px=cur_px)

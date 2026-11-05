@@ -1,0 +1,97 @@
+{
+ "a_source": {
+  "fps": 30.0,
+  "hf_x1000": 0.58,
+  "anchor_hf_x1000": 0.1,
+  "lf_std_x1000": 22.23,
+  "dL": 0.772,
+  "da": 0.427,
+  "dL_excess": 0.0,
+  "da_excess": 0.0,
+  "colour_jumps": 56
+ },
+ "a25_master": {
+  "fps": 25.0,
+  "hf_x1000": 0.81,
+  "anchor_hf_x1000": 0.14,
+  "lf_std_x1000": 22.3,
+  "lf_excess_x1000": 0.68,
+  "dL": 0.874,
+  "da": 0.426,
+  "dL_excess": 0.102,
+  "da_excess": -0.001,
+  "colour_jumps": 61
+ },
+ "d_raw_paste": {
+  "fps": 25.0,
+  "hf_x1000": 0.66,
+  "anchor_hf_x1000": 0.14,
+  "lf_std_x1000": 22.22,
+  "lf_excess_x1000": 2.14,
+  "dL": 1.665,
+  "da": 0.457,
+  "dL_excess": 0.893,
+  "da_excess": 0.03,
+  "colour_jumps": 181
+ },
+ "e1_codeformer": {
+  "fps": 25.0,
+  "hf_x1000": 0.68,
+  "anchor_hf_x1000": 0.12,
+  "lf_std_x1000": 21.95,
+  "lf_excess_x1000": 2.33,
+  "dL": 1.572,
+  "da": 0.567,
+  "dL_excess": 0.8,
+  "da_excess": 0.14,
+  "colour_jumps": 188
+ },
+ "e2_cf_detail": {
+  "fps": 25.0,
+  "hf_x1000": 0.63,
+  "anchor_hf_x1000": 0.14,
+  "lf_std_x1000": 22.23,
+  "lf_excess_x1000": 2.21,
+  "dL": 1.678,
+  "da": 0.469,
+  "dL_excess": 0.906,
+  "da_excess": 0.042,
+  "colour_jumps": 188
+ },
+ "e3_sr": {
+  "fps": 25.0,
+  "hf_x1000": 0.64,
+  "anchor_hf_x1000": 0.13,
+  "lf_std_x1000": 22.25,
+  "lf_excess_x1000": 2.29,
+  "dL": 1.661,
+  "da": 0.472,
+  "dL_excess": 0.889,
+  "da_excess": 0.045,
+  "colour_jumps": 186
+ },
+ "f_repair": {
+  "fps": 25.0,
+  "hf_x1000": 0.62,
+  "anchor_hf_x1000": 0.13,
+  "lf_std_x1000": 22.28,
+  "lf_excess_x1000": 2.38,
+  "dL": 1.605,
+  "da": 0.463,
+  "dL_excess": 0.833,
+  "da_excess": 0.036,
+  "colour_jumps": 175
+ },
+ "g_final": {
+  "fps": 30.01,
+  "hf_x1000": 0.35,
+  "anchor_hf_x1000": 0.09,
+  "lf_std_x1000": 22.21,
+  "lf_excess_x1000": 2.23,
+  "dL": 1.172,
+  "da": 0.419,
+  "dL_excess": 0.4,
+  "da_excess": -0.008,
+  "colour_jumps": 99
+ }
+}

@@ -121,6 +121,9 @@ class StableLatentSync(AccelLatentSync):
                 video_frames, faces, boxes, affine = pipe.loop_video(chunks, video_frames)
             finally:
                 ip.face_detector = real
+            if os.environ.get("LS_AFFINE_SMOOTH"):   # r15 Z (default off): zero-lag SG smoothing of the crop affine; the SAME transform pastes back
+                sys.path.insert(0, str(HERE.parent / "r15")); import affine_smooth as _as
+                faces, affine = _as.smooth(ip, video_frames, faces, affine, os.environ["LS_AFFINE_SMOOTH"])
             t_aff = time.perf_counter() - t0; n = len(chunks)
             # current-frame pixels / masks (paste-back + masked image), per 16-frame chunk to bound memory
             cur_px, masked_px, masks = [], [], []
@@ -202,6 +205,11 @@ class StableLatentSync(AccelLatentSync):
                     # r15 W1 LS_BON=N (default off): best-of-N candidates per window, picked sequentially (scripts/r15/bon.py)
                     sys.path.insert(0, str(HERE.parent / "r15")); import bon as _bon
                     latents, self.last_bon = _bon.continue_bon(self, pipe, windows, latents, mask_lat, masked_lat, ref_lat, audio_all, timesteps, extra, do_cfg, audio_path, video_fps, cur_px=cur_px)
+                    timesteps_done = True
+                elif self.overlap == "continue" and self.stride is not None and int(os.environ.get("LS_ENS", "1") or 1) > 1:
+                    # r15 Z LS_ENS=K (default off): K-noise latent ensemble against per-frame sampling texture noise (scripts/r15/bon.py)
+                    sys.path.insert(0, str(HERE.parent / "r15")); import bon as _bon
+                    latents, self.last_ens = _bon.continue_ens(self, pipe, windows, latents, mask_lat, masked_lat, ref_lat, audio_all, timesteps, extra, do_cfg)
                     timesteps_done = True
                 elif self.overlap == "continue" and self.stride is not None:
                     eps0 = latents.clone(); final = torch.empty_like(latents); done = 0
@@ -348,6 +356,9 @@ class StableLatentSync(AccelLatentSync):
                         dec = pipe.decode_latents(latents[:, :, a:a + nf])
                     out.append(pipe.paste_surrounding_pixels_back(dec, cur_px[a:a + nf], _paste_w(masks[a:a + nf]), device, weight_dtype))
                 synced = torch.cat(out); torch.cuda.synchronize(); t_vae += time.perf_counter() - t0
+            if os.environ.get("LS_DUMP_DIR"):   # r15 Z (default off): input crops, generated crops, affines per segment (scripts/r15/stage_dump.py)
+                sys.path.insert(0, str(HERE.parent / "r15")); import stage_dump as _sd
+                _sd.dump(os.environ["LS_DUMP_DIR"], getattr(self, "_dump_start", 0), faces, synced, boxes, affine)
             t0 = time.perf_counter(); frames = pipe.restore_video(synced, video_frames, boxes, affine); t_res = time.perf_counter() - t0
             # seams = first frame of NEW content after a previous window (segment-relative): window starts (none / fuse) or previous window ends (continue)
             if self.overlap == "continue" and self.stride is not None:
@@ -509,6 +520,7 @@ class StableRunner:
     silence_mix = None   # round 3: r3_lipsync.SilenceMix (dub-silent mouth), hooked per segment
 
     def set_segment(self, start: int, n: int):
+        self.acc._dump_start = start   # r15 Z: LS_DUMP_DIR names the dumps by segment start (scripts/r15/stage_dump.py)
         self.acc.chunk_hook = self.silence_mix.hook(start, n) if self.silence_mix is not None else None
         sa = getattr(self, "silent_all", None); self.acc.silent_seg = sa[start:start + n] if sa is not None else None   # phase 2: dub-silent master frames of this segment
 
