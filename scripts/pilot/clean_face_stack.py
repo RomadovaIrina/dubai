@@ -119,6 +119,17 @@ def mouth_open(lm478: np.ndarray) -> np.ndarray:
     return np.linalg.norm(lm478[:, 13] - lm478[:, 14], axis=1) / np.maximum(np.linalg.norm(eR - eL, axis=1), 1e-6)
 
 
+def face_turns(man: dict):
+    """Turns for the speaker -> face selection. LS_FACE_UNITS=1 (r15 F): the dubbed units (speaker, start, end) replace the raw
+    diarization turns, so a short overlap turn of a speaker with no dubbed line (m03 19 s: the child) never moves LatentSync's crop."""
+    turns = (man.get("diarization") or {}).get("turns")
+    if os.environ.get("LS_FACE_UNITS", "1") != "1": return turns
+    units = [u for u in (man.get("units") or []) if u.get("speaker") is not None and u.get("end", 0) > u.get("start", 0)]
+    if not units: return turns
+    print(f"  [faces] LS_FACE_UNITS: {len(units)} dubbed units replace {len(turns or [])} diarization turns", flush=True)
+    return [{"speaker": u["speaker"], "start": float(u["start"]), "end": float(u["end"])} for u in units]
+
+
 def assign_speakers(tracks: np.ndarray, turns: list, fps: float = 25.0, min_presence: float = 0.1) -> dict:
     """Diarization speakers -> face tracks (spec 8.2): Pearson correlation of each face's mouth-opening speed with each speaker's
     speech indicator (source diarization turns); each face is used at most once, best scores first."""
