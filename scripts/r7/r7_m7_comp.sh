@@ -42,6 +42,18 @@ for id in ${*:-03 01 05 02 04}; do
       RL=${REP_LABEL:-rep2}; LSR=${LS%.mp4}_$RL.mp4; FBR=${FBN%.npz}_${TAG}_$RL.npz
       { [ -s $LSR ] && [ -s $FBR ]; } || python scripts/r9/r9_layer_repair.py --ls $LS --lm ${LS%.mp4}.mediapipe.npz --fb $FBN --src-lm $W/video/master_mediapipe.npz --src-video $W/video/master_25fps.mp4 --out $LSR --fb-out $FBR ${REP_ARGS:-} ${FAST_ENC:+--preset $FAST_ENC} | grep "^=="
       [ -s $LSR ] && { LS=$LSR; FBX="--fallback $FBR"; }
+      if [ -n "${REP2_FB_ARGS:-}" ] && [ -s $LSR ]; then   # r15 F2: lip contrast re-scored on the REPAIRED (post-SR) layer, a second repair pass on it
+        FB2=${FBR%.npz}_lc2.npz; LSR2=${LSR%.mp4}_lc2.mp4; FBR2=${FB2%.npz}_rep.npz; FBC=${FB2%.npz}_comb.npz
+        [ -f $FB2 ] || python scripts/r8/r8_fallback.py --work $W --ls $LSR --lm ${LSR%.mp4}.mediapipe.npz --out $FB2 $REP2_FB_ARGS --lipcon-only on | grep "^==" | sed "s/^== /== pass2 /"
+        { [ -s $LSR2 ] && [ -s $FBR2 ]; } || python scripts/r9/r9_layer_repair.py --ls $LSR --lm ${LSR%.mp4}.mediapipe.npz --fb $FB2 --src-lm $W/video/master_mediapipe.npz --src-video $W/video/master_25fps.mp4 --out $LSR2 --fb-out $FBR2 ${REP_ARGS:-} ${FAST_ENC:+--preset $FAST_ENC} | grep "^==" | sed "s/^== /== pass2 /"
+        if [ -s $LSR2 ]; then cp ${LSR%.mp4}.mediapipe.npz ${LSR2%.mp4}.mediapipe.npz
+          python -c "import numpy as np,sys; a=np.load(sys.argv[1]); b=np.load(sys.argv[2]); np.savez_compressed(sys.argv[3], fb=np.maximum(a['fb'], b['fb']).astype(np.float32), ls_mask=a['ls_mask'])" $FBR $FBR2 $FBC
+          LS=$LSR2; FBX="--fallback $FBC"; fi
+      fi
+    fi
+    if [ -n "${LT_ARGS:-}" ]; then   # r15 F3: lip temporal stabilisation of the final layer (scripts/r15/lip_temporal.py: colour lock / flow-aligned median)
+      LTO=${LS%.mp4}_lt${LT_LABEL:-1}.mp4; [ -s $LTO ] || python scripts/r15/lip_temporal.py --ls $LS --lm ${LS%.mp4}.mediapipe.npz --out $LTO $LT_ARGS | grep "^=="
+      [ -s $LTO ] && { cp ${LS%.mp4}.mediapipe.npz ${LTO%.mp4}.mediapipe.npz; LS=$LTO; }
     fi
     FIX30_LS=$LS FIX30_MASTER_FPS=${LS_FPS:-25} FIX30_TD=$B/$ST/timing FIX30_MODE=r3fix FIX30_THREADS=${FIX30_THREADS:-16} FIX30_ARGS="$V1 $EXTRA $FBX ${FC_EXTRA:-}" bash scripts/quality/r3_fix30.sh $M $TAG > $B/$TAG/${id}.fix30.log 2>&1
     F=$W/${id}_${ST}_25fps_$TAG.mp4; [ -f $F ] || { echo "FAIL composite $id (see $B/$TAG/${id}.fix30.log)"; continue; }
