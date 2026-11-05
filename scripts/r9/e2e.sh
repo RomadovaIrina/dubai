@@ -30,7 +30,9 @@ esac
 [ -n "${E2E_LS_RATE:-}" ] && export LS_RATE=$E2E_LS_RATE   # r10 speed: LatentSync on k of every m frames (E2E_LS_RATE=2/3: face GPU −25 %, gated m03 / m19 / old03); half-rate (1/2) fails the flash gate
 [ -n "${R10_GEN_SPOOL:-}" ] && export R10_GEN_PY=scripts/r10/gen_client.py   # r10 speed: the generator job goes to the resident generator worker (scripts/r10/gen_worker.sh)
 export E2E_FX=${E2E_FX:-1}   # r10: the r9 + fix look (the management set, and the look the face speed stack was gated on) is the default; E2E_FX=0 = the plain r9 composite
-export DUB_ALLOW_NC=1 DUB_ALLOW_NC_BED=1  # CodeFormer + htdemucs: deliberate NC deviation, user-accepted (brief_r9_e2e.md); InsightFace is not used
+export DUB_ALLOW_NC=${DUB_ALLOW_NC:-1} DUB_ALLOW_NC_BED=${DUB_ALLOW_NC_BED:-1}  # CodeFormer + htdemucs: deliberate NC deviation, user-accepted (brief_r9_e2e.md); InsightFace is not used
+# r15 T: DUB_ALLOW_NC=0 = the commercially clean face (no CodeFormer: generator --codeformer off, composite without the CF detail layer);
+#        DUB_ALLOW_NC_BED=0 = no htdemucs (the Spleeter bed is the only output). Default unchanged (1 / 1); the clean Docker image sets 0 / 0.
 A=/workspace/dub/artifacts/r4a; B=/workspace/dub/artifacts/r4m; AT=r9_$ID; HT=r9_${ID}_htd; GT=r9g_$ID; FT=r9f_$ID
 W=$OUT/work; L=$OUT/logs; mkdir -p $W $L; T=$W/stages.tsv; : > $T; STATUS=SUCCESS; FL=(); ER=()
 export DUB_INPUTS=$W/in; rm -rf $DUB_INPUTS; mkdir -p $DUB_INPUTS
@@ -72,11 +74,24 @@ if [[ " $PF " == *" variable_fps "* ]]; then   # r13: a VFR phone clip -> consta
   ffmpeg -loglevel error -y -i "$SRC" -map 0:v:0 -map 0:a:0 -fps_mode cfr -r "$AFR" -c:v libx264 -preset medium -crf 12 -pix_fmt yuv420p -c:a copy $W/cfr.mp4 \
     && { rm -f $DUB_INPUTS/$ID.*; mv $W/cfr.mp4 $DUB_INPUTS/$ID.mp4; SRC=$DUB_INPUTS/$ID.mp4; } || fail cfr_failed PARTIAL_SUCCESS "VFR -> constant frame rate failed"
 fi
+HIRES=""; FMS=${E2E_FACE_MAXSIDE:-1920}   # r15 T (edge res4k_vertical: face_gen_failed on 2160x3840): above FMS px on the long side the face stages
+if [ "$FMS" != 0 ] && [ "${E2E_LIPSYNC:-on}" != off ] && [[ " $PF " != *" no_face "* ]]; then   # (generator + composite) run on a copy scaled to FMS
+  read -r SW SH < <(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=' ' "$SRC")   # (the audio stage reads it too:
+  if [ "${SW:-0}" -gt "$FMS" ] || [ "${SH:-0}" -gt "$FMS" ]; then                                                       # audio stream-copied, identical);
+    st face_res                                                                                                            # scripts/r15/hires_merge.py then adds
+    HIRES=$W/hires_src.${SRC##*.}; mv "$SRC" $HIRES                                                                        # the composite's change onto the
+    if [ "$SW" -ge "$SH" ]; then SCL="scale=$FMS:-2:flags=lanczos"; else SCL="scale=-2:$FMS:flags=lanczos"; fi                    # full-res source frames
+    if ffmpeg -loglevel error -y -i $HIRES -map 0:v:0 -map 0:a:0 -vf $SCL -c:v libx264 -preset medium -crf 12 -pix_fmt yuv420p -c:a copy $DUB_INPUTS/$ID.mp4; then
+      SRC=$DUB_INPUTS/$ID.mp4; FL+=("face_work_downscaled")
+    else rm -f $DUB_INPUTS/$ID.*; mv $HIRES "$SRC"; HIRES=""; fail face_res_failed PARTIAL_SUCCESS "downscale for the face stages failed"; fi
+  fi
+fi
 
 if [ -n "${R10_HEAVY_LOCK:-}" ]; then st wait_heavy; exec 8>"$R10_HEAVY_LOCK"; flock 8; fi   # r10 worker: audio + sep + face_gen (the heavy GPU stages) hold ONE exclusive lock; the wait is its own stage
 st audio   # one id, from the raw input; its own tag so nothing of another run is reused (the per-id caches $A/sep/<id> are cleared)
 rm -rf $A/sep/$ID $A/$AT $A/${AT}src $A/${AT}pre
 export DUB_SEP_STEMS=/workspace/dub/r8a
+[ "$DUB_ALLOW_NC_BED" = 1 ] || { R9_SEP_OVERLAP=off; FL+=("bed_spleeter_only"); }   # r15 T: clean bed
 OVL=${R9_SEP_OVERLAP:-on}   # r9 speed O: the htdemucs stems while the audio stage runs, the demucs remix in parallel with the Spleeter one (same commands = same files)
 if [ "$OVL" = on ]; then
   rm -rf $DUB_SEP_STEMS/stems_htdemucs/$ID $A/$HT
@@ -90,6 +105,7 @@ if ! { [ -f $AD/final_mix_aac.m4a ] && [ -f $AD/dubbed_16k.wav ]; }; then   # r1
   if grep -qs "ASR produced no speech units" $A/${AT}pre/runs/$ID.log $L/audio.log; then fail no_speech ERROR "no speech found in the audio: nothing to dub"
   else fail audio_failed ERROR "see logs/audio.log"; fi; finish; fi
 
+if [ "$DUB_ALLOW_NC_BED" = 1 ]; then   # r15 T: the whole htdemucs bed only with the NC bed allowed
 st sep   # htdemucs: stems on the GPU (models loaded once), then the sepH8p remix of the SAME dub on the CPU
 if [ "$OVL" = on ] && timeout 900 bash scripts/r9/sep_overlap.sh wait $W; then :   # the demucs mix was made during the audio stage
 elif [ "$OVL" = on ] && [ -f $W/sepmix.done ]; then fail htdemucs_stems_failed PARTIAL_SUCCESS "see logs/sep_stems.log"
@@ -100,17 +116,18 @@ rm -rf $DUB_SEP_STEMS/stems_htdemucs/$ID $A/$HT
 SEP_SRC=$AT SEP_PREV=$AT bash scripts/r8/sep_mix.sh $HT htdemucs stems "--bed-pauses source --bed-noise-back on --src-duck-db -3" $ID > $L/sep_mix.log 2>&1
 fi
 [ -f $A/$HT/$ID/final_mix_aac.m4a ] || fail htdemucs_mix_failed PARTIAL_SUCCESS "see logs/sep_mix.log: no demucs file"
+fi
 
 if [ -n "${DUB_POLYGLOT:-}" ]; then   # r13 8d / non-English target: the units the map assigns another language re-voiced in place on the accepted
   st polyglot                        # English timing (scripts/r13/polyglot.py), BEFORE the face (the lips follow the new speech); default off
-  if ! python scripts/r13/polyglot.py --run $AD --htd $A/$HT/$ID > $L/polyglot.log 2>&1; then
+  if ! python scripts/r13/polyglot.py --run $AD $([ -d $A/$HT/$ID ] && echo --htd $A/$HT/$ID) > $L/polyglot.log 2>&1; then
     for d in $AD $A/$HT/$ID; do for f in $d/en_*; do [ -f "$f" ] && { b=$(basename $f); rm -f $d/${b#en_}; cp $f $d/${b#en_}; }; done; done
     fail polyglot_failed PARTIAL_SUCCESS "see logs/polyglot.log: the English dub kept"; fi
 fi
 
 if [ "${DUB_PACE_FIX:-0}" = 1 ] && [ -z "${DUB_POLYGLOT:-}" ]; then   # r13 7.3 (default off): a phrase heard as rushed (speech rate > 1.25 x the video median,
   st pace_fix                  # or its tempo outside x0.75-1.25) is re-said shorter at natural pace in the same slot; the rest of the mix stays bit-identical
-  if ! python scripts/r13/pace_fix.py --run $AD --htd $A/$HT/$ID > $L/pace_fix.log 2>&1; then
+  if ! python scripts/r13/pace_fix.py --run $AD $([ -d $A/$HT/$ID ] && echo --htd $A/$HT/$ID) > $L/pace_fix.log 2>&1; then
     for d in $AD $A/$HT/$ID; do for f in $d/pre_pace_*; do [ -f "$f" ] && { b=$(basename $f); rm -f $d/${b#pre_pace_}; cp $f $d/${b#pre_pace_}; }; done; done
     fail pace_fix_failed PARTIAL_SUCCESS "see logs/pace_fix.log: the accepted dub kept"; fi
 fi
@@ -132,7 +149,9 @@ else
         && python scripts/r9/r9_source_rigid.py --src $SRC --source-lm $SL ) > $L/srcprep.log 2>&1 & SP=$!
   fi
   export R13_GPU_DONE_FILE=$W/gen_gpu_done; rm -f $R13_GPU_DONE_FILE   # read by the resident generator only (R10_GEN_EARLY_RELEASE)
-  AUDIO=$A/$AT TAG=$GT SKIP_SCORE=1 VIDEO_EXTRA="--codeformer optimized --codeformer-w 1.0 --steps 10 --steps-silent 20 --codeformer-parse off --codeformer-batch 16 $REFX" \
+  CFX="--codeformer optimized --codeformer-w 1.0 --codeformer-parse off --codeformer-batch 16"; CFDV=self   # r15 T: DUB_ALLOW_NC=0 -> the clean face
+  [ "$DUB_ALLOW_NC" = 1 ] || { CFX="--codeformer off"; CFDV=""; FL+=("face_clean_no_codeformer"); }
+  AUDIO=$A/$AT TAG=$GT SKIP_SCORE=1 VIDEO_EXTRA="$CFX --steps 10 --steps-silent 20 $REFX" \
     bash scripts/r7/r7_e2e.sh $ID > $L/face_gen.log 2>&1 & GENP=$!
   if [ "${R10_GEN_EARLY_RELEASE:-0}" = 1 ] && [ -n "${R10_HEAVY_LOCK:-}" ]; then   # r13: the resident generator signals the end of its GPU work (scripts/r10/gen_worker.py)
     while kill -0 $GENP 2>/dev/null; do [ -f $W/gen_gpu_done ] && { flock -u 8; echo "== $ID heavy lock released early: generator GPU done $(date +%T)" | tee -a $L/e2e.log; break; }; sleep 0.5; done
@@ -150,13 +169,22 @@ else
       1|k5|k7) FBL=fb7s; FBA="$FBA --open-gate 0.04 --dark-transient on --thr-wash-lips 0.2"; export REP_ARGS="--spikes off ${REP_ARGS:-}" REP_LABEL=rep2s
                SYX="--mouth-region 0.55"; [ "$E2E_SYNC" = k7 ] || SYX="$SYX --cm-mouth-excl 0.5";;
     esac
-    SKIP_SCORE=1 TAG=$FT SRC_TAG=$GT CFD=self SR=srt1 SR_EXTRA="--batch 8 --mask down2" FB=$FBL FB_ARGS="$FBA" EXTRA="--tex-tau 1000 --tex-sigma 2.5 $SYX" \
+    SKIP_SCORE=1 TAG=$FT SRC_TAG=$GT CFD=$CFDV SR=srt1 SR_EXTRA="--batch 8 --mask down2" FB=$FBL FB_ARGS="$FBA" EXTRA="--tex-tau 1000 --tex-sigma 2.5 $SYX" \
       bash scripts/r7/r7_m7_comp.sh $ID > $L/face_comp.log 2>&1
     [ -f $B/$FT/${ID}_$FT.mp4 ] && VID=$B/$FT/${ID}_$FT.mp4 || fail face_comp_failed PARTIAL_SUCCESS "see logs/face_comp.log: source picture used"
   else fail face_gen_failed PARTIAL_SUCCESS "see logs/face_gen.log: source picture used"; fi
 fi
 [ -n "${R10_HEAVY_LOCK:-}" ] && flock -u 8
 [ -n "$VID" ] || VID=$SRC
+if [ -n "$HIRES" ]; then   # r15 T: the face work was downscaled: back to the source resolution
+  if [ "$VID" = "$SRC" ]; then VID=$HIRES   # no face result: the full-res source picture
+  else
+    st face_hires
+    if python scripts/r15/hires_merge.py --hi $HIRES --lo-src $SRC --lo-comp $VID --out $W/face_hires.mp4 --json $W/face_hires.json --threads ${HIRES_THREADS:-16} > $L/face_hires.log 2>&1; then
+      VID=$W/face_hires.mp4; tail -1 $L/face_hires.log | tee -a $L/e2e.log
+    else VID=$HIRES; fail face_hires_failed PARTIAL_SUCCESS "see logs/face_hires.log: source picture used"; fi
+  fi
+fi
 
 SUBS=${E2E_SUBS:-off}; WM=${E2E_WATERMARK:-}   # r13 spec block 9: burned subtitles (ASS, word timing on the stretched dub, 4 styles + karaoke) and / or a watermark; default off
 if [ "$SUBS" != off ] || [ -n "$WM" ]; then   # E2E_SUBS=on E2E_SUBS_LANG=dub|src E2E_SUBS_STYLE=white|yellow|trendy|outline E2E_SUBS_KARAOKE=on|off; E2E_WATERMARK=<png>|text:DabAI E2E_WM_CORNER E2E_WM_OPACITY

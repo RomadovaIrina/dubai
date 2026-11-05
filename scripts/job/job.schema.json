@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dabai-job/2/job",
+  "title": "DabAI job (input)",
+  "description": "One video in. Validated by scripts/job/dabai_job.py validate(); unknown fields are rejected. v1 jobs (scripts/r13/dabai_job.py) are valid.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["input"],
+  "properties": {
+    "schema": {"enum": ["dabai-job/2", "dabai-job/1"], "default": "dabai-job/2"},
+    "job_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$", "description": "Names the outputs. HTTP: generated when missing. CLI: the input file stem."},
+    "input": {"type": "string", "description": "A local file path (any ffmpeg-readable video with an audio track) or an http(s) URL (e.g. a presigned R2 GET URL; downloaded into out_dir/input/, its query string is never logged)."},
+    "out_dir": {"type": "string", "description": "CLI only: where the job writes everything. HTTP: set by the service ($DABAI_JOBS_DIR/<job_id>)."},
+    "source_lang": {"type": "string", "default": "auto", "description": "auto = Whisper detects it (RU is the validated source). A given code that differs from the detected one adds the warning W_SOURCE_LANG."},
+    "target_lang": {"type": "string", "default": "en", "description": "A Chatterbox language id from scripts/r13/lang_routes.json (22 languages; quality group per language in LANGS.md). en = the accepted RU->EN path."},
+    "polyglot": {"type": ["object", "null"], "default": null, "description": "Per-sentence target languages in one video, e.g. {\"mode\": \"cycle\", \"langs\": [\"en\", \"de\"]} or {\"mode\": \"map\", \"units\": {\"0\": \"de\"}} (LANGS.md)."},
+    "mode": {"enum": ["quality", "fast"], "default": "quality", "description": "quality = LatentSync 1.6 teacher, q2 + F3 composite + c8 overlapping windows (the eye-approved production stack). fast = the 4-step distilled student (r2 step 1500 EMA) + c8: ~-25..35 % face GPU, slightly weaker sync."},
+    "lipsync": {"enum": ["auto", "off"], "default": "auto", "description": "off = voice-only dub, no face work."},
+    "subs": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean", "default": false},
+        "lang": {"enum": ["dub", "src"], "default": "dub", "description": "dub = the dubbed text timed on the dub; src = the original (Whisper word times)."},
+        "style": {"enum": ["white", "yellow", "trendy", "outline"], "default": "yellow", "description": "The 4 presets of TZ 9.3."},
+        "karaoke": {"type": "boolean", "default": true, "description": "Highlight the current word."}
+      }
+    },
+    "watermark": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean", "default": false},
+        "image": {"type": ["string", "null"], "default": null, "description": "PNG path on the worker; null = a rendered text mark."},
+        "text": {"type": "string", "default": "DabAI"},
+        "corner": {"enum": ["tl", "tr", "bl", "br"], "default": "br"},
+        "opacity": {"type": "number", "minimum": 0, "maximum": 1, "default": 0.6}
+      }
+    },
+    "output": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "bed": {"enum": ["auto", "demucs", "spleeter"], "default": "auto", "description": "Background bed of the main video. auto = htdemucs when the NC bed is enabled on this worker, else Spleeter."},
+        "both_beds": {"type": "boolean", "default": false, "description": "List both bed variants in status.outputs (when produced)."},
+        "keep_intermediate": {"type": "boolean", "default": false, "description": "false = the per-job work files (GBs) are deleted after the job; outputs, logs, status, metrics stay."}
+      }
+    },
+    "bed": {"enum": ["auto", "demucs", "spleeter"], "description": "v1 name of output.bed."},
+    "max_voices": {"type": "integer", "minimum": 1, "default": 2, "description": "TZ 6.3: more speakers than this -> one voice + warning W_MANY_SPEAKERS."},
+    "timeout_s": {"type": ["number", "null"], "exclusiveMinimum": 0, "default": null, "description": "null = max(1800, 1200 x video minutes). Past it the job is killed: status TIMEOUT."},
+    "sync": {"type": "string", "default": "1", "description": "Research switch (E2E_SYNC); leave the default."},
+    "debug_env": {"type": ["object", "null"], "description": "Tests / research only: extra pipeline environment (fault injection). Never from the product."}
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dabai-job/2/status",
+  "title": "DabAI job status (<out_dir>/status.json, GET /jobs/{id})",
+  "description": "Rewritten atomically every ~3 s while the job runs; final when status is not QUEUED / RUNNING. Fields may be added in later dabai-job/2 versions (ignore unknown fields); removing or renaming one bumps the schema to dabai-job/3.",
+  "type": "object",
+  "required": ["schema", "job_id", "status", "step", "progress_pct"],
+  "properties": {
+    "schema": {"const": "dabai-job/2"},
+    "job_id": {"type": "string"},
+    "status": {"enum": ["QUEUED", "RUNNING", "SUCCESS", "PARTIAL_SUCCESS", "ERROR", "TIMEOUT"], "description": "TZ 3.3. SUCCESS / PARTIAL_SUCCESS carry a video; ERROR / TIMEOUT do not."},
+    "step": {"type": "string", "description": "queued, download, precheck, upright, cfr, face_res, audio, sep, polyglot, pace_fix, face_gen, face_comp, face_hires, subs, mux, end (+ wait_* in a shared worker)"},
+    "step_label": {"type": "string", "description": "English label for the waiting screen (TZ 2.10)."},
+    "progress_pct": {"type": "number", "minimum": 0, "maximum": 100, "description": "Approximate, never goes backwards within a job."},
+    "eta_s": {"type": ["number", "null"], "description": "Approximate remaining seconds."},
+    "error": {
+      "type": ["object", "null"],
+      "description": "Set for ERROR / TIMEOUT.",
+      "properties": {
+        "code": {"enum": ["E_BAD_REQUEST", "E_INPUT_NOT_FOUND", "E_DOWNLOAD_FAILED", "E_INPUT_TOO_LARGE", "E_INPUT_UNREADABLE", "E_NO_SPEECH", "E_AUDIO_FAILED", "E_NO_OUTPUT", "E_TIMEOUT", "E_CANCELLED", "E_WORKER_RESTART", "E_INTERNAL"]},
+        "message": {"type": "string"}, "message_ru": {"type": "string"}, "retryable": {"type": "boolean"}, "detail": {"type": ["string", "null"]}
+      }
+    },
+    "warnings": {
+      "type": "array", "description": "User-facing notes of a SUCCESS / PARTIAL_SUCCESS job.",
+      "items": {"type": "object", "properties": {"flag": {"type": "string"}, "code": {"type": "string"}, "en": {"type": "string"}, "ru": {"type": "string"}}}
+    },
+    "flags": {"type": "array", "items": {"type": "string"}, "description": "All pipeline flags, technical ones included (low_res, face_work_downscaled, ...)."},
+    "messages": {"type": "array", "description": "v1 name of warnings (flag, en, ru)."},
+    "output": {"type": ["string", "null"], "description": "The dubbed video (H.264 MP4, source resolution / fps / aspect, AAC)."},
+    "outputs": {"type": "object", "description": "bed name -> video path (both beds with output.both_beds)."},
+    "bed_used": {"type": "string"},
+    "subs_ass": {"type": ["string", "null"], "description": "The ASS subtitles (also burned in when subs.enabled)."},
+    "metrics_json": {"type": ["string", "null"]},
+    "video_minutes": {"type": ["number", "null"], "description": "Input duration: what the user is charged for."},
+    "gpu_busy_s": {"type": ["number", "null"], "description": "NVML GPU-busy seconds of this job (TZ 1:5 accounting)."},
+    "wall_s": {"type": ["number", "null"]},
+    "peak_rss_mb": {"type": ["number", "null"]},
+    "refund_suggested": {"type": "boolean", "description": "true for ERROR / TIMEOUT / PARTIAL_SUCCESS and no-face jobs (TZ 5.5, 11.4); the refund itself is the backend's."},
+    "source_lang_detected": {"type": ["string", "null"]},
+    "spec": {"type": ["object", "null"], "description": "Pipeline facts: voice policy, speakers, faces, head pose, lip-sync frame verdict."},
+    "output_format": {"type": ["object", "null"], "description": "width, height, fps, duration_s, matches_source."},
+    "versions": {"type": "object", "properties": {"interface": {"type": "string"}, "pipeline": {"type": "string"}, "image": {"type": "string"}, "profile": {"enum": ["nc", "clean"]}}},
+    "params": {"type": "object", "description": "The normalised job (input URL redacted)."},
+    "started_at": {"type": ["string", "null"]}, "finished_at": {"type": ["string", "null"]},
+    "errors": {"type": "array", "items": {"type": "string"}, "description": "Technical error lines for the logs (not for the user)."}
+  }
+}
