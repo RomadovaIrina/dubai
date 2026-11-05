@@ -117,11 +117,24 @@ def separate_spleeter_torch(wav: pathlib.Path, work: pathlib.Path, t0: float, de
         raise RuntimeError(f"{SPLEETER_TORCH_W} missing: run scripts/setup_spleeter.sh")
     t1 = time.perf_counter(); sp = model_cache.get(("spleeter_torch", device), lambda: Spleeter2Stems(SPLEETER_TORCH_W, device)); load_s = time.perf_counter() - t1
     y, sr = sf.read(str(wav), dtype="float32"); assert sr == SEP_SR
-    t2 = time.perf_counter(); out = sp.separate(y); sep_s = time.perf_counter() - t2
+    t2 = time.perf_counter(); backend = f"torch/{device}"
+    try:
+        out = sp.separate(y)
+    except RuntimeError as e:   # r15 T: a long video (5-10 min: one STFT of the whole track) next to the resident Qwen / TTS models -> CUDA OOM.
+        if "out of memory" not in str(e).lower() or device == "cpu": raise   # recovery only: a clip that fits never gets here (unchanged)
+        import gc, torch
+        gc.collect(); torch.cuda.empty_cache(); print(f"[bed] spleeter_torch CUDA OOM ({len(y) / sr:.0f} s): cache freed, retry on {device}", flush=True)
+        try:
+            out = sp.separate(y)
+        except RuntimeError as e2:
+            if "out of memory" not in str(e2).lower(): raise
+            gc.collect(); torch.cuda.empty_cache(); print("[bed] spleeter_torch CUDA OOM again: separating on the CPU", flush=True)
+            out = model_cache.get(("spleeter_torch", "cpu"), lambda: Spleeter2Stems(SPLEETER_TORCH_W, "cpu")).separate(y); backend = "torch/cpu (CUDA OOM fallback)"
+    sep_s = time.perf_counter() - t2
     bg, voc = out["accompaniment"], out["vocals"]; p_bg, p_voc = work / "bg_44k.wav", work / "vocals_44k.wav"
     sf.write(str(p_bg), bg, sr, subtype="FLOAT"); sf.write(str(p_voc), voc, sr, subtype="FLOAT"); wav.unlink()
     total = time.perf_counter() - t0
-    return {"model": "Spleeter 2stems v1.4.0 (bg = accompaniment; MIT code, weights = MIT repo release asset) - PyTorch port spleeter_torch.py", "backend": f"torch/{device}",
+    return {"model": "Spleeter 2stems v1.4.0 (bg = accompaniment; MIT code, weights = MIT repo release asset) - PyTorch port spleeter_torch.py", "backend": backend,
             "weights": str(SPLEETER_TORCH_W), "bg": str(p_bg), "vocals": str(p_voc), "seconds": round(len(y) / SEP_SR, 3), "load_s": round(load_s, 3), "separate_s": round(sep_s, 3),
             "total_s": round(total, 3), "source_db": round(_db(y.mean(1)), 2), "vocals_db": round(_db(voc.mean(1)), 2), "bg_db": round(_db(bg.mean(1)), 2)}
 
