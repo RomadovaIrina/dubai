@@ -95,6 +95,7 @@ def main():
                     "(scripts/r15/lipcon.py, layer as a fraction of the source at the same frame) below this AND >= --lipcon-drop under its +-6-frame median "
                     "flags the frame (1 at thr - 0.1, 0.5 at thr), with --lipcon-same on only where the layer and source openings match (a different opening "
                     "legitimately changes the lip line, old03): a pale / vanished lip pop, re-drawn by the layer repair or faded to the source; 0 = off")
+    ap.add_argument("--joint-seg", choices=["off", "on"], default="off", help="r15 F3 (audit): window joints / whole-window fallback per segment (off = the r8 stepping from each segment start to the END OF THE VIDEO, mixing the phases of later segments)")
     ap.add_argument("--lipcon-drop", type=float, default=0.1); ap.add_argument("--lipcon-same", choices=["off", "on"], default="off", help="r15 F2: lipcon only where the openings match (--open-gate)")
     ap.add_argument("--lipcon-mode", choices=["drop", "adaptive"], default="drop", help="r15 F2: drop = below thr AND --lipcon-drop under the +-6-frame "
                     "median; adaptive = below thr AND below --lipcon-rel x the video's own +-(--lipcon-win)-frame median ratio (a transient dip of this video)")
@@ -108,10 +109,10 @@ def main():
     lml = np.load(a.lm)["lm"]; lms = np.load(work / "video/master_mediapipe.npz")["lm"]; n = min(len(lml), len(lms))
     ol, yl, al_, apl, n1 = read_feats(a.ls, lml, n); os_, ys, as_, aps, n2 = read_feats(work / "video/master_25fps.mp4", lms, n); n = min(n1, n2)
     man = json.loads(next(work.glob("*_25fps.manifest.json")).read_text())
-    ls_mask = np.zeros(n, bool); starts = []
+    ls_mask = np.zeros(n, bool); starts = []; seg_end = {}
     for s in man["lipsync"]["segments"]:
         if s["action"] == "LATENT_SYNC":
-            ls_mask[s["start_frame"]:min(n, s["end_frame"])] = True; starts.append(s["start_frame"])
+            ls_mask[s["start_frame"]:min(n, s["end_frame"])] = True; starts.append(s["start_frame"]); seg_end[s["start_frame"]] = min(n, s["end_frame"])
     jerk = np.nan_to_num(hf(ol[:n]) - hf(os_[:n]), nan=0.0)
     tone = np.nan_to_num(tone_hf(yl[:n], ol[:n], al_[:n]) - np.nan_to_num(tone_hf(ys[:n], os_[:n], as_[:n]), nan=0.0), nan=0.0)
     appx = np.nan_to_num(apl[:n] - 1.5 * np.nan_to_num(aps[:n], nan=0.0), nan=0.0)
@@ -157,8 +158,9 @@ def main():
             iod = float(np.linalg.norm(q[33, :2] - q[263, :2])); geo[k] = float(np.median(np.linalg.norm(p[RIG, :2] - q[RIG, :2], axis=1)) / max(iod, 1))
     # window joints: frames within 1 of a 16-frame boundary of a LatentSync segment
     joint = np.zeros(n, bool)
+    E_ = (lambda s0: seg_end[s0]) if a.joint_seg == "on" else (lambda s0: n)   # r15 F3 (audit): each segment's OWN 16-frame phase, up to its end
     for s0 in starts:
-        for b in range(s0, n, a.window):
+        for b in range(s0, E_(s0), a.window):
             joint[max(0, b - 1):min(n, b + 1)] = True
     sc = lambda x, t: np.clip((x - a.knee * t) / ((1 - a.knee) * t), 0, 1)
     tmed = lambda x: np.array([np.median(x[max(0, k - 6):k + 7]) for k in range(len(x))])   # the transient part (a pop), not a steady offset
@@ -208,8 +210,8 @@ def main():
     if a.dilate > 0: fb = np.array([fb[max(0, k - a.dilate):k + a.dilate + 1].max() for k in range(n)])
     # whole-window fallback where a window is mostly bad
     for s0 in starts:
-        for b in range(s0, n, a.window):
-            seg = slice(b, min(n, b + a.window))
+        for b in range(s0, E_(s0), a.window):
+            seg = slice(b, min(E_(s0), b + a.window))
             if ls_mask[seg].any() and (score[seg] > 0.5).mean() > a.win_frac: fb[seg] = 1.0
     if a.ramp_sigma > 0:
         R_ = int(3 * a.ramp_sigma); k_ = np.exp(-0.5 * (np.arange(-R_, R_ + 1) / a.ramp_sigma) ** 2); k_ /= k_.sum(); fb = np.convolve(np.pad(fb, R_, mode="edge"), k_, "same")[R_:-R_]

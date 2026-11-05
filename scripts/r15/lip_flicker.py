@@ -49,9 +49,14 @@ def main():
         F.append(stats(g, llm[m] if m is not None else None)); S.append(stats(fs, slm[k] if k < len(slm) else None)); k += 1
     F, S = np.array(F), np.array(S); dur = len(F) / fps
     eF, okF, dlF, daF = blinks(F, a.thr_l, a.thr_a, a.op_thr, fps); eS, okS, dlS, daS = blinks(S, a.thr_l, a.thr_a, a.op_thr, fps)
+    # W-style (r15 W per-stage table): all frames with lips on both sides, any shape: excess mean |dL| over the source, and the count of
+    # |dL| above the SOURCE's p99 |dL| (the source itself has ~1 % by construction)
+    vF, vS = np.isfinite(np.diff(F[:, 0])), np.isfinite(np.diff(S[:, 0])); aF, aS = np.abs(np.diff(F[:, 0])), np.abs(np.diff(S[:, 0]))
+    p99 = float(np.percentile(aS[vS], 99)) if vS.any() else np.nan
     sc = np.where(eF, np.maximum(dlF / a.thr_l, daF / a.thr_a), 0); top = [i for i in np.argsort(-sc)[:12] if sc[i] > 0]
     r = {"label": a.label, "frames": int(len(F)), "blinks": int(eF.sum()), "blinks_per_10s": round(10 * eF.sum() / dur, 2), "src_blinks": int(eS.sum()),
          "excess_per_10s": round(10 * (eF.sum() - eS.sum()) / dur, 2),
+         "W_excess_dL": round(float(aF[vF].mean() - aS[vS].mean()), 3), "W_jumps_p99": int((aF[vF] > p99).sum()), "W_src_jumps_p99": int((aS[vS] > p99).sum()), "src_p99_dL": round(p99, 2),
          "dL_steady": round(float(dlF[okF].mean()), 3), "da_steady": round(float(daF[okF].mean()), 3),
          "src_dL_steady": round(float(dlS[okS].mean()), 3), "src_da_steady": round(float(daS[okS].mean()), 3),
          "top": [[round((i + 1) / fps, 2), round(float(dlF[i]), 1), round(float(daF[i]), 1)] for i in sorted(top)]}
