@@ -76,7 +76,8 @@ if [[ " $PF " == *" variable_fps "* ]]; then   # r13: a VFR phone clip -> consta
 fi
 HIRES=""; FMS=${E2E_FACE_MAXSIDE:-1920}   # r15 T (edge res4k_vertical: face_gen_failed on 2160x3840): above FMS px on the long side the face stages
 if [ "$FMS" != 0 ] && [ "${E2E_LIPSYNC:-on}" != off ] && [[ " $PF " != *" no_face "* ]]; then   # (generator + composite) run on a copy scaled to FMS
-  read -r SW SH < <(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=' ' "$SRC")   # (the audio stage reads it too:
+  IFS=, read -r SW SH _ < <(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 "$SRC")   # (r15: csv s=' ' fails to parse in ffprobe 6.1)
+  [ -n "${SW:-}" ] && [ -n "${SH:-}" ] || echo "WARN $ID face_res: could not read the source size, face work at full resolution" | tee -a $L/e2e.log   # (the audio stage reads it too:
   if [ "${SW:-0}" -gt "$FMS" ] || [ "${SH:-0}" -gt "$FMS" ]; then                                                       # audio stream-copied, identical);
     st face_res                                                                                                            # scripts/r15/hires_merge.py then adds
     HIRES=$W/hires_src.${SRC##*.}; mv "$SRC" $HIRES                                                                        # the composite's change onto the
