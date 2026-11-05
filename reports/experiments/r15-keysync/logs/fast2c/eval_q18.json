@@ -1,0 +1,1 @@
+{"arm": "fast2c", "id": "q18", "sync_speech_at0": 7.606, "raw_av_offset": -1, "shift": 1, "face_gpu_s_per_vmin": 147.6, "interp_s": 26.3, "kf_s": 11.0, "vae_dec_interp_s": 14.2, "video_s": 20.04, "flicker_low_mean": 1.315, "flicker_lips_mean": 3.414, "flicker_ring_mean": 0.892, "flicker_lips_p95": 9.13}

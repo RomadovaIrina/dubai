@@ -54,11 +54,11 @@ def main():
         with torch.autocast("cuda", dtype=torch.float16):   # prod --vae-half: decode under fp16 autocast
             ref = [D(zz).float() for zz in Z]; t_torch = timeit(lambda: D(Z[0]))
         raw = os.path.join(a.out, "raw"); os.makedirs(raw, exist_ok=True); t0 = time.perf_counter()
-        torch.onnx.export(D, (Z[0],), os.path.join(raw, "dec.onnx"), input_names=["z"], output_names=["img"], opset_version=17, do_constant_folding=True, dynamo=False)
+        torch.onnx.export(D, (Z[0],), os.path.join(raw, "dec.onnx"), input_names=["z"], output_names=["img"], opset_version=17, do_constant_folding=False, dynamo=False)   # folding baked >2 GB of constants into node attributes (unparseable proto)
         print(f"ONNX dec {time.perf_counter() - t0:.0f}s", flush=True)
     import onnx, shutil
     mo = onnx.load(os.path.join(raw, "dec.onnx"), load_external_data=True)
-    onnx.save_model(mo, os.path.join(a.out, "dec.onnx"), save_as_external_data=True, all_tensors_to_one_file=True, location="dec.onnx.data", size_threshold=1024)
+    onnx.save_model(mo, os.path.join(a.out, "dec.onnx"), save_as_external_data=True, all_tensors_to_one_file=True, location="dec.onnx.data", size_threshold=1024, convert_attribute=True)
     shutil.rmtree(raw, ignore_errors=True); model.cpu(); torch.cuda.empty_cache()
     build(os.path.join(a.out, "dec.onnx"), os.path.join(a.out, "dec.plan"), os.path.join(a.out, "timing.cache"))
     E = Engine(os.path.join(a.out, "dec.plan"))

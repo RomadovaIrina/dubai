@@ -34,6 +34,43 @@ Lower-face ("low") tone flicker:
 
 The `fast2v` arm was meant to include the TRT VAE decoder. The engine failed, so it ran with the 4-frame torch decode, the same as fast4.
 
+## Round 2 (after the eye: m18 fast4 "rather good than bad"; m03 fast2 "the right side is great")
+**"KeySync fast" = fast2c: 148 / 137 / 137 face GPU-s/vmin (m18 / m03 / old03), prod 478 / 469 / 474 (3.4× faster), peak VRAM 12.4 GB.**
+The recipe is in `RECIPE.md`.
+
+| arm | face GPU-s/vmin m18 / m03 / old03 | SyncNet speech@0 | lips flicker | m18 split /vmin: interp UNet / interp decode / kf / enc / save |
+|---|---|---|---|---|
+| prod | 478 / 469 / 474 | 7.188 / 7.813 / 7.502 | 3.60 / 2.68 / 4.35 | 313 / 90 / 42 / 18 / 10 |
+| fast4c (4-step + TRT + compiled decode) | 179 / 169 / 170 | 7.427 / 8.173 / 6.922 | 3.32 / 2.58 / 4.06 | 70 / 42 / 33 / 19 / 10 |
+| **fast2c (2-step + TRT + compiled decode)** | **148 / 137 / 137** | **7.606 / 8.142 / 7.276** | 3.41 / 2.62 / 4.18 | 36 / 42 / 33 / 19 / 12 |
+
+- **The decode lever:** `torch.compile` of the VAE decoder with timesteps fixed to 1, the authors' per-frame math (`--vae-compile --vae-batch 8`).
+  - 52 → 26 ms per frame, 75 dB vs eager. The r12 compile failure was the dynamic `timesteps` argument.
+  - The interpolation decode is 90 → 42 s/vmin.
+- **The TRT VAE decoder:**
+  - Fixed: constant folding had baked > 2 GB of tensors into node attributes, so TensorRT parsed an empty network. Export without folding, attributes moved to external data.
+  - Builds at 69 dB, but it is SLOWER than torch (66.6 vs 52.5 ms per frame; the unfolded graph carries 3.2 GB of materialised constants). Not used.
+- **Full-length finals through the production r13 cfhf chain:** `outbox/r15_k/full/` (`k_cfhf.sh`, i.e. `ks_final.sh` with the r13_s8final env;
+  the r13 artefact layout rebuilt from the source + the q2 dub).
+  - Files: `<v>_keysync_fast2.mp4`, `<v>_keysync_prodKS.mp4`, `<v>_prodKS_vs_fast2_full.mp4`.
+  - Gate SyncNet on the finals, prod → fast2: m18 7.16 → 7.52, m03 6.94 → 7.23, old03 7.44 → 7.14.
+  - m03: the mother is the dubbed face (speaker crop), the child untouched.
+  - fast2 here = the fast2v renders (what the eye saw). The packaged fast2c matches them at 43–46 dB (only the decode numerics differ).
+- **Nose-tip tremble (the m18 note) is not the student:**
+  - Landmark jitter of the nose tip vs a head anchor (`k_nose.py`, 1e-3 IOD per frame, raw layers):
+
+    | | source | prod | fast4 | fast2 |
+    |---|---|---|---|---|
+    | m18 | 3.99 | 4.47 | 4.17 | 4.49 |
+    | m03 | 3.34 | 3.67 | 3.48 | 3.57 |
+    | old03 | 1.33 | 1.55 | 1.57 | 1.56 |
+
+  - On the pasted finals (30 fps), m18 source / prod / fast4 = 3.29 / 3.27 / 3.28.
+  - Pixel shimmer inside the nose hull (`k_noseflick.py`, added vs the source, p95): prod 1.63, trt 1.56, fast4 1.34, fast2 1.64. All of them are below the source's own grain on average.
+  - So it is shared KeySync behaviour: the nose lies inside KeySync's generated box, and KeySync moves it ~2 % IOD.
+  - `ks_paste.py KS_KEEP_NOSE=0.04` puts the source nose pixels back (shimmer p95 → 0.07). Landmark-wise it reads worse (mediapipe's nose point follows the mouth). Option clip: not made yet.
+- **Checkpoint:** run r1 final step 2984, `/workspace/dub/r15k/lcm_r1_lora_fp16.pt` + `lora_meta.json`.
+
 ## Setup and measurement
 - Held out: old03 (`qo3`), m03 (speaker crop), m18 (`q18`). The dub voice = r15's q2 dub (`r9_q2_<v>_htd/dubbed_16k.wav` from r15-w);
   r13 used an older dub, so the absolute SyncNet differs from r13's table. Compare arms only within this report.
@@ -164,3 +201,10 @@ KeySync (antonibigata/keysync; weights toninio19/keysync, tagged Apache-2.0 on H
 - На m03 у быстрой версии кожа под губой немного глаже (родинка в одном кадре пропала) — проверить глазом.
 - Чтобы дойти до ~140: ускорить декодер VAE (сейчас это самая долгая часть; движок TensorRT для него не собрался, не успел отладить) и так же дистиллировать модель ключевых кадров.
 - Лицензия: KeySync сделан на основе SVD (лицензия Stability Community: регистрация, до $1 млн выручки в год) и обучен в том числе на CelebV (некоммерческий датасет). Наш LoRA — производная от весов KeySync, ограничения те же. Решение за вами.
+
+## Раунд 2, кратко для Ирины (RU)
+- «KeySync fast» (2 шага + TensorRT + ускоренный декодер) — 148 / 137 / 137 GPU-с на минуту видео (m18 / m03 / old03) вместо ~475, то есть в 3,4 раза быстрее. Цель ~140 достигнута.
+- Полные видео через продовую цепочку KeySync (fast2, прод и бок о бок) лежат в outbox/r15_k/full. На m03 дублируется мама, ребёнок не тронут.
+- Синхрон на финалах: m18 и m03 лучше прода, old03 чуть хуже (−0,3).
+- Дрожание кончика носа — не от ученика: у прода оно такое же. Есть опция «нос из исходника» (KS_KEEP_NOSE).
+- Чекпоинт: lcm_r1_lora_fp16.pt (шаг 2984) и lora_meta.json, в /workspace/dub/r15k. Рецепт запуска — RECIPE.md.

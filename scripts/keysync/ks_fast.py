@@ -34,6 +34,7 @@ def main():
     ap.add_argument("--interp-lora", default="", help="r15: the LCM-LoRA student of the interpolation UNet (ks_lcm.py), merged into the weights; 1-row LCM sampler")
     ap.add_argument("--interp-steps", type=int, default=4); ap.add_argument("--lcm-noise", default="fresh", choices=["fresh", "ddim"])
     ap.add_argument("--trt-vae", default="", help="r15: TensorRT VAE decoder engine dir (ks_trt_vae.py) for the interpolation model")
+    ap.add_argument("--vae-compile", action="store_true", help="r15: torch.compile the VAE decoder (timesteps=1, fixed batch = --vae-batch)")
     ap.add_argument("--vae-batch", type=int, default=1, help="r15: frames per VAE decode call with timesteps=1 (= the authors' per-frame decode, batched)")
     ap.add_argument("--trt", default="", help="r15: TensorRT engine dir (ks_trt.py): <dir>/{kf,interp}/{full,shallow}.plan replace the UNets")
     a = ap.parse_args(); os.makedirs(a.out, exist_ok=True)
@@ -90,7 +91,7 @@ def main():
         for m in (model, model_kf): m.disable_first_stage_autocast = False
     torch.cuda.synchronize(); load_s = time.perf_counter() - t0
     print(json.dumps({"load_s": round(load_s, 1), "cfg": a.cfg, "decoding_t": a.decoding_t, "compile": a.compile, "vae_half": a.vae_half, "cudnn_bench": a.cudnn_bench, "fp8": a.fp8, "vae_cl": a.vae_cl, "KS_DC": os.environ.get("KS_DC", ""),
-                      "interp_lora": a.interp_lora, "interp_steps": a.interp_steps if a.interp_lora else None, "lcm_noise": a.lcm_noise if a.interp_lora else None, "trt": a.trt, "KS_ICHUNK": os.environ.get("KS_ICHUNK", ""), "vae_batch": a.vae_batch, "trt_vae": a.trt_vae}), flush=True)
+                      "interp_lora": a.interp_lora, "interp_steps": a.interp_steps if a.interp_lora else None, "lcm_noise": a.lcm_noise if a.interp_lora else None, "trt": a.trt, "KS_ICHUNK": os.environ.get("KS_ICHUNK", ""), "vae_batch": a.vae_batch, "vae_compile": a.vae_compile, "trt_vae": a.trt_vae}), flush=True)
     if os.environ.get("KS_LMK_CACHE"):   # r13 speed lever: landmarks off the critical path (prod: computed during TTS / separation); keyed by the frames' content
         import hashlib, numpy as _np; _xl = d.extract_video_landmarks; _cd = os.environ["KS_LMK_CACHE"]; os.makedirs(_cd, exist_ok=True)
         def _lmk(video_frames, landmarks_model):
@@ -104,12 +105,19 @@ def main():
     if a.vae_batch > 1:   # r15: the authors decode one frame per call (decoding_t 1 -> timesteps 1: no temporal mixing); the same math batched N frames per call
         from einops import rearrange as _re
         def _mkdec(m):
+            N = a.vae_batch; f1 = lambda x: m.first_stage_model.decode(x, timesteps=1)
+            # --vae-compile (r15): torch.compile of the decoder with timesteps fixed to 1 (the r12 failure was the dynamic timesteps arg);
+            # a fixed batch N (the tail padded with its last frame) = one graph, no recompiles. ~1.9x on the decode, 75 dB vs eager.
+            fd = torch.compile(f1, mode=a.compile_mode, dynamic=False) if a.vae_compile else f1
             def dec(z):
                 v = z.dim() == 5
                 if v: T_ = z.shape[2]; z = _re(z, "b c t h w -> (b t) c h w")
                 z = z / m.scale_factor; outs = []
                 with torch.autocast("cuda", enabled=not m.disable_first_stage_autocast):
-                    for i in range(0, z.shape[0], a.vae_batch): outs.append(m.first_stage_model.decode(z[i:i + a.vae_batch], timesteps=1))
+                    for i in range(0, z.shape[0], N):
+                        c = z[i:i + N]; B = c.shape[0]
+                        if a.vae_compile and B < N: c = torch.cat([c, c[-1:].expand(N - B, *c.shape[1:])])
+                        outs.append(fd(c)[:B])
                 out = torch.cat(outs, 0)
                 return _re(out, "(b t) c h w -> b c t h w", t=T_) if v else out
             return dec

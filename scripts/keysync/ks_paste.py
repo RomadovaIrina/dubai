@@ -35,6 +35,11 @@ if HF > 0:
         mk = np.zeros((s, s), np.uint8); cv2.fillPoly(mk, [np.round(p[LOWF] - [x, y]).astype(np.int32)], 1); fw = float(np.ptp(p[[234, 454], 0]))
         mk = cv2.dilate(mk, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * int(DIL * fw) + 1,) * 2))
         return cv2.GaussianBlur(mk.astype(np.float32), (0, 0), max(1.0, 0.06 * fw))[..., None]   # 1 = KeySync's own detail
+KN = float(os.environ.get("KS_KEEP_NOSE", "0"))
+if KN > 0:   # the nose polygon (mediapipe): bridge 168 / 6, the alae 129 / 358 / 64 / 294, the nostril bottoms 98 / 327, the columella 2 kept OUT (lip motion lives below it)
+    import cv2
+    NOSE = [168, 6, 197, 195, 5, 4, 1, 19, 129, 358, 64, 294, 98, 327, 48, 278, 115, 344]
+    NL = np.load(os.environ["KS_HF_LM"])["lm"][..., :2].astype(np.float32)
 fk = None; i = 0
 while True:
     a = A.stdout.read(W * H * 3)
@@ -49,7 +54,15 @@ while True:
             if lm_ is not None:
                 hk = kf - cv2.GaussianBlur(kf, (0, 0), HF); hs = roi - cv2.GaussianBlur(roi, (0, 0), HF)
                 kf = kf + (1 - lm_) * (hs - hk) + SHP * lm_ * hk
-        f[y:y + s, x:x + s] = np.clip(roi * (1 - m) + kf * m + 0.5, 0, 255).astype(np.uint8)
+        mm = m
+        if KN > 0:   # r15 KS_KEEP_NOSE=<feather sigma, IOD units>: the nose (bridge -> alae -> just above the subnasale) = the SOURCE pixels
+            p = NL[min(i, len(NL) - 1)]
+            if np.isfinite(p).all() and p.max() > 0:
+                iod = float(np.linalg.norm(p[33] - p[263])); nk = np.zeros((s, s), np.uint8)
+                cv2.fillPoly(nk, [np.round(cv2.convexHull((p[NOSE] - [x, y]).astype(np.float32))[:, 0]).astype(np.int32)], 1)
+                nk = cv2.GaussianBlur(nk.astype(np.float32), (0, 0), max(1.0, KN * iod))[..., None]
+                mm = m * (1 - nk)
+        f[y:y + s, x:x + s] = np.clip(roi * (1 - mm) + kf * mm + 0.5, 0, 255).astype(np.uint8)
     w.stdin.write(f.tobytes()); i += 1
 w.stdin.close(); w.wait(); A.kill(); K.kill()
 print(f"pasted {i} frames (source {n}) -> {out}")

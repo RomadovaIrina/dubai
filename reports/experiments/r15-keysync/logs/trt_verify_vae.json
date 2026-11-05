@@ -1,0 +1,1 @@
+{"n": 4, "psnr_vs_torch_fp16": [[69.32, 0.00119], [69.13, 0.00123], [69.12, 0.00123]], "trt_ms_per_call": 266.4, "torch_ms_per_call": 209.9, "trt_ms_per_frame": 66.6, "torch_ms_per_frame": 52.5}
