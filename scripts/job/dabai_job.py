@@ -269,6 +269,18 @@ def job_artifacts(jid: str, e2e: pathlib.Path) -> list[pathlib.Path]:
     return [x for x in xs if x.exists()]
 
 
+def keep_logs(arts: list[pathlib.Path], dst: pathlib.Path, cap_mb: float = 50.0) -> None:
+    """copy the *.log / *.json (<= 2 MB each, <= cap_mb in all) of the artifact dirs into dst before they are deleted"""
+    left = cap_mb * 1e6
+    for a in arts:
+        if not a.is_dir() or a.name == "work": continue
+        for f in sorted(a.rglob("*")):
+            if f.suffix not in (".log", ".json") or not f.is_file() or f.stat().st_size > 2e6 or f.stat().st_size > left: continue
+            try:
+                t = dst / a.name / f.relative_to(a); t.parent.mkdir(parents=True, exist_ok=True); shutil.copy2(f, t); left -= f.stat().st_size
+            except OSError: pass
+
+
 # ------------------------------------------------------------------ the job
 def run_job(job: dict, on_event=None, cancel: threading.Event | None = None) -> dict:
     t_start = time.time(); p, errs = validate(job)
@@ -356,6 +368,7 @@ def run_job(job: dict, on_event=None, cancel: threading.Event | None = None) -> 
         mt = metrics(p, man, vmin, time.time() - t_start, rss_peak, e2e, out); _write(out / "metrics.json", mt); st["metrics_json"] = str(out / "metrics.json")
         if not p["output"]["keep_intermediate"]:
             arts = job_artifacts(p["job_id"], e2e); st["cleanup_freed_mb"] = round(_du(arts) / 1e6, 1)
+            keep_logs(arts, e2e / "logs" / "artifacts")   # the stage logs (small) survive the cleanup: a failed job stays debuggable
             for a in arts: shutil.rmtree(a, ignore_errors=True) if a.is_dir() else a.unlink(missing_ok=True)
         if killed: return finish(code=killed, detail=f"after {time.time() - t0:.0f} s in step {st['step']}" if killed == "E_TIMEOUT" else None)
         status = man.get("status") or "ERROR"
