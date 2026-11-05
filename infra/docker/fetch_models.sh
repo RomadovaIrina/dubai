@@ -44,5 +44,21 @@ if [ -s $S ]; then echo "have $S"
 elif [ -n "${STUDENT_LORA_FILE:-}" ]; then cp "$STUDENT_LORA_FILE" $S
 elif [ -n "${STUDENT_LORA_URL:-}" ]; then dl "$STUDENT_LORA_URL" $S
 else echo "WARNING: no student LoRA (STUDENT_LORA_FILE / STUDENT_LORA_URL): mode fast is unavailable until $S exists"; fi
+if [ "${DUB_PROFILE:-}" = current ]; then   # the NC set, ONLY for the explicit current profile, onto its OWN volume (never the models volume)
+  N=${DABAI_NC_DIR:-/opt/dabai-nc}; mkdir -p $N; [ -w $N ] || { echo "mount a writable NC volume at $N" >&2; exit 64; }
+  log "NC set for DUB_PROFILE=current (CodeFormer S-Lab NC + htdemucs weights: a deliberate licence deviation, user-accepted 29.10) -> $N"
+  CF=b33cc7d639d6545bfcccc7e0bc6ae51f24e79c2b
+  if [ ! -f $N/CodeFormer/basicsr/version.py ]; then
+    T=$(mktemp -d); curl -fsSL --retry 3 -o $T/cf.tar.gz https://github.com/sczhou/CodeFormer/archive/$CF.tar.gz && tar -xzf $T/cf.tar.gz -C $T
+    rm -rf $N/CodeFormer; mv $T/CodeFormer-$CF $N/CodeFormer; rm -rf $T
+    printf "# GENERATED VERSION FILE (fetch_models.sh)\n__version__ = '1.3.2'\n__gitsha__ = '%s'\nversion_info = (1, 3, 2)\n" $CF > $N/CodeFormer/basicsr/version.py
+  fi
+  dl https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth $N/CodeFormer/weights/CodeFormer/codeformer.pth   # ParseNet: not used (--codeformer-parse off)
+  echo "1009e537e0c2a07d4cabce6355f53cb66767cd4b4297ec7a4a64ca4b8a5684b7  $N/CodeFormer/weights/CodeFormer/codeformer.pth" | sha256sum -c -
+  [ -d $N/sep_pylib/demucs ] || uv pip install --python $PY --target $N/sep_pylib --no-deps demucs==4.0.1 dora-search==0.1.13 julius==0.2.8 lameenc==1.9.0 \
+      openunmix==1.3.0 retrying==1.4.2 submitit==1.5.4 treetable==0.2.6
+  mkdir -p $N/quarantine_nc/torch; TORCH_HOME=$N/quarantine_nc/torch PYTHONPATH=$N/sep_pylib DUB_ALLOW_NC_BED=1 $PY -c "from demucs.pretrained import get_model; get_model('htdemucs'); print('htdemucs ok')"
+  echo "8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4  $N/quarantine_nc/torch/hub/checkpoints/955717e8-8726e21a.th" | sha256sum -c -
+fi
 log "check"; bash $R/infra/docker/check.sh --weights-only
 du -sh $M; echo FETCH_MODELS_DONE

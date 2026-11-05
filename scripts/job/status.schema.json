@@ -40,7 +40,7 @@
     "source_lang_detected": {"type": ["string", "null"]},
     "spec": {"type": ["object", "null"], "description": "Pipeline facts: voice policy, speakers, faces, head pose, lip-sync frame verdict."},
     "output_format": {"type": ["object", "null"], "description": "width, height, fps, duration_s, matches_source."},
-    "versions": {"type": "object", "properties": {"interface": {"type": "string"}, "pipeline": {"type": "string"}, "image": {"type": "string"}, "profile": {"enum": ["nc", "clean"]}}},
+    "versions": {"type": "object", "properties": {"interface": {"type": "string"}, "pipeline": {"type": "string"}, "image": {"type": "string"}, "profile": {"enum": ["clean", "current"]}}},
     "params": {"type": "object", "description": "The normalised job (input URL redacted)."},
     "started_at": {"type": ["string", "null"]}, "finished_at": {"type": ["string", "null"]},
     "errors": {"type": "array", "items": {"type": "string"}, "description": "Technical error lines for the logs (not for the user)."}

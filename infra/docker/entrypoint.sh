@@ -2,27 +2,34 @@
 # DabAI worker entrypoint (r15 T). Modes (the container's command):
 #   api                  (default) the HTTP job API on :${PORT:-8000} (scripts/job/job_api.py), one job at a time on this GPU
 #   job <job.json>       one job through the CLI (scripts/job/dabai_job.py), exit 0 = SUCCESS / PARTIAL_SUCCESS
-#   fetch-models         fill the models volume once (infra/docker/fetch_models.sh; needs HF_TOKEN for the gated pyannote 3.1, network)
+#   fetch-models         fill the models volume once (+ the NC volume when DUB_PROFILE=current); needs network + HF_TOKEN
 #   check [--deep]       weights / GPU / venv self-test (infra/docker/check.sh); --deep also hashes the weight files
 #   smoke <video.mp4>    one real job on a short clip (~5-10 min on a 5090) -> /data/jobs/smoke/status.json
 #   anything else        exec'd as is (e.g. bash)
+# DUB_PROFILE (required; baked at build, -e overrides): clean = DUB_ALLOW_NC=0 DUB_ALLOW_NC_BED=0 | current = 1 / 1 + the NC volume.
 set -euo pipefail
-R=${DUB_ROOT:-/workspace/dub/dubai}; M=$R/models; mode=${1:-api}; [ $# -gt 0 ] && shift
+R=${DUB_ROOT:-/workspace/dub/dubai}; M=$R/models; N=${DABAI_NC_DIR:-/opt/dabai-nc}; mode=${1:-api}; [ $# -gt 0 ] && shift
 echo "$mode" > /tmp/dabai_mode
 
-link_runtime() {   # caches + checkpoints that must come from the models volume (no download at start, TZ 5.1)
+case "${DUB_PROFILE:-}" in   # no silent default: the profile is a product / licence decision (INTERFACE.md section 8)
+  clean)   export DUB_ALLOW_NC=0 DUB_ALLOW_NC_BED=0 ;;
+  current) export DUB_ALLOW_NC=1 DUB_ALLOW_NC_BED=1 ;;
+  *)       echo "DUB_PROFILE must be 'clean' or 'current' (got '${DUB_PROFILE:-}'): an explicit product / licence decision, see INTERFACE.md section 8" >&2; exit 64 ;;
+esac
+
+link_runtime() {   # caches + checkpoints from the models volume (no download at start, TZ 5.1); the NC parts from their own volume (current only)
   mkdir -p /root/.cache/torch
   [ -d $M/cache/pyannote ] && ln -sfn $M/cache/pyannote /root/.cache/torch/pyannote
   [ -d $M/cache/pkuseg ] && ln -sfn $M/cache/pkuseg /root/.pkuseg
   local LS=$R/third_party/latentsync/checkpoints; mkdir -p $LS/auxiliary
   ln -sfn $M/latentsync/latentsync_unet.pt $LS/latentsync_unet.pt; ln -sfn $M/latentsync/whisper $LS/whisper
   for f in syncnet_v2.model sfd_face.pth; do ln -sfn $M/latentsync/auxiliary/$f $LS/auxiliary/$f; done
-  if [ "${DUB_ALLOW_NC:-0}" = 1 ] || [ "${DUB_ALLOW_NC_BED:-0}" = 1 ]; then   # the NC profile: only from an operator-mounted volume
-    local N=${DABAI_NC_DIR:-/opt/dabai-nc}
-    [ -d $N ] || { echo "DUB_ALLOW_NC / DUB_ALLOW_NC_BED = 1 but $N (CodeFormer, quarantine_nc, sep_pylib) is not mounted" >&2; exit 64; }
-    echo "WARNING: non-commercial components enabled (DUB_ALLOW_NC=${DUB_ALLOW_NC:-0} DUB_ALLOW_NC_BED=${DUB_ALLOW_NC_BED:-0}) from $N: a deliberate licence deviation" >&2
-    [ "${DUB_ALLOW_NC:-0}" = 1 ] && ln -sfn $N/CodeFormer $R/third_party/CodeFormer
-    [ "${DUB_ALLOW_NC_BED:-0}" = 1 ] && { ln -sfn $N/quarantine_nc /workspace/dub/quarantine_nc; ln -sfn $N/sep_pylib /workspace/dub/sep_pylib; }
+  if [ "$DUB_PROFILE" = current ]; then
+    for p in CodeFormer/weights/CodeFormer/codeformer.pth quarantine_nc/torch/hub/checkpoints/955717e8-8726e21a.th sep_pylib/demucs; do
+      [ -e $N/$p ] || { echo "DUB_PROFILE=current needs the NC volume at $N ($p missing): run fetch-models with DUB_PROFILE=current and -v <nc volume>:$N" >&2; exit 64; }
+    done
+    echo "WARNING: DUB_PROFILE=current: non-commercial components (CodeFormer S-Lab NC, htdemucs weights) are ENABLED from $N: a deliberate licence deviation" >&2
+    ln -sfn $N/CodeFormer $R/third_party/CodeFormer; ln -sfn $N/quarantine_nc /workspace/dub/quarantine_nc; ln -sfn $N/sep_pylib /workspace/dub/sep_pylib
   fi
   return 0
 }

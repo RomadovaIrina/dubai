@@ -108,8 +108,9 @@ def versions() -> dict:
         try: sha = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"], capture_output=True, text=True, timeout=5).stdout.strip() or None
         except Exception: sha = None
     if not sha and (ROOT / "VERSION").exists(): sha = (ROOT / "VERSION").read_text().strip()
-    nc = os.environ.get("DUB_ALLOW_NC", "1") == "1" or os.environ.get("DUB_ALLOW_NC_BED", "1") == "1"
-    return {"interface": INTERFACE, "pipeline": sha or "unknown", "image": os.environ.get("DABAI_IMAGE", "none"), "profile": "nc" if nc else "clean"}
+    nc = os.environ.get("DUB_ALLOW_NC", "1") == "1" or os.environ.get("DUB_ALLOW_NC_BED", "1") == "1"   # e2e.sh defaults: 1 / 1 (= current)
+    prof = os.environ.get("DUB_PROFILE") or ("current" if nc else "clean")
+    return {"interface": INTERFACE, "pipeline": sha or "unknown", "image": os.environ.get("DABAI_IMAGE", "none"), "profile": prof}
 
 
 # ------------------------------------------------------------------ validation

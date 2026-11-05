@@ -184,6 +184,9 @@ def _weights() -> list[str]:
     m = dj.ROOT / "models"; need = ["whisper-large-v3", "qwen2.5-14b-instruct-gguf", "chatterbox", "latentsync", "sd-vae-ft-mse", "wav2vec2-base-960h", "mediapipe",
                                     "realesrgan", "spleeter"]
     miss = [n for n in need if not (m / n).exists()]
+    if os.environ.get("DUB_PROFILE") == "current":   # the NC parts of the current profile (linked by the entrypoint from the NC volume)
+        miss += [p for p in (str(dj.ROOT / "third_party/CodeFormer/weights/CodeFormer/codeformer.pth"), "/workspace/dub/sep_pylib/demucs",
+                             "/workspace/dub/quarantine_nc/torch/hub/checkpoints/955717e8-8726e21a.th") if not pathlib.Path(p).exists()]
     if not pathlib.Path(dj.STUDENT_LORA).is_file(): miss.append("student LoRA (mode fast)")
     return miss
 

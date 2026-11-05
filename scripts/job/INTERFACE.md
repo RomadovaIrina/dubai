@@ -9,7 +9,7 @@ Audience: the backend developer. Russian summary: [INTERFACE_RU.md](INTERFACE_RU
   - the CLI `scripts/job/dabai_job.py`;
   - the Python call `dabai_job.run_job(job)`.
 - **Machine-readable contract:** [job.schema.json](job.schema.json) (input) and [status.schema.json](status.schema.json) (output), JSON Schema 2020-12. `GET /schema/job` and `GET /schema/status` serve them too.
-- **Image:** `infra/docker/` (section 8).
+- **Image:** `infra/docker/` (section 8). Its **profile (`clean` / `current`) is an open product / licence decision**: a required build arg, no default.
 - **What is and is not validated:** section 10.
 
 ## 1. Calling it
@@ -151,7 +151,7 @@ Each comes with a ready user message in English and Russian. `flags[]` also list
 | GET | `/jobs/{id}/files/{video\|subs\|metrics\|status\|log}` | The file; 404 until it exists. |
 | DELETE | `/jobs/{id}` | Cancel. A queued job is dropped; a running one has its pipeline killed. Result: ERROR `E_CANCELLED`. |
 | GET | `/health` | 200 when the node can take jobs (GPU visible, weights present, ≥ `DABAI_MIN_FREE_GB` free); 503 otherwise. No auth. |
-| GET | `/version` | `{interface, pipeline (git sha), image, profile: clean / nc}`. |
+| GET | `/version` | `{interface, pipeline (git sha), image, profile: clean / current}`. |
 
 **Service environment:**
 
@@ -216,26 +216,34 @@ Each comes with a ready user message in English and Russian. `flags[]` also list
 - **(b) Baked:** copy a filled models directory into a derived image (`FROM <image>` + `COPY models /workspace/dub/dubai/models`). The image becomes ~45 GB. Not recommended: every model change rebuilds the image.
 - **The student LoRA (mode `fast`)** is our own file. It is not on a public hub, so the operator supplies it (`STUDENT_LORA_FILE` or `STUDENT_LORA_URL`). On the laptop: `C:\repos\chkpts\latentsync_student_r14_r2_s4\step_01500_ema.pt`.
 
-**Profiles:**
-- **`clean` (default):**
-  - `DUB_ALLOW_NC=0`: no CodeFormer detail layer in the composite;
-  - `DUB_ALLOW_NC_BED=0`: the Spleeter background bed only.
-- **`nc`** (what the research servers run; CodeFormer + htdemucs were user-accepted on 29.10 as a licence deviation):
-  - mount `/opt/dabai-nc` (`CodeFormer/`, `quarantine_nc/`, `sep_pylib/`);
-  - set both switches to 1;
-  - the entrypoint warns loudly.
-- The two profiles differ in the look of the mouth (CodeFormer detail) and in the background bed. The eye compares them: REPORT.md.
+**Profile: `DUB_PROFILE=clean|current`. OPEN DECISION (product / legal), REQUIRED, no default.**
+- **How it is set:**
+  - `build.sh` and the Dockerfile refuse to build without it.
+  - The baked value is the run-time default; `-e DUB_PROFILE=…` overrides it.
+  - The entrypoint refuses to start with anything else.
+  - Every `status.json` / `metrics.json` reports it (`versions.profile`).
+- **The profiles:**
+
+| Profile | Face | Background bed | Non-commercial parts | Where they come from |
+|---|---|---|---|---|
+| `current` | The servers' production path: LatentSync + **CodeFormer detail** (S-Lab NC) + Real-ESRGAN | **htdemucs** (no weights licence, NC data) + Spleeter second file | Yes: the deviation the user accepted on 29.10 | A SEPARATE NC volume at `/opt/dabai-nc` (`fetch-models` with `DUB_PROFILE=current` fills it; the entrypoint links it; the warning is printed at every start). Never baked into the image or the models volume. |
+| `clean` | LatentSync + Real-ESRGAN layer SR, no CodeFormer | Spleeter only | None (GREY items remain: pyannote / Spleeter / Real-ESRGAN data) | – |
+
+- The licence inventory of every component: `reports/experiments/r15-tz/LICENCES_PROD_PATH.md`.
+- The look of both profiles: the A/B clips in `outbox/r15_t/` (old03 30 s, m03 20 s) and REPORT.md.
+- **On the research servers** (no `DUB_PROFILE`), `e2e.sh` keeps its old defaults (`DUB_ALLOW_NC=1`, `DUB_ALLOW_NC_BED=1` = `current`). Nothing flipped silently.
 
 **Run** (one container per GPU):
 ```bash
 docker run -d --gpus '"device=0"' --shm-size 16g -p 8000:8000 -e DABAI_API_TOKEN=<yours> \
-    -v dabai-models:/workspace/dub/dubai/models -v /srv/dabai/jobs:/data/jobs <image>
+    -v dabai-models:/workspace/dub/dubai/models [-v dabai-nc:/opt/dabai-nc   # profile current only] \
+    -v /srv/dabai/jobs:/data/jobs <image>
 ```
 
 ## 9. Versioning
 
 - `dabai-job/2` is this contract. Fields may be **added** within `/2`: clients must ignore unknown fields. Removing or renaming a field, or changing a meaning, bumps it to `/3`. The old version is then still accepted for one release.
-- `versions.pipeline` = the git commit of the code (`VERSION` in the image). `versions.image` = the image tag. `versions.profile` = `clean` / `nc`. All of them are in every `status.json` and `metrics.json`, so every result is traceable.
+- `versions.pipeline` = the git commit of the code (`VERSION` in the image). `versions.image` = the image tag. `versions.profile` = `clean` / `current`. All of them are in every `status.json` and `metrics.json`, so every result is traceable.
 - The weights are pinned by `models.lock.json` (sha256) and the software by the locks: same image + same volume = same result.
 
 ## 10. Validated / not validated (r15, 05.11.2026)
@@ -250,5 +258,5 @@ docker run -d --gpus '"device=0"' --shm-size 16g -p 8000:8000 -e DABAI_API_TOKEN
 | **`docker build` itself** | – | **NOT run** (no Docker on vast; a ~20 GB build was not to be made on the laptop without asking). The Dockerfile was reviewed by hand. |
 | The llama.cpp CUDA build with nvcc 12.8 | – | **NOT re-run** (r14-d has nvcc 13.0). The clean room reused the sm_120 build of the same recipe (`scripts/setup_llama_cuda.sh`, r13). |
 | `fetch-models` from zero | – | **NOT run** (a 24 GB download). Its steps are the r13-validated `download_models.sh` + `r9_models.sh` pieces. |
-| The `nc` profile inside the image | – | Not run in the image; it is the current production path on the servers. |
+| The `current` profile inside the image (the NC volume, its fetch step) | – | Not run in the image; the profile itself is the servers' production path (the A/B "current" arm). |
 | Subtitles for CJK / Arabic / Hindi scripts (Noto fallback fonts) | – | Not checked by eye. |

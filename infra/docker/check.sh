@@ -19,9 +19,13 @@ ${V}/mediapipe/bin/python -c "import mediapipe" && ok "mediapipe venv" || bad "m
 ${V}/main/bin/python -c "import pynvml; pynvml.nvmlInit()" && ok "NVML (GPU accounting)" || bad "NVML"
 ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libx264 && ffmpeg -hide_banner -filters 2>/dev/null | grep -q " subtitles " && ok "ffmpeg libx264 + libass" || bad "ffmpeg libx264 / libass"
 fc-list | grep -qi "DejaVu Sans" && ok "subtitle fonts" || bad "DejaVu Sans font"
+echo "     profile: DUB_PROFILE=${DUB_PROFILE:-unset} (DUB_ALLOW_NC=${DUB_ALLOW_NC:-?} DUB_ALLOW_NC_BED=${DUB_ALLOW_NC_BED:-?})"
 if [ "${DUB_ALLOW_NC:-0}" != 1 ]; then
   [ -e $R/third_party/CodeFormer ] && bad "CodeFormer present while DUB_ALLOW_NC=0" || ok "clean profile: no CodeFormer"
   ${V}/dabai/bin/python -c "import sys; sys.path.insert(0, '$R/scripts/pilot'); import clean_face_stack as c; c.install_tripwires(); c.assert_clean_tree()" > /dev/null && ok "no banned weight files (clean_face_stack)" || bad "banned weight files present"
+else
+  [ -s $R/third_party/CodeFormer/weights/CodeFormer/codeformer.pth ] && ok "current profile: CodeFormer (NC) present" || bad "current profile: no CodeFormer weights"
+  [ -s /workspace/dub/quarantine_nc/torch/hub/checkpoints/955717e8-8726e21a.th ] && [ -d /workspace/dub/sep_pylib/demucs ] && ok "current profile: htdemucs (NC) present" || bad "current profile: no htdemucs"
 fi
 [ -s "${DABAI_STUDENT_LORA:-/nonexistent}" ] && ok "student LoRA (mode fast)" || echo "WARN no student LoRA: mode fast unavailable"
 df -BG --output=avail /data 2>/dev/null | tail -1 | awk '{g=$1+0; if (g < 30) print "WARN /data has only " g " GB free (a 5-min 1080p job needs ~15 GB while it runs)"; else print "OK   /data " g " GB free"}'
