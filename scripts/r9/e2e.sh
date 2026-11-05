@@ -92,7 +92,7 @@ if [ -n "${R10_HEAVY_LOCK:-}" ]; then st wait_heavy; exec 8>"$R10_HEAVY_LOCK"; f
 LONG_S=${E2E_LONG_AUDIO_S:-120}   # r15 T (long5 / long10: the in-process retake ran out of VRAM next to the resident pipeline models, 27-31 GB): above this
 DUR_S=$(python3 -c "import json; print(json.load(open('$W/precheck.json'))['probe']['duration_s'])" 2>/dev/null || echo 0)   # many seconds the TTS stage (retake ->
 if [ "$LONG_S" != 0 ] && python3 -c "import sys; sys.exit(0 if float(sys.argv[1]) > float(sys.argv[2]) else 1)" "$DUR_S" "$LONG_S"; then   # clause -> burst_align)
-  export R9_ONEPROC=off R9_CHAIN_INPROC=off R8_STAGE_WAIT_VRAM=${R8_STAGE_WAIT_VRAM:-4096}; FL+=("audio_stage_own_process")   # runs in its own process after the pipeline exits (r8_tts_stage.py: the pre-r9-speed-L path,
+  export R9_ONEPROC=off R9_CHAIN_INPROC=off R8_STAGE_WAIT_VRAM=${R8_STAGE_WAIT_VRAM:-4096} DUB_RETAKE_BATCH_UNITS=${DUB_RETAKE_BATCH_UNITS:-4}; FL+=("audio_stage_own_process")   # (+ retake slices of 4 units: 16 OOMed with the face-aware takes)   # runs in its own process after the pipeline exits (r8_tts_stage.py: the pre-r9-speed-L path,
 fi                                                                               # the same stage code, full GPU); shorter clips unchanged (in-process, user-accepted 30.10)
 st audio   # one id, from the raw input; its own tag so nothing of another run is reused (the per-id caches $A/sep/<id> are cleared)
 rm -rf $A/sep/$ID $A/$AT $A/${AT}src $A/${AT}pre
