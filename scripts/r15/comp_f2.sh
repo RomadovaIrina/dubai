@@ -10,8 +10,12 @@ ST=${GT:-r9g_$id}; B=/workspace/dub/artifacts/r4m; P=$B/$ST/work_${id}_$ST/${id}
 Q2="--sharpen-luma on --sharpen-auto 1.05 --sharpen-lips-max 0.2"; F3=${F3:-"--reg-smooth 4 --mouth-region 0.45"}
 FBA="$(cat reports/experiments/r8-face/fb7.args) --open-gate 0.04 --dark-transient on --thr-wash-lips 0.2"; RL=rep2s; FL=fb7s$lab
 [ -n "${LC:-}" ] && { FBA="$FBA --thr-lipcon $LC"; RL=rep2slc; FL=fb7s${lab}lc; }   # r15 F2: + the lip-contrast flag, own FB / repair labels
+# LCA=<thr>: the ADAPTIVE lip-contrast flag (below thr of the source AND < 0.6 x the video's own 2 s median, <= 3 % of the frames), scored on
+# the pre-SR layer AND again on the repaired post-SR layer (second repair pass, r7_m7_comp REP2_FB_ARGS); labels fb7s<lab>la / rep2sla
+LCX=""; [ -n "${LCA:-}" ] && { LCX="--thr-lipcon $LCA --lipcon-mode adaptive --lipcon-rel 0.6 --lipcon-win 25 --lipcon-max-frac ${LCA_CAP:-0.03}"; FBA="$FBA $LCX"; RL=rep2sla; FL=fb7s${lab}la; }
+export REP2_FB_ARGS="${LCX:+$(cat reports/experiments/r8-face/fb7.args) $LCX}"
 mkdir -p /workspace/dub/r15f2/logs
 FC_CMS=1 LS_CMS_READ=1 SKIP_SCORE=1 TAG=r9f_$id$sfx SRC_TAG=$ST CFD=self CFD_LABEL=$lab SR=srt1 SR_EXTRA="--batch 8 --mask down2" \
   FB=$FL FB_ARGS="$FBA" REP=1 REP_ARGS="--spikes off" REP_LABEL=$RL FC_EXTRA="--pre-threads=8 $Q2 $F3" \
   EXTRA="--tex-tau 1000 --tex-sigma 2.5 --mouth-region 0.55 --cm-mouth-excl 0.5" bash scripts/r7/r7_m7_comp.sh $id > /workspace/dub/r15f2/logs/comp_$id$sfx.log 2>&1
-ls -la $B/r9f_$id$sfx/${id}_r9f_$id$sfx.mp4 2>&1 | tail -1 | cut -c1-200; grep "== layer_repair\|== fallback" /workspace/dub/r15f2/logs/comp_$id$sfx.log | cut -c1-300
+ls -la $B/r9f_$id$sfx/${id}_r9f_$id$sfx.mp4 2>&1 | tail -1 | cut -c1-200; grep "^== .*layer_repair\|^== .*fallback {" /workspace/dub/r15f2/logs/comp_$id$sfx.log | cut -c1-300

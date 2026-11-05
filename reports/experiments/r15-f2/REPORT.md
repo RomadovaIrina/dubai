@@ -81,3 +81,50 @@ Measure (scripts/r15/lipcon.py, T's lip_vanish metric): min(a* contrast ratio, l
 - scripts/r15/gate_f.sh: GT= override.
 
 Note: during the session the m03 b/c repair caches (`_ls_cfd_{off,sdt1}_srt1_rep2s.mp4`) were truncated by a killed mis-launch and deleted. The b/c finals made before that are intact. A rerun of comp_f2.sh rebuilds them.
+
+## Round 2: adaptive lipcon + post-SR pass (eye: "c + lipcon OK"; a > b > c without lipcon)
+
+Code:
+- `r8_fallback --lipcon-mode adaptive`: flag where the ratio is < 0.45 of the source AND < 0.6 x the video's own ±25-frame (2 s) median. Plus `--lipcon-max-frac 0.03`, a per-video cap that keeps the deepest dips.
+- `--lipcon-only`, and `r7_m7_comp REP2_FB_ARGS`: lipcon is scored again on the REPAIRED post-SR layer, and a second repair pass runs on it.
+- `comp_f2.sh LCA=0.45` uses all of this. Everything is off by default.
+
+Adaptive-rule flag counts on the pre-SR layer, before the cap (same-frame ratio): old03 168–227, m18 8–9, m03 13–27.
+- old03's dips are transient against its own 2 s median too, so the adaptive rule does NOT separate old03 from m03.
+- Comparing against the source's typical contrast at the layer's opening did not separate them either (old03 169–222).
+- The cap is what bounds old03: 63 frames = 3 %, in both passes.
+
+Arms (m03 fubla / fucla, old03 bla / cla):
+
+| | pass-1 lipcon flags | pass-2 flags | repaired frames | left to the source |
+|---|---|---|---|---|
+| m03 b + la | 27 | 2 | 40 + 2 | 0 |
+| m03 c + la | 28 | 7 (incl. 14.24) | 36 + 7 | 0 |
+| old03 b + la | 63 (cap) | 63 (cap) | 69 + 39 | 48 + 40 |
+| old03 c + la | 63 (cap) | 63 (cap) | 81 + 49 | 25 + 26 |
+
+Final-video dip frames (lip contrast < 0.45 of the source):
+
+| | a (prod) | b | c | b + fixed lc | c + fixed lc | b + adaptive | c + adaptive |
+|---|---|---|---|---|---|---|---|
+| m03 | 11 | 24 | 27 | 10 | 6 | 11 | 11 |
+| old03 | 24 | 64 | – | – | – | 27 | 33 |
+
+Notes:
+- **14.24 s on m03:** caught by pass 2 in c and gone from the c + adaptive final. In b the repaired layer has no dip there; it appears in the composite (colour match / sharpening), so b's final keeps a mild 0.41 frame.
+- **8.6–8.7 s on m03:** a 3-frame pale run that the neighbour interpolation does not fully restore (0.18 in both adaptive finals).
+- **The final-video measure is unreliable where the source fallback shows** (old03 5.7–5.9 s reads −0.07): there it measures on the layer's landmarks.
+- **old03 still: b / c show a closed mouth at about 5.0 s where a is slightly open.** The redraw or fallback may cost sync there: check by eye.
+
+Clips:
+- outbox/r15_f2/m03_lipcon_adaptive_05x.mp4 (a | b + la | c + la; 2–5.5, 8–9, 14–16 s)
+- outbox/r15_f2/old03_lipcon_adaptive_05x.mp4 (4–7, 17–18.5, 29.5–31.5 s)
+
+Gates: scripts/r15/gate_la.sh, queued behind gate_lc, under the GPU rules; it appends below and touches DONE_LA.
+
+RU:
+- Адаптивный порог (провал ниже 0.6 от своей двухсекундной медианы) old03 НЕ успокаивает: там провалы тоже короткие. Поэтому сделан лимит: флаг трогает не больше 3 % кадров, самые глубокие.
+- Второй проход после апскейла ловит 14.24 на m03 в варианте c.
+- На m03 провалов 11 у b и c с новым флагом против 11 в проде.
+- На old03 провалов 27–33 против 64 без флага и 24 в проде.
+- Глазом проверить: old03 около 5 с, там рот в b/c закрыт, а в проде приоткрыт.
