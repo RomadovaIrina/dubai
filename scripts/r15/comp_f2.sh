@@ -14,6 +14,9 @@ FBA="$(cat reports/experiments/r8-face/fb7.args) --open-gate 0.04 --dark-transie
 # the pre-SR layer AND again on the repaired post-SR layer (second repair pass, r7_m7_comp REP2_FB_ARGS); labels fb7s<lab>la / rep2sla
 LCX=""; [ -n "${LCA:-}" ] && { LCX="--thr-lipcon $LCA --lipcon-mode adaptive --lipcon-rel 0.6 --lipcon-win 25 --lipcon-max-frac ${LCA_CAP:-0.03}"; FBA="$FBA $LCX"; RL=rep2sla; FL=fb7s${lab}la; }
 export REP2_FB_ARGS="${LCX:+$(cat reports/experiments/r8-face/fb7.args) $LCX}"
+# LT=color|median|both: r15 F3 lip temporal stabilisation of the final layer (LT_EXTRA = more lip_temporal.py args); own repair label
+# (<RL>x) so the production / earlier repaired layers are never rewritten; arm a (lab ia04) reuses the production fallback score fb7s
+export LT_ARGS="" LT_LABEL=""; [ -n "${LT:-}" ] && { LT_ARGS="--mode $LT ${LT_EXTRA:-}"; LT_LABEL=$LT${LT_TAG:-}; RL=${RL}x; [ "$lab" = ia04 ] && [ -z "${LC:-}${LCA:-}" ] && FL=fb7s; }
 mkdir -p /workspace/dub/r15f2/logs
 FC_CMS=1 LS_CMS_READ=1 SKIP_SCORE=1 TAG=r9f_$id$sfx SRC_TAG=$ST CFD=self CFD_LABEL=$lab SR=srt1 SR_EXTRA="--batch 8 --mask down2" \
   FB=$FL FB_ARGS="$FBA" REP=1 REP_ARGS="--spikes off" REP_LABEL=$RL FC_EXTRA="--pre-threads=8 $Q2 $F3" \

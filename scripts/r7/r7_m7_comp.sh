@@ -51,6 +51,10 @@ for id in ${*:-03 01 05 02 04}; do
           LS=$LSR2; FBX="--fallback $FBC"; fi
       fi
     fi
+    if [ -n "${LT_ARGS:-}" ]; then   # r15 F3: lip temporal stabilisation of the final layer (scripts/r15/lip_temporal.py: colour lock / flow-aligned median)
+      LTO=${LS%.mp4}_lt${LT_LABEL:-1}.mp4; [ -s $LTO ] || python scripts/r15/lip_temporal.py --ls $LS --lm ${LS%.mp4}.mediapipe.npz --out $LTO $LT_ARGS | grep "^=="
+      [ -s $LTO ] && { cp ${LS%.mp4}.mediapipe.npz ${LTO%.mp4}.mediapipe.npz; LS=$LTO; }
+    fi
     FIX30_LS=$LS FIX30_MASTER_FPS=${LS_FPS:-25} FIX30_TD=$B/$ST/timing FIX30_MODE=r3fix FIX30_THREADS=${FIX30_THREADS:-16} FIX30_ARGS="$V1 $EXTRA $FBX ${FC_EXTRA:-}" bash scripts/quality/r3_fix30.sh $M $TAG > $B/$TAG/${id}.fix30.log 2>&1
     F=$W/${id}_${ST}_25fps_$TAG.mp4; [ -f $F ] || { echo "FAIL composite $id (see $B/$TAG/${id}.fix30.log)"; continue; }
     mv $F $B/$TAG/${id}_$TAG.mp4; mv $W/${id}_${ST}_25fps_$TAG.manifest.json $B/$TAG/${id}_$TAG.manifest.json; mv $W/${id}_${ST}_25fps_$TAG.fps_composite.json $B/$TAG/${id}_$TAG.fps_composite.json 2>/dev/null; mv $W/${id}_${ST}_25fps_$TAG.log $B/$TAG/${id}_$TAG.log 2>/dev/null
