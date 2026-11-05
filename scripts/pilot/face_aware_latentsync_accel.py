@@ -423,7 +423,14 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
                 if lm_smooth > 0 and dets is not None:   # stable LatentSync crop: centred moving average of the replayed landmarks / bbox (2026-10-13)
                     dets = smooth_detections(dets, lm_smooth)
                 if hasattr(runner, "set_segment"): runner.set_segment(s["start_frame"], s["frames"])   # round 3: per-segment conditioning hooks
+                if os.environ.get("DUB_GEN_DEBUG") == "1":   # r15 T: md5 of the LatentSync inputs per segment (stream vs list identity)
+                    import hashlib as _hl
+                    log(f"  [gen-debug] seg {s['index']} {s['start_frame']}-{s['end_frame']} rgb {_hl.md5(np.ascontiguousarray(seg_rgb).tobytes()).hexdigest()[:12]} "
+                        f"wav {_hl.md5(wav.read_bytes()).hexdigest()[:12]} dets {_hl.md5(repr(dets).encode()).hexdigest()[:12]} dtype {seg_rgb.dtype} {seg_rgb.shape} "
+                        f"contig {seg_rgb.flags['C_CONTIGUOUS']} strides {seg_rgb.strides}")
                 frs_rgb, dt = runner.run_frames(seg_rgb, wav, dets)
+                if os.environ.get("DUB_GEN_DEBUG") == "1":
+                    log(f"  [gen-debug] seg {s['index']} out {_hl.md5(np.ascontiguousarray(np.stack(frs_rgb)).tobytes()).hexdigest()[:12]}")
                 frs = [cv2.cvtColor(f, cv2.COLOR_RGB2BGR) for f in frs_rgb]
                 wav.unlink(missing_ok=True); del seg_rgb, frs_rgb
                 if codeformer == "optimized":                                                     # week 2: restore LatentSync output faces only
