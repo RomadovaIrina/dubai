@@ -35,7 +35,12 @@ def nblur(x, m, s):   # Gaussian blur of x inside the mask m only (normalised co
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--ls", required=True); ap.add_argument("--lm", required=True); ap.add_argument("--out", required=True)
-    ap.add_argument("--mode", choices=["color", "median", "both"], default="color"); ap.add_argument("--radius", type=int, default=3)
+    ap.add_argument("--mode", choices=["color", "median", "both", "none"], default="color"); ap.add_argument("--radius", type=int, default=3)
+    ap.add_argument("--median-gate", type=float, default=0.0, help="r15 F3: apply the flow median only where the frame's mouth pop (vs the mean of its "
+                    "aligned neighbours) is >= this x its running median (full at +0.5); 0 = the median everywhere")
+    ap.add_argument("--outlier", type=float, default=0.0, help="r15 F3 (old03 'explosions'): after the mode, on the WHOLE mouth (lips + teeth / "
+                    "cavity, dilated 0.15 MW) a pixel is replaced by the mean of its two flow-aligned neighbours (t-1, t+1) only where it differs "
+                    "from BOTH by > k x MAD while they agree (< k x MAD); k = this value (e.g. 3); 0 = off")
     ap.add_argument("--mradius", type=int, default=2, help="the median's radius (mode median / both)")
     ap.add_argument("--sigma", type=float, default=0.10, help="low-frequency colour scale, x mouth width (~8 px at a 80 px mouth)")
     ap.add_argument("--fb-err", type=float, default=0.03, help="forward-backward flow error limit, x mouth width (min 1.5 px)")
@@ -47,8 +52,9 @@ def main():
     enc = subprocess.Popen(["ffmpeg", "-loglevel", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", f"{fps}", "-i", "-",
                             "-c:v", "libx264", "-crf", str(a.crf), "-preset", a.preset, "-pix_fmt", "yuv420p", a.out], stdin=subprocess.PIPE)
     dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
-    R = max(a.radius if a.mode != "median" else 0, a.mradius if a.mode != "color" else 0)
-    buf = deque(); nxt = 0; stats = {"frames": 0, "done": 0, "valid_share": [], "corr_L": [], "corr_a": [], "med_delta": []}
+    R = max(a.radius if a.mode in ("color", "both") else 0, a.mradius if a.mode in ("median", "both") else 0, 1 if a.outlier > 0 else 0)
+    buf = deque(); nxt = 0; stats = {"frames": 0, "done": 0, "valid_share": [], "corr_L": [], "corr_a": [], "med_delta": [], "outlier_px": [], "gated": []}
+    pops_ = deque(maxlen=75)   # the recent mouth pops (median gate reference, ~3 s)
 
     def read():
         nonlocal nxt
@@ -95,8 +101,22 @@ def main():
                         x = wn.astype(np.float32); x[~v] = np.nan; stack.append(x); vc += v
                     med = np.nanmedian(np.stack(stack), 0); share = (vc - 1) / max(1, len(sel))
                     wgt = (mouthf * np.clip((share - 0.25) / 0.5, 0, 1))[..., None]
+                    if a.median_gate > 0 and (t - 1) in warped and (t + 1) in warped:   # r15 F3: the median only on POP frames (sync: a global median costs ~0.4 SyncNet)
+                        ga = 0.5 * (warped[t - 1][0].astype(np.float32) + warped[t + 1][0].astype(np.float32))
+                        pop_ = float(np.abs(cur - ga).mean(-1)[mouth > 0].mean()) if mouth.any() else 0.0
+                        ref_ = float(np.median(pops_)) if len(pops_) >= 10 else pop_; pops_.append(pop_)
+                        gate_ = float(np.clip((pop_ / max(ref_, 1e-3) - a.median_gate) / 0.5, 0, 1)); wgt = wgt * gate_; stats["gated"].append(gate_)
                     stats["med_delta"].append(float((np.abs(med - cur) * wgt).sum() / max(1.0, wgt.sum())))
                     cur = cur + wgt * (med - cur); stats["valid_share"].append(float(share[mouth > 0].mean()) if mouth.any() else 0.0)
+                if a.outlier > 0 and (t - 1) in warped and (t + 1) in warped:   # r15 F3: single-frame pops of the whole mouth (teeth / cavity too)
+                    (w1, v1), (w2, v2) = warped[t - 1], warped[t + 1]; w1f, w2f = w1.astype(np.float32), w2.astype(np.float32)
+                    g = lambda x: x.mean(-1)
+                    d1, d2, d12 = np.abs(g(cur) - g(w1f)), np.abs(g(cur) - g(w2f)), np.abs(g(w1f) - g(w2f))
+                    mz = cv2.dilate(mouth, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * int(0.05 * mw) + 1,) * 2)) > 0
+                    s_ = 1.4826 * float(np.median(d12[mz])) + 1.0 if mz.any() else 99.0
+                    o_ = (np.minimum(d1, d2) > a.outlier * s_) & (d12 < a.outlier * s_) & v1 & v2 & mz
+                    om = cv2.GaussianBlur(cv2.dilate(o_.astype(np.float32), np.ones((3, 3), np.uint8)), (0, 0), 1.0)[..., None]
+                    cur = cur + om * (0.5 * (w1f + w2f) - cur); stats["outlier_px"].append(float(o_.sum()) / max(1, mz.sum()))
                 out[y0:y1, x0:x1] = np.clip(cur + 0.5, 0, 255).astype(np.uint8); stats["done"] += 1
         enc.stdin.write(out.tobytes()); stats["frames"] += 1
         hist.append(buf.popleft()); read()
@@ -104,7 +124,10 @@ def main():
     rep = {"frames": stats["frames"], "processed": stats["done"], "mode": a.mode, "seconds": round(time.perf_counter() - t0, 1),
            "corr_L_mean": round(float(np.mean(stats["corr_L"])), 2) if stats["corr_L"] else None, "corr_a_mean": round(float(np.mean(stats["corr_a"])), 2) if stats["corr_a"] else None,
            "median_delta_mean": round(float(np.mean(stats["med_delta"])), 2) if stats["med_delta"] else None,
-           "valid_share_mean": round(float(np.mean(stats["valid_share"])), 2) if stats["valid_share"] else None, "args": vars(a)}
+           "valid_share_mean": round(float(np.mean(stats["valid_share"])), 2) if stats["valid_share"] else None,
+           "outlier_px_share_mean": round(float(np.mean(stats["outlier_px"])), 4) if stats["outlier_px"] else None,
+           "outlier_frames_gt1pct": int(sum(x > 0.01 for x in stats["outlier_px"])),
+           "median_gated_frames_gt05": int(sum(x > 0.5 for x in stats["gated"])) if stats["gated"] else None, "args": vars(a)}
     open(a.out.rsplit(".", 1)[0] + ".lt.json", "w").write(json.dumps(rep, indent=1))
     print("== lip_temporal", json.dumps({k: v for k, v in rep.items() if k != "args"}), flush=True)
 

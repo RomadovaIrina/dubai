@@ -19,6 +19,6 @@ gw python scripts/r4/r4_gate.py score --label $FT --dir $B/$FT --ids $id --force
 CUDA_VISIBLE_DEVICES= python scripts/r7/r7_closed_mouth.py --ids $id --variants $FT:$A/$AT --out $OUT/closed_mouth.json > /dev/null 2>&1
 CUDA_VISIBLE_DEVICES= python scripts/r9/occl_scan.py --src $SRC --out $B/$FT/${id}_$FT.mp4 --lm $B/$GT/timing/${id}_source_lm_F.npz --sheet $OUT/occl.jpg --json $OUT/occlusion.json 2>&1 | tail -n 1
 CUDA_VISIBLE_DEVICES= python scripts/r9/artefacts.py $id --tag-suffix "$sx" --gen $GT --out $OUT/art.json 2>&1 | grep -v Warn | tail -1
-gw bash scripts/r7/r7_frame_gate.sh $B/$FT:$FT $id | grep "^=="
+CUDA_VISIBLE_DEVICES= bash scripts/r7/r7_frame_gate.sh $B/$FT:$FT $id | grep "^=="
 CUDA_VISIBLE_DEVICES= python scripts/r7/r7_baseline.py freeze --tag $FT --audio $A/$AT --ids $id --out $OUT/face_gate.json | tail -1
 echo "R15_GATE_DONE $id$sx"

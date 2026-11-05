@@ -43,6 +43,7 @@ def pop_at(F, lm, k, dil=0.3):
 def main():
     ap = argparse.ArgumentParser(); [ap.add_argument("--" + k, required=True) for k in ("work", "timing", "src", "src-lm")]
     ap.add_argument("--final", action="append", required=True); ap.add_argument("--stage", action="append", default=[])
+    ap.add_argument("--events", help="the gate's flash.json of the PRIMARY final: its flash_list frames are the events"); ap.add_argument("--ratio", type=float, default=1.6, help="a stage has the pop when its pop at the event is >= this x its own median")
     ap.add_argument("--thr", type=float, default=5.0); ap.add_argument("--top", type=int, default=20); ap.add_argument("--json"); ap.add_argument("--sheet"); ap.add_argument("--sheet-n", type=int, default=8)
     a = ap.parse_args(); W = pathlib.Path(a.work)
     z = np.load(a.src_lm); slm = z["lm"].astype(np.float64); mu = z["mu"]
@@ -55,30 +56,39 @@ def main():
         pv = np.array([pop_at(Fv, slm, k) for k in range(min(n, len(Fv)))]); fin[lab] = (Fv, pv)
         x = pv - ps[:len(pv)]; print(f"{lab}: pop mean {np.nanmean(pv):.2f}, excess mean {np.nanmean(x):.2f}, frames > thr {int(np.nansum(x > a.thr))}", flush=True)
     prim = a.final[0].split("=", 1)[0]; pv = fin[prim][1]; x = np.nan_to_num(pv - ps[:len(pv)], nan=0)
-    ev = []
-    for k in np.argsort(-x):
-        if x[k] <= a.thr or len(ev) >= a.top: break
-        if all(abs(k - e) >= 3 for e in ev): ev.append(int(k))
+    if a.events:   # the gate's own strong-flash list (r4 flash.json: the frames the eye calls explosions), strongest first
+        fl = sorted(json.load(open(a.events))["flash_list"], key=lambda e: -e.get("mc_vs_src", 0)); ev = []
+        for e in fl:
+            if len(ev) >= a.top: break
+            if all(abs(e["frame"] - q) >= 3 for q in ev): ev.append(int(e["frame"]))
+    else:
+        ev = []
+        for k in np.argsort(-x):
+            if x[k] <= a.thr or len(ev) >= a.top: break
+            if all(abs(k - e) >= 3 for e in ev): ev.append(int(k))
     ev.sort()
     M = read_all(W / "video/master_25fps.mp4"); mlm = np.load(W / "video/master_mediapipe.npz")["lm"].astype(np.float64)
+    nm_ = len(M); mpop = np.array([pop_at(M, mlm, j) for j in range(nm_)]); mmed = float(np.nanmedian(mpop))
     st = []
-    for spec in a.stage:
-        lab, v = spec.split("=", 1); v = pathlib.Path(v); st.append((lab, read_all(v), np.load(v.with_suffix(".mediapipe.npz"))["lm"].astype(np.float64)))
+    for spec in a.stage:   # each stage's FULL pop series on the master timeline: an event is judged by its ratio to the stage's own median
+        lab, v = spec.split("=", 1); v = pathlib.Path(v); F = read_all(v); lm = np.load(v.with_suffix(".mediapipe.npz"))["lm"].astype(np.float64)
+        sp = np.array([pop_at(F, lm, j) for j in range(min(len(F), nm_))]); st.append((lab, sp, float(np.nanmedian(sp)))); del F
+        print(f"stage {lab}: pop median {np.nanmedian(sp):.2f}", flush=True)
     rows = []; origins = {}
     for k in ev:
-        m = int(round(mu[k])); ph = float(mu[k] - np.floor(mu[k])); fx = float(x[k])
-        base = np.nanmax([pop_at(M, mlm, j) for j in (m - 1, m, m + 1)])
-        sv = {}
-        for lab, F, lm in st: sv[lab] = round(float(np.nanmax([pop_at(F, lm, j) for j in (m - 1, m, m + 1)]) - base), 2)
-        org = next((lab for lab, _, _ in st if sv[lab] >= max(2.0, 0.6 * fx)), "composite/retime")
+        m = int(round(mu[k])); ph = float(mu[k] - np.floor(mu[k])); fx = float(x[k]) if k < len(x) else np.nan
+        win = [j for j in (m - 1, m, m + 1) if 0 <= j < nm_]
+        base = float(np.nanmax(mpop[win])) / max(mmed, 1e-6)
+        sv = {lab: round(float(np.nanmax(sp[[j for j in win if j < len(sp)]])) / max(med, 1e-6), 2) for lab, sp, med in st}
+        org = next((lab for lab, _, _ in st if sv[lab] >= a.ratio and sv[lab] >= base + 0.4), "composite/retime")
         origins[org] = origins.get(org, 0) + 1
         row = {"t": round(k / 29.97, 2), "src_frame": k, "master": m, "phase": round(ph, 2), "final_excess": {lab: round(float(fin[lab][1][k] - ps[k]), 2) for lab in fin},
-               "stage_excess": sv, "origin": org}
+               "master_ratio": round(base, 2), "stage_ratio": sv, "origin": org}
         rows.append(row); print(json.dumps(row), flush=True)
     rep = {"events": rows, "origin_counts": origins, "thr": a.thr}
     print("== explode", json.dumps({"n_events": len(rows), "origin_counts": origins}), flush=True)
     if a.json: pathlib.Path(a.json).write_text(json.dumps(rep, indent=1))
-    if a.sheet:   # the worst --sheet-n events: each final at k-1, k, k+1 + the source at k
+    if a.sheet and rows:   # the worst --sheet-n events: each final at k-1, k, k+1 + the source at k
         top = sorted(rows, key=lambda r: -r["final_excess"][prim])[:a.sheet_n]; Sc = read_all(a.src, gray=False); tiles = []
         Fc = {lab: read_all(spec.split("=", 1)[1], gray=False) for lab, spec in zip(fin, a.final)}
         for r in top:

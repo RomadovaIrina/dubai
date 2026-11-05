@@ -23,7 +23,7 @@ def _ls_root():
     return LS
 
 
-def syncnet_dists(video: pathlib.Path, audio: pathlib.Path | None, device="cuda", keep=False):
+def syncnet_dists(video: pathlib.Path, audio: pathlib.Path | None, device=__import__("os").environ.get("SYNC_DEVICE", "cuda"), keep=False):
     """-> list of tracks {f0, frame (global idx of the 5-frame clip centre), d (N, 31)}"""
     import cv2, torch
     LS = _ls_root(); sys.path.insert(0, str(LS))
