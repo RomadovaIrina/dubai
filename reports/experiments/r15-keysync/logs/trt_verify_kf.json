@@ -1,0 +1,1 @@
+{"which": "kf", "lora": "", "dc": true, "full_s0": [58.27, 0.03764], "h_s0": [52.62, 0.14271], "shallow_s1": [56.59, 0.04481], "full_s2": [63.86, 0.02534], "trt_ms_shallow": 52.3, "trt_ms_full": 417.2, "torch_eager_ms_full": 617.6, "torch_eager_ms_shallow": 61.4, "note": "psnr = [dB over the reference range, relative L2]"}

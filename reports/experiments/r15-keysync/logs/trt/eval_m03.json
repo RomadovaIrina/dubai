@@ -1,0 +1,1 @@
+{"arm": "trt", "id": "m03", "sync_speech_at0": 7.862, "raw_av_offset": -1, "shift": 1, "face_gpu_s_per_vmin": 421.1, "interp_s": 243.2, "kf_s": 18.7, "vae_dec_interp_s": 60.8, "video_s": 40.52, "flicker_low_mean": 0.816, "flicker_lips_mean": 2.705, "flicker_ring_mean": 0.82, "flicker_lips_p95": 7.895}

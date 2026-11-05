@@ -1,0 +1,1 @@
+{"which": "interp", "lora": "", "dc": true, "full_s0": [61.26, 0.03199], "h_s0": [52.91, 0.1222], "shallow_s1": [61.45, 0.0324], "full_s2": [61.96, 0.0283], "trt_ms_shallow": 35.1, "trt_ms_full": 278.4, "torch_eager_ms_full": 408.7, "torch_eager_ms_shallow": 40.5, "note": "psnr = [dB over the reference range, relative L2]"}

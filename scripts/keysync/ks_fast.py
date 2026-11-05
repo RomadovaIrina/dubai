@@ -5,7 +5,7 @@ Per-stage GPU timing (cuda-synchronised wall) by wrapping the pipeline's own fun
     python ks_fast.py --jobs jobs.txt --out OUTDIR [--cfg _s6] [--decoding-t 1] [--compile unet|none]
 jobs.txt: "<tag> <video 25 fps 512^2> <audio 16 kHz>" per line. Run from the keysync code dir."""
 import argparse, json, os, sys, time
-sys.path.insert(0, os.getcwd())
+sys.path.insert(0, os.getcwd()); sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))   # r15: ks_student / ks_trt next to this script
 import torch
 import scripts.sampling.dubbing_pipeline_raw as d
 
@@ -31,10 +31,26 @@ def main():
     ap.add_argument("--cudnn-bench", action="store_true"); ap.add_argument("--vae-cl", action="store_true", help="VAE decoder in channels_last")
     ap.add_argument("--fp8", action="store_true", help="torchao float8 dynamic activation + weight on the UNets' linear layers")
     ap.add_argument("--vae-half", action="store_true", help="VAE decode under fp16 autocast (the authors disable it: fp32)")
+    ap.add_argument("--interp-lora", default="", help="r15: the LCM-LoRA student of the interpolation UNet (ks_lcm.py), merged into the weights; 1-row LCM sampler")
+    ap.add_argument("--interp-steps", type=int, default=4); ap.add_argument("--lcm-noise", default="fresh", choices=["fresh", "ddim"])
+    ap.add_argument("--trt-vae", default="", help="r15: TensorRT VAE decoder engine dir (ks_trt_vae.py) for the interpolation model")
+    ap.add_argument("--vae-batch", type=int, default=1, help="r15: frames per VAE decode call with timesteps=1 (= the authors' per-frame decode, batched)")
+    ap.add_argument("--trt", default="", help="r15: TensorRT engine dir (ks_trt.py): <dir>/{kf,interp}/{full,shallow}.plan replace the UNets")
     a = ap.parse_args(); os.makedirs(a.out, exist_ok=True)
     t0 = time.perf_counter()
     model, _, n_batch = d.load_model(f"scripts/sampling/configs/interpolation{a.cfg}.yaml", "cuda", 14, "latents", "pretrained_models/checkpoints/interpolation_dub.pt")
     model_kf, _, n_batch_kf = d.load_model(f"scripts/sampling/configs/keyframe{a.cfg}.yaml", "cuda", 14, "latents", "pretrained_models/checkpoints/keyframe_dub.pt")
+    if a.interp_lora:
+        import ks_student
+        ks_student.merge_lora(model.model.diffusion_model, a.interp_lora)
+        model.model.diffusion_model._ks_dc_off = True   # DeepCache stays on the keyframes only
+        model.sampler = ks_student.LCMSampler(model.sampler, a.interp_steps, a.lcm_noise)
+    if a.trt_vae:   # r15: the interpolation model's VAE decode through a TensorRT engine (ks_trt_vae.py; per-frame math, N frames per call)
+        import ks_trt_vae; ks_trt_vae.use_vae_engine(model, a.trt_vae)
+    if a.trt:
+        import ks_trt
+        for m, tag in ((model, "interp"), (model_kf, "kf")):
+            if os.path.exists(os.path.join(a.trt, tag, "full.plan")): ks_trt.use_engines(m, os.path.join(a.trt, tag))
     hubert = d.HubertModel.from_pretrained("facebook/hubert-base-ls960").cuda()
     wavlm = d.WavLM_wrapper(model_size="Base+", feed_as_frames=False, merge_type="None", model_path="pretrained_models/checkpoints/WavLM-Base+.pt").cuda()
     vae = d.VaeWrapper("video"); lmk = d.LandmarksExtractor()
@@ -59,7 +75,11 @@ def main():
     if a.compile in ("unet", "all"):
         import torch._dynamo as _dyn; _dyn.config.cache_size_limit = 64; _dyn.config.accumulated_cache_size_limit = 1024
         for m in (model, model_kf):
+            if getattr(m.model.diffusion_model, "_ks_trt", False): continue   # a TensorRT engine replaces this UNet
             m.model.diffusion_model = torch.compile(m.model.diffusion_model, mode=a.compile_mode, dynamic=False)
+    if os.environ.get("KS_CAPTURE"):   # r15: record the UNet inputs of the first chunk at the first 3 sigmas of each model (for the TensorRT export / verify)
+        import ks_trt
+        for m, tag in ((model, "interp"), (model_kf, "kf")): ks_trt.add_capture(m, tag, os.environ["KS_CAPTURE"])
     if a.cudnn_bench: torch.backends.cudnn.benchmark = True
     if a.vae_cl:
         for m in (model, model_kf):   # the temporal decoder has 5-D (Conv3d) weights: channels_last on the 2-D convs only
@@ -69,7 +89,8 @@ def main():
     if a.vae_half:
         for m in (model, model_kf): m.disable_first_stage_autocast = False
     torch.cuda.synchronize(); load_s = time.perf_counter() - t0
-    print(json.dumps({"load_s": round(load_s, 1), "cfg": a.cfg, "decoding_t": a.decoding_t, "compile": a.compile, "vae_half": a.vae_half, "cudnn_bench": a.cudnn_bench, "fp8": a.fp8, "vae_cl": a.vae_cl, "KS_DC": os.environ.get("KS_DC", "")}), flush=True)
+    print(json.dumps({"load_s": round(load_s, 1), "cfg": a.cfg, "decoding_t": a.decoding_t, "compile": a.compile, "vae_half": a.vae_half, "cudnn_bench": a.cudnn_bench, "fp8": a.fp8, "vae_cl": a.vae_cl, "KS_DC": os.environ.get("KS_DC", ""),
+                      "interp_lora": a.interp_lora, "interp_steps": a.interp_steps if a.interp_lora else None, "lcm_noise": a.lcm_noise if a.interp_lora else None, "trt": a.trt, "KS_ICHUNK": os.environ.get("KS_ICHUNK", ""), "vae_batch": a.vae_batch, "trt_vae": a.trt_vae}), flush=True)
     if os.environ.get("KS_LMK_CACHE"):   # r13 speed lever: landmarks off the critical path (prod: computed during TTS / separation); keyed by the frames' content
         import hashlib, numpy as _np; _xl = d.extract_video_landmarks; _cd = os.environ["KS_LMK_CACHE"]; os.makedirs(_cd, exist_ok=True)
         def _lmk(video_frames, landmarks_model):
@@ -80,6 +101,20 @@ def main():
         d.extract_video_landmarks = _lmk
     for n in ("compute_video_embedding", "get_audio_embeddings", "extract_video_landmarks", "sample_keyframes", "sample_interpolation", "save_audio_video"):
         setattr(d, n, timed(n, getattr(d, n)))
+    if a.vae_batch > 1:   # r15: the authors decode one frame per call (decoding_t 1 -> timesteps 1: no temporal mixing); the same math batched N frames per call
+        from einops import rearrange as _re
+        def _mkdec(m):
+            def dec(z):
+                v = z.dim() == 5
+                if v: T_ = z.shape[2]; z = _re(z, "b c t h w -> (b t) c h w")
+                z = z / m.scale_factor; outs = []
+                with torch.autocast("cuda", enabled=not m.disable_first_stage_autocast):
+                    for i in range(0, z.shape[0], a.vae_batch): outs.append(m.first_stage_model.decode(z[i:i + a.vae_batch], timesteps=1))
+                out = torch.cat(outs, 0)
+                return _re(out, "(b t) c h w -> b c t h w", t=T_) if v else out
+            return dec
+        for m in (model, model_kf):
+            if not getattr(m, "_ks_trt_vae", False): m.decode_first_stage = _mkdec(m)
     for m, tag in ((model, "interp"), (model_kf, "kf")):
         m.decode_first_stage = timed(f"vae_decode_{tag}", m.decode_first_stage)
     if os.environ.get("KS_PROFILE"):   # profile UNet calls 40..60 of the interpolation model, print the top CUDA ops

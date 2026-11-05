@@ -1,0 +1,1 @@
+{"arm": "prod", "id": "m03", "sync_speech_at0": 7.813, "raw_av_offset": -1, "shift": 1, "face_gpu_s_per_vmin": 468.8, "interp_s": 271.7, "kf_s": 21.2, "vae_dec_interp_s": 60.8, "video_s": 40.52, "flicker_low_mean": 0.815, "flicker_lips_mean": 2.683, "flicker_ring_mean": 0.818, "flicker_lips_p95": 7.85}

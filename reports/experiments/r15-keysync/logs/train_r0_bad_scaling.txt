@@ -1,0 +1,6 @@
+GRID [700.0, 40.0452, 11.2571, 4.9728, 1.789, 0.7854, 0.264, 0.0511, 0.002]
+LORA modules 530 params 115.3M
+SEGMENTS train 804 from 8 clips, val 6 (tr_mk5)
+VAL {"step": 0, "psnr_vs_teacher_4": 20.62, "psnr_vs_gt_4": 17.9, "psnr_vs_teacher_2": 21.35, "psnr_vs_gt_2": 18.69, "teacher_psnr_vs_gt": 17.75}
+STEP 25 loss 0.07179 gnorm 0.297 1.81s/it per_k {0: 0.1048, 1: 0.0264, 2: 0.0228, 3: 0.0412, 4: 0.0470, 5: 0.0614, 6: 0.1130, 7: 0.1921} mem 14.3G
+STEP 50 loss 0.05956 gnorm 0.144 1.82s/it per_k {0: 0.1307, 1: 0.0303, 2: 0.0287, 3: 0.0529, 4: 0.0437, 5: 0.0348, 6: 0.1017, 7: 0.1611} mem 14.3G

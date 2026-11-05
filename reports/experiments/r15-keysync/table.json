@@ -1,0 +1,212 @@
+{
+ "prod": {
+  "arm": "prod",
+  "m18": {
+   "gpu_s_vmin": 477.8,
+   "interp_unet": 313.2,
+   "interp_dec": 89.8,
+   "kf": 42.5,
+   "enc": 17.7,
+   "save": 10.5,
+   "peak_gb": 27.7,
+   "sync_speech_at0": 7.188,
+   "flicker_lips_mean": 3.604,
+   "flicker_lips_p95": 9.633,
+   "flicker_low_mean": 1.4
+  },
+  "m03": {
+   "gpu_s_vmin": 468.8,
+   "interp_unet": 312.3,
+   "interp_dec": 90.0,
+   "kf": 31.4,
+   "enc": 17.8,
+   "save": 12.0,
+   "peak_gb": 24.9,
+   "sync_speech_at0": 7.813,
+   "flicker_lips_mean": 2.683,
+   "flicker_lips_p95": 7.85,
+   "flicker_low_mean": 0.815
+  },
+  "old03": {
+   "gpu_s_vmin": 474.4,
+   "interp_unet": 315.3,
+   "interp_dec": 90.8,
+   "kf": 33.0,
+   "enc": 17.9,
+   "save": 10.6,
+   "peak_gb": 27.7,
+   "sync_speech_at0": 7.502,
+   "flicker_lips_mean": 4.347,
+   "flicker_lips_p95": 14.63,
+   "flicker_low_mean": 0.553
+  }
+ },
+ "trt": {
+  "arm": "trt",
+  "m18": {
+   "gpu_s_vmin": 434.7,
+   "interp_unet": 272.2,
+   "interp_dec": 90.4,
+   "kf": 37.4,
+   "enc": 18.6,
+   "save": 10.5,
+   "peak_gb": 12.4,
+   "sync_speech_at0": 7.225,
+   "flicker_lips_mean": 3.581,
+   "flicker_lips_p95": 9.547,
+   "flicker_low_mean": 1.379
+  },
+  "m03": {
+   "gpu_s_vmin": 421.1,
+   "interp_unet": 270.1,
+   "interp_dec": 90.0,
+   "kf": 27.7,
+   "enc": 17.8,
+   "save": 10.4,
+   "peak_gb": 12.4,
+   "sync_speech_at0": 7.862,
+   "flicker_lips_mean": 2.705,
+   "flicker_lips_p95": 7.895,
+   "flicker_low_mean": 0.816
+  },
+  "old03": {
+   "gpu_s_vmin": 424.8,
+   "interp_unet": 271.6,
+   "interp_dec": 91.0,
+   "kf": 29.1,
+   "enc": 17.9,
+   "save": 9.4,
+   "peak_gb": 12.4,
+   "sync_speech_at0": 7.509,
+   "flicker_lips_mean": 4.3,
+   "flicker_lips_p95": 14.351,
+   "flicker_low_mean": 0.564
+  }
+ },
+ "lcm4": {
+  "arm": "lcm4",
+  "m18": {
+   "gpu_s_vmin": 247.0,
+   "interp_unet": 79.0,
+   "interp_dec": 90.1,
+   "kf": 44.6,
+   "enc": 18.6,
+   "save": 9.9,
+   "peak_gb": 19.4,
+   "sync_speech_at0": 7.356,
+   "flicker_lips_mean": 3.333,
+   "flicker_lips_p95": 9.436,
+   "flicker_low_mean": 1.307
+  },
+  "m03": {
+   "gpu_s_vmin": 236.0,
+   "interp_unet": 79.4,
+   "interp_dec": 90.5,
+   "kf": 31.7,
+   "enc": 17.9,
+   "save": 11.3,
+   "peak_gb": 19.4,
+   "sync_speech_at0": 8.126,
+   "flicker_lips_mean": 2.562,
+   "flicker_lips_p95": 7.698,
+   "flicker_low_mean": 0.787
+  },
+  "old03": {
+   "gpu_s_vmin": 236.8,
+   "interp_unet": 80.0,
+   "interp_dec": 90.9,
+   "kf": 33.1,
+   "enc": 17.9,
+   "save": 9.7,
+   "peak_gb": 19.5,
+   "sync_speech_at0": 6.871,
+   "flicker_lips_mean": 4.064,
+   "flicker_lips_p95": 13.963,
+   "flicker_low_mean": 0.577
+  }
+ },
+ "fast4": {
+  "arm": "fast4",
+  "m18": {
+   "gpu_s_vmin": 222.8,
+   "interp_unet": 70.4,
+   "interp_dec": 80.5,
+   "kf": 36.5,
+   "enc": 18.6,
+   "save": 12.0,
+   "peak_gb": 12.4,
+   "sync_speech_at0": 7.419,
+   "flicker_lips_mean": 3.318,
+   "flicker_lips_p95": 9.257,
+   "flicker_low_mean": 1.297
+  },
+  "m03": {
+   "gpu_s_vmin": 210.1,
+   "interp_unet": 68.4,
+   "interp_dec": 81.1,
+   "kf": 27.1,
+   "enc": 17.9,
+   "save": 10.4,
+   "peak_gb": 12.4,
+   "sync_speech_at0": 8.16,
+   "flicker_lips_mean": 2.576,
+   "flicker_lips_p95": 7.775,
+   "flicker_low_mean": 0.786
+  },
+  "old03": {
+   "gpu_s_vmin": 210.7,
+   "interp_unet": 68.4,
+   "interp_dec": 82.0,
+   "kf": 28.4,
+   "enc": 17.9,
+   "save": 8.7,
+   "peak_gb": 12.4,
+   "sync_speech_at0": 6.917,
+   "flicker_lips_mean": 4.061,
+   "flicker_lips_p95": 13.718,
+   "flicker_low_mean": 0.643
+  }
+ },
+ "fast2v": {
+  "arm": "fast2v",
+  "m18": {
+   "gpu_s_vmin": 187.4,
+   "interp_unet": 36.2,
+   "interp_dec": 80.2,
+   "kf": 36.2,
+   "enc": 18.6,
+   "save": 10.8,
+   "peak_gb": 12.4,
+   "sync_speech_at0": 7.601,
+   "flicker_lips_mean": 3.411,
+   "flicker_lips_p95": 8.961,
+   "flicker_low_mean": 1.316
+  },
+  "m03": {
+   "gpu_s_vmin": 176.2,
+   "interp_unet": 35.1,
+   "interp_dec": 81.0,
+   "kf": 27.1,
+   "enc": 17.8,
+   "save": 10.1,
+   "peak_gb": 12.4,
+   "sync_speech_at0": 8.139,
+   "flicker_lips_mean": 2.618,
+   "flicker_lips_p95": 7.729,
+   "flicker_low_mean": 0.872
+  },
+  "old03": {
+   "gpu_s_vmin": 178.2,
+   "interp_unet": 35.2,
+   "interp_dec": 82.0,
+   "kf": 28.5,
+   "enc": 18.0,
+   "save": 8.8,
+   "peak_gb": 12.4,
+   "sync_speech_at0": 7.245,
+   "flicker_lips_mean": 4.181,
+   "flicker_lips_p95": 13.964,
+   "flicker_low_mean": 0.874
+  }
+ }
+}

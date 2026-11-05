@@ -1,0 +1,1 @@
+{"which": "interp", "lora": "/workspace/dub/keysync/lcm/r1/lora_pick.pt", "dc": false, "full_s0": [58.44, 0.04338], "full_s2": [60.05, 0.03344], "trt_ms_full": 281.2, "torch_eager_ms_full": 416.8, "torch_eager_ms_shallow": null, "note": "psnr = [dB over the reference range, relative L2]"}
