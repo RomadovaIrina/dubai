@@ -306,7 +306,7 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
             raise ValueError("codeformer='optimized' needs cf_runner (codeformer_accel.CodeFormerAccel)")
         if not in_memory:
             raise NotImplementedError("codeformer='optimized' is implemented for the in-memory segment path only")
-        from codeformer_accel import lm5_from_insightface106
+        from codeformer_accel import lm5_from_insightface106, rigid_mouth_lm5
         if cf_runner.fallback_detector is None and router is not None:
             cf_runner.fallback_detector = lambda fr_bgr: _router_lm5(router, fr_bgr)
     t_cf = 0.0
@@ -424,6 +424,7 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
                     tc = time.perf_counter(); n_use = min(len(frs), s["frames"])                  # frames beyond s["frames"] are dropped by assembly
                     if cf_runner.landmark_source == "insightface" and dets is not None:
                         lms = [lm5_from_insightface106(dets[k][1]) if k < len(dets) else None for k in range(n_use)]; lm_src = "insightface106->5 (verify pass)"
+                        if os.environ.get("CF_MOUTH", "source") == "rigid": lms = rigid_mouth_lm5(lms); lm_src += " + rigid mouth (CF_MOUTH, r15 audit)"
                     else:
                         lms = [None] * n_use; lm_src = "retinaface router per frame"          # fresh detection on every frame (fallback_detector)
                     frs[:n_use], cf_st = cf_runner.restore_frames(frs[:n_use], lms)

@@ -15,6 +15,7 @@ export LS_CMS_READ=${LS_CMS_READ:-1} FC_CMS=${FC_CMS:-1} FC_EXTRA=${FC_EXTRA:---
 for id in "$@"; do
   ID=q2_$id; AT=r9_$ID; HT=r9_${ID}_htd; GT=r9g_${ID}_$V; FT=r9f_${ID}_$V; O=$X/${V}_$id; L=$O/logs; W=$O/work; mkdir -p $L $W
   [ -s $O/${V}_$id.mp4 ] && { echo "have ${V}_$id"; continue; }
+  [ -f /workspace/dub/r15w/skip/${V}_$id ] && { echo "== SKIP ${V}_$id (r15w/skip)"; continue; }   # r15 Z: prune queued arms of a running chain
   export DUB_INPUTS=$X/$ID/e2e/work/in; SRC=$(ls $DUB_INPUTS/$ID.* 2>/dev/null | head -1)
   [ -n "$SRC" ] && [ -f $A/$AT/$ID/dubbed_16k.wav ] || { echo "FAIL ${V}_$id: no baseline audio / input for $ID"; continue; }
   env | grep -E "^(R10_GEN_PY|R13_|LS_|TBDUB|BON_|KF_|GEN_|FAST_|FC_|CFD_|E2E_)" | sort > $L/env.txt

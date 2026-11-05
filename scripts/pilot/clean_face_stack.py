@@ -38,6 +38,19 @@ if CALIB_FILE.exists():
 LMK_ADAPT_ORIGIN_ORDER = [1, 10, 12, 14, 16, 3, 5, 7, 0, 23, 21, 19, 32, 30, 28, 26, 17, 43, 48, 49, 51, 50, 102, 103, 104, 105, 101, 73, 74, 86]
 
 
+def nose_rigid(lm):
+    """LS_NOSE_RIGID=1 (r15 audit): LatentSync's nose anchor (106 74/77/83/86 = MediaPipe 5/64/294/4) holds the two nostril WINGS, which
+    flare with smiles / speech and shift the crop. The wing points are moved so that the anchor centroid = the rigid nose centroid (5/4/1/195)
+    plus the video's median wing offset in the eye frame (the mean alignment and the wing spread are kept)."""
+    lm = np.array(lm, np.float64, copy=True); ok = np.isfinite(lm[:, 0, 0]) & np.isfinite(lm[:, [4, 5, 1, 195, 64, 294, 33, 263]]).all((1, 2))
+    if ok.sum() < 3: return lm.astype(np.float32)
+    e = lm[:, 263] - lm[:, 33]; d = np.linalg.norm(e, axis=1, keepdims=True); ux = e / np.maximum(d, 1e-6); uy = np.stack([-ux[:, 1], ux[:, 0]], 1)
+    rig = lm[:, [5, 4, 1, 195]].mean(1); off = lm[:, [5, 64, 294, 4]].mean(1) - rig
+    med = np.median(np.stack([(off * ux).sum(1), (off * uy).sum(1)], 1)[ok] / d[ok], 0)
+    T = rig + (med[0] * ux + med[1] * uy) * d; m = (4 * T - lm[:, 5] - lm[:, 4]) / 2; half = (lm[:, 64] - lm[:, 294]) / 2
+    lm[ok, 64] = (m + half)[ok]; lm[ok, 294] = (m - half)[ok]; return lm.astype(np.float32)
+
+
 def _seed_master_mp(out: pathlib.Path, fmap_: dict, n: int) -> None:
     """r9 speed (MP_SOURCE_NPZ=<the audio stage's single-face VIDEO-mode MediaPipe npz of the SOURCE>): the master frames are source frames
     (frame_map master_to_source), so the master pass is that npz indexed by the map instead of a second MediaPipe run. Not identical: VIDEO-mode
@@ -326,7 +339,7 @@ class CleanPrep:
         lm_ls = lm; Hrig = None
         if anchor_filter or mask_track == "head":
             import anchor_filters as af
-            t1 = time.perf_counter(); rp = pathlib.Path(work) / "master_rigid.npz"
+            t1 = time.perf_counter(); rp = pathlib.Path(work) / f"master_rigid{af.CACHE_TAG}.npz"
             if rp.exists() and len(np.load(rp)["H"]) == len(lm): Hrig = np.load(rp)["H"]
             else:
                 Hrig = af.rigid_motion(self.frames, lm); np.savez_compressed(rp, H=Hrig)
@@ -334,6 +347,7 @@ class CleanPrep:
             rv_ = float(os.environ.get("LS_RIGID_VALIDATE", "0") or 0)   # r15 F (default off): the rigid track checked against the landmarks (m03 19 s doubled mouth)
             if rv_ > 0: Hrig, self.anchor_info["rigid_validate"] = af.validate_motion(Hrig, lm, rv_, return_info=True); print(f"  [rigid] validate {self.anchor_info['rigid_validate']}", flush=True)
             if anchor_filter: lm_ls = af.filter_landmarks(lm, Hrig, anchor_filter).astype(np.float32)
+        if os.environ.get("LS_NOSE_RIGID", "0") == "1": lm_ls = nose_rigid(lm_ls); self.anchor_info["nose_rigid"] = True   # r15 audit flag
         self.ls_dets = ls_detections(lm_ls, W, H, calib)
         if mask_track == "head":   # mouth-mask boxes locked to the head motion (LatentSync reads the bbox only as a presence flag)
             l106 = np.stack([d[1] if d[1] is not None else np.full((106, 2), np.nan, np.float32) for d in self.ls_dets]).astype(np.float64)

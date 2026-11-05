@@ -189,6 +189,9 @@ class StableLatentSync(AccelLatentSync):
                 if self.steps_silent and self.silent_seg is not None and self.stride is None:   # tight silent mouth of a short schedule), the others with self.steps
                     sil = np.asarray(self.silent_seg, bool); sil = np.concatenate([sil, np.repeat(sil[-1:], max(0, n - len(sil)))]) if len(sil) < n else sil[:n]
                     is_sil = {w: bool(sil[w[0]:w[1]].mean() >= self.silent_frac) for w in windows}
+                    if os.environ.get("LS_SIL_HYST", "0") == "1" and len(full) >= 3:   # r15 audit flag: majority of 3 consecutive windows
+                        seq_ = [is_sil[w] for w in full]
+                        for i_ in range(1, len(full) - 1): is_sil[full[i_]] = (seq_[i_ - 1] + seq_[i_] + seq_[i_ + 1]) >= 2
                     groups = []
                     for cls in (False, True):
                         fw = [w for w in full if is_sil[w] == cls]; groups += [fw[k:k + self.B] for k in range(0, len(fw), self.B)]
@@ -497,6 +500,16 @@ def even_fill(src, gen, gin, pos):
     return out
 
 
+def _vae_mean(pipe):
+    """LS_VAE_MEAN=1 (r15 audit): LatentSync's prepare_mask_latents / prepare_image_latents SAMPLE the VAE posterior (latent_dist.sample),
+    a fresh per-frame perturbation of the masked / reference latents; the posterior mean is used instead."""
+    if getattr(pipe.vae, "_r15_vae_mean", False): return
+    enc = pipe.vae.encode
+    def encode(x, *a, **k):
+        out = enc(x, *a, **k); d = out.latent_dist; d.sample = lambda generator=None, _d=d: _d.mean; return out
+    pipe.vae.encode = encode; pipe.vae._r15_vae_mean = True; print("  LS_VAE_MEAN: VAE posterior mean for the masked / reference latents", flush=True)
+
+
 class StableRunner:
     """Same interface as face_aware_latentsync_accel.AccelRunner (run_frames / calls / config), executing StableLatentSync."""
 
@@ -504,6 +517,7 @@ class StableRunner:
                  overlap="fuse", window_len=None, bridge_len=0, bridge_steps=0):
         from resident_vram_probe import load_latentsync
         t0 = time.perf_counter(); pipe = pipe or load_latentsync()
+        if os.environ.get("LS_VAE_MEAN", "0") == "1": _vae_mean(pipe)   # r15 audit flag
         if os.environ.get("LS_LORA"):   # r11 FACE (default off): a per-speaker LoRA (scripts/r11/ft_speaker.py) merged into the UNet weights before compile
             sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "r11")); import ls_lora
             nl = ls_lora.merge_lora(pipe.unet, os.environ["LS_LORA"], float(os.environ.get("LS_LORA_STRENGTH", "1") or 1)); print(f"  LS_LORA merged {nl} adapters from {os.environ['LS_LORA']}", flush=True)

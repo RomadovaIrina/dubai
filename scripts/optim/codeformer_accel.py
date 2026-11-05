@@ -36,6 +36,7 @@ Every call records per-stage seconds, faces, fallbacks and peak VRAM in `self.ca
 from __future__ import annotations
 
 import concurrent.futures as cf
+import os
 import pathlib
 import sys
 import time
@@ -72,6 +73,31 @@ BLUR_K, BLUR_SIGMA = 101, 11
 #   detector's noise; the 512 crops differ from RetinaFace-aligned crops by the same amount as the two RetinaFace passes differ
 #   from each other (PSNR 18.2 dB vs 19.6 dB). Not assumed from documentation.
 LM106_TO_5: list = [list(range(33, 43)), list(range(87, 97)), list(range(77, 85)), 52, 61]
+# r15 audit (default): the REPLAYED 106 (clean_face_stack.MAP106) put MediaPipe iris points into the eye contours (106 34/38/40 -> 468/468/470,
+# 88/92/94 -> 473/473/475: two of them twice), so the eye centroids moved with gaze / blinks. Lid contour only; CF_EYE_IRIS=1 restores.
+_IRIS106 = {34, 38, 40, 88, 92, 94}
+if os.environ.get("CF_EYE_IRIS", "0") != "1":
+    LM106_TO_5 = [[i for i in LM106_TO_5[0] if i not in _IRIS106], [i for i in LM106_TO_5[1] if i not in _IRIS106]] + LM106_TO_5[2:]
+
+
+def lsq_similarity(src, dst) -> np.ndarray:
+    """least-squares similarity (rotation + uniform scale + translation) src -> dst, closed form, 2x3 float64 (CF_ALIGN_FIT=lsq)"""
+    src = np.asarray(src, np.float64); dst = np.asarray(dst, np.float64); A = np.zeros((2 * len(src), 4)); b = dst.reshape(-1)
+    A[0::2] = np.stack([src[:, 0], -src[:, 1], np.ones(len(src)), np.zeros(len(src))], 1)
+    A[1::2] = np.stack([src[:, 1], src[:, 0], np.zeros(len(src)), np.ones(len(src))], 1)
+    a_, b_, tx, ty = np.linalg.lstsq(A, b, rcond=None)[0]; return np.array([[a_, -b_, tx], [b_, a_, ty]])
+
+
+def rigid_mouth_lm5(lms: list) -> list:
+    """CF_MOUTH=rigid (r15 audit): the 5-point mouth corners are the SOURCE (RU) mouth while CodeFormer restores the GENERATED mouth.
+    They are replaced by the segment's median mouth-corner position in the eyes + nose frame: they follow the head, not the speech."""
+    idx = [i for i, l in enumerate(lms) if l is not None]
+    if len(idx) < 3: return lms
+    S = {i: lsq_similarity(lms[i][:3], FFHQ_TEMPLATE_512[:3]) for i in idx}
+    med = np.median(np.stack([np.asarray(lms[i][3:], np.float64) @ S[i][:, :2].T + S[i][:, 2] for i in idx]), 0); out = list(lms)
+    for i in idx:
+        l = np.array(lms[i], np.float32, copy=True); l[3:] = (med - S[i][:, 2]) @ np.linalg.inv(S[i][:, :2]).T; out[i] = l
+    return out
 
 
 def lm5_from_insightface106(lmk106, mapping: list | None = None) -> np.ndarray | None:
@@ -130,6 +156,7 @@ class CodeFormerAccel:
     # ------------------------------------------------------------------ geometry (facelib semantics, no detector)
     @staticmethod
     def affine_for(lm5: np.ndarray) -> np.ndarray:
+        if os.environ.get("CF_ALIGN_FIT", "lmeds") == "lsq": return lsq_similarity(lm5, FFHQ_TEMPLATE_512)   # r15 audit flag: no LMEDS fit jumps
         return cv2.estimateAffinePartial2D(np.asarray(lm5, dtype=np.float32), FFHQ_TEMPLATE_512, method=cv2.LMEDS)[0]
 
     @staticmethod

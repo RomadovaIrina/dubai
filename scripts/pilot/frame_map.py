@@ -16,7 +16,7 @@ Returned dict (stored as manifest["frame_map"]):
   summary            counts: dropped source frames, duplicated, ambiguous matches, lag median / min / max
 """
 from __future__ import annotations
-import pathlib, subprocess
+import os, pathlib, subprocess
 import numpy as np
 FPS = 25.0
 
@@ -43,6 +43,36 @@ def _thumbs(frames_or_path, size=(58, 106)) -> np.ndarray:
     return np.stack(out).astype(np.float32)
 
 
+def exact_master_to_source(src) -> np.ndarray:
+    """r15 audit (default; FRAME_MAP=thumb restores the greedy thumbnail match): which source frame each master frame holds, decided EXACTLY
+    by replaying the master command (face_aware_latentsync.make_master: `-r 25`, or DUB_MASTER_TIMING=fps `-vf fps=25`) on a tiny index video
+    with the source's own timestamps (each frame's index as 14 bit blocks), as scripts/quality/r3_master_timing.py does. The greedy match
+    disagreed with that map on 249 of 2258 old03 master frames (up to 3 source frames: a landmark spike when FAST_MPREUSE seeds the master pass)."""
+    import av, tempfile
+    c = av.open(str(src)); s = c.streams.video[0]; tb = s.time_base; rate = s.average_rate
+    pts = np.array(sorted(p.pts for p in c.demux(s) if p.pts is not None), np.int64); c.close()
+    NB, BS = 14, 16; W, H = 8 + NB * (BS + 4), BS + 16
+    tm = ["-vf", f"fps={FPS:g}"] if os.environ.get("DUB_MASTER_TIMING", "r25") == "fps" else ["-r", f"{FPS:g}"]
+    with tempfile.TemporaryDirectory() as td:
+        idx = pathlib.Path(td) / "idx.mp4"; out = pathlib.Path(td) / "idx_25.mp4"
+        o = av.open(str(idx), "w"); st = o.add_stream("libx264rgb", rate=rate); st.width, st.height = W, H; st.pix_fmt = "rgb24"; st.time_base = tb
+        st.codec_context.time_base = tb; st.options = {"crf": "0", "preset": "ultrafast"}
+        for k, p in enumerate(pts):
+            img = np.zeros((H, W, 3), np.uint8)
+            for b in range(NB):
+                if (k >> b) & 1: img[8:8 + BS, 8 + b * (BS + 4):8 + b * (BS + 4) + BS] = 255
+            f = av.VideoFrame.from_ndarray(img, format="rgb24"); f.pts = int(p); f.time_base = tb
+            for q in st.encode(f): o.mux(q)
+        for q in st.encode(): o.mux(q)
+        o.close()
+        subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-nostdin", "-i", str(idx)] + tm + ["-crf", "18", "-an", str(out)], check=True)
+        c = av.open(str(out)); j = []
+        for fr in c.decode(video=0):
+            g = fr.to_ndarray(format="gray"); j.append(sum(1 << b for b in range(NB) if g[8 + BS // 2, 8 + b * (BS + 4) + BS // 2] > 127))
+        c.close()
+    return np.array(j, np.int64)
+
+
 def frame_map(src: pathlib.Path, master_frames, max_step: int = 4) -> dict:
     """src: source video; master_frames: the 25 fps master (path or in-memory BGR frames)."""
     sp = _pts(pathlib.Path(src)); S = _thumbs(src); M = _thumbs(master_frames)
@@ -53,8 +83,17 @@ def frame_map(src: pathlib.Path, master_frames, max_step: int = 4) -> dict:
         d = np.abs(S[lo:hi] - M[k]).mean(axis=(1, 2)); o = np.argsort(d)
         jm[k] = lo + int(o[0]); mad[k] = float(d[o[0]]); prev = jm[k]
         if len(o) > 1 and d[o[1]] < 1.1 * d[o[0]] + 0.05: amb += 1
+    jm_thumb = jm.copy(); method = "grey 58x106 thumbnail match, monotone search (step 0..%d source frames)" % max_step
+    if os.environ.get("FRAME_MAP", "exact") != "thumb":   # r15 audit (default): the exact replayed map (exact_master_to_source)
+        try:
+            ex = exact_master_to_source(src)
+            if len(ex) >= len(M) and ex[:len(M)].max() < len(S):
+                jm = ex[:len(M)].astype(int); mad = np.abs(S[jm] - M).mean(axis=(1, 2)); method = "exact: master command replayed on an index video (thumbnail match kept as a check)"
+            else: print(f"  [frame_map] exact map unusable ({len(ex)} frames, max {ex.max() if len(ex) else -1}); thumbnail match kept", flush=True)
+        except Exception as e_:
+            print(f"  [frame_map] exact map failed ({e_!r}); thumbnail match kept", flush=True)
     used = np.bincount(jm, minlength=len(S)); lag = sp[jm] - np.arange(len(M)) / FPS
-    return {"method": "grey 58x106 thumbnail match, monotone search (step 0..%d source frames)" % max_step, "master_fps": FPS,
+    return {"method": method, "master_fps": FPS, "thumb_disagree": int((jm_thumb != jm).sum()),
             "source_frames": int(len(S)), "master_frames": int(len(M)), "source_pts": np.round(sp, 5).tolist(),
             "master_to_source": jm.tolist(), "match_mad": np.round(mad, 2).tolist(), "lag_s": np.round(lag, 4).tolist(),
             "source_master_pos": np.round(sp * FPS, 4).tolist(),

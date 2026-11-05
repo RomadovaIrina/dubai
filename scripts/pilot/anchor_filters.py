@@ -22,6 +22,7 @@ two by measuring the REAL rigid head motion without any detector: dense optical 
 All filters work inside contiguous face runs (a gap restarts them).
 """
 from __future__ import annotations
+import os
 import numpy as np
 
 FPS = 25.0
@@ -29,6 +30,22 @@ FPS = 25.0
 UPPER = [70, 63, 105, 66, 107, 55, 65, 52, 53, 46, 336, 296, 334, 293, 300, 285, 295, 282, 283, 276, 33, 133, 362, 263, 6, 168, 197, 195,
          9, 8, 151, 108, 337, 69, 299, 143, 372, 116, 345, 111, 340, 117, 346, 118, 347, 50, 280, 4, 5, 51, 281]
 EYE_IN = [159, 145, 386, 374, 468, 473]  # pupils / lid centres (excluded radius: blinks)
+# r15 audit: brows / forehead move with expressions (brow raises) and are not rigid; AF_UPPER=nobrow measures the head motion without them
+BROW_FOREHEAD = {70, 63, 105, 66, 107, 55, 65, 52, 53, 46, 336, 296, 334, 293, 300, 285, 295, 282, 283, 276, 9, 8, 151, 108, 337, 69, 299}
+if os.environ.get("AF_UPPER", "prod") == "nobrow": UPPER = [k for k in UPPER if k not in BROW_FOREHEAD]
+MIN_INLIER = float(os.environ.get("AF_MIN_INLIER", "0") or 0)   # r15 audit flag: below this RANSAC inlier SHARE the fit is replaced (0 = off: at
+# the 0.5 px threshold the share measures flow noise, m18 median 0.53, 23 % of pairs < 0.3); always replaced: no fit / < 12 samples / < 8 inliers
+CACHE_TAG = "_v2" + ("_nobrow" if os.environ.get("AF_UPPER", "prod") == "nobrow" else "")   # rigid-track cache files: the code version
+RIGID_LM = [1, 4, 5, 6, 168, 197, 195, 33, 133, 263, 362]   # landmark fallback for a failed flow fit (nose / eye corners; no forehead)
+
+
+def _lm_similarity(a, b):
+    """least-squares similarity of the rigid landmarks a (frame t-1) -> b (frame t); identity when they are missing"""
+    a = np.asarray(a, np.float64)[RIGID_LM, :2]; b = np.asarray(b, np.float64)[RIGID_LM, :2]
+    if not (np.isfinite(a).all() and np.isfinite(b).all()): return np.array([[1, 0, 0], [0, 1, 0]], np.float64)
+    A = np.zeros((2 * len(a), 4)); A[0::2] = np.stack([a[:, 0], -a[:, 1], np.ones(len(a)), np.zeros(len(a))], 1)
+    A[1::2] = np.stack([a[:, 1], a[:, 0], np.zeros(len(a)), np.ones(len(a))], 1)
+    p, q, tx, ty = np.linalg.lstsq(A, b.reshape(-1), rcond=None)[0]; return np.array([[p, -q, tx], [q, p, ty]])
 
 
 def runs(ok: np.ndarray):
@@ -82,11 +99,15 @@ def _rigid_motion(frames, lm, step, return_info):
             X0, Y0, X1, Y1 = max(0, x0 - 16), max(0, y0 - 16), min(Ww, x1 + 16), min(Hh, y1 + 16)
             F = dis.calc(np.ascontiguousarray(prev_g[Y0:Y1, X0:X1]), np.ascontiguousarray(g[Y0:Y1, X0:X1]), None)
             ys, xs = np.nonzero(m[::step, ::step]); ys = ys * step + (y0 - Y0); xs = xs * step + (x0 - X0)
+            M, share = None, 0.0
             if len(xs) >= 12:
                 p0 = np.stack([xs + X0, ys + Y0], 1).astype(np.float32); p1 = p0 + F[ys, xs]
                 M, inl = cv2.estimateAffinePartial2D(p0, p1, method=cv2.RANSAC, ransacReprojThreshold=0.5, maxIters=2000, confidence=0.995)
-                if M is not None:
-                    Hs[t] = M; info[t] = (len(xs), float(inl.mean()))
+                share = float(inl.mean()) if M is not None and inl is not None else 0.0
+            if M is not None and share >= MIN_INLIER and share * len(xs) >= 8:
+                Hs[t] = M; info[t] = (len(xs), share)
+            else:   # r15 audit (default): a failed / unreliable fit used to stay IDENTITY = a step in the cumulative head track that flow:4
+                Hs[t] = _lm_similarity(lm[t - 1], lm[t]); info[t] = (len(xs), -1.0 - share)   # spreads over +-12 frames; info < 0 = replaced
         prev_g = g
     return (Hs, info) if return_info else Hs
 
