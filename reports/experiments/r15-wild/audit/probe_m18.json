@@ -1,0 +1,84 @@
+{
+ "iod_px": 247.1,
+ "frames": 501,
+ "A_frame_map": {
+  "master_frames": 501,
+  "disagree": 0,
+  "max_abs": 0,
+  "examples": []
+ },
+ "N_nose": {
+  "wings_minus_rigid": {
+   "hf_x1000": 0.63,
+   "std_x1000": 7.83,
+   "p99_dev_x1000": 31.79
+  },
+  "nose_wings_prod": {
+   "idx": [
+    5,
+    64,
+    294,
+    4
+   ],
+   "hf_x1000": 2.08,
+   "lf_std_x1000": 39.64
+  },
+  "nose_rigid": {
+   "idx": [
+    5,
+    4,
+    1,
+    195
+   ],
+   "hf_x1000": 2.4,
+   "lf_std_x1000": 39.06
+  }
+ },
+ "C_codeformer_align": {
+  "prod_iris_lmeds_srcmouth": {
+   "mouth_hf_x1000": 3.36,
+   "eye_hf_x1000": 3.2,
+   "scale_hf_x1000": 2.18
+  },
+  "noiris_lmeds_srcmouth": {
+   "mouth_hf_x1000": 3.48,
+   "eye_hf_x1000": 3.29,
+   "scale_hf_x1000": 2.18
+  },
+  "noiris_lsq_srcmouth": {
+   "mouth_hf_x1000": 3.2,
+   "eye_hf_x1000": 2.77,
+   "scale_hf_x1000": 1.82
+  },
+  "noiris_lsq_rigidmouth": {
+   "mouth_hf_x1000": 3.28,
+   "eye_hf_x1000": 2.77,
+   "scale_hf_x1000": 1.96
+  }
+ },
+ "B_rigid": {
+  "upper_prod": {
+   "pairs": 500,
+   "failed_or_lt12": 0,
+   "inlier_lt_0.3": 114,
+   "inlier_lt_0.5": 231,
+   "inlier_p1": 0.077,
+   "inlier_median": 0.533,
+   "anchor_hf_x1000": 5.83
+  },
+  "upper_nobrow": {
+   "pairs": 500,
+   "failed_or_lt12": 0,
+   "inlier_lt_0.3": 67,
+   "inlier_lt_0.5": 181,
+   "inlier_p1": 0.126,
+   "inlier_median": 0.603,
+   "anchor_hf_x1000": 5.95
+  },
+  "anchor_diff_x1000": {
+   "mean": 4.12,
+   "p99": 20.7,
+   "max": 26.74
+  }
+ }
+}

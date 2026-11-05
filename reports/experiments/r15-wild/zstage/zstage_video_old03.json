@@ -1,0 +1,111 @@
+{
+ "a_source": {
+  "fps": 30.0,
+  "hf_x1000": 0.58,
+  "anchor_hf_x1000": 0.1,
+  "lf_std_x1000": 22.23,
+  "dL": 0.772,
+  "da": 0.427,
+  "dL_excess": 0.0,
+  "da_excess": 0.0,
+  "colour_jumps": 56
+ },
+ "a25_master": {
+  "fps": 25.0,
+  "hf_x1000": 0.81,
+  "anchor_hf_x1000": 0.15,
+  "lf_std_x1000": 22.29,
+  "lf_excess_x1000": 0.69,
+  "dL": 0.875,
+  "da": 0.427,
+  "dL_excess": 0.103,
+  "da_excess": 0.0,
+  "colour_jumps": 63
+ },
+ "d_raw_paste": {
+  "fps": 25.0,
+  "hf_x1000": 0.66,
+  "anchor_hf_x1000": 0.14,
+  "lf_std_x1000": 22.23,
+  "lf_excess_x1000": 2.15,
+  "dL": 1.661,
+  "da": 0.456,
+  "dL_excess": 0.889,
+  "da_excess": 0.029,
+  "colour_jumps": 176
+ },
+ "e1_codeformer": {
+  "fps": 25.0,
+  "hf_x1000": 0.68,
+  "anchor_hf_x1000": 0.12,
+  "lf_std_x1000": 21.96,
+  "lf_excess_x1000": 2.36,
+  "dL": 1.568,
+  "da": 0.565,
+  "dL_excess": 0.796,
+  "da_excess": 0.138,
+  "colour_jumps": 189
+ },
+ "e2_cf_detail": {
+  "fps": 25.0,
+  "hf_x1000": 0.63,
+  "anchor_hf_x1000": 0.14,
+  "lf_std_x1000": 22.2,
+  "lf_excess_x1000": 2.23,
+  "dL": 1.68,
+  "da": 0.467,
+  "dL_excess": 0.908,
+  "da_excess": 0.04,
+  "colour_jumps": 187
+ },
+ "e3_sr": {
+  "fps": 25.0,
+  "hf_x1000": 0.64,
+  "anchor_hf_x1000": 0.14,
+  "lf_std_x1000": 22.22,
+  "lf_excess_x1000": 2.33,
+  "dL": 1.657,
+  "da": 0.473,
+  "dL_excess": 0.885,
+  "da_excess": 0.046,
+  "colour_jumps": 190
+ },
+ "f_repair": {
+  "fps": 25.0,
+  "hf_x1000": 0.63,
+  "anchor_hf_x1000": 0.13,
+  "lf_std_x1000": 22.25,
+  "lf_excess_x1000": 2.39,
+  "dL": 1.6,
+  "da": 0.462,
+  "dL_excess": 0.828,
+  "da_excess": 0.035,
+  "colour_jumps": 169
+ },
+ "g_final": {
+  "fps": 30.01,
+  "hf_x1000": 0.36,
+  "anchor_hf_x1000": 0.09,
+  "lf_std_x1000": 22.26,
+  "lf_excess_x1000": 2.22,
+  "dL": 1.173,
+  "da": 0.417,
+  "dL_excess": 0.401,
+  "da_excess": -0.01,
+  "colour_jumps": 103
+ },
+ "b_input_crop": {
+  "hf": 0.57,
+  "anchor_hf": 0.05,
+  "lf_std": 6.62
+ },
+ "c_generated_crop": {
+  "hf": 0.43,
+  "anchor_hf": 0.06,
+  "lf_std": 6.45
+ },
+ "b_affine_placement": {
+  "hf": 0.84,
+  "lf_std": 8.05
+ }
+}

@@ -1,0 +1,16 @@
+{"label": "q2d_m18", "src_pop": null, "pop": 0.9, "excess": 0.11, "frames_gt_thr": 0, "events": 0, "strong_events_gt10": 0, "origin": {}}
+{"label": "q2d_m18", "src_pop": 0.79, "pop": 0.9, "excess": 0.11, "frames_gt_thr": 0, "events": 0, "strong_events_gt10": 0, "origin": {}}
+{"label": "q2ct3_m18", "src_pop": 0.79, "pop": 0.74, "excess": -0.04, "frames_gt_thr": 0, "events": 0, "strong_events_gt10": 0, "origin": {}}
+{"label": "q2ct5_m18", "src_pop": 0.79, "pop": null, "excess": null, "frames_gt_thr": null, "events": 0, "strong_events_gt10": 0, "origin": {}}
+{"label": "q2d_m03", "src_pop": 0.91, "pop": 1.04, "excess": 0.13, "frames_gt_thr": 0, "events": 0, "strong_events_gt10": 0, "origin": {}}
+{"label": "q2dlk_m03", "src_pop": 0.91, "pop": 1.0, "excess": 0.09, "frames_gt_thr": 0, "events": 0, "strong_events_gt10": 0, "origin": {}}
+{"label": "q2g15_m03", "src_pop": 0.91, "pop": 0.92, "excess": 0.02, "frames_gt_thr": 0, "events": 0, "strong_events_gt10": 0, "origin": {}}
+{"label": "q2rs7_m18", "src_pop": 0.79, "pop": 0.9, "excess": 0.11, "frames_gt_thr": 0, "events": 0, "strong_events_gt10": 0, "origin": {}}
+{"label": "q2g15lk_m03", "src_pop": 0.91, "pop": 0.9, "excess": -0.01, "frames_gt_thr": 0, "events": 0, "strong_events_gt10": 0, "origin": {}}
+{"label": "q2rs7lk_m18", "src_pop": 0.79, "pop": 0.86, "excess": 0.07, "frames_gt_thr": 0, "events": 0, "strong_events_gt10": 0, "origin": {}}
+{"label": "q2g125_m03", "src_pop": 0.91, "pop": 0.88, "excess": -0.03, "frames_gt_thr": 0, "events": 0, "strong_events_gt10": 0, "origin": {}}
+{"label": "q2g125lk_m03", "src_pop": 0.91, "pop": 0.87, "excess": -0.04, "frames_gt_thr": 0, "events": 0, "strong_events_gt10": 0, "origin": {}}
+{"label": "q2ts25_m03", "src_pop": 0.91, "pop": 0.98, "excess": 0.07, "frames_gt_thr": 0, "events": 0, "strong_events_gt10": 0, "origin": {}}
+{"label": "q2rs10_m18", "src_pop": 0.79, "pop": 0.9, "excess": 0.12, "frames_gt_thr": 0, "events": 0, "strong_events_gt10": 0, "origin": {}}
+{"label": "q2ts25lk_m03", "src_pop": 0.91, "pop": 0.95, "excess": 0.05, "frames_gt_thr": 0, "events": 0, "strong_events_gt10": 0, "origin": {}}
+{"label": "q2rs10lk_m18", "src_pop": 0.79, "pop": null, "excess": null, "frames_gt_thr": null, "events": 0, "strong_events_gt10": 0, "origin": {}}

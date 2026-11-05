@@ -1,0 +1,8 @@
+{"label": "q2d_m03", "frames": 1214, "flash_frames": 69, "flash_mc": 59, "flash_stat": 17, "strong": 22, "strong_t": [3.467, 3.633, 4.633, 4.667, 5.2, 7.667, 8.767, 11.667, 12.033, 13.467, 13.567, 13.767, 14.167, 19.8, 21.267, 21.367, 21.567, 26.433, 28.367, 28.4, 32.167, 36.033]}
+{"label": "q2dlk_m03", "frames": 1214, "flash_frames": 50, "flash_mc": 44, "flash_stat": 8, "strong": 18, "strong_t": [3.367, 3.633, 4.633, 4.667, 5.2, 7.667, 8.0, 8.767, 11.667, 13.567, 13.767, 14.167, 21.267, 26.433, 28.367, 28.4, 32.167, 36.033]}
+{"label": "q2g15_m03", "frames": 1214, "flash_frames": 34, "flash_mc": 30, "flash_stat": 4, "strong": 10, "strong_t": [3.633, 4.667, 13.567, 14.167, 21.267, 26.433, 28.367, 28.4, 32.167, 36.033]}
+{"label": "q2g15lk_m03", "frames": 1214, "flash_frames": 21, "flash_mc": 21, "flash_stat": 0, "strong": 4, "strong_t": [4.667, 14.167, 28.367, 36.033]}
+{"label": "q2g125_m03", "frames": 1214, "flash_frames": 16, "flash_mc": 16, "flash_stat": 0, "strong": 4, "strong_t": [3.633, 14.167, 28.367, 28.4]}
+{"label": "q2g125lk_m03", "frames": 1214, "flash_frames": 13, "flash_mc": 13, "flash_stat": 0, "strong": 2, "strong_t": [14.167, 28.4]}
+{"label": "q2ts25_m03", "frames": 1214, "flash_frames": 57, "flash_mc": 50, "flash_stat": 9, "strong": 17, "strong_t": [3.467, 3.633, 4.633, 4.667, 5.2, 8.767, 11.667, 13.567, 13.767, 14.167, 21.367, 26.433, 27.033, 28.367, 28.4, 32.167, 36.033]}
+{"label": "q2ts25lk_m03", "frames": 1214, "flash_frames": 42, "flash_mc": 41, "flash_stat": 3, "strong": 14, "strong_t": [3.467, 4.667, 5.2, 8.0, 8.767, 11.667, 13.567, 13.767, 14.167, 21.367, 27.033, 28.367, 28.4, 36.033]}
