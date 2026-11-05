@@ -192,7 +192,11 @@ def main() -> int:
     if a.mux == "final_mix" and (dd / "final_mix_aac.m4a").exists():
         dub_aac = dd / "final_mix_aac.m4a"   # what the viewer hears (dub voice + background bed); LatentSync / gate still use the clean voice
     master = base_work / "master_25fps.mp4"
-    if master.exists() and not (work / "master_25fps.mp4").exists(): os.symlink(master, work / "master_25fps.mp4")   # make_master() reuses it (identical ffmpeg call otherwise)
+    if master.exists() and not (work / "master_25fps.mp4").exists():   # make_master() reuses it (identical ffmpeg call otherwise)
+        import cv2   # r15 F3 (audit, plain bug): link only a master that matches THIS source's 25 fps timeline (frame count, fps); else make_master() rebuilds it
+        cap_ = cv2.VideoCapture(str(master)); nf_, fps_ = int(cap_.get(cv2.CAP_PROP_FRAME_COUNT)), cap_.get(cv2.CAP_PROP_FPS); cap_.release()
+        if abs(fps_ - 25.0) < 0.01 and abs(nf_ - round(duration * 25)) <= 2: os.symlink(master, work / "master_25fps.mp4")
+        else: print(f"  master_25fps not reused: {master} has {nf_} frames at {fps_:.3f} fps, the source needs ~{round(duration * 25)} at 25", flush=True)
     times = {}; t_all = time.perf_counter()
     man = {**man, "output": str(out), "work_dir": str(work), "candidate": {"tag": a.tag, "dubbed_dir": str(dd), "video_params": {k: v for k, v in vars(a).items() if k not in ("id", "tag", "run_dir", "work_dir", "dubbed_dir", "out", "work_out")}}}
     if a.dubbed_dir:   # units' alignment info comes from the E1 report when present

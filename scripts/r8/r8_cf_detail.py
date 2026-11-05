@@ -97,6 +97,8 @@ def main():
         for c0 in range(0, n, CH):
             for img in ex.map(second, range(c0, min(n, c0 + CH))):
                 for pk in st.encode(av.VideoFrame.from_ndarray(img, format="bgr24")): o.mux(pk)
+    for k in range(n, len(B)):   # r15 F3 (audit): the base frames past the CF / landmark length, unchanged (were dropped: a frozen mouth at the end)
+        for pk in st.encode(av.VideoFrame.from_ndarray(B[k], format="bgr24")): o.mux(pk)
     for pk in st.encode(): o.mux(pk)
     o.close()
     rep = {"frames": n, "mouth_frames": int(sum(b is not None for b in boxes)), "cf_minus_base_outside_mouth_mad": round(float(np.median(outside)), 3) if outside else None,

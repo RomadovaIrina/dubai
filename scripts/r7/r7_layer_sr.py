@@ -62,7 +62,7 @@ def main():
     ap.add_argument("--dilate", type=float, default=0.5, help="lips hull dilation in mouth widths = the restored region"); ap.add_argument("--feather", type=float, default=0.15)
     ap.add_argument("--strength", type=float, default=1.0); ap.add_argument("--crf", type=int, default=10); ap.add_argument("--max-frames", type=int, default=0)
     ap.add_argument("--batch", type=int, default=1, help="phase 2: ESRGAN crops per forward pass (crops padded to the batch's max size, reflect)")
-    ap.add_argument("--encode-preset", default="medium"); ap.add_argument("--mask", choices=["dilate", "down2"], default="dilate", help="phase 2: down2 = the same dilate-by-r + Gaussian edge computed at half resolution and resized (max |diff| 0.07, mean 0.004; 1.3 ms instead of 17 ms per frame)")
+    ap.add_argument("--encode-preset", default="medium"); ap.add_argument("--stable-box", choices=["off", "on"], default="off", help="r15 F3 (audit 9b): a stable, rounded crop box (hysteresis 2 px) instead of the truncated per-frame box"); ap.add_argument("--mask", choices=["dilate", "down2"], default="dilate", help="phase 2: down2 = the same dilate-by-r + Gaussian edge computed at half resolution and resized (max |diff| 0.07, mean 0.004; 1.3 ms instead of 17 ms per frame)")
     ap.add_argument("--temporal", type=int, default=0, help="r7 F: the ADDED detail (sr - raw) is averaged over +-N layer frames, flow-aligned (DIS on the raw crops) "
                     "to frame k, before it is added: per-frame ESRGAN texture flickers (03: twitch +4.7 at N=0); N=1 = 3-frame average")
     a = ap.parse_args(); lm = np.load(a.lm)["lm"]; net = load_model(); t0 = time.perf_counter()
@@ -93,6 +93,11 @@ def main():
         if p is None or not np.isfinite(p[LIPS_OUTER]).all(): continue
         q = p[LIPS_OUTER, :2]; mw = float(q[:, 0].max() - q[:, 0].min()); pad = (a.dilate + a.feather + 0.2) * mw
         x0, y0 = int(max(0, q[:, 0].min() - pad)), int(max(0, q[:, 1].min() - pad)); x1, y1 = int(min(W, q[:, 0].max() + pad)), int(min(H, q[:, 1].max() + pad))
+        if a.stable_box == "on":
+            bx = [int(round(max(0, q[:, 0].min() - pad))), int(round(max(0, q[:, 1].min() - pad))), int(round(min(W, q[:, 0].max() + pad))), int(round(min(H, q[:, 1].max() + pad)))]
+            pb = getattr(main, "_pb", None)
+            if pb is not None and max(abs(u - v) for u, v in zip(bx, pb)) <= 2: bx = pb
+            main._pb = bx; x0, y0, x1, y1 = bx
         if x1 - x0 < 16 or y1 - y0 < 16: continue
         crop = f[y0:y1, x0:x1].astype(np.float32); ch, cw = crop.shape[:2]
         hull = cv2.convexHull((q - [x0, y0]).astype(np.float32))[:, 0]; m = np.zeros((ch, cw), np.float32); cv2.fillPoly(m, [np.round(hull).astype(np.int32)], 1.0)
@@ -112,7 +117,7 @@ def main():
         h, w = F.shape[:2]; gx, gy = np.meshgrid(np.arange(w, dtype=np.float32), np.arange(h, dtype=np.float32))
         return cv2.remap(img, gx + F[..., 0], gy + F[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
     for k in range(n):
-        f = frames[k]
+        f = frames[k].copy()   # r15 F3 (audit 9a, fixed by default): never write into the input list (the neighbours' flow must read RAW frames)
         if boxes[k] is not None:
             x0, y0, x1, y1, m = boxes[k]; crop, det = crops[k]; tf = time.perf_counter()
             if dis is not None:   # average the detail over the neighbours, each warped onto frame k (flow on the raw crops, same box)

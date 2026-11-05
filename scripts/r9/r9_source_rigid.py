@@ -15,7 +15,7 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--src", required=True); ap.add_argument("--source-lm", required=True); ap.add_argument("--max-hold", type=int, default=2)
     a = ap.parse_args(); t0 = time.perf_counter()
     import fps_composite as fc, anchor_filters as af
-    S, _, _, _ = fc.decode_source(a.src); sl = pathlib.Path(a.source_lm)
+    S, _, _, _ = fc.source_stream(a.src)   # r15 F3 (audit): decode_source no longer exists; sl = pathlib.Path(a.source_lm)
     lm_s = np.load(sl)["lm"][:len(S)].astype(np.float64)
     if len(lm_s) != len(S): raise SystemExit(f"--source-lm has {len(lm_s)} frames, source {len(S)}")
     rawp = sl.with_name(sl.stem + "_mp.npz")
