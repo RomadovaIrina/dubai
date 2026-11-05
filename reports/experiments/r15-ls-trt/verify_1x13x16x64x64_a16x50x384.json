@@ -1,0 +1,1 @@
+{"key": "1x13x16x64x64_a16x50x384", "lora": "/workspace/dub/r15k/r6_step_00250_ema.pt", "psnr": [[77.93, 0.00104], [75.24, 0.00143], [73.04, 0.00186]], "trt_ms": 126.5, "torch_eager_fp16_ms": 182.1}
