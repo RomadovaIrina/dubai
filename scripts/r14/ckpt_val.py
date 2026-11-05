@@ -13,7 +13,10 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--out", required=True); ap.add_argument("--ckpt", required=True); ap.add_argument("--val-max", type=int, default=24)
     ap.add_argument("--student-steps", type=int, default=4); ap.add_argument("--rank", type=int, default=32)
     # --open-min: the proxy reads high; 1.03 reproduces the E2E pick on r2 (step 1500, x0.93 vs q2; 0.95 would pick the damped 3000)
-    ap.add_argument("--open-box", default="0.35,0.56,0.65,0.72"); ap.add_argument("--open-min", type=float, default=1.03); a = ap.parse_args()
+    ap.add_argument("--open-box", default="0.35,0.56,0.65,0.72"); ap.add_argument("--open-min", type=float, default=1.03)
+    # r15 (r5): --mse-tol T = among the checkpoints that wide, those within (1 + T) x the lowest MSE go to the highest val sync (r4_s6: its lowest-MSE
+    # pick had the run's weakest val sync and lost E2E to the final step); 0 = the r14 rule (lowest MSE)
+    ap.add_argument("--mse-tol", type=float, default=0.0); a = ap.parse_args()
     fs = sorted(glob.glob(str(pathlib.Path(a.out) / "t" / "*.pt"))); random.Random(1).shuffle(fs); cache = {f: torch.load(f) for f in fs}
     srcs = sorted({cache[f]["src"] for f in fs}); random.Random(2).shuffle(srcs)
     vsrc = set([s for s in srcs if (lambda d: d.get("mel") is not None and d["cond"].shape[1] == 16)(torch.load(s))][:a.val_max])
@@ -45,7 +48,13 @@ def main():
     # none that wide -> the widest
     ok = [r for r in res if r["open_ratio"] >= a.open_min]
     pick = min(ok, key=lambda r: r["mse"]) if ok else max(res, key=lambda r: r["open_ratio"])
-    why = (f"opening ratio {pick['open_ratio']:.3f} >= {a.open_min}, lowest MSE ({pick['mse']:.4f}) of the {len(ok)} that wide" if ok else
+    near = [r for r in ok if r["mse"] <= pick["mse"] * (1 + a.mse_tol)] if ok and a.mse_tol > 0 else []
+    if len(near) > 1:
+        lo = pick; pick = max(near, key=lambda r: r.get("sync", 0.0))
+        why = (f"opening ratio {pick['open_ratio']:.3f} >= {a.open_min}; of the {len(near)} within {a.mse_tol:.0%} of the lowest MSE ({lo['mse']:.4f}, {lo['ckpt']}) "
+               f"the highest val sync ({pick.get('sync', 0):.3f}, MSE {pick['mse']:.4f})")
+    else: why = None
+    why = why or (f"opening ratio {pick['open_ratio']:.3f} >= {a.open_min}, lowest MSE ({pick['mse']:.4f}) of the {len(ok)} that wide" if ok else
            f"no checkpoint reached opening ratio {a.open_min}; the widest ({pick['open_ratio']:.3f})")
     rep = {"val_windows": len(val), "by_ckpt": res, "best_by_pix": best_pix["ckpt"], "best_by_mse": best_mse["ckpt"], "pick": pick["ckpt"], "pick_reason": why}
     (pathlib.Path(a.ckpt) / "ckpt_val.json").write_text(json.dumps(rep, indent=1))

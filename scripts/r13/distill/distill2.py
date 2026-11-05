@@ -17,7 +17,16 @@ import distill as D   # load_unet, sched, LoRA, add_lora, lora_state, sample, lo
 
 @torch.no_grad()
 def cmd_teacher(a):
-    out = pathlib.Path(a.out); (out / "t").mkdir(parents=True, exist_ok=True); unet = D.load_unet(); s20 = D.sched(20); t0 = time.time()
+    out = pathlib.Path(a.out); (out / "t").mkdir(parents=True, exist_ok=True); unet = D.load_unet(); s20 = D.sched(a.teacher_steps); t0 = time.time()
+    # r15 (lever 1): the teacher as PRODUCTION q2 runs it (scripts/r9/e2e.sh + scripts/r4/r4_video.sh: --steps 10 on the speaking windows, CFG 2.0,
+    # DeepCache interval 5 branch 0, as scripts/optim/latentsync_accel.py) instead of the r13 / r14 20-step CFG 2.0 teacher without DeepCache;
+    # the helper wraps the UNet of a shim pipe (it only reads pipe.unet / pipe.scheduler); its state is reset per batch below
+    dc = None; tcfg = {"steps": a.teacher_steps, "cfg": a.teacher_cfg, "deepcache": a.teacher_deepcache}
+    if a.teacher_deepcache:
+        from DeepCache import DeepCacheSDHelper
+        shim = type("Shim", (), {})(); shim.unet, shim.scheduler = unet, s20
+        dc = DeepCacheSDHelper(pipe=shim); dc.set_params(cache_interval=a.teacher_deepcache, cache_branch_id=0); dc.enable()
+    print(f"[teacher] {tcfg}", flush=True)
     fs = sorted(glob.glob(str(pathlib.Path(a.cap) / "*.pt"))); random.Random(0).shuffle(fs); fs = fs[:a.max] if a.max else fs
     items = [(f, False) for f in fs] + ([(f, True) for f in fs] if a.flip else [])
     todo = [(i, f, fl) for i, (f, fl) in enumerate(items) if not (out / "t" / (pathlib.Path(f).stem + ("_f" if fl else "") + ".pt")).exists()]
@@ -32,10 +41,11 @@ def cmd_teacher(a):
             # the SAME noise for every frame of a window, as LatentSync's prepare_latents (randn(b, c, 1, h, w).repeat over frames): with i.i.d.
             # per-frame noise the UNet leaves the mouth as noise (the r13 pilot's teacher targets were that: mouth jitter 0.59 vs 0.008)
             z = torch.stack([torch.randn((4, 1) + cond.shape[3:], generator=torch.Generator(device="cuda").manual_seed(1000 + i), device="cuda", dtype=torch.float16).repeat(1, cond.shape[2], 1, 1) for i, _, _ in grp])
+            if dc is not None: dc.cached_output, dc.start_timestep, dc.cur_timestep = {}, None, 0   # a fresh DeepCache cycle per batch (reset_states would drop the wrappers)
             with torch.autocast("cuda", dtype=torch.float16):
-                x0 = D.sample(unet, s20, z, cond, au, cfg=2.0)
+                x0 = D.sample(unet, s20, z, cond, au, cfg=a.teacher_cfg)
             for j, (d, (i, f, fl)) in enumerate(zip(ds, grp)):
-                torch.save({"cond": cond[j].cpu(), "audio": d["audio"], "mel": d.get("mel"), "z": z[j].cpu(), "x0_teacher": x0[j].to(torch.float16).cpu(), "src": f, "flip": fl, "job": d.get("job"), "orig_audio": d.get("orig_audio", str(d.get("job", "")).startswith("x_"))},   # external clips (job x_*) carry their own audio
+                torch.save({"cond": cond[j].cpu(), "audio": d["audio"], "mel": d.get("mel"), "z": z[j].cpu(), "x0_teacher": x0[j].to(torch.float16).cpu(), "teacher": tcfg, "src": f, "flip": fl, "job": d.get("job"), "orig_audio": d.get("orig_audio", str(d.get("job", "")).startswith("x_"))},   # external clips (job x_*) carry their own audio
                            out / "t" / (pathlib.Path(f).stem + ("_f" if fl else "") + ".pt"))
             done += len(grp)
             if done % 40 < a.tbatch: print(f"[teacher] {done}/{len(todo)} {time.time() - t0:.0f} s ({(time.time() - t0) / done:.2f} s / window)", flush=True)
@@ -230,6 +240,8 @@ def cmd_train(a):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("cmd", choices=["teacher", "train"]); ap.add_argument("--cap"); ap.add_argument("--out", required=True)
     ap.add_argument("--max", type=int, default=0); ap.add_argument("--flip", action="store_true"); ap.add_argument("--tbatch", type=int, default=4)
+    ap.add_argument("--teacher-steps", type=int, default=20); ap.add_argument("--teacher-cfg", type=float, default=2.0)
+    ap.add_argument("--teacher-deepcache", type=int, default=0, help="r15: DeepCache interval for the teacher (0 = off; production q2 = 5 with --teacher-steps 10)")
     ap.add_argument("--steps", type=int, default=3000); ap.add_argument("--student-steps", type=int, default=4); ap.add_argument("--rank", type=int, default=32)
     ap.add_argument("--lr", type=float, default=1e-4); ap.add_argument("--ema", type=float, default=0.999); ap.add_argument("--val-every", type=int, default=500)
     ap.add_argument("--val-max", type=int, default=24); ap.add_argument("--sync-w", type=float, default=0.15); ap.add_argument("--pix-w", type=float, default=0.5)

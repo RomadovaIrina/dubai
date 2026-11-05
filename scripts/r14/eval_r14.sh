@@ -5,7 +5,7 @@
 #   LORA=<ckpt.pt> STEPS=4 TAG=s4 [XENV='"LS_STRIDE": "8", "LS_OVERLAP": "fuse"'] bash scripts/r14/eval_r14.sh [old03 m03 m18]      (BASE=1: the q2 + F3 baseline too, when missing)
 set -u
 cd /workspace/dub/dubai; export DUB_ROOT=/workspace/dub/dubai; . scripts/env.sh >/dev/null
-X=/workspace/dub/r14d/eval; OB=${OB:-/workspace/dub/outbox/r14_d}; mkdir -p $X $OB; A=/workspace/dub/artifacts/r4a
+X=${EVAL_DIR:-/workspace/dub/r14d/eval}; OB=${OB:-/workspace/dub/outbox/r14_d}; mkdir -p $X $OB; A=/workspace/dub/artifacts/r4a
 TAG=${TAG:-s4}; STEPS=${STEPS:-4}; LORA=${LORA:?LORA=<ckpt>}
 Q=${Q2:-q2}   # r15: the baseline job name; Q2=q2u Q2ENV='"LS_FACE_UNITS": "1"' = q2 + F3 with agent F's face-follows-the-dubbed-units fix (m03 19 s)
 [ -f $X/skip_$TAG ] && { echo "skip $TAG ($X/skip_$TAG)"; exit 0; }   # arms dropped while the chain runs

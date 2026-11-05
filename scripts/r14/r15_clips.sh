@@ -2,7 +2,7 @@
 # r15: the student arm vs the r14 student s4p1500c8 (2-panel full + 0.5x mouth), and the eye-check spans (m18 2-6 s, m03 17-21 s; 0.5x, time burnt in)
 # against both q2 + F3 and s4p1500c8 -> outbox/r15_d/.   bash scripts/r14/r15_clips.sh <TAG> [REF_TAG=s4p1500c8]
 cd /workspace/dub/dubai; export DUB_ROOT=/workspace/dub/dubai; . scripts/env.sh >/dev/null
-TAG=${1:?TAG}; R=${2:-s4p1500c8}; X=/workspace/dub/r14d/eval; OB=${OB:-/workspace/dub/outbox/r15_d}; mkdir -p $OB
+TAG=${1:?TAG}; R=${2:-s4p1500c8}; X=${EVAL_DIR:-/workspace/dub/r14d/eval}; OB=${OB:-/workspace/dub/outbox/r15_d}; mkdir -p $OB
 declare -A SPAN=([m18]=2:6 [m03]=17:21)
 for id in old03 m03 m18; do
   lm=$(find /workspace/dub/artifacts -path "*${Q2:-q2}_$id*" -name "*source_lm_F.npz" 2>/dev/null | head -1); [ -n "$lm" ] || { echo "no landmarks for $id"; continue; }
