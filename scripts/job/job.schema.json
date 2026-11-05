@@ -13,7 +13,7 @@
     "out_dir": {"type": "string", "description": "CLI only: where the job writes everything. HTTP: set by the service ($DABAI_JOBS_DIR/<job_id>)."},
     "source_lang": {"type": "string", "default": "auto", "description": "auto = Whisper detects it (RU is the validated source). A given code that differs from the detected one adds the warning W_SOURCE_LANG."},
     "target_lang": {"type": "string", "default": "en", "description": "A Chatterbox language id from scripts/r13/lang_routes.json (22 languages; quality group per language in LANGS.md). en = the accepted RU->EN path."},
-    "polyglot": {"type": ["object", "null"], "default": null, "description": "Per-sentence target languages in one video, e.g. {\"mode\": \"cycle\", \"langs\": [\"en\", \"de\"]} or {\"mode\": \"map\", \"units\": {\"0\": \"de\"}} (LANGS.md)."},
+    "polyglot": {"type": ["object", "null"], "default": null, "description": "Per-sentence target languages in one video (scripts/r13/polyglot.py): {\"mode\": \"units\", \"units\": {\"0\": \"de\"}} | {\"mode\": \"ranges\", \"ranges\": [{\"start\": 0, \"end\": 20, \"lang\": \"de\"}]} | {\"mode\": \"cycle\", \"langs\": [\"en\", \"de\"]} | {\"mode\": \"all\", \"lang\": \"de\"}."},
     "mode": {"enum": ["quality", "fast"], "default": "quality", "description": "quality = LatentSync 1.6 teacher, q2 + F3 composite + c8 overlapping windows (the eye-approved production stack). fast = the 4-step distilled student (r2 step 1500 EMA) + c8: ~-25..35 % face GPU, slightly weaker sync."},
     "lipsync": {"enum": ["auto", "off"], "default": "auto", "description": "off = voice-only dub, no face work."},
     "subs": {

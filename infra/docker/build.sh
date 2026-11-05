@@ -2,7 +2,8 @@
 # DabAI image (r15 T): build the ML worker image (context = the repo root). Builds locally only; PUSHES NOTHING.
 #     bash infra/docker/build.sh [tag]            env: IMAGE (default dabai-worker), LLAMA_JOBS (16), PLATFORM (linux/amd64)
 # Needs: Docker with BuildKit (docker buildx), ~60 GB free disk for the build, network (~6 GB of wheels + the CUDA base images).
-# The result is ~18-20 GB (CUDA runtime + cuDNN + torch + three venvs), WITHOUT weights. No GPU is needed to build, one is needed to run.
+# The result is ~14-18 GB (estimate: CUDA 12.8 runtime + cuDNN ~3.5 GB, /venv/dabai 8.3 GB, mediapipe 0.9 GB, fonts / ffmpeg ~1 GB), WITHOUT
+# weights. No GPU is needed to build, one is needed to run.
 # Do NOT run on a laptop without checking the disk: it pulls ~10 GB of base layers.
 set -euo pipefail
 cd "$(dirname "$0")/../.."

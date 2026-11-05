@@ -35,7 +35,8 @@ RUN bash infra/docker/install_env.sh venvs api
 ARG LATENTSYNC_COMMIT=a229c3948406bc2cf6eaf4873e662e70c6a04746
 RUN LATENTSYNC_COMMIT=${LATENTSYNC_COMMIT} bash infra/docker/install_env.sh latentsync
 ARG LLAMA_JOBS=16
-RUN JOBS=${LLAMA_JOBS} CUDACXX=/usr/local/cuda/bin/nvcc bash infra/docker/install_env.sh llama_cuda
+# no driver at build time: libcuda comes from the toolkit's stubs for the link step only (the runtime gets the real one from the host)
+RUN LIBRARY_PATH=/usr/local/cuda/lib64/stubs JOBS=${LLAMA_JOBS} CUDACXX=/usr/local/cuda/bin/nvcc bash infra/docker/install_env.sh llama_cuda
 RUN find /venv -depth -type d -name __pycache__ -exec rm -rf {} + ; rm -rf /root/.cache /tmp/*
 
 # ------------------------------------------------------------------------------------------------------------------------------------
