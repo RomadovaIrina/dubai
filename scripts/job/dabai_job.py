@@ -306,6 +306,7 @@ def run_job(job: dict, on_event=None, cancel: threading.Event | None = None) -> 
             return finish(code="E_INPUT_TOO_LARGE", detail=f"{vmin:.2f} min / {pr['size_mb']} MB (worker limits {MAX_MIN} min / {MAX_MB:.0f} MB)")
         env = {**os.environ, **e2e_env(p)}; log = open(out / "job.log", "w")
         proc = subprocess.Popen(["bash", str(ROOT / "scripts" / "r9" / "e2e.sh"), src, str(e2e)], cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+        st["pipeline_pgid"] = proc.pid   # its own session / process group: a restarted service kills it (job_api._kill_orphan)
         to = float(p.get("timeout_s") or max(1800.0, 1200.0 * max(vmin, 0.5)))   # TZ 3.8; a hung stage must not hold the worker forever
         t0 = time.time(); n_seen = 0; last_pct = 0.0; rss_peak = 0.0; killed = None; k = 0; plan = plan_of(p)
         while proc.poll() is None:

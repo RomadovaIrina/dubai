@@ -12,7 +12,7 @@ ff -i $B -vf "fps=60" $X fps60_conv.mp4                                         
 ff -i $B -vf "scale=2160:3840:flags=lanczos" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p -c:a copy res4k_vertical.mp4
 ff -i $B -vf "scale=-2:1080,pad=1920:1080:(ow-iw)/2:0" $X horizontal_1920x1080.mp4                           # landscape (pillarbox)
 ff -i $B -vf "crop=720:720:0:200" $X square_720.mp4                                                           # square, the face centred
-ff -i $B -vf "transpose=2" $X -metadata:s:v:0 rotate=90 rotated_meta90.mp4                                    # coded landscape + display rotation (phone)
+ff -i $B -vf "transpose=2" $X rot_tmp.mp4 && ff -display_rotation:v:0 -90 -i rot_tmp.mp4 -c copy rotated_meta90.mp4 && rm -f rot_tmp.mp4   # coded landscape + display matrix -90 (phone; r15: ffmpeg 6.1 ignores -metadata rotate)
 ff -i $B3 -t 20 -vf "select='not(eq(mod(n\,4)\,0))'" -fps_mode vfr $X vfr.mp4                                 # variable frame rate (every 4th frame dropped, timestamps kept)
 ff -i $B -c:v libx265 -pix_fmt yuv420p10le -x265-params "colorprim=bt2020:transfer=arib-std-b67:colormatrix=bt2020nc" -tag:v hvc1 -c:a copy hdr_hlg_10bit.mp4
 ff -ss 2 -t 3 -i $B3 $X short_3s.mp4

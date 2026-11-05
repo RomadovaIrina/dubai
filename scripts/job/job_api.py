@@ -77,12 +77,27 @@ def _close(jid: str, code: str, detail: str | None = None):
     dj._write(d / "status.json", st); dj.Events(d / "events.jsonl").emit("done", status=s_, error=code, progress_pct=100.0)
 
 
+def _kill_orphan(st: dict):
+    """the pipeline of a job that was RUNNING when the service died may still run (own session): kill it before the next job takes the GPU"""
+    pg = st.get("pipeline_pgid")
+    try:
+        if pg and b"e2e.sh" in pathlib.Path(f"/proc/{int(pg)}/cmdline").read_bytes(): os.killpg(int(pg), 9); return True
+    except (OSError, ValueError): pass
+    return False
+
+
 @app.on_event("startup")
-def _startup():
-    for p in JOBS.glob("*/status.json"):   # TZ 12.4: a restart must not lose a job silently
-        try:
-            if json.loads(p.read_text()).get("status") in ("RUNNING", "QUEUED"): _close(p.parent.name, "E_WORKER_RESTART", "the worker restarted")
-        except Exception: pass
+def _startup():   # TZ 12.4: a restart loses no job: RUNNING ones end as E_WORKER_RESTART (retryable), QUEUED ones run, in submit order
+    queued = []
+    for p in JOBS.glob("*/status.json"):
+        try: s = json.loads(p.read_text())
+        except Exception: continue
+        if s.get("status") == "RUNNING":
+            k = _kill_orphan(s); _close(p.parent.name, "E_WORKER_RESTART", "the worker restarted while the job ran" + (" (its pipeline was killed)" if k else ""))
+        elif s.get("status") == "QUEUED":
+            if (p.parent / "job.json").exists(): queued.append((s.get("submitted_ts") or (p.parent / "job.json").stat().st_mtime, p.parent.name))
+            else: _close(p.parent.name, "E_WORKER_RESTART", "the job file is missing")
+    for _, jid in sorted(queued): CANCEL[jid] = threading.Event(); ORDER.append(jid); Q.put(jid)
     threading.Thread(target=_worker, daemon=True, name="dabai-worker").start()
 
 
@@ -103,7 +118,7 @@ def submit(job: dict = Body(...)):
         if (d / "status.json").exists() or jid in CANCEL: raise HTTPException(409, f"job {jid} exists")
         d.mkdir(parents=True, exist_ok=True); dj._write(d / "job.json", job)
         st = {"schema": dj.INTERFACE, "job_id": jid, "status": "QUEUED", "step": "queued", "step_label": "Queued", "progress_pct": 0.0, "eta_s": None,
-              "params": {**p, "input": dj.redact(p["input"])}, "versions": dj.versions(), "submitted_at": dj.now_iso(), "error": None}
+              "params": {**p, "input": dj.redact(p["input"])}, "versions": dj.versions(), "submitted_at": dj.now_iso(), "submitted_ts": time.time(), "error": None}
         dj._write(d / "status.json", st); dj.Events(d / "events.jsonl").emit("status", status="QUEUED", progress_pct=0.0)
         CANCEL[jid] = threading.Event(); ORDER.append(jid); Q.put(jid); pos = len(ORDER)
     return {"job_id": jid, "status": "QUEUED", "queue_position": pos, "status_url": f"/jobs/{jid}"}
