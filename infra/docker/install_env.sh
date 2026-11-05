@@ -9,7 +9,8 @@
 #   check       imports + versions of every venv (no GPU needed)
 # Never installed: CodeFormer (S-Lab NC: code + weights), htdemucs weights, InsightFace / RetinaFace weights (NC). See INTERFACE.md "Image".
 set -euo pipefail
-H="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; DUB_ROOT=${DUB_ROOT:-$(cd "$H/../.." && pwd)}; V=${VENV_ROOT:-/venv}; PYV=${PYTHON_VERSION:-3.11.17}
+H="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; DUB_ROOT=${DUB_ROOT:-$(cd "$H/../.." && pwd)}; V=${VENV_ROOT:-/venv}
+PYV=${DABAI_PYTHON:-3.11.17}   # its own name: base images export a generic PYTHON_VERSION (the vast image: 3.12), which once gave the clean room 3.12 venvs
 export UV_NO_CACHE=${UV_NO_CACHE:-1} UV_LINK_MODE=copy UV_HTTP_TIMEOUT=600 UV_PYTHON_PREFERENCE=only-managed
 log(){ echo "[$(date +%T)] == $*"; }
 TORCH_IDX=https://download.pytorch.org/whl/cu128; LLAMA_CPU_IDX=https://abetlen.github.io/llama-cpp-python/whl/cpu

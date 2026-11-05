@@ -12,13 +12,15 @@ ${V}/dabai/bin/python - <<'PY' && ok "torch runs on the GPU" || bad "torch on th
 import torch; assert torch.cuda.is_available(), "cuda not available"; c = torch.cuda.get_device_capability(0)
 x = torch.randn(1024, 1024, device="cuda", dtype=torch.float16); y = (x @ x).float().sum().item()   # a real sm_120 kernel, not only the driver
 print(f"     torch {torch.__version__} cuda {torch.version.cuda} capability {c} {torch.cuda.get_device_name(0)} vram {torch.cuda.get_device_properties(0).total_memory / 2**30:.1f} GiB")
-assert torch.cuda.get_device_properties(0).total_memory >= 30 * 2**30, "the pipeline needs a 32 GB card (audio stage peak ~27.5 GB)"
+assert torch.cuda.get_device_properties(0).total_memory >= 30 * 2**30, "the pipeline needs a 32 GB card (audio stage peak ~30 GB)"
 PY
 PYTHONPATH=$R/third_party/llama_cuda ${V}/dabai/bin/python -c "import llama_cpp, sys; sys.exit(0 if llama_cpp.llama_supports_gpu_offload() else 1)" && ok "llama.cpp CUDA build (Qwen 14B on the GPU)" || bad "llama_cuda"
 ${V}/mediapipe/bin/python -c "import mediapipe" && ok "mediapipe venv" || bad "mediapipe venv"
 ${V}/main/bin/python -c "import pynvml; pynvml.nvmlInit()" && ok "NVML (GPU accounting)" || bad "NVML"
-ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libx264 && ffmpeg -hide_banner -filters 2>/dev/null | grep -q " subtitles " && ok "ffmpeg libx264 + libass" || bad "ffmpeg libx264 / libass"
-fc-list | grep -qi "DejaVu Sans" && ok "subtitle fonts" || bad "DejaVu Sans font"
+# (outputs captured first: with pipefail, "cmd | grep -q" fails when grep exits early and cmd dies of SIGPIPE)
+ENC=$(ffmpeg -hide_banner -encoders 2>/dev/null); FLT=$(ffmpeg -hide_banner -filters 2>/dev/null); FON=$(fc-list 2>/dev/null)
+grep -q libx264 <<< "$ENC" && grep -q " subtitles " <<< "$FLT" && ok "ffmpeg libx264 + libass" || bad "ffmpeg libx264 / libass"
+grep -qi "DejaVu Sans" <<< "$FON" && ok "subtitle fonts" || bad "DejaVu Sans font"
 echo "     profile: DUB_PROFILE=${DUB_PROFILE:-unset} (DUB_ALLOW_NC=${DUB_ALLOW_NC:-?} DUB_ALLOW_NC_BED=${DUB_ALLOW_NC_BED:-?})"
 if [ "${DUB_ALLOW_NC:-0}" != 1 ]; then
   [ -e $R/third_party/CodeFormer ] && bad "CodeFormer present while DUB_ALLOW_NC=0" || ok "clean profile: no CodeFormer"

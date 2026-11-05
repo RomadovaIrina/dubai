@@ -27,7 +27,7 @@ FROM nvidia/cuda:${CUDA_VERSION}-cudnn-devel-${UBUNTU} AS builder
 ARG PYTHON_VERSION
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive UV_PYTHON_INSTALL_DIR=/opt/uv/python UV_PYTHON_PREFERENCE=only-managed UV_NO_CACHE=1 UV_LINK_MODE=copy \
-    UV_HTTP_TIMEOUT=600 DUB_ROOT=/workspace/dub/dubai VENV_ROOT=/venv PYTHON_VERSION=${PYTHON_VERSION}
+    UV_HTTP_TIMEOUT=600 DUB_ROOT=/workspace/dub/dubai VENV_ROOT=/venv DABAI_PYTHON=${PYTHON_VERSION}
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential cmake git ca-certificates curl pkg-config \
       ffmpeg libgl1 libglib2.0-0 libsndfile1 libgomp1 && rm -rf /var/lib/apt/lists/*

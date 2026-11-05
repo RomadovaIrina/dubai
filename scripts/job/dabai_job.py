@@ -102,14 +102,16 @@ def redact(u: str) -> str:
     p = urllib.parse.urlsplit(u); return urllib.parse.urlunsplit((p.scheme, p.hostname or "", p.path, "", "")) + ("?<redacted>" if p.query else "")
 
 
-def versions() -> dict:
+def versions(env: dict | None = None) -> dict:
+    """env = the job's own overrides (debug_env): the profile is the one the pipeline really runs with"""
+    E = {**os.environ, **{k: str(v) for k, v in (env or {}).items()}}
     sha = os.environ.get("DABAI_GIT_SHA")
     if not sha:
         try: sha = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"], capture_output=True, text=True, timeout=5).stdout.strip() or None
         except Exception: sha = None
     if not sha and (ROOT / "VERSION").exists(): sha = (ROOT / "VERSION").read_text().strip()
-    nc = os.environ.get("DUB_ALLOW_NC", "1") == "1" or os.environ.get("DUB_ALLOW_NC_BED", "1") == "1"   # e2e.sh defaults: 1 / 1 (= current)
-    prof = os.environ.get("DUB_PROFILE") or ("current" if nc else "clean")
+    nc = E.get("DUB_ALLOW_NC", "1") == "1" or E.get("DUB_ALLOW_NC_BED", "1") == "1"   # e2e.sh defaults: 1 / 1 (= current)
+    prof = "current" if nc else "clean"   # what the pipeline really loads (the image entrypoint sets both switches from DUB_PROFILE)
     return {"interface": INTERFACE, "pipeline": sha or "unknown", "image": os.environ.get("DABAI_IMAGE", "none"), "profile": prof}
 
 
@@ -273,7 +275,7 @@ def run_job(job: dict, on_event=None, cancel: threading.Event | None = None) -> 
     out = pathlib.Path(p.get("out_dir") or job.get("out_dir") or "/tmp/dabai_job_invalid").resolve(); out.mkdir(parents=True, exist_ok=True)
     sp, ev = out / "status.json", Events(out / "events.jsonl", on_event); e2e = out / "e2e"
     st = {"schema": INTERFACE, "job_id": p.get("job_id"), "status": "RUNNING", "step": "queued", "step_label": "Queued", "progress_pct": 0.0, "eta_s": None,
-          "params": {**p, "input": redact(p.get("input", ""))}, "versions": versions(), "flags": [], "warnings": [], "messages": [], "error": None,
+          "params": {**p, "input": redact(p.get("input", ""))}, "versions": versions(p.get("debug_env")), "flags": [], "warnings": [], "messages": [], "error": None,
           "output": None, "outputs": {}, "subs_ass": None, "metrics_json": None, "video_minutes": None, "gpu_busy_s": None, "wall_s": None,
           "refund_suggested": False, "started_at": now_iso(), "finished_at": None, "errors": []}
 
@@ -424,7 +426,7 @@ def metrics(p: dict, man: dict, vmin: float, wall: float, rss: float, e2e: pathl
             "vram_peak_mib_by_stage": tm.get("vram_peak_mib_by_stage"), "ram_peak_rss_mb": round(rss),
             "lipsync": {k: vs.get(k) for k in ("eligible_lipsync_frames", "latentsync_failed_frames", "held_landmark_frames", "degraded_ratio", "voice_only")} if vs else None,
             "output_format": (man.get("outputs") or {}), "source": man.get("source"), "speakers": (man.get("spec") or {}).get("speakers"),
-            "disk_out_dir_mb": round(_du([out]) / 1e6, 1), "versions": versions()}
+            "disk_out_dir_mb": round(_du([out]) / 1e6, 1), "versions": versions(p.get("debug_env"))}
 
 
 def main() -> int:

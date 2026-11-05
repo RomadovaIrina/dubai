@@ -175,7 +175,8 @@ Each comes with a ready user message in English and Russian. `flags[]` also list
 - **4K and other large sources:**
   - Above 1920 px on the long side, the face stages run on a ≤ 1920 copy. `scripts/r15/hires_merge.py` then adds only the composite's change back onto the full-resolution frames.
   - Everything outside the mouth keeps the source pixels; the output is at the source resolution.
-  - This fixes the r13 failure (`res4k_vertical`: `face_gen_failed` on 2160×3840). Flag: `face_work_downscaled`.
+  - This is the fix for the r13 failure (`res4k_vertical`: `face_gen_failed` on 2160×3840). Flag: `face_work_downscaled`.
+  - Root cause (r15 repro, `E2E_FACE_MAXSIDE=0`): at full 4K the generator's frame preparation runs on the CPU. A 20 s clip took 15 min with the GPU at 0 % (13 GB VRAM parked) and 28–45 GB RSS; the repro was stopped at that point. RAM and time grow with length, so a 1-minute 4K clip would pass the container's memory limit (85 GiB on r14-d).
 - **Rotated phone clips:**
   - The precheck now probes the picture as displayed (r15 fix). Before, sideways frames could read as "no face".
   - The rotation is baked into the output.

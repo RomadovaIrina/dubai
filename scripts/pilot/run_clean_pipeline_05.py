@@ -262,12 +262,12 @@ def build_units(segments: list[dict], duration: float, max_unit_s: float) -> lis
 def run_diarization(wav16: pathlib.Path) -> list[dict]:
     import torch
     tok = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
-    if not tok:
-        raise Blocker("HF_TOKEN is not set (gated pyannote/speaker-diarization-3.1)")
+    if not tok and os.environ.get("HF_HUB_OFFLINE") != "1":   # r15 T: the image runs offline from a filled models volume: no token needed then
+        raise Blocker("HF_TOKEN is not set (gated pyannote/speaker-diarization-3.1; or HF_HUB_OFFLINE=1 with the model in the HF cache)")
     from pyannote.audio import Pipeline
     import model_cache
     def _load():
-        p_ = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1", use_auth_token=tok)
+        p_ = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1", use_auth_token=tok or None)
         if p_ is not None:
             p_.to(torch.device(dev()))
         return p_
