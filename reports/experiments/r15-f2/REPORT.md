@@ -128,3 +128,36 @@ RU:
 - На m03 провалов 11 у b и c с новым флагом против 11 в проде.
 - На old03 провалов 27–33 против 64 без флага и 24 в проде.
 - Глазом проверить: old03 около 5 с, там рот в b/c закрыт, а в проде приоткрыт.
+
+## How to enable: DUB_PROFILE=clean face = no CodeFormer + adaptive lipcon (eye: "b + lipcon about like a")
+
+Code: commits **5b5be66 + 6168df3** on experiment/r15-repair.
+- Files needed: scripts/r15/lipcon.py (new), scripts/r8/r8_fallback.py (lipcon flags), scripts/r7/r7_m7_comp.sh (the REP2_FB_ARGS second pass).
+- The other files in those commits (src_detail, clips, gates) are not needed for clean.
+- Everything defaults OFF, so the current profile is untouched.
+
+Settings, in e2e.sh face_comp, clean branch (DUB_ALLOW_NC=0, CFDV="", E2E_FX=1, E2E_SYNC=k5):
+```bash
+LCX="--thr-lipcon 0.45 --lipcon-mode adaptive --lipcon-rel 0.6 --lipcon-win 25 --lipcon-max-frac 0.03"
+FBL=fb7sla                                   # new fallback cache label (never reuse fb7s caches)
+FBA="$(cat reports/experiments/r8-face/fb7.args) --open-gate 0.04 --dark-transient on --thr-wash-lips 0.2 $LCX"
+export REP_LABEL=rep2sla REP_ARGS="--spikes off"
+export REP2_FB_ARGS="$(cat reports/experiments/r8-face/fb7.args) $LCX"   # 2nd pass: lipcon alone, on the repaired post-SR layer
+```
+r7_m7_comp then runs:
+1. pass 1: the fallback score with lipcon on the raw (no-CF) layer;
+2. the repair → `_rep2sla.mp4`;
+3. pass 2: lipcon on the repaired layer, a second repair → `_rep2sla_lc2.mp4`;
+4. the composite fallback = max of both passes' left-overs.
+
+What the settings mean:
+- **Threshold:** lip-vs-skin contrast < 0.45 of the source at the same frame, AND < 0.6 × the video's own ±1 s median.
+- **Cap:** at most 3 % of the LatentSync frames per pass, deepest dips first.
+
+Cost: CPU only, about +45 s of repair and +60 s of pass-2 scoring per 40 s video (m03).
+
+Verified so far:
+- m03: dip frames 24 → 11, the same as prod CF (11).
+- old03: 64 → 27, prod 24. old03 hits the 3 % cap.
+- m18: gate pending.
+- The gate (sync / flashes / slide) on all 3 is appended below when the GPU is free.
