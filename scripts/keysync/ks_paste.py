@@ -40,6 +40,25 @@ if KN > 0:   # the nose polygon (mediapipe): bridge 168 / 6, the alae 129 / 358 
     import cv2
     NOSE = [168, 6, 197, 195, 5, 4, 1, 19, 129, 358, 64, 294, 98, 327, 48, 278, 115, 344]
     NL = np.load(os.environ["KS_HF_LM"])["lm"][..., :2].astype(np.float32)
+CL = float(os.environ.get("KS_CLAMP", "0"))
+if CL > 0:   # r15 KS_CLAMP=<dilation, IOD units>: KeySync pixels only inside the SPEAKER's face oval (KS_HF_LM landmarks), dilated + extended 0.15 IOD down
+    import cv2   # (an opened jaw); KS_OTHERS=<k_faces2.py npz>: the other faces' ovals (dilated 0.08 of their IOD) are cut out -> they stay source (m03: the child)
+    OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109]
+    CLM = np.load(os.environ["KS_HF_LM"])["lm"][..., :2].astype(np.float32); CLD = float(os.environ.get("KS_CLAMP_DOWN", "0.15"))   # room below the chin (IOD)
+    OTH = np.load(os.environ["KS_OTHERS"])["others"] if os.environ.get("KS_OTHERS") else None
+    _el = lambda r: cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * max(1, int(r)) + 1,) * 2)
+    def clampmask(i):
+        p = CLM[min(i, len(CLM) - 1)]
+        if not np.isfinite(p).all(): return None
+        iod = float(np.linalg.norm(p[33] - p[263])); hp = cv2.convexHull((p[OVAL] - [x, y]).astype(np.float32))[:, 0]; mk = np.zeros((s, s), np.uint8)
+        cv2.fillPoly(mk, [np.round(hp).astype(np.int32)], 1); cv2.fillPoly(mk, [np.round(hp + [0, CLD * iod]).astype(np.int32)], 1)
+        mk = cv2.dilate(mk, _el(CL * iod))
+        if OTH is not None:
+            for f2 in OTH[min(i, len(OTH) - 1)]:
+                if np.isfinite(f2).all():
+                    om = np.zeros((s, s), np.uint8); cv2.fillPoly(om, [np.round(cv2.convexHull((f2[OVAL] - [x, y]).astype(np.float32))[:, 0]).astype(np.int32)], 1)
+                    mk[cv2.dilate(om, _el(0.08 * float(np.linalg.norm(f2[33] - f2[263])))) > 0] = 0
+        return cv2.GaussianBlur(mk.astype(np.float32), (0, 0), max(1.0, 0.04 * iod))[..., None]
 fk = None; i = 0
 while True:
     a = A.stdout.read(W * H * 3)
@@ -62,6 +81,9 @@ while True:
                 cv2.fillPoly(nk, [np.round(cv2.convexHull((p[NOSE] - [x, y]).astype(np.float32))[:, 0]).astype(np.int32)], 1)
                 nk = cv2.GaussianBlur(nk.astype(np.float32), (0, 0), max(1.0, KN * iod))[..., None]
                 mm = m * (1 - nk)
+        if CL > 0:
+            cm_ = clampmask(i)
+            if cm_ is not None: mm = mm * cm_
         f[y:y + s, x:x + s] = np.clip(roi * (1 - mm) + kf * mm + 0.5, 0, 255).astype(np.uint8)
     w.stdin.write(f.tobytes()); i += 1
 w.stdin.close(); w.wait(); A.kill(); K.kill()

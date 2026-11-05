@@ -208,3 +208,64 @@ KeySync (antonibigata/keysync; weights toninio19/keysync, tagged Apache-2.0 on H
 - Синхрон на финалах: m18 и m03 лучше прода, old03 чуть хуже (−0,3).
 - Дрожание кончика носа — не от ученика: у прода оно такое же. Есть опция «нос из исходника» (KS_KEEP_NOSE).
 - Чекпоинт: lcm_r1_lora_fp16.pt (шаг 2984) и lora_meta.json, в /workspace/dub/r15k. Рецепт запуска — RECIPE.md.
+
+## Round 3 (eye on the full videos): the composite was the problem, not KeySync
+The eye: the raw 512 KeySync crop is good; the full-frame cfhf chain makes the lips / cheek float (m03 3 / 7 / 12 s), slides the face (m18 ~3 s),
+leaves waxy stubble-less skin (old03), lets the cheek bleed into the child (m03) and shows a black-hole mouth (m03 ~25 s).
+
+### Diagnosis
+- **ks_fix's explosion guard = false positives.** It replaces the dubbed face by the SOURCE face with a ±10-frame cross-fade, so the mouth ghosts / slides.
+  - m18: frame 92 = 3.68 s (the "wild slide").
+  - m03: frames 108 / 198 / 217 / 218 / 293 = 4.3 / 7.9 / 8.7 / 11.7 s (the 3 / 7 / 12 s complaints).
+  - Stage sheets: `outbox/r15_k/m18_stage_sheet_3.4_3.7s.jpg`, `m03_stage_sheet_3_7_12s.jpg`. Columns: source | raw crop | ks_layer | ks_fix | tsmooth | cfhf | plain.
+    The raw crop is fine there; ks_fix shows the source's closed mouth.
+  - Smaller contributors: the 25 → 30 fps `minterpolate` (MCI) retime in ks_paste (5 of 6 output frames synthesized) and the tsmooth flow warp.
+  - Landmark jerk (`k_float.py`) does not separate the stages (all at the source's level), so it's ghosting / texture, not geometry.
+- **m03 cheek into the child.** The paste box covers part of the child (re-rendered blurry by KeySync); the mother's regenerated cheek edge bleeds there. Prod has it too.
+- **Black hole (`k_cavity.py`, m03, open-mouth frames with mean L < 15 and no teeth):** source 3.1 %, prodKS 20 %, fast2 16 %.
+
+### Fixes
+- **Plain paste** (`ks_plain.py`, `k_plain.sh`):
+  - the raw crop scaled back into its STATIC box (the exact inverse of ks_prep), on the 25 fps master, frames 1:1 (KeySync frame i at master i + the SyncNet shift);
+  - no retime / guard / chin tex / per-frame colour match / tsmooth;
+  - a feathered face-oval mask (+0.15 IOD below the chin) minus the other faces (`k_faces2.py`: mediapipe with 3 faces, speaker matched to the crop's track);
+  - one constant Lab colour match per video.
+- **`--tex 2` (stubble / pores):** the source's luma high frequencies, DIS-flow-warped onto KeySync's geometry, replace KeySync's inside the face mask, outside the generated lips (KeySync's own landmarks, dilated 0.15 IOD). Luma only; never sharper than the source.
+- **`--cavity 0.8` (black hole):** inside the generated inner-lip hull on open frames, near-black pixels are lifted toward the source's open-mouth interior tone (L p30 + mean a / b of the source's open frames), weighted by darkness and by distance to the lip rim (a lighter rim, a darker throat). No teeth yet; a source teeth bank would be the next step.
+- `ks_paste.py` (for the cfhf chain): `KS_CLAMP` / `KS_OTHERS` (the same face clamp), `KS_CLAMP_DOWN`, `KS_KEEP_NOSE`.
+
+### Results (gate SyncNet speech@0 on the full finals)
+| video | prodKS cfhf | fast2 cfhf | **fast2 plain** |
+|---|---|---|---|
+| m18 | 7.16 | 7.52 | **7.97** |
+| m03 | 6.94 | 7.23 | **8.58** |
+| old03 | 7.44 | 7.14 | **7.68** |
+
+- Child-region diff on m03 (|final − source|): cfhf 5.07 → clamp 3.26. Old03 stubble is visibly back with `--tex 2` (crops checked at 5 and 24 s).
+- **Files (`outbox/r15_k/full/`):** `<v>_keysync_fast2plain.mp4` (plain) and `<v>_keysync_fast2plainfx.mp4` (plain + texture + cavity) for m18 / m03 / old03;
+  `m03_keysync_fast2clamp.mp4` and `m03_keysync_fast2clampchin.mp4` (the cfhf chain with the face clamp, and with a tight chin).
+- **Clips (`outbox/r15_k/`, 0.5x):**
+  - `old03_face_prodKS_plain_plainfx` (3–7, 23–25), `old03_stubble_closeup` (3–7, 23–25), `m18_face_prodKS_plain_plainfx` (2–6), `m03_face_prodKS_plain_plainfx` (17–21, 24–26);
+  - `m03_face_cfhf_vs_plain` (2–4, 6–8, 11–13), `m18_face_cfhf_vs_plain` (2–6), `m03_cheek_before_vs_after_clamp`, `m03_chin_clamp_vs_tightchin`;
+  - `*_face_prodKS_fast2_fast2plain` (3-panels).
+
+## LatentSync UNet TensorRT (r6 student step 250, 4 steps, no CFG)
+- Code: branch `experiment/r15-ls-trt` (from `experiment/r14-distill` 56715cd), `scripts/r15/{ls_trt_gen.py, ls_trt.py, ls_run.sh}`; bundle `/workspace/dub/r15k/r15-ls-trt.bundle`.
+- How: the production generator (`candidate_video_stage.py`, the r4_video.sh args) with the student merged (= student_gen.py).
+  - The UNet calls are captured per input shape: 2×16, 1×16, 1×12 and 1×8 frames (the 8-frame bridges run 1 step, so that shape is sliced from the 16-frame capture).
+  - One fp16 engine per shape; the UNet forward is swapped at runtime; all 185 calls go through TRT.
+- **Identity:** engine vs PyTorch 72–78 dB per call; the raw LatentSync layer of a full run vs PyTorch: **76.4 dB** pixel PSNR (whole generator output 50.5 dB).
+- **Speed per call** (TRT vs eager fp16): 2×16 267 vs 362 ms, 1×16 127 vs 182, 1×12 97 vs 141, 1×8 64 vs 97 (1.35–1.5×).
+- **m03 LatentSync stage:**
+  - 137.6 → 125.0 s = **204 → 185 s/vmin (−9 %)**. The UNet is only 49.5 → 36.1 s of it; the rest is the VAE, audio and affine work.
+  - Whole generator wall: 261 → 234 s.
+- **VRAM:** PyTorch peak 11.3 GB (nvidia-smi 14.6). TRT: torch 8.9 GB, but nvidia-smi 24.9 GB, because 4 fixed-shape engines each hold a weight copy (2.4 GB each).
+  One dynamic-shape engine (or weight sharing) would be needed for a memory win.
+
+## Раунд 3, кратко для Ирины (RU)
+- «Плывущие» губы и щека — из-за полноформатной цепочки склейки, а не из-за KeySync. Главный виновник — защита ks_fix от «взрывов»: она по ошибке подменяет дублированный рот исходным и плавно смешивает их ±10 кадров. На m18 это 3,7 с («съезжает лицо»), на m03 — 4,3 / 7,9 / 11,7 с. Ещё вносят вклад пересчёт 25→30 кадров с интерполяцией движения и сглаживание tsmooth.
+- Новая «простая вклейка»: 512-кроп KeySync ставится ровно обратно в свою рамку, кадр в кадр, по маске лица (ребёнок не трогается), с одной общей цветокоррекцией. Синхрон на полных видео лучше прода на всех трёх: m18 7,97 (прод 7,16), m03 8,58 (6,94), old03 7,68 (7,44).
+- Щетина old03: переносится высокочастотная текстура кожи из исходника (только яркость, с выравниванием оптическим потоком, кроме губ). Щетина вернулась.
+- «Чёрная дыра» во рту (у прода 20 % открытых кадров, у fast2 16 %, у исходника 3 %): дно рта подкрашивается в тон рта исходника, светлее у губ и темнее к горлу. Зубов пока нет.
+- Видео: full/*_keysync_fast2plain.mp4 (простая вклейка) и full/*_keysync_fast2plainfx.mp4 (+ щетина + рот). Клипы 0,5x: *_face_prodKS_plain_plainfx_half_speed.mp4 и old03_stubble_closeup_half_speed.mp4.
+- TensorRT для LatentSync (ученик r6): картинка идентична (76 дБ), UNet в 1,37 раза быстрее, но вся стадия LatentSync только на 9 % (204 → 185 GPU-с на минуту), а памяти уходит больше (4 движка). Нужен один движок с переменной формой.

@@ -1,0 +1,3 @@
+SYNC_PLAIN m18 7.973 {'conf': 7.594, 'av_offset': 0}
+SYNC_PLAIN m03 8.579 {'conf': 4.062, 'av_offset': 6}
+SYNC_PLAIN old03 7.684 {'conf': 6.021, 'av_offset': 0}

@@ -49,3 +49,14 @@ KS_DC=2:0 KS_LMK_CACHE=/workspace/dub/keysync/lmk python ../ks_fast.py --jobs jo
 
 ## Numbers (warm, face GPU-s per video-minute, m18 / m03 / old03)
 prod 478 / 469 / 474 → fast4c 179 / 169 / 170 → **fast2c 148 / 137 / 137** (SyncNet 7.61 / 8.14 / 7.28 vs prod 7.19 / 7.81 / 7.50).
+
+## Round 3: the recommended post = the PLAIN paste (instead of the cfhf chain)
+```bash
+# after the KeySync run (OUT/<tag>/<tag>_<tag>.mp4) and its SyncNet AV offset (shift = -av_offset of the raw output):
+KS_CMS=1 python ks_plain.py --ks OUT/<tag>/<tag>_<tag>.mp4 --master master_25fps.mp4 --box box_<tag>.json --lm source_lm_F.npz \
+  [--others faces2.npz] --shift <shift> --audio final_mix_aac.m4a --out FINAL.mp4 \
+  --ks-lm <KeySync output>.mediapipe.npz --tex 2 --cavity 0.8
+```
+- `k_plain.sh <id> <render> <name> [args]` wraps it on r15-k.
+- `--others`: `k_faces2.py` for multi-face sources (m03).
+- The output is on the 25 fps master grid (no retime). The cfhf chain's ks_fix guard must NOT be used: its false positives make the face slide.
