@@ -72,7 +72,7 @@ def _sharp(px):
     return torch.log(F.conv2d(g, k).flatten(1).var(1) + 1e-8)
 
 
-def _score(pipe, xs, a_, o, b_, dec, voiced, mel, video_fps, sn, sc):
+def _score(pipe, xs, a_, o, b_, dec, voiced, mel, video_fps, sn, sc, weights=None):
     """xs (K, 4, L, h, w) candidate latents of window [a_, b_) (o pinned frames) -> (pick, z, raw (K, 4), px (K, Fn, 3, 288, 512))"""
     K = xs.shape[0]; px = _decode_low(pipe, xs[:, :, o:]); vo = voiced[a_ + o:b_]; raw = np.zeros((K, 4))
     for k in range(K):
@@ -89,14 +89,98 @@ def _score(pipe, xs, a_, o, b_, dec, voiced, mel, video_fps, sn, sc):
             ve, ae = sn(v.reshape(1, -1, v.shape[2], v.shape[3]).half(), mel[None, None, :, m0:m0 + 52].to(xs.device).half())
             raw[k, 0] = float(F.cosine_similarity(ve.float(), ae.float()))
         else: raw[k, 0] = np.nan
-    z = np.zeros(K)
-    for j, (w, s) in enumerate(((W_SYNC, S_SYNC), (W_OPEN, S_OPEN), (W_SHARP, S_SHARP), (-W_JUMP, S_JUMP))):
+    z = np.zeros(K); ws = weights or (W_SYNC, W_OPEN, W_SHARP, -W_JUMP)
+    for j, (w, s) in enumerate(zip(ws, (S_SYNC, S_OPEN, S_SHARP, S_JUMP))):
         col = raw[:, j]
         if np.isfinite(col).all(): z += w * (col - col.mean()) / s
     return (int(np.argmax(z)) if z.max() > z[0] + 1e-6 else 0), z, raw, px
 
 
-def continue_bon(acc, pipe, windows, eps0, mask_lat, masked_lat, ref_lat, audio_all, timesteps, extra, do_cfg, audio_path, video_fps):
+def _src_open_ref(cur_px):
+    """BON_REF=src: the median dark-cavity opening proxy of the SOURCE's own aligned crops of this segment (the same proxy / box as the
+    generated frames): the speaker's natural opening level, an absolute reference a uniformly damped student can be measured against"""
+    vals = []
+    for i in range(0, cur_px.shape[0], 32):
+        p = cur_px[i:i + 32, :, Y0:].float().to("cuda"); vals.append(_opening(p).cpu().numpy())
+    return float(np.median(np.concatenate(vals))) if vals else None
+
+
+def continue_bon_sel(acc, pipe, windows, eps0, mask_lat, masked_lat, ref_lat, audio_all, timesteps, extra, do_cfg, audio_path, video_fps, cur_px=None):
+    """LS_BON_SEL=1 (with LS_BON=N): SELECTIVE best-of-N. Every window runs the first denoising step with the CURRENT noise only; its x0
+    preview is checked: LAZY = voiced (>= half the new frames dub-voiced) and the voiced-frame opening proxy < BON_LAZY (0.7) x this
+    speaker's running median of window previews; SMEAR = the lip-box log Laplacian variance < running median - BON_SMEAR (0.3). Only a
+    flagged window tries the other N-1 noises (first step each, batch); a candidate is taken only if it improves the flagged criterion and
+    wins z = sync + open + 0.5 sharp - 2 jump (strong continuity: the first new frame vs the last pinned one); the chosen noise STAYS
+    the current noise for the next windows (no switching back and forth: the eye saw more tremble with bon3's per-window seeds)."""
+    N = int(os.environ.get("LS_BON", "3")); dev = eps0.device; n = eps0.shape[2]; t_start = time.perf_counter(); t_score = 0.0
+    LAZY = float(os.environ.get("BON_LAZY", "0.7")); SMEAR = float(os.environ.get("BON_SMEAR", "0.3")); WSEL = (1.0, 1.0, 0.5, -2.0)
+    E = [eps0]
+    for k in range(1, N):
+        g = torch.Generator(device=dev).manual_seed(1247 + 7919 * k)
+        E.append(torch.randn((1,) + tuple(eps0.shape[1:2]) + (1,) + tuple(eps0.shape[3:]), generator=g, device=dev, dtype=eps0.dtype).repeat(1, 1, n, 1, 1) * pipe.scheduler.init_noise_sigma)
+    E = torch.cat(E); final = torch.empty_like(eps0); done = 0; dec = {}; rows = []; cur = 0; h_open, h_sharp = [], []; nflag = nlazy = nsmear = nswitch = 0
+    sn, sc = _syncnet(); mel, rms, voiced = _audio(audio_path, n)
+    src_ref = _src_open_ref(cur_px) if os.environ.get("BON_REF") == "src" and cur_px is not None else None   # absolute lazy reference (see _src_open_ref)
+
+    def conds(a_, b_, K):
+        mk, mi, rl = [v[:, :, a_:b_].expand(K, *v.shape[1:2], b_ - a_, *v.shape[3:]).contiguous() for v in (mask_lat, masked_lat, ref_lat)]
+        au = audio_all[a_:b_].repeat(K, 1, 1)
+        if do_cfg: mk, mi, rl, au = torch.cat([mk] * 2), torch.cat([mi] * 2), torch.cat([rl] * 2), torch.cat([torch.zeros_like(au), au])
+        return mk, mi, rl, au
+
+    def run_step(x, Ew, t, cs, K, o, known):
+        mk, mi, rl, au = cs; x = x.clone()
+        if o > 0: x[:, :, :o] = pipe.scheduler.add_noise(known.expand(K, *known.shape[1:]), Ew[:, :, :o], t.reshape(1))
+        x2 = torch.cat([x] * 2) if do_cfg else x
+        npred = acc.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample
+        if do_cfg:
+            nu, na = npred.chunk(2); npred = nu + acc.guidance * (na - nu)
+        st_ = pipe.scheduler.step(npred, t, x, **extra); x0 = st_.pred_original_sample.clone()
+        if o > 0: x0[:, :, :o] = known.expand(K, *known.shape[1:])
+        return st_.prev_sample, x0
+
+    with torch.no_grad():
+        for a_, b_ in windows:
+            o = max(0, done - a_); known = final[:, :, a_:a_ + o] if o > 0 else None; t0_ = timesteps[0]
+            Ew = E[cur:cur + 1, :, a_:b_]; x, x0 = run_step(Ew.clone(), Ew, t0_, conds(a_, b_, 1), 1, o, known)
+            ts_ = time.perf_counter(); p0 = _decode_low(pipe, x0[:, :, o:])[0]; vo = voiced[a_ + o:b_]
+            op = _opening(p0).cpu().numpy(); shp = float(_sharp(p0).mean()); ov = float(op[vo].mean()) if vo.sum() * 2 >= max(1, len(vo)) else None
+            if src_ref is not None: lazy = ov is not None and ov < LAZY * src_ref   # BON_REF=src: below the speaker's own source opening level
+            else: lazy = ov is not None and len(h_open) >= 3 and ov < LAZY * float(np.median(h_open))
+            smear = len(h_sharp) >= 3 and shp < float(np.median(h_sharp)) - SMEAR
+            if ov is not None: h_open.append(ov)
+            h_sharp.append(shp); t_score += time.perf_counter() - ts_
+            if lazy or smear:
+                nflag += 1; nlazy += int(lazy); nsmear += int(smear); alts = [k for k in range(N) if k != cur]; Ea = E[alts][:, :, a_:b_]
+                xa, x0a = run_step(Ea.clone(), Ea, t0_, conds(a_, b_, len(alts)), len(alts), o, known)
+                ts_ = time.perf_counter(); _, z, raw, _ = _score(pipe, torch.cat([x0, x0a]), a_, o, b_, dec, voiced, mel, video_fps, sn, sc, weights=WSEL); t_score += time.perf_counter() - ts_
+                ok = [j for j in range(1, len(alts) + 1) if (not lazy or raw[j, 1] > raw[0, 1]) and (not smear or raw[j, 2] > raw[0, 2]) and z[j] > z[0] + 1e-6]
+                j = max(ok, key=lambda j_: z[j_]) if ok else 0
+                if j:
+                    cur = alts[j - 1]; x = xa[j - 1:j]; nswitch += 1
+                rows.append({"w": [a_, b_], "lazy": bool(lazy), "smear": bool(smear), "pick": int(cur), "switched": bool(j), "z": [round(float(v), 2) for v in z],
+                             "raw": [[round(float(v), 4) for v in r] for r in raw]})
+            Ew = E[cur:cur + 1, :, a_:b_]; cs = conds(a_, b_, 1)
+            for t in timesteps[1:]: x, _ = run_step(x, Ew, t, cs, 1, o, known)
+            if o > 0: x[:, :, :o] = known
+            final[:, :, a_:b_] = x; done = b_
+            ts_ = time.perf_counter(); pxc = _decode_low(pipe, x[:, :, o:])[0]; t_score += time.perf_counter() - ts_
+            for i, f_ in enumerate(range(a_ + o, b_)): dec[f_] = pxc[i]
+            for f_ in [f_ for f_ in dec if f_ < a_ - 16]: del dec[f_]
+    st = {"N": N, "selective": True, "src_ref": src_ref, "windows": len(windows), "flagged": nflag, "lazy": nlazy, "smear": nsmear, "switched": nswitch,
+          "share_flagged": round(nflag / max(1, len(windows)), 3), "share_switched": round(nswitch / max(1, len(windows)), 3),
+          "not_seed0": nswitch, "share_not_seed0": round(nswitch / max(1, len(windows)), 3), "pick_hist": [], "early": True,
+          "seconds": round(time.perf_counter() - t_start, 2), "score_s": round(t_score, 2)}
+    lg = os.environ.get("BON_LOG")
+    if lg:
+        with open(lg, "a") as f_: f_.write(json.dumps({**st, "audio": str(audio_path), "rows": rows}) + "\n")
+    print(f"  [bon-sel] N={N} windows {len(windows)}, flagged {nflag} (lazy {nlazy}, smear {nsmear}), switched {nswitch}, {st['seconds']} s (scoring {st['score_s']} s)", flush=True)
+    return final, st
+
+
+def continue_bon(acc, pipe, windows, eps0, mask_lat, masked_lat, ref_lat, audio_all, timesteps, extra, do_cfg, audio_path, video_fps, cur_px=None):
+    if os.environ.get("LS_BON_SEL") == "1":
+        return continue_bon_sel(acc, pipe, windows, eps0, mask_lat, masked_lat, ref_lat, audio_all, timesteps, extra, do_cfg, audio_path, video_fps, cur_px=cur_px)
     N = int(os.environ.get("LS_BON", "1")); early = os.environ.get("LS_BON_EARLY") == "1"; dev = eps0.device; n = eps0.shape[2]
     t_start = time.perf_counter(); t_score = 0.0
     E = [eps0]

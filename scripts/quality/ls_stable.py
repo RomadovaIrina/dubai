@@ -201,7 +201,7 @@ class StableLatentSync(AccelLatentSync):
                 if self.overlap == "continue" and self.stride is not None and int(os.environ.get("LS_BON", "1") or 1) > 1:
                     # r15 W1 LS_BON=N (default off): best-of-N candidates per window, picked sequentially (scripts/r15/bon.py)
                     sys.path.insert(0, str(HERE.parent / "r15")); import bon as _bon
-                    latents, self.last_bon = _bon.continue_bon(self, pipe, windows, latents, mask_lat, masked_lat, ref_lat, audio_all, timesteps, extra, do_cfg, audio_path, video_fps)
+                    latents, self.last_bon = _bon.continue_bon(self, pipe, windows, latents, mask_lat, masked_lat, ref_lat, audio_all, timesteps, extra, do_cfg, audio_path, video_fps, cur_px=cur_px)
                     timesteps_done = True
                 elif self.overlap == "continue" and self.stride is not None:
                     eps0 = latents.clone(); final = torch.empty_like(latents); done = 0

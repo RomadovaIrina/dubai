@@ -1,0 +1,26 @@
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1793886293.462455 1588719 gl_context_egl.cc:85] Successfully initialized EGL. Major : 1 Minor: 5
+I0000 00:00:1793886293.530011 1588748 gl_context.cc:369] GL version: 3.2 (OpenGL ES 3.2 NVIDIA 580.173.02), renderer: NVIDIA GeForce RTX 5090/PCIe/SSE2
+W0000 00:00:1793886293.530326 1588719 face_landmarker_graph.cc:174] Sets FaceBlendshapesGraph acceleration to xnnpack by default.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1793886293.534442 1588753 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1793886293.548336 1588751 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+q2u      mouth jitter 6.20 (x1.00 vs q2u, shake 3.2 %)  chin jitter 5.13 (x1.00, shake 5.2 %)
+q2       mouth jitter 6.28 (x1.01 vs q2u, shake 4.0 %)  chin jitter 5.11 (x0.99, shake 5.1 %)
+s4c8u    mouth jitter 6.01 (x0.97 vs q2u, shake 3.3 %)  chin jitter 5.03 (x0.98, shake 5.0 %)
+s4c8     mouth jitter 6.03 (x0.97 vs q2u, shake 3.4 %)  chin jitter 5.05 (x0.98, shake 4.9 %)
+tkf2u    mouth jitter 5.99 (x0.97 vs q2u, shake 3.3 %)  chin jitter 5.11 (x0.99, shake 4.8 %)
+tkf2     mouth jitter 6.05 (x0.98 vs q2u, shake 3.5 %)  chin jitter 5.05 (x0.98, shake 4.6 %)
+tkf2c8   mouth jitter 6.16 (x0.99 vs q2u, shake 3.8 %)  chin jitter 5.12 (x1.00, shake 4.8 %)
+kfv3u    mouth jitter 5.83 (x0.94 vs q2u, shake 2.5 %)  chin jitter 5.04 (x0.98, shake 5.4 %)
+kfv3     mouth jitter 5.95 (x0.96 vs q2u, shake 2.7 %)  chin jitter 5.05 (x0.98, shake 5.1 %)
+kf2      mouth jitter 5.68 (x0.92 vs q2u, shake 2.3 %)  chin jitter 4.99 (x0.97, shake 5.0 %)
+kf3      mouth jitter 5.49 (x0.89 vs q2u, shake 2.3 %)  chin jitter 4.98 (x0.97, shake 5.2 %)
+bon3     mouth jitter 6.01 (x0.97 vs q2u, shake 3.2 %)  chin jitter 5.07 (x0.99, shake 4.9 %)
+bon3e    mouth jitter 5.96 (x0.96 vs q2u, shake 3.0 %)  chin jitter 5.03 (x0.98, shake 4.7 %)
+bon2e    mouth jitter 6.00 (x0.97 vs q2u, shake 3.3 %)  chin jitter 5.06 (x0.98, shake 5.5 %)
+bonsel2  mouth jitter 6.04 (x0.97 vs q2u, shake 3.2 %)  chin jitter 5.08 (x0.99, shake 4.9 %)
+s4c8n2   mouth jitter 6.05 (x0.98 vs q2u, shake 3.3 %)  chin jitter 5.06 (x0.99, shake 4.5 %)
+tb       mouth jitter 7.25 (x1.17 vs q2u, shake 6.7 %)  chin jitter 5.48 (x1.07, shake 6.7 %)
+tbw      mouth jitter 7.41 (x1.20 vs q2u, shake 8.4 %)  chin jitter 5.68 (x1.11, shake 8.2 %)
+src      mouth jitter 6.61  chin jitter 5.30  (shake = share of frames above the source p95)

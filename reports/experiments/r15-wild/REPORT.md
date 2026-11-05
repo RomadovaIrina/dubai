@@ -1,100 +1,128 @@
-# r15 agent W (wild track): TBDub bake-off, best-of-N per window, keyframes + interpolation
+# r15 agent W (wild track): TBDub bake-off, best-of-N per window, keyframes + interpolation (+ round 2)
 
-Server r15-w (RTX 5090, Taiwan), branch `experiment/r15-wild` (base `experiment/r14-distill` d189fb5). Held out: old03 / m03 / m18.
+Server r15-w (RTX 5090, Taiwan), branch `experiment/r15-wild` (base `experiment/r14-distill` d189fb5; agent F's face-units fix 0009 = b519163
+applied in round 2). Held out: old03 / m03 / m18.
 
 **Method**
 - **Same dub everywhere.** Every arm runs on the dub of the q2 + F3 baseline (`artifacts/r4a/r9_q2_<id>`). The baseline itself is the one-command E2E via dabai_job (`scripts/r15/base_q2.sh`).
 - **Same face path everywhere.** Every arm runs the face path of `e2e.sh` under dabai_job (`scripts/r15/arm.sh`):
   - E2E_FX=1, E2E_SYNC=1 (= k5), the R10_FAST_FACE stack and the q2 + F3 flags;
   - only the generator changes.
-  - Identity check: arm `q2r` = q2 through `arm.sh` reproduces the E2E. SyncNet old03 7.80 vs 7.84; m18 8.308 vs 8.308.
-- **GPU s/vmin** = NVML per-job GPU-busy seconds of the WHOLE face stage (face_gen + face_comp, model loads and cold start included) per video-minute. The E2E adds the audio stage, ~50 GPU-s/vmin on m03.
+  - Identity check: arm `q2r` = q2 through arm.sh reproduces the E2E. SyncNet old03 7.80 vs 7.84; m18 8.308 vs 8.308.
+- **m03 and face units.** Round-2 m03 arms (`*u`, and tkf2c8 / bonsel2) run WITH the face-units fix and are compared with `q2u`, the production + fix. The fix alone takes m03 SyncNet 8.23 → 8.77 for q2, 7.19 → 7.59 for the student and 8.02 → 8.63 for tkf2. The m03 rows without `u` carry the old 19 s artefact.
 - **Metrics:**
-  - SyncNet = `scripts/r11/sync_speech.py` (the gate's);
+  - GPU s/vmin = NVML per-job GPU-busy seconds of the WHOLE face stage (face_gen + face_comp, loads and cold start included) per video-minute;
+  - E2E est. = face + the baseline's measured audio stage (50.5 / 54.5 on m03 / m18; old03 ~52, see "E2E check");
+  - SyncNet = `scripts/r11/sync_speech.py`;
   - flicker / pops = `scripts/r14/flicker_metric.py`;
-  - mouth opening = `scripts/r14/mouth_open.py`.
+  - mouth opening = `scripts/r14/mouth_open.py`;
+  - **tremble** = `scripts/r15/tremble.py` (new): MediaPipe mouth-ring / chin landmarks relative to a head anchor (eye corners + nose bridge), |second temporal difference| / IOD, as a ratio vs the reference (q2; m03: q2u).
 - **Clips** in `/workspace/dub/outbox/r15_w/`:
   - `<id>_mouth_<L>_vs_<R>_spots_half_speed.mp4` = the user's eye spots at 0.5x;
-  - `<id>_mouth_<L>_vs_<R>.mp4` = the mouth 2-panel, full length;
-  - `<id>_full_<L>_vs_<R>.mp4` = side by side, full length.
+  - `<id>_mouth_<L>_vs_<R>.mp4` = mouth 2-panel, full length;
+  - `<id>_full_<L>_vs_<R>.mp4` = side by side.
 
 ## TL;DR
 
-1. **The wild winner is W2's teacher variant, tkf2.**
-   - What it is: LatentSync q2 (the teacher) generating every 2nd frame (each keyframe with its own audio window). The in-between mouths are interpolated in the stabilised 512 crop space (DIS optical flow), lower face only, before paste-back.
-   - SyncNet 7.45 / 8.02 / 8.12. q2 + F3 has 7.84 / 8.23 / 8.31 (−0.40 / −0.20 / −0.19).
-   - Cost 145 / 154 / 192 face GPU-s/vmin. q2 costs 234 / 229 / 279 (−35 %).
-   - So it beats the student s4p1500c8 on BOTH axes on all 3 videos: 7.07 / 7.19 / 7.49 at 194 / 218 / 231.
-   - E2E ≈ face + ~50 audio ≈ 200–245, under the 300 norm, with the teacher.
-   - **Needs the eye at 0.5x**, because LS_RATE was rejected for tremble. Unlike LS_RATE, head motion is never interpolated here (every frame keeps its own affine and upper face). Pops are 20 / 12 / 8 vs q2 14 / 11 / 8.
-   - Clips: `<id>_mouth_q2_vs_tkf2_spots_half_speed.mp4`, `<id>_mouth_s4c8_vs_tkf2_spots_half_speed.mp4`.
-2. **TBDub (W0) is not a drop-in replacement.**
-   - Its own output ("native": its own paste-back, 25 fps) has SyncNet 7.62 / 7.80 / 6.34 (−0.22 / −0.43 / −1.97 vs prod).
-   - Through our post-chain it drops to 6.1–6.3 / 5.8–6.2 / 5.5–5.8. Our fps_composite costs its layer −1.2 vs −0.5 for LatentSync; see W0.
-   - Cheapest generator here: 140–190 face GPU-s/vmin, but 650 s/vmin wall per segment (CPU overhead).
-   - The eye can judge the native clips `<id>_mouth_q2_vs_tbnat_spots_half_speed.mp4`. Even if they look good, using TBDub needs a composite re-tuned for a generator that redraws the whole lower face.
-3. **Best-of-N (W1) is not worth it.**
-   - SyncNet vs s4p1500c8: +0.12 / 0.00 / −0.02 (bon3), at 503–523 GPU-s/vmin.
-   - The early-pick variants: bon3e 339–385, bon2e 289–339; SyncNet within ±0.1 of s4c8.
-   - The lazy-mouth fix seen on old03 (opening ×1.00 vs ×0.91) does not hold on m03 / m18.
-   - Picks ≠ seed 0 in 20–91 % of windows. A fixed better noise (`LS_NOISE_SEED`, the most-picked candidate) is not generic either: +0.13 / −0.09 / +0.02.
-4. **Plain keyframes on the student (W2 option a) trade too much sync.**
-   - kf2: −0.4…−0.5 SyncNet at −35 % GPU.
-   - kf3: −1.7…−1.8 at −45 %.
-   - My option (b), voiced-adaptive keyframes (kfv3: dense on dub-voiced frames), keeps or slightly raises SyncNet (+0.07 / +0.22 / +0.11) but saves nothing on these speech-dense clips (177 / 218 / 247).
+1. **The winner is tkf2c8: the q2 teacher + keyframes every 2nd frame + c8 overlapping windows** (`LS_KF=2 LS_STRIDE=8 LS_OVERLAP=continue`).
+   - How it works:
+     - LatentSync generates every 2nd master frame, each with its own audio window, in continue-overlap windows;
+     - each in-between mouth is interpolated in the stabilised aligned 512 crop (DIS optical flow), lower face only, before paste-back;
+     - head motion is never interpolated: every frame keeps its own affine and upper face.
+   - SyncNet 7.69 / 8.55 / 8.50 vs production 7.84 / 8.77 (q2u) / 8.31, i.e. −0.16 / −0.22 / +0.19.
+   - Cost 156 / 175 / 203 face GPU-s/vmin vs production 234 / 239 / 279 (−30 %). E2E ≈ 208 / 225 / 257 < 300 (measured E2E: see "E2E check").
+   - Tremble ×0.99 / 0.98, ×0.99 / 1.00, ×0.98 / 1.01 vs production; pops 20 / 10 / 8 vs 14 / 11 / 8.
+   - It beats the student s4p1500c8 on every axis: student SyncNet 7.07 / 7.59 / 7.49 at 194 / 220 / 231.
+   - **For the eye:** `<id>_mouth_q2_vs_tkf2c8_spots_half_speed.mp4` (m03: `q2u_vs_tkf2c8`).
+   - tkf2 (the same without c8) is 4–9 % cheaper and 0.1–0.4 lower on SyncNet.
+2. **TBDub (W0) is dropped.** The eye said "jelly". The tremble metric agrees, and it is TBDub's own: at 25 fps its NATIVE output jitters ×1.25 / 1.27 (mouth / chin) vs q2, more than through our chain (×1.19 / 1.05).
+   - SyncNet native 7.62 / 7.80 / 6.34; through our chain 5.5–6.3.
+   - 3-panel: `old03_mouth3_q2_tb_tbnat_spots_half_speed.mp4`.
+3. **Best-of-N (W1) is not worth it in any form.**
+   - bon3 / bon3e / bon2e: SyncNet ±0.1 vs the student at 289–523 GPU-s/vmin. The eye: bon3 "not bad" but trembles more than the plain student.
+   - The selective variants (re-generate only lazy / smeared windows, strong continuity, sticky noise; round 2) also stay at the student's level, at 244–301 GPU-s/vmin:
+     - bonsel 7.08 on old03;
+     - bonsel2 (lazy measured against the speaker's SOURCE opening) 7.09 / 7.51 / 7.50.
+   - Reason: the student's damping is small and spread out. Few windows are lazy enough to flag (5–28 %), and a different noise rarely beats the current one under the continuity term (0–4 % switches).
+4. **Keyframes on the student (W2) trade too much sync.**
+   - kf2: −0.4…−0.5 at −35 % GPU. kf3: −1.7.
+   - Voiced-adaptive kfv3 (dense on dub-voiced frames): ≈ student sync, saves nothing on speech-dense clips.
+   - The tremble metric shows plain keyframes are SMOOTHER, not shakier (kf2 ×0.87–0.92 mouth): they lose fast visemes, not stability.
 
 ## Results (`/workspace/dub/r15w/eval/TABLE.md`)
 
-| video | arm | SyncNet | flicker mean | pops (src p99) | flicker @ eye spots | mouth opening vs q2 (mean / speed) | near-closed voiced | face GPU s / vmin |
-|---|---|---|---|---|---|---|---|---|
-| old03 | q2 | 7.841 | 0.0060 | 14 | 0.0057 | 1.0 / 1.0 | 0.141 | 233.8 |
-| old03 | q2r | 7.804 | 0.0060 | 16 | 0.0057 | 0.999 / 1.014 | 0.141 | 233.8 |
-| old03 | s4c8 | 7.065 | 0.0057 | 1 | 0.0054 | 0.914 / 0.993 | 0.188 | 193.5 |
-| old03 | s4c8n2 | 7.191 | 0.0057 | 0 | 0.0055 | 1.073 / 0.947 | 0.133 | 196.7 |
-| old03 | tb | 6.275 | 0.0060 | 41 | 0.0057 | 1.026 / 1.122 | 0.147 | 160.3 |
-| old03 | tbw | 6.103 | 0.0056 | 6 | 0.0054 | 0.975 / 1.048 | 0.176 | 139.8 |
-| old03 | tbnat | 7.624 | 0.0072 | 177 | 0.0064 | 0.77 / 1.195 | 0.393 | – |
-| old03 | bon3 | 7.189 | 0.0057 | 1 | 0.0055 | 1.005 / 0.971 | 0.143 | 504.6 |
-| old03 | bon3e | 7.172 | 0.0057 | 1 | 0.0054 | 0.965 / 0.98 | 0.161 | 338.9 |
-| old03 | bon2e | 7.088 | 0.0057 | 1 | 0.0054 | 0.925 / 0.989 | 0.177 | 288.6 |
-| old03 | kf2 | 6.551 | 0.0053 | 0 | 0.0050 | 0.87 / 0.943 | 0.228 | 122.9 |
-| old03 | kf3 | 5.414 | 0.0050 | 0 | 0.0048 | 0.864 / 0.864 | 0.228 | 101.6 |
-| old03 | kfv3 | 7.137 | 0.0056 | 3 | 0.0053 | 0.913 / 0.973 | 0.192 | 177.3 |
-| old03 | tkf2 | 7.446 | 0.0057 | 20 | 0.0057 | 0.981 / 1.03 | 0.157 | 144.9 |
-| old03 | tbnc | 6.266 | – | – | – | – / – | – | 227.7 |
-| old03 | tbmr0 | 6.328 | – | – | – | – / – | – | – |
-| m03 | q2 | 8.225 | 0.0098 | 11 | 0.0084 | 1.0 / 1.0 | 0.156 | 229.2 |
-| m03 | s4c8 | 7.191 | 0.0095 | 11 | 0.0083 | 0.978 / 0.965 | 0.152 | 217.8 |
-| m03 | s4c8n2 | 7.105 | 0.0095 | 10 | 0.0083 | 0.959 / 0.958 | 0.150 | 216.7 |
-| m03 | tb | 6.236 | 0.0111 | 23 | 0.0095 | 1.079 / 1.039 | 0.114 | 168.9 |
-| m03 | tbw | 5.837 | 0.0110 | 24 | 0.0097 | 1.065 / 1.051 | 0.116 | 154.5 |
-| m03 | tbnat | 7.797 | 0.0171 | 156 | 0.0220 | 0.963 / 1.391 | 0.243 | – |
-| m03 | bon3 | 7.192 | 0.0095 | 10 | 0.0087 | 0.951 / 0.951 | 0.162 | 502.7 |
-| m03 | bon3e | 7.167 | 0.0095 | 10 | 0.0086 | 0.962 / 0.924 | 0.157 | 357.8 |
-| m03 | bon2e | 7.230 | 0.0095 | 10 | 0.0083 | 0.967 / 0.94 | 0.148 | 300.7 |
-| m03 | kf2 | 6.756 | 0.0093 | 11 | 0.0083 | 0.955 / 0.883 | 0.166 | 141.6 |
-| m03 | kf3 | 5.355 | 0.0091 | 13 | 0.0082 | 0.957 / 0.795 | 0.148 | 119.6 |
-| m03 | kfv3 | 7.408 | 0.0095 | 10 | 0.0083 | 0.984 / 0.953 | 0.148 | 218.4 |
-| m03 | tkf2 | 8.022 | 0.0097 | 12 | 0.0084 | 1.006 / 0.956 | 0.160 | 153.9 |
-| m18 | q2 | 8.308 | 0.0152 | 8 | 0.0153 | 1.0 / 1.0 | 0.570 | 278.9 |
-| m18 | q2r | 8.308 | 0.0152 | 8 | 0.0153 | 1.0 / 1.0 | 0.570 | 279.2 |
-| m18 | s4c8 | 7.487 | 0.0153 | 8 | 0.0154 | 0.975 / 0.902 | 0.568 | 231.0 |
-| m18 | s4c8n2 | 7.510 | 0.0153 | 8 | 0.0154 | 0.832 / 0.871 | 0.643 | 236.4 |
-| m18 | tb | 5.753 | 0.0181 | 16 | 0.0189 | 1.184 / 1.142 | 0.534 | 191.5 |
-| m18 | tbw | 5.489 | 0.0179 | 15 | 0.0185 | 1.165 / 1.149 | 0.555 | 180.7 |
-| m18 | tbnat | 6.340 | 0.0248 | 58 | 0.0259 | 1.219 / 1.42 | 0.548 | – |
-| m18 | bon3 | 7.470 | 0.0153 | 8 | 0.0152 | 0.88 / 0.882 | 0.635 | 523.0 |
-| m18 | bon3e | 7.387 | 0.0153 | 8 | 0.0153 | 0.86 / 0.867 | 0.647 | 384.8 |
-| m18 | bon2e | 7.485 | 0.0153 | 8 | 0.0154 | 0.97 / 0.921 | 0.593 | 339.3 |
-| m18 | kf2 | 7.212 | 0.0149 | 8 | 0.0148 | 0.924 / 0.813 | 0.618 | 156.8 |
-| m18 | kf3 | 5.676 | 0.0148 | 9 | 0.0147 | 0.884 / 0.775 | 0.628 | 125.7 |
-| m18 | kfv3 | 7.599 | 0.0153 | 9 | 0.0155 | 1.004 / 0.925 | 0.547 | 246.5 |
-| m18 | tkf2 | 8.119 | 0.0149 | 8 | 0.0150 | 1.074 / 0.941 | 0.534 | 191.5 |
+| video | arm | SyncNet | flicker mean | pops (src p99) | tremble mouth / chin vs q2 | mouth opening vs q2 (mean / speed) | near-closed voiced | face GPU s / vmin | E2E est. |
+|---|---|---|---|---|---|---|---|---|---|
+| old03 | q2 | 7.841 | 0.0060 | 14 | 1.00 / 1.00 | 1.0 / 1.0 | 0.141 | 233.8 | ~286 |
+| old03 | q2r | 7.804 | 0.0060 | 16 | 1.00 / 1.00 | 0.999 / 1.014 | 0.141 | 233.8 | ~286 |
+| old03 | s4c8 | 7.065 | 0.0057 | 1 | 0.97 / 0.97 | 0.914 / 0.993 | 0.188 | 193.5 | ~246 |
+| old03 | s4c8n2 | 7.191 | 0.0057 | 0 | 0.98 / 0.99 | 1.073 / 0.947 | 0.133 | 196.7 | ~249 |
+| old03 | tkf2 | 7.446 | 0.0057 | 20 | 0.94 / 0.98 | 0.981 / 1.03 | 0.157 | 144.9 | ~197 |
+| old03 | tkf2c8 | 7.686 | 0.0059 | 20 | 0.99 / 0.98 | 0.992 / 1.068 | 0.163 | 156.3 | ~208 |
+| old03 | kf2 | 6.551 | 0.0053 | 0 | 0.87 / 0.93 | 0.87 / 0.943 | 0.228 | 122.9 | ~175 |
+| old03 | kf3 | 5.414 | 0.0050 | 0 | 0.81 / 0.89 | 0.864 / 0.864 | 0.228 | 101.6 | ~154 |
+| old03 | kfv3 | 7.137 | 0.0056 | 3 | 0.96 / 0.97 | 0.913 / 0.973 | 0.192 | 177.3 | ~229 |
+| old03 | bon3 | 7.189 | 0.0057 | 1 | 0.97 / 0.99 | 1.005 / 0.971 | 0.143 | 504.6 | ~557 |
+| old03 | bon3e | 7.172 | 0.0057 | 1 | 0.97 / 0.98 | 0.965 / 0.98 | 0.161 | 338.9 | ~391 |
+| old03 | bon2e | 7.088 | 0.0057 | 1 | 0.96 / 0.97 | 0.925 / 0.989 | 0.177 | 288.6 | ~341 |
+| old03 | bonsel | 7.075 | 0.0057 | 1 | 0.97 / 0.98 | 0.924 / 0.993 | 0.196 | 244.0 | ~296 |
+| old03 | bonsel2 | 7.092 | 0.0057 | 1 | 0.97 / 0.99 | 0.927 / 0.982 | 0.187 | 251.5 | ~304 |
+| old03 | tb | 6.275 | 0.0060 | 41 | 1.16 / 1.06 | 1.026 / 1.122 | 0.147 | 160.3 | ~212 |
+| old03 | tbw | 6.103 | 0.0056 | 6 | 1.05 / 1.01 | 0.975 / 1.048 | 0.176 | 139.8 | ~192 |
+| old03 | tbnat | 7.624 | 0.0072 | 177 | – | 0.77 / 1.195 | 0.393 | – | – |
+| old03 | tbnc | 6.266 | – | – | – | – / – | – | 227.7 | ~280 |
+| old03 | tbmr0 | 6.328 | – | – | – | – / – | – | – | – |
+| m03 | q2u | 8.774 | 0.0098 | 11 | 1.00 / 1.00 | 1.0 / 1.0 | 0.166 | 239.1 | 290 |
+| m03 | q2 | 8.225 | 0.0098 | 11 | 1.01 / 0.99 | 1.009 / 1.024 | 0.156 | 229.2 | 280 |
+| m03 | s4c8u | 7.593 | 0.0095 | 11 | 0.97 / 0.98 | 0.983 / 0.97 | 0.160 | 219.6 | 270 |
+| m03 | s4c8 | 7.191 | 0.0095 | 11 | 0.97 / 0.98 | 0.987 / 0.988 | 0.152 | 217.8 | 268 |
+| m03 | tkf2u | 8.630 | 0.0096 | 12 | 0.97 / 0.99 | 1.013 / 0.95 | 0.155 | 159.5 | 210 |
+| m03 | tkf2 | 8.022 | 0.0097 | 12 | 0.98 / 0.98 | 1.016 / 0.979 | 0.160 | 153.9 | 204 |
+| m03 | tkf2c8 | 8.553 | 0.0098 | 10 | 0.99 / 1.00 | 1.019 / 0.953 | 0.162 | 174.8 | 225 |
+| m03 | kfv3u | 7.813 | 0.0095 | 12 | 0.94 / 0.98 | 0.995 / 0.935 | 0.143 | 201.9 | 252 |
+| m03 | kfv3 | 7.408 | 0.0095 | 10 | 0.96 / 0.98 | 0.993 / 0.976 | 0.148 | 218.4 | 269 |
+| m03 | kf2 | 6.756 | 0.0093 | 11 | 0.92 / 0.97 | 0.964 / 0.904 | 0.166 | 141.6 | 192 |
+| m03 | kf3 | 5.355 | 0.0091 | 13 | 0.89 / 0.97 | 0.966 / 0.814 | 0.148 | 119.6 | 170 |
+| m03 | bon3 | 7.192 | 0.0095 | 10 | 0.97 / 0.99 | 0.96 / 0.974 | 0.162 | 502.7 | 553 |
+| m03 | bon3e | 7.167 | 0.0095 | 10 | 0.96 / 0.98 | 0.971 / 0.947 | 0.157 | 357.8 | 408 |
+| m03 | bon2e | 7.230 | 0.0095 | 10 | 0.97 / 0.98 | 0.975 / 0.963 | 0.148 | 300.7 | 351 |
+| m03 | bonsel2 | 7.506 | 0.0095 | 11 | 0.97 / 0.99 | 0.97 / 0.959 | 0.157 | 297.8 | 348 |
+| m03 | s4c8n2 | 7.105 | 0.0095 | 10 | 0.98 / 0.99 | 0.968 / 0.981 | 0.150 | 216.7 | 267 |
+| m03 | tb | 6.236 | 0.0111 | 23 | 1.17 / 1.07 | 1.089 / 1.065 | 0.114 | 168.9 | 219 |
+| m03 | tbw | 5.837 | 0.0110 | 24 | 1.20 / 1.11 | 1.075 / 1.076 | 0.116 | 154.5 | 205 |
+| m03 | tbnat | 7.797 | 0.0171 | 156 | – | 0.972 / 1.424 | 0.243 | – | – |
+| m18 | q2 | 8.308 | 0.0152 | 8 | 1.00 / 1.00 | 1.0 / 1.0 | 0.570 | 278.9 | 333 |
+| m18 | q2r | 8.308 | 0.0152 | 8 | 1.00 / 1.00 | 1.0 / 1.0 | 0.570 | 279.2 | 334 |
+| m18 | s4c8 | 7.487 | 0.0153 | 8 | 0.96 / 0.95 | 0.975 / 0.902 | 0.568 | 231.0 | 286 |
+| m18 | s4c8n2 | 7.510 | 0.0153 | 8 | 0.97 / 0.95 | 0.832 / 0.871 | 0.643 | 236.4 | 291 |
+| m18 | tkf2 | 8.119 | 0.0149 | 8 | 0.96 / 0.99 | 1.074 / 0.941 | 0.534 | 191.5 | 246 |
+| m18 | tkf2c8 | 8.501 | 0.0151 | 8 | 0.98 / 1.01 | 1.105 / 0.955 | 0.530 | 202.6 | 257 |
+| m18 | kf2 | 7.212 | 0.0149 | 8 | 0.92 / 0.95 | 0.924 / 0.813 | 0.618 | 156.8 | 211 |
+| m18 | kf3 | 5.676 | 0.0148 | 9 | 0.91 / 0.96 | 0.884 / 0.775 | 0.628 | 125.7 | 180 |
+| m18 | kfv3 | 7.599 | 0.0153 | 9 | 0.98 / 0.97 | 1.004 / 0.925 | 0.547 | 246.5 | 301 |
+| m18 | bon3 | 7.470 | 0.0153 | 8 | 0.98 / 0.97 | 0.88 / 0.882 | 0.635 | 523.0 | 578 |
+| m18 | bon3e | 7.387 | 0.0153 | 8 | 0.96 / 0.97 | 0.86 / 0.867 | 0.647 | 384.8 | 439 |
+| m18 | bon2e | 7.485 | 0.0153 | 8 | 0.98 / 0.98 | 0.97 / 0.921 | 0.593 | 339.3 | 394 |
+| m18 | bonsel2 | 7.502 | 0.0153 | 8 | 0.97 / 0.99 | 0.982 / 0.903 | 0.570 | 301.0 | 356 |
+| m18 | tb | 5.753 | 0.0181 | 16 | 1.22 / 1.17 | 1.184 / 1.142 | 0.534 | 191.5 | 246 |
+| m18 | tbw | 5.489 | 0.0179 | 15 | 1.21 / 1.13 | 1.165 / 1.149 | 0.555 | 180.7 | 235 |
+| m18 | tbnat | 6.340 | 0.0248 | 58 | – | 1.219 / 1.42 | 0.548 | – | – |
 
 Notes on the table:
-- "q2" GPU = its E2E face_gen + face_comp (old03 = the identical `q2r` arm; the old03 E2E NVML sampler did not write a file).
-- tbnat (TBDub native) is a 25 fps video, so its flicker / pops are inflated by 1.2× larger inter-frame motion: not comparable.
-- tbnc = TBDub with no CodeFormer anywhere; tbmr0 = tbnc with `--mouth-region 0`. Both are diagnostics on old03.
+- "q2" face GPU = its E2E face_gen + face_comp; old03 = the identical `q2r` arm, since the early old03 E2E ran before pynvml was installed.
+- tbnat (TBDub native) is 25 fps, so its flicker / pops are inflated by the 1.2× larger inter-frame motion; its tremble at 25 fps is in the TBDub section.
+- tbnc = TBDub with no CodeFormer anywhere; tbmr0 = tbnc with `--mouth-region 0`. Both are old03 diagnostics.
+
+## E2E check (tkf2c8 as the full one-command job, its own fresh dub: `scripts/r15/e2e_arm.sh`)
+
+| video | E2E GPU-busy s / vmin (NVML, whole job) | audio | face_gen | face_comp | status | SyncNet (own dub) |
+|---|---|---|---|---|---|---|
+| old03 | **214.5** | 62.4 | 138.8 | 13.3 | SUCCESS | its dub is byte-identical to q2's, so the face-only arm's 7.69 applies (the confirming sync run was cancelled: another agent's training held the GPU) |
+| m18 | **275.3** | 68.8 | 170.6 | 35.9 | SUCCESS | 8.501 (= the face-only arm) |
+
+- Production q2 + F3 E2E for comparison: m18 333 (audio 54.5 + face 279), m03 ~290 (audio 50.5 + face 239). r14 measured old03 at 401.
+- tkf2c8 brings the teacher path under the 300 norm on both clips.
+- The audio stage measured 62–69 here vs 50–55 in the baselines. That is the same code: per-stage NVML attribution is noisier while another agent's jobs share the card.
 
 ## W0: TBDub bake-off
 
@@ -102,129 +130,105 @@ Notes on the table:
 - **GitHub `TaoLiveAIGC/TBDub`:**
   - LICENSE = the full Apache License 2.0 text;
   - README: "The code and released model weights are available under the Apache License 2.0".
-- **HF card `TaoLiveAIGC/TBDub`:**
-  - license field `apache-2.0`;
+- **HF card:**
+  - license `apache-2.0`;
   - "The released model weights and code are provided under the Apache License 2.0 unless otherwise specified. Third-party dependencies and checkpoints remain subject to their respective licenses."
   - Intended Use: "TBDub is intended for research and authorized applications involving visual dubbing, video localization, digital humans, and audio-driven facial animation." / "Users are responsible for obtaining appropriate consent and ensuring that generated content complies with applicable laws, licenses, and platform policies."
-  - This is a use statement, not an NC clause: commercial use is allowed under Apache-2.0.
-- **NOTICE.md:** derived from X-Dub and DiffSynth-Studio, both Apache-2.0.
-- **Dependencies:**
-  - Wan2.2 VAE from `KlingTeam/X-Dub`: HF license apache-2.0; GitHub KlingAIResearch/X-Dub Apache-2.0;
-  - `facebook/hubert-large-ll60k`: apache-2.0;
-  - MediaPipe face_landmarker: Apache-2.0;
-  - pip deps (requirements.txt): no NC packages, no InsightFace.
-- **Download:** 15.27 GB, the student only:
-  - tbdub_student.safetensors 12.59 GB, sha256 4e86900f…ea11e6 verified;
-  - Wan2.2_VAE 1.41 GB;
-  - hubert 1.26 GB;
-  - face_landmarker 4 MB (sha verified).
-  - The teacher (+12.59 GB) was not fetched.
-  - `scripts/r15/tbdub_setup.sh` reproduces this into `/workspace/dub/tbdub/{TBDub @19e18e4, ckpt, venv}`.
+  - This is a use statement, not an NC clause.
+- **NOTICE:** derived from X-Dub + DiffSynth-Studio, both Apache-2.0.
+- **Dependencies:** Wan2.2 VAE from KlingTeam/X-Dub (apache-2.0), hubert-large-ll60k (apache-2.0), MediaPipe (Apache-2.0). No NC pip deps, no InsightFace.
+- **Download:** 15.27 GB (student 12.59 GB, sha256 verified; teacher not fetched). `scripts/r15/tbdub_setup.sh` reproduces it.
 
-### Integration
-- **Own venv.** TBDub runs in its own venv (diffusers 0.36 / transformers 5.1 clash with dabai). It reuses dabai's torch 2.7.1+cu128 through a `.pth` fallback.
-- **Resident worker.** `scripts/r15/tbdub_worker.py` is a child of the generator stage, so it sits inside the stage's gpu.lock. It loads in 5–16 s and holds 14.6 GB resident (peak 18 GB per segment, 28.5 GB whole-video).
-- **Drop-in.** `scripts/r15/tbdub_gen.py` (`R10_GEN_PY`) swaps the LatentSync runner in `candidate_video_stage.py`. Everything else is production: speech gate, our mouth-only paste-back, CodeFormer, raw-layer dumps, the whole face_comp.
-- **Crop / paste-back.** TBDub's own MediaPipe crop is computed once over the whole master, and its own blend + paste-back is applied onto OUR frames.
-- **Modes:**
-  - default = per gate segment;
-  - `TBDUB_WHOLE=1` = one generation over the whole master with the whole dub, its native clip / motion continuity, sliced per segment;
-  - `TBDUB_FASTCC=1` = OpenCV instead of skimage for its per-frame Lab colour match, which was ~0.15 s/frame on CPU.
-- **Fixes on the way:**
-  - the MediaPipe child process wrote into the protocol stdout (fd-level redirect);
-  - the whole-video run left 28 GB in the caching allocator, so CodeFormer OOM'd and every segment passed through (`empty_cache` after each request);
-  - `arm.sh` now FAILs an arm when any generator segment passed through. Two runs had silently produced source-only videos: bon3 with stable_syncnet missing, and tbw with the OOM. Both were deleted and rerun.
+### Integration and diagnosis
+- **Integration:**
+  - own venv; resident worker `tbdub_worker.py`, a child of the generator stage so it sits inside its gpu.lock;
+  - load 5–16 s, 14.6 GB;
+  - drop-in `tbdub_gen.py` (`R10_GEN_PY`) with modes per segment / `TBDUB_WHOLE=1` / `TBDUB_FASTCC=1`.
+- **SyncNet by layer, old03:**
 
-### Where TBDub's sync goes (old03, SyncNet on each layer)
+  | layer | LatentSync q2 | TBDub |
+  |---|---|---|
+  | raw layer | 8.75 | 7.62 |
+  | + CodeFormer | 8.34 | 7.30 |
+  | SR | – | 7.55 |
+  | repair | – | 7.44 |
+  | final | 7.84 | 6.27 |
 
-| layer | LatentSync q2 | TBDub |
-|---|---|---|
-| raw generator layer (25 fps) | 8.75 | 7.62 (= native) |
-| + CodeFormer w 1.0 (generator stage) | 8.34 | 7.30 |
-| no CodeFormer, + SR | – | 7.55 |
-| + layer repair (rep2s) | – | 7.44 |
-| final (fps_composite → source fps) | 7.84 | 6.27 (with / without CodeFormer: 6.28 / 6.27) |
+  So our fps_composite costs TBDub −1.2 vs −0.5 for LatentSync. `--mouth-region 0` does not fix it (6.33). TBDub also trips the fallback more (3 % vs 1 %) and matches the source less in the paste guard (NCC 0.94 vs 0.985).
+- **Jelly is TBDub's own** (tremble at 25 fps, vs q2):
+  - TBDub through our chain: mouth ×1.19, chin ×1.05;
+  - TBDub native: mouth ×1.25, chin ×1.27, chin shake 8 % vs 3.8 %.
+- **Cost:** 140–190 face GPU-s/vmin; wall 650 s/vmin per segment (CPU colour match / paste).
 
-- The loss is our fps_composite, about −1.2 for TBDub vs about −0.5 for LatentSync.
-- `--mouth-region 0` (paste the layer's whole lower face, not lips + jaw drop) does not fix it: 6.33.
-- TBDub trips the fallback more (3 % vs 1 %, mostly the dark-transient detector on its darker mouth cavity). Its paste-guard NCC to the source is lower (median 0.939 vs 0.985), because it redraws the whole lower face, skin included. Neither explains −1.2 alone.
-- **Next step if the eye likes tbnat:** a stage-by-stage diagnosis of fps_composite on the TBDub layer (registration / retime / colour match).
+## W1: best-of-N (`LS_BON=N`, `LS_BON_EARLY=1`, `LS_BON_SEL=1`, `BON_REF=src`, `LS_NOISE_SEED`; `scripts/r15/bon.py`; all default off)
 
-### Speed
-- Face GPU-s/vmin: 160 / 169 / 192 per segment, 140 / 155 / 181 whole-video.
-- Wall is CPU-bound: 650 s/vmin per segment, mostly skimage colour match and PIL paste. Whole-video with FASTCC generates old03 in 276 s (184 s/vmin).
+**Round 1 design**
+- **Candidates:** per continue-window (16 frames, stride 8), N initial noises are denoised as one batch (candidate 0 = the trajectory's own noise).
+- **Sequential pick:** the overlap frames are pinned to the CHOSEN previous window.
+- **Score:** stable SyncNet (/0.03) + opening on dub-voiced minus dub-silent frames (/0.05 × 0.5) + lip sharpness (/0.15 × 0.5) − continuity jump (/0.30 × 0.5).
+- **Early mode:** pick on the first step's x0 preview.
+- **Pick ≠ seed 0** in 20–91 % of windows (`BON_STATS.txt`).
 
-## W1: best-of-N per window (`LS_BON=N`, `LS_BON_EARLY=1`, `scripts/r15/bon.py`, default off)
+**Round 2: selective (`LS_BON_SEL=1`)**
+- Every window runs the first step with the current noise; its preview is checked for:
+  - lazy (voiced opening below 0.7 × this speaker's running median, or with `BON_REF=src` below the median opening of the speaker's own SOURCE crops);
+  - smeared (lip sharpness below the running median − 0.3 / 0.2).
+- Only flagged windows try the other noises. A switch needs an improvement on the flagged criterion and z = sync + open + 0.5 sharp − 2 jump.
+- The chosen noise sticks for the next windows.
+- Flagged 8–28 %, switched 0–4 %, so the output ≈ the student.
+
+**Verdict:** no consistent gain on SyncNet / opening / tremble at +25 % to +170 % generator cost. Kept as flags, not for production.
+
+## W2: keyframes + interpolation (`LS_KF=k`, `KF_VOICED=1`, `KF_INTERP=dis|rife`; `scripts/r15/kf.py`; default off)
 
 **Design**
-- **Candidates:** per continue-window (c8: 16 frames, stride 8), N initial noises denoised as one batch. Candidate 0 is the trajectory's own noise; candidate k is seed 1247 + 7919 k, LatentSync-style (one draw repeated over the frames).
-- **Sequential pick:** the shared frames are pinned to the CHOSEN previous window, so the pick runs window by window.
-- **Score:** z-free, with fixed generic scales:
-  - stable SyncNet of the full window vs its mel (/0.03);
-  - opening on dub-voiced minus dub-silent frames (/0.05 × 0.5);
-  - lip-box log Laplacian variance (/0.15 × 0.5);
-  - continuity jump vs the last pinned frame (/0.30 × −0.5).
-- **Early mode:** the candidates run only the first step and are scored on the x0 preview; the winner runs the rest.
-- **Scoring decode:** only the lower 288 rows, with the EAGER VAE decoder. The compiled `_Pad16` one re-autotuned for ~60 s per process.
+- The generator runs on keyframes only (every k-th master frame + the last), each with its own 25 fps audio window. Option (a): the temporal layers see a k× subsampled clip.
+- The restore is intercepted: the keyframes' 512 crops stay in the aligned crop space.
+- Each in-between mouth is interpolated between its two keyframes, composited over its own frame's crop with LatentSync's lower-face mask, and restored with its own affine.
 
-**Pick statistics** (`eval/BON_STATS.txt`):
-- Pick ≠ seed 0: bon3 64 / 91 / 78 %, bon3e 49 / 84 / 75 %, bon2e 38 / 59 / 20 %.
-- The deciding terms are mostly continuity, sync and sharpness. The opening term almost never decides.
-- Candidate 2 won most windows on all 3 videos. As a fixed seed (`LS_NOISE_SEED=17085`, arm s4c8n2) it is not a generic gain: +0.13 / −0.09 / +0.02, opening ×1.07 / 0.96 / 0.83.
-
-**Verdict:** no consistent sync or opening gain; 1.5–2.6× the generator cost. Keep the flag for the record, not for production.
-
-## W2: keyframes + interpolation (`LS_KF=k`, `KF_VOICED=1`, `KF_INTERP=dis|rife`, `scripts/r15/kf.py`, default off)
-
-**Design**
-- **Keyframes:** the generator (any mode, c8 included) runs on keyframes only: every k-th master frame plus the last. Each keyframe keeps its own 25 fps audio window (chunk selection, as LS_RATE). That is option (a): the temporal layers see a k× subsampled clip.
-- **Crop space:** the restore is intercepted, so the keyframes' generated 512 crops stay in the aligned crop space.
-- **In-betweens:** each in-between mouth is interpolated there between its two keyframes. It is composited over THAT frame's own aligned crop with LatentSync's lower-face mask, then restored with that frame's own affine. So only the lower face is interpolated, never the head motion.
+**Option (b) `KF_VOICED=1`:** dense on dub-voiced frames ±2, keyframes only in dub silences.
 
 **Interpolator**
-- Default: bidirectional DIS optical flow (OpenCV, Apache-2.0; the repo's `ls_stable._flow_mid`).
-- Practical-RIFE 4.25 is downloaded and verified: MIT code, and the README says the weight links are "under the same MIT license as this project". It is in `/workspace/dub/rife`, 23 MB, sha256 6615790e… for flownet.pkl.
-- Running its downloaded model code was blocked by this session's auto-mode safety classifier. **RIFE (`KF_INTERP=rife`) is wired but untested; it needs the user's OK in the session.**
+- Default: DIS optical flow (OpenCV, Apache-2.0).
+- Practical-RIFE 4.25 (MIT code; README: weight links "under the same MIT license as this project") is downloaded to `/workspace/dub/rife`. Running its downloaded model code was blocked by this session's auto-mode safety classifier.
+- **`KF_INTERP=rife` is wired but untested and needs the user's OK in the session.** RIFE could recover some of the sync that DIS loses on fast visemes.
 
-**Results**
-- **Student kf2 / kf3:** smoothest (pops 0–13). SyncNet −0.43…−0.51 (kf2) and −1.65…−1.81 (kf3), with a lazier mouth (opening speed ×0.8–0.9).
-- **Teacher tkf2:** see the TL;DR. It is the arm to show the user.
-- **Option (b) kfv3** (dense on dub-voiced ±2 frames, keyframes / 3 only in dub silences): SyncNet ≥ s4c8 on all 3 videos. It saves nothing on these speech-dense clips (old03 −8 %, m03 0 %, m18 +7 %, the extra affine pass) and would only pay on pause-heavy videos.
+**Results:** see the table. The teacher variants tkf2 / tkf2c8 are the useful ones; the student ones lose sync.
 
 ## Files
 - `scripts/r15/`:
   - `arm.sh` (face arm on the baseline dub, NVML timing, pass-through guard, `ARM_CFD`);
   - `base_q2.sh` (baselines, gpu.lock held over the unlocked audio stage);
-  - `metrics.sh`, `pair.sh`, `table.py`, `bon_stats.py`, `pop_times.py`;
+  - `e2e_arm.sh` (any arm as the full E2E);
+  - `metrics.sh`, `pair.sh`, `panel3.sh`, `table.py`, `tremble.py`, `bon_stats.py`, `pop_times.py`;
   - `tbdub_setup.sh`, `tbdub_worker.py`, `tbdub_gen.py`, `tbdub_smoke.py`, `native.sh`, `comp_variant.sh`;
   - `bon.py`, `kf.py`;
-  - chains `chain_w0.sh`, `chain_tbw.sh`, `chain_w12.sh`, `chain_w1e.sh`, `chain_kfv.sh`, `final_metrics.sh`.
-- `scripts/quality/ls_stable.py`: the flags `LS_BON`, `LS_BON_EARLY`, `LS_KF`, `LS_NOISE_SEED`, all default off. With them unset the code path is byte-identical to r14.
-- Eval data: `/workspace/dub/r15w/eval/` (TABLE.md, BON_STATS.txt, *.sync.txt, flicker_*.json, mouth_*.json, <arm>_<id>/timing.json + logs).
+  - chains `chain_*.sh`, `final_metrics*.sh`.
+- `scripts/quality/ls_stable.py`: `LS_BON`, `LS_BON_EARLY`, `LS_BON_SEL` (+ `BON_REF` / `BON_LAZY` / `BON_SMEAR`), `LS_KF` (+ `KF_VOICED` / `KF_INTERP`), `LS_NOISE_SEED`. All default off; unset = the r14 code path.
+- Eval data: `/workspace/dub/r15w/eval/` (TABLE.md, BON_STATS.txt, tremble_*.json/txt, *.sync.txt, flicker_*.json, mouth_*.json, <arm>_<id>/timing.json + logs).
 
-### How to run the winner candidate (tkf2)
+### How to run tkf2c8
 ```
-V=tkf2 LS_KF=2 bash scripts/r15/arm.sh <id>      # face stages only, on an existing q2 baseline dub
-# full E2E: dabai_job debug_env {"LS_CMS_READ":"1","FC_CMS":"1","FC_EXTRA":"...q2+F3...","LS_KF":"2"}  (untested as a full E2E job)
+LS_KF=2 LS_STRIDE=8 LS_OVERLAP=continue V=tkf2c8 bash scripts/r15/arm.sh <id>                  # face stages on an existing q2 baseline dub
+PREFIX=tkf2c8e XENV='"LS_KF": "2", "LS_STRIDE": "8", "LS_OVERLAP": "continue"' bash scripts/r15/e2e_arm.sh <id>   # full E2E
+# dabai_job: debug_env = the q2 + F3 flags + {"LS_KF": "2", "LS_STRIDE": "8", "LS_OVERLAP": "continue"}
 ```
 
 ## Gotchas (server sharing)
-- **Unlocked audio stage.** The E2E audio stage (Qwen 14B + Chatterbox, ~27 GB) takes NO gpu.lock and OOMs next to any locked job. `base_q2.sh` holds the lock from the job start until the e2e's "sep" stage. Agent L used a whole-run lock (`locked.sh`), which also idled the GPU through its CPU-only composite stages.
-- **Missing stable SyncNet.** `models/latentsync/stable_syncnet.pt` (1.6 GB, ByteDance/LatentSync-1.6, openrail++ like the LatentSync weights) was missing on this server and was downloaded for W1.
+- **Unlocked audio stage.** The E2E audio stage (Qwen 14B + Chatterbox, ~27 GB) takes NO gpu.lock and OOMs next to locked jobs. base_q2.sh / e2e_arm.sh hold the lock until the e2e's "sep" stage.
+- **Missing stable SyncNet.** `models/latentsync/stable_syncnet.pt` (1.6 GB, ByteDance/LatentSync-1.6, openrail++ like the LatentSync weights) was missing; downloaded for W1.
+- **Never overwrite a running bash script in place.** Upload to `.new` and `mv`.
 
 ## Budget
-About 2.4 GPU-h of 6: arms 1.95 h by NVML job attribution, plus baselines, syncs and the smoke test.
+About 3.3 GPU-h of 6: arms 2.51 h by NVML job attribution, plus baselines, E2E checks, syncs and the smoke test.
 
 ## Для Ирины (RU)
-- **TBDub (Alibaba):**
-  - в нашей цепочке синхрон сильно хуже прода (6.1–6.3 против 7.8–8.3);
-  - «родной» TBDub ближе (7.6 / 7.8 / 6.3), но на m18 сильно проседает;
-  - стоит дешевле всего (140–190 GPU-с/мин);
-  - смотреть `*_mouth_q2_vs_tbnat_spots_half_speed`.
-- **Лучший-из-N у студента:** синхрон почти не меняется, раскрытие рта улучшается только на old03, дороже нормы. Не берём.
-- **Ключевые кадры у студента:** быстрее на 35–45 %, но синхрон падает.
-- **Главная находка: учитель (прод) с генерацией через кадр + интерполяция рта в выровненном кропе:**
-  - синхрон 7.45 / 8.02 / 8.12 (прод 7.84 / 8.23 / 8.31, студент 7.07 / 7.19 / 7.49);
-  - цена лица 145–192 GPU-с/мин (прод 230–280, студент 194–231);
-  - то есть лучше студента и по синхрону, и по цене, а весь E2E укладывается в норму 300.
-- **Нужен глаз на 0.5x** (не дрожит ли, как старый LS_RATE): `*_mouth_q2_vs_tkf2_spots_half_speed.mp4` и `*_mouth_s4c8_vs_tkf2_spots_half_speed.mp4`.
+- **Главная находка раунда: прод-модель (учитель), которая рисует рот через кадр с перекрытием окон (c8), а промежуточные кадры рта достраивает в выровненном кропе:**
+  - синхрон 7.69 / 8.55 / 8.50 против прода 7.84 / 8.77 / 8.31 (на m18 даже выше);
+  - на 30 % дешевле прода (156–203 GPU-с/мин лица), весь конвейер ~210–260 — в норме 300;
+  - дрожь по метрике как у прода;
+  - лучше студента и по синхрону, и по цене.
+- **Нужен ваш глаз на 0.5x:** `*_mouth_q2_vs_tkf2c8_spots_half_speed.mp4` (для m03: `q2u_vs_tkf2c8`).
+- **TBDub:** «желе» — его собственное (родной вывод дрожит ещё сильнее). Выбыл.
+- **Лучший-из-N у студента** (и полный, и выборочный «только ленивые окна»): синхрон и раскрытие почти не меняются, дороже. Не берём.
+- **Фикс «второго рта» на m03:** +0.5 синхрона у всех моделей; во всех m03-сравнениях раунда 2 он включён.

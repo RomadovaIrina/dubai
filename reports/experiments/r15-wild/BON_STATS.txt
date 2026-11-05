@@ -7,3 +7,7 @@ bon3_old03     N=3       windows  247  pick != seed0  158 (64 %)  hist [89, 30, 
 bon3e_m03      N=3 early windows  115  pick != seed0   97 (84 %)  hist [18, 28, 69]  177 s (scoring 47 s)  deciding term {'sync': 36, 'open': 0, 'sharp': 36, 'jump': 25}
 bon3e_m18      N=3 early windows   59  pick != seed0   44 (75 %)  hist [15, 9, 35]  91 s (scoring 24 s)  deciding term {'sync': 20, 'open': 0, 'sharp': 3, 'jump': 21}
 bon3e_old03    N=3 early windows  247  pick != seed0  122 (49 %)  hist [125, 61, 61]  382 s (scoring 103 s)  deciding term {'sync': 48, 'open': 0, 'sharp': 16, 'jump': 58}
+bonsel2_m03    N=3 selective windows  116  flagged 33 (28 %: lazy 31, smear 3)  noise switches 5 (4 %)  132 s (scoring 28 s)
+bonsel2_m18    N=3 selective windows   59  flagged 3 (5 %: lazy 0, smear 3)  noise switches 0 (0 %)  59 s (scoring 9 s)
+bonsel2_old03  N=3 selective windows  247  flagged 30 (12 %: lazy 17, smear 14)  noise switches 4 (2 %)  256 s (scoring 44 s)
+bonsel_old03   N=3 selective windows  247  flagged 19 (8 %: lazy 15, smear 4)  noise switches 1 (0 %)  241 s (scoring 39 s)
