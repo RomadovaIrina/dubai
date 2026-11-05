@@ -4,7 +4,7 @@
 # the user's old03 timestamps), 2-panels q2 | student (full + 0.5x mouth crop) -> outbox/r14_d/.
 #   LORA=<ckpt.pt> STEPS=4 TAG=s4 [XENV='"LS_STRIDE": "8", "LS_OVERLAP": "fuse"'] bash scripts/r14/eval_r14.sh [old03 m03 m18]      (BASE=1: the q2 + F3 baseline too, when missing)
 set -u
-cd /workspace/dub/dubai; export DUB_ROOT=/workspace/dub/dubai; . scripts/env.sh >/dev/null
+R=$(cd "$(dirname "$0")/../.." && pwd); cd $R; export DUB_ROOT=$R; . scripts/env.sh >/dev/null
 X=${EVAL_DIR:-/workspace/dub/r14d/eval}; OB=${OB:-/workspace/dub/outbox/r14_d}; mkdir -p $X $OB; A=/workspace/dub/artifacts/r4a
 TAG=${TAG:-s4}; STEPS=${STEPS:-4}; LORA=${LORA:?LORA=<ckpt>}
 Q=${Q2:-q2}   # r15: the baseline job name; Q2=q2u Q2ENV='"LS_FACE_UNITS": "1"' = q2 + F3 with agent F's face-follows-the-dubbed-units fix (m03 19 s)
@@ -22,7 +22,7 @@ for id in ${*:-old03 m03 m18}; do
   in=${SRC[$id]}
   [ -f $X/skip_${TAG}_$id ] && { echo "skip $TAG $id ($X/skip_${TAG}_$id)"; continue; }
   [ -n "${BASE:-1}" ] && job ${Q}_$id $in "{$COMMON${Q2ENV:+, $Q2ENV}}"
-  job ${TAG}_$id $in "{$COMMON, \"R10_GEN_PY\": \"/workspace/dub/dubai/scripts/r13/distill/student_gen.py\", \"R13_STUDENT_LORA\": \"$LORA\", \"R13_STUDENT_STEPS\": \"$STEPS\"${XENV:+, $XENV}}"
+  job ${TAG}_$id $in "{$COMMON, \"R10_GEN_PY\": \"$R/scripts/r13/distill/student_gen.py\", \"R13_STUDENT_LORA\": \"$LORA\", \"R13_STUDENT_STEPS\": \"$STEPS\"${XENV:+, $XENV}}"
   for n in ${Q}_$id ${TAG}_$id; do
     v=$(ls $X/$n/$n.mp4 2>/dev/null); w=$(ls $A/r9_$n/$n/dubbed_16k.wav 2>/dev/null | head -1)
     [ -n "$v" ] && [ -n "$w" ] && [ ! -s $X/$n.sync.txt ] && flock /workspace/dub/gpu.lock python scripts/r11/sync_speech.py --video $v --audio $w --label $n 2>&1 | grep "^== sync" > $X/$n.sync.txt

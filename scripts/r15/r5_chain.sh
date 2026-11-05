@@ -5,7 +5,7 @@
 # against q2 + F3 and the r14 student r2@1500 (the user's eye on m03, 05.11: the student "правое лучше" over production).
 # Runbook + the file list: reports/experiments/r14-distill/R5_RUNBOOK.md. Resumable: every step leaves $X/done_<step>; rerun = continue.
 #   setsid nohup bash scripts/r15/r5_chain.sh > /workspace/dub/r15x/r5_chain.log 2>&1 < /dev/null &
-cd /workspace/dub/dubai; export DUB_ROOT=/workspace/dub/dubai; . scripts/env.sh >/dev/null
+R=$(cd "$(dirname "$0")/../.." && pwd); cd $R; export DUB_ROOT=$R; . scripts/env.sh >/dev/null   # the checkout (or worktree) this script is in
 X=${R5_ROOT:-/workspace/dub/r15x}; E=$X/eval; N=$X/R5_NOTES.txt; T=$X/train_r5; C=$X/ckpt/r5_s4; OB=/workspace/dub/outbox/r15x; M=$X/markers
 mkdir -p $X $E $OB $M $X/ckpt; export EVAL_DIR=$E
 note(){ echo "$(date +%T) $*" | tee -a $N; }
@@ -15,13 +15,14 @@ idle(){ local ok=0 u; for i in $(seq 1 240); do u=$(nvidia-smi --query-gpu=memor
   if [ "$u" -lt 2000 ] && flock -w 5 /workspace/dub/gpu.lock true; then ok=$((ok + 1)); [ $ok -ge 2 ] && return 0; else ok=0; fi; sleep 15; done
   note "GPU not idle after 60 min, going anyway"; }
 FU='"LS_FACE_UNITS": "1"'; C8='"LS_STRIDE": "8", "LS_OVERLAP": "continue"'
-P2=$X/ckpt/r2_s4/step_01500_ema.pt   # the r14 student (control arm s4p1500c8u)
+P2=${R5_CONTROL:-$X/ckpt/r2_s4/step_01500_ema.pt}   # the r14 student (control arm s4p1500c8u)
+STEPS=${R5_STEPS:-2000}; IDS2=${R5_IDS:-m03 m18}   # budget knobs: train steps, the videos after old03
 ARGS="--student-steps 4 --sync-w 0.15 --pix-w 0.5 --lpips-w 0.2 --temp-w 0.5 --temp-nolips --lip-box 0.25,0.538,0.747,0.787 --ema 0.999 --lr 1e-4 --p16 0.7"
 
 # 0. setup check (no GPU work): the stack, the data, the inputs; nothing is printed from /workspace/.env
 if ! done_check; then
   nvidia-smi --query-gpu=name,memory.total --format=csv,noheader | tee -a $N
-  [ $(df -BG --output=avail /workspace | tail -1 | tr -dc 0-9) -ge 60 ] || die "less than 60 GB free on /workspace"
+  [ $(df -BG --output=avail /workspace | tail -1 | tr -dc 0-9) -ge 40 ] || die "less than 40 GB free on /workspace"
   for p in /venv/dabai/bin/python /venv/mediapipe/bin/python third_party/latentsync/checkpoints/latentsync_unet.pt /workspace/.env $P2 \
            /workspace/dub/inputs/test_videos_raw/03.mp4 /workspace/dub/inputs/mamakris/story-1774249919482-367803614.MOV /workspace/dub/inputs/mamakris/story-1774250817106-616905094.mp4; do
     [ -e "$p" ] || die "missing $p"; done
@@ -53,7 +54,7 @@ if ! done_train; then
   flock /workspace/dub/gpu.lock python scripts/r13/distill/distill2.py train --out $S $ARGS --steps 30 --val-every 30 --val-max 4 --run smoke_r5 --ckpt-root $S/ckpt > $X/smoke_r5.log 2>&1
   grep -q "\[train\] done" $X/smoke_r5.log || die "smoke failed: $(tail -1 $X/smoke_r5.log | cut -c1-200)"
   note "SMOKE_OK: $(grep '\[val\]' $X/smoke_r5.log | tail -1 | cut -c1-250)"
-  flock /workspace/dub/gpu.lock python scripts/r13/distill/distill2.py train --out $T $ARGS --steps 2000 --val-every 250 --val-max 24 --run r5_s4 --ckpt-root $X/ckpt > $X/run_r5.log 2>&1
+  flock /workspace/dub/gpu.lock python scripts/r13/distill/distill2.py train --out $T $ARGS --steps $STEPS --val-every 250 --val-max 24 --run r5_s4 --ckpt-root $X/ckpt > $X/run_r5.log 2>&1
   grep -q "\[train\] done" $X/run_r5.log || die "training failed: $(tail -1 $X/run_r5.log | cut -c1-200)"
   mark train; note "r5_s4 trained: $(tail -1 $C/latest.txt 2>/dev/null)"
 fi
@@ -63,7 +64,7 @@ if ! done_pick; then
   flock /workspace/dub/gpu.lock python scripts/r14/ckpt_val.py --out $T --ckpt $C --student-steps 4 --mse-tol 0.2 > $X/ckpt_val_r5.log 2>&1 || die "ckpt_val failed"
   mark pick; note "pick: $(python3 -c "import json; d=json.load(open('$C/ckpt_val.json')); print(d['pick'], '-', d['pick_reason'])")"
 fi
-PK=$C/$(python3 -c "import json; print(json.load(open('$C/ckpt_val.json'))['pick'])"); FN=$C/step_02000_ema.pt
+PK=$C/$(python3 -c "import json; print(json.load(open('$C/ckpt_val.json'))['pick'])"); FN=$C/step_$(printf %05d $STEPS)_ema.pt
 
 ev(){ local tag=$1 ck=$2 id=$3; [ -s $E/${tag}_$id/${tag}_$id.mp4 ] && return 0; idle; echo "$tag $id $(date +%T)" > $M/E2E_RUNNING
   Q2=q2u Q2ENV="$FU" OB=$OB LORA=$ck STEPS=4 TAG=$tag XENV="$C8, $FU" bash scripts/r14/eval_r14.sh $id >> $X/eval_r5.log 2>&1; rm -f $M/E2E_RUNNING
@@ -75,14 +76,14 @@ ev s4p1500c8u $P2 old03; ev r5c8u $PK old03
 [ "$PK" != "$FN" ] && ev r5fc8u $FN old03
 B=r5c8u; BC=$PK
 if [ "$PK" != "$FN" ] && python3 -c "import sys; sys.exit(0 if float('$(sy r5fc8u_old03)' or 0) > float('$(sy r5c8u_old03)' or 0) else 1)"; then B=r5fc8u; BC=$FN; fi
-note "old03 sync: q2u $(sy q2u_old03), r14 student $(sy s4p1500c8u_old03), r5 pick $(sy r5c8u_old03), r5 final $(sy r5fc8u_old03) -> $B ($(basename $BC)) on m03 / m18"
+note "old03 sync: q2u $(sy q2u_old03), r14 student $(sy s4p1500c8u_old03), r5 pick $(sy r5c8u_old03), r5 final $(sy r5fc8u_old03) -> $B ($(basename $BC)) on $IDS2"
 
 # 7. m03 / m18: the r14 student + the better r5
-for id in m03 m18; do ev s4p1500c8u $P2 $id; ev $B $BC $id; done
+for id in $IDS2; do ev s4p1500c8u $P2 $id; ev $B $BC $id; done
 
 # 8. clips (the r5 arm vs q2u and vs the r14 student; m03 17-21 s and m18 2-6 s at 0.5x), 9. tables
 OB=$OB Q2=q2u bash scripts/r14/r15_clips.sh $B s4p1500c8u > $X/r5_clips.log 2>&1 || note "clips failed: $(tail -1 $X/r5_clips.log)"
-python scripts/r15/r5_table.py --root $X --run r5_s4 --base q2u --arms s4p1500c8u r5c8u r5fc8u > $X/R5_TABLE.md 2>&1
+python scripts/r15/r5_table.py --root $X --run r5_s4 --base q2u --arms s4p1500c8u r5c8u r5fc8u --ids old03 $IDS2 > $X/R5_TABLE.md 2>&1
 cat $X/R5_TABLE.md | tee -a $N
 
 # 10. commit (the run's report files) + the incremental bundle; R5_DONE last
