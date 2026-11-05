@@ -228,7 +228,11 @@ class CleanPrep:
         self.times = {}; self.error = None
         t0 = time.perf_counter()
         if frames is None:
-            self.master, _ = fa.make_master(src, work); self.frames = fa.read_frames(self.master)
+            self.master, _ = fa.make_master(src, work)
+            if os.environ.get("DUB_GEN_STREAM") == "1":   # r15 T: no whole-video frame buffer (lazy_frames.py); the same frames
+                import lazy_frames; self.frames = lazy_frames.LazyFrames(self.master, back=int(os.environ.get("DUB_GEN_STREAM_BACK", "1024")))
+            else:
+                self.frames = fa.read_frames(self.master)
         else:
             self.master, self.frames = master, frames
         self.times["prep_master"] = round(time.perf_counter() - t0, 3); t0 = time.perf_counter()

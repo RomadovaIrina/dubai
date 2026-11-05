@@ -324,8 +324,12 @@ def main() -> int:
             Mo = rec_cls = make_box_recorder(MouthOnlyRunner, prep.frames)
         runner = Mo(runner, a.mask_top, a.mask_feather, a.mask_smooth, defer=a.codeformer_scope == "mouth")
         if a.dump_raw: runner.raw = {}   # A r3: --dump-raw (_lsraw.mp4)
-    raw_ls = _DiskFrames(out.with_name(out.stem + "_ls_raw.frames")) if a.dump_ls_raw != "off" else {}   # r9: on disk (long videos)
-    raw_pre = _DiskFrames(out.with_name(out.stem + "_ls_pre.frames")) if a.dump_ls_raw != "off" else {}; _pre_stash = []   # r8 F: raw_pre = the same LatentSync frames BEFORE CodeFormer (--dump-ls-raw writes _ls_pre.mp4)
+    _stream = os.environ.get("DUB_GEN_STREAM") == "1" and prep is not None and hasattr(prep.frames, "release_before")   # r15 T (lazy_frames.py)
+    if _stream:   # exact patches vs the master frame of the same index: no 2 x (9 GB per 5 min) raw memmaps
+        import lazy_frames; raw_ls = lazy_frames.PatchFrames() if a.dump_ls_raw != "off" else {}; raw_pre = lazy_frames.PatchFrames() if a.dump_ls_raw != "off" else {}; _pre_stash = []
+    else:
+        raw_ls = _DiskFrames(out.with_name(out.stem + "_ls_raw.frames")) if a.dump_ls_raw != "off" else {}   # r9: on disk (long videos)
+        raw_pre = _DiskFrames(out.with_name(out.stem + "_ls_pre.frames")) if a.dump_ls_raw != "off" else {}; _pre_stash = []   # r8 F: raw_pre = the same LatentSync frames BEFORE CodeFormer (--dump-ls-raw writes _ls_pre.mp4)
     if a.dump_ls_raw != "off":   # r3 D: keep the raw LatentSync frames (BGR, before the mouth-only composite) per master frame
         if not getattr(runner, "deferred", False): raise SystemExit("--dump-ls-raw needs --mouth-only-pasteback on --codeformer-scope mouth")
         import hashlib, numpy as np
@@ -342,6 +346,15 @@ def main() -> int:
                 _h.extend(hashlib.md5(f.tobytes()).hexdigest() for f in _mf)
                 for i, hh in enumerate(_h): _idx.setdefault(hh, []).append(i)
         def _composite(outs, originals, boxes=None):   # segment start = the master position whose frames match (repeated frames: all of them must match)
+            if _stream:   # r15 T: the segment start is known (MouthOnlyRunner.set_segment); originals = the master frames of the segment
+                st = runner._seg_start
+                for k, o in enumerate(outs):
+                    if k < len(originals): raw_ls.put(st + k, o, originals[k])
+                if len(_pre_stash) == len(outs):
+                    for k, o in enumerate(_pre_stash):
+                        if k < len(originals): raw_pre.put(st + k, o, originals[k])
+                _pre_stash.clear()
+                return _comp(outs, originals, boxes)
             _load_master()
             oh = [hashlib.md5(np.ascontiguousarray(o).tobytes()).hexdigest() for o in originals]
             st = next((i for i in _idx.get(oh[0], []) if _h[i:i + len(oh)] == oh), None) if oh else None
@@ -389,15 +402,16 @@ def main() -> int:
         with rp.timed(times, "dump_ls_raw"):
             raw_path = out.with_name(out.stem + "_ls_raw.mp4") if a.dump_ls_raw == "on" else pathlib.Path(a.dump_ls_raw); w = iio.get_writer(str(raw_path), fps=25, codec="libx264rgb", macro_block_size=None, pixelformat="rgb24",
                                                                                 ffmpeg_params=["-crf", "0", "-preset", "veryfast"], ffmpeg_log_level="error")
-            _load_master()
-            for i, f in enumerate(_mf): w.append_data((raw_ls.get(i, f))[:, :, ::-1])
+            if _stream: _mf = prep.frames   # r15 T: the lazy master, read once in order (one frame in memory)
+            else: _load_master()
+            for i, f in enumerate(_mf): w.append_data((raw_ls.get(i, f, f) if _stream else raw_ls.get(i, f))[:, :, ::-1])
             w.close()
         man["ls_raw"] = {"path": str(raw_path), "ls_frames": len(raw_ls), "master_frames": len(_mf)}; raw_ls.close(); del raw_ls
         if raw_pre:   # r8 F: the clean (pre-CodeFormer) layer of the same run: the base of the CodeFormer detail transfer (r8_cf_detail.py)
             with rp.timed(times, "dump_ls_pre"):
                 pre_path = raw_path.with_name(raw_path.name.replace("_ls_raw", "_ls_pre")); w = iio.get_writer(str(pre_path), fps=25, codec="libx264rgb", macro_block_size=None,
                                                                                                           pixelformat="rgb24", ffmpeg_params=["-crf", "0", "-preset", "veryfast"], ffmpeg_log_level="error")
-                for i, f in enumerate(_mf): w.append_data((raw_pre.get(i, f))[:, :, ::-1])
+                for i, f in enumerate(_mf): w.append_data((raw_pre.get(i, f, f) if _stream else raw_pre.get(i, f))[:, :, ::-1])
                 w.close()
             man["ls_raw"]["pre_codeformer"] = {"path": str(pre_path), "ls_frames": len(raw_pre)}
         raw_pre.close(); del raw_pre
@@ -411,6 +425,7 @@ def main() -> int:
         for i, f in enumerate(mf): w_.append_data(cv2.cvtColor(sub.get(i, f), cv2.COLOR_BGR2RGB))
         w_.close(); man["ls_raw"] = {"path": str(rawp), "frames": len(mf), "ls_frames": len(sub)}; del mf, sub
     rep["backend"] = "optimized"; man["lipsync"] = rep
+    if prep is not None and hasattr(prep.frames, "stats"): man["gen_stream"] = prep.frames.stats()   # r15 T
     if prep is not None:   # spec 11: degraded frames (held landmarks, LatentSync failures) vs the 2 % SUCCESS / PARTIAL_SUCCESS rule (same rule as run_clean_pipeline_05)
         elig = int(rep["frame_classes"].get("VALID_FACE", 0)); failed = int((rep["by_action"].get("PASS_THROUGH_LS_FAILED") or {}).get("frames", 0))
         held = int(man["face_stack"].get("held_landmark_frames", 0)); ratio = (held + failed) / max(elig, 1)

@@ -200,22 +200,11 @@ class LatentSyncRunner:
 
 
 def read_frames(p: pathlib.Path) -> list:
-    import cv2, os
-    if os.environ.get("LS_CMS_READ") == "1":   # r13: the master decoded with its OWN matrix (BT.709 for the tagged HD masters; OpenCV's decode differed
-        # by m03 +1.7 L / +2.7 b*), so the generated face, the lossless layers (LS_LAYER_RGB) and the FC_CMS composite share one colour space
-        import av
-        c = av.open(str(p)); fr = []
-        for f_ in c.decode(c.streams.video[0]):
-            cs = getattr(f_, "colorspace", None); cs = "ITU709" if cs == 1 else ("ITU601" if cs in (5, 6) else ("ITU709" if f_.height >= 720 else "ITU601"))
-            fr.append(f_.reformat(format="bgr24", src_colorspace=cs, src_color_range="MPEG").to_ndarray())
-        c.close(); return fr
-    cap = cv2.VideoCapture(str(p)); fr = []
-    while True:
-        ok, f = cap.read()
-        if not ok:
-            break
-        fr.append(f)
-    cap.release(); return fr
+    """all frames of p (BGR). LS_CMS_READ=1 (r13): the master decoded with its OWN matrix (BT.709 for the tagged HD masters; OpenCV's decode
+    differed by m03 +1.7 L / +2.7 b*), so the generated face, the lossless layers (LS_LAYER_RGB) and the FC_CMS composite share one colour space.
+    r15 T: the decode itself lives in lazy_frames.iter_frames (one code path for this list and the lazy sequence of DUB_GEN_STREAM=1)."""
+    import lazy_frames
+    return list(lazy_frames.iter_frames(p))
 
 
 def assemble(master: pathlib.Path, src: pathlib.Path, segs: list[dict], replacements: dict, out: pathlib.Path, work: pathlib.Path) -> dict:

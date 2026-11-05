@@ -190,6 +190,8 @@ def classify_master(master_frames: list, router, gate: np.ndarray | None, stride
     Inside a gated run every `stride`-th frame is detected, the others inherit the last decision. `cache` = VideoPrep.router_rows (the same
     router call on every frame, made earlier): replayed instead of detecting."""
     stride = max(1, int(stride)); rows: list[dict] = []; detected = 0; last = None; since = stride
+    if cache is not None:   # r15 T: the rows are replayed: no frame is read (identical rows; no decode pass of a lazy master)
+        master_frames = [None] * len(master_frames)
     for i, fr in enumerate(master_frames):
         if gate is not None and not gate[i]:
             rows.append({"frame": i, "cls": "NO_SPEECH", "reason": "outside_speech_gate", "bbox": None}); last = None; since = stride
@@ -218,22 +220,25 @@ def assemble_frames(master_frames: list, audio_mux: pathlib.Path, segs: list[dic
     tmp = work / (out.stem + "_video.mp4")
     writer = imageio.get_writer(str(tmp), fps=FPS, codec="libx264", macro_block_size=None, ffmpeg_params=["-crf", "13"], ffmpeg_log_level="error")
     written = 0; padded: dict = {}; blended = 0; pos = 0
+    it_ = iter(master_frames) if not isinstance(master_frames, list) else None   # r15 T: a lazy master is read once, in order
     for s in segs:
         rep = replacements.get(s["index"]); xf = s.get("crossfade") or {}
+        pf_ = rep if (rep is not None and hasattr(rep, "put")) else None   # r15 T: PatchFrames -> rebuilt on the master frame
         for k in range(s["frames"]):
             if pos >= len(master_frames):
                 break
-            fr = master_frames[pos]; pos += 1
+            fr = next(it_) if it_ is not None else master_frames[pos]; pos += 1
             if rep is not None and k < len(rep):
+                rk = pf_.get(k, fr) if pf_ is not None else rep[k]
                 a = 1.0
                 if xf.get("in") and k < xf["in"]:
                     a = (k + 1) / (xf["in"] + 1)
                 if xf.get("out") and k >= s["frames"] - xf["out"]:
                     a = min(a, (s["frames"] - k) / (xf["out"] + 1))
                 if a < 1.0:
-                    fr = cv2.addWeighted(rep[k], a, fr, 1.0 - a, 0.0); blended += 1
+                    fr = cv2.addWeighted(rk, a, fr, 1.0 - a, 0.0); blended += 1
                 else:
-                    fr = rep[k]
+                    fr = rk
             elif rep is not None:
                 padded[s["index"]] = padded.get(s["index"], 0) + 1   # LatentSync returned fewer frames: keep original
             writer.append_data(cv2.cvtColor(fr, cv2.COLOR_BGR2RGB)); written += 1
@@ -389,6 +394,7 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
             s["action"] = "PASS_THROUGH_NO_RUNNER"; continue
         try:
             if in_memory:
+                if hasattr(master_frames, "release_before"): master_frames.release_before(s["start_frame"])   # r15 T: lazy master, sliding cache
                 seg_rgb = np.stack([cv2.cvtColor(master_frames[i], cv2.COLOR_BGR2RGB) for i in range(s["start_frame"], s["end_frame"])])
                 a0 = int(round(s["start_frame"] / FPS * SR)); a1 = a0 + int(round(s["frames"] / FPS * SR))
                 seg_audio = audio[a0:a1]
@@ -455,6 +461,11 @@ def process_video(src: pathlib.Path, work: pathlib.Path, audio16k: pathlib.Path,
                 for p in (v, au, o, v.with_name(v.stem + "_lsview.mp4")):
                     if p.exists():
                         p.unlink()                                                                    # runtime media freed as we go
+            if in_memory and hasattr(master_frames, "release_before"):   # r15 T: exact patches vs the master instead of full frames in RAM
+                import lazy_frames
+                pf = lazy_frames.PatchFrames(n=len(frs))
+                for k in range(min(len(frs), s["frames"])): pf.put(k, frs[k], master_frames[s["start_frame"] + k])
+                frs_n = len(frs); frs = pf
             replacements[s["index"]] = frs
             s["latentsync"] = {"seconds": dt, "frames_in": s["frames"], "frames_out": len(frs)}
             ls_runs.append(dt); log(f"  [lipsync] seg {s['index']} {s['start_s']}-{s['end_s']}s LatentSync {dt}s -> {len(frs)} frames")
