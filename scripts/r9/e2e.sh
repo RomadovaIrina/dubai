@@ -170,6 +170,11 @@ else
       1|k5|k7) FBL=fb7s; FBA="$FBA --open-gate 0.04 --dark-transient on --thr-wash-lips 0.2"; export REP_ARGS="--spikes off ${REP_ARGS:-}" REP_LABEL=rep2s
                SYX="--mouth-region 0.55"; [ "$E2E_SYNC" = k7 ] || SYX="$SYX --cm-mouth-excl 0.5";;
     esac
+    if [ "$DUB_ALLOW_NC" != 1 ] && [ "${DUB_CLEAN_LIPCON:-0}" = 1 ]; then   # r15 F2 (agent F, experiment/r15-repair 6168df3; eye 05.11: "no CF + adaptive lipcon ~ prod CF"):
+      LCX="--thr-lipcon 0.45 --lipcon-mode adaptive --lipcon-rel 0.6 --lipcon-win 25 --lipcon-max-frac 0.03"   # the clean face: a lip-vs-skin contrast dip
+      FBL=${FBL}la; FBA="$FBA $LCX"; export REP_LABEL=${REP_LABEL:-rep2}la REP2_FB_ARGS="$(cat reports/experiments/r8-face/fb7.args) $LCX"   # (< 0.45 of the source AND < 0.6 x
+      FL+=("face_clean_lipcon")   # the video's +-1 s median, <= 3 % of the frames) is re-drawn by the layer repair, re-scored after it (2nd pass); CPU only. Default OFF until F's gates pass
+    fi
     SKIP_SCORE=1 TAG=$FT SRC_TAG=$GT CFD=$CFDV SR=srt1 SR_EXTRA="--batch 8 --mask down2" FB=$FBL FB_ARGS="$FBA" EXTRA="--tex-tau 1000 --tex-sigma 2.5 $SYX" \
       bash scripts/r7/r7_m7_comp.sh $ID > $L/face_comp.log 2>&1
     [ -f $B/$FT/${ID}_$FT.mp4 ] && VID=$B/$FT/${ID}_$FT.mp4 || fail face_comp_failed PARTIAL_SUCCESS "see logs/face_comp.log: source picture used"

@@ -91,7 +91,20 @@ def main():
                     "between open frames (> 0.07) keep the r8 wash / coll test (gate-safe: the flash detector counts them); 0 = off")
     ap.add_argument("--thr-wash-lips", type=float, default=0.0, help="r11 SYNC, with --open-gate: where the openings differ, the lip-ring brightness "
                     "transient (layer ring vs source ring, minus its +-6-frame median) >= this flags a washed mouth (+ its neighbours above half); 0 = off")
+    ap.add_argument("--thr-lipcon", type=float, default=0.0, help="r15 F2 (m03 'lips vanish', agent T): the lip-vs-skin a* / lightness contrast "
+                    "(scripts/r15/lipcon.py, layer as a fraction of the source at the same frame) below this AND >= --lipcon-drop under its +-6-frame median "
+                    "flags the frame (1 at thr - 0.1, 0.5 at thr), with --lipcon-same on only where the layer and source openings match (a different opening "
+                    "legitimately changes the lip line, old03): a pale / vanished lip pop, re-drawn by the layer repair or faded to the source; 0 = off")
+    ap.add_argument("--lipcon-drop", type=float, default=0.1); ap.add_argument("--lipcon-same", choices=["off", "on"], default="off", help="r15 F2: lipcon only where the openings match (--open-gate)")
+    ap.add_argument("--lipcon-mode", choices=["drop", "adaptive"], default="drop", help="r15 F2: drop = below thr AND --lipcon-drop under the +-6-frame "
+                    "median; adaptive = below thr AND below --lipcon-rel x the video's own +-(--lipcon-win)-frame median ratio (a transient dip of this video)")
+    ap.add_argument("--lipcon-rel", type=float, default=0.6); ap.add_argument("--lipcon-win", type=int, default=25)
+    ap.add_argument("--lipcon-max-frac", type=float, default=0.0, help="r15 F2: at most this fraction of the LatentSync frames flagged by lipcon (the deepest "
+                    "dips first; a per-video budget so a steadily pale video cannot be re-drawn wholesale); 0 = no cap")
+    ap.add_argument("--lipcon-only", choices=["off", "on"], default="off", help="r15 F2: score lipcon alone (the second pass on the repaired layer)")
     a = ap.parse_args(); work = pathlib.Path(a.work)
+    if a.thr_lipcon > 0:
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "r15")); import lipcon
     lml = np.load(a.lm)["lm"]; lms = np.load(work / "video/master_mediapipe.npz")["lm"]; n = min(len(lml), len(lms))
     ol, yl, al_, apl, n1 = read_feats(a.ls, lml, n); os_, ys, as_, aps, n2 = read_feats(work / "video/master_25fps.mp4", lms, n); n = min(n1, n2)
     man = json.loads(next(work.glob("*_25fps.manifest.json")).read_text())
@@ -102,12 +115,13 @@ def main():
     jerk = np.nan_to_num(hf(ol[:n]) - hf(os_[:n]), nan=0.0)
     tone = np.nan_to_num(tone_hf(yl[:n], ol[:n], al_[:n]) - np.nan_to_num(tone_hf(ys[:n], os_[:n], as_[:n]), nan=0.0), nan=0.0)
     appx = np.nan_to_num(apl[:n] - 1.5 * np.nan_to_num(aps[:n], nan=0.0), nan=0.0)
-    coll = np.zeros(n); wash = np.zeros(n); washl = np.zeros(n); sp5 = np.full(n, np.nan); lp5 = np.full(n, np.nan)
+    coll = np.zeros(n); wash = np.zeros(n); washl = np.zeros(n); sp5 = np.full(n, np.nan); lp5 = np.full(n, np.nan); lcl = np.full((n, 2), np.nan); lcs = np.full((n, 2), np.nan)
     cl = cv2.VideoCapture(str(a.ls)); cs = cv2.VideoCapture(str(work / "video/master_25fps.mp4"))
     for k in range(n):
         okl, fl = cl.read(); oks, fs = cs.read()
         if not (okl and oks): break
         q = lms[k]
+        if a.thr_lipcon > 0: lcl[k] = lipcon.measure(fl, lml[k]); lcs[k] = lipcon.measure(fs, q)
         if not np.isfinite(q[LIPS_OUTER + LIPS_INNER + [33, 263]]).all(): continue
         iod = float(np.linalg.norm(q[33, :2] - q[263, :2])); m = np.zeros(fs.shape[:2], np.uint8)
         cv2.fillPoly(m, [np.round(cv2.convexHull(q[LIPS_OUTER, :2].astype(np.float32))[:, 0]).astype(np.int32)], 1)
@@ -171,7 +185,20 @@ def main():
             wt = washl - tmed(washl); fl_ = sc(wt, a.thr_wash_lips); hi_ = fl_ > 0.5
             nb_ = np.zeros(n, bool); nb_[1:] |= hi_[:-1]; nb_[:-1] |= hi_[1:]
             F["washl"] = np.where(nb_ & (wt > 0.5 * a.thr_wash_lips), 1.0, fl_) * ~same
-    for k_ in ("jerk", "app"): F[k_] = np.where(joint, np.clip(F[k_] * a.joint_gain, 0, 1), F[k_])
+    if a.thr_lipcon > 0:   # r15 F2: the lips lose their colour / lightness contrast to the skin (transient), whatever the opening
+        lc = lipcon.contrast(lcl, lcs); lcm = np.array([np.nanmedian(lc[max(0, k - 6):k + 7]) if np.isfinite(lc[max(0, k - 6):k + 7]).any() else np.nan for k in range(n)])
+        if a.lipcon_mode == "adaptive":
+            R_ = a.lipcon_win; lcw = np.array([np.nanmedian(lc[max(0, k - R_):k + R_ + 1]) if np.isfinite(lc[max(0, k - R_):k + R_ + 1]).any() else np.nan for k in range(n)])
+            F["lipcon"] = np.nan_to_num(np.clip((a.thr_lipcon + 0.1 - lc) / 0.2, 0, 1) * (lc < a.lipcon_rel * lcw), nan=0.0)
+        else: F["lipcon"] = np.nan_to_num(np.clip((a.thr_lipcon + 0.1 - lc) / 0.2, 0, 1) * (lc < np.minimum(lcm, 1.0) - a.lipcon_drop), nan=0.0)
+        if a.lipcon_same == "on" and a.open_gate > 0: F["lipcon"] = F["lipcon"] * (np.nan_to_num(np.abs(ol[:n] - os_[:n]), nan=1.0) < a.open_gate)
+    if a.thr_lipcon > 0 and a.lipcon_max_frac > 0:   # r15 F2: per-video budget, the deepest dips kept
+        cap = int(a.lipcon_max_frac * max(1, ls_mask[:n].sum())); on_ = np.flatnonzero((F["lipcon"] > 0.5) & ls_mask[:n])
+        if len(on_) > cap: F["lipcon"][on_[np.argsort(np.nan_to_num(lc[on_], nan=9))[cap:]]] = 0.0
+    if a.thr_lipcon > 0 and a.lipcon_only == "on": F = {"lipcon": F["lipcon"]}
+    for k_ in ("jerk", "app"):
+        if k_ not in F: continue
+        F[k_] = np.where(joint, np.clip(F[k_] * a.joint_gain, 0, 1), F[k_])
     score = np.max(np.stack(list(F.values()), 1), 1) * ls_mask
     fb = score.copy()
     flag = score > 0.5; k = 0   # gaps of <= --merge-gap frames between flagged frames are filled: one held fallback, no blinking in and out
