@@ -1,0 +1,78 @@
+17:22:21 train r6_s4: 1250 steps, cfg_w 5 (smoke: cfg term 0.0015 vs mse 0.008, 2.86 s/step)
+18:29:45 r6_s4 trained: r6_s4 step 1250/1250 (66 min): loss 0.0378 | last val @ 1250: mse 0.0048, sync 0.943 (teacher 0.941), jitter 0.0319 (teacher 0.0320), mouth opening / teacher 1.022 (untrained 0.926)
+18:34:31 pick: step_00250_ema.pt - opening ratio 1.056 >= 1.03; of the 2 within 20% of the lowest MSE (0.0042, step_00500_ema.pt) the highest val sync (0.944, MSE 0.0047)
+|---|---|---|---|---|---|---|---|
+| old03 | q2u | 7.805 | 0.0060 | 15 | 1 | 0.14 | 305 |
+| old03 | s4p1500c8u | 7.099 | 0.0057 | 1 | 0.913 / 0.983 | 0.20 | 257 |
+| old03 | r5fc8u | 7.056 | 0.0058 | 0 | 0.915 / 0.899 | 0.17 | 260 |
+| old03 | r6c8u | 7.929 | 0.0059 | 8 | 1.009 / 0.981 | 0.14 | 262 |
+| m03 | q2u | 8.779 | 0.0098 | 11 | 1 | 0.16 | 286 |
+| m03 | s4p1500c8u | 7.586 | 0.0095 | 12 | 0.981 / 0.965 | 0.16 | 262 |
+| m03 | r5fc8u | 7.322 | 0.0095 | 11 | 0.967 / 0.883 | 0.14 | 274 |
+| m03 | r6c8u | 8.467 | 0.0097 | 12 | 1.033 / 0.990 | 0.13 | 264 |
+18:56:38 E2E done
+18:56:38 recipe start: arms q2u s4p1500c8u r6c8u on old03 m03
+19:16:40 == sync_speech q2u_old03rec: 6.950 over 53 s; global offset 0
+19:17:22 == sync_speech s4p1500c8u_old03rec: 6.194 over 53 s; global offset 0
+19:18:03 == sync_speech r6c8u_old03rec: 7.053 over 53 s; global offset 0
+19:20:01 == sync_speech q2u_m03rec: 8.325 over 34 s; global offset 6
+19:20:37 == sync_speech s4p1500c8u_m03rec: 7.352 over 34 s; global offset 6
+19:21:12 == sync_speech r6c8u_m03rec: 8.180 over 34 s; global offset 6
+### With agent F's lip recipe (CF off + adaptive lipcon 0.45 + lip colour lock r5 + flow median r2), same server
+
+| video | arm | sync_speech | opening vs q2u+recipe (mean / speed) | lip flicker W excess dL | W jumps [src] | blink excess / 10 s |
+|---|---|---|---|---|---|---|
+| old03 | q2u + recipe | 6.950 | 1 | 0.007 | 42 [28] | -5.42 |
+| old03 | s4p1500c8u + recipe | 6.194 | 0.914 / 1.054 | -0.057 | 25 [28] | -5.31 |
+| old03 | r6c8u + recipe | 7.053 | 1.008 / 1.011 | -0.094 | 25 [28] | -7.42 |
+| m03 | q2u + recipe | 8.325 | 1 | 0.219 | 32 [13] | 2.72 |
+| m03 | s4p1500c8u + recipe | 7.352 | 0.960 / 0.984 | 0.192 | 29 [13] | 1.48 |
+| m03 | r6c8u + recipe | 8.180 | 1.020 / 0.986 | 0.172 | 30 [13] | 3.21 |
+19:21:57 recipe done
+19:21:57 R6 chain done
+19:22:25 follow-ups start (pick step_00250_ema.pt)
+19:30:02 r6c8u m18: no output video (OSError: [Errno 28] No space left on device: '/workspace/dub/r15x/eval/r6c8u_m18/status.tmp')
+19:30:20 r6s500c8u old03: no output video ()
+19:30:38 r6s1250c8u old03: no output video ()
+19:30:56 r6s500c8u m03: no output video ()
+19:31:13 r6s1250c8u m03: no output video ()
+
+### End-to-end (dabai_job, q2 + F3 composite, LS_FACE_UNITS=1; base = q2u)
+
+| video | arm | sync_speech | flicker mean | flicker pops | opening vs q2u (mean / speed) | near-closed voiced | GPU s / video-min |
+|---|---|---|---|---|---|---|---|
+| old03 | q2u | 7.805 | 0.0060 | 15 | 1 | 0.14 | 305 |
+| old03 | s4p1500c8u | 7.099 | 0.0057 | 1 | 0.913 / 0.983 | 0.20 | 257 |
+| old03 | r5fc8u | 7.056 | 0.0058 | 0 | 0.915 / 0.899 | 0.17 | 260 |
+| old03 | r6c8u | 7.929 | 0.0059 | 8 | 1.009 / 0.981 | 0.14 | 262 |
+| m03 | q2u | 8.779 | 0.0098 | 11 | 1 | 0.16 | 286 |
+| m03 | s4p1500c8u | 7.586 | 0.0095 | 12 | 0.981 / 0.965 | 0.16 | 262 |
+| m03 | r5fc8u | 7.322 | 0.0095 | 11 | 0.967 / 0.883 | 0.14 | 274 |
+| m03 | r6c8u | 8.467 | 0.0097 | 12 | 1.033 / 0.990 | 0.13 | 264 |
+| m18 | q2u | – | – | – | 1 | – | 326 |
+19:31:13 explode q2u failed: 
+19:31:13 explode m03 primary q2u: 
+19:31:13 explode r6c8u failed: 
+19:31:13 explode m03 primary r6c8u: 
+19:31:13 BUNDLE FAILED
+19:31:13 R6_DONE
+19:37:06 follow-ups (re)start: 11G free
+19:37:06 follow-ups start (pick step_00250_ema.pt)
+| old03 | q2u | 7.805 | 0.0060 | 15 | 1 | 0.14 | 305 |
+| old03 | s4p1500c8u | 7.099 | 0.0057 | 1 | 0.913 / 0.983 | 0.20 | 257 |
+| old03 | r5fc8u | 7.056 | 0.0058 | 0 | 0.915 / 0.899 | 0.17 | 260 |
+| old03 | r6c8u | 7.929 | 0.0059 | 8 | 1.009 / 0.981 | 0.14 | 262 |
+| old03 | r6s500c8u | 8.075 | 0.0061 | 11 | 0.988 / 1.011 | 0.16 | 263 |
+| old03 | r6s1250c8u | 8.175 | 0.0061 | 16 | 1.007 / 0.995 | 0.14 | 263 |
+| m03 | q2u | 8.779 | 0.0098 | 11 | 1 | 0.16 | 286 |
+| m03 | s4p1500c8u | 7.586 | 0.0095 | 12 | 0.981 / 0.965 | 0.16 | 262 |
+| m03 | r5fc8u | 7.322 | 0.0095 | 11 | 0.967 / 0.883 | 0.14 | 274 |
+| m03 | r6c8u | 8.467 | 0.0097 | 12 | 1.033 / 0.990 | 0.13 | 264 |
+| m03 | r6s500c8u | 8.712 | 0.0099 | 12 | 1.029 / 0.949 | 0.15 | 264 |
+| m03 | r6s1250c8u | 8.784 | 0.0099 | 12 | 1.046 / 0.907 | 0.12 | 262 |
+| m18 | q2u | 8.331 | 0.0152 | 8 | 1 | 0.57 | 326 |
+| m18 | r6c8u | 8.202 | 0.0154 | 8 | 1.071 / 0.928 | 0.53 | 314 |
+20:29:09 explode q2u failed: ValueError: need at least one array to concatenate
+20:29:09 explode m03 primary q2u: source pop mean 0.91 q2u: pop mean 1.04, excess mean 0.13, frames > thr 0 r6c8u: pop mean 0.99, excess mean 0.08, frames > thr 0 s4p1500c8u: pop mean 0.92, excess mean 0.02, frames > thr 0 q2urec: pop mean 0.92, excess mean 0.01, frames > thr 0 r6c8urec: pop mean 0.90, excess mean -0.00, frames > thr 0 == explode {"n_events": 0, "origin_counts": {}} 
+20:31:09 explode r6c8u failed: ValueError: need at least one array to concatenate
+20:31:09 explode m03 primary r6c8u: source pop mean 0.91 r6c8u: pop mean 0.99, excess mean 0.08, frames > thr 0 q2u: pop mean 1.04, excess mean 0.13, frames > thr 0 s4p1500c8u: pop mean 0.92, excess mean 0.02, frames > thr 0 q2urec: pop mean 0.92, excess mean 0.01, frames > thr 0 r6c8urec: pop mean 0.90, excess mean -0.00, frames > thr 0 == explode {"n_events": 0, "origin_counts": {}} 
