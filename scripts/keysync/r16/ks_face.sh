@@ -21,27 +21,36 @@ t plan; $PY $R/scripts/keysync/r16/ks_e2e_prep.py --mp $KW/master_mp2.npz --dub 
 TAGS=$(python3 -c "import json; print(' '.join(f['tag'] for f in json.load(open('$KW/faces.json'))['faces']))")
 MODE=$(python3 -c "import json; print(json.load(open('$KW/faces.json'))['mode'])")
 [ -n "$TAGS" ] || { echo "KS: no speaking face"; exit 1; }
-t engines; ENG=$(bash $R/scripts/keysync/r16/ks_engines.sh 2> $KW/engines.log | tail -1); [ -d "$ENG" ] || { tail -5 $KW/engines.log; exit 1; }
 t crop; : > $KW/jobs.txt
 for f in $TAGS; do
   if [ "$MODE" = multi_face ]; then export KS_BOX_K=${KS_BOX_K:-1.25} KS_BOX_M=${KS_BOX_M:-0.4}; fi
   ( cd $KW && $PY $KS/ks_prep.py $KW/master_25fps.mp4 $KW/lm_$f.npz $KW/dub_$f.wav $KW/data $f ) > $KW/prep_$f.log 2>&1 || { tail -3 $KW/prep_$f.log; exit 1; }
   echo "$f $KW/data/videos/$f.mp4 $KW/data/audios/$f.wav" >> $KW/jobs.txt
 done
+# GPU section = ONE hold of the GPU lock (TensorRT engines on first use + KeySync + the SyncNet offsets), released before the CPU paste.
+# KS_HELD_FD: the caller (e2e.sh with R10_HEAVY_LOCK) already holds the lock on that fd since its audio stage: no second wait in the queue.
+if [ -n "${KS_HELD_FD:-}" ]; then REL="flock -u $KS_HELD_FD"; else t wait_gpu; exec 7>$LOCK; flock 7; REL="flock -u 7"; fi
+export KS_GPU_LOCK=/dev/null   # (ks_engines.sh: the lock is held here)
+t engines; ENG=$(bash $R/scripts/keysync/r16/ks_engines.sh 2> $KW/engines.log | tail -1); [ -d "$ENG" ] || { tail -5 $KW/engines.log; exit 1; }
 t keysync   # the resident worker: one process for every speaking face of this video
 LMK=${KS_LMK_CACHE:-$KS/lmk}; mkdir -p $LMK; [ -n "${KS_TORCH_HOME:-}" ] && export TORCH_HOME=$KS_TORCH_HOME   # (image: face_alignment's weights on the volume)
 ( cd $KS/code && . ../venv/bin/activate && KS_DC=2:0 KS_LMK_CACHE=$LMK TORCHINDUCTOR_CACHE_DIR=${TORCHINDUCTOR_CACHE_DIR:-$KS/inductor} \
-  flock $LOCK python ../ks_fast.py --jobs $KW/jobs.txt --out $KW/out --cfg _s8 --vae-half --compile unet --trt $ENG \
+  python ../ks_fast.py --jobs $KW/jobs.txt --out $KW/out --cfg _s8 --vae-half --compile unet --trt $ENG \
     --interp-lora $LORA --interp-steps ${KS_INTERP_STEPS:-2} --vae-batch 8 --vae-compile ) > $KW/ks_fast.log 2>&1 || { tail -5 $KW/ks_fast.log; exit 1; }
 grep "^KS_JOB" $KW/ks_fast.log | tail -3
-CUR=$KW/master_25fps.mp4; n=0
+t shift; declare -A SHF
 for f in $TAGS; do
-  KO=$KW/out/$f/${f}_$f.mp4; [ -s $KO ] || { echo "KS: no output for $f"; exit 1; }
-  t shift_$f; SH=${KS_PASTE_SHIFT:-auto}
+  KO=$KW/out/$f/${f}_$f.mp4; [ -s $KO ] || { echo "KS: no output for $f"; exit 1; }; SH=${KS_PASTE_SHIFT:-auto}
   if [ "$SH" = auto ]; then   # = r15 K: the raw output's SyncNet AV offset (vs the audio KeySync heard), pasted with shift = -offset
-    ( cd $R && flock $LOCK $PY scripts/quality/sync_perframe.py --video $KO --audio $KW/data/audios/$f.wav --out $KW/raw_sync_$f.json ) > $KW/raw_sync_$f.log 2>&1 \
+    ( cd $R && $PY scripts/quality/sync_perframe.py --video $KO --audio $KW/data/audios/$f.wav --out $KW/raw_sync_$f.json ) > $KW/raw_sync_$f.log 2>&1 \
       && SH=$(python3 -c "import json; print(-int(json.load(open('$KW/raw_sync_$f.json'))['global']['av_offset']))") || { echo "KS WARN sync offset failed ($f): shift 0"; SH=0; }
   fi
+  SHF[$f]=$SH
+done
+$REL   # GPU done: the paste below is CPU only
+CUR=$KW/master_25fps.mp4; n=0
+for f in $TAGS; do
+  KO=$KW/out/$f/${f}_$f.mp4; SH=${SHF[$f]}
   t paste_$f; $MPY $R/scripts/quality/mp_landmarks.py --video $KO --out $KW/ks_lm_$f.npz > $KW/ks_lm_$f.log 2>&1 || { tail -3 $KW/ks_lm_$f.log; exit 1; }
   OTH=""; [ -s $KW/others_$f.npz ] && OTH="--others $KW/others_$f.npz"; n=$((n + 1)); NXT=$KW/paste_$n.mp4
   ( cd $KS && KS_CMS=1 $PY ks_plain.py --ks $KO --master $CUR --box $KW/data/box_$f.json --lm $KW/lm_$f.npz $OTH --shift $SH --audio $AD/final_mix_aac.m4a \

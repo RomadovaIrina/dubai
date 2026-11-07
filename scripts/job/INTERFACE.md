@@ -51,7 +51,8 @@ It never raises. A crash anywhere in the pipeline ends as a status, and the call
 | `source_lang` | `auto` or a code | `auto` | Whisper detects the language. RU is the validated source. A code that differs from the detected language adds the warning `W_SOURCE_LANG`. |
 | `target_lang` | 22 Chatterbox ids | `en` | `en` = the accepted RU→EN path. The others and their quality group are in `reports/experiments/r13-spec/LANGS.md`. 7 of them need the external API (OpenAI key pending); until then they use the built-in voice and get the warning `W_DONOR_FALLBACK`. |
 | `polyglot` | null / object | null | A target language per sentence (TZ 2.7). Forms: `{"mode": "units", "units": {"0": "de", "3": "fr"}}` (by sentence index, the rest English); `{"mode": "ranges", "ranges": [{"start": 0, "end": 20, "lang": "de"}]}` (by source time); `{"mode": "cycle", "langs": [...]}`; `{"mode": "all", "lang": "de"}`. |
-| `mode` | `quality` / `fast` | `quality` | See below. |
+| `face` | `keysync` / `latentsync` | `keysync` | r16: the lip-sync engine. `keysync` = KeySync fast2 (TensorRT keyframes + 2-step LCM student + plain paste; the face path since 06.11). Two faces: only faces that got a dubbed speaker are changed, the others stay untouched. Output on a 25 fps grid. `latentsync` = the frozen r15 stack. |
+| `mode` | `quality` / `fast` | `quality` | `face=latentsync` only, see below. With `keysync` both modes run fast2. |
 | `lipsync` | `auto` / `off` | `auto` | `off` = a voice-only dub, with no face work. |
 | `subs` | `{enabled, lang: dub/src, style: white/yellow/trendy/outline, karaoke}` | off | Burned-in subtitles (TZ 9.1–9.3). The `.ass` file is returned as well. |
 | `watermark` | `{enabled, image (PNG path) / text, corner tl/tr/bl/br, opacity 0..1}` | off | TZ 9.4. |
@@ -231,6 +232,7 @@ Each comes with a ready user message in English and Russian. `flags[]` also list
   2. Run `docker run --rm --gpus all -e HF_TOKEN -v dabai-models:/workspace/dub/dubai/models <image> fetch-models` once.
   3. Every worker mounts the volume read-mostly; `HF_HUB_OFFLINE=1` is baked in, so nothing downloads at start.
 - **(b) Baked:** copy a filled models directory into a derived image (`FROM <image>` + `COPY models /workspace/dub/dubai/models`). The image becomes ~45 GB. Not recommended: every model change rebuilds the image.
+- **KeySync (`face=keysync`, the default):** `fetch-models` step 8/8 puts `toninio19/keysync` (13.15 GB) into `models/keysync/checkpoints/`; the LCM student (`lora_pick.pt` + `lora_meta.json`) and the TensorRT capture (`kf.pt`, `interp.pt`) are ours: give the folder with these 4 files as `-v <dir>:/kit:ro -e KS_KIT_DIR=/kit`. The first job on a new GPU / driver builds the TensorRT plans (~12 min on a 5090) and the VAE autotune (~4 min) into `models/keysync/trt_cache` and `inductor`; keep the volume writable so later starts reuse them.
 - **The student LoRA (mode `fast`)** is our own file. It is not on a public hub, so the operator supplies it (`STUDENT_LORA_FILE` or `STUDENT_LORA_URL`). On the laptop: `C:\repos\chkpts\latentsync_student_r14_r2_s4\step_01500_ema.pt`.
 
 **Profile: `DUB_PROFILE=clean|current`. OPEN DECISION (product / legal), REQUIRED, no default.**

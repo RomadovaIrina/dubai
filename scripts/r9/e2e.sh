@@ -143,8 +143,8 @@ if [ "${E2E_LIPSYNC:-on}" = off ]; then FL+=("lipsync_off_by_request")   # r13 i
 elif [[ " $PF " == *" no_face "* ]]; then FL+=("face_skipped_no_face")
 elif [ "${DUB_FACE:-keysync}" = keysync ]; then   # r16 T (#25): KeySync fast2 (TRT engines built on first use) + the plain paste; LatentSync frozen since 06.11
   st face_keysync                                 # (DUB_FACE=latentsync = the r15 path below). Hooks: KS_DUB_DELAY_MS, KS_PASTE_SHIFT, KS_PLAIN_ARGS (scripts/keysync/r16/ks_face.sh)
-  FL+=("face_keysync"); [ -n "${R10_HEAVY_LOCK:-}" ] && flock -u 8   # ks_face.sh takes the GPU lock itself, only around its GPU steps
-  if bash scripts/keysync/r16/ks_face.sh $ID $SRC $AD $W $W/ks_face.mp4 > $L/face_keysync.log 2>&1 && [ -s $W/ks_face.mp4 ]; then
+  FL+=("face_keysync"); HFD=""; [ -n "${R10_HEAVY_LOCK:-}" ] && HFD=8   # the GPU lock held since the audio stage goes on to ks_face.sh's GPU section,
+  if KS_HELD_FD=$HFD bash scripts/keysync/r16/ks_face.sh $ID $SRC $AD $W $W/ks_face.mp4 > $L/face_keysync.log 2>&1 && [ -s $W/ks_face.mp4 ]; then
     VID=$W/ks_face.mp4; grep -E "^KS_(FACES|PASTE|FACE_DONE)" $L/face_keysync.log | cut -c1-400 | tee -a $L/e2e.log
     grep -q '"mode": "multi_face"' $W/ks/faces.json 2>/dev/null && FL+=("face_keysync_multi_face")
     KS25=$W/ks/master_25fps.mp4   # the KeySync result is on the 25 fps master grid (no retime)

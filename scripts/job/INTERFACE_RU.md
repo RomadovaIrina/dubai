@@ -28,7 +28,8 @@
  "mode": "quality", "subs": {"enabled": true, "style": "yellow", "lang": "dub", "karaoke": true},
  "watermark": {"enabled": true, "text": "DabAI", "corner": "br", "opacity": 0.6}}
 ```
-- `mode`:
+- `face` (r16): `keysync` (по умолчанию) — KeySync fast2, основной путь лица с 06.11; если в кадре двое, меняется только рот того, кому сопоставлена речь дубляжа. `latentsync` — замороженный путь r15.
+- `mode` (только для `face=latentsync`):
   - `quality` — основной режим, одобренный по качеству;
   - `fast` — дешевле по GPU примерно на 25–35 %, синхрон чуть слабее.
 - `target_lang`: 22 языка. `en` — основной, проверенный путь.
