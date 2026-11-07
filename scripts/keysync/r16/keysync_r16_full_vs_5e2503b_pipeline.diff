@@ -1,0 +1,60 @@
+diff --git a/scripts/sampling/dubbing_pipeline_raw.py b/scripts/sampling/dubbing_pipeline_raw.py
+index 4b4ac96..ec4b7b4 100644
+--- a/scripts/sampling/dubbing_pipeline_raw.py
++++ b/scripts/sampling/dubbing_pipeline_raw.py
+@@ -397,7 +397,7 @@ def create_pipeline_inputs(
+     )
+ 
+     # random_cond_idx = np.random.randint(0, len(video_emb))
+-    random_cond_idx = 0
++    random_cond_idx = int(os.environ.get("KS_REF_IDX", 0))   # r16 K2: the identity / reference frame
+ 
+     assert len(to_remove) == len(audio_image_preds), (
+         "to_remove and audio_image_preds must have the same length"
+@@ -596,7 +596,7 @@ def sample_keyframes(
+         value_dict["masks"] = masks_list[i].unsqueeze(0).transpose(1, 2).to(device)
+ 
+         with torch.no_grad():
+-            with torch.autocast(device):
++            with torch.autocast(device, dtype=torch.bfloat16 if os.environ.get("KS_AC_BF16") == "1" else torch.float16):   # r13: KS_AC_BF16=1 (float8 PerRow needs bf16 activations)
+                 batch, batch_uc = get_batch(
+                     get_unique_embedder_keys_from_conditioner(
+                         model_keyframes.conditioner
+@@ -783,7 +783,7 @@ def sample_interpolation(
+     value_dict["masks"] = masks_chunks.transpose(1, 2).to(device)
+ 
+     with torch.no_grad():
+-        with torch.autocast(device):
++        with torch.autocast(device, dtype=torch.bfloat16 if os.environ.get("KS_AC_BF16") == "1" else torch.float16):   # r13: KS_AC_BF16=1 (float8 PerRow needs bf16 activations)
+             batch, batch_uc = get_batch_overlap(
+                 get_unique_embedder_keys_from_conditioner(model.conditioner),
+                 value_dict,
+@@ -819,8 +819,8 @@ def sample_interpolation(
+                 f"Audio: {audio_cond.shape}, Video: {shape}, Additional inputs: {additional_model_inputs}"
+             )
+ 
+-            if chunk_size is not None:
+-                chunk_size = chunk_size * num_frames
++            if chunk_size is not None:  # keysync speed: KS_ICHUNK = segments per interpolation UNet call (authors: 2)
++                chunk_size = int(os.environ.get("KS_ICHUNK", chunk_size)) * num_frames
+ 
+             def denoiser(
+                 input: torch.Tensor, sigma: torch.Tensor, c: Dict[str, torch.Tensor]
+@@ -886,7 +886,7 @@ def extract_video_landmarks(video_frames, landmarks_model):
+     """Extract landmarks from video frames"""
+     print("Extracting landmarks from video frames")
+     landmarks = []
+-    batch_size = 10
++    batch_size = int(os.environ.get("KS_LMK_BS", 10))  # keysync speed: landmark batch (authors: 10)
+ 
+     for i in tqdm(range(0, len(video_frames), batch_size), desc="Extracting landmarks"):
+         batch = video_frames[i : i + batch_size]
+@@ -1611,7 +1611,7 @@ def main(
+         model_size="Base+",
+         feed_as_frames=False,
+         merge_type="None",
+-        model_path="/vol/paramonos2/projects/antoni/code/Personal/code_prep/keysync/pretrained_models/checkpoints/WavLM-Base+.pt",
++        model_path="pretrained_models/checkpoints/WavLM-Base+.pt",
+     ).cuda()
+     vae_model = VaeWrapper("video")
+     landmarks_model = LandmarksExtractor()

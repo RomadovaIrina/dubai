@@ -1,0 +1,7 @@
+ 
+     # random_cond_idx = np.random.randint(0, len(video_emb))
+-    random_cond_idx = 0
++    random_cond_idx = int(os.environ.get("KS_REF_IDX", 0))   # r16 K2: the identity / reference frame
+ 
+     assert len(to_remove) == len(audio_image_preds), (
+         "to_remove and audio_image_preds must have the same length"

@@ -35,14 +35,21 @@ ap.add_argument("--diag", default="", help="r16 K1: write per-video diagnostics 
 ap.add_argument("--align", type=float, default=0.0, help="r16 K1 smart paste: per-frame similarity of KeySync's stable landmarks (eye corners, nose bridge; --ks-lm) onto the source's at the shown master frame, "
                 "gaussian-smoothed over time (sigma = this many frames), clamped to 0.06 IOD / 3 %% scale / 2 deg; 0 = off (the static inverse crop)")
 ap.add_argument("--ks-lm", default="", help="landmarks of the raw KeySync output (512 grid, its frame index): the GENERATED lips for --tex / --cavity")
-ap.add_argument("--tex", type=float, default=0.0, help="r15 stubble / pores: the source's luma high frequencies (gaussian sigma px), DIS-flow-warped onto KeySync's "
+ap.add_argument("--tex", type=float, default=2.0, help="r15 stubble / pores: the source's luma high frequencies (gaussian sigma px), DIS-flow-warped onto KeySync's "
                 "geometry, replace KeySync's inside the face mask outside the generated lips (dilated 0.15 IOD); 0 = off")
 ap.add_argument("--cavity", type=float, default=0.0, help="r15 black-hole mouth: lift strength (0..1) of the near-black inner-mouth pixels toward the source's open-mouth "
                 "interior tone (L 30th percentile + mean a / b of the source's open frames); 0 = off")
+ap.add_argument("--lip-keep", default="", help="r16 K2: per-master-frame weights (.npy, k2_pause.py): the SOURCE lips (hull + 0.10 IOD) show through the paste mask")
 a = ap.parse_args()
 b = json.load(open(a.box)); x0, y0, s, W, H = b["x"], b["y"], b["side"], b["W"], b["H"]
 z = np.load(a.lm); LM = z["lm"][..., :2].astype(np.float32); J = z["j"] if "j" in z.files else np.arange(len(LM))
 OT = np.load(a.others)["others"] if a.others else None
+LK = np.load(a.lip_keep) if a.lip_keep else None
+XS, YS = b.get("xs"), b.get("ys")   # r16 K2: a TRACKED box (k2_prep_track.py): constant side, per-master-frame corner
+def bxy(k): return (int(XS[min(max(k, 0), len(XS) - 1)]), int(YS[min(max(k, 0), len(YS) - 1)])) if XS else (x0, y0)
+def BXY(k): return np.array(bxy(k), np.float32)
+def crop(f, k):
+    bx, by = bxy(k); return f[by:by + s, bx:bx + s]
 IODM = float(np.nanmedian(np.linalg.norm(LM[:, 33] - LM[:, 263], axis=1)))
 KL = np.load(a.ks_lm)["lm"][..., :2].astype(np.float32) * (s / 512.0) if a.ks_lm else None
 LIPS_O = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185]
@@ -71,14 +78,18 @@ def ramp(lo_edge, hi_edge):   # 24 px feather at the box edges, none on a side t
     return np.clip(r, 0, 1)
 
 
-BOXF = np.minimum.outer(ramp(y0 == 0, y0 + s == H), ramp(x0 == 0, x0 + s == W)).astype(np.float32)
+_BF = {}
+def boxf(k):
+    bx, by = bxy(k); key = (by == 0, by + s == H, bx == 0, bx + s == W)
+    if key not in _BF: _BF[key] = np.minimum.outer(ramp(key[0], key[1]), ramp(key[2], key[3])).astype(np.float32)
+    return _BF[key]
 last = [None]
 
 
 def mask(k):
     i = int(J[min(k, len(J) - 1)]); p = LM[min(i, len(LM) - 1)]
     if not np.isfinite(p).all(): return last[0], None
-    iod = float(np.linalg.norm(p[33] - p[263])); q = p - [x0, y0]; mk = np.zeros((s, s), np.uint8)
+    iod = float(np.linalg.norm(p[33] - p[263])); q = p - BXY(k); mk = np.zeros((s, s), np.uint8)
     hp = hull(q[OVAL]); cv2.fillPoly(mk, [hp], 1); cv2.fillPoly(mk, [hp + np.array([0, int(round(a.down * iod))], np.int32)], 1)
     own = mk.copy()   # r16 K1: the speaker's own face (oval + the room below the chin): the other-face protection must never cover it
     mk = cv2.dilate(mk, el(a.dil * iod))
@@ -87,22 +98,25 @@ def mask(k):
             if np.isfinite(f2).all():
                 om = np.zeros((s, s), np.uint8); oi = float(np.linalg.norm(f2[33] - f2[263]))
                 if a.others_grow > 0:
-                    ov_ = f2[OVAL] - [x0, y0]; cc = ov_.mean(0); g_ = cc + (ov_ - cc) * a.others_grow
+                    ov_ = f2[OVAL] - BXY(k); cc = ov_.mean(0); g_ = cc + (ov_ - cc) * a.others_grow
                     cv2.fillPoly(om, [hull(np.concatenate([g_, g_ - [0, 0.35 * oi]]))], 1)
                 else:
-                    cv2.fillPoly(om, [hull(f2[OVAL] - [x0, y0])], 1); om = cv2.dilate(om, el(0.08 * oi))
+                    cv2.fillPoly(om, [hull(f2[OVAL] - BXY(k))], 1); om = cv2.dilate(om, el(0.08 * oi))
                 if a.others_grow > 0: om[cv2.dilate(own, el(0.03 * iod)) > 0] = 0
                 mk[om > 0] = 0
-    m = cv2.GaussianBlur(mk.astype(np.float32), (0, 0), max(1.0, 0.04 * iod)) * BOXF
+    m = cv2.GaussianBlur(mk.astype(np.float32), (0, 0), max(1.0, 0.04 * iod)) * boxf(k)
     if OT is not None and a.others_grow > 0:   # the feather of the cut lies OUTSIDE the speaker's face: fully KeySync inside her oval
-        m = np.maximum(m, np.clip(2 * cv2.GaussianBlur(own.astype(np.float32), (0, 0), max(1.0, 0.04 * iod)), 0, 1) * BOXF)
+        m = np.maximum(m, np.clip(2 * cv2.GaussianBlur(own.astype(np.float32), (0, 0), max(1.0, 0.04 * iod)), 0, 1) * boxf(k))
+    if LK is not None and k < len(LK) and LK[k] > 0.01:   # r16 K2 pause closure: the source lips through the mask
+        lk = np.zeros((s, s), np.uint8); cv2.fillPoly(lk, [hull(q[LIPS])], 1); lk = cv2.dilate(lk, el(0.10 * iod))
+        m = m * (1 - LK[k] * cv2.GaussianBlur(lk.astype(np.float32), (0, 0), max(1.0, 0.04 * iod)))
     lip = np.zeros((s, s), np.uint8); cv2.fillPoly(lip, [hull(q[LIPS])], 1); lip = cv2.dilate(lip, el(0.15 * iod))
     last[0] = m; return m, (mk > 0) & (lip == 0)
 
 
 NOSE = [168, 6, 197, 195, 5, 4, 1, 19, 129, 358, 64, 294, 98, 327, 48, 278, 115, 344]
 def mouth_zone(k, i, iod):   # source lips at master k  U  KeySync lips at its frame i, dilated 0.3 IOD
-    z_ = np.zeros((s, s), np.uint8); p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)] - [x0, y0]
+    z_ = np.zeros((s, s), np.uint8); p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)] - BXY(k)
     if np.isfinite(p[LIPS]).all(): cv2.fillPoly(z_, [hull(p[LIPS])], 1)
     if KL is not None and 0 <= i < len(KL) and np.isfinite(KL[i][LIPS]).all(): cv2.fillPoly(z_, [hull(KL[i][LIPS])], 1)
     return cv2.dilate(z_, el(0.3 * iod)) > 0
@@ -119,7 +133,7 @@ if a.align > 0 and KL is not None:   # r16 K1: per-frame similarity KeySync -> s
     for k in range(n):
         i = kidx(k)
         if not (0 <= i < nkl): continue
-        p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)] - [x0, y0]; q = KL[i]
+        p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)] - BXY(k); q = KL[i]
         if not (np.isfinite(p[STB]).all() and np.isfinite(q[STB]).all()): continue
         if ECM is not None:
             if i >= len(ECM) or not np.isfinite(ECM[i]).all(): continue
@@ -161,11 +175,11 @@ if not a.no_cm or a.cavity > 0:   # pass 1: the global colour match on the skin;
         if a.no_cm or k % 5 or not (0 <= kidx(k) < len(K)): continue
         _, sk = mask(k)
         if sk is None or sk.sum() < 500: continue
-        lk = cv2.cvtColor(K[kidx(k)].astype(np.float32) / 255, cv2.COLOR_RGB2LAB)[sk]; lm_ = cv2.cvtColor(f[y0:y0 + s, x0:x0 + s].astype(np.float32) / 255, cv2.COLOR_RGB2LAB)[sk]
+        lk = cv2.cvtColor(K[kidx(k)].astype(np.float32) / 255, cv2.COLOR_RGB2LAB)[sk]; lm_ = cv2.cvtColor(crop(f, k).astype(np.float32) / 255, cv2.COLOR_RGB2LAB)[sk]
         SK.append(lk[:: 7]); SM.append(lm_[:: 7])
         if a.sharp == "auto" and k % 10 == 0:
             core = sk & (cv2.erode(sk.astype(np.uint8), el(0.1 * IODM)) > 0)
-            HFR.append((hf_energy(cv2.cvtColor(f[y0:y0 + s, x0:x0 + s], cv2.COLOR_RGB2GRAY).astype(np.float32), core), hf_energy(cv2.cvtColor(K[kidx(k)], cv2.COLOR_RGB2GRAY).astype(np.float32), core)))
+            HFR.append((hf_energy(cv2.cvtColor(crop(f, k), cv2.COLOR_RGB2GRAY).astype(np.float32), core), hf_energy(cv2.cvtColor(K[kidx(k)], cv2.COLOR_RGB2GRAY).astype(np.float32), core)))
     if not a.no_cm:
         SK, SM = np.concatenate(SK), np.concatenate(SM)
         gain = np.clip(SM.std(0) / np.maximum(SK.std(0), 1e-3), 0.9, 1.1).astype(np.float32); off = (SM.mean(0) - SK.mean(0) * gain).astype(np.float32)
@@ -197,7 +211,7 @@ def fix_ks(kf, i, m, src_crop):   # r15 --cavity / --tex on one KeySync crop (fl
         yk = cv2.cvtColor(kf.astype(np.float32), cv2.COLOR_RGB2YCrCb); ys = cv2.cvtColor(sc, cv2.COLOR_RGB2YCrCb)[..., 0]
         ws = cv2.remap(ys, GX + fl[..., 0], GY + fl[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
         lx = np.zeros((s, s), np.uint8)
-        lp = kp if kp is not None and np.isfinite(kp).all() else LM[min(int(J[min(i + a.shift, len(J) - 1)]), len(LM) - 1)] - [x0, y0]
+        lp = kp if kp is not None and np.isfinite(kp).all() else LM[min(int(J[min(i + a.shift, len(J) - 1)]), len(LM) - 1)] - BXY(i + a.shift)
         if np.isfinite(lp).all():
             iod = float(np.linalg.norm(lp[33] - lp[263])); cv2.fillPoly(lx, [hull(lp[LIPS_O])], 1); lx = cv2.dilate(lx, el(0.15 * iod))
             lx = cv2.GaussianBlur(lx.astype(np.float32), (0, 0), max(1.0, 0.05 * iod))
@@ -216,7 +230,7 @@ if a.lfm > 0:   # r16 K1: per-frame low-frequency Lab difference maps (LG x LG),
         if sk is None: continue
         p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)]; iod = float(np.linalg.norm(p[33] - p[263])) if np.isfinite(p).all() else IODM
         wm = ((m > 0.05) & ~mouth_zone(k, i, iod)).astype(np.float32)
-        kf = warp_ks(K[i].astype(np.float32), k, i); lk = lab_of(kf) * gain + off; lm_ = lab_of(f[y0:y0 + s, x0:x0 + s])
+        kf = warp_ks(K[i].astype(np.float32), k, i); lk = lab_of(kf) * gain + off; lm_ = lab_of(crop(f, k))
         sg = 0.35 * iod * LG / s; ds = lambda x: cv2.resize(x, (LG, LG), interpolation=cv2.INTER_AREA)
         wd = cv2.GaussianBlur(ds(wm), (0, 0), sg); ok_ = wd > 0.02
         dd = (cv2.GaussianBlur(ds(lm_ * wm[..., None]), (0, 0), sg) - cv2.GaussianBlur(ds(lk * wm[..., None]), (0, 0), sg)) / np.maximum(wd, 1e-3)[..., None]
@@ -237,7 +251,7 @@ def scale_fix(kf, k):
     if SFX is None or k >= len(SFX): return kf
     p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)]
     if not np.isfinite(p[LOWC]).all(): return kf
-    c_ = p[LOWC].mean(0) - [x0, y0]; M = cv2.getRotationMatrix2D((float(c_[0]), float(c_[1])), 0.0, float(SFX[k]))
+    c_ = p[LOWC].mean(0) - BXY(k); M = cv2.getRotationMatrix2D((float(c_[0]), float(c_[1])), 0.0, float(SFX[k]))
     return cv2.warpAffine(kf, M, (s, s), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
 DG = []
 fps_m = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=r_frame_rate", "-of", "csv=p=0", a.master], capture_output=True, text=True).stdout.strip()
@@ -257,16 +271,16 @@ for k, f in enumerate(frames(a.master, W, H)):
         if SHARP > 0:
             yk = cv2.cvtColor(kf.astype(np.float32), cv2.COLOR_RGB2YCrCb); yk[..., 0] += SHARP * (yk[..., 0] - cv2.GaussianBlur(yk[..., 0], (0, 0), max(0.6, s / 512.0)))
             kf = np.clip(cv2.cvtColor(yk, cv2.COLOR_YCrCb2RGB), 0, 255)
-        if a.tex > 0 or a.cavity > 0: kf = fix_ks(kf, i, m, f[y0:y0 + s, x0:x0 + s])
-        roi = f[y0:y0 + s, x0:x0 + s].astype(np.float32); mm2 = m * fade
+        if a.tex > 0 or a.cavity > 0: kf = fix_ks(kf, i, m, crop(f, k))
+        roi = crop(f, k).astype(np.float32); mm2 = m * fade
         p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)]; iod = float(np.linalg.norm(p[33] - p[263])) if np.isfinite(p).all() else IODM
         if UP is not None and np.isfinite(p[[33, 263, 133, 362, 152]]).all():
-            em = p[[33, 263, 133, 362]].mean(0) - [x0, y0]; ax = (p[152] - [x0, y0]) - em; L2 = float(ax @ ax)
+            em = p[[33, 263, 133, 362]].mean(0) - BXY(k); ax = (p[152] - BXY(k)) - em; L2 = float(ax @ ax)
             if L2 > 1:
                 t_ = ((GX - em[0]) * ax[0] + (GY - em[1]) * ax[1]) / L2
                 mm2 = mm2 * np.clip((t_ - UP[0]) / (UP[1] - UP[0]), 0, 1).astype(np.float32)
         if a.keep_nose > 0 and np.isfinite(p[NOSE]).all():
-            nmk = np.zeros((s, s), np.uint8); cv2.fillPoly(nmk, [hull(p[NOSE] - [x0, y0])], 1)
+            nmk = np.zeros((s, s), np.uint8); cv2.fillPoly(nmk, [hull(p[NOSE] - BXY(k))], 1)
             mm2 = mm2 * (1 - cv2.GaussianBlur(nmk.astype(np.float32), (0, 0), max(1.0, a.keep_nose * iod)))
         mm = mm2[..., None]; comp = np.clip(roi * (1 - mm) + kf * mm + 0.5, 0, 255)
         if a.diag and k % 2 == 0:
@@ -274,7 +288,7 @@ for k, f in enumerate(frames(a.master, W, H)):
             if band.sum() > 200:
                 lc, ls_ = lab_of(comp), lab_of(roi); dl = (lc[band] - ls_[band]).mean(0)
                 DG.append([k, *dl.tolist(), hf_energy(cv2.cvtColor(comp.astype(np.uint8), cv2.COLOR_RGB2GRAY).astype(np.float32), core) / max(hf_energy(cv2.cvtColor(roi.astype(np.uint8), cv2.COLOR_RGB2GRAY).astype(np.float32), core), 1e-6)])
-        f[y0:y0 + s, x0:x0 + s] = comp.astype(np.uint8)
+        crop(f, k)[:] = comp.astype(np.uint8)
     w.stdin.write(f.tobytes())
 if a.diag and DG:
     dg = np.array(DG, np.float64); de = np.linalg.norm(dg[:, 1:4], axis=1)

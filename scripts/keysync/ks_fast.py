@@ -100,6 +100,13 @@ def main():
             if os.path.exists(f): return _np.load(f, allow_pickle=True)
             r = _xl(video_frames, landmarks_model); _np.save(f, _np.asarray(r)); return r
         d.extract_video_landmarks = _lmk
+    if os.environ.get("KS_KF_AR") or os.environ.get("KS_KF_RR"):   # r16 K2: keyframe guidance split (audio vs reference)
+        _g = model_kf.sampler.guider
+        if os.environ.get("KS_KF_AR"): _g.audio_ratio = float(os.environ["KS_KF_AR"])
+        if os.environ.get("KS_KF_RR"): _g.ref_ratio = float(os.environ["KS_KF_RR"])
+        print("KS_KF_GUIDE audio", _g.audio_ratio, "ref", _g.ref_ratio, flush=True)
+    if os.environ.get("KS_GATE") and a.interp_lora:   # r16 K2: more interp steps only on wide-open segments (ks_gate.py)
+        import ks_gate; ks_gate.install(d, model)
     for n in ("compute_video_embedding", "get_audio_embeddings", "extract_video_landmarks", "sample_keyframes", "sample_interpolation", "save_audio_video"):
         setattr(d, n, timed(n, getattr(d, n)))
     if a.vae_batch > 1:   # r15: the authors decode one frame per call (decoding_t 1 -> timesteps 1: no temporal mixing); the same math batched N frames per call
