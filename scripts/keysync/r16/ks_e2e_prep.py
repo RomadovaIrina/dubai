@@ -81,6 +81,12 @@ if len(present) >= 2 and co >= 0.10 and units:
         plan["faces"].append({"tag": tag, "track": int(j), "speakers": sorted(s for s, k in mp_.items() if k == j), "units": len(own),
                               "muted_s": round(muted, 2), "presence": round(float(np.isfinite(tr[:, j, 0, 0]).mean()), 3)})
     plan["untouched_tracks"] = [int(j) for j in present if j not in speaking]
+elif len(present) >= 2 and co >= 0.10:   # two faces but no dubbed units to map: the LARGEST face track gets the dub, the others stay untouched
+    j = max(present, key=lambda k: float(np.nanmean(np.ptp(tr[:, k, :, 0], axis=1))))
+    plan["mode"] = "multi_face"; plan["note"] = "no dubbed units with speakers: the largest face speaks"
+    np.savez_compressed(f"{a.out}/lm_f0.npz", lm=hold(tr[:, j])); others_npz(f"{a.out}/others_f0.npz", [k for k in present if k != j])
+    write_wav(f"{a.out}/dub_f0.wav", pcm); plan["untouched_tracks"] = [int(k) for k in present if k != j]
+    plan["faces"].append({"tag": "f0", "track": int(j), "speakers": "all", "presence": round(float(np.isfinite(tr[:, j, 0, 0]).mean()), 3)})
 else:
     plan["mode"] = "single_face"; plan["note"] = ("faces never co-occur: one person split across tracks" if len(present) >= 2 and co < 0.10
                                                   else "no dubbed units with speakers" if len(present) >= 2 else "one face")
