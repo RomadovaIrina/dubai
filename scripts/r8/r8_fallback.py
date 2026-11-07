@@ -75,10 +75,36 @@ def main():
     ap.add_argument("--ls", required=True); ap.add_argument("--lm", required=True); ap.add_argument("--out", required=True)
     ap.add_argument("--thr-jerk", type=float, default=0.05); ap.add_argument("--thr-tone", type=float, default=14.0); ap.add_argument("--thr-app", type=float, default=9.0)
     ap.add_argument("--thr-geo", type=float, default=0.12); ap.add_argument("--thr-coll", type=float, default=0.45)
+    ap.add_argument("--rel-stats", choices=["off", "on"], default="off", help="r11 FACE: wash / coll / dark relative to the LAYER's own statistics (its steady offset vs the source, its own typical cavity), not absolute: for generator variants with another tone (a tighter generation mask)")
     ap.add_argument("--thr-wash", type=float, default=0.12); ap.add_argument("--thr-dark", type=float, default=0.6); ap.add_argument("--knee", type=float, default=0.5, help="a feature counts from knee x thr (0) to thr (1)")
     ap.add_argument("--joint-gain", type=float, default=1.3); ap.add_argument("--dilate", type=int, default=2); ap.add_argument("--ramp-sigma", type=float, default=2.0); ap.add_argument("--merge-gap", type=int, default=6)
     ap.add_argument("--win-frac", type=float, default=0.4); ap.add_argument("--window", type=int, default=16)
+    ap.add_argument("--wash-region", choices=["mouth", "lips"], default="mouth", help="r11 SYNC (m18 / m03: 20 / 25 'wash' flags, nearly all a CLOSED "
+                    "generated mouth over an OPEN source mouth: the source's dark cavity makes the layer look 'brighter'; each flag swapped the source's "
+                    "open mouth in = a sync hit): mouth = luma of the source-lip box (r8); lips = the lip RING only (outer minus inner contour, each "
+                    "frame's own landmarks: layer lips on the layer, source lips on the source), so cavity / teeth never count")
+    ap.add_argument("--dark-transient", choices=["off", "on"], default="off", help="r11 SYNC: the black-hole score counts only its transient part "
+                    "(minus the +-6-frame median over the layer): a held open vowel with a dark cavity is a mouth, a near-black pop is an artefact")
+    ap.add_argument("--open-gate", type=float, default=0.0, help="r11 SYNC: wash / coll flags need the layer and source inner openings (IOD) to differ "
+                    "by less than this (a different opening legitimately changes the mouth box luma / contrast); 0 = off")
+    ap.add_argument("--og-short", type=int, default=0, help="r11 SYNC, with --open-gate: layer closures (opening < 0.04 IOD) of <= this many frames "
+                    "between open frames (> 0.07) keep the r8 wash / coll test (gate-safe: the flash detector counts them); 0 = off")
+    ap.add_argument("--thr-wash-lips", type=float, default=0.0, help="r11 SYNC, with --open-gate: where the openings differ, the lip-ring brightness "
+                    "transient (layer ring vs source ring, minus its +-6-frame median) >= this flags a washed mouth (+ its neighbours above half); 0 = off")
+    ap.add_argument("--thr-lipcon", type=float, default=0.0, help="r15 F2 (m03 'lips vanish', agent T): the lip-vs-skin a* / lightness contrast "
+                    "(scripts/r15/lipcon.py, layer as a fraction of the source at the same frame) below this AND >= --lipcon-drop under its +-6-frame median "
+                    "flags the frame (1 at thr - 0.1, 0.5 at thr), with --lipcon-same on only where the layer and source openings match (a different opening "
+                    "legitimately changes the lip line, old03): a pale / vanished lip pop, re-drawn by the layer repair or faded to the source; 0 = off")
+    ap.add_argument("--lipcon-drop", type=float, default=0.1); ap.add_argument("--lipcon-same", choices=["off", "on"], default="off", help="r15 F2: lipcon only where the openings match (--open-gate)")
+    ap.add_argument("--lipcon-mode", choices=["drop", "adaptive"], default="drop", help="r15 F2: drop = below thr AND --lipcon-drop under the +-6-frame "
+                    "median; adaptive = below thr AND below --lipcon-rel x the video's own +-(--lipcon-win)-frame median ratio (a transient dip of this video)")
+    ap.add_argument("--lipcon-rel", type=float, default=0.6); ap.add_argument("--lipcon-win", type=int, default=25)
+    ap.add_argument("--lipcon-max-frac", type=float, default=0.0, help="r15 F2: at most this fraction of the LatentSync frames flagged by lipcon (the deepest "
+                    "dips first; a per-video budget so a steadily pale video cannot be re-drawn wholesale); 0 = no cap")
+    ap.add_argument("--lipcon-only", choices=["off", "on"], default="off", help="r15 F2: score lipcon alone (the second pass on the repaired layer)")
     a = ap.parse_args(); work = pathlib.Path(a.work)
+    if a.thr_lipcon > 0:
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "r15")); import lipcon
     lml = np.load(a.lm)["lm"]; lms = np.load(work / "video/master_mediapipe.npz")["lm"]; n = min(len(lml), len(lms))
     ol, yl, al_, apl, n1 = read_feats(a.ls, lml, n); os_, ys, as_, aps, n2 = read_feats(work / "video/master_25fps.mp4", lms, n); n = min(n1, n2)
     man = json.loads(next(work.glob("*_25fps.manifest.json")).read_text())
@@ -89,12 +115,13 @@ def main():
     jerk = np.nan_to_num(hf(ol[:n]) - hf(os_[:n]), nan=0.0)
     tone = np.nan_to_num(tone_hf(yl[:n], ol[:n], al_[:n]) - np.nan_to_num(tone_hf(ys[:n], os_[:n], as_[:n]), nan=0.0), nan=0.0)
     appx = np.nan_to_num(apl[:n] - 1.5 * np.nan_to_num(aps[:n], nan=0.0), nan=0.0)
-    coll = np.zeros(n); wash = np.zeros(n); sp5 = np.full(n, np.nan); lp5 = np.full(n, np.nan)
+    coll = np.zeros(n); wash = np.zeros(n); washl = np.zeros(n); sp5 = np.full(n, np.nan); lp5 = np.full(n, np.nan); lcl = np.full((n, 2), np.nan); lcs = np.full((n, 2), np.nan)
     cl = cv2.VideoCapture(str(a.ls)); cs = cv2.VideoCapture(str(work / "video/master_25fps.mp4"))
     for k in range(n):
         okl, fl = cl.read(); oks, fs = cs.read()
         if not (okl and oks): break
         q = lms[k]
+        if a.thr_lipcon > 0: lcl[k] = lipcon.measure(fl, lml[k]); lcs[k] = lipcon.measure(fs, q)
         if not np.isfinite(q[LIPS_OUTER + LIPS_INNER + [33, 263]]).all(): continue
         iod = float(np.linalg.norm(q[33, :2] - q[263, :2])); m = np.zeros(fs.shape[:2], np.uint8)
         cv2.fillPoly(m, [np.round(cv2.convexHull(q[LIPS_OUTER, :2].astype(np.float32))[:, 0]).astype(np.int32)], 1)
@@ -103,12 +130,25 @@ def main():
         gl = cv2.cvtColor(fl, cv2.COLOR_BGR2GRAY).astype(np.float32)[m]; gs = cv2.cvtColor(fs, cv2.COLOR_BGR2GRAY).astype(np.float32)[m]
         coll[k] = 1 - gl.std() / max(gs.std(), 1.0)                       # lip / cavity contrast lost vs the source (washed blob)
         wash[k] = (gl.mean() - gs.mean()) / max(gs.mean(), 1.0)           # the mouth region brighter than the source (pale / pink pop)
+        if a.wash_region == "lips" or a.thr_wash_lips > 0:   # r11 SYNC: lip ring vs lip ring (each frame's own contours), cavity / teeth excluded
+            def ring(p, shape):
+                if not np.isfinite(p[LIPS_OUTER + LIPS_INNER]).all(): return None
+                r = np.zeros(shape, np.uint8); cv2.fillPoly(r, [np.round(p[LIPS_OUTER, :2]).astype(np.int32)], 1); cv2.fillPoly(r, [np.round(p[LIPS_INNER, :2]).astype(np.int32)], 0)
+                r = cv2.erode(r, np.ones((3, 3), np.uint8)); return r > 0 if r.sum() >= 15 else None
+            rl, rs = ring(lml[k], fs.shape[:2]), ring(q, fs.shape[:2])
+            if rl is not None and rs is not None:
+                ll = cv2.cvtColor(fl, cv2.COLOR_BGR2GRAY).astype(np.float32)[rl]; ls_ = cv2.cvtColor(fs, cv2.COLOR_BGR2GRAY).astype(np.float32)[rs]
+                washl[k] = (ll.mean() - ls_.mean()) / max(ls_.mean(), 1.0)
+            if a.wash_region == "lips": wash[k] = washl[k]
         sp5[k], lp5[k] = np.percentile(gs, 5), np.percentile(gl, 5)
     cl.release(); cs.release()
     # black hole: the layer's darkest mouth pixels vs the source's TYPICAL open-mouth cavity over the video (not the same frame: a dub-open mouth over a
     # closed source mouth is a legitimate dark cavity; a near-black slot darker than this person's cavity ever is, is not)
     so_ = np.isfinite(os_[:n]) & (os_[:n] > 0.06) & np.isfinite(sp5)
     ref_cav = float(np.median(sp5[so_])) if so_.sum() > 10 else float(np.nanpercentile(sp5, 10))
+    if a.rel_stats == "on":   # r11 FACE: a generator that renders a consistently darker cavity (a tighter mask: LS_MASK=mask3.png) is not a black hole;
+        lt_ = np.isfinite(lp5) & (ls_mask[:n] > 0) if len(ls_mask) >= n else np.isfinite(lp5)   # only the darker of the source's cavity and the layer's OWN typical one counts
+        if lt_.sum() > 10: ref_cav = min(ref_cav, float(np.nanpercentile(lp5[lt_], 10)))
     dark = np.where(np.isfinite(lp5), (ref_cav - lp5) / (ref_cav + 10.0), 0.0)
     geo = np.zeros(n)
     for k in range(n):
@@ -123,8 +163,42 @@ def main():
     sc = lambda x, t: np.clip((x - a.knee * t) / ((1 - a.knee) * t), 0, 1)
     tmed = lambda x: np.array([np.median(x[max(0, k - 6):k + 7]) for k in range(len(x))])   # the transient part (a pop), not a steady offset
     F = {"jerk": sc(jerk, a.thr_jerk), "tone": sc(tone, a.thr_tone), "app": sc(appx, a.thr_app), "geo": sc(geo, a.thr_geo),
-         "coll": sc(coll - np.minimum(tmed(coll), 0.15), a.thr_coll), "wash": sc(wash - np.minimum(tmed(wash), 0.05), a.thr_wash), "dark": sc(dark, a.thr_dark)}
-    for k_ in ("jerk", "app"): F[k_] = np.where(joint, np.clip(F[k_] * a.joint_gain, 0, 1), F[k_])
+         "coll": sc(coll - np.minimum(tmed(coll), 0.15 if a.rel_stats == "off" else 1e9), a.thr_coll),
+         "wash": sc(wash - np.minimum(tmed(wash), 0.05 if (a.rel_stats == "off" and a.wash_region == "mouth") else 1e9), a.thr_wash), "dark": sc(dark, a.thr_dark)}   # r11 --rel-stats: the whole steady offset removed
+    if a.dark_transient == "on":   # r11 SYNC: the pop, not a held dark cavity
+        dk = np.where(ls_mask[:n], dark, np.nan); dmed = np.array([np.nanmedian(dk[max(0, k - 6):k + 7]) if np.isfinite(dk[max(0, k - 6):k + 7]).any() else 0.0 for k in range(n)])
+        F["dark"] = sc(dark - np.maximum(dmed, 0.0), a.thr_dark)
+    if a.open_gate > 0:   # r11 SYNC: wash / contrast compared only between mouths of a similar opening
+        same = np.nan_to_num(np.abs(ol[:n] - os_[:n]), nan=1.0) < a.open_gate
+        if a.og_short > 0:   # r11 SYNC: a SHORT closure of the layer between open frames over an open source keeps the r8 wash test (the gate's
+            # flash detector counts these 2-3-frame closures; m03 92-94 / 361-362 / 517-518 / 528-529)
+            o_ = np.nan_to_num(ol[:n], nan=1.0); cl_ = o_ < 0.04; k = 0
+            while k < n:
+                if not cl_[k]: k += 1; continue
+                e = k
+                while e < n and cl_[e]: e += 1
+                if e - k <= a.og_short and o_[max(0, k - 2):k].max(initial=0) > 0.07 and o_[e:e + 2].max(initial=0) > 0.07: same[k:e] = True
+                k = e
+        for k_ in ("wash", "coll"): F[k_] = F[k_] * same
+        if a.thr_wash_lips > 0:   # r11 SYNC: where the openings differ, a washed mouth is judged on the lip ring alone (transient part), with
+            # hysteresis: the neighbours of a flagged frame count from half the threshold (m18 410-412: 0.18 / 0.36 / 0.16 = one pale 3-frame pop)
+            wt = washl - tmed(washl); fl_ = sc(wt, a.thr_wash_lips); hi_ = fl_ > 0.5
+            nb_ = np.zeros(n, bool); nb_[1:] |= hi_[:-1]; nb_[:-1] |= hi_[1:]
+            F["washl"] = np.where(nb_ & (wt > 0.5 * a.thr_wash_lips), 1.0, fl_) * ~same
+    if a.thr_lipcon > 0:   # r15 F2: the lips lose their colour / lightness contrast to the skin (transient), whatever the opening
+        lc = lipcon.contrast(lcl, lcs); lcm = np.array([np.nanmedian(lc[max(0, k - 6):k + 7]) if np.isfinite(lc[max(0, k - 6):k + 7]).any() else np.nan for k in range(n)])
+        if a.lipcon_mode == "adaptive":
+            R_ = a.lipcon_win; lcw = np.array([np.nanmedian(lc[max(0, k - R_):k + R_ + 1]) if np.isfinite(lc[max(0, k - R_):k + R_ + 1]).any() else np.nan for k in range(n)])
+            F["lipcon"] = np.nan_to_num(np.clip((a.thr_lipcon + 0.1 - lc) / 0.2, 0, 1) * (lc < a.lipcon_rel * lcw), nan=0.0)
+        else: F["lipcon"] = np.nan_to_num(np.clip((a.thr_lipcon + 0.1 - lc) / 0.2, 0, 1) * (lc < np.minimum(lcm, 1.0) - a.lipcon_drop), nan=0.0)
+        if a.lipcon_same == "on" and a.open_gate > 0: F["lipcon"] = F["lipcon"] * (np.nan_to_num(np.abs(ol[:n] - os_[:n]), nan=1.0) < a.open_gate)
+    if a.thr_lipcon > 0 and a.lipcon_max_frac > 0:   # r15 F2: per-video budget, the deepest dips kept
+        cap = int(a.lipcon_max_frac * max(1, ls_mask[:n].sum())); on_ = np.flatnonzero((F["lipcon"] > 0.5) & ls_mask[:n])
+        if len(on_) > cap: F["lipcon"][on_[np.argsort(np.nan_to_num(lc[on_], nan=9))[cap:]]] = 0.0
+    if a.thr_lipcon > 0 and a.lipcon_only == "on": F = {"lipcon": F["lipcon"]}
+    for k_ in ("jerk", "app"):
+        if k_ not in F: continue
+        F[k_] = np.where(joint, np.clip(F[k_] * a.joint_gain, 0, 1), F[k_])
     score = np.max(np.stack(list(F.values()), 1), 1) * ls_mask
     fb = score.copy()
     flag = score > 0.5; k = 0   # gaps of <= --merge-gap frames between flagged frames are filled: one held fallback, no blinking in and out

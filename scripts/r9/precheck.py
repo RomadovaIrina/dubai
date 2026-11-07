@@ -68,7 +68,13 @@ def main():
     if (pr["pix_fmt"] or "").endswith("10le") or pr["color_transfer"] in ("arib-std-b67", "smpte2084"): flags.append("hdr_or_10bit")
     if pr["duration_s"] > 60: flags.append("long_video")
     try:
-        r["faces"] = fc = faces(a.input, work, fps)
+        src_f, fps_f = a.input, fps
+        if pr["rotation"]:   # r15 T: probe the DISPLAYED picture: a phone clip codes its frames sideways, MediaPipe then misses faces (r13: a cosmetic
+            up = work / "precheck_upright.mp4"; fps_f = min(fps, 8.0)   # face_partly_absent; worst case a false no_face = voice-only dub). ffmpeg autorotates.
+            subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-nostdin", "-i", str(a.input), "-an", "-vf", f"fps={fps_f}", "-c:v", "libx264", "-preset", "ultrafast",
+                            "-crf", "18", "-pix_fmt", "yuv420p", str(up)], check=True, timeout=900)
+            src_f = str(up); r["faces_probe"] = "display-oriented copy"
+        r["faces"] = fc = faces(src_f, work, fps_f)
         if fc["face_frac"] == 0: flags.append("no_face")
         elif fc["face_frac"] < 0.8: flags.append("face_partly_absent")
         if fc["two_face_frac"] >= 0.10: flags.append("two_faces")

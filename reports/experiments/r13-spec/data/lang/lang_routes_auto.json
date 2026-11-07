@@ -1,0 +1,164 @@
+{
+ "source": "r13 local measurements (scripts/r13/lang_eval.py; LANGS.md)",
+ "rules": {
+  "mt_external_if": "wrong-script / mixed-language output in >= 2 of the sentences, or judge adequacy < EN - 0.5, or chrF(back) < 0.85 x EN",
+  "tts_donor_if": "TTS CER mean > max(0.10, 2 x EN), or > 25 % of the sentences with CER > 0.20",
+  "note": "relative to EN = the accepted language measured by the same test (the 14B self-judge gives EN itself 4.0 / 5)"
+ },
+ "langs": {
+  "en": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "adequacy": 4.0,
+   "chrf_back": 55.3,
+   "cer_mean": 0.007
+  },
+  "de": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "adequacy": 3.5,
+   "chrf_back": 51.0,
+   "cer_mean": 0.048
+  },
+  "es": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "adequacy": 3.75,
+   "chrf_back": 47.8,
+   "cer_mean": 0.009
+  },
+  "fr": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "adequacy": 3.62,
+   "chrf_back": 52.0,
+   "cer_mean": 0.009
+  },
+  "it": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "adequacy": 3.62,
+   "chrf_back": 54.7,
+   "cer_mean": 0.009
+  },
+  "pt": {
+   "mt": "openai",
+   "tts": "chatterbox",
+   "adequacy": 4.0,
+   "chrf_back": 50.2,
+   "cer_mean": 0.035
+  },
+  "tr": {
+   "mt": "openai",
+   "tts": "chatterbox",
+   "adequacy": 3.38,
+   "chrf_back": 44.4,
+   "cer_mean": 0.089
+  },
+  "pl": {
+   "mt": "openai",
+   "tts": "donor_vc",
+   "adequacy": 3.56,
+   "chrf_back": 55.0,
+   "cer_mean": 0.104
+  },
+  "nl": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "adequacy": 3.5,
+   "chrf_back": 49.9,
+   "cer_mean": 0.016
+  },
+  "sv": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "adequacy": 3.62,
+   "chrf_back": 47.6,
+   "cer_mean": 0.093
+  },
+  "da": {
+   "mt": "qwen",
+   "tts": "donor_vc",
+   "adequacy": 3.56,
+   "chrf_back": 51.8,
+   "cer_mean": 0.134
+  },
+  "no": {
+   "mt": "openai",
+   "tts": "chatterbox",
+   "adequacy": 3.5,
+   "chrf_back": 51.4,
+   "cer_mean": 0.079
+  },
+  "fi": {
+   "mt": "openai",
+   "tts": "donor_vc",
+   "adequacy": 2.88,
+   "chrf_back": 43.6,
+   "cer_mean": 0.171
+  },
+  "el": {
+   "mt": "openai",
+   "tts": "donor_vc",
+   "adequacy": 2.94,
+   "chrf_back": 46.3,
+   "cer_mean": 0.163
+  },
+  "he": {
+   "mt": "openai",
+   "tts": "donor_vc",
+   "adequacy": 2.81,
+   "chrf_back": 42.2,
+   "cer_mean": 0.735
+  },
+  "ar": {
+   "mt": "openai",
+   "tts": "donor_vc",
+   "adequacy": 3.31,
+   "chrf_back": 50.1,
+   "cer_mean": 0.206
+  },
+  "hi": {
+   "mt": "openai",
+   "tts": "chatterbox",
+   "adequacy": 3.0,
+   "chrf_back": 38.5,
+   "cer_mean": 0.09
+  },
+  "zh": {
+   "mt": "qwen",
+   "tts": "chatterbox",
+   "adequacy": 4.12,
+   "chrf_back": 49.3,
+   "cer_mean": 0.013
+  },
+  "ja": {
+   "mt": "openai",
+   "tts": "chatterbox",
+   "adequacy": 3.94,
+   "chrf_back": 34.6,
+   "cer_mean": 0.038
+  },
+  "ko": {
+   "mt": "openai",
+   "tts": "donor_vc",
+   "adequacy": 3.75,
+   "chrf_back": 39.6,
+   "cer_mean": 0.179
+  },
+  "ms": {
+   "mt": "openai",
+   "tts": "chatterbox",
+   "adequacy": 3.31,
+   "chrf_back": 48.4,
+   "cer_mean": 0.046
+  },
+  "sw": {
+   "mt": "openai",
+   "tts": "chatterbox",
+   "adequacy": 2.19,
+   "chrf_back": 23.3,
+   "cer_mean": 0.065
+  }
+ }
+}

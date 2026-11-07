@@ -1,0 +1,85 @@
+{
+ "lang": "es",
+ "rows": [
+  {
+   "i": 0,
+   "text": "La decoración Prime de Neometria.",
+   "wav": "/workspace/dub/r13s/lang/wav/es_00.wav",
+   "dur_s": 2.64,
+   "gen_s": 0.78,
+   "asr": "La decoración prime de neumétria.",
+   "cer": 0.0625,
+   "s_per_char": 0.0825
+  },
+  {
+   "i": 1,
+   "text": "también en el terreno tenemos un complejo de baños, todo está listo para los primeros baños en aproximadamente 3-4 días literalmente",
+   "wav": "/workspace/dub/r13s/lang/wav/es_01.wav",
+   "dur_s": 9.76,
+   "gen_s": 2.36,
+   "asr": "También en el terreno tenemos un complejo de baños.  Todo está listo para los primeros baños en aproximadamente 3-4 días literalmente.",
+   "cer": 0.0,
+   "s_per_char": 0.0751
+  },
+  {
+   "i": 2,
+   "text": "amigos, bueno, salud a todos, voy a grabar el primer video, así que informativo, con la intención de conocernos probablemente",
+   "wav": "/workspace/dub/r13s/lang/wav/es_02.wav",
+   "dur_s": 8.72,
+   "gen_s": 2.14,
+   "asr": "Amigos, bueno, salud a todos, voy a grabar el primer video, así que informativo, con la intención de conocernos probablemente.",
+   "cer": 0.0,
+   "s_per_char": 0.0727
+  },
+  {
+   "i": 3,
+   "text": "haremos un video con los anteojos, volveremos a ver, probaremos de nuevo cómo será nuestra aplicación con esto",
+   "wav": "/workspace/dub/r13s/lang/wav/es_03.wav",
+   "dur_s": 6.36,
+   "gen_s": 1.59,
+   "asr": "Haremos un video con los anteojos, volveremos a ver, probaremos de nuevo como será nuestra aplicación con esto.",
+   "cer": 0.0093,
+   "s_per_char": 0.0589
+  },
+  {
+   "i": 4,
+   "text": "Vamos a probar este otro formato de grabación de video.",
+   "wav": "/workspace/dub/r13s/lang/wav/es_04.wav",
+   "dur_s": 3.36,
+   "gen_s": 0.95,
+   "asr": "Vamos a probar este otro formato de grabación de video.",
+   "cer": 0.0,
+   "s_per_char": 0.0622
+  },
+  {
+   "i": 5,
+   "text": "Vamos a ver qué incluye la reparación que propone el constructor.",
+   "wav": "/workspace/dub/r13s/lang/wav/es_05.wav",
+   "dur_s": 4.0,
+   "gen_s": 1.08,
+   "asr": "Vamos a ver qué incluye la reparación que propone el constructor.",
+   "cer": 0.0,
+   "s_per_char": 0.0625
+  },
+  {
+   "i": 6,
+   "text": "ya comenzarán las inhalaciones aquí, ahora mostraré la piscina, así que tenemos diferentes cosas aquí, zona para",
+   "wav": "/workspace/dub/r13s/lang/wav/es_06.wav",
+   "dur_s": 7.36,
+   "gen_s": 1.76,
+   "asr": "Ya comenzarán las inhalaciones aquí, ahora mostraré la piscina.  Así que tenemos diferentes cosas aquí, zona para.",
+   "cer": 0.0,
+   "s_per_char": 0.0675
+  },
+  {
+   "i": 7,
+   "text": "más o menos lo que quiero decir es que estoy contento de conocerte, contento de la cooperación, hoy es viernes, el 28",
+   "wav": "/workspace/dub/r13s/lang/wav/es_07.wav",
+   "dur_s": 7.96,
+   "gen_s": 1.96,
+   "asr": "Más o menos lo que quiero decir es que estoy contento de conocerte, contento de la cooperación.  Hoy es viernes, el 28.",
+   "cer": 0.0,
+   "s_per_char": 0.0698
+  }
+ ]
+}

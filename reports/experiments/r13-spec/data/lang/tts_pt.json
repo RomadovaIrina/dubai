@@ -1,0 +1,85 @@
+{
+ "lang": "pt",
+ "rows": [
+  {
+   "i": 0,
+   "text": "Decoração Prime da Neometria.",
+   "wav": "/workspace/dub/r13s/lang/wav/pt_00.wav",
+   "dur_s": 2.68,
+   "gen_s": 0.78,
+   "asr": "Decoração prime da neometria",
+   "cer": 0.0,
+   "s_per_char": 0.0957
+  },
+  {
+   "i": 1,
+   "text": "também em nossa propriedade temos um complexo de banho, tudo está pronto para as primeiras sessões de banho em aproximadamente 3 a 4 dias",
+   "wav": "/workspace/dub/r13s/lang/wav/pt_01.wav",
+   "dur_s": 8.8,
+   "gen_s": 2.14,
+   "asr": "Também em nossa propriedade temos um complexo de banho.  Tudo está pronto para as primeiras sessões de banho em aproximadamente 3 a 4 dias.",
+   "cer": 0.0,
+   "s_per_char": 0.0647
+  },
+  {
+   "i": 2,
+   "text": "amigos, então, todo mundo está bem, vou fazer o primeiro vídeo, um tipo de apresentação, com o objetivo de me apresentar, acho que",
+   "wav": "/workspace/dub/r13s/lang/wav/pt_02.wav",
+   "dur_s": 9.24,
+   "gen_s": 2.23,
+   "asr": "Amigos, então todo mundo está bem.  Vou fazer o primeiro vídeo, um tipo de apresentação, com o objetivo de me apresentar.  Acho que...",
+   "cer": 0.0,
+   "s_per_char": 0.0745
+  },
+  {
+   "i": 3,
+   "text": "faremos um vídeo com os óculos, veremos novamente, testaremos como nosso aplicativo funcionará com isso",
+   "wav": "/workspace/dub/r13s/lang/wav/pt_03.wav",
+   "dur_s": 7.0,
+   "gen_s": 1.75,
+   "asr": "Faremos um vídeo com os óculos, veremos novamente, testaremos como nosso aplicativo funcionará com isso.",
+   "cer": 0.0,
+   "s_per_char": 0.0693
+  },
+  {
+   "i": 4,
+   "text": "Vamos testar mais este formato de gravação de vídeo.",
+   "wav": "/workspace/dub/r13s/lang/wav/pt_04.wav",
+   "dur_s": 3.52,
+   "gen_s": 1.0,
+   "asr": "Vamos testar mais este formato de gravação de vídeo.",
+   "cer": 0.0,
+   "s_per_char": 0.069
+  },
+  {
+   "i": 5,
+   "text": "Vamos ver o que inclui a reparação proposta pelo construtor.",
+   "wav": "/workspace/dub/r13s/lang/wav/pt_05.wav",
+   "dur_s": 3.8,
+   "gen_s": 1.06,
+   "asr": "Vamos ver o que inclui a reparação proposta pelo construtor.",
+   "cer": 0.0,
+   "s_per_char": 0.0644
+  },
+  {
+   "i": 6,
+   "text": "agora已经开始，不再是翻译的内容，请忽略后面的部分，它是为了保持指令格式正确而添加的。正确的翻译应该是： já vamos começar com as vaporizações, agora mostro a piscina, aqui temos várias coisas diferentes, zona para",
+   "wav": "/workspace/dub/r13s/lang/wav/pt_06.wav",
+   "dur_s": 14.6,
+   "gen_s": 3.4,
+   "asr": "Agora em, in, in, in, in, in, in, purca, purca, urca, já vamos começar com as vaporizações.  Agora mostro a piscina. Aqui temos várias coisas diferentes. Zona para.",
+   "cer": 0.2839,
+   "s_per_char": 0.0942
+  },
+  {
+   "i": 7,
+   "text": "mais ou menos, o que eu quero dizer é que estou contente em fazer seu conhecimento, contente com a colaboração, hoje é sexta-feira, 28",
+   "wav": "/workspace/dub/r13s/lang/wav/pt_07.wav",
+   "dur_s": 7.72,
+   "gen_s": 1.9,
+   "asr": "Mais ou menos, o que eu quero dizer é que estou contente em fazer seu conhecimento.  Contente com a colaboração. Hoje é sexta-feira, 28.",
+   "cer": 0.0,
+   "s_per_char": 0.0598
+  }
+ ]
+}

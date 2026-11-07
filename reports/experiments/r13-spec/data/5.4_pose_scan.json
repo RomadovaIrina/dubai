@@ -1,0 +1,322 @@
+{
+ "01": {
+  "video": "/workspace/dub/inputs/test_videos_raw/01.MP4",
+  "frames": 1271,
+  "face_frames": 130,
+  "face_frac": 0.102,
+  "yaw_p1_p50_p99": [
+   -3.3,
+   -1.4,
+   1.0
+  ],
+  "pitch_p1_p50_p99": [
+   -20.7,
+   4.2,
+   12.0
+  ],
+  "frac_yaw_gt30": 0.0,
+  "frac_pitch_gt30": 0.0,
+  "frac_any_gt30": 0.0,
+  "decision": "lipsync",
+  "rule": {
+   "yaw_deg": 30.0,
+   "max_fraction": 0.3
+  }
+ },
+ "02": {
+  "video": "/workspace/dub/inputs/test_videos_raw/02.mp4",
+  "frames": 1662,
+  "face_frames": 0,
+  "face_frac": 0.0,
+  "yaw_p1_p50_p99": null,
+  "pitch_p1_p50_p99": null,
+  "frac_yaw_gt30": 0.0,
+  "frac_pitch_gt30": 0.0,
+  "frac_any_gt30": 0.0,
+  "decision": "no_face",
+  "rule": {
+   "yaw_deg": 30.0,
+   "max_fraction": 0.3
+  }
+ },
+ "03": {
+  "video": "/workspace/dub/inputs/test_videos_raw/03.mp4",
+  "frames": 1355,
+  "face_frames": 1355,
+  "face_frac": 1.0,
+  "yaw_p1_p50_p99": [
+   -2.3,
+   0.1,
+   5.2
+  ],
+  "pitch_p1_p50_p99": [
+   -12.3,
+   -9.2,
+   -6.1
+  ],
+  "frac_yaw_gt30": 0.0,
+  "frac_pitch_gt30": 0.0,
+  "frac_any_gt30": 0.0,
+  "decision": "lipsync",
+  "rule": {
+   "yaw_deg": 30.0,
+   "max_fraction": 0.3
+  }
+ },
+ "04": {
+  "video": "/workspace/dub/inputs/test_videos_raw/04.mp4",
+  "frames": 809,
+  "face_frames": 809,
+  "face_frac": 1.0,
+  "yaw_p1_p50_p99": [
+   -0.6,
+   4.4,
+   21.3
+  ],
+  "pitch_p1_p50_p99": [
+   -11.5,
+   -3.7,
+   2.2
+  ],
+  "frac_yaw_gt30": 0.0,
+  "frac_pitch_gt30": 0.0,
+  "frac_any_gt30": 0.0,
+  "decision": "lipsync",
+  "rule": {
+   "yaw_deg": 30.0,
+   "max_fraction": 0.3
+  }
+ },
+ "05": {
+  "video": "/workspace/dub/inputs/test_videos_raw/05.mp4",
+  "frames": 784,
+  "face_frames": 756,
+  "face_frac": 0.964,
+  "yaw_p1_p50_p99": [
+   -54.0,
+   -5.8,
+   18.7
+  ],
+  "pitch_p1_p50_p99": [
+   -12.2,
+   -2.5,
+   5.9
+  ],
+  "frac_yaw_gt30": 0.0622,
+  "frac_pitch_gt30": 0.0,
+  "frac_any_gt30": 0.0622,
+  "decision": "lipsync",
+  "rule": {
+   "yaw_deg": 30.0,
+   "max_fraction": 0.3
+  }
+ },
+ "story-1773579769284-320619146": {
+  "video": "/workspace/dub/inputs/mamakris/story-1773579769284-320619146.MP4",
+  "frames": 2589,
+  "face_frames": 2589,
+  "face_frac": 1.0,
+  "yaw_p1_p50_p99": [
+   -10.3,
+   -1.0,
+   11.2
+  ],
+  "pitch_p1_p50_p99": [
+   -1.8,
+   8.7,
+   17.9
+  ],
+  "frac_yaw_gt30": 0.0,
+  "frac_pitch_gt30": 0.0,
+  "frac_any_gt30": 0.0,
+  "decision": "lipsync",
+  "rule": {
+   "yaw_deg": 30.0,
+   "max_fraction": 0.3
+  }
+ },
+ "story-1774249919482-367803614": {
+  "video": "/workspace/dub/inputs/mamakris/story-1774249919482-367803614.MOV",
+  "frames": 607,
+  "face_frames": 607,
+  "face_frac": 1.0,
+  "yaw_p1_p50_p99": [
+   -13.9,
+   -5.8,
+   -1.1
+  ],
+  "pitch_p1_p50_p99": [
+   -7.2,
+   5.8,
+   15.1
+  ],
+  "frac_yaw_gt30": 0.0,
+  "frac_pitch_gt30": 0.0,
+  "frac_any_gt30": 0.0,
+  "decision": "lipsync",
+  "rule": {
+   "yaw_deg": 30.0,
+   "max_fraction": 0.3
+  }
+ },
+ "story-1774249930391-60765207": {
+  "video": "/workspace/dub/inputs/mamakris/story-1774249930391-60765207.MOV",
+  "frames": 429,
+  "face_frames": 429,
+  "face_frac": 1.0,
+  "yaw_p1_p50_p99": [
+   -30.3,
+   -5.1,
+   7.6
+  ],
+  "pitch_p1_p50_p99": [
+   -14.9,
+   4.1,
+   19.8
+  ],
+  "frac_yaw_gt30": 0.0117,
+  "frac_pitch_gt30": 0.0,
+  "frac_any_gt30": 0.0117,
+  "decision": "lipsync",
+  "rule": {
+   "yaw_deg": 30.0,
+   "max_fraction": 0.3
+  }
+ },
+ "story-1774250573471-666527943": {
+  "video": "/workspace/dub/inputs/mamakris/story-1774250573471-666527943.MP4",
+  "frames": 505,
+  "face_frames": 505,
+  "face_frac": 1.0,
+  "yaw_p1_p50_p99": [
+   -14.0,
+   -0.5,
+   35.4
+  ],
+  "pitch_p1_p50_p99": [
+   -10.9,
+   -0.2,
+   8.1
+  ],
+  "frac_yaw_gt30": 0.0198,
+  "frac_pitch_gt30": 0.0,
+  "frac_any_gt30": 0.0198,
+  "decision": "lipsync",
+  "rule": {
+   "yaw_deg": 30.0,
+   "max_fraction": 0.3
+  }
+ },
+ "story-1774250795589-441186215": {
+  "video": "/workspace/dub/inputs/mamakris/story-1774250795589-441186215.mp4",
+  "frames": 648,
+  "face_frames": 648,
+  "face_frac": 1.0,
+  "yaw_p1_p50_p99": [
+   -13.0,
+   -4.0,
+   7.2
+  ],
+  "pitch_p1_p50_p99": [
+   -26.8,
+   -6.1,
+   5.6
+  ],
+  "frac_yaw_gt30": 0.0,
+  "frac_pitch_gt30": 0.0,
+  "frac_any_gt30": 0.0,
+  "decision": "lipsync",
+  "rule": {
+   "yaw_deg": 30.0,
+   "max_fraction": 0.3
+  }
+ },
+ "story-1774250817106-616905094": {
+  "video": "/workspace/dub/inputs/mamakris/story-1774250817106-616905094.mp4",
+  "frames": 301,
+  "face_frames": 301,
+  "face_frac": 1.0,
+  "yaw_p1_p50_p99": [
+   -10.3,
+   -2.6,
+   3.5
+  ],
+  "pitch_p1_p50_p99": [
+   -36.4,
+   -17.6,
+   -8.2
+  ],
+  "frac_yaw_gt30": 0.0,
+  "frac_pitch_gt30": 0.103,
+  "frac_any_gt30": 0.103,
+  "decision": "lipsync",
+  "rule": {
+   "yaw_deg": 30.0,
+   "max_fraction": 0.3
+  }
+ },
+ "story-1774250832175-746471562": {
+  "video": "/workspace/dub/inputs/mamakris/story-1774250832175-746471562.mp4",
+  "frames": 266,
+  "face_frames": 266,
+  "face_frac": 1.0,
+  "yaw_p1_p50_p99": [
+   -7.5,
+   1.0,
+   4.0
+  ],
+  "pitch_p1_p50_p99": [
+   -2.7,
+   2.4,
+   7.4
+  ],
+  "frac_yaw_gt30": 0.0,
+  "frac_pitch_gt30": 0.0,
+  "frac_any_gt30": 0.0,
+  "decision": "lipsync",
+  "rule": {
+   "yaw_deg": 30.0,
+   "max_fraction": 0.3
+  }
+ },
+ "story-1774250884789-692894647": {
+  "video": "/workspace/dub/inputs/mamakris/story-1774250884789-692894647.mp4",
+  "frames": 413,
+  "face_frames": 413,
+  "face_frac": 1.0,
+  "yaw_p1_p50_p99": [
+   -5.3,
+   2.1,
+   8.2
+  ],
+  "pitch_p1_p50_p99": [
+   -1.5,
+   3.1,
+   7.4
+  ],
+  "frac_yaw_gt30": 0.0,
+  "frac_pitch_gt30": 0.0,
+  "frac_any_gt30": 0.0,
+  "decision": "lipsync",
+  "rule": {
+   "yaw_deg": 30.0,
+   "max_fraction": 0.3
+  }
+ },
+ "story-1774250904597-834383232": {
+  "video": "/workspace/dub/inputs/mamakris/story-1774250904597-834383232.mp4",
+  "frames": 501,
+  "face_frames": 0,
+  "face_frac": 0.0,
+  "yaw_p1_p50_p99": null,
+  "pitch_p1_p50_p99": null,
+  "frac_yaw_gt30": 0.0,
+  "frac_pitch_gt30": 0.0,
+  "frac_any_gt30": 0.0,
+  "decision": "no_face",
+  "rule": {
+   "yaw_deg": 30.0,
+   "max_fraction": 0.3
+  }
+ }
+}

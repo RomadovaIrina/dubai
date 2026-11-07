@@ -1,0 +1,106 @@
+{
+ "T1_transient": {
+  "ok": true,
+  "codes": [
+   429,
+   429,
+   500,
+   200
+  ],
+  "stats": {
+   "requests": 4,
+   "retries": 3,
+   "429": 2,
+   "5xx": 1,
+   "net": 0,
+   "limiter_wait_s": 0.19460046528838576,
+   "backoff_s": 1.6110196951812914
+  },
+  "s": 1.92,
+  "retry_after_honoured": true
+ },
+ "T2_persistent_429": {
+  "requests": 4,
+  "engine": "chatterbox_fallback",
+  "flag": "donor_unavailable_fallback",
+  "file": true,
+  "error": "donor unavailable after 4 attempts: HTTP 429: {\"error\": {\"code\": 429}}",
+  "stats": {
+   "requests": 4,
+   "retries": 3,
+   "429": 4,
+   "5xx": 0,
+   "net": 0,
+   "limiter_wait_s": 0.2924628659151495,
+   "backoff_s": 0.6000000000000001
+  }
+ },
+ "T3_rate_limiter": {
+  "requests": 16,
+  "429": 0,
+  "errors": [],
+  "wall_s": 13.0,
+  "expected_min_wall_s": 13.0,
+  "median_gap_s": 1.0
+ },
+ "T4_400": {
+  "raised": true,
+  "requests": 1,
+  "msg": "donor refused the request (HTTP 400: {\"error\": {\"code\": 400}})"
+ },
+ "T5_no_key": {
+  "engine": "chatterbox_fallback",
+  "flag": "donor_unavailable_fallback",
+  "error": "OPENAI_API_KEY is not set"
+ },
+ "T6_router": {
+  "table_langs": 2,
+  "no_key": {
+   "en": {
+    "mt": "qwen",
+    "tts": "chatterbox"
+   },
+   "de": {
+    "mt": "qwen",
+    "tts": "chatterbox"
+   },
+   "hi": {
+    "mt": "qwen",
+    "tts": "chatterbox",
+    "note": "not measured",
+    "mt_planned": "openai",
+    "tts_planned": "donor_vc",
+    "degraded": "no_external_key"
+   },
+   "xx": {
+    "mt": "qwen",
+    "tts": "chatterbox",
+    "note": "not measured",
+    "mt_planned": "openai",
+    "tts_planned": "donor_vc",
+    "degraded": "no_external_key"
+   }
+  },
+  "with_key": {
+   "en": {
+    "mt": "qwen",
+    "tts": "chatterbox"
+   },
+   "de": {
+    "mt": "qwen",
+    "tts": "chatterbox"
+   },
+   "hi": {
+    "mt": "openai",
+    "tts": "donor_vc",
+    "note": "not measured"
+   },
+   "xx": {
+    "mt": "openai",
+    "tts": "donor_vc",
+    "note": "not measured"
+   }
+  }
+ },
+ "PASS": true
+}

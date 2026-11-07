@@ -1,0 +1,871 @@
+{
+ "run": "/workspace/dub/r13s/pace/spl/old03",
+ "corridor": [
+  0.75,
+  1.25
+ ],
+ "placements": 21,
+ "measured": 18,
+ "tempo_p5_p50_p95": [
+  0.897,
+  0.954,
+  1.07
+ ],
+ "phrase_violations": [],
+ "span_violations": [],
+ "local_violations": [],
+ "local_windows": 173,
+ "recorded_atempo_violations": [],
+ "librosa_time_stretch": "not used by the current chain (ffmpeg atempo only)",
+ "rows": [
+  {
+   "unit": 0,
+   "placed": [
+    3.42,
+    4.94
+   ],
+   "text": "Friends, hello to everyone.",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 6.81,
+   "matched_words": "4/4",
+   "tempo_span": 0.944,
+   "tempo": 0.925,
+   "local_max": [
+    0.925,
+    3.49,
+    4.86,
+    "friends hello to everyone"
+   ],
+   "local_min": [
+    0.925,
+    3.49,
+    4.86,
+    "friends hello to everyone"
+   ]
+  },
+  {
+   "unit": 1,
+   "placed": [
+    5.22,
+    9.7
+   ],
+   "text": "I'm going to make the first video, which is going to be more or less informative",
+   "atempo_recorded": 0.9118,
+   "close_inner": [
+    [
+     9.18,
+     0.17
+    ]
+   ],
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.17,
+   "matched_words": "16/16",
+   "tempo_span": 0.917,
+   "tempo": 0.963,
+   "local_max": [
+    1.005,
+    7.28,
+    7.84,
+    "which is going to"
+   ],
+   "local_min": [
+    0.917,
+    7.56,
+    8.32,
+    "going to be more"
+   ]
+  },
+  {
+   "unit": 1,
+   "placed": [
+    10.34,
+    11.82
+   ],
+   "text": "probably to get to know it better.",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 9.53,
+   "matched_words": "7/7",
+   "tempo_span": 0.936,
+   "tempo": 0.937,
+   "local_max": [
+    0.997,
+    10.7,
+    11.2,
+    "to get to know"
+   ],
+   "local_min": [
+    0.921,
+    11.0,
+    11.75,
+    "to know it better"
+   ]
+  },
+  {
+   "unit": 2,
+   "placed": [
+    12.02,
+    12.75
+   ],
+   "text": "In general,",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 10.47,
+   "matched_words": "2/2",
+   "tempo": null,
+   "why": "too few matched words"
+  },
+  {
+   "unit": 2,
+   "placed": [
+    14.34,
+    18.66
+   ],
+   "text": "what I want to say is that I am glad to meet you and I am glad for the cooperati",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 8.76,
+   "matched_words": "20/20",
+   "tempo_span": 0.933,
+   "tempo": 0.955,
+   "local_max": [
+    1.14,
+    14.81,
+    15.52,
+    "to say is that"
+   ],
+   "local_min": [
+    0.892,
+    17.28,
+    18.53,
+    "glad for the cooperation"
+   ]
+  },
+  {
+   "unit": 3,
+   "placed": [
+    18.76,
+    21.3
+   ],
+   "text": "Today is Friday, August twenty-eight,",
+   "atempo_recorded": 0.9,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 6.14,
+   "matched_words": "6/6",
+   "tempo_span": 0.797,
+   "tempo": 0.888,
+   "local_max": [
+    0.901,
+    19.46,
+    21.24,
+    "friday august twenty eight"
+   ],
+   "local_min": [
+    0.869,
+    18.85,
+    20.48,
+    "today is friday august"
+   ]
+  },
+  {
+   "unit": 3,
+   "placed": [
+    22.3,
+    26.9
+   ],
+   "text": "so let's go ahead and consider this moment as the beginning of our collaboration",
+   "atempo_recorded": 1.018,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 8.41,
+   "matched_words": "15/15",
+   "tempo_span": 1.013,
+   "tempo": 1.012,
+   "local_max": [
+    1.067,
+    24.96,
+    25.78,
+    "the beginning of our"
+   ],
+   "local_min": [
+    0.963,
+    22.57,
+    23.37,
+    "let's go ahead and"
+   ]
+  },
+  {
+   "unit": 4,
+   "placed": [
+    28.32,
+    35.06
+   ],
+   "text": "What I really want to say is that I hope this collaboration will be smooth and b",
+   "atempo_recorded": 0.9,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.13,
+   "matched_words": "21/21",
+   "tempo_span": 0.859,
+   "tempo": 0.952,
+   "local_max": [
+    1.0,
+    33.76,
+    34.55,
+    "bring us all the"
+   ],
+   "local_min": [
+    0.873,
+    29.47,
+    30.96,
+    "say is that i"
+   ]
+  },
+  {
+   "unit": 4,
+   "placed": [
+    35.18,
+    43.84
+   ],
+   "text": "that we have wished for, and that there be no obstacles in our way, no barriers ",
+   "atempo_recorded": 1.0155,
+   "close_inner": [
+    [
+     39.62,
+     0.11
+    ]
+   ],
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.19,
+   "matched_words": "27/27",
+   "tempo_span": 0.935,
+   "tempo": 1.062,
+   "local_max": [
+    1.172,
+    42.43,
+    43.23,
+    "that would hinder our"
+   ],
+   "local_min": [
+    0.958,
+    38.28,
+    39.48,
+    "in our way no"
+   ]
+  },
+  {
+   "unit": 5,
+   "placed": [
+    44.04,
+    44.39
+   ],
+   "text": "I hope,",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": null,
+   "matched_words": "2/2",
+   "tempo": null,
+   "why": "too few matched words"
+  },
+  {
+   "unit": 5,
+   "placed": [
+    46.44,
+    47.4
+   ],
+   "text": "everything will be fine.",
+   "atempo_recorded": 1.14,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 10.17,
+   "matched_words": "4/4",
+   "tempo_span": 1.128,
+   "tempo": 1.09,
+   "local_max": [
+    1.09,
+    46.55,
+    47.34,
+    "everything will be fine"
+   ],
+   "local_min": [
+    1.09,
+    46.55,
+    47.34,
+    "everything will be fine"
+   ]
+  },
+  {
+   "unit": 6,
+   "placed": [
+    47.42,
+    48.27
+   ],
+   "text": "For the actions",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.66,
+   "matched_words": "3/3",
+   "tempo_span": 0.999,
+   "tempo": 1.038
+  },
+  {
+   "unit": 6,
+   "placed": [
+    48.34,
+    50.9
+   ],
+   "text": "that are going to be reciprocal with you,",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 6.74,
+   "matched_words": "8/8",
+   "tempo_span": 0.914,
+   "tempo": 0.898,
+   "local_max": [
+    0.998,
+    48.37,
+    49.1,
+    "that are going to"
+   ],
+   "local_min": [
+    0.856,
+    49.16,
+    50.61,
+    "be reciprocal with you"
+   ]
+  },
+  {
+   "unit": 6,
+   "placed": [
+    51.4,
+    55.27
+   ],
+   "text": "and in general with the product that we are collecting and making today,",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.13,
+   "matched_words": "13/13",
+   "tempo_span": 0.951,
+   "tempo": 0.929,
+   "local_max": [
+    0.943,
+    52.35,
+    53.23,
+    "with the product that"
+   ],
+   "local_min": [
+    0.889,
+    51.65,
+    52.63,
+    "in general with the"
+   ]
+  },
+  {
+   "unit": 7,
+   "placed": [
+    55.48,
+    57.53
+   ],
+   "text": "I will be sending out more videos next,",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.65,
+   "matched_words": "8/8",
+   "tempo_span": 1.009,
+   "tempo": 1.058,
+   "local_max": [
+    1.071,
+    56.33,
+    57.42,
+    "out more videos next"
+   ],
+   "local_min": [
+    1.038,
+    55.57,
+    56.23,
+    "i will be sending"
+   ]
+  },
+  {
+   "unit": 7,
+   "placed": [
+    59.34,
+    67.71
+   ],
+   "text": "I plan on recording them in different formats, both with and without glasses, so",
+   "atempo_recorded": 0.8977,
+   "close_inner": [
+    [
+     62.82,
+     0.05
+    ],
+    [
+     64.34,
+     0.39
+    ]
+   ],
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 6.18,
+   "matched_words": "22/22",
+   "tempo_span": 0.958,
+   "tempo": 0.908,
+   "local_max": [
+    0.977,
+    61.19,
+    62.77,
+    "different formats both with"
+   ],
+   "local_min": [
+    0.839,
+    64.47,
+    65.45,
+    "so we can observe"
+   ]
+  },
+  {
+   "unit": 8,
+   "placed": [
+    67.92,
+    68.91
+   ],
+   "text": "Well,",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": null,
+   "matched_words": "1/1",
+   "tempo": null,
+   "why": "too few matched words"
+  },
+  {
+   "unit": 8,
+   "placed": [
+    70.2,
+    72.26
+   ],
+   "text": "I'll basically send everything to our chat.",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 8.7,
+   "matched_words": "7/7",
+   "tempo_span": 0.943,
+   "tempo": 0.915,
+   "local_max": [
+    0.942,
+    71.24,
+    72.19,
+    "everything to our chat"
+   ],
+   "local_min": [
+    0.918,
+    70.45,
+    71.73,
+    "basically send everything to"
+   ]
+  },
+  {
+   "unit": 9,
+   "placed": [
+    73.58,
+    79.32
+   ],
+   "text": "So, let's all together wish everyone here a great deal of success, that is exact",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 8.0,
+   "matched_words": "22/22",
+   "tempo_span": 1.015,
+   "tempo": 1.017,
+   "local_max": [
+    1.12,
+    78.25,
+    79.17,
+    "to express right now"
+   ],
+   "local_min": [
+    0.942,
+    76.44,
+    77.38,
+    "of success that is"
+   ]
+  },
+  {
+   "unit": 10,
+   "placed": [
+    79.9,
+    82.37
+   ],
+   "text": "Our cooperation is going to be smooth and easy,",
+   "atempo_recorded": 1.1,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 8.43,
+   "matched_words": "9/9",
+   "tempo_span": 1.061,
+   "tempo": 1.067,
+   "local_max": [
+    1.187,
+    80.01,
+    80.97,
+    "our cooperation is going"
+   ],
+   "local_min": [
+    0.947,
+    81.17,
+    82.34,
+    "be smooth and easy"
+   ]
+  },
+  {
+   "unit": 10,
+   "placed": [
+    84.0,
+    89.16
+   ],
+   "text": "and it's going to bring us the results that we are hoping for, so let's move for",
+   "atempo_recorded": 0.939,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.49,
+   "matched_words": "18/18",
+   "tempo_span": 0.877,
+   "tempo": 0.908,
+   "local_max": [
+    0.966,
+    85.84,
+    86.6,
+    "that we are hoping"
+   ],
+   "local_min": [
+    0.865,
+    86.32,
+    88.0,
+    "hoping for so let's"
+   ]
+  }
+ ],
+ "rate_median_sps": 7.65,
+ "rate_peaks": [
+  {
+   "unit": 2,
+   "sps": 12.46,
+   "t0": 16.5,
+   "t1": 17.2,
+   "words": "you and i am"
+  },
+  {
+   "unit": 9,
+   "sps": 12.46,
+   "t0": 77.84,
+   "t1": 78.3,
+   "words": "what i want to"
+  },
+  {
+   "unit": 1,
+   "sps": 12.38,
+   "t0": 10.82,
+   "t1": 11.32,
+   "words": "get to know it"
+  },
+  {
+   "unit": 10,
+   "sps": 11.76,
+   "t0": 80.75,
+   "t1": 81.27,
+   "words": "is going to be"
+  },
+  {
+   "unit": 2,
+   "sps": 11.73,
+   "t0": 14.33,
+   "t1": 14.87,
+   "words": "what i want to"
+  },
+  {
+   "unit": 2,
+   "sps": 11.73,
+   "t0": 15.62,
+   "t1": 16.22,
+   "words": "i am glad to"
+  },
+  {
+   "unit": 1,
+   "sps": 11.7,
+   "t0": 10.7,
+   "t1": 11.2,
+   "words": "to get to know"
+  },
+  {
+   "unit": 1,
+   "sps": 11.11,
+   "t0": 7.46,
+   "t1": 7.98,
+   "words": "is going to be"
+  },
+  {
+   "unit": 3,
+   "sps": 11.09,
+   "t0": 24.84,
+   "t1": 25.6,
+   "words": "as the beginning of"
+  },
+  {
+   "unit": 9,
+   "sps": 11.09,
+   "t0": 77.3,
+   "t1": 78.02,
+   "words": "is exactly what i"
+  }
+ ],
+ "phrase_rate": [
+  {
+   "unit": 2,
+   "placed": [
+    12.02,
+    12.75
+   ],
+   "sps": 10.47,
+   "x_median": 1.37,
+   "tempo": null,
+   "text": "In general,"
+  },
+  {
+   "unit": 5,
+   "placed": [
+    46.44,
+    47.4
+   ],
+   "sps": 10.17,
+   "x_median": 1.33,
+   "tempo": 1.09,
+   "text": "everything will be fine."
+  },
+  {
+   "unit": 1,
+   "placed": [
+    10.34,
+    11.82
+   ],
+   "sps": 9.53,
+   "x_median": 1.25,
+   "tempo": 0.937,
+   "text": "probably to get to know it better."
+  },
+  {
+   "unit": 2,
+   "placed": [
+    14.34,
+    18.66
+   ],
+   "sps": 8.76,
+   "x_median": 1.15,
+   "tempo": 0.955,
+   "text": "what I want to say is that I am glad to meet you and I am glad for the cooperati"
+  },
+  {
+   "unit": 8,
+   "placed": [
+    70.2,
+    72.26
+   ],
+   "sps": 8.7,
+   "x_median": 1.14,
+   "tempo": 0.915,
+   "text": "I'll basically send everything to our chat."
+  },
+  {
+   "unit": 10,
+   "placed": [
+    79.9,
+    82.37
+   ],
+   "sps": 8.43,
+   "x_median": 1.1,
+   "tempo": 1.067,
+   "text": "Our cooperation is going to be smooth and easy,"
+  },
+  {
+   "unit": 3,
+   "placed": [
+    22.3,
+    26.9
+   ],
+   "sps": 8.41,
+   "x_median": 1.1,
+   "tempo": 1.012,
+   "text": "so let's go ahead and consider this moment as the beginning of our collaboration"
+  },
+  {
+   "unit": 9,
+   "placed": [
+    73.58,
+    79.32
+   ],
+   "sps": 8.0,
+   "x_median": 1.05,
+   "tempo": 1.017,
+   "text": "So, let's all together wish everyone here a great deal of success, that is exact"
+  },
+  {
+   "unit": 6,
+   "placed": [
+    47.42,
+    48.27
+   ],
+   "sps": 7.66,
+   "x_median": 1.0,
+   "tempo": 1.038,
+   "text": "For the actions"
+  },
+  {
+   "unit": 7,
+   "placed": [
+    55.48,
+    57.53
+   ],
+   "sps": 7.65,
+   "x_median": 1.0,
+   "tempo": 1.058,
+   "text": "I will be sending out more videos next,"
+  },
+  {
+   "unit": 10,
+   "placed": [
+    84.0,
+    89.16
+   ],
+   "sps": 7.49,
+   "x_median": 0.98,
+   "tempo": 0.908,
+   "text": "and it's going to bring us the results that we are hoping for, so let's move for"
+  },
+  {
+   "unit": 4,
+   "placed": [
+    35.18,
+    43.84
+   ],
+   "sps": 7.19,
+   "x_median": 0.94,
+   "tempo": 1.062,
+   "text": "that we have wished for, and that there be no obstacles in our way, no barriers "
+  },
+  {
+   "unit": 1,
+   "placed": [
+    5.22,
+    9.7
+   ],
+   "sps": 7.17,
+   "x_median": 0.94,
+   "tempo": 0.963,
+   "text": "I'm going to make the first video, which is going to be more or less informative"
+  },
+  {
+   "unit": 4,
+   "placed": [
+    28.32,
+    35.06
+   ],
+   "sps": 7.13,
+   "x_median": 0.93,
+   "tempo": 0.952,
+   "text": "What I really want to say is that I hope this collaboration will be smooth and b"
+  },
+  {
+   "unit": 6,
+   "placed": [
+    51.4,
+    55.27
+   ],
+   "sps": 7.13,
+   "x_median": 0.93,
+   "tempo": 0.929,
+   "text": "and in general with the product that we are collecting and making today,"
+  },
+  {
+   "unit": 0,
+   "placed": [
+    3.42,
+    4.94
+   ],
+   "sps": 6.81,
+   "x_median": 0.89,
+   "tempo": 0.925,
+   "text": "Friends, hello to everyone."
+  },
+  {
+   "unit": 6,
+   "placed": [
+    48.34,
+    50.9
+   ],
+   "sps": 6.74,
+   "x_median": 0.88,
+   "tempo": 0.898,
+   "text": "that are going to be reciprocal with you,"
+  },
+  {
+   "unit": 7,
+   "placed": [
+    59.34,
+    67.71
+   ],
+   "sps": 6.18,
+   "x_median": 0.81,
+   "tempo": 0.908,
+   "text": "I plan on recording them in different formats, both with and without glasses, so"
+  },
+  {
+   "unit": 3,
+   "placed": [
+    18.76,
+    21.3
+   ],
+   "sps": 6.14,
+   "x_median": 0.8,
+   "tempo": 0.888,
+   "text": "Today is Friday, August twenty-eight,"
+  }
+ ]
+}

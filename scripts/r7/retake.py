@@ -294,7 +294,11 @@ def main():
             ref = refs[spk]["file"]
             if ref: m.prepare_conditionals(ref)
             cur_spk = spk
-            for k, res in zip(ix, ladders([(rows[k]["u"], preps[k]["kept"]) for k in ix])): pre_tts[k] = res
+            B_ = int(os.environ.get("DUB_RETAKE_BATCH_UNITS", "16")) or len(ix) or 1   # r15 T (5-min video: ALL selected units of a speaker in ONE ladder batch -> CUDA OOM
+            for s0 in range(0, len(ix), B_):                                           # in the QA Whisper): slices of <= B_ units; ladder_batch keeps the sequential selection per
+                sl = ix[s0:s0 + B_]                                                    # take, so a slice gives the same takes; <= B_ selected units = the one batch as before
+                for k, res in zip(sl, ladders([(rows[k]["u"], preps[k]["kept"]) for k in sl])): pre_tts[k] = res
+                if len(ix) > B_: torch.cuda.empty_cache()
     for ri, (r, P) in enumerate(zip(rows, preps)):
         u = r["u"]; ps, t_start, old_text, old_j, base_cost, rec, kept = P["ps"], P["t_start"], P["old_text"], P["old_j"], P["base_cost"], P["rec"], P["kept"]
         best = None

@@ -271,10 +271,14 @@ def main() -> int:
         man["speech_gate"] = {**man.get("speech_gate", {}), "intervals": gate, "skip_silent": {"cuts_s": [[round(c0, 2), round(c1, 2)] for c0, c1 in cuts], "gate_seconds_before": round(g0, 2),
                               "gate_seconds_after": round(g1, 2), "skipped_seconds": round(g0 - g1, 2), "skipped_pct_of_video": round(100 * (g0 - g1) / duration, 2)}}
         print(f"  [skip-silent] {len(cuts)} cuts, gate {g0:.1f} -> {g1:.1f} s ({100 * (g0 - g1) / duration:.1f} % of the video)", flush=True)
-    if a.ref_mode != "same" or a.bridge_len:   # round 3: generator variants (ls_stable.StableLatentSync; same call interface)
+    ls_stride = int(os.environ.get("LS_STRIDE", "0") or 0) or None   # r14 F (mouth flicker): overlapping 16-frame windows (stride < 16), default off;
+    ls_overlap = os.environ.get("LS_OVERLAP", "fuse")                   # fuse = per-step latent blending over the overlap (MultiDiffusion along time; needs --no-deepcache),
+    # continue = each window's overlap pinned to the previous window's result at every noise level (DeepCache OK); bridges are skipped with a stride
+    if a.ref_mode != "same" or a.bridge_len or ls_stride:   # round 3: generator variants (ls_stable.StableLatentSync; same call interface)
         from ls_stable import StableRunner
         with rp.timed(times, "latentsync_load"): runner = StableRunner(a.window_batch_size, not a.no_deepcache, a.steps, a.guidance, 1247, a.deepcache_interval, ref_mode=a.ref_mode,
-                                                                       bridge_len=a.bridge_len, bridge_steps=a.bridge_steps)
+                                                                       bridge_len=a.bridge_len, bridge_steps=a.bridge_steps, stride=ls_stride, overlap=ls_overlap)
+        if ls_stride: man["ls_overlap"] = {"stride": ls_stride, "overlap": ls_overlap}
         runner.acc.audio_lead = a.audio_lead; man["audio_lead"] = a.audio_lead
         if a.steps_silent > 0 and cut_energy is not None:   # phase 2: per-master-frame dub silence for the adaptive step count
             import numpy as _np
@@ -285,10 +289,19 @@ def main() -> int:
             import cv2, numpy as np
             from ls_window_ab import pick_reference
             LM = np.stack([np.asarray(d[1], np.float32) if d[0] is not None else np.full((106, 2), np.nan, np.float32) for d in prep.ls_dets]); ok = np.isfinite(LM[:, 0, 0])
-            cost, rs = pick_reference(LM, ok, a.ref_select, 16)
-            runner.acc.set_reference(np.stack([cv2.cvtColor(f, cv2.COLOR_BGR2RGB) for f in prep.frames[rs:rs + 16]]), list(prep.ls_dets[rs:rs + 16]))
-            man["reference"] = {"select": a.ref_select, "start_frame": int(rs), "t": round(rs / 25, 2), "cost": round(cost, 4)}
-            print(f"  [ref] fixed reference frames {rs}-{rs + 16} ({rs / 25:.2f}s)", flush=True)
+            idx_ = None
+            if os.environ.get("LS_REF_SMART") == "1":   # r14 F night P2 (default off): 16 smart source frames (open mouth, teeth, sharp, frontal, median light)
+                sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "r12")); import ref_smart
+                lm_ = np.load(work / "master_mediapipe.npz")["lm"][:len(prep.frames)].copy(); lm_[~ok[:len(lm_)]] = np.nan
+                idx_, rinfo_ = ref_smart.pick(prep.frames, lm_); print(f"  [ref] smart {rinfo_}", flush=True)
+            if idx_:
+                runner.acc.set_reference(np.stack([cv2.cvtColor(prep.frames[i], cv2.COLOR_BGR2RGB) for i in idx_]), [prep.ls_dets[i] for i in idx_])
+                man["reference"] = {"select": "smart", **rinfo_}
+            else:
+                cost, rs = pick_reference(LM, ok, a.ref_select, 16)
+                runner.acc.set_reference(np.stack([cv2.cvtColor(f, cv2.COLOR_BGR2RGB) for f in prep.frames[rs:rs + 16]]), list(prep.ls_dets[rs:rs + 16]))
+                man["reference"] = {"select": a.ref_select, "start_frame": int(rs), "t": round(rs / 25, 2), "cost": round(cost, 4)}
+                print(f"  [ref] fixed reference frames {rs}-{rs + 16} ({rs / 25:.2f}s)", flush=True)
     else:
         with rp.timed(times, "latentsync_load"): runner = faa.AccelRunner(a.window_batch_size, not a.no_deepcache, "none", "auto", steps=a.steps, guidance=a.guidance, deepcache_interval=a.deepcache_interval)
     if a.silence_mix > 0:   # round 3: dub-silent mouth (r3_lipsync.SilenceMix), stretches in absolute master frames
@@ -311,8 +324,12 @@ def main() -> int:
             Mo = rec_cls = make_box_recorder(MouthOnlyRunner, prep.frames)
         runner = Mo(runner, a.mask_top, a.mask_feather, a.mask_smooth, defer=a.codeformer_scope == "mouth")
         if a.dump_raw: runner.raw = {}   # A r3: --dump-raw (_lsraw.mp4)
-    raw_ls = _DiskFrames(out.with_name(out.stem + "_ls_raw.frames")) if a.dump_ls_raw != "off" else {}   # r9: on disk (long videos)
-    raw_pre = _DiskFrames(out.with_name(out.stem + "_ls_pre.frames")) if a.dump_ls_raw != "off" else {}; _pre_stash = []   # r8 F: raw_pre = the same LatentSync frames BEFORE CodeFormer (--dump-ls-raw writes _ls_pre.mp4)
+    _stream = os.environ.get("DUB_GEN_STREAM") == "1" and prep is not None and hasattr(prep.frames, "release_before")   # r15 T (lazy_frames.py)
+    if _stream:   # exact patches vs the master frame of the same index: no 2 x (9 GB per 5 min) raw memmaps
+        import lazy_frames; raw_ls = lazy_frames.PatchFrames() if a.dump_ls_raw != "off" else {}; raw_pre = lazy_frames.PatchFrames() if a.dump_ls_raw != "off" else {}; _pre_stash = []
+    else:
+        raw_ls = _DiskFrames(out.with_name(out.stem + "_ls_raw.frames")) if a.dump_ls_raw != "off" else {}   # r9: on disk (long videos)
+        raw_pre = _DiskFrames(out.with_name(out.stem + "_ls_pre.frames")) if a.dump_ls_raw != "off" else {}; _pre_stash = []   # r8 F: raw_pre = the same LatentSync frames BEFORE CodeFormer (--dump-ls-raw writes _ls_pre.mp4)
     if a.dump_ls_raw != "off":   # r3 D: keep the raw LatentSync frames (BGR, before the mouth-only composite) per master frame
         if not getattr(runner, "deferred", False): raise SystemExit("--dump-ls-raw needs --mouth-only-pasteback on --codeformer-scope mouth")
         import hashlib, numpy as np
@@ -329,6 +346,15 @@ def main() -> int:
                 _h.extend(hashlib.md5(f.tobytes()).hexdigest() for f in _mf)
                 for i, hh in enumerate(_h): _idx.setdefault(hh, []).append(i)
         def _composite(outs, originals, boxes=None):   # segment start = the master position whose frames match (repeated frames: all of them must match)
+            if _stream:   # r15 T: the segment start is known (MouthOnlyRunner.set_segment); originals = the master frames of the segment
+                st = runner._seg_start
+                for k, o in enumerate(outs):
+                    if k < len(originals): raw_ls.put(st + k, o, originals[k])
+                if len(_pre_stash) == len(outs):
+                    for k, o in enumerate(_pre_stash):
+                        if k < len(originals): raw_pre.put(st + k, o, originals[k])
+                _pre_stash.clear()
+                return _comp(outs, originals, boxes)
             _load_master()
             oh = [hashlib.md5(np.ascontiguousarray(o).tobytes()).hexdigest() for o in originals]
             st = next((i for i in _idx.get(oh[0], []) if _h[i:i + len(oh)] == oh), None) if oh else None
@@ -376,15 +402,16 @@ def main() -> int:
         with rp.timed(times, "dump_ls_raw"):
             raw_path = out.with_name(out.stem + "_ls_raw.mp4") if a.dump_ls_raw == "on" else pathlib.Path(a.dump_ls_raw); w = iio.get_writer(str(raw_path), fps=25, codec="libx264rgb", macro_block_size=None, pixelformat="rgb24",
                                                                                 ffmpeg_params=["-crf", "0", "-preset", "veryfast"], ffmpeg_log_level="error")
-            _load_master()
-            for i, f in enumerate(_mf): w.append_data((raw_ls.get(i, f))[:, :, ::-1])
+            if _stream: _mf = prep.frames   # r15 T: the lazy master, read once in order (one frame in memory)
+            else: _load_master()
+            for i, f in enumerate(_mf): w.append_data((raw_ls.get(i, f, f) if _stream else raw_ls.get(i, f))[:, :, ::-1])
             w.close()
         man["ls_raw"] = {"path": str(raw_path), "ls_frames": len(raw_ls), "master_frames": len(_mf)}; raw_ls.close(); del raw_ls
         if raw_pre:   # r8 F: the clean (pre-CodeFormer) layer of the same run: the base of the CodeFormer detail transfer (r8_cf_detail.py)
             with rp.timed(times, "dump_ls_pre"):
                 pre_path = raw_path.with_name(raw_path.name.replace("_ls_raw", "_ls_pre")); w = iio.get_writer(str(pre_path), fps=25, codec="libx264rgb", macro_block_size=None,
                                                                                                           pixelformat="rgb24", ffmpeg_params=["-crf", "0", "-preset", "veryfast"], ffmpeg_log_level="error")
-                for i, f in enumerate(_mf): w.append_data((raw_pre.get(i, f))[:, :, ::-1])
+                for i, f in enumerate(_mf): w.append_data((raw_pre.get(i, f, f) if _stream else raw_pre.get(i, f))[:, :, ::-1])
                 w.close()
             man["ls_raw"]["pre_codeformer"] = {"path": str(pre_path), "ls_frames": len(raw_pre)}
         raw_pre.close(); del raw_pre
@@ -398,6 +425,7 @@ def main() -> int:
         for i, f in enumerate(mf): w_.append_data(cv2.cvtColor(sub.get(i, f), cv2.COLOR_BGR2RGB))
         w_.close(); man["ls_raw"] = {"path": str(rawp), "frames": len(mf), "ls_frames": len(sub)}; del mf, sub
     rep["backend"] = "optimized"; man["lipsync"] = rep
+    if prep is not None and hasattr(prep.frames, "stats"): man["gen_stream"] = prep.frames.stats()   # r15 T
     if prep is not None:   # spec 11: degraded frames (held landmarks, LatentSync failures) vs the 2 % SUCCESS / PARTIAL_SUCCESS rule (same rule as run_clean_pipeline_05)
         elig = int(rep["frame_classes"].get("VALID_FACE", 0)); failed = int((rep["by_action"].get("PASS_THROUGH_LS_FAILED") or {}).get("frames", 0))
         held = int(man["face_stack"].get("held_landmark_frames", 0)); ratio = (held + failed) / max(elig, 1)

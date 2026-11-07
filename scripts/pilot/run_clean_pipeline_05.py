@@ -195,7 +195,7 @@ def run_vad(wav16: pathlib.Path) -> list[dict]:
     return [{"start": round(float(t["start"]), 3), "end": round(float(t["end"]), 3)} for t in ts]
 
 
-ASR_OPTS = {"hallu_filter": "on", "hallu_nsp": 0.6, "hallu_cov": 0.5, "segments": "off", "seg_min": 45.0, "seg_max": 90.0, "seg_pause": 0.5, "seg_db": -40.0}   # r7 --asr-*
+ASR_OPTS = {"hallu_filter": "on", "hallu_nsp": 0.6, "hallu_cov": 0.5, "hallu_cr": 2.4, "hallu_lp": -1.0, "hallu_novad": 0.1, "segments": "off", "seg_min": 45.0, "seg_max": 90.0, "seg_pause": 0.5, "seg_db": -40.0}   # r7 --asr-*
 
 
 def run_asr(wav16: pathlib.Path, language: str | None, speech: list[dict] | None = None) -> tuple[list[dict], dict]:
@@ -223,7 +223,7 @@ def run_asr(wav16: pathlib.Path, language: str | None, speech: list[dict] | None
             "audio_duration_s": round(float(info.duration) if len(chunks) == 1 else chunks[-1][1], 3), "compute_type": m.model.compute_type,
             "chunks": {"mode": ASR_OPTS["segments"], "pieces": [[round(a, 3), round(b, 3) if b is not None else None] for a, b in chunks], "cuts": cuts}}
     if ASR_OPTS["hallu_filter"] == "on" and speech is not None:   # r7 spec 6.2
-        out, rep = asr_guard.guard(out, speech, ASR_OPTS["hallu_nsp"], ASR_OPTS["hallu_cov"])
+        out, rep = asr_guard.guard(out, speech, ASR_OPTS["hallu_nsp"], ASR_OPTS["hallu_cov"], ASR_OPTS["hallu_cr"], ASR_OPTS["hallu_lp"], ASR_OPTS["hallu_novad"])
         meta["hallu_filter"] = rep
     free_cuda(m)
     return out, meta
@@ -262,12 +262,12 @@ def build_units(segments: list[dict], duration: float, max_unit_s: float) -> lis
 def run_diarization(wav16: pathlib.Path) -> list[dict]:
     import torch
     tok = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
-    if not tok:
-        raise Blocker("HF_TOKEN is not set (gated pyannote/speaker-diarization-3.1)")
+    if not tok and os.environ.get("HF_HUB_OFFLINE") != "1":   # r15 T: the image runs offline from a filled models volume: no token needed then
+        raise Blocker("HF_TOKEN is not set (gated pyannote/speaker-diarization-3.1; or HF_HUB_OFFLINE=1 with the model in the HF cache)")
     from pyannote.audio import Pipeline
     import model_cache
     def _load():
-        p_ = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1", use_auth_token=tok)
+        p_ = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1", use_auth_token=tok or None)
         if p_ is not None:
             p_.to(torch.device(dev()))
         return p_
@@ -490,6 +490,21 @@ def run_translation(units: list[dict], src_lang: str, tgt_lang: str, times: dict
         return meta, llm, src_name, tgt_name    # the burst TTS session re-translates over-long parts with the same model (tts_burst.py), caller deletes it
     del llm
     return meta
+
+
+def voice_policy(units: list[dict], man: dict, max_voices: int) -> None:
+    """spec 6.3: more than max_voices dubbed speakers -> ONE voice (the speaker with the most unit speech) for every unit, flag
+    many_speakers_one_voice for the job status / the user message. max_voices 0 = off. <= max_voices speakers: nothing changes."""
+    by: dict = {}
+    for u in units: by[u["speaker"]] = round(by.get(u["speaker"], 0.0) + (u["end"] - u["start"]), 3)
+    pol = {"max_voices": max_voices, "unit_speakers": len(by), "speech_s": by, "applied": False}
+    if max_voices and len(by) > max_voices:
+        main = max(by, key=by.get)
+        for u in units: u["speaker_diarized"] = u["speaker"]; u["speaker"] = main
+        pol.update(applied=True, voice=main, message=f"{len(by)} speakers detected: dubbed with one voice ({main})")
+        man["result_flags"] = sorted(set(man.get("result_flags", [])) | {"many_speakers_one_voice"})
+        print(f"  [voices] {len(by)} speakers > {max_voices}: one voice = {main} {by}", flush=True)
+    man["voice_policy"] = pol
 
 
 def speaker_references(units: list[dict], turns: list[dict], wav16: pathlib.Path, work: pathlib.Path) -> dict:
@@ -880,6 +895,9 @@ def main() -> int:
     ap.add_argument("--asr-hallu-filter", choices=["on", "off"], default="on", help="r7 spec 6.2: drop Whisper segments flagged as hallucinated (no_speech_prob > --asr-hallu-nsp, "
                     "stock subtitle / outro phrase, looped phrase) where Silero VAD covers < --asr-hallu-cov of the span (asr_guard.py); report in manifest asr.hallu_filter")
     ap.add_argument("--asr-hallu-nsp", type=float, default=0.6); ap.add_argument("--asr-hallu-cov", type=float, default=0.5)
+    ap.add_argument("--asr-hallu-cr", type=float, default=2.4, help="r13 6.2: compression_ratio above this = looped text (0 = off)")
+    ap.add_argument("--asr-hallu-lp", type=float, default=-1.0, help="r13 6.2: avg_logprob below this = low-confidence text")
+    ap.add_argument("--asr-hallu-novad", type=float, default=0.1, help="r13 6.2: Silero coverage of the span below this = no speech heard (0 = off)")
     ap.add_argument("--asr-compute", choices=["int8_float16", "float16"], default="int8_float16", help="faster-whisper compute type of the source ASR. On the RTX 5090 "
                     "(ctranslate2 4.8.2) int8_float16 loses case / punctuation and some words (05: 'тестим' -> 'с этим'), which moves the sentence segmentation; "
                     "float16 reproduces the r6v1 transcripts (made with int8_float16 on the r6 server)")
@@ -970,6 +988,8 @@ def main() -> int:
                     help="optimized backend: mediapipe = clean face stack (scripts/pilot/clean_face_stack.py, Apache-2.0 MediaPipe Face Landmarker in /venv/mediapipe) "
                          "for the router, LatentSync's crop / verify detections and the mouth-mask landmarks; InsightFace / RetinaFace loaders are blocked. "
                          "insightface = previous stack (non-commercial weights, needs DUB_ALLOW_NC=1). Default since 2026-10-16 (CLEAN-ONLY)")
+    ap.add_argument("--max-voices", type=int, default=int(os.environ.get("DUB_MAX_VOICES", "0")), help="spec 6.3: more dubbed speakers than this -> one voice "
+                    "+ result flag many_speakers_one_voice (0 = off; env DUB_MAX_VOICES)")
     ap.add_argument("--max-faces", type=int, default=2, help="spec 8.2: faces tracked per frame; with >= 2 faces only the active speaker's face (diarization <-> mouth motion) is lip-synced")
     ap.add_argument("--pose-precheck", choices=["on", "off"], default="on", help="spec 5.4: > 30 %% of face frames with |yaw| > 30 deg -> voice-only result (no lip-sync), flagged")
     ap.add_argument("--pose-gate-deg", type=float, default=0.0, help="spec 5.5 test: frames with |yaw| above this go to pass-through (held +-3 frames, eased by the crossfade); 0 = off")
@@ -985,7 +1005,7 @@ def main() -> int:
     global QWEN_GPU_LAYERS, QWEN_QUANT, VAD_DEVICE
     QWEN_GPU_LAYERS = a.qwen_gpu_layers; QWEN_QUANT = a.qwen_quant
     if a.vad_device: VAD_DEVICE = a.vad_device
-    ASR_OPTS.update(compute=a.asr_compute, hallu_filter=a.asr_hallu_filter, hallu_nsp=a.asr_hallu_nsp, hallu_cov=a.asr_hallu_cov, segments=a.asr_segments, seg_min=a.asr_seg_min,
+    ASR_OPTS.update(compute=a.asr_compute, hallu_filter=a.asr_hallu_filter, hallu_nsp=a.asr_hallu_nsp, hallu_cov=a.asr_hallu_cov, hallu_cr=a.asr_hallu_cr, hallu_lp=a.asr_hallu_lp, hallu_novad=a.asr_hallu_novad, segments=a.asr_segments, seg_min=a.asr_seg_min,
                     seg_max=a.asr_seg_max, seg_pause=a.asr_seg_pause, seg_db=a.asr_seg_db)
     os.environ["DUB_QA_WHISPER_COMPUTE"] = a.qa_whisper_compute
     os.environ["DUB_TTS_TEXT_NORM"] = a.tts_text_norm
@@ -1072,6 +1092,7 @@ def main() -> int:
 
         assign_speakers(units, turns)
         man["diarization"] = {"model": "pyannote/speaker-diarization-3.1", "turns": turns, "speakers": sorted({t["speaker"] for t in turns})}
+        voice_policy(units, man, a.max_voices)   # spec 6.3: > max_voices speakers -> one voice + a result flag (the turns stay for the face binding 8.2)
         print(f"  [diarization] {len(turns)} turns, speakers={man['diarization']['speakers']}", flush=True)
         man["tiny_unit_merge"] = {"enabled": False}
         if a.alignment == "burst" and a.tiny_unit_merge == "on":

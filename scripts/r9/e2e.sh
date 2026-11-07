@@ -30,11 +30,13 @@ esac
 [ -n "${E2E_LS_RATE:-}" ] && export LS_RATE=$E2E_LS_RATE   # r10 speed: LatentSync on k of every m frames (E2E_LS_RATE=2/3: face GPU −25 %, gated m03 / m19 / old03); half-rate (1/2) fails the flash gate
 [ -n "${R10_GEN_SPOOL:-}" ] && export R10_GEN_PY=scripts/r10/gen_client.py   # r10 speed: the generator job goes to the resident generator worker (scripts/r10/gen_worker.sh)
 export E2E_FX=${E2E_FX:-1}   # r10: the r9 + fix look (the management set, and the look the face speed stack was gated on) is the default; E2E_FX=0 = the plain r9 composite
-export DUB_ALLOW_NC=1 DUB_ALLOW_NC_BED=1  # CodeFormer + htdemucs: deliberate NC deviation, user-accepted (brief_r9_e2e.md); InsightFace is not used
+export DUB_ALLOW_NC=${DUB_ALLOW_NC:-1} DUB_ALLOW_NC_BED=${DUB_ALLOW_NC_BED:-1}  # CodeFormer + htdemucs: deliberate NC deviation, user-accepted (brief_r9_e2e.md); InsightFace is not used
+# r15 T: DUB_ALLOW_NC=0 = the commercially clean face (no CodeFormer: generator --codeformer off, composite without the CF detail layer);
+#        DUB_ALLOW_NC_BED=0 = no htdemucs (the Spleeter bed is the only output). Default unchanged (1 / 1); the clean Docker image sets 0 / 0.
 A=/workspace/dub/artifacts/r4a; B=/workspace/dub/artifacts/r4m; AT=r9_$ID; HT=r9_${ID}_htd; GT=r9g_$ID; FT=r9f_$ID
 W=$OUT/work; L=$OUT/logs; mkdir -p $W $L; T=$W/stages.tsv; : > $T; STATUS=SUCCESS; FL=(); ER=()
 export DUB_INPUTS=$W/in; rm -rf $DUB_INPUTS; mkdir -p $DUB_INPUTS
-echo "r9 e2e $ID E2E_REF=${E2E_REF:-same} E2E_FX=${E2E_FX:-0} commit $(git rev-parse --short HEAD) input $IN out $OUT $(date -Is)" | tee $L/e2e.log
+echo "r9 e2e $ID E2E_REF=${E2E_REF:-same} E2E_FX=${E2E_FX:-0} E2E_SYNC=${E2E_SYNC:-0} commit $(git rev-parse --short HEAD) input $IN out $OUT $(date -Is)" | tee $L/e2e.log
 nvidia-smi --query-gpu=timestamp,memory.used,utilization.gpu --format=csv,noheader,nounits -lms 100 > $W/nvsmi.csv 2>/dev/null & NV=$!
 export R10_JOB=$ID; NVML=${R10_NVML:-$W/nvml.jsonl}; NM=""   # r10: NVML sampler, 100 ms, per-process SM util tagged by R10_JOB (a worker passes its one shared R10_NVML file)
 [ -z "${R10_NVML:-}" ] && [ -x /venv/main/bin/python ] && { rm -f $NVML; /venv/main/bin/python scripts/r10/gpu_sampler.py --out $NVML > $L/gpu_sampler.log 2>&1 & NM=$!; }
@@ -42,13 +44,14 @@ trap 'kill $NV $NM 2>/dev/null' EXIT
 st() { echo -e "$1\t$(date +%s.%N)" >> $T; echo "== $ID stage $1 $(date +%T)" | tee -a $L/e2e.log; }   # stage start; the next st (or 'end') closes it
 fail() { FL+=("$1"); ER+=("$1: ${3:-}"); [ "$2" = ERROR ] && STATUS=ERROR || { [ $STATUS = SUCCESS ] && STATUS=$2; }; echo "== $ID $2: $1 ${3:-}" | tee -a $L/e2e.log; }   # fail <flag> <status> [detail]
 collect() { python scripts/r9/collect.py --id $ID --out $OUT --status $STATUS --flags "${FL[*]:-}" --errors "$(printf '%s\n' "${ER[@]:-}")" --stages $T --nvsmi $W/nvsmi.csv --precheck $W/precheck.json \
-    --audio $A/$AT --htd $A/$HT --face $B/$FT --input "$IN"; }
+    --audio $A/$AT --htd $A/$HT --face $B/$FT --gen $B/$GT --input "$IN"; }
 finish() {
   st end; kill $NV $NM 2>/dev/null; wait $NV $NM 2>/dev/null
   collect 2>&1 | tee -a $L/e2e.log
   [ -s $NVML ] && /venv/main/bin/python scripts/r10/gpu_sampler.py --summary $NVML --stages $T --job $ID \
     --vmin $(python3 -c "import json; print(json.load(open('$OUT/timing.json'))['video_min'] or 1)" 2>/dev/null || echo 1) > $OUT/gpu_time.json 2>> $L/gpu_sampler.log \
     && python3 -c "import json; t = json.load(open('$OUT/gpu_time.json'))['total']; print('== $ID NVML GPU-busy', t.get('gpu_busy_s_per_vmin'), 's/vmin, weighted', t.get('gpu_weighted_s_per_vmin'), ', wall', t.get('wall_s_per_vmin'))" | tee -a $L/e2e.log
+  STATUS=$(python3 -c "import json; print(json.load(open('$OUT/manifest.json'))['status'])" 2>/dev/null || echo $STATUS)   # r13: collect folds in the stage verdicts (11.3 2 % rule)
   echo "R9_E2E_DONE $ID $STATUS" | tee -a $L/e2e.log; exit 0
 }
 
@@ -65,11 +68,36 @@ if [[ " $PF " == *" rotated_source "* ]]; then   # the pipeline reads coded fram
     && { rm -f $DUB_INPUTS/$ID.*; mv $W/upright.mp4 $DUB_INPUTS/$ID.mp4; } || fail upright_failed PARTIAL_SUCCESS "rotation bake failed"
 fi
 SRC=$(ls $DUB_INPUTS/$ID.* | head -1)
+if [[ " $PF " == *" variable_fps "* ]]; then   # r13: a VFR phone clip -> constant rate at its AVERAGE rate (the same frame count, even timing), near-lossless;
+  st cfr                                     # the composite assumes a constant rate (edge suite: VFR 22.5 avg / 30 nominal -> face_comp_failed)
+  AFR=$(ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate -of csv=p=0 "$SRC")
+  ffmpeg -loglevel error -y -i "$SRC" -map 0:v:0 -map 0:a:0 -fps_mode cfr -r "$AFR" -c:v libx264 -preset medium -crf 12 -pix_fmt yuv420p -c:a copy $W/cfr.mp4 \
+    && { rm -f $DUB_INPUTS/$ID.*; mv $W/cfr.mp4 $DUB_INPUTS/$ID.mp4; SRC=$DUB_INPUTS/$ID.mp4; } || fail cfr_failed PARTIAL_SUCCESS "VFR -> constant frame rate failed"
+fi
+HIRES=""; FMS=${E2E_FACE_MAXSIDE:-1920}   # r15 T (edge res4k_vertical: face_gen_failed on 2160x3840): above FMS px on the long side the face stages
+if [ "$FMS" != 0 ] && [ "${E2E_LIPSYNC:-on}" != off ] && [[ " $PF " != *" no_face "* ]]; then   # (generator + composite) run on a copy scaled to FMS
+  IFS=, read -r SW SH _ < <(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 "$SRC")   # (r15: csv s=' ' fails to parse in ffprobe 6.1)
+  [ -n "${SW:-}" ] && [ -n "${SH:-}" ] || echo "WARN $ID face_res: could not read the source size, face work at full resolution" | tee -a $L/e2e.log   # (the audio stage reads it too:
+  if [ "${SW:-0}" -gt "$FMS" ] || [ "${SH:-0}" -gt "$FMS" ]; then                                                       # audio stream-copied, identical);
+    st face_res                                                                                                            # scripts/r15/hires_merge.py then adds
+    HIRES=$W/hires_src.${SRC##*.}; mv "$SRC" $HIRES                                                                        # the composite's change onto the
+    if [ "$SW" -ge "$SH" ]; then SCL="scale=$FMS:-2:flags=lanczos"; else SCL="scale=-2:$FMS:flags=lanczos"; fi                    # full-res source frames
+    if ffmpeg -loglevel error -y -i $HIRES -map 0:v:0 -map 0:a:0 -vf $SCL -c:v libx264 -preset medium -crf 12 -pix_fmt yuv420p -c:a copy $DUB_INPUTS/$ID.mp4; then
+      SRC=$DUB_INPUTS/$ID.mp4; FL+=("face_work_downscaled")
+    else rm -f $DUB_INPUTS/$ID.*; mv $HIRES "$SRC"; HIRES=""; fail face_res_failed PARTIAL_SUCCESS "downscale for the face stages failed"; fi
+  fi
+fi
 
 if [ -n "${R10_HEAVY_LOCK:-}" ]; then st wait_heavy; exec 8>"$R10_HEAVY_LOCK"; flock 8; fi   # r10 worker: audio + sep + face_gen (the heavy GPU stages) hold ONE exclusive lock; the wait is its own stage
+LONG_S=${E2E_LONG_AUDIO_S:-120}   # r15 T (long5 / long10: the in-process retake ran out of VRAM next to the resident pipeline models, 27-31 GB): above this
+DUR_S=$(python3 -c "import json; print(json.load(open('$W/precheck.json'))['probe']['duration_s'])" 2>/dev/null || echo 0)   # many seconds the TTS stage (retake ->
+if [ "$LONG_S" != 0 ] && python3 -c "import sys; sys.exit(0 if float(sys.argv[1]) > float(sys.argv[2]) else 1)" "$DUR_S" "$LONG_S"; then   # clause -> burst_align)
+  export R9_ONEPROC=off R9_CHAIN_INPROC=off R8_STAGE_WAIT_VRAM=${R8_STAGE_WAIT_VRAM:-4096} DUB_RETAKE_BATCH_UNITS=${DUB_RETAKE_BATCH_UNITS:-4} R8_STAGE_TTS_BATCH=${R8_STAGE_TTS_BATCH:-0}; FL+=("audio_stage_own_process")   # (+ the stage takes one by one: a batched round of long face-aware takes = +8 GB -> OOM)   # runs in its own process after the pipeline exits (r8_tts_stage.py: the pre-r9-speed-L path,
+fi                                                                               # the same stage code, full GPU); shorter clips unchanged (in-process, user-accepted 30.10)
 st audio   # one id, from the raw input; its own tag so nothing of another run is reused (the per-id caches $A/sep/<id> are cleared)
 rm -rf $A/sep/$ID $A/$AT $A/${AT}src $A/${AT}pre
 export DUB_SEP_STEMS=/workspace/dub/r8a
+[ "$DUB_ALLOW_NC_BED" = 1 ] || { R9_SEP_OVERLAP=off; FL+=("bed_spleeter_only"); }   # r15 T: clean bed
 OVL=${R9_SEP_OVERLAP:-on}   # r9 speed O: the htdemucs stems while the audio stage runs, the demucs remix in parallel with the Spleeter one (same commands = same files)
 if [ "$OVL" = on ]; then
   rm -rf $DUB_SEP_STEMS/stems_htdemucs/$ID $A/$HT
@@ -79,8 +107,11 @@ fi
 bash scripts/r8/r8_audio.sh $AT $ID > $L/audio.log 2>&1
 unset R9_ON_MIXSRC
 AD=$A/$AT/$ID
-[ -f $AD/final_mix_aac.m4a ] && [ -f $AD/dubbed_16k.wav ] || { fail audio_failed ERROR "see logs/audio.log"; finish; }
+if ! { [ -f $AD/final_mix_aac.m4a ] && [ -f $AD/dubbed_16k.wav ]; }; then   # r13: a clip with no speech (silence / music only) is its own, clear ERROR
+  if grep -qs "ASR produced no speech units" $A/${AT}pre/runs/$ID.log $L/audio.log; then fail no_speech ERROR "no speech found in the audio: nothing to dub"
+  else fail audio_failed ERROR "see logs/audio.log"; fi; finish; fi
 
+if [ "$DUB_ALLOW_NC_BED" = 1 ]; then   # r15 T: the whole htdemucs bed only with the NC bed allowed
 st sep   # htdemucs: stems on the GPU (models loaded once), then the sepH8p remix of the SAME dub on the CPU
 if [ "$OVL" = on ] && timeout 900 bash scripts/r9/sep_overlap.sh wait $W; then :   # the demucs mix was made during the audio stage
 elif [ "$OVL" = on ] && [ -f $W/sepmix.done ]; then fail htdemucs_stems_failed PARTIAL_SUCCESS "see logs/sep_stems.log"
@@ -91,9 +122,25 @@ rm -rf $DUB_SEP_STEMS/stems_htdemucs/$ID $A/$HT
 SEP_SRC=$AT SEP_PREV=$AT bash scripts/r8/sep_mix.sh $HT htdemucs stems "--bed-pauses source --bed-noise-back on --src-duck-db -3" $ID > $L/sep_mix.log 2>&1
 fi
 [ -f $A/$HT/$ID/final_mix_aac.m4a ] || fail htdemucs_mix_failed PARTIAL_SUCCESS "see logs/sep_mix.log: no demucs file"
+fi
+
+if [ -n "${DUB_POLYGLOT:-}" ]; then   # r13 8d / non-English target: the units the map assigns another language re-voiced in place on the accepted
+  st polyglot                        # English timing (scripts/r13/polyglot.py), BEFORE the face (the lips follow the new speech); default off
+  if ! python scripts/r13/polyglot.py --run $AD $([ -d $A/$HT/$ID ] && echo --htd $A/$HT/$ID) > $L/polyglot.log 2>&1; then
+    for d in $AD $A/$HT/$ID; do for f in $d/en_*; do [ -f "$f" ] && { b=$(basename $f); rm -f $d/${b#en_}; cp $f $d/${b#en_}; }; done; done
+    fail polyglot_failed PARTIAL_SUCCESS "see logs/polyglot.log: the English dub kept"; fi
+fi
+
+if [ "${DUB_PACE_FIX:-0}" = 1 ] && [ -z "${DUB_POLYGLOT:-}" ]; then   # r13 7.3 (default off): a phrase heard as rushed (speech rate > 1.25 x the video median,
+  st pace_fix                  # or its tempo outside x0.75-1.25) is re-said shorter at natural pace in the same slot; the rest of the mix stays bit-identical
+  if ! python scripts/r13/pace_fix.py --run $AD $([ -d $A/$HT/$ID ] && echo --htd $A/$HT/$ID) > $L/pace_fix.log 2>&1; then
+    for d in $AD $A/$HT/$ID; do for f in $d/pre_pace_*; do [ -f "$f" ] && { b=$(basename $f); rm -f $d/${b#pre_pace_}; cp $f $d/${b#pre_pace_}; }; done; done
+    fail pace_fix_failed PARTIAL_SUCCESS "see logs/pace_fix.log: the accepted dub kept"; fi
+fi
 
 VID=""
-if [[ " $PF " == *" no_face "* ]]; then FL+=("face_skipped_no_face")
+if [ "${E2E_LIPSYNC:-on}" = off ]; then FL+=("lipsync_off_by_request")   # r13 interface: the user asked for a voice-only dub
+elif [[ " $PF " == *" no_face "* ]]; then FL+=("face_skipped_no_face")
 else
   st face_gen
   rm -rf $B/$GT $B/$FT
@@ -107,22 +154,60 @@ else
       python scripts/quality/r3_master_timing.py --src $SRC --master $WV/master_25fps.mp4 --vf fps=25 --out $TJ && python scripts/quality/r3_source_lm.py --src $SRC --timing $TJ --out $SL \
         && python scripts/r9/r9_source_rigid.py --src $SRC --source-lm $SL ) > $L/srcprep.log 2>&1 & SP=$!
   fi
-  AUDIO=$A/$AT TAG=$GT SKIP_SCORE=1 VIDEO_EXTRA="--codeformer optimized --codeformer-w 1.0 --steps 10 --steps-silent 20 --codeformer-parse off --codeformer-batch 16 $REFX" \
-    bash scripts/r7/r7_e2e.sh $ID > $L/face_gen.log 2>&1
-  [ -n "$SP" ] && wait $SP
+  export R13_GPU_DONE_FILE=$W/gen_gpu_done; rm -f $R13_GPU_DONE_FILE   # read by the resident generator only (R10_GEN_EARLY_RELEASE)
+  CFX="--codeformer optimized --codeformer-w 1.0 --codeformer-parse off --codeformer-batch 16"; CFDV=self   # r15 T: DUB_ALLOW_NC=0 -> the clean face
+  [ "$DUB_ALLOW_NC" = 1 ] || { CFX="--codeformer off"; CFDV=""; FL+=("face_clean_no_codeformer"); }
+  AUDIO=$A/$AT TAG=$GT SKIP_SCORE=1 VIDEO_EXTRA="$CFX --steps 10 --steps-silent 20 $REFX" \
+    bash scripts/r7/r7_e2e.sh $ID > $L/face_gen.log 2>&1 & GENP=$!
+  if [ "${R10_GEN_EARLY_RELEASE:-0}" = 1 ] && [ -n "${R10_HEAVY_LOCK:-}" ]; then   # r13: the resident generator signals the end of its GPU work (scripts/r10/gen_worker.py)
+    while kill -0 $GENP 2>/dev/null; do [ -f $W/gen_gpu_done ] && { flock -u 8; echo "== $ID heavy lock released early: generator GPU done $(date +%T)" | tee -a $L/e2e.log; break; }; sleep 0.5; done
+  fi
+  wait $GENP
+  if [ -n "$SP" ]; then [ -f $B/$GT/work_${ID}_$GT/${ID}_${GT}_25fps.manifest.json ] || kill $SP 2>/dev/null; wait $SP 2>/dev/null; fi   # r13: no generator output -> stop the source prep (it would wait 1 h for the master)
   if [ -f $B/$GT/work_${ID}_$GT/${ID}_${GT}_25fps.manifest.json ]; then
     [ -n "${R10_HEAVY_LOCK:-}" ] && flock -u 8   # r10 worker: the next job's audio + face_gen may start
     if [ -n "${R10_COMP_GATE:-}" ]; then st wait_comp; touch $W/comp_ready; until [ -f $W/comp_go ]; do sleep 1; done; fi   # r10 worker: the composite (~12 GB) starts only once no other job is in its audio stage (~30 GB)
     st face_comp
     [ "$E2E_FX" = 1 ] && export REP=1 CFD_LABEL=ia04 CFD_ARGS="--inner-alpha 0.4 ${CFD_EXTRA:-}"   # r9: short mouth glitches re-drawn in the layer, long ones -> smooth source fallback; CodeFormer detail at 0.4 inside the mouth
     [ "$E2E_FX" = 1 ] || { [ -n "${CFD_EXTRA:-}" ] && export CFD_ARGS="${CFD_ARGS:-} $CFD_EXTRA"; }
-    SKIP_SCORE=1 TAG=$FT SRC_TAG=$GT CFD=self SR=srt1 SR_EXTRA="--batch 8 --mask down2" FB=fb7 FB_ARGS="$(cat reports/experiments/r8-face/fb7.args)" \
+    FBL=fb7; FBA="$(cat reports/experiments/r8-face/fb7.args)"; SYX=""
+    case "${E2E_SYNC:-0}" in   # r12: the r11 composite sync fix (reports/experiments/r11-composite-sync): k5 (user: "реально лучше") / k7 (k5 without the colour-match exclusion, gate-safer); needs E2E_FX=1 (the layer repair)
+      1|k5|k7) FBL=fb7s; FBA="$FBA --open-gate 0.04 --dark-transient on --thr-wash-lips 0.2"; export REP_ARGS="--spikes off ${REP_ARGS:-}" REP_LABEL=rep2s
+               SYX="--mouth-region 0.55"; [ "$E2E_SYNC" = k7 ] || SYX="$SYX --cm-mouth-excl 0.5";;
+    esac
+    if [ "$DUB_ALLOW_NC" != 1 ] && [ "${DUB_CLEAN_LIPCON:-0}" = 1 ]; then   # r15 F2 (agent F, experiment/r15-repair 6168df3; eye 05.11: "no CF + adaptive lipcon ~ prod CF"):
+      LCX="--thr-lipcon 0.45 --lipcon-mode adaptive --lipcon-rel 0.6 --lipcon-win 25 --lipcon-max-frac 0.03"   # the clean face: a lip-vs-skin contrast dip
+      FBL=${FBL}la; FBA="$FBA $LCX"; export REP_LABEL=${REP_LABEL:-rep2}la REP2_FB_ARGS="$(cat reports/experiments/r8-face/fb7.args) $LCX"   # (< 0.45 of the source AND < 0.6 x
+      FL+=("face_clean_lipcon")   # the video's +-1 s median, <= 3 % of the frames) is re-drawn by the layer repair, re-scored after it (2nd pass); CPU only. Default OFF until F's gates pass
+    fi
+    SKIP_SCORE=1 TAG=$FT SRC_TAG=$GT CFD=$CFDV SR=srt1 SR_EXTRA="--batch 8 --mask down2" FB=$FBL FB_ARGS="$FBA" EXTRA="--tex-tau 1000 --tex-sigma 2.5 $SYX" \
       bash scripts/r7/r7_m7_comp.sh $ID > $L/face_comp.log 2>&1
     [ -f $B/$FT/${ID}_$FT.mp4 ] && VID=$B/$FT/${ID}_$FT.mp4 || fail face_comp_failed PARTIAL_SUCCESS "see logs/face_comp.log: source picture used"
   else fail face_gen_failed PARTIAL_SUCCESS "see logs/face_gen.log: source picture used"; fi
 fi
 [ -n "${R10_HEAVY_LOCK:-}" ] && flock -u 8
 [ -n "$VID" ] || VID=$SRC
+if [ -n "$HIRES" ]; then   # r15 T: the face work was downscaled: back to the source resolution
+  if [ "$VID" = "$SRC" ]; then VID=$HIRES   # no face result: the full-res source picture
+  else
+    st face_hires
+    if python scripts/r15/hires_merge.py --hi $HIRES --lo-src $SRC --lo-comp $VID --out $W/face_hires.mp4 --json $W/face_hires.json --threads ${HIRES_THREADS:-16} > $L/face_hires.log 2>&1; then
+      VID=$W/face_hires.mp4; tail -1 $L/face_hires.log | tee -a $L/e2e.log
+    else VID=$HIRES; fail face_hires_failed PARTIAL_SUCCESS "see logs/face_hires.log: source picture used"; fi
+  fi
+fi
+
+SUBS=${E2E_SUBS:-off}; WM=${E2E_WATERMARK:-}   # r13 spec block 9: burned subtitles (ASS, word timing on the stretched dub, 4 styles + karaoke) and / or a watermark; default off
+if [ "$SUBS" != off ] || [ -n "$WM" ]; then   # E2E_SUBS=on E2E_SUBS_LANG=dub|src E2E_SUBS_STYLE=white|yellow|trendy|outline E2E_SUBS_KARAOKE=on|off; E2E_WATERMARK=<png>|text:DabAI E2E_WM_CORNER E2E_WM_OPACITY
+  st subs   # CPU (libass + libx264 at the source size / fps); the picture is re-encoded ONCE, then muxed with each bed below
+  SA=(--no-subs)
+  if [ "$SUBS" != off ]; then MAN=$(ls $AD/${ID}_*.manifest.json 2>/dev/null | head -1)
+    SA=(--manifest "$MAN" --lang ${E2E_SUBS_LANG:-dub} --style ${E2E_SUBS_STYLE:-yellow} --karaoke ${E2E_SUBS_KARAOKE:-on}); fi
+  [ -n "$WM" ] && SA+=(--watermark "$WM" --wm-corner ${E2E_WM_CORNER:-br} --wm-opacity ${E2E_WM_OPACITY:-0.6})
+  if SUBS_THREADS=${SUBS_THREADS:-8} python scripts/r7/r7_subs.py burn --video $VID "${SA[@]}" --out $W/final_subs.mp4 > $L/subs.log 2>&1; then
+    VID=$W/final_subs.mp4; [ -f $W/final_subs.mp4.ass ] && cp $W/final_subs.mp4.ass $OUT/${ID}.ass   # the ASS for a player / the backend (soft subs)
+  else fail subs_failed PARTIAL_SUCCESS "see logs/subs.log: the output has no subtitles / watermark"; fi
+fi
 
 st mux   # the picture rendered once, muxed with each bed (stream copy: within the pair the video stream is bit-identical)
 for v in demucs:$A/$HT/$ID/final_mix_aac.m4a spleeter:$AD/final_mix_aac.m4a; do

@@ -1,0 +1,85 @@
+{
+ "lang": "en",
+ "rows": [
+  {
+   "i": 0,
+   "text": "Neometria Prime Finish.",
+   "wav": "/workspace/dub/r13s/lang/wav/en_00.wav",
+   "dur_s": 2.2,
+   "gen_s": 0.87,
+   "asr": "Neometria Prime Finish",
+   "cer": 0.0,
+   "s_per_char": 0.1
+  },
+  {
+   "i": 1,
+   "text": "we also have a sauna complex on the premises, everything is ready for the first steam baths in 3-4 days, literally",
+   "wav": "/workspace/dub/r13s/lang/wav/en_01.wav",
+   "dur_s": 6.52,
+   "gen_s": 1.67,
+   "asr": "We also have a sauna complex on the premises.  Everything is ready for the first steam bus in 3-4 days, literally.",
+   "cer": 0.027,
+   "s_per_char": 0.0587
+  },
+  {
+   "i": 2,
+   "text": "friends, well, hello to everyone, I'm recording the first video, an introductory one, to get to know you all",
+   "wav": "/workspace/dub/r13s/lang/wav/en_02.wav",
+   "dur_s": 6.08,
+   "gen_s": 1.54,
+   "asr": "Friends, well hello to everyone, I'm recording the first video, an introductory one to get to know you all.",
+   "cer": 0.0,
+   "s_per_char": 0.0596
+  },
+  {
+   "i": 3,
+   "text": "we will make a video with the glasses, we will look again, test how our application will work with this",
+   "wav": "/workspace/dub/r13s/lang/wav/en_03.wav",
+   "dur_s": 5.16,
+   "gen_s": 1.35,
+   "asr": "we will make a video with the glasses we will look again test how our application will work with this",
+   "cer": 0.0,
+   "s_per_char": 0.0511
+  },
+  {
+   "i": 4,
+   "text": "Let's test out this video recording format as well.",
+   "wav": "/workspace/dub/r13s/lang/wav/en_04.wav",
+   "dur_s": 2.84,
+   "gen_s": 0.85,
+   "asr": "Let's test out this video recording format as well.",
+   "cer": 0.0,
+   "s_per_char": 0.058
+  },
+  {
+   "i": 5,
+   "text": "Let's see what the repair offered by the developer includes.",
+   "wav": "/workspace/dub/r13s/lang/wav/en_05.wav",
+   "dur_s": 3.16,
+   "gen_s": 0.93,
+   "asr": "Let's see what the repair offered by the developer includes.",
+   "cer": 0.0,
+   "s_per_char": 0.0545
+  },
+  {
+   "i": 6,
+   "text": "already the steam rooms will start here now I will show you the pool we have all sorts of things here zone for",
+   "wav": "/workspace/dub/r13s/lang/wav/en_06.wav",
+   "dur_s": 5.44,
+   "gen_s": 1.42,
+   "asr": "Already the steam rooms will start here.  Now I will show you the pool.  We have all sorts of things here, zone 4.",
+   "cer": 0.0273,
+   "s_per_char": 0.0495
+  },
+  {
+   "i": 7,
+   "text": "more or less, what I want to say is that I'm glad to meet you, glad for the cooperation, today is Friday, the 28th.",
+   "wav": "/workspace/dub/r13s/lang/wav/en_07.wav",
+   "dur_s": 6.16,
+   "gen_s": 1.57,
+   "asr": "More or less what I want to say is that I'm glad to meet you, glad for the cooperation.  Today is Friday the 28th.",
+   "cer": 0.0,
+   "s_per_char": 0.0565
+  }
+ ]
+}

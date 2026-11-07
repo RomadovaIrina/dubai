@@ -1,0 +1,85 @@
+{
+ "lang": "no",
+ "rows": [
+  {
+   "i": 0,
+   "text": "Prime-utsmykking fra Neometria.",
+   "wav": "/workspace/dub/r13s/lang_guard/wav/no_00.wav",
+   "dur_s": 2.8,
+   "gen_s": 0.83,
+   "asr": "Prime utsmykking fra Neometria.",
+   "cer": 0.0345,
+   "s_per_char": 0.0966
+  },
+  {
+   "i": 1,
+   "text": "også på området har vi en badestasjon, alt er klar for de første badene innen 3-4 dager, nesten umiddelbart",
+   "wav": "/workspace/dub/r13s/lang_guard/wav/no_01.wav",
+   "dur_s": 6.92,
+   "gen_s": 1.71,
+   "asr": "Også på området har vi en badestasjon. Alt er klar for de første badene innen 3-4 dager, nesten umiddelbart.",
+   "cer": 0.0,
+   "s_per_char": 0.0665
+  },
+  {
+   "i": 2,
+   "text": "vennene, hei til alle, jeg lager første video, en presentasjonsvideo for å gjøre kjent meg like nok",
+   "wav": "/workspace/dub/r13s/lang_guard/wav/no_02.wav",
+   "dur_s": 6.72,
+   "gen_s": 1.64,
+   "asr": "Vennene, hei til alle. Jeg lager første video, en presentasjonsvideo for å gjøre kjent meg like nok.",
+   "cer": 0.0,
+   "s_per_char": 0.07
+  },
+  {
+   "i": 3,
+   "text": "vi lager et video med glass, så ser vi igjen, tester hvordan vårt program vil fungere på dette",
+   "wav": "/workspace/dub/r13s/lang_guard/wav/no_03.wav",
+   "dur_s": 5.24,
+   "gen_s": 1.35,
+   "asr": "Vi lager et video med glass, så ser vi igjen og tester hvordan vårt program vil fungere på dette.",
+   "cer": 0.0326,
+   "s_per_char": 0.057
+  },
+  {
+   "i": 4,
+   "text": "La oss teste denne formen for videoopptak også.",
+   "wav": "/workspace/dub/r13s/lang_guard/wav/no_04.wav",
+   "dur_s": 3.6,
+   "gen_s": 1.01,
+   "asr": "La oss teste denne formen for videoopptak også.",
+   "cer": 0.0,
+   "s_per_char": 0.0783
+  },
+  {
+   "i": 5,
+   "text": "La oss se, hva en rensking inkluderer som anbefales av byggekontrakten. Note: There seems to be a slight misunderstanding in the original request, as \"rensking\" (cleaning) does not fit the context. The correct translation should be: La oss se, hva en reparasjon inkluderer som foreslås av byggekontrakten.",
+   "wav": "/workspace/dub/r13s/lang_guard/wav/no_05.wav",
+   "dur_s": 18.28,
+   "gen_s": 4.27,
+   "asr": "La oss se hva en rensking inkluderer som anbefales av byggekontrakten.  Note, there seems to be a slight misunderstanding in the original request as rensking, cleaning.  Do note feat the context.  The correct translation should be, la oss se hva en reparasjon inkluderer som foreslås av byggekontrakten.",
+   "cer": 0.0171,
+   "s_per_char": 0.0624
+  },
+  {
+   "i": 6,
+   "text": "allerede vil det begynne å boile her nå skal jeg vise deg bassenen her har vi forskjellige ting her zone for",
+   "wav": "/workspace/dub/r13s/lang_guard/wav/no_06.wav",
+   "dur_s": 5.48,
+   "gen_s": 1.4,
+   "asr": "Allerede vil det begynne å boile her. Nå skal jeg vise deg bassene. Her har vi forskjellige ting her zone for.",
+   "cer": 0.0093,
+   "s_per_char": 0.0507
+  },
+  {
+   "i": 7,
+   "text": "mer i alt det som jeg vil si er jeg glad med å møtes med dere og er glad over samarbeidet i dag er fredag 28",
+   "wav": "/workspace/dub/r13s/lang_guard/wav/no_07.wav",
+   "dur_s": 7.44,
+   "gen_s": 1.83,
+   "asr": "Mer i alt det som jeg vil si er jeg glad med å møtes med dere, og er glad over samarbeidet i dag er fredag 1.80.10.",
+   "cer": 0.037,
+   "s_per_char": 0.0689
+  }
+ ]
+}

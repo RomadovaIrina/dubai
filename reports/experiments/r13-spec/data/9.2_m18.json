@@ -1,0 +1,41 @@
+{
+ "subs": {
+  "sub_words": 53,
+  "ref_words": 55,
+  "matched": 51,
+  "matched_share": 0.962,
+  "median_ms": 209,
+  "p90_ms": 518,
+  "within_150ms": 0.118,
+  "within_300ms": 0.745
+ },
+ "subs_methods": {
+  "ctc": 4
+ },
+ "chars_only": {
+  "sub_words": 53,
+  "ref_words": 55,
+  "matched": 51,
+  "matched_share": 0.962,
+  "median_ms": 173,
+  "p90_ms": 340,
+  "within_150ms": 0.392,
+  "within_300ms": 0.843
+ },
+ "naive_no_stretch": {
+  "sub_words": 53,
+  "ref_words": 55,
+  "matched": 51,
+  "matched_share": 0.962,
+  "median_ms": 167,
+  "p90_ms": 400,
+  "within_150ms": 0.451,
+  "within_300ms": 0.804
+ },
+ "placements": 4,
+ "atempo": {
+  "min": 0.95,
+  "max": 1.007,
+  "share_ne_1": 0.75
+ }
+}

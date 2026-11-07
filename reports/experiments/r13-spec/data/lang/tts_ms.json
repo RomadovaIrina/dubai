@@ -1,0 +1,85 @@
+{
+ "lang": "ms",
+ "rows": [
+  {
+   "i": 0,
+   "text": "Penyelenggaraan Prime daripada Neometria.",
+   "wav": "/workspace/dub/r13s/lang/wav/ms_00.wav",
+   "dur_s": 2.88,
+   "gen_s": 0.83,
+   "asr": "Penyelinggaran Prima Daripada Neometria",
+   "cer": 0.075,
+   "s_per_char": 0.072
+  },
+  {
+   "i": 1,
+   "text": "juga di kawasan tersebut kami mempunyai kompleks basuhan dan segala sesuatu sudah siap untuk pertama kali mandi uap dalam masa 3-4 hari sahaja",
+   "wav": "/workspace/dub/r13s/lang/wav/ms_01.wav",
+   "dur_s": 11.6,
+   "gen_s": 2.77,
+   "asr": "Yuga di kawasan tersebut kami mempunyai kompleks bazuhan dan segala sesuatu suda siap untuk pertama kalimandi wab dalam masa 3.4 hari sahaja.",
+   "cer": 0.0426,
+   "s_per_char": 0.0823
+  },
+  {
+   "i": 2,
+   "text": "kawan-kawan hai semua saya akan menghasilkan video pertama ini yang bersifat penerangan supaya kita dapat berkenaan",
+   "wav": "/workspace/dub/r13s/lang/wav/ms_02.wav",
+   "dur_s": 8.48,
+   "gen_s": 2.07,
+   "asr": "Kawan-kawan, hai semua saya akan menghasilkan video pertama ini yang bersifat penerangan supaya kita dapat berkenan.",
+   "cer": 0.0088,
+   "s_per_char": 0.0744
+  },
+  {
+   "i": 3,
+   "text": "kita buat video dengan kacamata, kita lihat lagi, kita uji lagi bagaimana aplikasi kita akan berfungsi untuk ini",
+   "wav": "/workspace/dub/r13s/lang/wav/ms_03.wav",
+   "dur_s": 9.56,
+   "gen_s": 2.29,
+   "asr": "Kita buat video dengan kakak mata, kita lihat lagi, kita uji lagi bagaimana aplikasi kita akan berfungsi untuk ini.",
+   "cer": 0.0273,
+   "s_per_char": 0.0869
+  },
+  {
+   "i": 4,
+   "text": "Mari kita uji format pengambilan video yang begini lagi.",
+   "wav": "/workspace/dub/r13s/lang/wav/ms_04.wav",
+   "dur_s": 4.36,
+   "gen_s": 1.18,
+   "asr": "Mari kita uji format pengambilan video yang begini lagi.",
+   "cer": 0.0,
+   "s_per_char": 0.0793
+  },
+  {
+   "i": 5,
+   "text": "Mari kita lihat apa yang termasuk dalam perbaikan yang diusulkan oleh pembina.",
+   "wav": "/workspace/dub/r13s/lang/wav/ms_05.wav",
+   "dur_s": 5.64,
+   "gen_s": 1.44,
+   "asr": "Mari kita lihat apa yang termasuk ke dalam perbaikan yang diuzulkan oleh pembina.",
+   "cer": 0.0519,
+   "s_per_char": 0.0732
+  },
+  {
+   "i": 6,
+   "text": "ini sudah mulakan pemanasan di sini sekarang akan tunjukkan kolam renang beginilah apa yang kita ada di sini benda-benda berbeza zon untuk",
+   "wav": "/workspace/dub/r13s/lang/wav/ms_06.wav",
+   "dur_s": 10.04,
+   "gen_s": 2.42,
+   "asr": "Ini sudah mulakan temanasan di sini sekarang.  Akan tunjukkan kolam renang beginilah apa yang kita ada di sini benda-benda berbesar untuk.",
+   "cer": 0.0438,
+   "s_per_char": 0.0733
+  },
+  {
+   "i": 7,
+   "text": "lebih banyak secara keseluruhan apa yang saya mahu katakan adalah bahagia bertemu dengan anda bahagia bekerjasama hari ini adalah Jumaat 28",
+   "wav": "/workspace/dub/r13s/lang/wav/ms_07.wav",
+   "dur_s": 10.16,
+   "gen_s": 2.44,
+   "asr": "Lebih banyak sekarang keseluruhan apa yang saya mahu katakan adalah bahagia bertemu dengan anda bahagia bekerja sama hari ini adalah Jumat Isyantaristo.",
+   "cer": 0.1151,
+   "s_per_char": 0.0731
+  }
+ ]
+}

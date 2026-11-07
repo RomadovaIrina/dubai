@@ -1,0 +1,85 @@
+{
+ "lang": "sv",
+ "rows": [
+  {
+   "i": 0,
+   "text": "Prime-upplägg från Neometria.",
+   "wav": "/workspace/dub/r13s/lang_guard/wav/sv_00.wav",
+   "dur_s": 2.68,
+   "gen_s": 0.76,
+   "asr": "Prima upplägg från neometria.",
+   "cer": 0.0741,
+   "s_per_char": 0.0993
+  },
+  {
+   "i": 1,
+   "text": "Vi har också en badrumsanläggning på området, allt är redo för de första baden inom 3-4 dagar, rentav.",
+   "wav": "/workspace/dub/r13s/lang_guard/wav/sv_01.wav",
+   "dur_s": 7.72,
+   "gen_s": 1.89,
+   "asr": "Vi har också en badrumsanläggning på området. Allt är redo för det första baden inom 30 fotodagar rent av.",
+   "cer": 0.0714,
+   "s_per_char": 0.0788
+  },
+  {
+   "i": 2,
+   "text": "vänner hej alla det är mitt första video en presentation för att komma att känna varandra大概是这样的意思，但是瑞典语的翻译需要更准确地表达原意，以下是更准确的翻译： vänner, hej till alla! Detta är mitt första inlägg, en introduktionsvideo för att presentera mig och komma att känna varandra.",
+   "wav": "/workspace/dub/r13s/lang_guard/wav/sv_02.wav",
+   "dur_s": 14.96,
+   "gen_s": 3.43,
+   "asr": "Vänner, hej alla! Det här är mitt första videopresentation för att komma att känna varandra.  Izu, izu, vänner, hej till alla!  Detta är mitt första inlägg, en introduktionsvideo för att presentera mig och komma att känna varandra.",
+   "cer": 0.1741,
+   "s_per_char": 0.0606
+  },
+  {
+   "i": 3,
+   "text": "vi gör ett video med glasögon tittar igen testar hur vårt program fungerar på detta",
+   "wav": "/workspace/dub/r13s/lang_guard/wav/sv_03.wav",
+   "dur_s": 6.0,
+   "gen_s": 1.52,
+   "asr": "Vi gör ett video med Glassagon, tittar igen, testar hur vårt program fungerar på detta.",
+   "cer": 0.0241,
+   "s_per_char": 0.0723
+  },
+  {
+   "i": 4,
+   "text": "Låt oss testa just den här videouppfångningsformatet.",
+   "wav": "/workspace/dub/r13s/lang_guard/wav/sv_04.wav",
+   "dur_s": 3.8,
+   "gen_s": 1.02,
+   "asr": "Låt oss testa just den här videoformatet.",
+   "cer": 0.2308,
+   "s_per_char": 0.0731
+  },
+  {
+   "i": 5,
+   "text": "Låt oss titta på vad som inkluderas i reparationsarbete som byggföretaget erbjuder.",
+   "wav": "/workspace/dub/r13s/lang_guard/wav/sv_05.wav",
+   "dur_s": 5.64,
+   "gen_s": 1.44,
+   "asr": "Låt oss titta på vad som inkluderas i reparationsarbete som byggföretaget erbjuder.",
+   "cer": 0.0,
+   "s_per_char": 0.0688
+  },
+  {
+   "i": 6,
+   "text": "redan här börjar dampningen nu ska jag visa på badet sådana här saker har vi här olika saker zon för",
+   "wav": "/workspace/dub/r13s/lang_guard/wav/sv_06.wav",
+   "dur_s": 8.04,
+   "gen_s": 1.96,
+   "asr": "Redan här börjar dampningen nu ska jag visa på badet sådana här saker har vi här olika saker som för.",
+   "cer": 0.02,
+   "s_per_char": 0.0804
+  },
+  {
+   "i": 7,
+   "text": "mer i allmänhet vad jag vill säga är att jag är glad över att träffas med er och glad över samarbetet idag är fredagen den 28:e",
+   "wav": "/workspace/dub/r13s/lang_guard/wav/sv_07.wav",
+   "dur_s": 10.24,
+   "gen_s": 2.42,
+   "asr": "Med i allmänhet vad jag vill säga är att jag är glad över att träffas med er och glad över samarbetet idag är flädagen den tolimentus i Kina.",
+   "cer": 0.1508,
+   "s_per_char": 0.0813
+  }
+ ]
+}

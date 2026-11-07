@@ -1,0 +1,1460 @@
+{
+ "run": "/workspace/dub/artifacts/r4a/r9_old02/old02",
+ "corridor": [
+  0.75,
+  1.25
+ ],
+ "placements": 25,
+ "measured": 21,
+ "tempo_p5_p50_p95": [
+  0.779,
+  0.894,
+  1.176
+ ],
+ "phrase_violations": [
+  {
+   "unit": 3,
+   "placed": [
+    28.8,
+    30.94
+   ],
+   "text": "we have a Finnish sauna,",
+   "atempo_recorded": 0.8955,
+   "close_inner": [
+    [
+     30.04,
+     0.22
+    ]
+   ],
+   "clause_tempo": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 6.55,
+   "matched_words": "5/5",
+   "tempo_span": 0.577,
+   "tempo": 0.677,
+   "local_max": [
+    0.764,
+    28.87,
+    30.02,
+    "we have a finnish"
+   ],
+   "local_min": [
+    0.672,
+    29.07,
+    30.78,
+    "have a finnish sauna"
+   ]
+  }
+ ],
+ "span_violations": [
+  {
+   "unit": 3,
+   "placed": [
+    28.8,
+    30.94
+   ],
+   "text": "we have a Finnish sauna,",
+   "atempo_recorded": 0.8955,
+   "close_inner": [
+    [
+     30.04,
+     0.22
+    ]
+   ],
+   "clause_tempo": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 6.55,
+   "matched_words": "5/5",
+   "tempo_span": 0.577,
+   "tempo": 0.677,
+   "local_max": [
+    0.764,
+    28.87,
+    30.02,
+    "we have a finnish"
+   ],
+   "local_min": [
+    0.672,
+    29.07,
+    30.78,
+    "have a finnish sauna"
+   ]
+  },
+  {
+   "unit": 3,
+   "placed": [
+    40.03,
+    41.42
+   ],
+   "text": "now I'll show you a Russian banya.",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 7.44,
+   "matched_words": "7/7",
+   "tempo_span": 1.342,
+   "tempo": 0.914,
+   "local_max": [
+    1.621,
+    40.22,
+    40.68,
+    "i'll show you a"
+   ],
+   "local_min": [
+    0.657,
+    40.52,
+    41.59,
+    "you a russian banya"
+   ]
+  },
+  {
+   "unit": 4,
+   "placed": [
+    41.52,
+    48.22
+   ],
+   "text": "A Russian banya as it should be, with a wood-burning stove, that's how it all lo",
+   "atempo_recorded": 0.9171,
+   "close_inner": [
+    [
+     44.48,
+     0.54
+    ]
+   ],
+   "clause_tempo": [
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 7.45,
+   "matched_words": "17/17",
+   "tempo_span": 0.69,
+   "tempo": 0.895,
+   "local_max": [
+    0.955,
+    47.37,
+    48.07,
+    "how it all looks"
+   ],
+   "local_min": [
+    0.811,
+    45.38,
+    47.61,
+    "stove that's how it"
+   ]
+  },
+  {
+   "unit": 6,
+   "placed": [
+    70.18,
+    76.84
+   ],
+   "text": "Of course, for the sauna complex and these procedures, everything will need to b",
+   "atempo_recorded": 0.9109,
+   "close_inner": [
+    [
+     71.83,
+     0.52
+    ],
+    [
+     73.54,
+     0.57
+    ]
+   ],
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.61,
+   "matched_words": "19/19",
+   "tempo_span": 0.704,
+   "tempo": 0.871,
+   "local_max": [
+    0.95,
+    73.92,
+    74.46,
+    "will need to be"
+   ],
+   "local_min": [
+    0.782,
+    74.38,
+    76.21,
+    "be paid for that's"
+   ]
+  },
+  {
+   "unit": 8,
+   "placed": [
+    84.8,
+    87.2
+   ],
+   "text": "There is a massage room, a small refrigerator,",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0,
+    0.95,
+    0.9
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 8.29,
+   "matched_words": "8/8",
+   "tempo_span": 1.355,
+   "tempo": 1.176,
+   "local_max": [
+    1.22,
+    85.7,
+    87.06,
+    "room a small refrigerator"
+   ],
+   "local_min": [
+    1.101,
+    84.89,
+    85.64,
+    "there is a massage"
+   ]
+  },
+  {
+   "unit": 8,
+   "placed": [
+    88.12,
+    89.59
+   ],
+   "text": "and here is a spot",
+   "atempo_recorded": 0.8932,
+   "close_inner": [
+    [
+     88.54,
+     0.15
+    ]
+   ],
+   "clause_tempo": [
+    1.0,
+    1.0,
+    0.95,
+    0.9
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 7.52,
+   "matched_words": "4/5",
+   "tempo_span": 0.611,
+   "tempo": 0.786,
+   "local_max": [
+    0.786,
+    88.23,
+    89.12,
+    "and here is a"
+   ],
+   "local_min": [
+    0.786,
+    88.23,
+    89.12,
+    "and here is a"
+   ]
+  },
+  {
+   "unit": 8,
+   "placed": [
+    94.24,
+    97.02
+   ],
+   "text": "for drinking tea or mineral water,",
+   "atempo_recorded": 0.8967,
+   "close_inner": [
+    [
+     94.77,
+     0.15
+    ]
+   ],
+   "clause_tempo": [
+    1.0,
+    1.0,
+    0.95,
+    0.9
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 5.72,
+   "matched_words": "6/6",
+   "tempo_span": 0.719,
+   "tempo": 0.779,
+   "local_max": [
+    0.9,
+    94.89,
+    96.38,
+    "drinking tea or mineral"
+   ],
+   "local_min": [
+    0.698,
+    94.29,
+    95.9,
+    "for drinking tea or"
+   ]
+  }
+ ],
+ "local_violations": [
+  {
+   "unit": 3,
+   "tempo": 1.621,
+   "t0": 40.22,
+   "t1": 40.68,
+   "words": "i'll show you a"
+  },
+  {
+   "unit": 3,
+   "tempo": 1.596,
+   "t0": 40.08,
+   "t1": 40.6,
+   "words": "now i'll show you"
+  },
+  {
+   "unit": 3,
+   "tempo": 0.657,
+   "t0": 40.52,
+   "t1": 41.59,
+   "words": "you a russian banya"
+  },
+  {
+   "unit": 3,
+   "tempo": 0.672,
+   "t0": 29.07,
+   "t1": 30.78,
+   "words": "have a finnish sauna"
+  },
+  {
+   "unit": 8,
+   "tempo": 0.698,
+   "t0": 94.29,
+   "t1": 95.9,
+   "words": "for drinking tea or"
+  },
+  {
+   "unit": 0,
+   "tempo": 0.742,
+   "t0": 6.87,
+   "t1": 8.12,
+   "words": "for the first steam"
+  }
+ ],
+ "local_windows": 108,
+ "recorded_atempo_violations": [],
+ "librosa_time_stretch": "not used by the current chain (ffmpeg atempo only)",
+ "rows": [
+  {
+   "unit": 0,
+   "placed": [
+    1.0,
+    3.7
+   ],
+   "text": "We also have a sauna complex on the premises,",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 8.19,
+   "matched_words": "9/9",
+   "tempo_span": 1.126,
+   "tempo": 0.972,
+   "local_max": [
+    1.097,
+    1.61,
+    2.8,
+    "have a sauna complex"
+   ],
+   "local_min": [
+    0.942,
+    1.25,
+    2.44,
+    "also have a sauna"
+   ]
+  },
+  {
+   "unit": 0,
+   "placed": [
+    5.1,
+    6.05
+   ],
+   "text": "everything is ready",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 11.59,
+   "matched_words": "3/3",
+   "tempo_span": 0.939,
+   "tempo": 0.894
+  },
+  {
+   "unit": 0,
+   "placed": [
+    6.8,
+    12.12
+   ],
+   "text": "for the first steam baths in three to four days; steam bathing will literally be",
+   "atempo_recorded": 0.8981,
+   "close_inner": [
+    [
+     9.43,
+     0.54
+    ]
+   ],
+   "clause_tempo": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 6.81,
+   "matched_words": "17/17",
+   "tempo_span": 0.924,
+   "tempo": 0.899,
+   "local_max": [
+    0.999,
+    9.2,
+    10.48,
+    "four days steam bathing"
+   ],
+   "local_min": [
+    0.742,
+    6.87,
+    8.12,
+    "for the first steam"
+   ]
+  },
+  {
+   "unit": 1,
+   "placed": [
+    12.36,
+    14.25
+   ],
+   "text": "Now I will show the pool.",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 6.94,
+   "matched_words": "6/6",
+   "tempo_span": 0.94,
+   "tempo": 0.957,
+   "local_max": [
+    1.052,
+    13.25,
+    13.88,
+    "i will show the"
+   ],
+   "local_min": [
+    0.97,
+    12.49,
+    13.72,
+    "now i will show"
+   ]
+  },
+  {
+   "unit": 2,
+   "placed": [
+    14.9,
+    15.47
+   ],
+   "text": "Here",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    0.95,
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 3.11,
+   "matched_words": "1/1",
+   "tempo": null,
+   "why": "too few matched words"
+  },
+  {
+   "unit": 2,
+   "placed": [
+    16.4,
+    17.86
+   ],
+   "text": "we have all sorts of things,",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    0.95,
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 6.46,
+   "matched_words": "6/6",
+   "tempo_span": 0.855,
+   "tempo": 0.863,
+   "local_max": [
+    0.883,
+    16.76,
+    17.72,
+    "all sorts of things"
+   ],
+   "local_min": [
+    0.842,
+    16.55,
+    17.28,
+    "have all sorts of"
+   ]
+  },
+  {
+   "unit": 2,
+   "placed": [
+    19.14,
+    21.88
+   ],
+   "text": "like a changing area, barrels over here,",
+   "atempo_recorded": 0.8967,
+   "close_inner": [
+    [
+     20.38,
+     0.3
+    ]
+   ],
+   "clause_tempo": [
+    1.0,
+    0.95,
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 7.5,
+   "matched_words": "7/7",
+   "tempo_span": 0.959,
+   "tempo": 1.012,
+   "local_max": [
+    1.04,
+    19.33,
+    21.22,
+    "a changing area barrels"
+   ],
+   "local_min": [
+    1.021,
+    19.91,
+    21.73,
+    "area barrels over here"
+   ]
+  },
+  {
+   "unit": 2,
+   "placed": [
+    24.14,
+    25.53
+   ],
+   "text": "and some lounge chairs.",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    0.95,
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 5.23,
+   "matched_words": "4/4",
+   "tempo_span": 0.892,
+   "tempo": 1.127,
+   "local_max": [
+    1.127,
+    24.25,
+    25.42,
+    "and some lounge chairs"
+   ],
+   "local_min": [
+    1.127,
+    24.25,
+    25.42,
+    "and some lounge chairs"
+   ]
+  },
+  {
+   "unit": 3,
+   "placed": [
+    26.16,
+    26.75
+   ],
+   "text": "Here",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 2.62,
+   "matched_words": "1/1",
+   "tempo": null,
+   "why": "too few matched words"
+  },
+  {
+   "unit": 3,
+   "placed": [
+    28.8,
+    30.94
+   ],
+   "text": "we have a Finnish sauna,",
+   "atempo_recorded": 0.8955,
+   "close_inner": [
+    [
+     30.04,
+     0.22
+    ]
+   ],
+   "clause_tempo": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 6.55,
+   "matched_words": "5/5",
+   "tempo_span": 0.577,
+   "tempo": 0.677,
+   "local_max": [
+    0.764,
+    28.87,
+    30.02,
+    "we have a finnish"
+   ],
+   "local_min": [
+    0.672,
+    29.07,
+    30.78,
+    "have a finnish sauna"
+   ]
+  },
+  {
+   "unit": 3,
+   "placed": [
+    40.03,
+    41.42
+   ],
+   "text": "now I'll show you a Russian banya.",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 7.44,
+   "matched_words": "7/7",
+   "tempo_span": 1.342,
+   "tempo": 0.914,
+   "local_max": [
+    1.621,
+    40.22,
+    40.68,
+    "i'll show you a"
+   ],
+   "local_min": [
+    0.657,
+    40.52,
+    41.59,
+    "you a russian banya"
+   ]
+  },
+  {
+   "unit": 4,
+   "placed": [
+    41.52,
+    48.22
+   ],
+   "text": "A Russian banya as it should be, with a wood-burning stove, that's how it all lo",
+   "atempo_recorded": 0.9171,
+   "close_inner": [
+    [
+     44.48,
+     0.54
+    ]
+   ],
+   "clause_tempo": [
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 7.45,
+   "matched_words": "17/17",
+   "tempo_span": 0.69,
+   "tempo": 0.895,
+   "local_max": [
+    0.955,
+    47.37,
+    48.07,
+    "how it all looks"
+   ],
+   "local_min": [
+    0.811,
+    45.38,
+    47.61,
+    "stove that's how it"
+   ]
+  },
+  {
+   "unit": 4,
+   "placed": [
+    49.7,
+    51.01
+   ],
+   "text": "what a nice smell here.",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 6.2,
+   "matched_words": "5/5",
+   "tempo_span": 0.848,
+   "tempo": 0.796,
+   "local_max": [
+    0.851,
+    49.79,
+    50.58,
+    "what a nice smell"
+   ],
+   "local_min": [
+    0.79,
+    50.01,
+    50.88,
+    "a nice smell here"
+   ]
+  },
+  {
+   "unit": 5,
+   "placed": [
+    58.02,
+    59.72
+   ],
+   "text": "There is also a second floor,",
+   "atempo_recorded": 0.9,
+   "close_inner": null,
+   "clause_tempo": [
+    0.9,
+    0.95
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 7.8,
+   "matched_words": "6/6",
+   "tempo_span": 0.787,
+   "tempo": 0.823,
+   "local_max": [
+    0.892,
+    58.38,
+    59.18,
+    "is also a second"
+   ],
+   "local_min": [
+    0.804,
+    58.5,
+    59.56,
+    "also a second floor"
+   ]
+  },
+  {
+   "unit": 5,
+   "placed": [
+    65.6,
+    68.55
+   ],
+   "text": "which is also part of the complex's infrastructure.",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": [
+    0.9,
+    0.95
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 6.54,
+   "matched_words": "8/8",
+   "tempo_span": 0.778,
+   "tempo": 0.89,
+   "local_max": [
+    0.913,
+    66.73,
+    68.42,
+    "of the complex's infrastructure"
+   ],
+   "local_min": [
+    0.808,
+    65.95,
+    66.94,
+    "also part of the"
+   ]
+  },
+  {
+   "unit": 6,
+   "placed": [
+    70.18,
+    76.84
+   ],
+   "text": "Of course, for the sauna complex and these procedures, everything will need to b",
+   "atempo_recorded": 0.9109,
+   "close_inner": [
+    [
+     71.83,
+     0.52
+    ],
+    [
+     73.54,
+     0.57
+    ]
+   ],
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.61,
+   "matched_words": "19/19",
+   "tempo_span": 0.704,
+   "tempo": 0.871,
+   "local_max": [
+    0.95,
+    73.92,
+    74.46,
+    "will need to be"
+   ],
+   "local_min": [
+    0.782,
+    74.38,
+    76.21,
+    "be paid for that's"
+   ]
+  },
+  {
+   "unit": 7,
+   "placed": [
+    77.92,
+    84.58
+   ],
+   "text": "It won't bankrupt you, that is, we all go to the bathhouse, we all pay for this,",
+   "atempo_recorded": 0.9,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 8.77,
+   "matched_words": "22/22",
+   "tempo_span": 0.788,
+   "tempo": 0.888,
+   "local_max": [
+    0.96,
+    83.89,
+    84.49,
+    "the hammam as well"
+   ],
+   "local_min": [
+    0.815,
+    81.18,
+    82.0,
+    "go to the bathhouse"
+   ]
+  },
+  {
+   "unit": 8,
+   "placed": [
+    84.8,
+    87.2
+   ],
+   "text": "There is a massage room, a small refrigerator,",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0,
+    0.95,
+    0.9
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 8.29,
+   "matched_words": "8/8",
+   "tempo_span": 1.355,
+   "tempo": 1.176,
+   "local_max": [
+    1.22,
+    85.7,
+    87.06,
+    "room a small refrigerator"
+   ],
+   "local_min": [
+    1.101,
+    84.89,
+    85.64,
+    "there is a massage"
+   ]
+  },
+  {
+   "unit": 8,
+   "placed": [
+    88.12,
+    89.59
+   ],
+   "text": "and here is a spot",
+   "atempo_recorded": 0.8932,
+   "close_inner": [
+    [
+     88.54,
+     0.15
+    ]
+   ],
+   "clause_tempo": [
+    1.0,
+    1.0,
+    0.95,
+    0.9
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 7.52,
+   "matched_words": "4/5",
+   "tempo_span": 0.611,
+   "tempo": 0.786,
+   "local_max": [
+    0.786,
+    88.23,
+    89.12,
+    "and here is a"
+   ],
+   "local_min": [
+    0.786,
+    88.23,
+    89.12,
+    "and here is a"
+   ]
+  },
+  {
+   "unit": 8,
+   "placed": [
+    94.24,
+    97.02
+   ],
+   "text": "for drinking tea or mineral water,",
+   "atempo_recorded": 0.8967,
+   "close_inner": [
+    [
+     94.77,
+     0.15
+    ]
+   ],
+   "clause_tempo": [
+    1.0,
+    1.0,
+    0.95,
+    0.9
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 5.72,
+   "matched_words": "6/6",
+   "tempo_span": 0.719,
+   "tempo": 0.779,
+   "local_max": [
+    0.9,
+    94.89,
+    96.38,
+    "drinking tea or mineral"
+   ],
+   "local_min": [
+    0.698,
+    94.29,
+    95.9,
+    "for drinking tea or"
+   ]
+  },
+  {
+   "unit": 8,
+   "placed": [
+    99.14,
+    102.75
+   ],
+   "text": "a relaxation area, and there are also loungers available.",
+   "atempo_recorded": 0.9,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0,
+    0.95,
+    0.9
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 8.72,
+   "matched_words": "5/9",
+   "tempo_span": 1.158,
+   "tempo": 1.215,
+   "local_max": [
+    1.219,
+    99.27,
+    102.1,
+    "relaxation there are loungers"
+   ],
+   "local_min": [
+    1.125,
+    99.17,
+    101.39,
+    "a relaxation there are"
+   ]
+  },
+  {
+   "unit": 9,
+   "placed": [
+    102.94,
+    104.91
+   ],
+   "text": "Here we have our interesting sauna",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "realigned_raw_take",
+   "rate_sps": 8.15,
+   "matched_words": "6/6",
+   "tempo_span": 0.872,
+   "tempo": 0.823,
+   "local_max": [
+    0.894,
+    103.23,
+    104.44,
+    "we have our interesting"
+   ],
+   "local_min": [
+    0.762,
+    102.99,
+    103.73,
+    "here we have our"
+   ]
+  },
+  {
+   "unit": 9,
+   "placed": [
+    106.0,
+    106.59
+   ],
+   "text": "and bath.",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "realigned_raw_take",
+   "rate_sps": 5.52,
+   "matched_words": "2/2",
+   "tempo": null,
+   "why": "too few matched words"
+  },
+  {
+   "unit": 10,
+   "placed": [
+    106.76,
+    107.91
+   ],
+   "text": "The hammam",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.46,
+   "matched_words": "2/2",
+   "tempo": null,
+   "why": "too few matched words"
+  },
+  {
+   "unit": 10,
+   "placed": [
+    108.3,
+    109.72
+   ],
+   "text": "and all this space.",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 5.5,
+   "matched_words": "4/4",
+   "tempo_span": 1.014,
+   "tempo": 0.911,
+   "local_max": [
+    0.911,
+    108.51,
+    109.62,
+    "and all this space"
+   ],
+   "local_min": [
+    0.911,
+    108.51,
+    109.62,
+    "and all this space"
+   ]
+  }
+ ],
+ "rate_median_sps": 7.44,
+ "rate_peaks": [
+  {
+   "unit": 7,
+   "sps": 13.29,
+   "t0": 79.48,
+   "t1": 81.24,
+   "words": "is we all go"
+  },
+  {
+   "unit": 7,
+   "sps": 13.29,
+   "t0": 80.88,
+   "t1": 81.38,
+   "words": "we all go to"
+  },
+  {
+   "unit": 7,
+   "sps": 13.29,
+   "t0": 81.02,
+   "t1": 81.5,
+   "words": "all go to the"
+  },
+  {
+   "unit": 3,
+   "sps": 12.42,
+   "t0": 40.22,
+   "t1": 40.68,
+   "words": "i'll show you a"
+  },
+  {
+   "unit": 7,
+   "sps": 11.85,
+   "t0": 83.77,
+   "t1": 84.31,
+   "words": "and the hammam as"
+  },
+  {
+   "unit": 5,
+   "sps": 11.31,
+   "t0": 58.13,
+   "t1": 58.82,
+   "words": "there is also a"
+  },
+  {
+   "unit": 3,
+   "sps": 11.29,
+   "t0": 40.36,
+   "t1": 40.97,
+   "words": "show you a russian"
+  },
+  {
+   "unit": 7,
+   "sps": 11.08,
+   "t0": 78.83,
+   "t1": 80.94,
+   "words": "you that is we"
+  },
+  {
+   "unit": 7,
+   "sps": 11.05,
+   "t0": 79.28,
+   "t1": 81.14,
+   "words": "that is we all"
+  },
+  {
+   "unit": 7,
+   "sps": 11.05,
+   "t0": 82.97,
+   "t1": 83.95,
+   "words": "for this and the"
+  }
+ ],
+ "phrase_rate": [
+  {
+   "unit": 0,
+   "placed": [
+    5.1,
+    6.05
+   ],
+   "sps": 11.59,
+   "x_median": 1.56,
+   "tempo": 0.894,
+   "text": "everything is ready"
+  },
+  {
+   "unit": 7,
+   "placed": [
+    77.92,
+    84.58
+   ],
+   "sps": 8.77,
+   "x_median": 1.18,
+   "tempo": 0.888,
+   "text": "It won't bankrupt you, that is, we all go to the bathhouse, we all pay for this,"
+  },
+  {
+   "unit": 8,
+   "placed": [
+    99.14,
+    102.75
+   ],
+   "sps": 8.72,
+   "x_median": 1.17,
+   "tempo": 1.215,
+   "text": "a relaxation area, and there are also loungers available."
+  },
+  {
+   "unit": 8,
+   "placed": [
+    84.8,
+    87.2
+   ],
+   "sps": 8.29,
+   "x_median": 1.11,
+   "tempo": 1.176,
+   "text": "There is a massage room, a small refrigerator,"
+  },
+  {
+   "unit": 0,
+   "placed": [
+    1.0,
+    3.7
+   ],
+   "sps": 8.19,
+   "x_median": 1.1,
+   "tempo": 0.972,
+   "text": "We also have a sauna complex on the premises,"
+  },
+  {
+   "unit": 9,
+   "placed": [
+    102.94,
+    104.91
+   ],
+   "sps": 8.15,
+   "x_median": 1.1,
+   "tempo": 0.823,
+   "text": "Here we have our interesting sauna"
+  },
+  {
+   "unit": 5,
+   "placed": [
+    58.02,
+    59.72
+   ],
+   "sps": 7.8,
+   "x_median": 1.05,
+   "tempo": 0.823,
+   "text": "There is also a second floor,"
+  },
+  {
+   "unit": 6,
+   "placed": [
+    70.18,
+    76.84
+   ],
+   "sps": 7.61,
+   "x_median": 1.02,
+   "tempo": 0.871,
+   "text": "Of course, for the sauna complex and these procedures, everything will need to b"
+  },
+  {
+   "unit": 8,
+   "placed": [
+    88.12,
+    89.59
+   ],
+   "sps": 7.52,
+   "x_median": 1.01,
+   "tempo": 0.786,
+   "text": "and here is a spot"
+  },
+  {
+   "unit": 2,
+   "placed": [
+    19.14,
+    21.88
+   ],
+   "sps": 7.5,
+   "x_median": 1.01,
+   "tempo": 1.012,
+   "text": "like a changing area, barrels over here,"
+  },
+  {
+   "unit": 10,
+   "placed": [
+    106.76,
+    107.91
+   ],
+   "sps": 7.46,
+   "x_median": 1.0,
+   "tempo": null,
+   "text": "The hammam"
+  },
+  {
+   "unit": 4,
+   "placed": [
+    41.52,
+    48.22
+   ],
+   "sps": 7.45,
+   "x_median": 1.0,
+   "tempo": 0.895,
+   "text": "A Russian banya as it should be, with a wood-burning stove, that's how it all lo"
+  },
+  {
+   "unit": 3,
+   "placed": [
+    40.03,
+    41.42
+   ],
+   "sps": 7.44,
+   "x_median": 1.0,
+   "tempo": 0.914,
+   "text": "now I'll show you a Russian banya."
+  },
+  {
+   "unit": 1,
+   "placed": [
+    12.36,
+    14.25
+   ],
+   "sps": 6.94,
+   "x_median": 0.93,
+   "tempo": 0.957,
+   "text": "Now I will show the pool."
+  },
+  {
+   "unit": 0,
+   "placed": [
+    6.8,
+    12.12
+   ],
+   "sps": 6.81,
+   "x_median": 0.92,
+   "tempo": 0.899,
+   "text": "for the first steam baths in three to four days; steam bathing will literally be"
+  },
+  {
+   "unit": 3,
+   "placed": [
+    28.8,
+    30.94
+   ],
+   "sps": 6.55,
+   "x_median": 0.88,
+   "tempo": 0.677,
+   "text": "we have a Finnish sauna,"
+  },
+  {
+   "unit": 5,
+   "placed": [
+    65.6,
+    68.55
+   ],
+   "sps": 6.54,
+   "x_median": 0.88,
+   "tempo": 0.89,
+   "text": "which is also part of the complex's infrastructure."
+  },
+  {
+   "unit": 2,
+   "placed": [
+    16.4,
+    17.86
+   ],
+   "sps": 6.46,
+   "x_median": 0.87,
+   "tempo": 0.863,
+   "text": "we have all sorts of things,"
+  },
+  {
+   "unit": 4,
+   "placed": [
+    49.7,
+    51.01
+   ],
+   "sps": 6.2,
+   "x_median": 0.83,
+   "tempo": 0.796,
+   "text": "what a nice smell here."
+  },
+  {
+   "unit": 8,
+   "placed": [
+    94.24,
+    97.02
+   ],
+   "sps": 5.72,
+   "x_median": 0.77,
+   "tempo": 0.779,
+   "text": "for drinking tea or mineral water,"
+  },
+  {
+   "unit": 9,
+   "placed": [
+    106.0,
+    106.59
+   ],
+   "sps": 5.52,
+   "x_median": 0.74,
+   "tempo": null,
+   "text": "and bath."
+  },
+  {
+   "unit": 10,
+   "placed": [
+    108.3,
+    109.72
+   ],
+   "sps": 5.5,
+   "x_median": 0.74,
+   "tempo": 0.911,
+   "text": "and all this space."
+  },
+  {
+   "unit": 2,
+   "placed": [
+    24.14,
+    25.53
+   ],
+   "sps": 5.23,
+   "x_median": 0.7,
+   "tempo": 1.127,
+   "text": "and some lounge chairs."
+  },
+  {
+   "unit": 2,
+   "placed": [
+    14.9,
+    15.47
+   ],
+   "sps": 3.11,
+   "x_median": 0.42,
+   "tempo": null,
+   "text": "Here"
+  },
+  {
+   "unit": 3,
+   "placed": [
+    26.16,
+    26.75
+   ],
+   "sps": 2.62,
+   "x_median": 0.35,
+   "tempo": null,
+   "text": "Here"
+  }
+ ]
+}

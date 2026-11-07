@@ -1,0 +1,253 @@
+{
+ "run": "/workspace/dub/artifacts/r4a/r9_m18/m18",
+ "corridor": [
+  0.75,
+  1.25
+ ],
+ "placements": 4,
+ "measured": 4,
+ "tempo_p5_p50_p95": [
+  0.958,
+  0.979,
+  1.006
+ ],
+ "phrase_violations": [],
+ "span_violations": [],
+ "local_violations": [],
+ "local_windows": 42,
+ "recorded_atempo_violations": [],
+ "librosa_time_stretch": "not used by the current chain (ffmpeg atempo only)",
+ "rows": [
+  {
+   "unit": 0,
+   "placed": [
+    1.18,
+    3.64
+   ],
+   "text": "This is a wonderful and convenient app.",
+   "atempo_recorded": 0.975,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.4,
+   "matched_words": "7/7",
+   "tempo_span": 0.968,
+   "tempo": 0.977,
+   "local_max": [
+    1.006,
+    1.23,
+    2.3,
+    "this is a wonderful"
+   ],
+   "local_min": [
+    0.971,
+    1.79,
+    3.56,
+    "wonderful and convenient app"
+   ]
+  },
+  {
+   "unit": 1,
+   "placed": [
+    3.66,
+    12.72
+   ],
+   "text": "This is about Mommy Kris, which is not just for young mothers, but also for wome",
+   "atempo_recorded": 1.007,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 6.89,
+   "matched_words": "29/29",
+   "tempo_span": 1.007,
+   "tempo": 1.01,
+   "local_max": [
+    1.082,
+    6.28,
+    7.64,
+    "for young mothers but"
+   ],
+   "local_min": [
+    0.91,
+    8.86,
+    9.52,
+    "are in search of"
+   ]
+  },
+  {
+   "unit": 2,
+   "placed": [
+    12.74,
+    16.0
+   ],
+   "text": "Personally, I found such an activity for myself.",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 6.42,
+   "matched_words": "8/8",
+   "tempo_span": 0.948,
+   "tempo": 0.955,
+   "local_max": [
+    0.996,
+    13.7,
+    14.56,
+    "i found such an"
+   ],
+   "local_min": [
+    0.931,
+    14.24,
+    15.35,
+    "such an activity for"
+   ]
+  },
+  {
+   "unit": 3,
+   "placed": [
+    16.28,
+    19.29
+   ],
+   "text": "A big thank you to the developers. I recommend it.",
+   "atempo_recorded": 0.976,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 8.31,
+   "matched_words": "10/10",
+   "tempo_span": 0.961,
+   "tempo": 0.981,
+   "local_max": [
+    1.048,
+    16.37,
+    17.13,
+    "a big thank you"
+   ],
+   "local_min": [
+    0.953,
+    17.56,
+    19.26,
+    "developers i recommend it"
+   ]
+  }
+ ],
+ "rate_median_sps": 7.14,
+ "rate_peaks": [
+  {
+   "unit": 1,
+   "sps": 9.58,
+   "t0": 8.36,
+   "t1": 9.06,
+   "words": "women who are in"
+  },
+  {
+   "unit": 3,
+   "sps": 9.17,
+   "t0": 17.23,
+   "t1": 18.48,
+   "words": "to the developers i"
+  },
+  {
+   "unit": 0,
+   "sps": 9.06,
+   "t0": 1.51,
+   "t1": 2.6,
+   "words": "is a wonderful and"
+  },
+  {
+   "unit": 1,
+   "sps": 9.05,
+   "t0": 8.86,
+   "t1": 9.52,
+   "words": "are in search of"
+  },
+  {
+   "unit": 3,
+   "sps": 8.7,
+   "t0": 16.37,
+   "t1": 17.13,
+   "words": "a big thank you"
+  },
+  {
+   "unit": 3,
+   "sps": 8.68,
+   "t0": 16.75,
+   "t1": 17.5,
+   "words": "thank you to the"
+  },
+  {
+   "unit": 1,
+   "sps": 8.55,
+   "t0": 3.69,
+   "t1": 4.71,
+   "words": "this is about mommy"
+  },
+  {
+   "unit": 0,
+   "sps": 8.31,
+   "t0": 1.23,
+   "t1": 2.3,
+   "words": "this is a wonderful"
+  },
+  {
+   "unit": 3,
+   "sps": 8.3,
+   "t0": 17.03,
+   "t1": 18.14,
+   "words": "you to the developers"
+  },
+  {
+   "unit": 1,
+   "sps": 8.04,
+   "t0": 8.12,
+   "t1": 8.96,
+   "words": "for women who are"
+  }
+ ],
+ "phrase_rate": [
+  {
+   "unit": 3,
+   "placed": [
+    16.28,
+    19.29
+   ],
+   "sps": 8.31,
+   "x_median": 1.16,
+   "tempo": 0.981,
+   "text": "A big thank you to the developers. I recommend it."
+  },
+  {
+   "unit": 0,
+   "placed": [
+    1.18,
+    3.64
+   ],
+   "sps": 7.4,
+   "x_median": 1.04,
+   "tempo": 0.977,
+   "text": "This is a wonderful and convenient app."
+  },
+  {
+   "unit": 1,
+   "placed": [
+    3.66,
+    12.72
+   ],
+   "sps": 6.89,
+   "x_median": 0.96,
+   "tempo": 1.01,
+   "text": "This is about Mommy Kris, which is not just for young mothers, but also for wome"
+  },
+  {
+   "unit": 2,
+   "placed": [
+    12.74,
+    16.0
+   ],
+   "sps": 6.42,
+   "x_median": 0.9,
+   "tempo": 0.955,
+   "text": "Personally, I found such an activity for myself."
+  }
+ ]
+}

@@ -1,0 +1,85 @@
+{
+ "lang": "no",
+ "rows": [
+  {
+   "i": 0,
+   "text": "Prime-utsmykking fra Neometria.",
+   "wav": "/workspace/dub/r13s/lang/wav/no_00.wav",
+   "dur_s": 2.8,
+   "gen_s": 0.8,
+   "asr": "Prime utsmykking fra Neometria.",
+   "cer": 0.0345,
+   "s_per_char": 0.0966
+  },
+  {
+   "i": 1,
+   "text": "likevel har vi en badepark på området, alt er klar for de aller første badene innen 3-4 dager, nesten即时发生翻译请求时，我需要确保给出的指令是准确的。根据给定的指令，我将给出从俄语到挪威语的翻译。给出的俄语文本翻译成挪威语如下： også på området har vi en badepark, alt er klar for de aller første badene innen 3-4 dager, nesten 请确认是否需要进一步调整或解释。根据之前的指令，我将只返回翻译，因此我将重新给出答案： også på området har vi en badepark, alt er klar for de aller første badene innen 3-4 dager, nesten",
+   "wav": "/workspace/dub/r13s/lang/wav/no_01.wav",
+   "dur_s": 21.32,
+   "gen_s": 5.01,
+   "asr": "Likevel har vi en badepark på området. Alt er klar for de aller første badene innen tre-four dager.  nesten trever, even treven treven, treven treven treven, treven treven treve i en badepark.  Alt er klar for de aller første badene innen treven treven dager.  Nesten mistryssent trevendt, også på området har vi en badepark.  Alt er klar for de aller første badene innen treven treven dager.  Nesten.",
+   "cer": 0.3753,
+   "s_per_char": 0.0548
+  },
+  {
+   "i": 2,
+   "text": "vennene, heyy hva er saken, hei til alle, la oss lure på å filme første video, en presentasjonsvideo for å bli kjent med hverandre大概是这样的意思：\"Vennene, hei hei, hei til alle, la oss filme den første videoen, en presentasjonsvideo for å bli kjent med hverandre.\" 请注意，直接翻译可能需要一些调整以确保自然流畅。",
+   "wav": "/workspace/dub/r13s/lang/wav/no_02.wav",
+   "dur_s": 14.12,
+   "gen_s": 3.28,
+   "asr": "Vennene, hei, hva er saken? Hei til alle. La oss lure på å filme første video, en presentasjonsvideo for å bli kjent med hverandre.  Vennene, hei, hei, hei til alle. La oss filme den første videoen, en presentasjonsvideo for å bli kjent med hverandre.",
+   "cer": 0.1227,
+   "s_per_char": 0.0525
+  },
+  {
+   "i": 3,
+   "text": "vi lager et video med glass, så ser vi igjen, tester hvordan vårt program vil fungere på dette",
+   "wav": "/workspace/dub/r13s/lang/wav/no_03.wav",
+   "dur_s": 5.24,
+   "gen_s": 1.36,
+   "asr": "Vi lager et video med glass, så ser vi igjen og tester hvordan vårt program vil fungere på dette.",
+   "cer": 0.0326,
+   "s_per_char": 0.057
+  },
+  {
+   "i": 4,
+   "text": "La oss teste denne formen for videoopptak også.",
+   "wav": "/workspace/dub/r13s/lang/wav/no_04.wav",
+   "dur_s": 3.6,
+   "gen_s": 1.01,
+   "asr": "La oss teste denne formen for videoopptak også.",
+   "cer": 0.0,
+   "s_per_char": 0.0783
+  },
+  {
+   "i": 5,
+   "text": "La oss se, hva en rensking inkluderer som anbefales av byggekontrakten. Note: There seems to be a slight misunderstanding in the original request, as \"rensking\" (cleaning) does not fit the context. The correct translation should be: La oss se, hva en reparasjon inkluderer som foreslås av byggekontrakten.",
+   "wav": "/workspace/dub/r13s/lang/wav/no_05.wav",
+   "dur_s": 18.28,
+   "gen_s": 4.31,
+   "asr": "La oss se hva en rensking inkluderer som anbefales av byggekontrakten.  Note, there seems to be a slight misunderstanding in the original request as rensking, cleaning.  Do note feat the context.  The correct translation should be, la oss se hva en reparasjon inkluderer som foreslås av byggekontrakten.",
+   "cer": 0.0171,
+   "s_per_char": 0.0624
+  },
+  {
+   "i": 6,
+   "text": "allerede vil det begynne å boile her nå skal jeg vise deg bassenen her har vi forskjellige ting her zone for",
+   "wav": "/workspace/dub/r13s/lang/wav/no_06.wav",
+   "dur_s": 5.48,
+   "gen_s": 1.39,
+   "asr": "Allerede vil det begynne å boile her. Nå skal jeg vise deg bassene. Her har vi forskjellige ting her zone for.",
+   "cer": 0.0093,
+   "s_per_char": 0.0507
+  },
+  {
+   "i": 7,
+   "text": "mer i alt det som jeg vil si er jeg glad med å møtes med dere og er glad over samarbeidet i dag er fredag 28",
+   "wav": "/workspace/dub/r13s/lang/wav/no_07.wav",
+   "dur_s": 7.44,
+   "gen_s": 1.82,
+   "asr": "Mer i alt det som jeg vil si er jeg glad med å møtes med dere, og er glad over samarbeidet i dag er fredag 1.80.10.",
+   "cer": 0.037,
+   "s_per_char": 0.0689
+  }
+ ]
+}

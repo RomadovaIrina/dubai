@@ -113,6 +113,30 @@ def unit_entities(u: dict) -> list:
     return ents
 
 
+WINDOW_TOKENS, WINDOW_OVERLAP, ANSWER_TOKENS = 3000, 2, 600
+
+
+def _ntok(llm, text: str) -> int:
+    try: return len(llm.tokenize(text.encode("utf-8"), add_bos=False))
+    except Exception: return len(text) // 2 + 1   # no tokenizer: conservative for Cyrillic
+
+
+def _windows(llm, head: str, rows: list) -> list:
+    """r15 T (long videos: "Requested tokens (4929) exceed context window of 4096"): the script rows as ONE list when the whole prompt fits
+    the model context (minus the answer), else consecutive windows of <= WINDOW_TOKENS tokens (with the instructions), WINDOW_OVERLAP rows shared."""
+    try: n_ctx = int(llm.n_ctx())
+    except Exception: n_ctx = 4096
+    if _ntok(llm, EXTRACT_SYSTEM + head + "\n".join(rows)) <= n_ctx - ANSWER_TOKENS - 64: return [rows]
+    h = _ntok(llm, EXTRACT_SYSTEM + head) + 16; out, cur, n = [], [], h
+    for r in rows:
+        t = _ntok(llm, r) + 1
+        if cur and n + t > WINDOW_TOKENS:
+            out.append(cur); cur = cur[-WINDOW_OVERLAP:]; n = h + sum(_ntok(llm, x) + 1 for x in cur)
+        cur.append(r); n += t
+    if cur: out.append(cur)
+    return out
+
+
 def extract(llm, units: list, log=print) -> dict:
     """Qwen lists the proper nouns per unit; kept only when the English form occurs in the unit translation. Sets u['ne'] = [entity ...]."""
     rows = [f'{u["id"]}: RU: {u.get("text", "").strip()} | EN: {u.get("translation", "").strip()}' for u in units if u.get("translation")]
@@ -121,13 +145,26 @@ def extract(llm, units: list, log=print) -> dict:
               "exactly as written in RU, the English form exactly as written in EN, and a simple English pronunciation respelling of the English form "
               "(how an English reader should say it, e.g. Sochi -> SOH-chee). Do NOT list common nouns, nationalities, languages, or generic objects, rooms, "
               "services or foods, even when they are foreign words. Answer with a JSON list of objects with the keys "
-              '"unit", "source", "english", "respell"; [] if there are none.\n\n' + "\n".join(rows))
+              '"unit", "source", "english", "respell"; [] if there are none.\n\n')
     stats = {"candidates": 0, "kept": 0, "entities": []}
-    try:
-        r = llm.create_chat_completion([{"role": "system", "content": EXTRACT_SYSTEM}, {"role": "user", "content": prompt}], max_tokens=600, temperature=0.0)
-        txt = r["choices"][0]["message"]["content"]; m = re.search(r"\[.*\]", txt, re.S); items = json.loads(m.group(0)) if m else []
-    except Exception as e:  # never block the dub on the guard
-        log(f"  [ne] extraction failed: {type(e).__name__}: {str(e)[:120]}"); return {**stats, "error": str(e)[:200]}
+    parts = _windows(llm, prompt, rows)   # r15 T: ONE window (= the unchanged single call) whenever the whole script fits the context
+    items = []
+    for k, part in enumerate(parts):
+        try:
+            r = llm.create_chat_completion([{"role": "system", "content": EXTRACT_SYSTEM}, {"role": "user", "content": prompt + "\n".join(part)}], max_tokens=600, temperature=0.0)
+            txt = r["choices"][0]["message"]["content"]; m = re.search(r"\[.*\]", txt, re.S); got = json.loads(m.group(0)) if m else []
+        except Exception as e:  # never block the dub on the guard
+            if len(parts) == 1:
+                log(f"  [ne] extraction failed: {type(e).__name__}: {str(e)[:120]}"); return {**stats, "error": str(e)[:200]}
+            log(f"  [ne] extraction failed in window {k + 1}/{len(parts)}: {type(e).__name__}: {str(e)[:120]}"); stats.setdefault("window_errors", []).append(str(e)[:200]); continue
+        items += got if isinstance(got, list) else []
+    if len(parts) > 1:   # overlapping windows: the same (sentence, English form) once
+        seen, uniq = set(), []
+        for it in items:
+            key = (str(it.get("unit")), str(it.get("english", "")).strip().lower()) if isinstance(it, dict) else None
+            if key is not None and key not in seen: seen.add(key); uniq.append(it)
+        items = uniq; stats["windows"] = len(parts)
+        log(f"  [ne] long script: {len(rows)} sentences in {len(parts)} windows (<= {WINDOW_TOKENS} tokens, {WINDOW_OVERLAP} sentences overlap), {len(items)} candidates")
     by_id = {u["id"]: u for u in units}
     for it in items if isinstance(items, list) else []:
         try:

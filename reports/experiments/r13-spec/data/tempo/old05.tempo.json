@@ -1,0 +1,715 @@
+{
+ "run": "/workspace/dub/artifacts/r4a/r9_old05/old05",
+ "corridor": [
+  0.75,
+  1.25
+ ],
+ "placements": 13,
+ "measured": 12,
+ "tempo_p5_p50_p95": [
+  0.816,
+  0.918,
+  1.047
+ ],
+ "phrase_violations": [],
+ "span_violations": [
+  {
+   "unit": 2,
+   "placed": [
+    13.7,
+    15.86
+   ],
+   "text": "And such a feature adds, of course,",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "natural_src": "realigned_raw_take",
+   "rate_sps": 7.95,
+   "matched_words": "7/7",
+   "tempo_span": 0.64,
+   "tempo": 0.879,
+   "local_max": [
+    0.93,
+    14.17,
+    15.08,
+    "such a feature adds"
+   ],
+   "local_min": [
+    0.864,
+    13.81,
+    14.8,
+    "and such a feature"
+   ]
+  },
+  {
+   "unit": 2,
+   "placed": [
+    19.69,
+    21.38
+   ],
+   "text": "and opportunities we have.",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "natural_src": "realigned_raw_take",
+   "rate_sps": 7.79,
+   "matched_words": "4/4",
+   "tempo_span": 0.684,
+   "tempo": 0.862,
+   "local_max": [
+    0.862,
+    19.78,
+    21.25,
+    "and opportunities we have"
+   ],
+   "local_min": [
+    0.862,
+    19.78,
+    21.25,
+    "and opportunities we have"
+   ]
+  },
+  {
+   "unit": 5,
+   "placed": [
+    40.14,
+    41.88
+   ],
+   "text": "it definitely won't be superfluous.",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 8.4,
+   "matched_words": "5/5",
+   "tempo_span": 1.365,
+   "tempo": 1.089,
+   "local_max": [
+    1.11,
+    40.33,
+    41.74,
+    "definitely won't be superfluous"
+   ],
+   "local_min": [
+    1.052,
+    40.21,
+    41.08,
+    "it definitely won't be"
+   ]
+  }
+ ],
+ "local_violations": [
+  {
+   "unit": 5,
+   "tempo": 0.718,
+   "t0": 38.86,
+   "t1": 39.68,
+   "words": "be such a video"
+  },
+  {
+   "unit": 3,
+   "tempo": 0.731,
+   "t0": 26.45,
+   "t1": 28.04,
+   "words": "our app performs in"
+  }
+ ],
+ "local_windows": 35,
+ "recorded_atempo_violations": [],
+ "librosa_time_stretch": "not used by the current chain (ffmpeg atempo only)",
+ "rows": [
+  {
+   "unit": 0,
+   "placed": [
+    1.8,
+    4.06
+   ],
+   "text": "Let's test out this video recording format as well.",
+   "atempo_recorded": 1.091,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.59,
+   "matched_words": "9/9",
+   "tempo_span": 1.018,
+   "tempo": 1.012,
+   "local_max": [
+    1.069,
+    2.74,
+    3.79,
+    "video recording format as"
+   ],
+   "local_min": [
+    0.97,
+    1.89,
+    2.7,
+    "let's test out this"
+   ]
+  },
+  {
+   "unit": 1,
+   "placed": [
+    5.64,
+    6.27
+   ],
+   "text": "After all,",
+   "atempo_recorded": 1.1,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 9.93,
+   "matched_words": "2/2",
+   "tempo": null,
+   "why": "too few matched words"
+  },
+  {
+   "unit": 1,
+   "placed": [
+    7.4,
+    9.57
+   ],
+   "text": "modern phones already allow this.",
+   "atempo_recorded": 0.901,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.45,
+   "matched_words": "5/5",
+   "tempo_span": 0.866,
+   "tempo": 0.914,
+   "local_max": [
+    0.92,
+    7.53,
+    9.2,
+    "modern phones already allow"
+   ],
+   "local_min": [
+    0.905,
+    7.99,
+    9.44,
+    "phones already allow this"
+   ]
+  },
+  {
+   "unit": 2,
+   "placed": [
+    13.7,
+    15.86
+   ],
+   "text": "And such a feature adds, of course,",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "natural_src": "realigned_raw_take",
+   "rate_sps": 7.95,
+   "matched_words": "7/7",
+   "tempo_span": 0.64,
+   "tempo": 0.879,
+   "local_max": [
+    0.93,
+    14.17,
+    15.08,
+    "such a feature adds"
+   ],
+   "local_min": [
+    0.864,
+    13.81,
+    14.8,
+    "and such a feature"
+   ]
+  },
+  {
+   "unit": 2,
+   "placed": [
+    17.0,
+    18.42
+   ],
+   "text": "to the popularity",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "natural_src": "realigned_raw_take",
+   "rate_sps": 8.08,
+   "matched_words": "3/3",
+   "tempo_span": 0.908,
+   "tempo": 0.999
+  },
+  {
+   "unit": 2,
+   "placed": [
+    19.69,
+    21.38
+   ],
+   "text": "and opportunities we have.",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "natural_src": "realigned_raw_take",
+   "rate_sps": 7.79,
+   "matched_words": "4/4",
+   "tempo_span": 0.684,
+   "tempo": 0.862,
+   "local_max": [
+    0.862,
+    19.78,
+    21.25,
+    "and opportunities we have"
+   ],
+   "local_min": [
+    0.862,
+    19.78,
+    21.25,
+    "and opportunities we have"
+   ]
+  },
+  {
+   "unit": 3,
+   "placed": [
+    22.92,
+    24.55
+   ],
+   "text": "Well, I just want to see how",
+   "atempo_recorded": 0.9,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "realigned_raw_take",
+   "rate_sps": 8.31,
+   "matched_words": "7/7",
+   "tempo_span": 0.836,
+   "tempo": 0.886,
+   "local_max": [
+    0.88,
+    23.69,
+    24.41,
+    "want to see how"
+   ],
+   "local_min": [
+    0.823,
+    23.39,
+    24.03,
+    "i just want to"
+   ]
+  },
+  {
+   "unit": 3,
+   "placed": [
+    26.34,
+    28.96
+   ],
+   "text": "our app performs in this format.",
+   "atempo_recorded": 0.9,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "realigned_raw_take",
+   "rate_sps": 5.69,
+   "matched_words": "6/6",
+   "tempo_span": 0.915,
+   "tempo": 0.786,
+   "local_max": [
+    0.801,
+    27.2,
+    28.82,
+    "performs in this format"
+   ],
+   "local_min": [
+    0.731,
+    26.45,
+    28.04,
+    "our app performs in"
+   ]
+  },
+  {
+   "unit": 4,
+   "placed": [
+    30.8,
+    33.79
+   ],
+   "text": "I'm just walking, filming and, saying something.",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": null,
+   "natural_src": "stored_spans",
+   "rate_sps": 7.51,
+   "matched_words": "7/7",
+   "tempo_span": 0.94,
+   "tempo": 0.947,
+   "local_max": [
+    0.98,
+    31.01,
+    32.62,
+    "just walking filming and"
+   ],
+   "local_min": [
+    0.936,
+    32.04,
+    33.74,
+    "filming and saying something"
+   ]
+  },
+  {
+   "unit": 5,
+   "placed": [
+    38.2,
+    39.8
+   ],
+   "text": "So let it be such a video,",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 8.82,
+   "matched_words": "7/7",
+   "tempo_span": 0.927,
+   "tempo": 0.841,
+   "local_max": [
+    1.183,
+    38.25,
+    38.92,
+    "so let it be"
+   ],
+   "local_min": [
+    0.718,
+    38.86,
+    39.68,
+    "be such a video"
+   ]
+  },
+  {
+   "unit": 5,
+   "placed": [
+    40.14,
+    41.88
+   ],
+   "text": "it definitely won't be superfluous.",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    1.0
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 8.4,
+   "matched_words": "5/5",
+   "tempo_span": 1.365,
+   "tempo": 1.089,
+   "local_max": [
+    1.11,
+    40.33,
+    41.74,
+    "definitely won't be superfluous"
+   ],
+   "local_min": [
+    1.052,
+    40.21,
+    41.08,
+    "it definitely won't be"
+   ]
+  },
+  {
+   "unit": 6,
+   "placed": [
+    42.8,
+    44.81
+   ],
+   "text": "We are testing all possible variants",
+   "atempo_recorded": 1.0,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    0.95
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 7.43,
+   "matched_words": "6/6",
+   "tempo_span": 0.876,
+   "tempo": 0.955,
+   "local_max": [
+    1.025,
+    42.89,
+    44.24,
+    "are testing all possible"
+   ],
+   "local_min": [
+    0.87,
+    42.75,
+    43.64,
+    "we are testing all"
+   ]
+  },
+  {
+   "unit": 6,
+   "placed": [
+    47.72,
+    48.98
+   ],
+   "text": "that we can come up with.",
+   "atempo_recorded": 0.95,
+   "close_inner": null,
+   "clause_tempo": [
+    1.0,
+    0.95
+   ],
+   "natural_src": "stored_spans",
+   "rate_sps": 7.64,
+   "matched_words": "6/6",
+   "tempo_span": 0.926,
+   "tempo": 0.922,
+   "local_max": [
+    1.152,
+    47.98,
+    48.58,
+    "we can come up"
+   ],
+   "local_min": [
+    0.93,
+    48.12,
+    48.92,
+    "can come up with"
+   ]
+  }
+ ],
+ "rate_median_sps": 7.79,
+ "rate_peaks": [
+  {
+   "unit": 5,
+   "sps": 12.42,
+   "t0": 38.25,
+   "t1": 38.92,
+   "words": "so let it be"
+  },
+  {
+   "unit": 5,
+   "sps": 11.7,
+   "t0": 38.58,
+   "t1": 39.12,
+   "words": "let it be such"
+  },
+  {
+   "unit": 5,
+   "sps": 11.33,
+   "t0": 40.21,
+   "t1": 41.08,
+   "words": "it definitely won't be"
+  },
+  {
+   "unit": 2,
+   "sps": 11.29,
+   "t0": 14.42,
+   "t1": 15.32,
+   "words": "a feature adds of"
+  },
+  {
+   "unit": 6,
+   "sps": 9.95,
+   "t0": 47.98,
+   "t1": 48.58,
+   "words": "we can come up"
+  },
+  {
+   "unit": 0,
+   "sps": 9.15,
+   "t0": 2.42,
+   "t1": 3.3,
+   "words": "out this video recording"
+  },
+  {
+   "unit": 3,
+   "sps": 9.07,
+   "t0": 23.39,
+   "t1": 24.03,
+   "words": "i just want to"
+  },
+  {
+   "unit": 0,
+   "sps": 9.03,
+   "t0": 2.74,
+   "t1": 3.79,
+   "words": "video recording format as"
+  },
+  {
+   "unit": 6,
+   "sps": 9.03,
+   "t0": 47.8,
+   "t1": 48.44,
+   "words": "that we can come"
+  },
+  {
+   "unit": 2,
+   "sps": 8.56,
+   "t0": 14.17,
+   "t1": 15.08,
+   "words": "such a feature adds"
+  }
+ ],
+ "phrase_rate": [
+  {
+   "unit": 1,
+   "placed": [
+    5.64,
+    6.27
+   ],
+   "sps": 9.93,
+   "x_median": 1.27,
+   "tempo": null,
+   "text": "After all,"
+  },
+  {
+   "unit": 5,
+   "placed": [
+    38.2,
+    39.8
+   ],
+   "sps": 8.82,
+   "x_median": 1.13,
+   "tempo": 0.841,
+   "text": "So let it be such a video,"
+  },
+  {
+   "unit": 5,
+   "placed": [
+    40.14,
+    41.88
+   ],
+   "sps": 8.4,
+   "x_median": 1.08,
+   "tempo": 1.089,
+   "text": "it definitely won't be superfluous."
+  },
+  {
+   "unit": 3,
+   "placed": [
+    22.92,
+    24.55
+   ],
+   "sps": 8.31,
+   "x_median": 1.07,
+   "tempo": 0.886,
+   "text": "Well, I just want to see how"
+  },
+  {
+   "unit": 2,
+   "placed": [
+    17.0,
+    18.42
+   ],
+   "sps": 8.08,
+   "x_median": 1.04,
+   "tempo": 0.999,
+   "text": "to the popularity"
+  },
+  {
+   "unit": 2,
+   "placed": [
+    13.7,
+    15.86
+   ],
+   "sps": 7.95,
+   "x_median": 1.02,
+   "tempo": 0.879,
+   "text": "And such a feature adds, of course,"
+  },
+  {
+   "unit": 2,
+   "placed": [
+    19.69,
+    21.38
+   ],
+   "sps": 7.79,
+   "x_median": 1.0,
+   "tempo": 0.862,
+   "text": "and opportunities we have."
+  },
+  {
+   "unit": 6,
+   "placed": [
+    47.72,
+    48.98
+   ],
+   "sps": 7.64,
+   "x_median": 0.98,
+   "tempo": 0.922,
+   "text": "that we can come up with."
+  },
+  {
+   "unit": 0,
+   "placed": [
+    1.8,
+    4.06
+   ],
+   "sps": 7.59,
+   "x_median": 0.97,
+   "tempo": 1.012,
+   "text": "Let's test out this video recording format as well."
+  },
+  {
+   "unit": 4,
+   "placed": [
+    30.8,
+    33.79
+   ],
+   "sps": 7.51,
+   "x_median": 0.96,
+   "tempo": 0.947,
+   "text": "I'm just walking, filming and, saying something."
+  },
+  {
+   "unit": 1,
+   "placed": [
+    7.4,
+    9.57
+   ],
+   "sps": 7.45,
+   "x_median": 0.96,
+   "tempo": 0.914,
+   "text": "modern phones already allow this."
+  },
+  {
+   "unit": 6,
+   "placed": [
+    42.8,
+    44.81
+   ],
+   "sps": 7.43,
+   "x_median": 0.95,
+   "tempo": 0.955,
+   "text": "We are testing all possible variants"
+  },
+  {
+   "unit": 3,
+   "placed": [
+    26.34,
+    28.96
+   ],
+   "sps": 5.69,
+   "x_median": 0.73,
+   "tempo": 0.786,
+   "text": "our app performs in this format."
+  }
+ ]
+}

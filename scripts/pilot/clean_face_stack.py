@@ -87,7 +87,7 @@ def pose_from_matrix(M: np.ndarray) -> np.ndarray:
     return out
 
 
-POSE_PRECHECK = {"yaw_deg": 30.0, "max_fraction": 0.30}
+POSE_PRECHECK = {"yaw_deg": float(os.environ.get("DUB_POSE_YAW", "30")), "max_fraction": float(os.environ.get("DUB_POSE_FRAC", "0.30"))}   # spec 5.5 (r13: env override for the branch test only)
 HOLD_GAP_FRAMES = 5   # spec 11: missing landmarks for <= 5 frames (0.2 s) inside a face run -> previous valid frame   # spec 5.4: > 30 % of face frames with |yaw| > 30 deg -> voice-only result, flagged
 
 
@@ -228,7 +228,11 @@ class CleanPrep:
         self.times = {}; self.error = None
         t0 = time.perf_counter()
         if frames is None:
-            self.master, _ = fa.make_master(src, work); self.frames = fa.read_frames(self.master)
+            self.master, _ = fa.make_master(src, work)
+            if os.environ.get("DUB_GEN_STREAM") == "1":   # r15 T: no whole-video frame buffer (lazy_frames.py); the same frames
+                import lazy_frames; self.frames = lazy_frames.LazyFrames(self.master, back=int(os.environ.get("DUB_GEN_STREAM_BACK", "1024")))
+            else:
+                self.frames = fa.read_frames(self.master)
         else:
             self.master, self.frames = master, frames
         self.times["prep_master"] = round(time.perf_counter() - t0, 3); t0 = time.perf_counter()

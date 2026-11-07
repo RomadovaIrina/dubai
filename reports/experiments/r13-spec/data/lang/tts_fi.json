@@ -1,0 +1,85 @@
+{
+ "lang": "fi",
+ "rows": [
+  {
+   "i": 0,
+   "text": "Prime-täyttö Neometrian tarpeisiin.",
+   "wav": "/workspace/dub/r13s/lang/wav/fi_00.wav",
+   "dur_s": 2.88,
+   "gen_s": 0.85,
+   "asr": "Primetator neometrion tarpeisiin.",
+   "cer": 0.1515,
+   "s_per_char": 0.0873
+  },
+  {
+   "i": 1,
+   "text": "myös alueellamme on sauna-keskus, joka on valmiina ensimmäisille kuviin noin 3-4 päivän päästä todella",
+   "wav": "/workspace/dub/r13s/lang/wav/fi_01.wav",
+   "dur_s": 8.6,
+   "gen_s": 2.09,
+   "asr": "Myös alueellamme on saunakeskus, joka on valmiina ensimmäisiä kuvinnoin tredaparapäivän pestetodella.",
+   "cer": 0.1818,
+   "s_per_char": 0.0869
+  },
+  {
+   "i": 2,
+   "text": "ystävät, no mitä, tervehdit kaikille, äänin ensimmäisen videon, joka on tutustuvaa luonteen, tarkoituksena on tutustua, luultani",
+   "wav": "/workspace/dub/r13s/lang/wav/fi_02.wav",
+   "dur_s": 9.92,
+   "gen_s": 2.39,
+   "asr": "Tervetuloa kaikille, jotka katsoivat videon.  Joka on tutustuva luontiin, tarkoituksella on tutustua luultani.",
+   "cer": 0.3361,
+   "s_per_char": 0.0813
+  },
+  {
+   "i": 3,
+   "text": "tehdään video silmälampiin katsotaan uudelleen testataan miten sovelluksen toimii tällä",
+   "wav": "/workspace/dub/r13s/lang/wav/fi_03.wav",
+   "dur_s": 5.92,
+   "gen_s": 1.5,
+   "asr": "Teidän video sinne lampiin katsotaan uudelleen testataan miten sovelluksen tuimi tekee.",
+   "cer": 0.1379,
+   "s_per_char": 0.068
+  },
+  {
+   "i": 4,
+   "text": "Kootamme testata myös tällaista videonottopohjaa",
+   "wav": "/workspace/dub/r13s/lang/wav/fi_04.wav",
+   "dur_s": 3.52,
+   "gen_s": 0.98,
+   "asr": "Kuutamme testata miostelesta videonottopujaa.",
+   "cer": 0.2292,
+   "s_per_char": 0.0733
+  },
+  {
+   "i": 5,
+   "text": "Haluaisin tarkastella, mitä remontti, jota rakentajamiehet ehdottavat, sisältää.",
+   "wav": "/workspace/dub/r13s/lang/wav/fi_05.wav",
+   "dur_s": 6.96,
+   "gen_s": 1.75,
+   "asr": "Haluaisin tarkastella, mitä remontti, jota rakentajimiet edottavat sisältöön.",
+   "cer": 0.0921,
+   "s_per_char": 0.0916
+  },
+  {
+   "i": 6,
+   "text": "jo alkaa tässä sivuilla kiertueet nyt näytän uima-allas tässä ovat erilaisia asuja täällä on erilaisia asioita zona для переводческой технической поддержки",
+   "wav": "/workspace/dub/r13s/lang/wav/fi_06.wav",
+   "dur_s": 13.04,
+   "gen_s": 3.07,
+   "asr": "Jo alkaa tässä sivuja kirtoet niitten uima alas tässä ovat erilaisia.  Asuja teille on erilaisia asioita zonaa для приватческой технической поддержки.",
+   "cer": 0.1494,
+   "s_per_char": 0.0847
+  },
+  {
+   "i": 7,
+   "text": "Yritän päättää, mutta haluan sanoa yleisesti, olen iloinen tapaamisestani teidän kanssa ja olen iloinen yhteistyöstä. Tänään on viikonloppuna, 28.",
+   "wav": "/workspace/dub/r13s/lang/wav/fi_07.wav",
+   "dur_s": 11.84,
+   "gen_s": 2.8,
+   "asr": "Yritän päättää, mutta haluan sanoa yleisesti, olen iloinen tapamisestani ja idän kansa ja olen iloinen iheistööstä.  Tänään on viikon loppuna 5031.",
+   "cer": 0.0922,
+   "s_per_char": 0.084
+  }
+ ]
+}

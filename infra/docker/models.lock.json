@@ -1,0 +1,398 @@
+{
+ "schema": "dabai-models/1",
+ "sets": {
+  "whisper-large-v3": {
+   "licence": "MIT",
+   "used_by": "ASR (6.1), subtitle timing checks",
+   "optional": false
+  },
+  "qwen2.5-14b-instruct-gguf": {
+   "licence": "Apache-2.0",
+   "used_by": "translation (6.4)",
+   "optional": false
+  },
+  "chatterbox": {
+   "licence": "MIT",
+   "used_by": "TTS (7.2)",
+   "optional": false
+  },
+  "latentsync": {
+   "licence": "OpenRAIL++ (user-approved)",
+   "used_by": "lip-sync (8.1) + SyncNet",
+   "optional": false
+  },
+  "sd-vae-ft-mse": {
+   "licence": "MIT",
+   "used_by": "LatentSync VAE",
+   "optional": false
+  },
+  "wav2vec2-base-960h": {
+   "licence": "Apache-2.0",
+   "used_by": "CTC word timing (9.2), TTS QA",
+   "optional": false
+  },
+  "mediapipe": {
+   "licence": "Apache-2.0",
+   "used_by": "faces / head pose (5.4)",
+   "optional": false
+  },
+  "realesrgan": {
+   "licence": "BSD-3-Clause",
+   "used_by": "composite layer SR",
+   "optional": false
+  },
+  "spleeter": {
+   "licence": "MIT",
+   "used_by": "background bed",
+   "optional": false
+  },
+  "cache/pyannote": {
+   "licence": "MIT (gated)",
+   "used_by": "diarization (6.3)",
+   "optional": false
+  },
+  "cache/pkuseg": {
+   "licence": "MIT",
+   "used_by": "Chatterbox zh segmenter",
+   "optional": true
+  },
+  "student": {
+   "licence": "own (LatentSync OpenRAIL++ derivative)",
+   "used_by": "mode fast",
+   "optional": true
+  }
+ },
+ "total_gb": 23.23,
+ "files": [
+  {
+   "path": "whisper-large-v3/.gitattributes",
+   "bytes": 1519,
+   "sha256": "11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361",
+   "set": "whisper-large-v3"
+  },
+  {
+   "path": "whisper-large-v3/README.md",
+   "bytes": 2052,
+   "sha256": "39e96252229f5a3d0141dc81afb65a36fd205461ac21e5b70f2cd1248ef0082c",
+   "set": "whisper-large-v3"
+  },
+  {
+   "path": "whisper-large-v3/config.json",
+   "bytes": 2394,
+   "sha256": "a9306624f5ec14270a014b647e5c316b6e03a662c369758d1b90697a7b0655b9",
+   "set": "whisper-large-v3"
+  },
+  {
+   "path": "whisper-large-v3/model.bin",
+   "bytes": 3087284237,
+   "sha256": "69f74147e3334731bc3a76048724833325d2ec74642fb52620eda87352e3d4f1",
+   "set": "whisper-large-v3"
+  },
+  {
+   "path": "whisper-large-v3/preprocessor_config.json",
+   "bytes": 340,
+   "sha256": "7ccc62c6f2765af1f3b46c00c9b5894426835a05021c8b9c01eecb6dfb542711",
+   "set": "whisper-large-v3"
+  },
+  {
+   "path": "whisper-large-v3/tokenizer.json",
+   "bytes": 2480617,
+   "sha256": "6d8cbd7cd0d8d5815e478dac67b85a26bbe77c1f5e0c6d76d1ce2abc0e5f21ca",
+   "set": "whisper-large-v3"
+  },
+  {
+   "path": "whisper-large-v3/vocabulary.json",
+   "bytes": 1068114,
+   "sha256": "c69260f2ab26d659b7c398f9a2b2b48ed0df16c3b47d7326782fd9cba71690c1",
+   "set": "whisper-large-v3"
+  },
+  {
+   "path": "qwen2.5-14b-instruct-gguf/qwen2.5-14b-instruct-q5_k_m-00001-of-00003.gguf",
+   "bytes": 4005690208,
+   "sha256": "5899521e6d7196db09bc78dc50c066b1514e48f0cd6ae085e481ee06e2134ac6",
+   "set": "qwen2.5-14b-instruct-gguf"
+  },
+  {
+   "path": "qwen2.5-14b-instruct-gguf/qwen2.5-14b-instruct-q5_k_m-00002-of-00003.gguf",
+   "bytes": 3997407296,
+   "sha256": "ada99d5a4222c0d2b0394f35ad4cd4281bdd1d8b7e9fa4be4f80f036621c580a",
+   "set": "qwen2.5-14b-instruct-gguf"
+  },
+  {
+   "path": "qwen2.5-14b-instruct-gguf/qwen2.5-14b-instruct-q5_k_m-00003-of-00003.gguf",
+   "bytes": 2505775872,
+   "sha256": "02a06964fa37f5e9cd21c92aa3851309ae3f3dcc2f52d631f1ce31b5b93640c0",
+   "set": "qwen2.5-14b-instruct-gguf"
+  },
+  {
+   "path": "chatterbox/Cangjie5_TC.json",
+   "bytes": 1920163,
+   "sha256": "7073fd9de919443ae88e0bd2449917a65fe54898a4413ed1edcc4b67f28bce8c",
+   "set": "chatterbox"
+  },
+  {
+   "path": "chatterbox/conds.pt",
+   "bytes": 107374,
+   "sha256": "6552d70568833628ba019c6b03459e77fe71ca197d5c560cef9411bee9d87f4e",
+   "set": "chatterbox"
+  },
+  {
+   "path": "chatterbox/grapheme_mtl_merged_expanded_v1.json",
+   "bytes": 69989,
+   "sha256": "69632f47220a788a52ce2661d096453c5655e9bf25289d89a8d832c46ee07dbf",
+   "set": "chatterbox"
+  },
+  {
+   "path": "chatterbox/mtl_tokenizer.json",
+   "bytes": 68125,
+   "sha256": "e7f9364e2c279b2de19f417a83624d9887532a56daec2ddddac470cc71693253",
+   "set": "chatterbox"
+  },
+  {
+   "path": "chatterbox/s3gen.pt",
+   "bytes": 1057165844,
+   "sha256": "9b9ff07e60b20c136e2b1b3d7563a24604e8d2c4c267888d1ee929dd0151d2a3",
+   "set": "chatterbox"
+  },
+  {
+   "path": "chatterbox/t3_mtl23ls_v3.safetensors",
+   "bytes": 2143989928,
+   "sha256": "5abca8321ede76f8e61f1cc0d19aea6c946b28871017ce8726f8a69203f05953",
+   "set": "chatterbox"
+  },
+  {
+   "path": "chatterbox/tokenizer.json",
+   "bytes": 25470,
+   "sha256": "d71e3a44eabb1784df9a68e9f95b251ecbf1a7af6a9f50835856b2ca9d8c14a5",
+   "set": "chatterbox"
+  },
+  {
+   "path": "chatterbox/ve.pt",
+   "bytes": 5698626,
+   "sha256": "4b16d836bc598509860f6fa068165a8bb5e9ac84f05582dfcf278a5a372879f1",
+   "set": "chatterbox"
+  },
+  {
+   "path": "latentsync/auxiliary/sfd_face.pth",
+   "bytes": 89844381,
+   "sha256": "d54a87c2b7543b64729c9a25eafd188da15fd3f6e02f0ecec76ae1b30d86c491",
+   "set": "latentsync"
+  },
+  {
+   "path": "latentsync/auxiliary/syncnet_v2.model",
+   "bytes": 54573114,
+   "sha256": "961e8696f888fce4f3f3a6c3d5b3267cf5b343100b238e79b2659bff2c605442",
+   "set": "latentsync"
+  },
+  {
+   "path": "latentsync/latentsync_unet.pt",
+   "bytes": 5072222488,
+   "sha256": "0a478e89eb660f82da4c35dbdde8a5adfb27f99d1b4e50edd03729e1e98316d3",
+   "set": "latentsync"
+  },
+  {
+   "path": "latentsync/whisper/tiny.pt",
+   "bytes": 75572083,
+   "sha256": "65147644a518d12f04e32d6f3b26facc3f8dd46e5390956a9424a650c0ce22b9",
+   "set": "latentsync"
+  },
+  {
+   "path": "sd-vae-ft-mse/config.json",
+   "bytes": 547,
+   "sha256": "92d3dfb746fca211a2c9e019e285f8597412211728dce3c5bcf4eda0f2d62e7e",
+   "set": "sd-vae-ft-mse"
+  },
+  {
+   "path": "sd-vae-ft-mse/diffusion_pytorch_model.safetensors",
+   "bytes": 334643276,
+   "sha256": "a1d993488569e928462932c8c38a0760b874d166399b14414135bd9c42df5815",
+   "set": "sd-vae-ft-mse"
+  },
+  {
+   "path": "wav2vec2-base-960h/config.json",
+   "bytes": 1596,
+   "sha256": "d3ec255c063d9f95057b553b19c20135b259875834a4fe9deb218a6be25b4cf3",
+   "set": "wav2vec2-base-960h"
+  },
+  {
+   "path": "wav2vec2-base-960h/feature_extractor_config.json",
+   "bytes": 158,
+   "sha256": "d3de0c797bf9b65f90bc65c30cb7b303ebeda341f6fc80af33628c4b26b95632",
+   "set": "wav2vec2-base-960h"
+  },
+  {
+   "path": "wav2vec2-base-960h/model.safetensors",
+   "bytes": 377607901,
+   "sha256": "8aa76ab2243c81747a1f832954586bc566090c83a0ac167df6f31f0fa917d74a",
+   "set": "wav2vec2-base-960h"
+  },
+  {
+   "path": "wav2vec2-base-960h/preprocessor_config.json",
+   "bytes": 159,
+   "sha256": "b225d617c025463b9e157e06afea8b90dc7078fc70b013c533328423e0486b4a",
+   "set": "wav2vec2-base-960h"
+  },
+  {
+   "path": "wav2vec2-base-960h/special_tokens_map.json",
+   "bytes": 85,
+   "sha256": "bb7068de1150661a10b55f9e4b12a0e77af8bf91f5e45e1b58afaf1d0e17f675",
+   "set": "wav2vec2-base-960h"
+  },
+  {
+   "path": "wav2vec2-base-960h/tokenizer_config.json",
+   "bytes": 163,
+   "sha256": "dc790594f5bc351a4311c6624f40acd95850d4aaf2a5cb3c656c9b610720b608",
+   "set": "wav2vec2-base-960h"
+  },
+  {
+   "path": "wav2vec2-base-960h/vocab.json",
+   "bytes": 291,
+   "sha256": "19727f8944fe6459fc3f240ae2c198395b740f6a029bd23e06656266b83bcf64",
+   "set": "wav2vec2-base-960h"
+  },
+  {
+   "path": "mediapipe/face_landmarker.task",
+   "bytes": 3758596,
+   "sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff",
+   "set": "mediapipe"
+  },
+  {
+   "path": "realesrgan/RealESRGAN_x2plus.pth",
+   "bytes": 67061725,
+   "sha256": "49fafd45f8fd7aa8d31ab2a22d14d91b536c34494a5cfe31eb5d89c2fa266abb",
+   "set": "realesrgan"
+  },
+  {
+   "path": "spleeter/2stems_tf_vars.npz",
+   "bytes": 78656670,
+   "sha256": "562d2d38480dd4c1d9ac753612d7cb60029487eab2f14c5afc47cc08563a2d23",
+   "set": "spleeter"
+  },
+  {
+   "path": "spleeter/pretrained_models/2stems/checkpoint",
+   "bytes": 67,
+   "sha256": "011c96b970c1f56137037924fe1a0f0851369b0ee6692e120aea798615326f48",
+   "set": "spleeter"
+  },
+  {
+   "path": "spleeter/pretrained_models/2stems/model.data-00000-of-00001",
+   "bytes": 78614080,
+   "sha256": "7747f9fd2c782306dbec1504360fbb645a097a48446f23486c3ff9c89bc11788",
+   "set": "spleeter"
+  },
+  {
+   "path": "spleeter/pretrained_models/2stems/model.index",
+   "bytes": 5244,
+   "sha256": "55661a09f79c86071fc7077b44b4cf1f01b6d82bbbb83ed94cb68a2f9944e378",
+   "set": "spleeter"
+  },
+  {
+   "path": "spleeter/pretrained_models/2stems/model.meta",
+   "bytes": 805575,
+   "sha256": "6e1f6d86a22bb452a58cb20e3de87b416f8a79e626ca223e20f763ab2d21ec95",
+   "set": "spleeter"
+  },
+  {
+   "path": "cache/pyannote/models--pyannote--segmentation-3.0/blobs/c3a7a5be5e67d6d1b1d95af32a4c77d0fe9d6e55",
+   "bytes": 399,
+   "sha256": "fa65a47a751602f04cc570135007d76859b69e8f9f1bfdf5878a5145980d4263",
+   "set": "cache/pyannote"
+  },
+  {
+   "path": "cache/pyannote/models--pyannote--segmentation-3.0/blobs/da85c29829d4002daedd676e012936488234d9255e65e86dfab9bec6b1729298",
+   "bytes": 5905440,
+   "sha256": "da85c29829d4002daedd676e012936488234d9255e65e86dfab9bec6b1729298",
+   "set": "cache/pyannote"
+  },
+  {
+   "path": "cache/pyannote/models--pyannote--segmentation-3.0/refs/main",
+   "bytes": 40,
+   "sha256": "ebeba353f18374df2a2d458ccac960680113e9116a4b0dc680c4c344ab52b7a9",
+   "set": "cache/pyannote"
+  },
+  {
+   "path": "cache/pyannote/models--pyannote--segmentation-3.0/snapshots/e66f3d3b9eb0873085418a7b813d3b369bf160bb/config.yaml",
+   "bytes": 399,
+   "sha256": "fa65a47a751602f04cc570135007d76859b69e8f9f1bfdf5878a5145980d4263",
+   "set": "cache/pyannote"
+  },
+  {
+   "path": "cache/pyannote/models--pyannote--segmentation-3.0/snapshots/e66f3d3b9eb0873085418a7b813d3b369bf160bb/pytorch_model.bin",
+   "bytes": 5905440,
+   "sha256": "da85c29829d4002daedd676e012936488234d9255e65e86dfab9bec6b1729298",
+   "set": "cache/pyannote"
+  },
+  {
+   "path": "cache/pyannote/models--pyannote--speaker-diarization-3.1/blobs/5402e3ca79b6cfa5b0ec283eed920cafe45ee39b",
+   "bytes": 469,
+   "sha256": "04ad9cd59a93c3a7c754200ecc9e1c4ba87bf1657ef8a4debf7555e711daeeda",
+   "set": "cache/pyannote"
+  },
+  {
+   "path": "cache/pyannote/models--pyannote--speaker-diarization-3.1/refs/main",
+   "bytes": 40,
+   "sha256": "bee945510d73adecd0cc02f2446e451f1760e36e964e840759e070d0a25bb7ae",
+   "set": "cache/pyannote"
+  },
+  {
+   "path": "cache/pyannote/models--pyannote--speaker-diarization-3.1/snapshots/84fd25912480287da0247647c3d2b4853cb3ee5d/config.yaml",
+   "bytes": 469,
+   "sha256": "04ad9cd59a93c3a7c754200ecc9e1c4ba87bf1657ef8a4debf7555e711daeeda",
+   "set": "cache/pyannote"
+  },
+  {
+   "path": "cache/pyannote/models--pyannote--wespeaker-voxceleb-resnet34-LM/blobs/366edf44f4c80889a3eb7a9d7bdf02c4aede3127f7dd15e274dcdb826b143c56",
+   "bytes": 26645418,
+   "sha256": "366edf44f4c80889a3eb7a9d7bdf02c4aede3127f7dd15e274dcdb826b143c56",
+   "set": "cache/pyannote"
+  },
+  {
+   "path": "cache/pyannote/models--pyannote--wespeaker-voxceleb-resnet34-LM/blobs/f6508f3ba9be494115516d34cab74943714b9460",
+   "bytes": 221,
+   "sha256": "6ff718cff3c5d7a4493537ab7f4780cad7e3d32453f59099b4076aefa07a9974",
+   "set": "cache/pyannote"
+  },
+  {
+   "path": "cache/pyannote/models--pyannote--wespeaker-voxceleb-resnet34-LM/refs/main",
+   "bytes": 40,
+   "sha256": "aa69820e3ecf932b1c1c490c2ff7a476746e68d9a81574d939f60a8fdc3ec0a1",
+   "set": "cache/pyannote"
+  },
+  {
+   "path": "cache/pyannote/models--pyannote--wespeaker-voxceleb-resnet34-LM/snapshots/837717ddb9ff5507820346191109dc79c958d614/config.yaml",
+   "bytes": 221,
+   "sha256": "6ff718cff3c5d7a4493537ab7f4780cad7e3d32453f59099b4076aefa07a9974",
+   "set": "cache/pyannote"
+  },
+  {
+   "path": "cache/pyannote/models--pyannote--wespeaker-voxceleb-resnet34-LM/snapshots/837717ddb9ff5507820346191109dc79c958d614/pytorch_model.bin",
+   "bytes": 26645418,
+   "sha256": "366edf44f4c80889a3eb7a9d7bdf02c4aede3127f7dd15e274dcdb826b143c56",
+   "set": "cache/pyannote"
+  },
+  {
+   "path": "cache/pkuseg/spacy_ontonotes/features.msgpack",
+   "bytes": 22685181,
+   "sha256": "fd4322482a7018b9bce9216173ae9d2848efe6d310b468bbb4383fb55c874a18",
+   "set": "cache/pkuseg"
+  },
+  {
+   "path": "cache/pkuseg/spacy_ontonotes/weights.npz",
+   "bytes": 37508754,
+   "sha256": "5ada075eb25a854f71d6e6fa4e7d55e7be0ae049255b1f8f19d05c13b1b68c9e",
+   "set": "cache/pkuseg"
+  },
+  {
+   "path": "cache/pkuseg/spacy_ontonotes.zip",
+   "bytes": 34567143,
+   "sha256": "b216e7f92de7ae285aeab8feba2faa8ea8216e5995ff6fb3d391cc8356db1bfe",
+   "set": "cache/pkuseg"
+  },
+  {
+   "path": "student/latentsync_student_r2_s4_step01500_ema.pt",
+   "bytes": 30228073,
+   "sha256": "cfc2428556ce0bf07928b18e5eebfdd8c4601684e96bd22dc733520fd7c2b717",
+   "set": "student"
+  }
+ ]
+}

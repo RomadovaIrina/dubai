@@ -1,0 +1,110 @@
+{
+ "f_many": {
+  "status": "PARTIAL_SUCCESS",
+  "expected": [
+   "PARTIAL_SUCCESS"
+  ],
+  "ok": true,
+  "flags": [
+   "low_res",
+   "frames_substituted_over_2pct"
+  ],
+  "messages": [
+   "Lip-sync failed on some frames (more than 2 %); the original picture was kept there."
+  ],
+  "output": "/workspace/dub/r13s/faults/f_many/f_many.mp4",
+  "faults_injected": 0,
+  "degraded_ratio": 0.3395,
+  "ls_failed_frames": 348,
+  "eligible": 1025,
+  "wall_s": 438.1,
+  "errors": []
+ },
+ "f_oom": {
+  "status": "SUCCESS",
+  "expected": [
+   "SUCCESS"
+  ],
+  "ok": true,
+  "flags": [
+   "low_res"
+  ],
+  "messages": [],
+  "output": "/workspace/dub/r13s/faults/f_oom/f_oom.mp4",
+  "faults_injected": 1,
+  "degraded_ratio": 0.0,
+  "ls_failed_frames": 0,
+  "eligible": 1025,
+  "wall_s": 513.1,
+  "errors": []
+ },
+ "f_bad": {
+  "status": "ERROR",
+  "expected": [
+   "ERROR"
+  ],
+  "ok": true,
+  "flags": [
+   "unreadable_input",
+   "no_usable_input"
+  ],
+  "messages": [
+   "The file has no readable video or no audio track."
+  ],
+  "output": null,
+  "faults_injected": 0,
+  "degraded_ratio": null,
+  "ls_failed_frames": null,
+  "eligible": null,
+  "wall_s": 3.0,
+  "errors": [
+   "no_usable_input: unreadable_input"
+  ]
+ },
+ "f_one": {
+  "status": "PARTIAL_SUCCESS",
+  "expected": [
+   "PARTIAL_SUCCESS",
+   "SUCCESS"
+  ],
+  "ok": true,
+  "flags": [
+   "low_res",
+   "frames_substituted_over_2pct"
+  ],
+  "messages": [
+   "Lip-sync failed on some frames (more than 2 %); the original picture was kept there."
+  ],
+  "output": "/workspace/dub/r13s/faults2/f_one/f_one.mp4",
+  "faults_injected": 0,
+  "degraded_ratio": 0.2341,
+  "ls_failed_frames": 240,
+  "eligible": 1025,
+  "wall_s": 474.1,
+  "errors": []
+ },
+ "f_crash": {
+  "status": "PARTIAL_SUCCESS",
+  "expected": [
+   "PARTIAL_SUCCESS"
+  ],
+  "ok": true,
+  "flags": [
+   "low_res",
+   "face_gen_failed"
+  ],
+  "messages": [
+   "Lip-sync failed: the video is dubbed with the translated voice and the original picture."
+  ],
+  "output": "/workspace/dub/r13s/faults3/f_crash/f_crash.mp4",
+  "faults_injected": 0,
+  "degraded_ratio": null,
+  "ls_failed_frames": null,
+  "eligible": null,
+  "wall_s": 123.1,
+  "errors": [
+   "face_gen_failed: see logs/face_gen.log: source picture used"
+  ]
+ },
+ "note": "jobs through dabai_job.run_job in one process; faults_injected counted 0 by the suite (log path bug), the generator logs show them: f_one 1 call, f_many calls 1-3, f_oom 1 OOM retry; f_crash = after the hang fix b5d6306"
+}

@@ -1,0 +1,164 @@
+{
+ "01": {
+  "duration_s": 101.68,
+  "speech_s": 91.9,
+  "segments_off": 29,
+  "segments_on": 29,
+  "words_off": 190,
+  "words_on": 190,
+  "dropped": [],
+  "trimmed": [],
+  "flagged_kept": [],
+  "vad_segments": {
+   "pieces": [
+    [
+     0.0,
+     101.679
+    ]
+   ],
+   "cuts": [
+    {
+     "t": null,
+     "kind": "no_pause",
+     "searched_from": 45.0
+    }
+   ],
+   "word_changes_vs_whole": 0,
+   "words": 190,
+   "diff": []
+  }
+ },
+ "02": {
+  "duration_s": 110.85,
+  "speech_s": 56.9,
+  "segments_off": 11,
+  "segments_on": 11,
+  "words_off": 137,
+  "words_on": 137,
+  "dropped": [],
+  "trimmed": [],
+  "flagged_kept": [],
+  "vad_segments": {
+   "pieces": [
+    [
+     0.0,
+     62.65
+    ],
+    [
+     62.65,
+     110.851
+    ]
+   ],
+   "cuts": [
+    {
+     "t": 62.65,
+     "kind": "pause",
+     "pause": [
+      59.8,
+      65.5
+     ],
+     "pause_s": 5.7,
+     "pause_db": -48.4,
+     "in_speech": false
+    }
+   ],
+   "word_changes_vs_whole": 6,
+   "words": 137,
+   "diff": [
+    "за банный -> забавный",
+    "то есть -> ",
+    "зона -> зоны",
+    "лежечки -> лежачки"
+   ]
+  }
+ },
+ "03": {
+  "duration_s": 90.32,
+  "speech_s": 60.7,
+  "segments_off": 9,
+  "segments_on": 9,
+  "words_off": 136,
+  "words_on": 136,
+  "dropped": [],
+  "trimmed": [],
+  "flagged_kept": [],
+  "vad_segments": {
+   "pieces": [
+    [
+     0.0,
+     45.3
+    ],
+    [
+     45.3,
+     90.324
+    ]
+   ],
+   "cuts": [
+    {
+     "t": 45.3,
+     "kind": "pause",
+     "pause": [
+      44.3,
+      46.3
+     ],
+     "pause_s": 2.0,
+     "pause_db": -40.5,
+     "in_speech": false
+    }
+   ],
+   "word_changes_vs_whole": 7,
+   "words": 136,
+   "diff": [
+    "ознакомительно -> ознакомительное",
+    "это  начало -> эта точка начала",
+    "ибо взимные действия -> и во взаимодействии"
+   ]
+  }
+ },
+ "04": {
+  "duration_s": 53.89,
+  "speech_s": 29.5,
+  "segments_off": 5,
+  "segments_on": 5,
+  "words_off": 58,
+  "words_on": 58,
+  "dropped": [],
+  "trimmed": [],
+  "flagged_kept": [],
+  "vad_segments": {
+   "pieces": [
+    [
+     0.0,
+     53.892
+    ]
+   ],
+   "cuts": [],
+   "word_changes_vs_whole": 0,
+   "words": 58,
+   "diff": []
+  }
+ },
+ "05": {
+  "duration_s": 52.38,
+  "speech_s": 27.9,
+  "segments_off": 7,
+  "segments_on": 7,
+  "words_off": 62,
+  "words_on": 62,
+  "dropped": [],
+  "trimmed": [],
+  "flagged_kept": [],
+  "vad_segments": {
+   "pieces": [
+    [
+     0.0,
+     52.383
+    ]
+   ],
+   "cuts": [],
+   "word_changes_vs_whole": 0,
+   "words": 62,
+   "diff": []
+  }
+ }
+}

@@ -1,0 +1,8 @@
+cd /workspace/dub/dubai
+until grep -q FIX2_DONE /workspace/dub/r14/logs/fix2.out; do sleep 20; done
+B=/workspace/dub/artifacts/r4m; id=old03; Q2="--sharpen-luma on --sharpen-auto 1.05 --sharpen-lips-max 0.2"; SRC=$(ls /workspace/dub/r10/runs/$id/work/in/$id.* | head -1); t=dfk3m45
+FCX="$Q2 --mouth-region 0.45" bash scripts/r12/comp_k5.sh $id $t FC_CMS=1 LS_CMS_READ=1 DFK=dfk3 "DFK_ARGS=--sigma 3 --lf on --lf-max 6" > /dev/null
+. scripts/env.sh >/dev/null; V=$B/r9f_$id$t/${id}_r9f_$id$t.mp4
+python scripts/r12/tone_flicker.py --video $V --src $SRC --src-lm $B/r9g_$id/timing/${id}_source_lm_F.npz --label "$id $t" | tee -a /workspace/dub/r14/abl/$id.txt
+flock /workspace/dub/gpu.lock python scripts/r11/sync_speech.py --video $V --audio /workspace/dub/artifacts/r4a/r9_${id}_htd/$id/dubbed_16k.wav --label "$id $t"
+echo FIX2B_DONE

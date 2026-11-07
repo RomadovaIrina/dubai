@@ -32,6 +32,38 @@ import torch
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "optim")); sys.path.insert(0, str(HERE.parent / "pilot"))
 from latentsync_accel import LS, AccelLatentSync, _ReplayDetector, _sdpa_context   # noqa: E402
+from latentsync_accel import _tree_half   # noqa: E402
+
+
+def _cond_step(acc, dc, pipe, x, t, mk, mi, rl, au):
+    """r12 LS_CFG_DELTA: one DeepCache SKIP step on the conditional half only. The cached deep features (batch 2B, from the last full step)
+    are viewed as their conditional half for this call and restored afterwards (the shallow blocks this call writes are never read across steps)."""
+    sv = dc.cached_output; dc.cached_output = {k_: _tree_half(v_) for k_, v_ in sv.items()}
+    try:
+        h = lambda v_: v_.chunk(2)[1]
+        return acc.unet(torch.cat([pipe.scheduler.scale_model_input(x, t), h(mk), h(mi), h(rl)], dim=1), t, encoder_hidden_states=h(au)).sample
+    finally:
+        dc.cached_output = sv
+
+
+def _dc_half(dc):
+    """r12 LS_CFG_TRUNC: at the CFG -> conditional-only switch, the DeepCache features cached by the last full step keep their conditional half."""
+    if dc is not None: dc.cached_output = {k_: _tree_half(v_) for k_, v_ in dc.cached_output.items()}
+
+
+def _paste_w(masks):
+    """paste-back weight of the generated pixels: 1 - mask (upstream, a hard edge). r11 FACE LS_MASK_FEATHER=sigma (px of the 512 crop, default off):
+    the generated region is eroded by 2 sigma and blurred by sigma, so the soft ramp lies INSIDE it (never the hallucinated outside); the UNet
+    still sees the binary mask. For a tighter generation mask (LS_MASK=mask3.png) whose hard edge draws a seam on the chin."""
+    g = 1 - masks
+    sg = float(os.environ.get("LS_MASK_FEATHER", "0") or 0)
+    if sg <= 0: return g
+    import torch.nn.functional as Fn
+    from torchvision.transforms.functional import gaussian_blur
+    r = max(1, int(round(2 * sg))); x = g.float()
+    x = -Fn.max_pool2d(-x, 2 * r + 1, stride=1, padding=r)          # erode by r
+    k = 2 * int(math.ceil(3 * sg)) + 1
+    return gaussian_blur(x, [k, k], [sg, sg]).clamp(0, 1).to(g.dtype)
 
 
 class StableLatentSync(AccelLatentSync):
@@ -95,7 +127,7 @@ class StableLatentSync(AccelLatentSync):
             for a in range(0, n, nf):
                 p, mp, m = ip.prepare_masks_and_masked_images(faces[a:a + nf], affine_transform=False); cur_px.append(p); masked_px.append(mp); masks.append(m)
             cur_px, masked_px, masks = torch.cat(cur_px), torch.cat(masked_px), torch.cat(masks)
-            t_vae = 0.0; t_unet = 0.0; unet_calls = 0; windows = []
+            t_vae = 0.0; t_unet = 0.0; unet_calls = 0; unet_rows = 0; windows = []
             if self.mode == "wrapper":
                 synced = cur_px.to(device, weight_dtype)
             elif self.mode == "vae":
@@ -103,7 +135,7 @@ class StableLatentSync(AccelLatentSync):
                 for a in range(0, n, nf):
                     lat = pipe.prepare_image_latents(cur_px[a:a + nf], device, weight_dtype, generator, False)
                     dec = pipe.decode_latents(lat)
-                    out.append(pipe.paste_surrounding_pixels_back(dec, cur_px[a:a + nf], 1 - masks[a:a + nf], device, weight_dtype))
+                    out.append(pipe.paste_surrounding_pixels_back(dec, cur_px[a:a + nf], _paste_w(masks[a:a + nf]), device, weight_dtype))
                 synced = torch.cat(out); t_vae = time.perf_counter() - t0
             else:
                 latents = pipe.prepare_latents(n, pipe.vae.config.latent_channels, H, W, weight_dtype, device, generator)   # (1, 4, n, h, w), same noise per frame
@@ -113,11 +145,20 @@ class StableLatentSync(AccelLatentSync):
                 if ref_faces is not None:
                     rp, _, _ = ip.prepare_masks_and_masked_images(ref_faces, affine_transform=False)
                     ref_lat16 = pipe.prepare_image_latents(rp, device, weight_dtype, generator, False)          # (1, 4, R, h, w)
+                ref_px = cur_px; sharp_r = int(os.environ.get("LS_REF_SHARP", "0") or 0)
+                if sharp_r > 0 and ref_faces is None:
+                    # r11 FACE LS_REF_SHARP=R (default off): the UNet reference of frame i = the SHARPEST aligned crop within +-R frames (Laplacian
+                    # variance of the mouth rows 256-435 of the 512 crop). The current-frame reference copies the source's motion blur on head turns
+                    # (the pale / mushy lip frames); the crops are pose-normalised by the affine, so a near neighbour keeps the pose.
+                    g_ = cur_px[:, :, 256:436, 96:416].float().mean(1, keepdim=True)
+                    lap = torch.nn.functional.conv2d(g_, torch.tensor([[[[0., 1., 0.], [1., -4., 1.], [0., 1., 0.]]]], device=g_.device))
+                    sh = lap.flatten(1).var(1).cpu().numpy(); idx = [max(range(max(0, i - sharp_r), min(n, i + sharp_r + 1)), key=lambda j: sh[j]) for i in range(n)]
+                    ref_px = cur_px[idx]; self.last_ref_sharp = {"radius": sharp_r, "changed": int(sum(j != i for i, j in enumerate(idx)))}
                 for a in range(0, n, nf):
                     mk, mi = pipe.prepare_mask_latents(masks[a:a + nf], masked_px[a:a + nf], H, W, weight_dtype, device, generator, False)
                     m_l.append(mk); mi_l.append(mi)
                     if ref_faces is None:
-                        r_l.append(pipe.prepare_image_latents(cur_px[a:a + nf], device, weight_dtype, generator, False))
+                        r_l.append(pipe.prepare_image_latents(ref_px[a:a + nf], device, weight_dtype, generator, False))
                 mask_lat, masked_lat = torch.cat(m_l, 2), torch.cat(mi_l, 2)
                 if ref_faces is None:
                     ref_lat = torch.cat(r_l, 2)
@@ -155,6 +196,8 @@ class StableLatentSync(AccelLatentSync):
                 t0 = time.perf_counter()
                 if self.overlap == "continue" and self.stride is not None:
                     eps0 = latents.clone(); final = torch.empty_like(latents); done = 0
+                    # r14 F LS_CFG_EARLY=g:frac (default off): guidance g in the first frac of the steps, then self.guidance (CFG 3 on every step flickered)
+                    ce_ = os.environ.get("LS_CFG_EARLY", ""); g_hi, k_hi = (float(ce_.split(":")[0]), round(float(ce_.split(":")[1]) * len(timesteps))) if ce_ else (self.guidance, 0)
                     with _sdpa_context(self.sdpa):
                         for a_, b_ in windows:
                             o = max(0, done - a_); x = eps0[:, :, a_:b_].clone(); known = final[:, :, a_:a_ + o] if o > 0 else None
@@ -163,13 +206,13 @@ class StableLatentSync(AccelLatentSync):
                                 mk, mi, rl, au = torch.cat([mk] * 2), torch.cat([mi] * 2), torch.cat([rl] * 2), torch.cat([torch.zeros_like(au), au])
                             if dc is not None:
                                 dc.cached_output = {}
-                            for t in timesteps:
+                            for si_, t in enumerate(timesteps):
                                 if o > 0:   # pin the shared frames to the previous window's result at this noise level
                                     x[:, :, :o] = pipe.scheduler.add_noise(known, eps0[:, :, a_:a_ + o], t.reshape(1))
                                 x2 = torch.cat([x] * 2) if do_cfg else x
                                 npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1
                                 if do_cfg:
-                                    nu, na = npred.chunk(2); npred = nu + self.guidance * (na - nu)
+                                    nu, na = npred.chunk(2); npred = nu + (g_hi if si_ < k_hi else self.guidance) * (na - nu)
                                 x = pipe.scheduler.step(npred, t, x, **extra).prev_sample
                             if o > 0:
                                 x[:, :, :o] = known
@@ -188,12 +231,26 @@ class StableLatentSync(AccelLatentSync):
                             ts_g = timesteps
                             if gsteps.get(id(grp), self.steps) != self.steps:   # this group's own schedule (DeepCache indexes the current scheduler timesteps)
                                 pipe.scheduler.set_timesteps(gsteps[id(grp)], device=device); ts_g = pipe.scheduler.timesteps
-                            for t in ts_g:
-                                x2 = torch.cat([x] * 2) if do_cfg else x
-                                npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1
-                                if do_cfg:
-                                    nu, na = npred.chunk(2); npred = nu + self.guidance * (na - nu)
+                            ema_a = float(os.environ.get("LS_X0_EMA", "0") or 0); ema_k = int(os.environ.get("LS_X0_EMA_STEPS", "3") or 3)   # r11 FACE (flag, default off)
+                            cfg_g = do_cfg; kt_ = round(self.cfg_trunc * len(ts_g) / max(1, self.steps)) if self.cfg_trunc > 0 else 0   # r12 LS_CFG_TRUNC (scaled to this group's schedule)
+                            dl_ = None   # r12 LS_CFG_DELTA: the guidance delta (cond - uncond) of the last full step
+                            for si_, t in enumerate(ts_g):
+                                if cfg_g and 0 < kt_ <= si_:
+                                    cfg_g = False; mk, mi, rl, au = [v_.chunk(2)[1] for v_ in (mk, mi, rl, au)]; _dc_half(dc)
+                                if cfg_g and dl_ is not None and self.cfg_delta and dc is not None and si_ % self.deepcache_interval != 0:
+                                    npred = _cond_step(self, dc, pipe, x, t, mk, mi, rl, au) + (self.guidance - 1) * dl_; unet_calls += 1; unet_rows += x.shape[0]
+                                else:
+                                    x2 = torch.cat([x] * 2) if cfg_g else x
+                                    npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1; unet_rows += x2.shape[0]
+                                    if cfg_g:
+                                        nu, na = npred.chunk(2); dl_ = na - nu; npred = nu + self.guidance * dl_
                                 x = pipe.scheduler.step(npred, t, x, **extra).prev_sample
+                                if ema_a > 0 and si_ >= len(ts_g) - ema_k and x.shape[2] >= 3:
+                                    # r11 FACE LS_X0_EMA=a, LS_X0_EMA_STEPS=K: in the last K steps, a +-1-frame temporal filter on the window's latents
+                                    # (x <- (1 - 2a) x + a x[f-1] + a x[f+1], edges replicated). The initial noise is the same frame repeated, so this
+                                    # smooths the per-frame CONTENT drift (the lip definition jumping sharp -> mushy -> sharp), not the noise.
+                                    xp = torch.cat([x[:, :, :1], x[:, :, :-1]], 2); xn = torch.cat([x[:, :, 1:], x[:, :, -1:]], 2)
+                                    x = ((1 - 2 * ema_a) * x.float() + ema_a * (xp.float() + xn.float())).to(x.dtype)
                             for k, (a, b) in enumerate(grp):
                                 latents[:, :, a:b] = x[k:k + 1]
                             if ts_g is not timesteps: pipe.scheduler.set_timesteps(self.steps, device=device); timesteps = pipe.scheduler.timesteps
@@ -253,11 +310,17 @@ class StableLatentSync(AccelLatentSync):
                                 mk, mi, rl, au = torch.cat([mk] * 2), torch.cat([mi] * 2), torch.cat([rl] * 2), torch.cat([torch.zeros_like(au), au])
                             if dc is not None:
                                 dc.cached_output = {}
-                            for t in timesteps[k0:]:
-                                x2 = torch.cat([x] * 2) if do_cfg else x
-                                npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1
-                                if do_cfg:
-                                    nu, na = npred.chunk(2); npred = nu + self.guidance * (na - nu)
+                            cfg_b = do_cfg; dlb_ = None
+                            for j_, t in enumerate(timesteps[k0:]):
+                                if cfg_b and 0 < self.cfg_trunc <= k0 + j_:   # r12 LS_CFG_TRUNC: the same global step rule inside the bridges
+                                    cfg_b = False; mk, mi, rl, au = [v_.chunk(2)[1] for v_ in (mk, mi, rl, au)]; _dc_half(dc)
+                                if cfg_b and dlb_ is not None and self.cfg_delta and dc is not None and j_ % self.deepcache_interval != 0:   # r12 LS_CFG_DELTA (bridges: DeepCache counts from k0)
+                                    npred = _cond_step(self, dc, pipe, x, t, mk, mi, rl, au) + (self.guidance - 1) * dlb_; unet_calls += 1; unet_rows += x.shape[0]
+                                else:
+                                    x2 = torch.cat([x] * 2) if cfg_b else x
+                                    npred = self.unet(torch.cat([pipe.scheduler.scale_model_input(x2, t), mk, mi, rl], dim=1), t, encoder_hidden_states=au).sample; unet_calls += 1; unet_rows += x2.shape[0]
+                                    if cfg_b:
+                                        nu, na = npred.chunk(2); dlb_ = na - nu; npred = nu + self.guidance * dlb_
                                 x = pipe.scheduler.step(npred, t, x, **extra).prev_sample
                             for j, (a_, b_) in enumerate(bt):
                                 L_ = b_ - a_; w = torch.tensor([min(i + 1, L_ - i) for i in range(L_)], device=device, dtype=torch.float32)
@@ -274,7 +337,7 @@ class StableLatentSync(AccelLatentSync):
                         part = pipe.decode_latents(latents[:, :, a:a + nf, r0:]); dec = cur_px[a:a + nf].to(device=part.device, dtype=part.dtype).clone(); dec[:, :, r0 * 8:] = part
                     else:
                         dec = pipe.decode_latents(latents[:, :, a:a + nf])
-                    out.append(pipe.paste_surrounding_pixels_back(dec, cur_px[a:a + nf], 1 - masks[a:a + nf], device, weight_dtype))
+                    out.append(pipe.paste_surrounding_pixels_back(dec, cur_px[a:a + nf], _paste_w(masks[a:a + nf]), device, weight_dtype))
                 synced = torch.cat(out); torch.cuda.synchronize(); t_vae += time.perf_counter() - t0
             t0 = time.perf_counter(); frames = pipe.restore_video(synced, video_frames, boxes, affine); t_res = time.perf_counter() - t0
             # seams = first frame of NEW content after a previous window (segment-relative): window starts (none / fuse) or previous window ends (continue)
@@ -284,7 +347,7 @@ class StableLatentSync(AccelLatentSync):
                 seams = [w[0] for w in windows[1:]] if windows else list(range(nf, n, nf))
             stats = {"frames": int(frames.shape[0]), "windows": len(windows), "seams": seams, "full_windows": len([w for w in windows if w[1] - w[0] == nf]),
                      "partial_windows": len([w for w in windows if w[1] - w[0] != nf]), "groups": unet_calls // max(len(timesteps), 1) if windows else 0,
-                     "window_batch_size": self.B, "unet_calls": unet_calls, "silent_windows": n_sil_windows if windows else 0, "steps_silent": self.steps_silent, "stride": self.stride, "ref_mode": self.ref_mode, "mode": self.mode,
+                     "window_batch_size": self.B, "unet_calls": unet_calls, "unet_rows": unet_rows, "cfg_trunc": self.cfg_trunc, "cfg_delta": self.cfg_delta, "silent_windows": n_sil_windows if windows else 0, "steps_silent": self.steps_silent, "stride": self.stride, "ref_mode": self.ref_mode, "mode": self.mode,
                      "overlap": self.overlap, "window_len": self.num_frames, "bridge": {"len": self.bridge_len, "steps": self.bridge_steps},
                      "detector": "replayed_verify_pass" if replay is not None else "latentsync_internal", "detector_fallback_calls": replay.fallbacks if replay else 0,
                      "seconds": {"preprocess_audio_video": round(t_pre, 3), "affine": round(t_aff, 3), "vae_and_cond": round(t_vae, 3), "unet_denoise": round(t_unet, 3),
@@ -367,9 +430,50 @@ def half_rate_fill(src, sub, idx):
             wa = cv2.remap(A, gx + a_ * fba[..., 0], gy + a_ * fba[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
             wb = cv2.remap(Bq, gx + (1 - a_) * fab[..., 0], gy + (1 - a_) * fab[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
             it = (1 - a_) * wa.astype(np.float32) + a_ * wb.astype(np.float32)
+            fm = os.environ.get("LS_RATE_FILL", "blend")   # r13 (user on m03 LS_RATE 2/3: "лицо подергивается и дрожит" = an 8.3 Hz mouth pulse: the blended
+            # fill frame is softer than its generated neighbours): hf = the blend's low frequencies + the nearer warped frame's detail; near = the nearer warped frame alone
+            if fm in ("hf", "near"):
+                wn = (wa if a_ <= 0.5 else wb).astype(np.float32)
+                if fm == "near": it = wn
+                else:
+                    sg = float(os.environ.get("LS_RATE_FILL_SIGMA", "1.5")); it = cv2.GaussianBlur(it, (0, 0), sg) + (wn - cv2.GaussianBlur(wn, (0, 0), sg))
         else: it = A.astype(np.float32)
         mm = cv2.GaussianBlur(cv2.dilate(m[y0:y1, x0:x1].astype(np.uint8), np.ones((9, 9), np.uint8)).astype(np.float32), (0, 0), 4.0)[..., None]
         f = src[k].copy(); f[y0:y1, x0:x1] = np.clip(mm * it + (1 - mm) * f[y0:y1, x0:x1].astype(np.float32), 0, 255).round().astype(np.uint8); out[k] = f
+    return out
+
+
+def _flow_mid(dis, a, b, t):
+    """r13 LS_RATE_EVEN: the frame at time t (0..1) between RGB frames a and b, bidirectional DIS flow (as half_rate_fill)."""
+    import cv2
+    ga, gb = cv2.cvtColor(a, cv2.COLOR_RGB2GRAY), cv2.cvtColor(b, cv2.COLOR_RGB2GRAY); fab, fba = dis.calc(ga, gb, None), dis.calc(gb, ga, None)
+    gy, gx = np.mgrid[0:a.shape[0], 0:a.shape[1]].astype(np.float32)
+    wa = cv2.remap(a, gx + t * fba[..., 0], gy + t * fba[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+    wb = cv2.remap(b, gx + (1 - t) * fab[..., 0], gy + (1 - t) * fab[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+    return np.clip((1 - t) * wa.astype(np.float32) + t * wb.astype(np.float32), 0, 255).round().astype(np.uint8)
+
+
+def even_fill(src, gen, gin, pos):
+    """r13 LS_RATE_EVEN: generated frames gen[j] (made from the input frames gin[j] at master time pos[j], evenly spaced) -> every master frame k:
+    inside the region the generator changed (|gen - gin| > 3 on either neighbour, dilated, feathered) the flow interpolation of the two generated
+    neighbours at k's time, outside it the source frame's own pixels; a master frame that IS a generated time takes that frame."""
+    import cv2
+    n = len(src); out = np.empty_like(src); dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM); pos = np.asarray(pos, np.float64)
+    reg = [np.abs(g.astype(np.int16) - i.astype(np.int16)).max(2) > 3 for g, i in zip(gen, gin)]
+    for k in range(n):
+        j = int(np.searchsorted(pos, k, side="right") - 1); j = max(0, min(j, len(pos) - 1))
+        if abs(pos[j] - k) < 1e-6 or j + 1 >= len(pos):
+            r = reg[j]; it = gen[j] if abs(pos[j] - k) < 1e-6 else gen[j]
+            m = r
+        else:
+            t = (k - pos[j]) / (pos[j + 1] - pos[j]); m = reg[j] | reg[j + 1]; it = None
+        ys, xs = np.nonzero(m)
+        if len(ys) == 0: out[k] = src[k]; continue
+        H, W = m.shape; pad = 24; y0, y1, x0, x1 = max(0, ys.min() - pad), min(H, ys.max() + pad + 1), max(0, xs.min() - pad), min(W, xs.max() + pad + 1)
+        if it is None: it = _flow_mid(dis, np.ascontiguousarray(gen[j][y0:y1, x0:x1]), np.ascontiguousarray(gen[j + 1][y0:y1, x0:x1]), t)
+        else: it = it[y0:y1, x0:x1]
+        mm = cv2.GaussianBlur(cv2.dilate(m[y0:y1, x0:x1].astype(np.uint8), np.ones((9, 9), np.uint8)).astype(np.float32), (0, 0), 4.0)[..., None]
+        f = src[k].copy(); f[y0:y1, x0:x1] = np.clip(mm * it.astype(np.float32) + (1 - mm) * f[y0:y1, x0:x1].astype(np.float32), 0, 255).round().astype(np.uint8); out[k] = f
     return out
 
 
@@ -379,7 +483,11 @@ class StableRunner:
     def __init__(self, window_batch_size=2, deepcache=True, steps=20, guidance=1.5, seed=1247, deepcache_interval=5, stride=None, ref_mode="same", mode="ls", pipe=None,
                  overlap="fuse", window_len=None, bridge_len=0, bridge_steps=0):
         from resident_vram_probe import load_latentsync
-        t0 = time.perf_counter(); pipe = pipe or load_latentsync(); vae_compile(pipe); unet_compile(pipe)
+        t0 = time.perf_counter(); pipe = pipe or load_latentsync()
+        if os.environ.get("LS_LORA"):   # r11 FACE (default off): a per-speaker LoRA (scripts/r11/ft_speaker.py) merged into the UNet weights before compile
+            sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "r11")); import ls_lora
+            nl = ls_lora.merge_lora(pipe.unet, os.environ["LS_LORA"], float(os.environ.get("LS_LORA_STRENGTH", "1") or 1)); print(f"  LS_LORA merged {nl} adapters from {os.environ['LS_LORA']}", flush=True)
+        vae_compile(pipe); unet_compile(pipe)
         self.acc = StableLatentSync(pipe, stride=stride, ref_mode=ref_mode, mode=mode, overlap=overlap, window_len=window_len, bridge_len=bridge_len, bridge_steps=bridge_steps,
                                     window_batch_size=window_batch_size,
                                     deepcache=deepcache, steps=steps, guidance=guidance, seed=seed, deepcache_interval=deepcache_interval)
@@ -395,6 +503,32 @@ class StableRunner:
         self.acc.chunk_hook = self.silence_mix.hook(start, n) if self.silence_mix is not None else None
         sa = getattr(self, "silent_all", None); self.acc.silent_seg = sa[start:start + n] if sa is not None else None   # phase 2: dub-silent master frames of this segment
 
+    def _even_rate(self, frames, audio_wav, detections, fps, rate="2/3"):
+        """r13 LS_RATE=2/3 LS_RATE_EVEN=1 (user on m03 LS_RATE 2/3: "лицо подергивается и дрожит"; the skip pattern feeds the generator uneven steps):
+        LatentSync on an EVEN 50/3 fps grid (master times 0, 1.5, 3, ...; the half-step input frames are flow-interpolated from the source, their
+        detections averaged; the audio chunks are taken at the same times: video_fps just under 50/3), then flow-interpolated back to the master grid."""
+        import cv2
+        k_, m_ = map(int, rate.split("/")); n = len(frames); pos = np.arange(0, n - 1e-6, m_ / k_); dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM); gin = []; dets = [] if detections is not None else None
+        for t in pos:
+            a = int(np.floor(t)); f_ = t - a
+            if f_ < 1e-6 or a + 1 >= n: gin.append(frames[a]); d_ = detections[a] if detections is not None else None
+            else:
+                gin.append(_flow_mid(dis, frames[a], frames[a + 1], f_))
+                d_ = None
+                if detections is not None:
+                    da, db = detections[a], detections[a + 1]
+                    if da is None or db is None or any(x is None for x in tuple(da) + tuple(db)): d_ = da if da is not None else db
+                    else: d_ = type(da)((np.asarray(x, np.float64) + np.asarray(y, np.float64)) / 2 for x, y in zip(da, db))
+            if dets is not None: dets.append(d_)
+        ss = self.acc.silent_seg
+        if ss is not None: self.acc.silent_seg = np.asarray(ss)[np.minimum(np.round(pos).astype(int), len(ss) - 1)]
+        try:
+            gen = self.acc.run_frames(np.ascontiguousarray(np.stack(gin)), audio_wav, dets, video_fps=(25.0 * k_ / m_) * (1 - 1e-9))
+        finally: self.acc.silent_seg = ss
+        gen = np.asarray(gen)[:len(pos)]
+        print(f"  [ls_rate] even {25 * k_ / m_:.2f} fps: {len(pos)} generated for {n} master frames", flush=True)
+        return even_fill(frames, gen, np.stack(gin)[:len(gen)], pos[:len(gen)])
+
     def run_frames(self, frames_rgb, audio_wav, detections=None):
         prof = os.environ.get("LS_PROFILE", "")   # r10 speed: CUDA kernel table of the FIRST segment -> <file> (torch.profiler; diagnostics only)
         if prof and not getattr(self, "_profiled", False):
@@ -407,8 +541,21 @@ class StableRunner:
             return r
         fps = int(os.environ.get("DUB_LS_FPS", "25")); t0 = time.perf_counter()
         rate = os.environ.get("LS_RATE", "")   # r10 speed: LS_RATE=k/m = LatentSync on k of every m master frames, each with ITS OWN 25 fps audio window (chunk selection), the rest flow-filled
-        if rate and len(frames_rgb) >= 32:
+        if rate and os.environ.get("LS_RATE_EVEN") == "1" and len(frames_rgb) >= 32:   # r13: any k/m on an even grid (user: even 2/3 "стало сильно лучше", slight tremble left)
+            frames = self._even_rate(np.asarray(frames_rgb), str(audio_wav), detections, fps, rate)
+        elif rate and len(frames_rgb) >= 32:
             k_, m_ = map(int, rate.split("/")); n = len(frames_rgb); idx = np.array([i for i in range(n) if i % m_ < k_]); ss = self.acc.silent_seg; hk = self.acc.chunk_hook
+            aq = float(os.environ.get("LS_RATE_ADAPT", "0") or 0)
+            if aq > 0:   # r13 (user on m03 LS_RATE 2/3: "лицо подергивается и дрожит"): skip frames only in LOW-motion blocks; a block (4 x m frames) whose
+                # frame-to-frame change (grey, quarter resolution, whole frame = mostly the head) is above the aq quantile of the segment keeps every frame
+                import cv2
+                g = [cv2.resize(cv2.cvtColor(np.asarray(f_), cv2.COLOR_RGB2GRAY), None, fx=0.25, fy=0.25, interpolation=cv2.INTER_AREA).astype(np.float32) for f_ in frames_rgb]
+                mo = np.array([0.0] + [float(np.abs(g[i] - g[i - 1]).mean()) for i in range(1, n)]); L_ = 4 * m_
+                bm = np.array([mo[b:b + L_].mean() for b in range(0, n, L_)]); thr_ = np.quantile(bm, aq)
+                keep = np.zeros(n, bool)
+                for bi, b in enumerate(range(0, n, L_)):
+                    keep[b:b + L_] = True if bm[bi] > thr_ else (np.arange(b, min(n, b + L_)) % m_ < k_)
+                idx = np.flatnonzero(keep); print(f"  [ls_rate] adapt q={aq}: {n - len(idx)} of {n} frames skipped ({100 * (n - len(idx)) / n:.1f} %)", flush=True)
             if ss is not None: self.acc.silent_seg = np.asarray(ss)[idx[idx < len(ss)]]
             def sel(enc, ch, hk=hk):
                 ch = hk(enc, ch) if hk is not None else ch

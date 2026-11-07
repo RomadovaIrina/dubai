@@ -1,0 +1,85 @@
+{
+ "lang": "zh",
+ "rows": [
+  {
+   "i": 0,
+   "text": "Neometria Prime装修风格。",
+   "wav": "/workspace/dub/r13s/lang/wav/zh_00.wav",
+   "dur_s": 3.04,
+   "gen_s": 0.89,
+   "asr": "Neo Metria Prime 装修风格",
+   "cer": 0.0,
+   "s_per_char": 0.1689
+  },
+  {
+   "i": 1,
+   "text": "我们也准备了一个桑拿区，一切就绪，三天到四天后就可以开始第一次蒸桑拿了。",
+   "wav": "/workspace/dub/r13s/lang/wav/zh_01.wav",
+   "dur_s": 7.92,
+   "gen_s": 1.98,
+   "asr": "我们也准备了一个桑拿区 一切就绪 三天到四天后就可以开始第一次蒸桑拿了",
+   "cer": 0.0,
+   "s_per_char": 0.24
+  },
+  {
+   "i": 2,
+   "text": "朋友们大家好，我要录制第一个介绍性的视频，目的是让大家互相认识一下。",
+   "wav": "/workspace/dub/r13s/lang/wav/zh_02.wav",
+   "dur_s": 6.84,
+   "gen_s": 1.71,
+   "asr": "朋友们大家好 我要录制第一个介绍性的视频 目的是让大家互相认识一下",
+   "cer": 0.0,
+   "s_per_char": 0.2206
+  },
+  {
+   "i": 3,
+   "text": "我们做一段戴眼镜的视频，再看看，再测试一下我们的应用程序在这种情况下的表现。",
+   "wav": "/workspace/dub/r13s/lang/wav/zh_03.wav",
+   "dur_s": 6.92,
+   "gen_s": 1.73,
+   "asr": "我们做一段戴眼镜的视频 再看看再测试一下我们的应用程序 在这种情况下的表现",
+   "cer": 0.0,
+   "s_per_char": 0.1977
+  },
+  {
+   "i": 4,
+   "text": "我们来测试一下这种视频拍摄格式吧",
+   "wav": "/workspace/dub/r13s/lang/wav/zh_04.wav",
+   "dur_s": 4.04,
+   "gen_s": 1.11,
+   "asr": "我们来测试一下这种视频拍摄格式吧",
+   "cer": 0.0,
+   "s_per_char": 0.2525
+  },
+  {
+   "i": 5,
+   "text": "让我们来看看开发商提出的维修都包括什么。",
+   "wav": "/workspace/dub/r13s/lang/wav/zh_05.wav",
+   "dur_s": 4.72,
+   "gen_s": 1.26,
+   "asr": "让我们来看看开发商提出的维修都包括什么",
+   "cer": 0.0,
+   "s_per_char": 0.2484
+  },
+  {
+   "i": 6,
+   "text": "这里就开始有蒸汽了，我现在给你们看看游泳池，我们这里有各种各样的东西，一个区域是",
+   "wav": "/workspace/dub/r13s/lang/wav/zh_06.wav",
+   "dur_s": 8.72,
+   "gen_s": 2.13,
+   "asr": "这里就开始有蒸汽了 我现在给你们看看游泳池 我们这里有各种各样的东西 一个区域是",
+   "cer": 0.0,
+   "s_per_char": 0.2357
+  },
+  {
+   "i": 7,
+   "text": "总的来说，我想说的是，很高兴与你们相识，也很高兴今天是周五，28号。",
+   "wav": "/workspace/dub/r13s/lang/wav/zh_07.wav",
+   "dur_s": 8.12,
+   "gen_s": 2.01,
+   "asr": "总的来说,我想说的是,很高兴与你们相识,也很高兴今天是周五,丁太好",
+   "cer": 0.1034,
+   "s_per_char": 0.28
+  }
+ ]
+}

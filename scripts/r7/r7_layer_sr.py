@@ -9,6 +9,7 @@ Weights: models/realesrgan/RealESRGAN_x2plus.pth (sha256 49fafd45...266abb, 64 M
 from __future__ import annotations
 import argparse, hashlib, pathlib, sys, time
 import numpy as np
+_LRGB = __import__("os").environ.get("LS_LAYER_RGB", "0") == "1"  # r13 LS_LAYER_RGB=1: lossless RGB layer (each yuv420p round trip lost ~0.7 L / +0.4 b*)
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 WEIGHTS = ROOT / "models/realesrgan/RealESRGAN_x2plus.pth"; SHA = "49fafd45f8fd7aa8d31ab2a22d14d91b536c34494a5cfe31eb5d89c2fa266abb"
@@ -67,7 +68,7 @@ def main():
     a = ap.parse_args(); lm = np.load(a.lm)["lm"]; net = load_model(); t0 = time.perf_counter()
     import av
     c = av.open(a.ls_raw); s = c.streams.video[0]; s.thread_type = "AUTO"; o = av.open(a.out, "w")   # phase 2: threaded decode (38 s -> 3 s on 1309 frames)
-    st = o.add_stream("libx264", rate=s.average_rate); st.pix_fmt = "yuv420p"; st.options = {"crf": str(a.crf), "preset": a.encode_preset}; T = {"decode": 0.0, "sr": 0.0, "flow": 0.0, "encode": 0.0}
+    st = o.add_stream("libx264rgb" if _LRGB else "libx264", rate=s.average_rate); st.pix_fmt = "bgr24" if _LRGB else "yuv420p"; st.options = ({"qp": "0", "preset": a.encode_preset} if _LRGB else {"crf": str(a.crf), "preset": a.encode_preset}); T = {"decode": 0.0, "sr": 0.0, "flow": 0.0, "encode": 0.0}
     frames = []; crops = []; boxes = []   # per frame: (x0, y0, x1, y1, mask) or None; the raw crop and its ESRGAN detail (sr - raw)
     pending = []   # (frame index, crop float32 BGR, mask, box) awaiting the ESRGAN pass
     def flush():

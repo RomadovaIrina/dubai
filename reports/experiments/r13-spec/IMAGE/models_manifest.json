@@ -1,0 +1,231 @@
+[
+ {
+  "name": "faster-whisper large-v3",
+  "path": "models/whisper-large-v3",
+  "source": "hf:Systran/faster-whisper-large-v3",
+  "hf_revision": "edaa852ec7e145841d8ffdb056a99866b5f0a478",
+  "bytes": 3090839273,
+  "gb": 3.09,
+  "licence": "MIT",
+  "used_by": "ASR (6.1), TTS QA, subtitle checks",
+  "status": "required",
+  "present_on_reference_server": true,
+  "files_sha256": []
+ },
+ {
+  "name": "Qwen2.5-14B-Instruct GGUF Q5_K_M",
+  "path": "models/qwen2.5-14b-instruct-gguf",
+  "source": "hf:Qwen/Qwen2.5-14B-Instruct-GGUF (*q5_k_m*)",
+  "hf_revision": "b466e1f8c07172155743e8e1307507d8a4f91fbd",
+  "bytes": 10508873376,
+  "gb": 10.51,
+  "licence": "Apache-2.0",
+  "used_by": "translation / duration-aware rewrites / judge (6.4)",
+  "status": "required",
+  "present_on_reference_server": true,
+  "files_sha256": []
+ },
+ {
+  "name": "Qwen2.5-7B-Instruct GGUF Q8_0",
+  "path": "models/qwen2.5-7b-instruct-gguf",
+  "source": "hf:Qwen/Qwen2.5-7B-Instruct-GGUF",
+  "hf_revision": "bb5d59e06d9551d752d08b292a50eb208b07ab1f",
+  "bytes": 8098525408,
+  "gb": 8.1,
+  "licence": "Apache-2.0",
+  "used_by": "NOT used any more (14B on the GPU since 29.10)",
+  "status": "drop from the image (DUB_SKIP_QWEN7B=1)",
+  "present_on_reference_server": true,
+  "files_sha256": []
+ },
+ {
+  "name": "Chatterbox Multilingual v3",
+  "path": "models/chatterbox",
+  "source": "hf:ResembleAI/chatterbox (ve.pt, s3gen.pt, conds.pt, t3_mtl23ls_v3.safetensors, tokenizers)",
+  "hf_revision": "5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18",
+  "bytes": 3212885885,
+  "gb": 3.21,
+  "licence": "MIT",
+  "used_by": "TTS (7.2), VC (7.4)",
+  "status": "required",
+  "present_on_reference_server": true,
+  "files_sha256": []
+ },
+ {
+  "name": "LatentSync 1.6",
+  "path": "models/latentsync",
+  "source": "hf:ByteDance/LatentSync-1.6 (latentsync_unet.pt, whisper/tiny.pt, auxiliary/syncnet_v2.model, auxiliary/sfd_face.pth)",
+  "hf_revision": "c42c7e6c8e9c213626389fa7d9a3c444b8536353",
+  "bytes": 5292212066,
+  "gb": 5.29,
+  "licence": "OpenRAIL++ (user-approved)",
+  "used_by": "lip-sync (8.1), SyncNet metric (12.1)",
+  "status": "required",
+  "present_on_reference_server": true,
+  "files_sha256": []
+ },
+ {
+  "name": "sd-vae-ft-mse",
+  "path": "models/sd-vae-ft-mse",
+  "source": "hf:stabilityai/sd-vae-ft-mse",
+  "hf_revision": "31f26fdeee1355a5c34592e401dd41e45d25a493",
+  "bytes": 334643823,
+  "gb": 0.33,
+  "licence": "MIT",
+  "used_by": "LatentSync VAE",
+  "status": "required",
+  "present_on_reference_server": true,
+  "files_sha256": []
+ },
+ {
+  "name": "wav2vec2-base-960h",
+  "path": "models/wav2vec2-base-960h",
+  "source": "hf:facebook/wav2vec2-base-960h",
+  "hf_revision": "22aad52d435eb6dbaf354bdad9b0da84ce7d6156",
+  "bytes": 377610353,
+  "gb": 0.38,
+  "licence": "Apache-2.0",
+  "used_by": "TTS QA (CTC), subtitle word timing (9.2), tempo audit",
+  "status": "required",
+  "present_on_reference_server": true,
+  "files_sha256": []
+ },
+ {
+  "name": "MediaPipe Face Landmarker",
+  "path": "models/mediapipe",
+  "source": "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task (sha256 pinned)",
+  "hf_revision": null,
+  "bytes": 3758596,
+  "gb": 0.0,
+  "licence": "Apache-2.0",
+  "used_by": "faces, head pose (5.4), crops",
+  "status": "required",
+  "present_on_reference_server": true,
+  "files_sha256": [
+   {
+    "file": "face_landmarker.task",
+    "bytes": 3758596,
+    "sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff"
+   }
+  ]
+ },
+ {
+  "name": "Spleeter 2stems",
+  "path": "models/spleeter",
+  "source": "https://github.com/deezer/spleeter/releases/download/v1.4.0/2stems.tar.gz (-> torch npz)",
+  "hf_revision": null,
+  "bytes": 158081812,
+  "gb": 0.16,
+  "licence": "MIT",
+  "used_by": "the Spleeter background bed",
+  "status": "required",
+  "present_on_reference_server": true,
+  "files_sha256": [
+   {
+    "file": "2stems_tf_vars.npz",
+    "bytes": 78656670,
+    "sha256": "562d2d38480dd4c1d9ac753612d7cb60029487eab2f14c5afc47cc08563a2d23"
+   },
+   {
+    "file": "pretrained_models/2stems/model.data-00000-of-00001",
+    "bytes": 78614080,
+    "sha256": "7747f9fd2c782306dbec1504360fbb645a097a48446f23486c3ff9c89bc11788"
+   },
+   {
+    "file": "pretrained_models/2stems/model.meta",
+    "bytes": 805575,
+    "sha256": "6e1f6d86a22bb452a58cb20e3de87b416f8a79e626ca223e20f763ab2d21ec95"
+   }
+  ]
+ },
+ {
+  "name": "Real-ESRGAN x2plus",
+  "path": "models/realesrgan",
+  "source": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth (sha256 pinned)",
+  "hf_revision": null,
+  "bytes": 67061725,
+  "gb": 0.07,
+  "licence": "BSD-3-Clause",
+  "used_by": "composite layer SR",
+  "status": "required",
+  "present_on_reference_server": true,
+  "files_sha256": [
+   {
+    "file": "RealESRGAN_x2plus.pth",
+    "bytes": 67061725,
+    "sha256": "49fafd45f8fd7aa8d31ab2a22d14d91b536c34494a5cfe31eb5d89c2fa266abb"
+   }
+  ]
+ },
+ {
+  "name": "CodeFormer + ParseNet",
+  "path": "third_party/CodeFormer/weights",
+  "source": "https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/{codeformer,parsing_parsenet}.pth",
+  "hf_revision": null,
+  "bytes": 461969155,
+  "gb": 0.46,
+  "licence": "S-Lab License 1.0 = NON-COMMERCIAL",
+  "used_by": "mouth detail (8.3), DUB_ALLOW_NC=1",
+  "status": "LICENCE DEVIATION, user-accepted 29.10",
+  "present_on_reference_server": true,
+  "files_sha256": []
+ },
+ {
+  "name": "htdemucs (demucs 4.0.1)",
+  "path": "/workspace/dub/quarantine_nc/torch",
+  "source": "pip demucs==4.0.1 (code MIT) + its pretrained htdemucs checkpoint (dl.fbaipublicfiles.com)",
+  "hf_revision": null,
+  "bytes": 84141911,
+  "gb": 0.08,
+  "licence": "weights: not cleared for commercial use (treated as NC)",
+  "used_by": "the htdemucs (main) background bed, DUB_ALLOW_NC_BED=1",
+  "status": "LICENCE DEVIATION, user-accepted",
+  "present_on_reference_server": true,
+  "files_sha256": [
+   {
+    "file": "hub/checkpoints/955717e8-8726e21a.th",
+    "bytes": 84141911,
+    "sha256": "8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4"
+   }
+  ]
+ },
+ {
+  "name": "pyannote speaker-diarization-3.1",
+  "path": "models/hf (HF_HOME cache)",
+  "source": "hf:pyannote/speaker-diarization-3.1 + segmentation-3.0 + wespeaker-voxceleb-resnet34-LM (GATED: HF token + accepted terms)",
+  "hf_revision": null,
+  "bytes": 280,
+  "gb": 0.0,
+  "licence": "MIT",
+  "used_by": "diarization (6.3)",
+  "status": "required: pre-fetch into HF_HOME at build time (5.1: no download at start)",
+  "present_on_reference_server": true,
+  "files_sha256": []
+ },
+ {
+  "name": "Silero VAD",
+  "path": "pip silero-vad (weights inside the package)",
+  "source": "pip silero-vad",
+  "hf_revision": null,
+  "bytes": 0,
+  "gb": 0.0,
+  "licence": "MIT",
+  "used_by": "VAD (5.2, 6.2 guard), speech gate",
+  "status": "required",
+  "present_on_reference_server": false,
+  "files_sha256": []
+ },
+ {
+  "name": "KeySync",
+  "path": "/workspace/dub/keysync (own venv)",
+  "source": "git https://github.com/antonibigata/keysync @5e2503b + ks_sm120.patch; weights ~13 GB (scripts/keysync/ on experiment/r13-keysync)",
+  "hf_revision": null,
+  "bytes": 0,
+  "gb": 0.0,
+  "licence": "Stability AI Community License (< $1M revenue, registration)",
+  "used_by": "the alternative lip-sync generator (KeySync agent)",
+  "status": "OPTIONAL; LICENCE DEVIATION, user-accepted",
+  "present_on_reference_server": false,
+  "files_sha256": []
+ }
+]

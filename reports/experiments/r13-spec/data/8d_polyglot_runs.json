@@ -1,0 +1,82 @@
+{
+ "m03poly": {
+  "status": "SUCCESS",
+  "flags": [
+   "two_faces"
+  ],
+  "outputs": {
+   "demucs": {
+    "width": 720,
+    "height": 1280,
+    "fps": 30.0,
+    "duration_s": 40.5,
+    "a_duration_s": 40.5,
+    "vcodec": "h264",
+    "size_mb": 18.43,
+    "file": "m03poly_DabAI_r9_demucs.mp4",
+    "matches_source": true
+   },
+   "spleeter": {
+    "width": 720,
+    "height": 1280,
+    "fps": 30.0,
+    "duration_s": 40.5,
+    "a_duration_s": 40.5,
+    "vcodec": "h264",
+    "size_mb": 18.42,
+    "file": "m03poly_DabAI_r9_spleeter.mp4",
+    "matches_source": true
+   }
+  },
+  "timing": {
+   "precheck": 9.1,
+   "audio": 70.8,
+   "sep": 2.5,
+   "polyglot": 30.9,
+   "face_gen": 291.3,
+   "face_comp": 134.4,
+   "subs": 7.2,
+   "mux": 0.1,
+   "metrics": 0.0
+  }
+ },
+ "m18de": {
+  "status": "SUCCESS",
+  "flags": [],
+  "outputs": {
+   "demucs": {
+    "width": 720,
+    "height": 1280,
+    "fps": 30.0,
+    "duration_s": 20.053,
+    "a_duration_s": 20.053,
+    "vcodec": "h264",
+    "size_mb": 8.36,
+    "file": "m18de_DabAI_r9_demucs.mp4",
+    "matches_source": true
+   },
+   "spleeter": {
+    "width": 720,
+    "height": 1280,
+    "fps": 30.0,
+    "duration_s": 20.053,
+    "a_duration_s": 20.053,
+    "vcodec": "h264",
+    "size_mb": 8.36,
+    "file": "m18de_DabAI_r9_spleeter.mp4",
+    "matches_source": true
+   }
+  },
+  "timing": {
+   "precheck": 2.8,
+   "audio": 47.2,
+   "sep": 0.0,
+   "polyglot": 25.9,
+   "face_gen": 149.7,
+   "face_comp": 106.2,
+   "subs": 4.0,
+   "mux": 0.1,
+   "metrics": 0.0
+  }
+ }
+}

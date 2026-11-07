@@ -1,0 +1,85 @@
+{
+ "lang": "sw",
+ "rows": [
+  {
+   "i": 0,
+   "text": "Ulayaji Prime kutoka kwa Neometria.",
+   "wav": "/workspace/dub/r13s/lang/wav/sw_00.wav",
+   "dur_s": 3.12,
+   "gen_s": 0.89,
+   "asr": "Ulayaji prime kutoka kwa neometria.",
+   "cer": 0.0,
+   "s_per_char": 0.0918
+  },
+  {
+   "i": 1,
+   "text": "nia yetu ya nyumba yetilesi huna mazingira ya bath chanya ambayo huwa na ubalizi zote, na kila chochote lenye utamaduni linaweza kubadilisha kwa kunywa mafuta mbadala kila 3-4 siku hivi karibuni tayari kustahimili mabath.",
+   "wav": "/workspace/dub/r13s/lang/wav/sw_01.wav",
+   "dur_s": 16.4,
+   "gen_s": 3.83,
+   "asr": "Nia yetu ya nyumba yetilezi huna mazingira ya bath chanya ambayo hua na ubalizi zote na kila chochote lenyi utamaduni linaweza kubadilisha kwa kuniwa mafuta mubadala kila tre, kwatro siku hivi karibuni tayari kustahimiri mabati.",
+   "cer": 0.078,
+   "s_per_char": 0.0752
+  },
+  {
+   "i": 2,
+   "text": "marafiki, ni salam kwenu zote, ninachukua kufilisi kwanza hii, iliyohusu kutoa maelekezo, kwa maana ya kushirikiana",
+   "wav": "/workspace/dub/r13s/lang/wav/sw_02.wav",
+   "dur_s": 9.72,
+   "gen_s": 2.33,
+   "asr": "Marafiki, ni salamu kwenu zote. Ni nachukua kufilisi kwanza hii ili uhusu kutuwa maelekezo kwa maana ya kushirikiana.",
+   "cer": 0.0541,
+   "s_per_char": 0.0876
+  },
+  {
+   "i": 3,
+   "text": "Tufanye video na glasses tukuelimewa tena zaidi tueleze kwamba programu yetu inawezeshiwa kwa hii",
+   "wav": "/workspace/dub/r13s/lang/wav/sw_03.wav",
+   "dur_s": 7.8,
+   "gen_s": 1.91,
+   "asr": "Tufanye video na glases tukuelimiwa.  Tena zaidi tueleze kwa mba programu yetu inaweze shiwa kwa ji.",
+   "cer": 0.0619,
+   "s_per_char": 0.0804
+  },
+  {
+   "i": 4,
+   "text": "Tafadhali tuwezesha kidogo hii taasisi ya kushotoa video hapa hapa",
+   "wav": "/workspace/dub/r13s/lang/wav/sw_04.wav",
+   "dur_s": 6.32,
+   "gen_s": 1.6,
+   "asr": "Tafadhali tuwe cesha kidogo hii taasisi yakusho toa video hapa hapa.",
+   "cer": 0.0606,
+   "s_per_char": 0.0958
+  },
+  {
+   "i": 5,
+   "text": "Tafuta na angalia ikiwa inavyowezesha haribifu linalotolewa na mnadhaaji kwa ajili ya ubunifu.",
+   "wav": "/workspace/dub/r13s/lang/wav/sw_05.wav",
+   "dur_s": 7.04,
+   "gen_s": 1.75,
+   "asr": "Tafuta na angalia ikiwa inabyo etsesha haribifu lina rotolewa na mnadhaaji kwa jili yao bunifu.",
+   "cer": 0.0968,
+   "s_per_char": 0.0757
+  },
+  {
+   "i": 6,
+   "text": "sasa nitakupa vizuri kwenye bafundi hizi ikiwa hapa sasa nitumie mapenzi hizi zonzo kumbukumbu hapa kuna vile vile maduka mbalimbali kwenye zona hii",
+   "wav": "/workspace/dub/r13s/lang/wav/sw_06.wav",
+   "dur_s": 10.4,
+   "gen_s": 2.52,
+   "asr": "Sasa nitakupa vizuri kwenye bafundi hiti ikiwa hapa sasa nitumie mapenzi hiti zonzo kumbu kumbu hapa kuna vile vile maduka mulimbari kwenye zona hii.",
+   "cer": 0.0405,
+   "s_per_char": 0.0703
+  },
+  {
+   "i": 7,
+   "text": "Zuri kusaidia, ninakua muda mwingi kufikia kwa ushauri huo kwa lugha yaKiswahili kutoka kiingereza au kirusi. Lathari lako ni kama hapa: \"Zuri kukuwa na wewe, nikitaka kusema, nimependa kuwa na ripoti nawe, nimependa kazi na wewe leo, juma 28\"",
+   "wav": "/workspace/dub/r13s/lang/wav/sw_07.wav",
+   "dur_s": 16.36,
+   "gen_s": 3.79,
+   "asr": "Zuri kusaidia, ninakuwa muda muingi kufikia kwa ushauri wokuwa luga ya kizwairi kutoka kingereza uki rusi.  Latari lako ni kama hapa, zuri kukua na wewe. Nikitaka kusema, nimependa kuwa na ripoki na wewe. Nimependa kazi na wewe leo, Juma 18 sikuara.",
+   "cer": 0.1282,
+   "s_per_char": 0.0699
+  }
+ ]
+}

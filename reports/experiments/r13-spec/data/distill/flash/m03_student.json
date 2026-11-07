@@ -1,0 +1,398 @@
+{
+ "video": "/workspace/dub/r13s/distill/eval/m03/st_m03.mp4",
+ "frames": 1214,
+ "thr": 6.0,
+ "flash_frames": 43,
+ "source_spike_frames": 1,
+ "flash_mc": 31,
+ "flash_stat": 12,
+ "flash_list": [
+  {
+   "frame": 104,
+   "t": 3.467,
+   "mc_ratio": 1.84,
+   "mc_vs_src": 1.97,
+   "z_hf": -0.3,
+   "z_lum": 4.0,
+   "z_col": 1.5
+  },
+  {
+   "frame": 109,
+   "t": 3.633,
+   "mc_ratio": 2.27,
+   "mc_vs_src": 3.22,
+   "z_hf": 0.6,
+   "z_lum": -1.2,
+   "z_col": -1.9
+  },
+  {
+   "frame": 125,
+   "t": 4.2,
+   "mc_ratio": 0.62,
+   "mc_vs_src": 0.73,
+   "z_hf": 0.0,
+   "z_lum": -6.9,
+   "z_col": -4.4
+  },
+  {
+   "frame": 139,
+   "t": 4.667,
+   "mc_ratio": 2.34,
+   "mc_vs_src": 2.19,
+   "z_hf": -0.5,
+   "z_lum": 0.7,
+   "z_col": 0.9
+  },
+  {
+   "frame": 185,
+   "t": 6.2,
+   "mc_ratio": 2.42,
+   "mc_vs_src": 1.93,
+   "z_hf": -0.1,
+   "z_lum": 3.0,
+   "z_col": 1.1
+  },
+  {
+   "frame": 188,
+   "t": 6.3,
+   "mc_ratio": 2.35,
+   "mc_vs_src": 1.73,
+   "z_hf": 1.0,
+   "z_lum": 0.1,
+   "z_col": 0.6
+  },
+  {
+   "frame": 222,
+   "t": 7.433,
+   "mc_ratio": 1.51,
+   "mc_vs_src": 1.62,
+   "z_hf": -1.2,
+   "z_lum": 1.2,
+   "z_col": 0.6
+  },
+  {
+   "frame": 238,
+   "t": 7.967,
+   "mc_ratio": 1.61,
+   "mc_vs_src": 2.15,
+   "z_hf": 0.1,
+   "z_lum": 4.5,
+   "z_col": 1.1
+  },
+  {
+   "frame": 239,
+   "t": 8.0,
+   "mc_ratio": 1.71,
+   "mc_vs_src": 3.55,
+   "z_hf": 0.2,
+   "z_lum": 2.3,
+   "z_col": 0.8
+  },
+  {
+   "frame": 263,
+   "t": 8.8,
+   "mc_ratio": 0.83,
+   "mc_vs_src": 0.86,
+   "z_hf": 0.2,
+   "z_lum": -6.4,
+   "z_col": -4.4
+  },
+  {
+   "frame": 349,
+   "t": 11.667,
+   "mc_ratio": 1.78,
+   "mc_vs_src": 2.35,
+   "z_hf": -0.3,
+   "z_lum": 5.6,
+   "z_col": -0.7
+  },
+  {
+   "frame": 352,
+   "t": 11.767,
+   "mc_ratio": 1.6,
+   "mc_vs_src": 1.46,
+   "z_hf": 0.3,
+   "z_lum": -8.4,
+   "z_col": -6.5
+  },
+  {
+   "frame": 371,
+   "t": 12.4,
+   "mc_ratio": 2.22,
+   "mc_vs_src": 2.93,
+   "z_hf": 0.6,
+   "z_lum": -0.7,
+   "z_col": -0.5
+  },
+  {
+   "frame": 408,
+   "t": 13.633,
+   "mc_ratio": 1.54,
+   "mc_vs_src": 2.63,
+   "z_hf": -0.5,
+   "z_lum": -1.9,
+   "z_col": -0.9
+  },
+  {
+   "frame": 409,
+   "t": 13.667,
+   "mc_ratio": 1.84,
+   "mc_vs_src": 2.99,
+   "z_hf": -0.4,
+   "z_lum": -2.1,
+   "z_col": -1.3
+  },
+  {
+   "frame": 426,
+   "t": 14.233,
+   "mc_ratio": 1.89,
+   "mc_vs_src": 2.04,
+   "z_hf": -0.7,
+   "z_lum": 1.4,
+   "z_col": -0.5
+  },
+  {
+   "frame": 431,
+   "t": 14.4,
+   "mc_ratio": 2.68,
+   "mc_vs_src": 2.28,
+   "z_hf": 0.4,
+   "z_lum": 1.1,
+   "z_col": -0.3
+  },
+  {
+   "frame": 474,
+   "t": 15.833,
+   "mc_ratio": 2.07,
+   "mc_vs_src": 1.74,
+   "z_hf": -0.3,
+   "z_lum": -1.1,
+   "z_col": -0.5
+  },
+  {
+   "frame": 475,
+   "t": 15.867,
+   "mc_ratio": 1.84,
+   "mc_vs_src": 1.63,
+   "z_hf": -0.7,
+   "z_lum": 0.1,
+   "z_col": -0.2
+  },
+  {
+   "frame": 484,
+   "t": 16.167,
+   "mc_ratio": 0.98,
+   "mc_vs_src": 0.8,
+   "z_hf": -0.0,
+   "z_lum": -7.7,
+   "z_col": -2.0
+  },
+  {
+   "frame": 485,
+   "t": 16.2,
+   "mc_ratio": 0.96,
+   "mc_vs_src": 1.04,
+   "z_hf": 0.1,
+   "z_lum": -8.4,
+   "z_col": -3.4
+  },
+  {
+   "frame": 486,
+   "t": 16.233,
+   "mc_ratio": 1.19,
+   "mc_vs_src": 1.16,
+   "z_hf": -0.0,
+   "z_lum": 7.7,
+   "z_col": 2.3
+  },
+  {
+   "frame": 487,
+   "t": 16.267,
+   "mc_ratio": 1.16,
+   "mc_vs_src": 1.04,
+   "z_hf": -0.7,
+   "z_lum": 7.9,
+   "z_col": 2.7
+  },
+  {
+   "frame": 493,
+   "t": 16.467,
+   "mc_ratio": 1.69,
+   "mc_vs_src": 1.61,
+   "z_hf": -0.6,
+   "z_lum": 0.4,
+   "z_col": -0.6
+  },
+  {
+   "frame": 570,
+   "t": 19.033,
+   "mc_ratio": 3.19,
+   "mc_vs_src": 3.79,
+   "z_hf": -1.1,
+   "z_lum": -0.0,
+   "z_col": 0.7
+  },
+  {
+   "frame": 571,
+   "t": 19.067,
+   "mc_ratio": 2.75,
+   "mc_vs_src": 3.88,
+   "z_hf": 0.0,
+   "z_lum": 0.7,
+   "z_col": -1.7
+  },
+  {
+   "frame": 573,
+   "t": 19.133,
+   "mc_ratio": 1.59,
+   "mc_vs_src": 2.25,
+   "z_hf": 0.2,
+   "z_lum": -2.2,
+   "z_col": -0.1
+  },
+  {
+   "frame": 619,
+   "t": 20.667,
+   "mc_ratio": 2.56,
+   "mc_vs_src": 5.72,
+   "z_hf": -0.3,
+   "z_lum": -0.7,
+   "z_col": -0.6
+  },
+  {
+   "frame": 638,
+   "t": 21.3,
+   "mc_ratio": 0.68,
+   "mc_vs_src": 0.93,
+   "z_hf": 0.3,
+   "z_lum": -6.3,
+   "z_col": -3.7
+  },
+  {
+   "frame": 640,
+   "t": 21.367,
+   "mc_ratio": 1.94,
+   "mc_vs_src": 2.27,
+   "z_hf": -1.0,
+   "z_lum": 2.2,
+   "z_col": 0.4
+  },
+  {
+   "frame": 673,
+   "t": 22.467,
+   "mc_ratio": 1.77,
+   "mc_vs_src": 1.67,
+   "z_hf": -0.0,
+   "z_lum": -1.0,
+   "z_col": -0.8
+  },
+  {
+   "frame": 706,
+   "t": 23.567,
+   "mc_ratio": 1.75,
+   "mc_vs_src": 2.66,
+   "z_hf": 0.8,
+   "z_lum": 0.1,
+   "z_col": -1.6
+  },
+  {
+   "frame": 707,
+   "t": 23.6,
+   "mc_ratio": 1.4,
+   "mc_vs_src": 3.18,
+   "z_hf": -0.4,
+   "z_lum": 4.8,
+   "z_col": 6.3
+  },
+  {
+   "frame": 749,
+   "t": 25.0,
+   "mc_ratio": 0.95,
+   "mc_vs_src": 0.66,
+   "z_hf": 1.3,
+   "z_lum": -6.1,
+   "z_col": -4.4
+  },
+  {
+   "frame": 797,
+   "t": 26.6,
+   "mc_ratio": 1.77,
+   "mc_vs_src": 1.8,
+   "z_hf": 1.1,
+   "z_lum": -1.8,
+   "z_col": -0.5
+  },
+  {
+   "frame": 810,
+   "t": 27.033,
+   "mc_ratio": 2.22,
+   "mc_vs_src": 2.63,
+   "z_hf": -0.1,
+   "z_lum": -0.5,
+   "z_col": 2.1
+  },
+  {
+   "frame": 826,
+   "t": 27.567,
+   "mc_ratio": 1.72,
+   "mc_vs_src": 1.66,
+   "z_hf": -0.3,
+   "z_lum": 3.4,
+   "z_col": 2.3
+  },
+  {
+   "frame": 850,
+   "t": 28.367,
+   "mc_ratio": 2.31,
+   "mc_vs_src": 2.51,
+   "z_hf": -0.8,
+   "z_lum": 1.6,
+   "z_col": 0.7
+  },
+  {
+   "frame": 851,
+   "t": 28.4,
+   "mc_ratio": 1.06,
+   "mc_vs_src": 2.06,
+   "z_hf": 0.1,
+   "z_lum": 7.6,
+   "z_col": -1.1
+  },
+  {
+   "frame": 852,
+   "t": 28.433,
+   "mc_ratio": 1.09,
+   "mc_vs_src": 2.37,
+   "z_hf": -0.3,
+   "z_lum": 6.5,
+   "z_col": 1.0
+  },
+  {
+   "frame": 1080,
+   "t": 36.033,
+   "mc_ratio": 2.59,
+   "mc_vs_src": 2.08,
+   "z_hf": -0.1,
+   "z_lum": 0.1,
+   "z_col": -1.4
+  },
+  {
+   "frame": 1090,
+   "t": 36.367,
+   "mc_ratio": 2.23,
+   "mc_vs_src": 1.83,
+   "z_hf": -0.0,
+   "z_lum": -2.1,
+   "z_col": -0.3
+  },
+  {
+   "frame": 1139,
+   "t": 38.0,
+   "mc_ratio": 2.38,
+   "mc_vs_src": 1.8,
+   "z_hf": 0.6,
+   "z_lum": 3.8,
+   "z_col": 3.0
+  }
+ ]
+}
