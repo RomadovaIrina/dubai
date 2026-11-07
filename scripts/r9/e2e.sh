@@ -102,7 +102,7 @@ export DUB_SEP_STEMS=/workspace/dub/r8a
 OVL=${R9_SEP_OVERLAP:-on}   # r9 speed O: the htdemucs stems while the audio stage runs, the demucs remix in parallel with the Spleeter one (same commands = same files)
 if [ "$OVL" = on ]; then
   rm -rf $DUB_SEP_STEMS/stems_htdemucs/$ID $A/$HT
-  bash scripts/r9/sep_overlap.sh start $ID $DUB_SEP_STEMS/stems_htdemucs $W $L
+  bash scripts/r9/sep_overlap.sh start $ID $DUB_SEP_STEMS/stems_htdemucs $W $L 8>&-   # (its background demucs must not inherit the lock fd)
   export R9_ON_MIXSRC="bash $DUB_ROOT/scripts/r9/sep_overlap.sh mix $ID $AT $HT $W $L"
 fi
 bash scripts/r8/r8_audio.sh $AT $ID > $L/audio.log 2>&1
@@ -178,13 +178,16 @@ else
     WV=$B/$GT/work_${ID}_$GT/video; TD=$B/$GT/timing
     ( for i in $(seq 1800); do [ -s $WV/master_mediapipe.npz ] && break; sleep 2; done; [ -s $WV/master_mediapipe.npz ] || exit 0; mkdir -p $TD; TJ=$TD/${ID}_master_timing_F.json; SL=$TD/${ID}_source_lm_F.npz
       python scripts/quality/r3_master_timing.py --src $SRC --master $WV/master_25fps.mp4 --vf fps=25 --out $TJ && python scripts/quality/r3_source_lm.py --src $SRC --timing $TJ --out $SL \
-        && python scripts/r9/r9_source_rigid.py --src $SRC --source-lm $SL ) > $L/srcprep.log 2>&1 & SP=$!
+        && python scripts/r9/r9_source_rigid.py --src $SRC --source-lm $SL ) > $L/srcprep.log 2>&1 8>&- & SP=$!
   fi
   export R13_GPU_DONE_FILE=$W/gen_gpu_done; rm -f $R13_GPU_DONE_FILE   # read by the resident generator only (R10_GEN_EARLY_RELEASE)
   CFX="--codeformer optimized --codeformer-w 1.0 --codeformer-parse off --codeformer-batch 16"; CFDV=self   # r15 T: DUB_ALLOW_NC=0 -> the clean face
+  if [ "$DUB_ALLOW_NC" = 1 ] && [ ! -s third_party/CodeFormer/weights/CodeFormer/codeformer.pth ]; then   # r16 T: the NC weights are not on this host / volume
+    echo "== $ID WARN LatentSync face: DUB_ALLOW_NC=1 but third_party/CodeFormer/weights/CodeFormer/codeformer.pth is missing -> the CLEAN face (no CodeFormer)" | tee -a $L/e2e.log
+    export DUB_ALLOW_NC=0; FL+=("codeformer_missing_clean_face"); fi
   [ "$DUB_ALLOW_NC" = 1 ] || { CFX="--codeformer off"; CFDV=""; FL+=("face_clean_no_codeformer"); }
   AUDIO=$A/$AT TAG=$GT SKIP_SCORE=1 VIDEO_EXTRA="$CFX --steps 10 --steps-silent 20 $REFX" \
-    bash scripts/r7/r7_e2e.sh $ID > $L/face_gen.log 2>&1 & GENP=$!
+    bash scripts/r7/r7_e2e.sh $ID > $L/face_gen.log 2>&1 8>&- & GENP=$!   # (the lock stays with this shell: a background child never holds fd 8)
   if [ "${R10_GEN_EARLY_RELEASE:-0}" = 1 ] && [ -n "${R10_HEAVY_LOCK:-}" ]; then   # r13: the resident generator signals the end of its GPU work (scripts/r10/gen_worker.py)
     while kill -0 $GENP 2>/dev/null; do [ -f $W/gen_gpu_done ] && { flock -u 8; echo "== $ID heavy lock released early: generator GPU done $(date +%T)" | tee -a $L/e2e.log; break; }; sleep 0.5; done
   fi
@@ -271,6 +274,6 @@ export METRICS=on
 } > $L/metrics.log 2>&1
 if [ "${E2E_FRAME_GATE:-on}" = on ] && [ -f $B/$FT/${ID}_$FT.mp4 ]; then   # the whole-frame gate is one CPU core for ~1 s per frame at 1080p: in the background (next video starts), then the rows again
   ( bash scripts/r7/r7_frame_gate.sh $B/$FT:$FT $ID | grep "^=="; python scripts/r7/r7_baseline.py freeze --tag $FT --audio $A/$AT --ids $ID --out $W/face_gate.json | tail -2
-    collect | tail -1; echo "R9_FRAME_GATE_DONE $ID" ) > $L/frame_gate.log 2>&1 < /dev/null &
+    collect | tail -1; echo "R9_FRAME_GATE_DONE $ID" ) > $L/frame_gate.log 2>&1 < /dev/null 8>&- &
   disown; fi
 finish
