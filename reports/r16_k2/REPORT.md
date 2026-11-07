@@ -74,3 +74,26 @@ The full outputs carry the accepted `final_mix_aac.m4a` unchanged (packet md5 ch
   - `clips/<v>_teeth_tone_4panel_plain_bank_tone07_tone10_*_half_speed.mp4` (m03 23–27 and 0–4 s, m18 2–6 s, old03 37–40 s);
   - `full/<v>_keysync_fast2_a_bank_tone{07,10}.mp4`.
   - All yuv420p with +faststart; the full files carry the original audio (packet md5 checked).
+
+## Round 3 (Irina on the round-1 panel: "b лучше на маме, a и c хуже"): (a), (c) and the tone round dropped; gated steps
+- **Why (a) looked worse** (m03 25.1–25.6 s frame by frame): on the open "O" the bank filled the whole cavity with a grille of teeth, i.e. an open jaw with clenched teeth.
+  - The source interior was affine-stretched to the taller dub opening, so the teeth were stretched, the gaps read as bars, and the colour was brown.
+  - It was not flicker: inner-mouth zigzag plain 13.6 = bank 13.6, b8 12.8, source 8.1.
+- **`ks_gate.py`** (hook: `KS_GATE="thr=0.12,cap=0.25,hi=8,lo=2"` in ks_fast.py):
+  - The gate: per decoded keyframe, the dark-pixel share inside the source mouth box (landmark cache). On m03 this correlates 0.83 with the generated opening, and threshold 0.12 ≈ opening > 0.22.
+  - It is capped at the darkest 25 % of keyframes per keyframe batch; a segment is "hi" if either of its keyframes is.
+  - The sampler runs the 8-step (or 4-step) AYS grid. Lo segments are evaluated only at s0 / s4 (= the plain 2-step student), and 28-row UNet chunks with no active row are skipped.
+  - About 21–23 % of segments run hi.
+
+| warm face GPU-s/vmin m03 / old03 / m18 | SyncNet speech@0 m03 / old03 / m18 (plain tex2 = 8.616 / 7.717 / 7.986) |
+|---|---|
+| 2 steps (plain): 137 / 126 / 134 | – |
+| b8 full (8 steps spliced on open > 0.18; Irina liked it): est. 212 / 165 / 200 | 8.488 / 7.630 / 7.977 |
+| **b8 gate: 161 / 130 / 176** | 8.494 / 7.813 / 8.117 |
+| **b4 gate: 135 / 128 / 144** | 8.464 / 7.784 / 8.216 |
+
+- Raw black-cavity share stays roughly where it was (m03 16.5 / 14.3 %): steps don't cure the black hole. What Irina liked in b is the steadier and smaller mouth (the inner-mouth zigzag drops).
+- Files:
+  - `clips/{m03,m18}_steps_4panel_plain_b8full_b8gate_b4gate_*_half_speed.mp4` (m03 23–27 and 0–4 s, m18 2–6 s);
+  - `full/<v>_keysync_fast2_{plain_tex2,b8_full,b8_gate,b4_gate}.mp4`.
+  - All with tex2 (now the ks_plain default), the original audio, yuv420p with +faststart.
