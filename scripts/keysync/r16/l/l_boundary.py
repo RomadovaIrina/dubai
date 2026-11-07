@@ -23,14 +23,14 @@ def series(vid, lmf):
         band = np.zeros((512, 512), np.uint8); cv2.fillPoly(band, [cv2.convexHull(p[LOW].astype(np.int32))], 1)
         lips = np.zeros_like(band); cv2.fillPoly(lips, [cv2.convexHull(p[LIPS].astype(np.int32))], 1)
         k = max(3, int(0.25 * iod)) | 1; lips = cv2.dilate(lips, np.ones((k, k), np.uint8)); band = band.astype(bool) & ~lips.astype(bool)
+        xl, xr = p[61, 0] - 0.15 * iod, p[291, 0] + 0.15 * iod; xs = np.arange(512)[None, :]; band &= (xs < xl) | (xs > xr)   # cheeks only (audit #4)
         eye = np.zeros_like(lips); cv2.fillPoly(eye, [cv2.convexHull(p[EYES].astype(np.int32))], 1); eye = eye.astype(bool) & ~band
         d = np.abs(fr[t] - fr[t - 1]); E.append(float(d[eye].mean())); B.append(float(d[band].mean()))
     return np.array(E), np.array(B)
 
 
-def fold(x, P):
-    ok = np.isfinite(x); idx = np.arange(len(x)); m = [float(np.nanmean(x[ok & (idx % P == k)])) for k in range(P)]
-    ph = int(np.argmax(m)); b = x[ok & (idx % P == ph)]; o = x[ok & (idx % P != ph)]
+def fold(x, P, ph=0):   # fixed phase (no argmax: its max over P phases is biased upward; audit #10). The render starts at a keyframe (frame 0).
+    ok = np.isfinite(x); idx = np.arange(len(x)); b = x[ok & (idx % P == ph)]; o = x[ok & (idx % P != ph) & (idx % P != (ph + 1) % P)]
     return {"phase": ph, "ratio": round(float(b.mean() / o.mean()), 2), "boundary": round(float(b.mean()), 2), "other": round(float(o.mean()), 2)}
 
 
@@ -38,7 +38,9 @@ ap = argparse.ArgumentParser()
 for k in ("gen", "gen-lm", "src", "src-lm"): ap.add_argument("--" + k, required=True)
 ap.add_argument("--period", type=int, default=13); ap.add_argument("--out", default=""); a = ap.parse_args()
 gE, gB = series(a.gen, a.gen_lm); sE, sB = series(a.src, a.src_lm); r = {}
-for P in (a.period, 12):
-    r[f"P{P}"] = {"gen_eye": fold(gE, P), "gen_band": fold(gB, P), "src_eye": fold(sE, P), "src_band": fold(sB, P)}
+P = a.period
+for ph in (0, 1):   # into / out of the keyframe at frame 13k; the source at the same phases = the no-seam reference
+    r[f"P{P}_ph{ph}"] = {"gen_eye": fold(gE, P, ph), "gen_band": fold(gB, P, ph), "src_eye": fold(sE, P, ph), "src_band": fold(sB, P, ph)}
+r[f"P{P}"] = r[f"P{P}_ph0"]
 if a.out: json.dump(r, open(a.out, "w"))
 print(json.dumps(r))

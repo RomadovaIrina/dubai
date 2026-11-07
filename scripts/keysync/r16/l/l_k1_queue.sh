@@ -1,4 +1,5 @@
 #!/bin/bash
+# DEPRECATED (audit #5): its dump used the q01-q09 QA clips. Kept only as the record of how spk1 / spk3 / spk3c were trained.
 # r16 L on r16-k1: after the dump -> evals of the current student and jit10_s776 (m03a, m18a, o03a) -> spike + boundary run from s776.
 R=/workspace/dub/r16l; L=$R/repo/scripts/keysync/r16/l
 while ! grep -q DUMP_DONE $R/dump/dump.log; do sleep 20; done

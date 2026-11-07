@@ -25,7 +25,7 @@ def norm(lm):
 def stats(lm, t0, t1):
     Q = norm(lm)[int(t0 * 25):int(t1 * 25)]
     r = {}
-    for nm, ix in (("cheek", CHEEK), ("jaw", JAW)):
+    for nm, ix in (("cheek", CHEEK),):   # no "jaw": it moves with articulation (audit #4)
         X = Q[:, ix]; v = np.linalg.norm(X[1:] - X[:-1], axis=-1).mean(1); acc = np.linalg.norm(X[2:] - 2 * X[1:-1] + X[:-2], axis=-1).mean(1)
         r[f"{nm}_v"] = round(float(v.mean()), 2); r[f"{nm}_a95"] = round(float(np.percentile(acc, 95)), 2)
     w = np.linalg.norm(Q[:, 234] - Q[:, 454], axis=-1); r["width_dstd"] = round(float(np.diff(w).std()), 2)

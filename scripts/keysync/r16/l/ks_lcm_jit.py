@@ -18,14 +18,19 @@ import scripts.sampling.dubbing_pipeline_raw as d
 from ks_lcm import LORA_ON, add_lora, lora_state, cm_coef, seg, load_segments
 
 
-def band_weights(m):   # m: (14, 1|4, h, w) generated mask -> (1, 1, h, w) band weights (cheeks + jaw), lip zone 0
+BAND = ["cheeks"]
+TEST_TAGS = ("q0", "m03", "m18", "old03", "o03")   # the QA / eval set: never train on it
+
+
+def band_weights(m):   # m: (14, 1|4, h, w) generated mask -> (1, 1, h, w) band weights (cheeks + jaw | cheeks only), lip zone 0
     mm = (m[:, :1] > 0.5).float().amax(0, keepdim=True)   # union over the segment
     ys, xs = torch.nonzero(mm[0, 0], as_tuple=True)
     B = torch.zeros_like(mm)
     if len(ys) < 16: return B
     r0, r1, c0, c1 = int(ys.min()), int(ys.max()) + 1, int(xs.min()), int(xs.max()) + 1; h, w = r1 - r0, c1 - c0
     cw, jh = max(1, round(0.28 * w)), max(1, round(0.22 * h))
-    B[..., r0:r1, c0:c0 + cw] = 1; B[..., r0:r1, c1 - cw:c1] = 1; B[..., r1 - jh:r1, c0:c1] = 1
+    B[..., r0:r1, c0:c0 + cw] = 1; B[..., r0:r1, c1 - cw:c1] = 1
+    if BAND[0] == "cheekjaw": B[..., r1 - jh:r1, c0:c1] = 1   # "cheeks": no jaw / chin rows (they move with the mouth opening)
     return B * mm
 
 
@@ -55,9 +60,18 @@ def main():
     ap.add_argument("--seed", type=int, default=0); ap.add_argument("--swap-keys", default="crossattn", help="the audio conditions (KeySync: crossattn = per-frame audio)")
     ap.add_argument("--spike-top", type=float, default=0.0, help="jitter = mean of the top fraction of excesses (CVaR), e.g. 0.05; 0 = plain mean")
     ap.add_argument("--pair", type=float, default=0.0, help="prob. of training 2 adjacent segments jointly (jitter across the shared keyframe)")
-    a = ap.parse_args(); os.makedirs(a.out, exist_ok=True); dev = "cuda"
+    ap.add_argument("--band", default="cheeks", choices=["cheeks", "cheekjaw"], help="jitter region: the cheek columns only (default; audit #4: jaw / chin rows move with the mouth) or + jaw rows")
+    ap.add_argument("--init-step", type=int, default=-1, help="global step of --init (-1 = its sidecar <init>.json global_step, else 0)")
+    ap.add_argument("--state-every", type=int, default=100, help="save the resumable state every N steps (not only at the chunk end)")
+    ap.add_argument("--allow-test", action="store_true", help="allow test-set clips (q0*, m03, m18, old03) in the dump (audit #5: leakage)")
+    a = ap.parse_args(); os.makedirs(a.out, exist_ok=True); dev = "cuda"; BAND[0] = a.band
     st_path = f"{a.out}/state.pt"; st = torch.load(st_path, map_location="cpu", weights_only=False) if a.resume and os.path.exists(st_path) else None
     step0 = st["step"] if st else 0; random.seed(a.seed + step0); torch.manual_seed(a.seed + step0)
+    if st and "g0" in st: g0 = st["g0"]   # global step = the r16 continuation steps since lora_pick (audit #6)
+    elif a.init_step >= 0: g0 = a.init_step
+    else:
+        sc = os.path.splitext(a.init)[0] + ".json"; g0 = json.load(open(sc)).get("global_step", 0) if os.path.exists(sc) else 0
+    print(f"GLOBAL step offset g0 {g0} (init {a.init})", flush=True)
     model, _, n_batch = d.load_model(f"scripts/sampling/configs/interpolation{a.cfg}.yaml", dev, 14, "latents", "pretrained_models/checkpoints/interpolation_dub.pt")
     guider = model.sampler.guider; sig = model.sampler.discretization(8, device=dev).float(); G = [float(x) for x in sig[:9]]
     for m in list(sys.modules.values()):
@@ -71,10 +85,21 @@ def main():
     print(f"LORA loaded {'state' if st else a.init} step0 {step0} unexpected {len(miss.unexpected_keys)}", flush=True)
     params = [p for n, p in dm.named_parameters() if ".down." in n or ".up." in n]
     for p in params: p.requires_grad_(True)
-    json.dump({"rank": a.rank, "alpha": a.alpha, "modules": names, "grid": G, "cfg": a.cfg}, open(f"{a.out}/lora_meta.json", "w"))
+    head = os.popen(f"git -C {os.path.dirname(os.path.abspath(__file__))} rev-parse --short HEAD 2>/dev/null").read().strip()
+    hp = {k_: v for k_, v in vars(a).items()}; hp.update({"init_global_step": g0, "code": head,
+          "note": "spike-top makes the jitter term ~20x the mean: lam is not comparable across spike-top settings"})
+    json.dump({"rank": a.rank, "alpha": a.alpha, "modules": names, "grid": G, "cfg": a.cfg, "hparams": hp}, open(f"{a.out}/lora_meta.json", "w"))
+    def save_ckpt(L_):
+        g = g0 + step; base = f"{a.out}/lora_step_{g:05d}"
+        torch.save({k_: v.half() for k_, v in L_.items()}, base + ".pt")
+        json.dump({"global_step": g, "local_step": step, "run": os.path.basename(a.out.rstrip("/")), "hparams": hp}, open(base + ".json", "w"))
+    def save_state():
+        torch.save({"step": step, "g0": g0, "lora": lora_state(dm), "opt": opt.state_dict()}, st_path + ".tmp"); os.replace(st_path + ".tmp", st_path)
     opt = torch.optim.AdamW(params, lr=a.lr, betas=(0.9, 0.999), weight_decay=0.0)
     if st and "opt" in st: opt.load_state_dict(st["opt"])
     files = sorted(glob.glob(f"{a.dump}/*.pt")); files = [f for f in files if os.path.basename(f) != f"{a.val_tag}.pt"]
+    bad = [f for f in files if os.path.basename(f).startswith(TEST_TAGS)]
+    if bad and not a.allow_test: sys.exit(f"REFUSED: test-set clips in the dump (audit #5): {[os.path.basename(f) for f in bad]}")
     train = load_segments(files); print(f"SEGMENTS train {len(train)} from {len(files)} clips", flush=True)
     akeys = None
 
@@ -142,15 +167,13 @@ def main():
         opt.step(); opt.zero_grad(set_to_none=True); step += 1
         if step % 25 == 0:
             h = hist[-25:]; mean = lambda j: sum(x[j] for x in h) / len(h)
-            print(f"STEP {step} cd {mean(1):.5f} jit {mean(2):.6f} (d1 {mean(3):.6f} d2 {mean(4):.6f}) gnorm {float(gn):.3f} "
+            print(f"STEP {step} global {g0 + step} cd {mean(1):.5f} jit {mean(2):.6f} (d1 {mean(3):.6f} d2 {mean(4):.6f}) gnorm {float(gn):.3f} "
                   f"{(time.perf_counter() - tl) / 25:.2f}s/it swaps {nsw} pairs {npair} mem {torch.cuda.max_memory_allocated() / 2**30:.1f}G", flush=True); tl = time.perf_counter()
-        if a.ckpt_every and step % a.ckpt_every == 0:
-            torch.save({k_: v.half() for k_, v in lora_state(dm).items()}, f"{a.out}/lora_step_{step:05d}.pt")
-    L = lora_state(dm)
-    torch.save({"step": step, "lora": L, "opt": opt.state_dict()}, st_path + ".tmp"); os.replace(st_path + ".tmp", st_path)
-    torch.save({k_: v.half() for k_, v in L.items()}, f"{a.out}/lora_step_{step:05d}.pt")
-    json.dump({"step": step, "hist_last": hist[-100:]}, open(f"{a.out}/hist_{step:05d}.json", "w"))
-    print(f"CHUNK_DONE step {step} minutes {(time.perf_counter() - t_start) / 60:.1f}", flush=True)
+        if a.ckpt_every and step % a.ckpt_every == 0: save_ckpt(lora_state(dm))
+        if a.state_every and step % a.state_every == 0: save_state()
+    save_state(); save_ckpt(lora_state(dm))
+    json.dump({"step": step, "global_step": g0 + step, "hist_last": hist[-100:]}, open(f"{a.out}/hist_{g0 + step:05d}.json", "w"))
+    print(f"CHUNK_DONE step {step} global {g0 + step} minutes {(time.perf_counter() - t_start) / 60:.1f}", flush=True)
 
 
 if __name__ == "__main__":

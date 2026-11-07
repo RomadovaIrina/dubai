@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """r16 L: pixel motion of the lower face OUTSIDE the lips (cheek / jaw band), from dense optical flow (Farneback, 512 crop).
-Band = the lower face-oval polygon (below the nose) minus the outer-lip hull dilated by 0.25 IOD; head motion removed by subtracting the
+Band = the CHEEKS: the lower face-oval polygon minus the columns between the mouth corners (61 / 291) widened by 0.15 IOD (so no lips, chin or
+jaw-under-mouth, which move with articulation; audit #4) and minus the outer-lip hull dilated by 0.25 IOD; head motion removed by subtracting the
 median flow of the upper face (eyes / forehead). Per frame: v = mean |residual flow| in the band (px / frame), acc = mean |flow_t - flow_t-1|
 (the 2nd-order change = "inflate / deflate" speed). Output ratios gen / src over [t0, t1).
     python l_flow.py --gen G.mp4 --gen-lm G.npz --src S.mp4 --src-lm S.npz --t0 1 --t1 5 --out F.json"""
@@ -25,6 +26,7 @@ def run(vid, lmf, t0, t1):
         lips = np.zeros_like(band); cv2.fillPoly(lips, [cv2.convexHull(p[LIPS].astype(np.int32))], 1)
         k = max(3, int(0.25 * iod)) | 1; lips = cv2.dilate(lips, np.ones((k, k), np.uint8))
         band = band.astype(bool) & ~lips.astype(bool)
+        xl, xr = p[61, 0] - 0.15 * iod, p[291, 0] + 0.15 * iod; xs = np.arange(512)[None, :]; band &= (xs < xl) | (xs > xr)
         up = np.zeros_like(lips); cv2.fillPoly(up, [cv2.convexHull(p[UP].astype(np.int32))], 1); up = up.astype(bool) & ~band
         fl = cv2.calcOpticalFlowFarneback(fr[t], fr[t + 1], None, 0.5, 3, 21, 3, 5, 1.1, 0)
         fl = fl - np.median(fl[up], axis=0)

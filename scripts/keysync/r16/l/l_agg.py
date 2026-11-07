@@ -10,7 +10,7 @@ for f in sorted(glob.glob(f"{O}/*.cheek.json")):
     s = ld(f"{O}/{t}.sync.json"); r["sync"] = {"conf": s["global"]["conf"], "off": s["global"]["av_offset"]} if s else None
     cv = ld(f"{O}/{t}.cav.json")
     if cv: r["cavity"] = {k: {kk: v.get(kk) for kk in ("open_frames", "black_hole_frames", "black_hole_share", "near_black_share", "black_hole_times")} for k, v in cv.items()}
-    b = ld(f"{O}/{t}.bnd.json"); r["boundary13"] = {k: (v["phase"], v["ratio"]) for k, v in b["P13"].items()} if b else None
+    b = ld(f"{O}/{t}.bnd.json"); r["boundary13"] = {f"ph{ph}": {k: v["ratio"] for k, v in b[f"P13_ph{ph}"].items()} for ph in (0, 1)} if b and "P13_ph0" in b else None
     res[t] = r
 json.dump(res, open(f"{O}/metrics.json", "w"), indent=1)
 for t, r in res.items():
