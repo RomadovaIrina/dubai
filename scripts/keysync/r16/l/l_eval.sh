@@ -17,5 +17,6 @@ while read tag vid aud; do
   (cd /workspace/dub/dubai && SYNC_DEVICE=cpu /venv/dabai/bin/python $R/repo/scripts/quality/sync_perframe.py --video $G --audio $aud --out $O/$tag.sync.json > $O/$tag.sync.log 2>&1; echo cpu > $O/$tag.sync.dev)
   /venv/dabai/bin/python $K/k_cavity.py --pairs gen=$G:$O/$tag.mp.npz src=$vid:$R/data/videos/$tag.mp.npz > $O/$tag.cav.json 2>/dev/null
   /venv/dabai/bin/python $R/repo/scripts/keysync/r16/l/l_flow.py --gen $G --gen-lm $O/$tag.mp.npz --src $vid --src-lm $R/data/videos/$tag.mp.npz --out $O/$tag.flow.json > /dev/null 2>&1
+  /venv/dabai/bin/python $R/repo/scripts/keysync/r16/l/l_boundary.py --gen $G --gen-lm $O/$tag.mp.npz --src $vid --src-lm $R/data/videos/$tag.mp.npz --out $O/$tag.bnd.json > /dev/null 2>&1
 done < $J
 python3 $R/repo/scripts/keysync/r16/l/l_agg.py $O

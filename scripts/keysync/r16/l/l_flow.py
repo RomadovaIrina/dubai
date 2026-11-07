@@ -40,4 +40,8 @@ for k in ("gen", "gen-lm", "src", "src-lm", "out"): ap.add_argument("--" + k, re
 ap.add_argument("--t0", type=float, default=1); ap.add_argument("--t1", type=float, default=5); a = ap.parse_args()
 G, S = run(a.gen, a.gen_lm, a.t0, a.t1), run(a.src, a.src_lm, a.t0, a.t1)
 r = {"gen": G, "src": S, "ratio": {k: round(G[k] / max(S[k], 1e-6), 2) for k in G}}
+ga, sa = np.load(a.gen + ".band_acc.npy"), np.load(a.src + ".band_acc.npy"); n = min(len(ga), len(sa))   # same timeline: frame-paired spikes
+fr = ga[:n] / np.maximum(sa[:n], 0.3); top = np.argsort(-fr)[:5]
+r["spike"] = {"top5_ratio": round(float(fr[top].mean()), 2), "frac_over_1.5": round(float((fr > 1.5).mean()), 3),
+              "top_t": [round(a.t0 + (int(i) + 2) / 25, 2) for i in sorted(top)]}
 json.dump(r, open(a.out, "w")); print(json.dumps(r))

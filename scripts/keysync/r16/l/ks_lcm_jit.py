@@ -29,13 +29,18 @@ def band_weights(m):   # m: (14, 1|4, h, w) generated mask -> (1, 1, h, w) band 
     return B * mm
 
 
-def jitter(fs, x0, B, tau, pool=4):
+def jitter(fs, x0, B, tau, pool=4, top=0.0):
+    """top > 0: CVaR = the mean of the top fraction of the (frame, channel, cell) excesses -> aims at the spikes, not the average."""
     P = lambda z: F.avg_pool2d(z * B, pool) / F.avg_pool2d(B, pool).clamp(min=1e-3)
     wb = (F.avg_pool2d(B, pool) > 0.5).float()   # cells mostly inside the band
     pf, pg = P(fs), P(x0); out = {}
     for k, op in ((1, lambda z: z[1:] - z[:-1]), (2, lambda z: z[2:] - 2 * z[1:-1] + z[:-2])):
         e = F.relu(op(pf).abs() - op(pg).abs() - tau) ** 2
-        out[k] = (e * wb).sum() / (wb.sum() * e.shape[0] * e.shape[1]).clamp(min=1)
+        if top > 0:
+            v = e[(wb > 0).expand_as(e)]
+            out[k] = v.topk(max(1, int(top * v.numel()))).values.mean() if v.numel() else e.sum() * 0
+        else:
+            out[k] = (e * wb).sum() / (wb.sum() * e.shape[0] * e.shape[1]).clamp(min=1)
     return out[1] + out[2], out
 
 
@@ -48,6 +53,8 @@ def main():
     ap.add_argument("--huber", type=float, default=0.01); ap.add_argument("--ckpt-every", type=int, default=0, help="0 = only at the chunk end")
     ap.add_argument("--lam", type=float, default=1.0); ap.add_argument("--tau", type=float, default=0.0); ap.add_argument("--swap", type=float, default=0.5)
     ap.add_argument("--seed", type=int, default=0); ap.add_argument("--swap-keys", default="crossattn", help="the audio conditions (KeySync: crossattn = per-frame audio)")
+    ap.add_argument("--spike-top", type=float, default=0.0, help="jitter = mean of the top fraction of excesses (CVaR), e.g. 0.05; 0 = plain mean")
+    ap.add_argument("--pair", type=float, default=0.0, help="prob. of training 2 adjacent segments jointly (jitter across the shared keyframe)")
     a = ap.parse_args(); os.makedirs(a.out, exist_ok=True); dev = "cuda"
     st_path = f"{a.out}/state.pt"; st = torch.load(st_path, map_location="cpu", weights_only=False) if a.resume and os.path.exists(st_path) else None
     step0 = st["step"] if st else 0; random.seed(a.seed + step0); torch.manual_seed(a.seed + step0)
@@ -89,34 +96,45 @@ def main():
         g = rearrange(c["gt"], "b c t h w -> (b t) c h w") if c["gt"].dim() == 5 else c["gt"]
         return m, g
 
-    t_start = time.perf_counter(); hist = []; step = step0; tl = time.perf_counter(); nsw = 0
+    t_start = time.perf_counter(); hist = []; step = step0; tl = time.perf_counter(); nsw = 0; npair = 0
     while step < a.steps and (time.perf_counter() - t_start) / 60 < a.minutes:
         tag, ch, i, n = random.choice(train)
-        c, uc = seg(ch["c"], i, n, dev), seg(ch["uc"], i, n, dev); m, x0 = masks_of(c); w = m.clone(); w[0] = 0; w[13] = 0
-        if akeys is None:
-            akeys = [k for k in a.swap_keys.split(",") if k in c]
-            print("COND keys", {k: tuple(v.shape) for k, v in c.items() if isinstance(v, torch.Tensor)}, "swap keys", akeys,
-                  "uc zero", {k: bool((uc[k] == 0).all()) for k in akeys if k in uc}, flush=True)
-        if a.swap > 0 and random.random() < a.swap:
-            t2, ch2, i2, n2 = random.choice(train)
-            c2, uc2 = seg(ch2["c"], i2, n2, dev), seg(ch2["uc"], i2, n2, dev)
-            for k in akeys:
-                if k in c2 and c2[k].shape == c[k].shape: c[k] = c2[k]
-                if k in uc and k in uc2 and uc2[k].shape == uc[k].shape: uc[k] = uc2[k]
-            nsw += 1
-        k = random.randrange(0, 8); sn, sn1 = G[k], G[k + 1]
-        xn = x0 + sn * torch.randn_like(x0)
-        with torch.no_grad():
-            with torch.autocast(dev, dtype=torch.float16):
-                xh = teacher_euler(xn, sn, sn1, c, uc).float()
+        pair = a.pair > 0 and random.random() < a.pair
+        if pair:   # two adjacent segments: seg i frame 13 == seg i+1 frame 0 (the shared keyframe) -> the jitter spans the segment boundary
+            while i + 1 >= n: tag, ch, i, n = random.choice(train)
+            npair += 1
+        swap = None
+        if not pair and a.swap > 0 and random.random() < a.swap:
+            t2, ch2, i2, n2 = random.choice(train); swap = (seg(ch2["c"], i2, n2, dev), seg(ch2["uc"], i2, n2, dev)); nsw += 1
+        k = random.randrange(0, 8); sn, sn1 = G[k], G[k + 1]; lcd = 0; FS, X0, BB = [], [], []
+        for ii in ([i, i + 1] if pair else [i]):
+            c, uc = seg(ch["c"], ii, n, dev), seg(ch["uc"], ii, n, dev); m, x0 = masks_of(c); w = m.clone(); w[0] = 0; w[13] = 0
+            if akeys is None:
+                akeys = [kk for kk in a.swap_keys.split(",") if kk in c]
+                print("COND keys", {kk: tuple(v.shape) for kk, v in c.items() if isinstance(v, torch.Tensor)}, "swap keys", akeys,
+                      "uc zero", {kk: bool((uc[kk] == 0).all()) for kk in akeys if kk in uc}, flush=True)
+            if swap:
+                c2, uc2 = swap
+                for kk in akeys:
+                    if kk in c2 and c2[kk].shape == c[kk].shape: c[kk] = c2[kk]
+                    if kk in uc and kk in uc2 and uc2[kk].shape == uc[kk].shape: uc[kk] = uc2[kk]
+            xn = x0 + sn * torch.randn_like(x0)
+            with torch.no_grad():
+                with torch.autocast(dev, dtype=torch.float16):
+                    xh = teacher_euler(xn, sn, sn1, c, uc).float()
+                with torch.autocast(dev, dtype=torch.bfloat16):
+                    ft = xh if k + 1 == 8 else f_student(xh, sn1, c).float()
             with torch.autocast(dev, dtype=torch.bfloat16):
-                ft = xh if k + 1 == 8 else f_student(xh, sn1, c).float()
-        with torch.autocast(dev, dtype=torch.bfloat16):
-            fs = f_student(xn, sn, c).float()
-        diff = (fs - ft) * w
-        lcd = ((diff ** 2 + a.huber ** 2).sqrt() - a.huber).sum() / (w.sum() * 4).clamp(min=1)
-        fsm = fs * m + x0 * (1 - m)   # as the sampler: outside the mask = the source latents
-        B = band_weights(m); lj, parts = jitter(fsm, x0, B, a.tau)
+                fs = f_student(xn, sn, c).float()
+            diff = (fs - ft) * w
+            lcd = lcd + ((diff ** 2 + a.huber ** 2).sqrt() - a.huber).sum() / (w.sum() * 4).clamp(min=1)
+            fsm = fs * m + x0 * (1 - m)   # as the sampler: outside the mask = the source latents
+            fsm = torch.cat([x0[:1], fsm[1:13], x0[13:]])   # the keyframe ends = the keyframes (generated by the keyframe model at inference)
+            FS.append(fsm); X0.append(x0); BB.append(band_weights(m))
+        lcd = lcd / len(FS)
+        if pair: FSc, X0c, B = torch.cat([FS[0], FS[1][1:]]), torch.cat([X0[0], X0[1][1:]]), torch.maximum(BB[0], BB[1])
+        else: FSc, X0c, B = FS[0], X0[0], BB[0]
+        lj, parts = jitter(FSc, X0c, B, a.tau, top=a.spike_top)
         loss = lcd + a.lam * lj
         loss.backward(); hist.append((k, float(lcd), float(lj), float(parts[1]), float(parts[2])))
         gn = torch.nn.utils.clip_grad_norm_(params, 1.0)
@@ -125,7 +143,7 @@ def main():
         if step % 25 == 0:
             h = hist[-25:]; mean = lambda j: sum(x[j] for x in h) / len(h)
             print(f"STEP {step} cd {mean(1):.5f} jit {mean(2):.6f} (d1 {mean(3):.6f} d2 {mean(4):.6f}) gnorm {float(gn):.3f} "
-                  f"{(time.perf_counter() - tl) / 25:.2f}s/it swaps {nsw} mem {torch.cuda.max_memory_allocated() / 2**30:.1f}G", flush=True); tl = time.perf_counter()
+                  f"{(time.perf_counter() - tl) / 25:.2f}s/it swaps {nsw} pairs {npair} mem {torch.cuda.max_memory_allocated() / 2**30:.1f}G", flush=True); tl = time.perf_counter()
         if a.ckpt_every and step % a.ckpt_every == 0:
             torch.save({k_: v.half() for k_, v in lora_state(dm).items()}, f"{a.out}/lora_step_{step:05d}.pt")
     L = lora_state(dm)
