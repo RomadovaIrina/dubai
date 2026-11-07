@@ -8,7 +8,10 @@ landmarks of that clip:
   sharp   mouth-box Laplacian variance / the clip median
   frontal |yaw| (nose tip vs the eye midpoint, / IOD) and |roll| (eye line angle)
   light   face-oval mean L / the clip median (too dark or blown out -> penalty)
-score = 3 teeth + 1 open-fit(0.18) - 2 smile (corner lift > speaker median + 0.03) - wide (width > 1.15 x median) - 2 occl (lower-face patch outlier: hand / cup) - 4 max(0, 0.85 - face size / median) - 2 dark + 0.5 min(sharp, 2) - 6 |yaw| - 2 |roll| - |light - 1|; top-N at least --gap s apart, each checked with MediaPipe Hands (a hand inside the face box -> rejected).
+score = 3 teeth + 1 open-fit(0.18) - 2 smile (corner lift > speaker median + 0.03) - wide (width > 1.15 x median) - 2 occl (lower-face patch outlier: hand / cup) - 4 max(0, 0.85 - face size / median) - 8 max(0, centre distance from the clip median / face height - 0.08) - 2 dark + 0.5 min(sharp, 2) - 6 |yaw| - 2 |roll| - |light - 1|; top-N at least --gap s apart, each checked with MediaPipe Hands (a hand inside the face box -> rejected).
+Presence (--face-lm, + --box): only frames where THIS face is present in the master track (finite landmarks; not a bridged / absent frame) AND the
+crop landmarks are that face (their centre within 0.25 face heights of the master track projected through the crop box) are candidates, so the
+reference is never another person / an empty crop (audit orch. 10).
 Writes <out>.json (top-3 + per-frame features) and <out>.jpg (contact sheet: face + mouth zoom + scores) for a human override.
     python k2_refpick.py --video crop512.mp4 [--lm crop512.npz] --out refpick_m03"""
 import argparse, json, subprocess, sys
@@ -18,18 +21,38 @@ INNER = [78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308, 415, 310, 311, 312, 1
 OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109]
 LIPS = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185]
 ap = argparse.ArgumentParser(); ap.add_argument("--video", required=True); ap.add_argument("--lm", default=""); ap.add_argument("--out", required=True)
-ap.add_argument("--gap", type=float, default=2.0); ap.add_argument("--open-target", type=float, default=0.18, dest="ot"); ap.add_argument("--topn", type=int, default=3); a = ap.parse_args()
+ap.add_argument("--gap", type=float, default=2.0); ap.add_argument("--open-target", type=float, default=0.18, dest="ot"); ap.add_argument("--topn", type=int, default=3)
+ap.add_argument("--face-lm", default="", dest="face_lm", help="the face MASTER landmarks (lm_<tag>.npz: NaN where absent), frame-aligned with --video")
+ap.add_argument("--box", default="", help="the crop box json (static x/y/side or tracked xs/ys) mapping the master to --video"); a = ap.parse_args()
+import os
+HERE = os.path.dirname(os.path.realpath(__file__))
 if not a.lm:
     a.lm = a.out + ".mp.npz"
-    subprocess.run(["/venv/mediapipe/bin/python", "/workspace/dub/dubai/scripts/quality/mp_landmarks.py", "--video", a.video, "--out", a.lm], check=True, stdout=subprocess.DEVNULL)
+    mpl = next((q for q in [os.path.join(HERE, "../../quality/mp_landmarks.py"), os.path.join(HERE, "mp_landmarks.py"),
+                             os.path.join(os.environ.get("DABAI_ROOT", "."), "scripts/quality/mp_landmarks.py")] if os.path.exists(q)), None)
+    if mpl is None: sys.exit("k2_refpick: no --lm and mp_landmarks.py not found (set DABAI_ROOT)")
+    subprocess.run([os.environ.get("DUB_MEDIAPIPE_PY", sys.executable), mpl, "--video", a.video, "--out", a.lm], check=True, stdout=subprocess.DEVNULL)
 LM = np.load(a.lm)["lm"][..., :2].astype(np.float32)
+PRES = None   # per crop frame: this face is present and the crop landmarks are it
+if a.face_lm:
+    FL = np.load(a.face_lm)["lm"][..., :2].astype(np.float32); PRES = np.zeros(len(LM), bool)
+    B = json.load(open(a.box)) if a.box else None
+    for k in range(min(len(LM), len(FL))):
+        q = FL[k]
+        if not (np.isfinite(q).all() and np.isfinite(LM[k]).all()): continue
+        if B is None: PRES[k] = True; continue
+        x0 = B["xs"][min(k, len(B["xs"]) - 1)] if "xs" in B else B["x"]; y0 = B["ys"][min(k, len(B["ys"]) - 1)] if "ys" in B else B["y"]; sc = 512.0 / B["side"]
+        cq = (q.mean(0) - (x0, y0)) * sc; fhq = float(np.linalg.norm(q[10] - q[152])) * sc
+        PRES[k] = np.hypot(*(LM[k].mean(0) - cq)) < 0.25 * max(fhq, 1)
+    print(f"k2_refpick: presence {int(PRES.sum())} / {len(PRES)} frames", file=sys.stderr)
+    if PRES.sum() == 0: sys.exit("k2_refpick: the face is never present in the crop")
 c = cv2.VideoCapture(a.video); fps = c.get(cv2.CAP_PROP_FPS) or 25; R = []; k = 0; PATCH = []
 poly = lambda p, idx, sh: cv2.fillPoly(np.zeros(sh, np.uint8), [np.round(cv2.convexHull(p[idx].astype(np.float32))[:, 0]).astype(np.int32)], 1)
 while True:
     ok, f = c.read()
     if not ok or k >= len(LM): break
     p = LM[k]; row = None
-    if np.isfinite(p).all():
+    if np.isfinite(p).all() and (PRES is None or PRES[k]):
         sh = f.shape[:2]; lab = cv2.cvtColor(f, cv2.COLOR_BGR2LAB).astype(np.float32); L = lab[..., 0] * 100 / 255; A = lab[..., 1] - 128
         mw = float(np.linalg.norm(p[61] - p[291])); iod = float(np.linalg.norm(p[33] - p[263])); op = float(np.linalg.norm(p[13] - p[14])) / max(mw, 1)
         face = poly(p, OVAL, sh) & (1 - cv2.dilate(poly(p, LIPS, sh), np.ones((9, 9), np.uint8)))
@@ -52,14 +75,15 @@ while True:
         lipm = cv2.warpAffine(poly(p, LIPS, sh).astype(np.float32), cv2.getAffineTransform(src3, dst3), (48, 32)) < 0.5
         PATCH.append((k, lf, lipm))
         lh = poly(p, LIPS, sh) & (1 - poly(p, INNER, sh)); lipc = float(np.median(A[lh > 0]) - skA) if lh.sum() > 20 else 0.0   # the lips are redder than the skin; a hand over them is not
-        row = dict(k=k, t=round(k / fps, 2), open=round(op, 3), lift=lift, width=mw / max(iod, 1), fh=float(np.linalg.norm(p[10] - p[152])), lipc=lipc, teeth_up=round(t_up, 3), dark=round(dark, 3), sharp=sharp, yaw=round(yaw, 3), roll=round(roll, 1), light=float(L[face > 0].mean()))
+        row = dict(k=k, t=round(k / fps, 2), open=round(op, 3), lift=lift, width=mw / max(iod, 1), fh=float(np.linalg.norm(p[10] - p[152])), lipc=lipc, cx=float(p[:, 0].mean()), cy=float(p[:, 1].mean()), teeth_up=round(t_up, 3), dark=round(dark, 3), sharp=sharp, yaw=round(yaw, 3), roll=round(roll, 1), light=float(L[face > 0].mean()))
     if row: R.append(row)
     k += 1
 MEDP = np.median(np.stack([q[1] for q in PATCH[:: max(1, len(PATCH) // 300)]]), 0); occ = {}
 for kk, lf, lipm in PATCH: occ[kk] = float(np.abs(lf - MEDP)[lipm].mean())
-mlc = max(np.median([r["lipc"] for r in R]), 1e-3)
+mlc = max(np.median([r["lipc"] for r in R]), 1e-3); mcx, mcy = np.median([r["cx"] for r in R]), np.median([r["cy"] for r in R])
 ov = np.array(list(occ.values())); o75, o95 = np.percentile(ov, 75), np.percentile(ov, 95); mfh = np.median([r["fh"] for r in R])
 for r in R:
+    r["pos"] = round(float(np.hypot(r["cx"] - mcx, r["cy"] - mcy) / max(r["fh"], 1)), 3)   # KeySync assumes the identity face roughly where the frames have it (q02: a far-off reference -> garbage mouth)
     r["occl"] = round(float(max(np.clip((occ[r["k"]] - o75) / max(o95 - o75, 1e-6), 0, 2), np.clip((0.7 - r["lipc"] / mlc) / 0.3, 0, 2))), 2); r["fh_rel"] = round(r["fh"] / mfh, 2)
 sm = np.median([r["sharp"] for r in R]); lm_ = np.median([r["light"] for r in R]); ml = np.median([r["lift"] for r in R]); mwd = np.median([r["width"] for r in R])
 for r in R:
@@ -67,7 +91,7 @@ for r in R:
     ofit = 1.0 - min(abs(r["open"] - a.ot) / 0.08, 1.0) if r["open"] > 0.04 else 0.0
     r["smile"] = round(max(0.0, (r["lift"] - ml) - 0.03) / 0.03, 2); r["wide"] = round(max(0.0, r["width"] / mwd - 1.15) / 0.10, 2)   # vs the speaker's own median
     r["lift_rel"] = round(r["lift"] - ml, 3); r["width_rel"] = round(r["width"] / mwd, 3)
-    r["score"] = round(3 * r["teeth_up"] + ofit - 2 * min(r["smile"], 2) - min(r["wide"], 2) - 2 * r["occl"] - 4 * max(0.0, 0.85 - r["fh_rel"]) - 2 * r["dark"] + 0.5 * min(r["sharp_rel"], 2) - 6 * abs(r["yaw"]) - 2 * abs(np.radians(r["roll"])) - abs(r["light_rel"] - 1), 3)
+    r["score"] = round(3 * r["teeth_up"] + ofit - 2 * min(r["smile"], 2) - min(r["wide"], 2) - 2 * r["occl"] - 4 * max(0.0, 0.85 - r["fh_rel"]) - 8 * max(0.0, r["pos"] - 0.08) - 2 * r["dark"] + 0.5 * min(r["sharp_rel"], 2) - 6 * abs(r["yaw"]) - 2 * abs(np.radians(r["roll"])) - abs(r["light_rel"] - 1), 3)
 order = sorted(R, key=lambda r: -r["score"]); top = []; HANDS = None; rej = []
 def hand_over_face(k):   # MediaPipe Hands on a shortlisted frame: any hand landmark inside the face box (+10 %) -> reject (a hand / finger over the face)
     global HANDS

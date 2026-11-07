@@ -11,7 +11,9 @@
 #   paste     ks_plain (K1 + K2): ECC align, scale locked, lfm 6, upper-src, keep-nose, tex 2, others-grow 1.3, --absent skip; KS_PASTE_JOBS workers
 # usage: ks_face.sh <id> <src video> <audio dir: dubbed_16k.wav + final_mix_aac.m4a> <work dir> <out.mp4> [route.json]
 # exit 0 = OUT written; 3 = nothing to lip-sync (keep the source picture, not an error); other = failed.
-# Env: KS_DELAY KS_PROBE_S KS_REF KS_CROP KS_PAD KS_GATE KS_TSMOOTH KS_PAUSE KS_PASTE_SHIFT KS_PLAIN_ARGS KS_PLAIN_EXTRA KS_INTERP_STEPS KS_SYNC_MAX_S
+# multi-shot (K2): KS_SHOTS=auto (default) -> ks_shots.py detect after the landmarks; > 1 shot -> ks_shots.sh runs this script once per shot (own
+#   plan / crop / ref / KeySync / post / paste per shot, nothing smoothed across a cut), concat -c copy + the mix stream-copied. KS_SHOTS=off = one run.
+# Env: KS_SHOTS KS_SHOT_MIN_S KS_DELAY KS_PROBE_S KS_REF KS_CROP KS_PAD KS_GATE KS_TSMOOTH KS_PAUSE KS_PASTE_SHIFT KS_PLAIN_ARGS KS_PLAIN_EXTRA KS_INTERP_STEPS KS_SYNC_MAX_S
 #      KS_PASTE_JOBS KS_HELD_FD KS_MIN_IOD KS_NUM_FACES
 set -o pipefail
 ID=$1; SRC=$2; AD=$3; W=$4; OUTV=$5; ROUTE=${6:-}
@@ -29,10 +31,17 @@ sync_off() {   # sync_off <video> <wav> <json>: SyncNet global AV offset of a ra
   ( cd $R && $PY scripts/quality/sync_perframe.py --video $V --audio $A --out $J ) > ${J%.json}.log 2>&1 \
     && python3 -c "import json; print(int(json.load(open('$J'))['global']['av_offset']))" || echo x; }
 
-t master; ffmpeg -v error -y -i "$SRC" -map 0:v:0 -an -vf fps=25 -c:v libx264 -preset fast -crf 10 -pix_fmt yuv420p $KW/master_25fps.mp4 || exit 1
+t master
+if [ -n "${KS_MASTER_IN:-}" ]; then cp "$KS_MASTER_IN" $KW/master_25fps.mp4   # (ks_shots.sh: this shot's frames of the parent master, lossless)
+else ffmpeg -v error -y -i "$SRC" -map 0:v:0 -an -vf fps=25 -c:v libx264 -preset fast -crf 10 -pix_fmt yuv420p $KW/master_25fps.mp4 || exit 1; fi
 N=$(ffprobe -v error -count_packets -select_streams v:0 -show_entries stream=nb_read_packets -of csv=p=0 $KW/master_25fps.mp4)
 t landmarks   # CPU; up to KS_NUM_FACES faces (route.json faces are matched to these tracks)
-GLOG_minloglevel=2 OMP_NUM_THREADS=4 $MPY $R/scripts/pilot/mp_landmarks.py $KW/master_25fps.mp4 $KW/master_mp.npz --num-faces ${KS_NUM_FACES:-4} > $KW/mp.log 2>&1 || { tail -3 $KW/mp.log; exit 1; }
+if [ -n "${KS_MP_NPZ:-}" ]; then cp "$KS_MP_NPZ" $KW/master_mp.npz   # (ks_shots.sh: the parent's landmarks sliced to this shot)
+else GLOG_minloglevel=2 OMP_NUM_THREADS=4 $MPY $R/scripts/pilot/mp_landmarks.py $KW/master_25fps.mp4 $KW/master_mp.npz --num-faces ${KS_NUM_FACES:-4} > $KW/mp.log 2>&1 || { tail -3 $KW/mp.log; exit 1; }; fi
+if [ "${KS_SHOTS:-auto}" != off ] && [ -z "${KS_IN_SHOT:-}" ]; then   # K2 multi-shot: > 1 segment (shots = hard cuts + faceless gaps > 2 s, each cut to its face range) -> ks_shots.sh runs this script per face segment
+  t shots; $PY $KT/ks_shots.py detect --video $KW/master_25fps.mp4 --mp $KW/master_mp.npz --out $KW/shots.json | cut -c1-600 || exit 1
+  if [ "$(python3 -c "import json; print(len(json.load(open('$KW/shots.json'))['segments']))")" -gt 1 ]; then bash $R/scripts/keysync/r16/ks_shots.sh "$ID" "$AD" "$W" "$OUTV" "$ROUTE" $KW; exit $?; fi
+fi
 t plan; $PY $R/scripts/keysync/r16/ks_e2e_prep.py --mp $KW/master_mp.npz --dub $AD/dubbed_16k.wav --out $KW ${ROUTE:+--route $ROUTE} | tee $KW/plan.log | cut -c1-600 || exit 1
 TAGS=$(python3 -c "import json; print(' '.join(f['tag'] for f in json.load(open('$KW/faces.json'))['faces']))")
 [ -n "$TAGS" ] || { echo "KS_FACE_KEEP_SOURCE $ID: no face to lip-sync ($(python3 -c "import json; d=json.load(open('$KW/faces.json')); print(d['mode'], d.get('skipped'))"))"; exit 3; }
@@ -69,7 +78,7 @@ PY
   $MPY $R/scripts/quality/mp_landmarks.py --video $KW/data/crop_$f.mp4 --out $KW/crop_lm_$f.npz > /dev/null 2>&1 || { echo "KS: crop landmarks failed ($f)"; exit 1; }
   REF=${KS_REF:-auto}
   if [ "$REF" = auto ]; then   # K2: a frame with the upper teeth showing as KeySync's identity (black-hole mouths roughly halved); 0 if the pick fails
-    REF=$($MPY $KT/k2_refpick.py --video $KW/data/crop_$f.mp4 --lm $KW/crop_lm_$f.npz --out $KW/ref_$f 2> $KW/ref_$f.log | grep "^K2_REFPICK" | python3 -c "import json,sys; print(json.loads(sys.stdin.read()[11:])['pick'])" 2>/dev/null)
+    REF=$($MPY $KT/k2_refpick.py --video $KW/data/crop_$f.mp4 --lm $KW/crop_lm_$f.npz --face-lm $KW/lm_$f.npz --box $KW/data/box_$f.json --out $KW/ref_$f 2> $KW/ref_$f.log | grep "^K2_REFPICK" | python3 -c "import json,sys; print(json.loads(sys.stdin.read()[11:])['pick'])" 2>/dev/null)
     [ -n "$REF" ] || { echo "KS WARN refpick failed ($f): ref 0"; REF=0; }
   fi
   echo $REF > $KW/ref_$f.txt
