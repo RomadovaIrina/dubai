@@ -176,3 +176,23 @@ Script: `scripts/keysync/r16/k2_k1chain.sh <v> <ref>` (run dir /workspace/dub/k1
   - `full/<v>_keysync_r16_refteeth_b8gate_k1chain{,_pauseB}.mp4` and `full/m03_keysync_r16_ref84_b8gate_k1chain{,_pauseB}.mp4`;
   - `clips/<v>_final_k1chain_refteeth_pauseB_source_*` and `clips/m03_final_k1chain_ref46_ref84_ref84pauseB_source_23-27s_half_speed.mp4`.
 - q06: not KeySync-able (KeySync's detector finds no face even in the tracked crop); needs a no-face → skip / LatentSync rule.
+
+## Round 7: an auto-pick without a human (pick what #84 is)
+New terms in `k2_refpick.py`, each relative to the speaker's own median:
+- smile: mouth-corner lift above the lip-centre line > median + 0.03. #84 = +0.023; the smiles #46 / #25 / #438 = +0.07..0.08.
+- wide mouth: width / IOD > 1.15 × median.
+- opening target 0.18 (the pauses are handled by arm b).
+- face size: < 0.85 × median → penalty (wide shots).
+- occlusion: the lower-face patch is an outlier, or the lips are no redder than the skin.
+- MediaPipe Hands on the shortlist: a hand inside the face box → rejected.
+
+| video | auto-pick #1 | verdict by eye |
+|---|---|---|
+| m03 | #531 (21.24 s); #84 is #2 | #84-like: neutral, small opening, upper teeth, no smile, the child out of frame |
+| old03 | #1518 (60.72 s) | #84-like (neutral talking, upper teeth) |
+| m18 | #158 (6.32 s) | her teeth are never visible; a neutral, slightly open, frontal frame |
+| q02 | #655 (26.2 s) | a frontal close-up, slightly open; the wide shots (small face) and the hand frames are no longer #1 |
+| q01 | not on r16-k2 | – |
+
+- Limitation: on q02 a blurred, out-of-focus hand over the nose still passes as #2 (MediaPipe Hands misses it); #1 is right on all four.
+- The contact sheet `refpick/<v>_v5.jpg` is a debug artefact only.
