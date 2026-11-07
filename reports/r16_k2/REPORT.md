@@ -196,3 +196,6 @@ New terms in `k2_refpick.py`, each relative to the speaker's own median:
 
 - Limitation: on q02 a blurred, out-of-focus hand over the nose still passes as #2 (MediaPipe Hands misses it); #1 is right on all four.
 - The contact sheet `refpick/<v>_v5.jpg` is a debug artefact only.
+- **Check (m03 full, K1 chain):**
+  - The auto-pick #531 matches #84 by eye at 25.40–25.52 s (the upper teeth row), and is slightly better on the numbers: black-cavity 5.1 vs 6.7 %, SyncNet 8.74 vs 8.60, guard 0 vs 1 replaced frames. → **auto-pick = the default.**
+  - Panel: `clips/m03_final_k1chain_ref84_ref531auto_source_23-27s_half_speed.mp4`; full: `full/m03_keysync_r16_ref531auto_b8gate_k1chain{,_pauseB}.mp4`.
