@@ -14,7 +14,7 @@ Input: the MediaPipe pass of the 25 fps master (scripts/pilot/mp_landmarks.py --
 Writes OUT/faces.json + per face: lm_<tag>.npz, others_<tag>.npz, dub_<tag>.wav (16 kHz mono, NOT delayed: the delay probe sets that)."""
 import argparse, glob, json, os, sys, wave
 import numpy as np
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../pilot"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../pilot"))
 import clean_face_stack as cfs
 
 ap = argparse.ArgumentParser()

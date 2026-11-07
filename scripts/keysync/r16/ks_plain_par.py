@@ -94,5 +94,6 @@ subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i
 got = nframes(a.out)
 print(f"plain paste: KeySync {nk} frames, master {n}, shift {SH} -> {a.out} ({got} frames; {J} workers: slicing {t1 - t0:.0f} s, colour match {t2 - t1:.0f} s, "
       f"paste {t3 - t2:.0f} s, total {time.time() - t0:.0f} s)", flush=True)
-if got != n: print(f"WARNING: {got} frames written != master {n}", flush=True); sys.exit(1)
+if got != n: print(f"WARNING: {got} frames written != master {n} (-shortest: the mix ends earlier, as in the serial paste)", flush=True)
+if got < n - 13: sys.exit(1)
 if not os.environ.get("KS_PAR_KEEP"): shutil.rmtree(T, ignore_errors=True)

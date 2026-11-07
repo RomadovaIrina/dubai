@@ -18,7 +18,7 @@ ID=$1; SRC=$2; AD=$3; W=$4; OUTV=$5; ROUTE=${6:-}
 R=$(cd "$(dirname "$0")/../../.." && pwd); KS=${KS_ROOT:-/workspace/dub/keysync}; LOCK=${KS_GPU_LOCK:-/workspace/dub/gpu.lock}
 PY=${DUB_PY:-/venv/dabai/bin/python}; MPY=${DUB_MEDIAPIPE_PY:-/venv/mediapipe/bin/python}; LORA=${KS_LORA:-$KS/student/lora_pick.pt}
 KW=$W/ks; rm -rf $KW; mkdir -p $KW/data $KW/out $KW/probe $KW/kit
-for f in $R/scripts/keysync/*.py $R/scripts/keysync/r15/*.py $R/scripts/keysync/r16/*.py; do ln -sf $f $KW/kit/; done   # one flat kit dir = this checkout's code
+for f in $R/scripts/keysync/*.py $R/scripts/keysync/r15/*.py $R/scripts/keysync/r16/*.py; do cp $f $KW/kit/; done   # one flat kit dir = this checkout's code (copies: python resolves a symlinked script's imports to its real dir)
 KT=$KW/kit; PAD=${KS_PAD:-60}
 t() { echo "KS_T $1 $(date +%s.%N)"; }
 dur() { ffprobe -v error -show_entries format=duration -of csv=p=0 "$1"; }
@@ -33,14 +33,15 @@ t master; ffmpeg -v error -y -i "$SRC" -map 0:v:0 -an -vf fps=25 -c:v libx264 -p
 N=$(ffprobe -v error -count_packets -select_streams v:0 -show_entries stream=nb_read_packets -of csv=p=0 $KW/master_25fps.mp4)
 t landmarks   # CPU; up to KS_NUM_FACES faces (route.json faces are matched to these tracks)
 GLOG_minloglevel=2 OMP_NUM_THREADS=4 $MPY $R/scripts/pilot/mp_landmarks.py $KW/master_25fps.mp4 $KW/master_mp.npz --num-faces ${KS_NUM_FACES:-4} > $KW/mp.log 2>&1 || { tail -3 $KW/mp.log; exit 1; }
-t plan; $PY $KT/ks_e2e_prep.py --mp $KW/master_mp.npz --dub $AD/dubbed_16k.wav --out $KW ${ROUTE:+--route $ROUTE} | tee $KW/plan.log | cut -c1-600 || exit 1
+t plan; $PY $R/scripts/keysync/r16/ks_e2e_prep.py --mp $KW/master_mp.npz --dub $AD/dubbed_16k.wav --out $KW ${ROUTE:+--route $ROUTE} | tee $KW/plan.log | cut -c1-600 || exit 1
 TAGS=$(python3 -c "import json; print(' '.join(f['tag'] for f in json.load(open('$KW/faces.json'))['faces']))")
 [ -n "$TAGS" ] || { echo "KS_FACE_KEEP_SOURCE $ID: no face to lip-sync ($(python3 -c "import json; d=json.load(open('$KW/faces.json')); print(d['mode'], d.get('skipped'))"))"; exit 3; }
 
 t crop
 for f in $TAGS; do
   if [ "${KS_CROP:-track}" = track ]; then   # K2: constant side 1.8 face heights, the centre follows the face (smoothed)
-    $MPY $KT/k2_prep_track.py --master $KW/master_25fps.mp4 --lm $KW/lm_$f.npz --out $KW/data/crop_$f > $KW/crop_$f.log 2>&1 || { tail -3 $KW/crop_$f.log; exit 1; }
+    TK=${KS_TRACK_K:-1.8}; [ -s $KW/others_$f.npz ] && TK=${KS_TRACK_K2:-1.25}   # another face in the shot: the tight crop (r15 K m03: 1.25), so KeySync / SyncNet see one face
+    $MPY $KT/k2_prep_track.py --master $KW/master_25fps.mp4 --lm $KW/lm_$f.npz --out $KW/data/crop_$f --k $TK > $KW/crop_$f.log 2>&1 || { tail -3 $KW/crop_$f.log; exit 1; }
     mv $KW/data/crop_${f}_box.json $KW/data/box_$f.json
   else
     ( mkdir -p $KW/data/st/videos $KW/data/st/audios; cd $KW && $PY $KT/ks_prep.py $KW/master_25fps.mp4 $KW/lm_$f.npz $KW/dub_$f.wav $KW/data/st $f ) > $KW/crop_$f.log 2>&1 || { tail -3 $KW/crop_$f.log; exit 1; }
@@ -93,7 +94,7 @@ PY
     echo "$f $KW/probe/v_$f.mp4 $KW/probe/a_$f.wav" >> $KW/probe/jobs.txt
   done
   ksfast $KW/probe/jobs.txt $KW/probe/out $KW/probe/ks_fast.log || exit 1
-  for f in $TAGS; do O=$(sync_off $KW/probe/out/$f/${f}_$f.mp4 $KW/probe/a_$f.wav $KW/probe/sync_$f.json)
+  for f in $TAGS; do O=$(sync_off $(ls $KW/probe/out/$f/*.mp4 | head -1) $KW/probe/a_$f.wav $KW/probe/sync_$f.json)
     [ "$O" = x ] && { echo "KS WARN probe sync failed ($f): delay 0"; O=0; }; DLY[$f]=$(( -O * 40 )); echo "KS_PROBE $f av_offset $O -> dub delay ${DLY[$f]} ms"; done
 else for f in $TAGS; do DLY[$f]=${KS_DELAY}; done; fi
 t keysync; : > $KW/jobs.txt
@@ -101,12 +102,18 @@ for f in $TAGS; do   # the dub KeySync hears: delayed (or advanced) by the probe
   D=${DLY[$f]}; PD=$(python3 -c "print(($N + $PAD) / 25)")
   if [ "$D" -ge 0 ]; then AF="adelay=$D:all=1,apad=whole_dur=$PD"; else AF="atrim=start=$(python3 -c "print(-$D / 1000)"),asetpts=PTS-STARTPTS,apad=whole_dur=$PD"; fi
   ffmpeg -v error -y -i $KW/dub_$f.wav -af "$AF" -t $PD -ar 16000 -ac 1 $KW/data/dubp_$f.wav || exit 1
-  echo "$f $KW/data/pad_$f.mp4 $KW/data/dubp_$f.wav $(cat $KW/ref_$f.txt)" >> $KW/jobs.txt
+  ffmpeg -v error -y -i $KW/dub_$f.wav -af "apad=whole_dur=$PD" -t $PD -ar 16000 -ac 1 $KW/data/dubo_$f.wav || exit 1   # the ORIGINAL timing, for the check
+  if [ "$N" -gt "$(( ${KS_CHUNK_MIN_S:-90} * 25 ))" ]; then   # long video: ~KS_CHUNK_S pieces cut at dub pauses, the same reference in each (RAM flat)
+    $PY $KT/ks_chunk.py split --video $KW/data/pad_$f.mp4 --audio $KW/data/dubp_$f.wav --ref $(cat $KW/ref_$f.txt) --chunk-s ${KS_CHUNK_S:-60} --out $KW/data/chunks_$f --tag $f \
+      >> $KW/jobs.txt 2> $KW/chunk_$f.log || { tail -3 $KW/chunk_$f.log; exit 1; }; grep KS_CHUNKS $KW/chunk_$f.log
+  else echo "$f $KW/data/pad_$f.mp4 $KW/data/dubp_$f.wav $(cat $KW/ref_$f.txt)" >> $KW/jobs.txt; fi
 done
 ksfast $KW/jobs.txt $KW/out $KW/ks_fast.log "${KS_GATE-thr=0.12,cap=0.25,hi=8,lo=2}" || exit 1
+for f in $TAGS; do [ -d $KW/data/chunks_$f ] || continue; mkdir -p $KW/out/$f
+  $PY $KT/ks_chunk.py join --dir $KW/data/chunks_$f --renders $KW/out --out $KW/out/$f/joined.mp4 --tag $f || exit 1; done
 t check; declare -A SHF
 for f in $TAGS; do SH=${KS_PASTE_SHIFT:-auto}
-  if [ "$SH" = auto ]; then O=$(sync_off $KW/out/$f/${f}_$f.mp4 $KW/data/dubp_$f.wav $KW/sync_$f.json)   # K1 fallback: still off after the delay -> paste shift
+  if [ "$SH" = auto ]; then O=$(sync_off $(ls $KW/out/$f/*.mp4 | head -1) $KW/data/dubo_$f.wav $KW/sync_$f.json)   # vs the ORIGINAL dub (K2): still off after the delay -> paste shift (K1 fallback)
     [ "$O" = x ] && O=0; SH=$(( -O )); fi
   SHF[$f]=$SH; echo "KS_CHECK $f delay ${DLY[$f]} ms, paste shift $SH"
 done
@@ -114,10 +121,10 @@ $REL   # GPU done: the post + paste below are CPU only
 
 CUR=$KW/master_25fps.mp4; n=0
 for f in $TAGS; do
-  RAW=$KW/out/$f/${f}_$f.mp4; P=$KW/post_$f; mkdir -p $P
+  RAW=$(ls $KW/out/$f/*.mp4 | head -1); P=$KW/post_$f; mkdir -p $P
   t post_$f
   $MPY $R/scripts/quality/mp_landmarks.py --video $RAW --out $P/raw_lm.npz > $P/raw_lm.log 2>&1 || { tail -3 $P/raw_lm.log; exit 1; }
-  $PY $KT/k_ecc.py --ks $RAW --src $KW/data/pad_$f.mp4 --lm $KW/crop_lm_$f.npz --out $P/ecc.npz > $P/ecc.log 2>&1 || { tail -3 $P/ecc.log; exit 1; }
+  $PY $KT/$([ "${KS_ECC_PAR:-1}" = 1 ] && echo "k_ecc_par.py --warm 30" || echo k_ecc.py) --ks $RAW --src $KW/data/pad_$f.mp4 --lm $KW/crop_lm_$f.npz --out $P/ecc.npz > $P/ecc.log 2>&1 || { tail -3 $P/ecc.log; exit 1; }
   L=$RAW
   if [ "${KS_TSMOOTH:-gate:0.5}" != off ]; then $PY $KT/ks_tsmooth.py --layer $L --lm $P/raw_lm.npz --src-lm $KW/crop_lm_$f.npz --out $P/ts.mp4 --alpha ${KS_TSMOOTH:-gate:0.5} > $P/ts.log 2>&1 \
     && L=$P/ts.mp4 || { tail -3 $P/ts.log; exit 1; }; grep -h "gate:" $P/ts.log | head -1; fi
