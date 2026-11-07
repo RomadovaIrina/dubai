@@ -19,6 +19,10 @@ ap = argparse.ArgumentParser()
 for k in ("ks", "master", "box", "lm", "audio", "out"): ap.add_argument("--" + k, required=True)
 ap.add_argument("--others", default=""); ap.add_argument("--shift", type=int, default=0); ap.add_argument("--dil", type=float, default=0.10); ap.add_argument("--down", type=float, default=0.15)
 ap.add_argument("--no-cm", action="store_true")
+ap.add_argument("--align-ecc", default="", help="r16 K1: k_ecc.py npz (per-frame KS -> source affine in 512 px, image-based) instead of the landmark fit for --align")
+ap.add_argument("--align-scale", type=float, default=-1, help="r16 K1: scale component of --align: -1 = smoothed like the rest (r16 smart), 0 = LOCKED (no per-frame scale), >0 = its own smoothing sigma in frames")
+ap.add_argument("--scale-fix", default="", help="r16 K1 m18 'breathing': k_breath.py npz measured on a no-align paste of the SAME render (master grid); "
+                "the high-frequency part of KeySync's lower-face scale vs the source (x / its 1 s moving mean) is divided out per frame, about the lower-face centroid")
 ap.add_argument("--lfm", type=float, default=0.0, help="r16 K1 #15/#16: per-frame LOW-FREQUENCY Lab match (KeySync -> master skin, normalized blur at 0.35 IOD, mouth zone excluded), "
                 "gaussian-smoothed over time with this sigma in frames, on top of the global gain; 0 = off (one global offset)")
 ap.add_argument("--sharp", default="0", help="r16 K1 #17: unsharp amount on the KeySync luma (sigma 1 px at 512 scale), or 'auto' = match the source's skin high-frequency energy")
@@ -98,6 +102,7 @@ SHARP = 0.0 if a.sharp == "auto" else float(a.sharp)
 UP = tuple(float(x) for x in a.upper_src.split(":")) if a.upper_src else None
 kidx = lambda k: k - a.shift   # KeySync frame shown at master frame k
 AT = None
+ECM = np.load(a.align_ecc)["M"] if a.align_ecc else None
 if a.align > 0 and KL is not None:   # r16 K1: per-frame similarity KeySync -> source (box coords), smoothed params
     STB = [33, 263, 133, 362, 168, 6]; nkl = len(KL); prm = np.full((n, 4), np.nan)
     for k in range(n):
@@ -105,6 +110,11 @@ if a.align > 0 and KL is not None:   # r16 K1: per-frame similarity KeySync -> s
         if not (0 <= i < nkl): continue
         p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)] - [x0, y0]; q = KL[i]
         if not (np.isfinite(p[STB]).all() and np.isfinite(q[STB]).all()): continue
+        if ECM is not None:
+            if i >= len(ECM) or not np.isfinite(ECM[i]).all(): continue
+            M = ECM[i].astype(np.float64).copy(); M[:, 2] *= s / 512.0   # 512 grid -> box grid (linear part unchanged)
+            A_ = M[:, :2]; sc_ = float(np.sqrt(abs(np.linalg.det(A_)))); th = float(np.arctan2(A_[1, 0] - A_[0, 1], A_[0, 0] + A_[1, 1]))
+            c0 = q[STB].mean(0); t_ = M @ np.r_[c0, 1] - c0; prm[k] = [t_[0], t_[1], sc_ - 1, th]; continue
         M, _ = cv2.estimateAffinePartial2D(q[STB].astype(np.float32), p[STB].astype(np.float32), method=cv2.LMEDS)
         if M is None: continue
         sc_ = float(np.hypot(M[0, 0], M[1, 0])); th = float(np.arctan2(M[1, 0], M[0, 0])); c0 = q[STB].mean(0)   # params about the anchor centroid
@@ -113,7 +123,12 @@ if a.align > 0 and KL is not None:   # r16 K1: per-frame similarity KeySync -> s
     if ok.sum() > 5:
         for d in range(4): prm[~ok, d] = np.interp(np.flatnonzero(~ok), np.flatnonzero(ok), prm[ok, d])
         g = np.exp(-0.5 * (np.arange(-int(3 * a.align), int(3 * a.align) + 1) / a.align) ** 2); g /= g.sum(); pd_ = len(g) // 2
+        raw_ds = prm[:, 2].copy()
         prm = np.stack([np.convolve(np.pad(prm[:, d], (pd_, pd_), mode="edge"), g, "valid") for d in range(4)], 1)
+        if a.align_scale == 0: prm[:, 2] = 0.0
+        elif a.align_scale > 0:
+            g2 = np.exp(-0.5 * (np.arange(-int(3 * a.align_scale), int(3 * a.align_scale) + 1) / a.align_scale) ** 2); g2 /= g2.sum(); p2 = len(g2) // 2
+            prm[:, 2] = np.convolve(np.pad(raw_ds, (p2, p2), mode="edge"), g2, "valid")
         iodm = float(np.nanmedian(np.linalg.norm(LM[:, 33] - LM[:, 263], axis=1))); lim = 0.06 * iodm
         prm[:, :2] = np.clip(prm[:, :2], -lim, lim); prm[:, 2] = np.clip(prm[:, 2], -0.03, 0.03); prm[:, 3] = np.clip(prm[:, 3], -np.radians(2), np.radians(2))
         AT = prm; print(f"align: |t| mean {np.linalg.norm(prm[:, :2], axis=1).mean():.2f} px, scale {np.abs(prm[:, 2]).mean() * 100:.2f} %, rot {np.degrees(np.abs(prm[:, 3])).mean():.2f} deg", flush=True)
@@ -202,6 +217,17 @@ if a.lfm > 0:   # r16 K1: per-frame low-frequency Lab difference maps (LG x LG),
         return o_
     LFM = sm(D) / np.maximum(sm(V), 1e-3); LFM = np.clip(LFM, -12, 12).astype(np.float32)
     print(f"lfm: |D| mean L {np.abs(LFM[..., 0]).mean():.2f} a {np.abs(LFM[..., 1]).mean():.2f} b {np.abs(LFM[..., 2]).mean():.2f} (sigma_t {a.lfm})", flush=True)
+SFX = None
+if a.scale_fix:
+    xs_ = np.load(a.scale_fix)["lower"].astype(np.float64); tr_ = np.convolve(np.pad(xs_, (12, 12), mode="edge"), np.ones(25) / 25, "valid")
+    SFX = np.clip(tr_ / xs_, 0.97, 1.03); print(f"scale-fix: correction std {(SFX - 1).std() * 100:.3f} %, max {np.abs(SFX - 1).max() * 100:.2f} %", flush=True)
+LOWC = [234, 454, 132, 361, 58, 288, 172, 397, 150, 379, 152, 1]
+def scale_fix(kf, k):
+    if SFX is None or k >= len(SFX): return kf
+    p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)]
+    if not np.isfinite(p[LOWC]).all(): return kf
+    c_ = p[LOWC].mean(0) - [x0, y0]; M = cv2.getRotationMatrix2D((float(c_[0]), float(c_[1])), 0.0, float(SFX[k]))
+    return cv2.warpAffine(kf, M, (s, s), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
 DG = []
 fps_m = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=r_frame_rate", "-of", "csv=p=0", a.master], capture_output=True, text=True).stdout.strip()
 w = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", fps_m, "-i", "-", "-i", a.audio, "-map", "0:v", "-map", "1:a",
@@ -211,7 +237,7 @@ for k, f in enumerate(frames(a.master, W, H)):
     f = f.copy(); i = kidx(k); m, _ = mask(k)
     if m is not None:
         fade = 1.0 if i < nk - 8 else max(0.0, (nk - i) / 8.0)   # KeySync's output ends a few frames early: fade to the master
-        kf = warp_ks(K[int(np.clip(i, 0, nk - 1))].astype(np.float32), k, i)
+        kf = scale_fix(warp_ks(K[int(np.clip(i, 0, nk - 1))].astype(np.float32), k, i), k)
         if not a.no_cm:
             lab = cv2.cvtColor(kf / 255, cv2.COLOR_RGB2LAB) * gain + off
             if LFM is not None: lab += cv2.resize(LFM[min(k, n - 1)], (s, s), interpolation=cv2.INTER_CUBIC)
