@@ -80,6 +80,7 @@ def mask(k):
     if not np.isfinite(p).all(): return last[0], None
     iod = float(np.linalg.norm(p[33] - p[263])); q = p - [x0, y0]; mk = np.zeros((s, s), np.uint8)
     hp = hull(q[OVAL]); cv2.fillPoly(mk, [hp], 1); cv2.fillPoly(mk, [hp + np.array([0, int(round(a.down * iod))], np.int32)], 1)
+    own = mk.copy()   # r16 K1: the speaker's own face (oval + the room below the chin): the other-face protection must never cover it
     mk = cv2.dilate(mk, el(a.dil * iod))
     if OT is not None:
         for f2 in OT[min(i, len(OT) - 1)]:
@@ -90,8 +91,11 @@ def mask(k):
                     cv2.fillPoly(om, [hull(np.concatenate([g_, g_ - [0, 0.35 * oi]]))], 1)
                 else:
                     cv2.fillPoly(om, [hull(f2[OVAL] - [x0, y0])], 1); om = cv2.dilate(om, el(0.08 * oi))
+                if a.others_grow > 0: om[cv2.dilate(own, el(0.03 * iod)) > 0] = 0
                 mk[om > 0] = 0
     m = cv2.GaussianBlur(mk.astype(np.float32), (0, 0), max(1.0, 0.04 * iod)) * BOXF
+    if OT is not None and a.others_grow > 0:   # the feather of the cut lies OUTSIDE the speaker's face: fully KeySync inside her oval
+        m = np.maximum(m, np.clip(2 * cv2.GaussianBlur(own.astype(np.float32), (0, 0), max(1.0, 0.04 * iod)), 0, 1) * BOXF)
     lip = np.zeros((s, s), np.uint8); cv2.fillPoly(lip, [hull(q[LIPS])], 1); lip = cv2.dilate(lip, el(0.15 * iod))
     last[0] = m; return m, (mk > 0) & (lip == 0)
 
