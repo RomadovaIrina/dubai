@@ -1,0 +1,14 @@
+{
+ "video": "/workspace/dub/inputs/test_videos_raw/02.mp4",
+ "size": [
+  464,
+  848
+ ],
+ "sampled": 40,
+ "thr": {
+  "speck": 2.0,
+  "dark": 0.5,
+  "iod_min": 50.0
+ },
+ "faces": []
+}

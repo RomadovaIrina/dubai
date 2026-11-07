@@ -1,0 +1,34 @@
+{
+ "video": "/workspace/dub/r16q/clips/q04_farikh.mp4",
+ "size": [
+  1920,
+  1080
+ ],
+ "sampled": 40,
+ "thr": {
+  "speck": 2.0,
+  "dark": 0.5,
+  "iod_min": 50.0
+ },
+ "faces": [
+  {
+   "face": 0,
+   "center_xy": [
+    1281.3,
+    459.8
+   ],
+   "frames": 38,
+   "dark": 0.183,
+   "must": 0.707,
+   "tex": 2.237,
+   "speck": 4.004,
+   "speck_abs": 0.094,
+   "refL": 34.902,
+   "iod": 81.146,
+   "texture_reliable": true,
+   "beard_score": 2.002,
+   "beard": true,
+   "face_engine": "latentsync"
+  }
+ ]
+}

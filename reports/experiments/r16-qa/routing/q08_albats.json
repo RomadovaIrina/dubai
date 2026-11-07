@@ -1,0 +1,19 @@
+{
+ "keep_source_all": false,
+ "keep_source_ranges": [],
+ "keep_source_s": 0,
+ "lipsync_track": 0,
+ "lipsync_box_center_xy": [
+  335.0,
+  145.7
+ ],
+ "lipsync_speech_s": 37.9,
+ "face_engine": "keysync",
+ "beard": {
+  "beard": false,
+  "speck": 3.158,
+  "dark": 0.084,
+  "texture_reliable": false
+ },
+ "why": "no beard"
+}

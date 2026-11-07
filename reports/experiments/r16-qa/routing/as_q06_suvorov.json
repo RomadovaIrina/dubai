@@ -1,0 +1,308 @@
+{
+ "thr": {
+  "conf": 2.0,
+  "off_win": 3,
+  "min_frames": 25
+ },
+ "tracks": [
+  {
+   "id": 0,
+   "f0": 67,
+   "frames": 44,
+   "box_center_xy": [
+    1123.4,
+    307.2
+   ],
+   "box_size": 224.0,
+   "conf_whole": 1.605,
+   "offset_whole": 1
+  },
+  {
+   "id": 1,
+   "f0": 116,
+   "frames": 47,
+   "box_center_xy": [
+    1021.0,
+    328.4
+   ],
+   "box_size": 220.4,
+   "conf_whole": 2.478,
+   "offset_whole": 2
+  },
+  {
+   "id": 2,
+   "f0": 168,
+   "frames": 161,
+   "box_center_xy": [
+    1088.6,
+    321.0
+   ],
+   "box_size": 223.2,
+   "conf_whole": 2.365,
+   "offset_whole": 2
+  },
+  {
+   "id": 3,
+   "f0": 334,
+   "frames": 80,
+   "box_center_xy": [
+    1091.5,
+    286.2
+   ],
+   "box_size": 218.1,
+   "conf_whole": 2.354,
+   "offset_whole": 1
+  },
+  {
+   "id": 4,
+   "f0": 419,
+   "frames": 210,
+   "box_center_xy": [
+    1117.8,
+    294.5
+   ],
+   "box_size": 217.8,
+   "conf_whole": 2.281,
+   "offset_whole": 1
+  },
+  {
+   "id": 5,
+   "f0": 634,
+   "frames": 48,
+   "box_center_xy": [
+    1082.3,
+    329.0
+   ],
+   "box_size": 233.9,
+   "conf_whole": 3.576,
+   "offset_whole": 2
+  },
+  {
+   "id": 6,
+   "f0": 687,
+   "frames": 120,
+   "box_center_xy": [
+    1031.4,
+    379.1
+   ],
+   "box_size": 232.8,
+   "conf_whole": 2.06,
+   "offset_whole": 2
+  },
+  {
+   "id": 7,
+   "f0": 812,
+   "frames": 28,
+   "box_center_xy": [
+    997.2,
+    361.4
+   ],
+   "box_size": 248.6,
+   "conf_whole": 2.598,
+   "offset_whole": 2
+  },
+  {
+   "id": 8,
+   "f0": 860,
+   "frames": 52,
+   "box_center_xy": [
+    1023.5,
+    347.6
+   ],
+   "box_size": 239.8,
+   "conf_whole": 2.621,
+   "offset_whole": 1
+  },
+  {
+   "id": 9,
+   "f0": 917,
+   "frames": 56,
+   "box_center_xy": [
+    1024.1,
+    347.6
+   ],
+   "box_size": 224.2,
+   "conf_whole": 1.572,
+   "offset_whole": 1
+  },
+  {
+   "id": 10,
+   "f0": 978,
+   "frames": 72,
+   "box_center_xy": [
+    967.5,
+    343.5
+   ],
+   "box_size": 230.6,
+   "conf_whole": 1.172,
+   "offset_whole": -3
+  },
+  {
+   "id": 11,
+   "f0": 1056,
+   "frames": 63,
+   "box_center_xy": [
+    863.3,
+    359.6
+   ],
+   "box_size": 220.8,
+   "conf_whole": 3.214,
+   "offset_whole": 2
+  }
+ ],
+ "speakers": {
+  "SPEAKER_00": {
+   "track": 5,
+   "conf": 3.58,
+   "offset": 2,
+   "frames": 43,
+   "speech_s": 35.24,
+   "on_screen": true
+  },
+  "SPEAKER_01": {
+   "track": null,
+   "speech_s": 0.41,
+   "on_screen": false
+  }
+ },
+ "turns": [
+  {
+   "start": 0.031,
+   "end": 3.001,
+   "speaker": "SPEAKER_00",
+   "track": 5,
+   "on_screen": true,
+   "from": "speaker"
+  },
+  {
+   "start": 3.946,
+   "end": 7.388,
+   "speaker": "SPEAKER_00",
+   "track": 1,
+   "conf": 2.478,
+   "offset": 2,
+   "frames": 47,
+   "on_screen": true,
+   "from": "turn"
+  },
+  {
+   "start": 9.076,
+   "end": 16.315,
+   "speaker": "SPEAKER_00",
+   "track": 2,
+   "conf": 2.9,
+   "offset": 2,
+   "frames": 104,
+   "on_screen": true,
+   "from": "turn"
+  },
+  {
+   "start": 18.323,
+   "end": 19.623,
+   "speaker": "SPEAKER_00",
+   "track": 5,
+   "on_screen": true,
+   "from": "speaker"
+  },
+  {
+   "start": 19.808,
+   "end": 21.817,
+   "speaker": "SPEAKER_00",
+   "track": 4,
+   "conf": 3.101,
+   "offset": 1,
+   "frames": 50,
+   "on_screen": true,
+   "from": "turn"
+  },
+  {
+   "start": 22.728,
+   "end": 24.803,
+   "speaker": "SPEAKER_00",
+   "track": 4,
+   "conf": 3.159,
+   "offset": 1,
+   "frames": 52,
+   "on_screen": true,
+   "from": "turn"
+  },
+  {
+   "start": 25.613,
+   "end": 27.453,
+   "speaker": "SPEAKER_00",
+   "track": 5,
+   "conf": 3.58,
+   "offset": 2,
+   "frames": 43,
+   "on_screen": true,
+   "from": "turn"
+  },
+  {
+   "start": 27.858,
+   "end": 29.984,
+   "speaker": "SPEAKER_00",
+   "track": 6,
+   "conf": 2.293,
+   "offset": 3,
+   "frames": 53,
+   "on_screen": true,
+   "from": "turn"
+  },
+  {
+   "start": 30.372,
+   "end": 35.958,
+   "speaker": "SPEAKER_00",
+   "track": 8,
+   "conf": 3.069,
+   "offset": 1,
+   "frames": 37,
+   "on_screen": true,
+   "from": "turn"
+  },
+  {
+   "start": 31.908,
+   "end": 32.313,
+   "speaker": "SPEAKER_01",
+   "track": null,
+   "on_screen": false,
+   "from": "speaker"
+  },
+  {
+   "start": 36.447,
+   "end": 37.443,
+   "speaker": "SPEAKER_00",
+   "track": 5,
+   "on_screen": true,
+   "from": "speaker"
+  },
+  {
+   "start": 38.101,
+   "end": 40.514,
+   "speaker": "SPEAKER_00",
+   "track": 10,
+   "conf": 1.658,
+   "offset": 3,
+   "frames": 33,
+   "on_screen": false,
+   "from": "turn"
+  },
+  {
+   "start": 41.729,
+   "end": 44.969,
+   "speaker": "SPEAKER_00",
+   "track": 11,
+   "conf": 3.214,
+   "offset": 2,
+   "frames": 63,
+   "on_screen": true,
+   "from": "turn"
+  }
+ ],
+ "hook": {
+  "off_screen_speakers": [
+   "SPEAKER_01"
+  ],
+  "keep_source_all": false,
+  "note": "mute the off-screen speakers' units in every face's generator input (T: ks_e2e_prep units filter); keep_source_all -> skip the face stage"
+ }
+}

@@ -1,0 +1,34 @@
+{
+ "video": "/workspace/dub/r16l/data/videos/m03_src.mp4",
+ "size": [
+  512,
+  512
+ ],
+ "sampled": 40,
+ "thr": {
+  "speck": 2.0,
+  "dark": 0.5,
+  "iod_min": 50.0
+ },
+ "faces": [
+  {
+   "face": 0,
+   "center_xy": [
+    239.3,
+    230.8
+   ],
+   "frames": 39,
+   "dark": 0.155,
+   "must": 0.139,
+   "tex": 1.246,
+   "speck": 0.0,
+   "speck_abs": 0.0,
+   "refL": 56.078,
+   "iod": 127.069,
+   "texture_reliable": true,
+   "beard_score": 0.0,
+   "beard": false,
+   "face_engine": "keysync"
+  }
+ ]
+}

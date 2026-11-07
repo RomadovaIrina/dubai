@@ -1,0 +1,19 @@
+{
+ "keep_source_all": false,
+ "keep_source_ranges": [
+  [
+   37.981,
+   40.634
+  ]
+ ],
+ "keep_source_s": 2.65,
+ "lipsync_track": 2,
+ "lipsync_box_center_xy": [
+  1088.6,
+  321.0
+ ],
+ "lipsync_speech_s": 7.24,
+ "face_engine": "keysync",
+ "beard": null,
+ "why": "beard unmeasured -> keysync default"
+}

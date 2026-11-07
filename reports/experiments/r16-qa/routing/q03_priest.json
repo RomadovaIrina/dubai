@@ -1,0 +1,19 @@
+{
+ "keep_source_all": false,
+ "keep_source_ranges": [],
+ "keep_source_s": 0,
+ "lipsync_track": 0,
+ "lipsync_box_center_xy": [
+  967.1,
+  302.7
+ ],
+ "lipsync_speech_s": 22.87,
+ "face_engine": "latentsync",
+ "beard": {
+  "beard": true,
+  "speck": 2.502,
+  "dark": 0.387,
+  "texture_reliable": true
+ },
+ "why": "beard/stubble -> latentsync"
+}
