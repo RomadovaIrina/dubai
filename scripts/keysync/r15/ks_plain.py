@@ -23,6 +23,8 @@ ap.add_argument("--align-ecc", default="", help="r16 K1: k_ecc.py npz (per-frame
 ap.add_argument("--align-scale", type=float, default=-1, help="r16 K1: scale component of --align: -1 = smoothed like the rest (r16 smart), 0 = LOCKED (no per-frame scale), >0 = its own smoothing sigma in frames")
 ap.add_argument("--scale-fix", default="", help="r16 K1 m18 'breathing': k_breath.py npz measured on a no-align paste of the SAME render (master grid); "
                 "the high-frequency part of KeySync's lower-face scale vs the source (x / its 1 s moving mean) is divided out per frame, about the lower-face centroid")
+ap.add_argument("--others-grow", type=float, default=0.0, help="r16 K1 m03: protect the OTHER faces' whole head: their oval scaled by this factor about its centre "
+                "and stretched up by 0.35 of their IOD (hair), feathered on the speaker side; 0 = the r15 clamp (oval + 0.08 IOD)")
 ap.add_argument("--lfm", type=float, default=0.0, help="r16 K1 #15/#16: per-frame LOW-FREQUENCY Lab match (KeySync -> master skin, normalized blur at 0.35 IOD, mouth zone excluded), "
                 "gaussian-smoothed over time with this sigma in frames, on top of the global gain; 0 = off (one global offset)")
 ap.add_argument("--sharp", default="0", help="r16 K1 #17: unsharp amount on the KeySync luma (sigma 1 px at 512 scale), or 'auto' = match the source's skin high-frequency energy")
@@ -82,8 +84,13 @@ def mask(k):
     if OT is not None:
         for f2 in OT[min(i, len(OT) - 1)]:
             if np.isfinite(f2).all():
-                om = np.zeros((s, s), np.uint8); cv2.fillPoly(om, [hull(f2[OVAL] - [x0, y0])], 1)
-                mk[cv2.dilate(om, el(0.08 * float(np.linalg.norm(f2[33] - f2[263])))) > 0] = 0
+                om = np.zeros((s, s), np.uint8); oi = float(np.linalg.norm(f2[33] - f2[263]))
+                if a.others_grow > 0:
+                    ov_ = f2[OVAL] - [x0, y0]; cc = ov_.mean(0); g_ = cc + (ov_ - cc) * a.others_grow
+                    cv2.fillPoly(om, [hull(np.concatenate([g_, g_ - [0, 0.35 * oi]]))], 1)
+                else:
+                    cv2.fillPoly(om, [hull(f2[OVAL] - [x0, y0])], 1); om = cv2.dilate(om, el(0.08 * oi))
+                mk[om > 0] = 0
     m = cv2.GaussianBlur(mk.astype(np.float32), (0, 0), max(1.0, 0.04 * iod)) * BOXF
     lip = np.zeros((s, s), np.uint8); cv2.fillPoly(lip, [hull(q[LIPS])], 1); lip = cv2.dilate(lip, el(0.15 * iod))
     last[0] = m; return m, (mk > 0) & (lip == 0)
