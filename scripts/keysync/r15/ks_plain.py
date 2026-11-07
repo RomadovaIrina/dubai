@@ -20,8 +20,8 @@ for k in ("ks", "master", "box", "lm", "audio", "out"): ap.add_argument("--" + k
 ap.add_argument("--others", default=""); ap.add_argument("--shift", type=int, default=0); ap.add_argument("--dil", type=float, default=0.10); ap.add_argument("--down", type=float, default=0.15)
 ap.add_argument("--no-cm", action="store_true")
 ap.add_argument("--ks-lm", default="", help="landmarks of the raw KeySync output (512 grid, its frame index): the GENERATED lips for --tex / --cavity")
-ap.add_argument("--tex", type=float, default=0.0, help="r15 stubble / pores: the source's luma high frequencies (gaussian sigma px), DIS-flow-warped onto KeySync's "
-                "geometry, replace KeySync's inside the face mask outside the generated lips (dilated 0.15 IOD); 0 = off")
+ap.add_argument("--tex", type=float, default=2.0, help="r15 stubble / pores: the source's luma high frequencies (gaussian sigma px), DIS-flow-warped onto KeySync's "
+                "geometry, replace KeySync's inside the face mask outside the generated lips (dilated 0.15 IOD); 0 = off; r16: default 2 (Irina 07.11: old03 better)")
 ap.add_argument("--cavity", type=float, default=0.0, help="r15 black-hole mouth: lift strength (0..1) of the near-black inner-mouth pixels toward the source's open-mouth "
                 "interior tone (L 30th percentile + mean a / b of the source's open frames); 0 = off")
 a = ap.parse_args()
