@@ -31,16 +31,19 @@ def series(vid, lmf):
 
 def fold(x, P, ph=0):   # fixed phase (no argmax: its max over P phases is biased upward; audit #10). The render starts at a keyframe (frame 0).
     ok = np.isfinite(x); idx = np.arange(len(x)); b = x[ok & (idx % P == ph)]; o = x[ok & (idx % P != ph) & (idx % P != (ph + 1) % P)]
-    return {"phase": ph, "ratio": round(float(b.mean() / o.mean()), 2), "boundary": round(float(b.mean()), 2), "other": round(float(o.mean()), 2)}
+    m = [float(np.nanmean(x[ok & (idx % P == k)])) for k in range(P)]; pm = int(np.argmax(m))
+    return {"phase": ph, "ratio": round(float(b.mean() / o.mean()), 2), "boundary": round(float(b.mean()), 2), "other": round(float(o.mean()), 2),
+            "phase_max": pm, "ratio_max_info_only": round(float(m[pm] / np.mean([v for k, v in enumerate(m) if k != pm])), 2)}
 
 
 ap = argparse.ArgumentParser()
 for k in ("gen", "gen-lm", "src", "src-lm"): ap.add_argument("--" + k, required=True)
-ap.add_argument("--period", type=int, default=13); ap.add_argument("--out", default=""); a = ap.parse_args()
+ap.add_argument("--period", type=int, default=13); ap.add_argument("--phase", type=int, default=0, help="the boundary phase: diff t % P == phase (0 = into the keyframe at 13k; phase+1 is reported too)")
+ap.add_argument("--out", default=""); a = ap.parse_args()
 gE, gB = series(a.gen, a.gen_lm); sE, sB = series(a.src, a.src_lm); r = {}
 P = a.period
-for ph in (0, 1):   # into / out of the keyframe at frame 13k; the source at the same phases = the no-seam reference
+for ph in (a.phase, (a.phase + 1) % a.period):   # into / out of the keyframe at frame 13k; the source at the same phases = the no-seam reference
     r[f"P{P}_ph{ph}"] = {"gen_eye": fold(gE, P, ph), "gen_band": fold(gB, P, ph), "src_eye": fold(sE, P, ph), "src_band": fold(sB, P, ph)}
-r[f"P{P}"] = r[f"P{P}_ph0"]
+r[f"P{P}"] = r[f"P{P}_ph{a.phase}"]
 if a.out: json.dump(r, open(a.out, "w"))
 print(json.dumps(r))
