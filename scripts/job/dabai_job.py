@@ -28,6 +28,7 @@ STEPS = {
     "upright": ("Preparing the video", 1, 5, 20), "cfr": ("Preparing the video", 1, 5, 20), "face_res": ("Preparing the video", 1, 5, 30),
     "wait_heavy": ("Waiting for the GPU", 0, 0, 0), "audio": ("Recognising, translating and voicing the speech", 30, 60, 120),
     "sep": ("Separating the background", 2, 5, 10), "polyglot": ("Voicing the other languages", 4, 30, 60), "pace_fix": ("Voicing", 2, 20, 30),
+    "face_keysync": ("Generating the lip movements", 50, 300, 260),   # r16: KeySync fast2; the base covers a cold start (TensorRT build + VAE autotune)
     "face_gen": ("Generating the lip movements", 40, 60, 330), "wait_comp": ("Waiting for the GPU", 0, 0, 0),
     "face_comp": ("Compositing the face", 17, 40, 330), "face_hires": ("Restoring the full resolution", 3, 10, 150),
     "subs": ("Burning subtitles / watermark", 3, 5, 25), "mux": ("Assembling the final video", 1, 2, 3), "metrics": ("Assembling the final video", 0, 1, 1),
@@ -80,7 +81,7 @@ ERRORS = {   # terminal error code -> (status, EN, RU, retryable)
 }
 TECH = {"low_res", "long_video", "landscape", "rotated_source", "high_fps", "odd_fps", "variable_fps", "hdr_or_10bit", "face_partly_absent",
         "face_work_downscaled", "bed_spleeter_only", "face_clean_no_codeformer", "lipsync_off_by_request", "face_skipped_no_face",
-        "voice_only_pose_precheck", "htdemucs_stems_failed", "htdemucs_mix_failed"}
+        "voice_only_pose_precheck", "htdemucs_stems_failed", "htdemucs_mix_failed", "face_keysync", "face_keysync_multi_face"}
 STYLES = ("white", "yellow", "trendy", "outline")
 _LANGS = None
 
@@ -121,7 +122,7 @@ def validate(job: dict) -> tuple[dict, list[str]]:
     e: list[str] = []
     if not isinstance(job, dict): return {}, ["the job must be a JSON object"]
     allowed = {"schema", "input", "out_dir", "job_id", "source_lang", "target_lang", "polyglot", "mode", "lipsync", "subs", "watermark", "output",
-               "bed", "max_voices", "timeout_s", "sync", "debug_env"}
+               "bed", "max_voices", "timeout_s", "sync", "debug_env", "face"}
     for k in job:
         if k not in allowed: e.append(f"unknown field: {k}")
     p = {k: v for k, v in job.items() if k in allowed}
@@ -137,6 +138,8 @@ def validate(job: dict) -> tuple[dict, list[str]]:
     if pg is not None and not isinstance(pg, dict): e.append("polyglot must be null or an object (LANGS.md)")
     p["mode"] = str(p.get("mode") or "quality")
     if p["mode"] not in ("quality", "fast"): e.append("mode must be quality or fast")
+    p["face"] = str(p.get("face") or os.environ.get("DABAI_FACE_DEFAULT", "keysync"))   # r16: KeySync is the face path; latentsync = the frozen r15 stack
+    if p["face"] not in ("keysync", "latentsync"): e.append("face must be keysync or latentsync")
     p["lipsync"] = str(p.get("lipsync") or "auto")
     if p["lipsync"] not in ("auto", "off"): e.append("lipsync must be auto or off")
     s = p.get("subs") or {}
@@ -171,7 +174,9 @@ def validate(job: dict) -> tuple[dict, list[str]]:
 
 def mode_env(p: dict) -> dict:
     """the generator / composite stack per mode (brief r15: quality = q2 + F3 + c8 teacher, fast = the 4-step student r2 step 1500 EMA + c8)"""
-    q = {"LS_CMS_READ": "1", "FC_CMS": "1", "LS_STRIDE": "8", "LS_OVERLAP": "continue",
+    if p.get("face", "keysync") == "keysync":   # r16: KeySync fast2 (2-step student, eye-approved) for both modes; no faster variant yet
+        return {"DUB_FACE": "keysync", "KS_INTERP_STEPS": "2"}
+    q = {"DUB_FACE": "latentsync", "LS_CMS_READ": "1", "FC_CMS": "1", "LS_STRIDE": "8", "LS_OVERLAP": "continue",
          "FC_EXTRA": "--pre-threads=12 --sharpen-luma on --sharpen-auto 1.05 --sharpen-lips-max 0.2 --reg-smooth 4 --mouth-region 0.45"}
     if p["mode"] == "fast":
         q.update(R10_GEN_PY="scripts/r13/distill/student_gen.py", R13_STUDENT_LORA=STUDENT_LORA, R13_STUDENT_STEPS="4")
@@ -395,7 +400,7 @@ def plan_of(p: dict) -> list[str]:
     """the e2e steps this job is expected to pass (progress weights / ETA); steps that appear anyway add their weight"""
     pl = ["precheck", "audio"] + (["sep"] if os.environ.get("DUB_ALLOW_NC_BED", "1") == "1" else [])
     if p.get("polyglot") or p["target_lang"] != "en": pl.append("polyglot")
-    if p["lipsync"] != "off": pl += ["face_gen", "face_comp"]
+    if p["lipsync"] != "off": pl += ["face_keysync"] if p.get("face", "keysync") == "keysync" else ["face_gen", "face_comp"]
     if p["subs"]["enabled"] or p["watermark"]["enabled"]: pl.append("subs")
     return pl + ["mux"]
 
@@ -447,12 +452,12 @@ def main() -> int:
     ap.add_argument("job", nargs="?", help="job.json"); ap.add_argument("--validate", action="store_true"); ap.add_argument("--input"); ap.add_argument("--out")
     ap.add_argument("--job-id"); ap.add_argument("--mode", default="quality"); ap.add_argument("--target-lang", default="en"); ap.add_argument("--source-lang", default="auto")
     ap.add_argument("--subs", help="style: white|yellow|trendy|outline (on)"); ap.add_argument("--subs-lang", default="dub")
-    ap.add_argument("--watermark", help="PNG path or text:<mark>"); ap.add_argument("--lipsync", default="auto"); ap.add_argument("--keep-intermediate", action="store_true")
+    ap.add_argument("--watermark", help="PNG path or text:<mark>"); ap.add_argument("--lipsync", default="auto"); ap.add_argument("--face", default=None, help="keysync (default) | latentsync"); ap.add_argument("--keep-intermediate", action="store_true")
     a = ap.parse_args()
     if a.job: job = json.loads(pathlib.Path(a.job).read_text())
     else:
         job = {"input": a.input, "out_dir": a.out, "job_id": a.job_id, "mode": a.mode, "target_lang": a.target_lang, "source_lang": a.source_lang,
-               "lipsync": a.lipsync, "output": {"keep_intermediate": a.keep_intermediate}}
+               "lipsync": a.lipsync, "face": a.face, "output": {"keep_intermediate": a.keep_intermediate}}
         if a.subs: job["subs"] = {"enabled": True, "style": a.subs, "lang": a.subs_lang}
         if a.watermark: job["watermark"] = {"enabled": True, **({"text": a.watermark[5:]} if a.watermark.startswith("text:") else {"image": a.watermark})}
         job = {k: v for k, v in job.items() if v is not None}

@@ -41,7 +41,12 @@ RUN LATENTSYNC_COMMIT=${LATENTSYNC_COMMIT} bash infra/docker/install_env.sh late
 ARG LLAMA_JOBS=16
 # no driver at build time: libcuda comes from the toolkit's stubs for the link step only (the runtime gets the real one from the host)
 RUN LIBRARY_PATH=/usr/local/cuda/lib64/stubs JOBS=${LLAMA_JOBS} CUDACXX=/usr/local/cuda/bin/nvcc bash infra/docker/install_env.sh llama_cuda
-RUN find /venv -depth -type d -name __pycache__ -exec rm -rf {} + ; rm -rf /root/.cache /tmp/*
+# r16 T: the KeySync-fast face (DUB_FACE=keysync, the r16 default): keysync 5e2503b + the sm120 r15 patch in its OWN venv (torch 2.7.1 cu128 +
+# TensorRT 10.16, ~6 GB) at /opt/keysync. Weights / the student / the TRT capture on the models volume (fetch-models 8/8); the TensorRT plans and
+# the inductor cache are built on the first job into the volume (KS_TRT_CACHE, TORCHINDUCTOR_CACHE_DIR: plans are tied to GPU + driver + TRT).
+COPY scripts/keysync scripts/keysync
+RUN KS_ROOT=/opt/keysync KS_NO_WEIGHTS=1 bash scripts/keysync/r16/ks_install.sh && rm -rf /opt/keysync/code/.git /opt/keysync/code/pretrained_models
+RUN find /venv /opt/keysync -depth -type d -name __pycache__ -exec rm -rf {} + ; rm -rf /root/.cache /tmp/*
 
 # ------------------------------------------------------------------------------------------------------------------------------------
 FROM nvidia/cuda:${CUDA_VERSION}-cudnn-runtime-${UBUNTU} AS runtime
@@ -63,6 +68,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libgl1 l
       fonts-dejavu-core fonts-noto-core fonts-noto-cjk && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /opt/uv/python /opt/uv/python
 COPY --from=builder /venv /venv
+COPY --from=builder /opt/keysync /opt/keysync
 COPY --from=uv /uv /usr/local/bin/uv
 ENV UV_PYTHON_INSTALL_DIR=/opt/uv/python UV_PYTHON_PREFERENCE=only-managed UV_NO_CACHE=1 UV_LINK_MODE=copy
 COPY . /workspace/dub/dubai
@@ -75,6 +81,9 @@ ENV DUB_ROOT=/workspace/dub/dubai DUB_ENV=/venv/dabai VIRTUAL_ENV=/venv/dabai DU
     DUB_PROFILE=${DUB_PROFILE} DABAI_NC_DIR=/opt/dabai-nc DUB_THREADS=16 \
     DABAI_JOBS_DIR=/data/jobs DABAI_IMAGE=${IMAGE_TAG} DABAI_GIT_SHA=${GIT_SHA} \
     DABAI_STUDENT_LORA=/workspace/dub/dubai/models/student/latentsync_student_r2_s4_step01500_ema.pt \
+    KS_ROOT=/opt/keysync KS_LORA=/workspace/dub/dubai/models/keysync/student/lora_pick.pt KS_TRT_CAP=/workspace/dub/dubai/models/keysync/trt_cap \
+    KS_TRT_CACHE=/workspace/dub/dubai/models/keysync/trt_cache TORCHINDUCTOR_CACHE_DIR=/workspace/dub/dubai/models/keysync/inductor \
+    KS_LMK_CACHE=/data/ks_lmk KS_TORCH_HOME=/workspace/dub/dubai/models/keysync/torch DABAI_FACE_DEFAULT=keysync \
     PYTHONUNBUFFERED=1 NVIDIA_VISIBLE_DEVICES=all NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
 VOLUME ["/workspace/dub/dubai/models", "/data"]
 WORKDIR /workspace/dub/dubai

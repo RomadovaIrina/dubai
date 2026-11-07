@@ -141,6 +141,14 @@ fi
 VID=""
 if [ "${E2E_LIPSYNC:-on}" = off ]; then FL+=("lipsync_off_by_request")   # r13 interface: the user asked for a voice-only dub
 elif [[ " $PF " == *" no_face "* ]]; then FL+=("face_skipped_no_face")
+elif [ "${DUB_FACE:-keysync}" = keysync ]; then   # r16 T (#25): KeySync fast2 (TRT engines built on first use) + the plain paste; LatentSync frozen since 06.11
+  st face_keysync                                 # (DUB_FACE=latentsync = the r15 path below). Hooks: KS_DUB_DELAY_MS, KS_PASTE_SHIFT, KS_PLAIN_ARGS (scripts/keysync/r16/ks_face.sh)
+  FL+=("face_keysync")
+  if bash scripts/keysync/r16/ks_face.sh $ID $SRC $AD $W $W/ks_face.mp4 > $L/face_keysync.log 2>&1 && [ -s $W/ks_face.mp4 ]; then
+    VID=$W/ks_face.mp4; grep -E "^KS_(FACES|PASTE|FACE_DONE)" $L/face_keysync.log | cut -c1-400 | tee -a $L/e2e.log
+    grep -q '"mode": "multi_face"' $W/ks/faces.json 2>/dev/null && FL+=("face_keysync_multi_face")
+    KS25=$W/ks/master_25fps.mp4   # the KeySync result is on the 25 fps master grid (no retime)
+  else fail face_gen_failed PARTIAL_SUCCESS "see logs/face_keysync.log: source picture used"; fi
 else
   st face_gen
   rm -rf $B/$GT $B/$FT
@@ -190,8 +198,10 @@ fi
 if [ -n "$HIRES" ]; then   # r15 T: the face work was downscaled: back to the source resolution
   if [ "$VID" = "$SRC" ]; then VID=$HIRES   # no face result: the full-res source picture
   else
-    st face_hires
-    if python scripts/r15/hires_merge.py --hi $HIRES --lo-src $SRC --lo-comp $VID --out $W/face_hires.mp4 --json $W/face_hires.json --threads ${HIRES_THREADS:-16} > $L/face_hires.log 2>&1; then
+    st face_hires; HI=$HIRES; LOS=$SRC
+    if [ -n "${KS25:-}" ]; then LOS=$KS25; HI=$W/hires_25fps.mp4   # KeySync: merge on its 25 fps grid (the full-res source at 25 fps, near-lossless)
+      ffmpeg -loglevel error -y -i $HIRES -map 0:v:0 -an -vf fps=25 -c:v libx264 -preset veryfast -crf 12 -pix_fmt yuv420p $HI || HI=$HIRES; fi
+    if python scripts/r15/hires_merge.py --hi $HI --lo-src $LOS --lo-comp $VID --out $W/face_hires.mp4 --json $W/face_hires.json --threads ${HIRES_THREADS:-16} > $L/face_hires.log 2>&1; then
       VID=$W/face_hires.mp4; tail -1 $L/face_hires.log | tee -a $L/e2e.log
     else VID=$HIRES; fail face_hires_failed PARTIAL_SUCCESS "see logs/face_hires.log: source picture used"; fi
   fi

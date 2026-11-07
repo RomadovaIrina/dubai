@@ -44,6 +44,19 @@ if [ -s $S ]; then echo "have $S"
 elif [ -n "${STUDENT_LORA_FILE:-}" ]; then cp "$STUDENT_LORA_FILE" $S
 elif [ -n "${STUDENT_LORA_URL:-}" ]; then dl "$STUDENT_LORA_URL" $S
 else echo "WARNING: no student LoRA (STUDENT_LORA_FILE / STUDENT_LORA_URL): mode fast is unavailable until $S exists"; fi
+log "8/8 KeySync (r16 face): toninio19/keysync checkpoints (pinned revision) + the LCM student + the TensorRT capture (ours: KS_KIT_DIR)"
+K=$M/keysync; mkdir -p $K/checkpoints $K/student $K/trt_cap $K/trt_cache $K/inductor $K/torch
+$PY - $K/checkpoints <<'PY'
+import os, sys, shutil, pathlib
+from huggingface_hub import hf_hub_download
+for f in ["WavLM-Base+.pt", "keyframe_dub.pt", "interpolation_dub.pt"]:
+    d = pathlib.Path(sys.argv[1]) / f
+    if not d.exists(): shutil.copy(hf_hub_download("toninio19/keysync", "checkpoints/" + f, revision=os.environ.get("KS_HF_REVISION", "main")), d)
+    print("keysync", f, d.stat().st_size)
+PY
+for f in student/lora_pick.pt student/lora_meta.json trt_cap/kf.pt trt_cap/interp.pt; do   # KS_KIT_DIR = a folder with these 4 files (HANDOFF / laptop chkpts)
+  [ -s $K/$f ] || { [ -n "${KS_KIT_DIR:-}" ] && [ -s $KS_KIT_DIR/$(basename $f) ] && cp $KS_KIT_DIR/$(basename $f) $K/$f; } || echo "WARNING: no $K/$f (set KS_KIT_DIR): the KeySync face is unavailable"
+done
 if [ "${DUB_PROFILE:-}" = current ]; then   # the NC set, ONLY for the explicit current profile, onto its OWN volume (never the models volume)
   N=${DABAI_NC_DIR:-/opt/dabai-nc}; mkdir -p $N; [ -w $N ] || { echo "mount a writable NC volume at $N" >&2; exit 64; }
   log "NC set for DUB_PROFILE=current (CodeFormer S-Lab NC + htdemucs weights: a deliberate licence deviation, user-accepted 29.10) -> $N"

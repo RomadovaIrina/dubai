@@ -24,6 +24,9 @@ link_runtime() {   # caches + checkpoints from the models volume (no download at
   local LS=$R/third_party/latentsync/checkpoints; mkdir -p $LS/auxiliary
   ln -sfn $M/latentsync/latentsync_unet.pt $LS/latentsync_unet.pt; ln -sfn $M/latentsync/whisper $LS/whisper
   for f in syncnet_v2.model sfd_face.pth; do ln -sfn $M/latentsync/auxiliary/$f $LS/auxiliary/$f; done
+  if [ -d ${KS_ROOT:-/opt/keysync}/code ]; then   # r16: KeySync weights from the volume (fetch-models 8/8)
+    mkdir -p ${KS_ROOT:-/opt/keysync}/code/pretrained_models; ln -sfn $M/keysync/checkpoints ${KS_ROOT:-/opt/keysync}/code/pretrained_models/checkpoints
+  fi
   if [ "$DUB_PROFILE" = current ]; then
     for p in CodeFormer/weights/CodeFormer/codeformer.pth quarantine_nc/torch/hub/checkpoints/955717e8-8726e21a.th sep_pylib/demucs; do
       [ -e $N/$p ] || { echo "DUB_PROFILE=current needs the NC volume at $N ($p missing): run fetch-models with DUB_PROFILE=current and -v <nc volume>:$N" >&2; exit 64; }

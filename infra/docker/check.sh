@@ -29,6 +29,11 @@ else
   [ -s $R/third_party/CodeFormer/weights/CodeFormer/codeformer.pth ] && ok "current profile: CodeFormer (NC) present" || bad "current profile: no CodeFormer weights"
   [ -s /workspace/dub/quarantine_nc/torch/hub/checkpoints/955717e8-8726e21a.th ] && [ -d /workspace/dub/sep_pylib/demucs ] && ok "current profile: htdemucs (NC) present" || bad "current profile: no htdemucs"
 fi
+KS=${KS_ROOT:-/opt/keysync}
+$KS/venv/bin/python -c "import tensorrt, torch; assert torch.cuda.is_available(); print('     keysync venv: torch', torch.__version__, 'tensorrt', tensorrt.__version__)" && ok "KeySync venv (TensorRT)" || bad "KeySync venv"
+for f in checkpoints/keyframe_dub.pt checkpoints/interpolation_dub.pt checkpoints/WavLM-Base+.pt student/lora_pick.pt student/lora_meta.json trt_cap/kf.pt trt_cap/interp.pt; do
+  [ -s $M/keysync/$f ] || { bad "KeySync: $M/keysync/$f missing (fetch-models 8/8, KS_KIT_DIR)"; continue; }; done
+ls ${KS_TRT_CACHE:-$M/keysync/trt_cache}/*/eng_s/interp/full.plan > /dev/null 2>&1 && ok "KeySync TensorRT engines cached" || echo "WARN no KeySync TensorRT engines yet: the first job builds them (~5 min)"
 [ -s "${DABAI_STUDENT_LORA:-/nonexistent}" ] && ok "student LoRA (mode fast)" || echo "WARN no student LoRA: mode fast unavailable"
 df -BG --output=avail /data 2>/dev/null | tail -1 | awk '{g=$1+0; if (g < 60) print "WARN /data has only " g " GB free (a job needs >= 10 GB per video minute while it runs: 5 min >= 60 GB, 15 min ~150 GB)"; else print "OK   /data " g " GB free"}'
 [ $F = 0 ] && echo "CHECK_OK" || echo "CHECK_FAILED"; exit $F
