@@ -19,6 +19,8 @@ ap = argparse.ArgumentParser()
 for k in ("ks", "master", "box", "lm", "audio", "out"): ap.add_argument("--" + k, required=True)
 ap.add_argument("--others", default=""); ap.add_argument("--shift", type=int, default=0); ap.add_argument("--dil", type=float, default=0.10); ap.add_argument("--down", type=float, default=0.15)
 ap.add_argument("--no-cm", action="store_true")
+ap.add_argument("--align", type=float, default=0.0, help="r16 K1 smart paste: per-frame similarity of KeySync's stable landmarks (eye corners, nose bridge; --ks-lm) onto the source's at the shown master frame, "
+                "gaussian-smoothed over time (sigma = this many frames), clamped to 0.06 IOD / 3 %% scale / 2 deg; 0 = off (the static inverse crop)")
 ap.add_argument("--ks-lm", default="", help="landmarks of the raw KeySync output (512 grid, its frame index): the GENERATED lips for --tex / --cavity")
 ap.add_argument("--tex", type=float, default=0.0, help="r15 stubble / pores: the source's luma high frequencies (gaussian sigma px), DIS-flow-warped onto KeySync's "
                 "geometry, replace KeySync's inside the face mask outside the generated lips (dilated 0.15 IOD); 0 = off")
@@ -76,6 +78,31 @@ def mask(k):
 
 
 kidx = lambda k: k - a.shift   # KeySync frame shown at master frame k
+AT = None
+if a.align > 0 and KL is not None:   # r16 K1: per-frame similarity KeySync -> source (box coords), smoothed params
+    STB = [33, 263, 133, 362, 168, 6]; nkl = len(KL); prm = np.full((n, 4), np.nan)
+    for k in range(n):
+        i = kidx(k)
+        if not (0 <= i < nkl): continue
+        p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)] - [x0, y0]; q = KL[i]
+        if not (np.isfinite(p[STB]).all() and np.isfinite(q[STB]).all()): continue
+        M, _ = cv2.estimateAffinePartial2D(q[STB].astype(np.float32), p[STB].astype(np.float32), method=cv2.LMEDS)
+        if M is None: continue
+        sc_ = float(np.hypot(M[0, 0], M[1, 0])); th = float(np.arctan2(M[1, 0], M[0, 0])); c0 = q[STB].mean(0)   # params about the anchor centroid
+        t_ = M @ np.r_[c0, 1] - c0; prm[k] = [t_[0], t_[1], sc_ - 1, th]
+    ok = np.isfinite(prm).all(1)
+    if ok.sum() > 5:
+        for d in range(4): prm[~ok, d] = np.interp(np.flatnonzero(~ok), np.flatnonzero(ok), prm[ok, d])
+        g = np.exp(-0.5 * (np.arange(-int(3 * a.align), int(3 * a.align) + 1) / a.align) ** 2); g /= g.sum(); pd_ = len(g) // 2
+        prm = np.stack([np.convolve(np.pad(prm[:, d], (pd_, pd_), mode="edge"), g, "valid") for d in range(4)], 1)
+        iodm = float(np.nanmedian(np.linalg.norm(LM[:, 33] - LM[:, 263], axis=1))); lim = 0.06 * iodm
+        prm[:, :2] = np.clip(prm[:, :2], -lim, lim); prm[:, 2] = np.clip(prm[:, 2], -0.03, 0.03); prm[:, 3] = np.clip(prm[:, 3], -np.radians(2), np.radians(2))
+        AT = prm; print(f"align: |t| mean {np.linalg.norm(prm[:, :2], axis=1).mean():.2f} px, scale {np.abs(prm[:, 2]).mean() * 100:.2f} %, rot {np.degrees(np.abs(prm[:, 3])).mean():.2f} deg", flush=True)
+def warp_ks(kf, k, i):
+    if AT is None or not (0 <= i < len(KL)): return kf
+    tx, ty, ds, th = AT[k]; c0 = KL[i][[33, 263, 133, 362, 168, 6]].mean(0) if np.isfinite(KL[i]).all() else np.array([s / 2, s / 2])
+    M = cv2.getRotationMatrix2D((float(c0[0]), float(c0[1])), float(np.degrees(-th)), float(1 + ds)); M[:, 2] += [tx, ty]
+    return cv2.warpAffine(kf, M, (s, s), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
 gain = np.ones(3, np.float32); off = np.zeros(3, np.float32); CAV = None
 is_open = lambda p: np.isfinite(p).all() and np.linalg.norm(p[61] - p[291]) > 5 and np.linalg.norm(p[13] - p[14]) / np.linalg.norm(p[61] - p[291]) > 0.15
 if not a.no_cm or a.cavity > 0:   # pass 1: the global colour match on the skin; the source's open-mouth interior tone (for --cavity)
@@ -136,7 +163,7 @@ for k, f in enumerate(frames(a.master, W, H)):
     f = f.copy(); i = kidx(k); m, _ = mask(k)
     if m is not None:
         fade = 1.0 if i < nk - 8 else max(0.0, (nk - i) / 8.0)   # KeySync's output ends a few frames early: fade to the master
-        kf = K[int(np.clip(i, 0, nk - 1))].astype(np.float32)
+        kf = warp_ks(K[int(np.clip(i, 0, nk - 1))].astype(np.float32), k, i)
         if not a.no_cm:
             lab = cv2.cvtColor(kf / 255, cv2.COLOR_RGB2LAB) * gain + off; kf = np.clip(cv2.cvtColor(lab, cv2.COLOR_LAB2RGB) * 255, 0, 255)
         if a.tex > 0 or a.cavity > 0: kf = fix_ks(kf, i, m, f[y0:y0 + s, x0:x0 + s])
