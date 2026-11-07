@@ -130,3 +130,30 @@ With the b8 gate on top:
   - `clips/m03_keyframe_ref_b8gate_base_refteeth_refteeth-rr3_rr3_23-27s_half_speed.mp4`;
   - `clips/m18_…_2-6s_half_speed.mp4`.
   - Raw 512 KeySync windows with the final-mix audio; at m03 25.56 s ref_teeth shows upper teeth where base has the black "O".
+
+## Round 5: ref_teeth full length, the parted-lips side effect, pause arms, the tracked crop
+**ref_teeth, full length** (`k2_refpick.py` auto-pick; m03 #46 = 1.84 s, m18 #242 = 9.68 s, old03 #2002 = 80.08 s; contact sheets in `outbox/r16_k2/refpick/`):
+- Black-cavity share: m03 16.5 → 8.5 %, m18 39 → 25 %, old03 4.5 → 5.9 %.
+- Side effect: lips rest parted in dub pauses (closed in silence m03 59 → 22 %, old03 47 → 21 %; source 51 / 50 %).
+- A less-open teeth reference (open target 0.10) doesn't fix it (m03 12 %, old03 17 %), and on m18 it makes the black cavity worse. Any reference with visible teeth has parted lips.
+
+**Pause arms** (Irina's rule: no KeySync ↔ source fade on a visible face). Pause = a dub-silent run ≥ 6 frames (> 35 dB below peak), eased over 4 frames.
+- (a) `ks_plain --lip-keep` (k2_pause.py weights): the source lips (hull + 0.10 IOD) show through the paste mask, only where the source mouth is closed too.
+- (b) `k2_pause.py --mode warp`: KeySync's own lips closed by a per-column vertical warp (the upper lip band stretched down, the lower lip band up, 0.35-mouth-width skin margin); no source pixels at all.
+
+| closed in dub pauses | source | ref_teeth | a | b |
+|---|---|---|---|---|
+| m03 | 53 % | 27 % | 52 % | 53 % |
+| old03 | 50 % | 23 % | 49 % | 44 % |
+
+- Black cavity unchanged.
+- By eye at m03 35.2 s: ref_teeth = open with teeth; a = unchanged there (the source mouth is not closed on that frame); b = naturally closed lips.
+- Panels: `clips/{m03,old03}_pause_3panel_refteeth_a-srclips_b-lipwarp_*_half_speed.mp4` (m03 33–36.5 and 37.5–40.5 s, old03 54.5–58 and 81.5–84.5 s).
+
+**Tracked crop** (Q's q05 / q06: the static box makes the face 0.27–0.36 of KeySync's input):
+- `k2_prep_track.py` gives a constant-side square box (1.8 face_h + 2 × the smoothing residual) whose centre follows the gaussian-smoothed face track (sigma 6 frames); `ks_plain` takes per-frame boxes (`xs` / `ys` in box.json). The static path is bit-identical (regression max diff 0).
+- Face share in the input: q05 0.355 → 0.44, q06 0.27 → 0.52. m03 / m18 / old03 keep the static box (already 0.49–0.72). Policy: track only when the static face share is < 0.45.
+- q05 (driven by its own audio for the A/B): the static box gives a teal blob over the mouth and a white neck slab in every shot; the tracked box gives a normal talking face (the beard is thinner, KeySync's known beard weakness).
+  - Panel: `clips/q05_crop_source_static_tracked_{2-6,28-32}s_half_speed.mp4`.
+  - Still broken: the 20 s cut to a product shot with a small picture-in-picture of him, in every crop. Needs shot handling: no KeySync on shots where the face is small / inset.
+- q06: VHS, near-profile, heavy gestures; MediaPipe finds a face in only 19 % of frames (27–38 s). KeySync's own detector found none in the static crop (crash: "No valid landmarks found"). The tracked crop is rendering.

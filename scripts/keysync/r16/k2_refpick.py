@@ -18,7 +18,7 @@ INNER = [78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308, 415, 310, 311, 312, 1
 OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109]
 LIPS = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185]
 ap = argparse.ArgumentParser(); ap.add_argument("--video", required=True); ap.add_argument("--lm", default=""); ap.add_argument("--out", required=True)
-ap.add_argument("--gap", type=float, default=2.0); a = ap.parse_args()
+ap.add_argument("--gap", type=float, default=2.0); ap.add_argument("--open-target", type=float, default=0.16, dest="ot"); ap.add_argument("--topn", type=int, default=3); a = ap.parse_args()
 if not a.lm:
     a.lm = a.out + ".mp.npz"
     subprocess.run(["/venv/mediapipe/bin/python", "/workspace/dub/dubai/scripts/quality/mp_landmarks.py", "--video", a.video, "--out", a.lm], check=True, stdout=subprocess.DEVNULL)
@@ -49,12 +49,12 @@ while True:
 sm = np.median([r["sharp"] for r in R]); lm_ = np.median([r["light"] for r in R])
 for r in R:
     r["sharp_rel"] = round(r["sharp"] / max(sm, 1e-6), 2); r["light_rel"] = round(r["light"] / max(lm_, 1e-6), 2)
-    ofit = 1.0 - min(abs(r["open"] - 0.16) / 0.10, 1.0) if r["open"] > 0.06 else 0.0
+    ofit = 1.0 - min(abs(r["open"] - a.ot) / 0.06, 1.0) if r["open"] > 0.04 else 0.0
     r["score"] = round(3 * r["teeth_up"] + ofit - 2 * r["dark"] + 0.5 * min(r["sharp_rel"], 2) - 6 * abs(r["yaw"]) - 2 * abs(np.radians(r["roll"])) - abs(r["light_rel"] - 1), 3)
 order = sorted(R, key=lambda r: -r["score"]); top = []
 for r in order:
     if all(abs(r["t"] - q["t"]) >= a.gap for q in top): top.append(r)
-    if len(top) == 3: break
+    if len(top) == a.topn: break
 cur = next((r for r in R if r["k"] == 0), None)
 tiles = []
 for lab_, r in [("frame0 (current)", cur)] + [(f"#{i + 1}", r) for i, r in enumerate(top)]:

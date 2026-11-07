@@ -19,6 +19,7 @@ ap = argparse.ArgumentParser()
 for k in ("ks", "master", "box", "lm", "audio", "out"): ap.add_argument("--" + k, required=True)
 ap.add_argument("--others", default=""); ap.add_argument("--shift", type=int, default=0); ap.add_argument("--dil", type=float, default=0.10); ap.add_argument("--down", type=float, default=0.15)
 ap.add_argument("--no-cm", action="store_true")
+ap.add_argument("--lip-keep", default="", help="r16 K2: per-master-frame weights (.npy, k2_pause.py): the SOURCE lips (hull + 0.10 IOD) show through the paste mask")
 ap.add_argument("--ks-lm", default="", help="landmarks of the raw KeySync output (512 grid, its frame index): the GENERATED lips for --tex / --cavity")
 ap.add_argument("--tex", type=float, default=2.0, help="r15 stubble / pores: the source's luma high frequencies (gaussian sigma px), DIS-flow-warped onto KeySync's "
                 "geometry, replace KeySync's inside the face mask outside the generated lips (dilated 0.15 IOD); 0 = off; r16: default 2 (Irina 07.11: old03 better)")
@@ -26,8 +27,11 @@ ap.add_argument("--cavity", type=float, default=0.0, help="r15 black-hole mouth:
                 "interior tone (L 30th percentile + mean a / b of the source's open frames); 0 = off")
 a = ap.parse_args()
 b = json.load(open(a.box)); x0, y0, s, W, H = b["x"], b["y"], b["side"], b["W"], b["H"]
+XS, YS = b.get("xs"), b.get("ys")   # r16 K2: a TRACKED box (k2_prep_track.py): constant side, per-master-frame corner
+bxy = (lambda k: (int(XS[min(max(k, 0), len(XS) - 1)]), int(YS[min(max(k, 0), len(YS) - 1)]))) if XS else (lambda k: (x0, y0))
 z = np.load(a.lm); LM = z["lm"][..., :2].astype(np.float32); J = z["j"] if "j" in z.files else np.arange(len(LM))
 OT = np.load(a.others)["others"] if a.others else None
+LK = np.load(a.lip_keep) if a.lip_keep else None
 KL = np.load(a.ks_lm)["lm"][..., :2].astype(np.float32) * (s / 512.0) if a.ks_lm else None
 LIPS_O = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185]
 INNER = [78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308, 415, 310, 311, 312, 13, 82, 81, 80, 191]
@@ -55,22 +59,29 @@ def ramp(lo_edge, hi_edge):   # 24 px feather at the box edges, none on a side t
     return np.clip(r, 0, 1)
 
 
-BOXF = np.minimum.outer(ramp(y0 == 0, y0 + s == H), ramp(x0 == 0, x0 + s == W)).astype(np.float32)
+_BF = {}
+def boxf(k):
+    bx, by = bxy(k); key = (by == 0, by + s == H, bx == 0, bx + s == W)
+    if key not in _BF: _BF[key] = np.minimum.outer(ramp(key[0], key[1]), ramp(key[2], key[3])).astype(np.float32)
+    return _BF[key]
 last = [None]
 
 
 def mask(k):
     i = int(J[min(k, len(J) - 1)]); p = LM[min(i, len(LM) - 1)]
     if not np.isfinite(p).all(): return last[0], None
-    iod = float(np.linalg.norm(p[33] - p[263])); q = p - [x0, y0]; mk = np.zeros((s, s), np.uint8)
+    bx, by = bxy(k); iod = float(np.linalg.norm(p[33] - p[263])); q = p - [bx, by]; mk = np.zeros((s, s), np.uint8)
     hp = hull(q[OVAL]); cv2.fillPoly(mk, [hp], 1); cv2.fillPoly(mk, [hp + np.array([0, int(round(a.down * iod))], np.int32)], 1)
     mk = cv2.dilate(mk, el(a.dil * iod))
     if OT is not None:
         for f2 in OT[min(i, len(OT) - 1)]:
             if np.isfinite(f2).all():
-                om = np.zeros((s, s), np.uint8); cv2.fillPoly(om, [hull(f2[OVAL] - [x0, y0])], 1)
+                om = np.zeros((s, s), np.uint8); cv2.fillPoly(om, [hull(f2[OVAL] - [bx, by])], 1)
                 mk[cv2.dilate(om, el(0.08 * float(np.linalg.norm(f2[33] - f2[263])))) > 0] = 0
-    m = cv2.GaussianBlur(mk.astype(np.float32), (0, 0), max(1.0, 0.04 * iod)) * BOXF
+    m = cv2.GaussianBlur(mk.astype(np.float32), (0, 0), max(1.0, 0.04 * iod)) * boxf(k)
+    if LK is not None and k < len(LK) and LK[k] > 0.01:
+        lk = np.zeros((s, s), np.uint8); cv2.fillPoly(lk, [hull(q[LIPS])], 1); lk = cv2.dilate(lk, el(0.10 * iod))
+        m = m * (1 - LK[k] * cv2.GaussianBlur(lk.astype(np.float32), (0, 0), max(1.0, 0.04 * iod)))
     lip = np.zeros((s, s), np.uint8); cv2.fillPoly(lip, [hull(q[LIPS])], 1); lip = cv2.dilate(lip, el(0.15 * iod))
     last[0] = m; return m, (mk > 0) & (lip == 0)
 
@@ -89,7 +100,7 @@ if not a.no_cm or a.cavity > 0:   # pass 1: the global colour match on the skin;
         if a.no_cm or k % 5 or not (0 <= kidx(k) < len(K)): continue
         _, sk = mask(k)
         if sk is None or sk.sum() < 500: continue
-        lk = cv2.cvtColor(K[kidx(k)].astype(np.float32) / 255, cv2.COLOR_RGB2LAB)[sk]; lm_ = cv2.cvtColor(f[y0:y0 + s, x0:x0 + s].astype(np.float32) / 255, cv2.COLOR_RGB2LAB)[sk]
+        lk = cv2.cvtColor(K[kidx(k)].astype(np.float32) / 255, cv2.COLOR_RGB2LAB)[sk]; bx, by = bxy(k); lm_ = cv2.cvtColor(f[by:by + s, bx:bx + s].astype(np.float32) / 255, cv2.COLOR_RGB2LAB)[sk]
         SK.append(lk[:: 7]); SM.append(lm_[:: 7])
     if not a.no_cm:
         SK, SM = np.concatenate(SK), np.concatenate(SM)
@@ -119,7 +130,7 @@ def fix_ks(kf, i, m, src_crop):   # r15 --cavity / --tex on one KeySync crop (fl
         yk = cv2.cvtColor(kf.astype(np.float32), cv2.COLOR_RGB2YCrCb); ys = cv2.cvtColor(sc, cv2.COLOR_RGB2YCrCb)[..., 0]
         ws = cv2.remap(ys, GX + fl[..., 0], GY + fl[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
         lx = np.zeros((s, s), np.uint8)
-        lp = kp if kp is not None and np.isfinite(kp).all() else LM[min(int(J[min(i + a.shift, len(J) - 1)]), len(LM) - 1)] - [x0, y0]
+        lp = kp if kp is not None and np.isfinite(kp).all() else LM[min(int(J[min(i + a.shift, len(J) - 1)]), len(LM) - 1)] - list(bxy(i + a.shift))
         if np.isfinite(lp).all():
             iod = float(np.linalg.norm(lp[33] - lp[263])); cv2.fillPoly(lx, [hull(lp[LIPS_O])], 1); lx = cv2.dilate(lx, el(0.15 * iod))
             lx = cv2.GaussianBlur(lx.astype(np.float32), (0, 0), max(1.0, 0.05 * iod))
@@ -139,8 +150,9 @@ for k, f in enumerate(frames(a.master, W, H)):
         kf = K[int(np.clip(i, 0, nk - 1))].astype(np.float32)
         if not a.no_cm:
             lab = cv2.cvtColor(kf / 255, cv2.COLOR_RGB2LAB) * gain + off; kf = np.clip(cv2.cvtColor(lab, cv2.COLOR_LAB2RGB) * 255, 0, 255)
-        if a.tex > 0 or a.cavity > 0: kf = fix_ks(kf, i, m, f[y0:y0 + s, x0:x0 + s])
-        roi = f[y0:y0 + s, x0:x0 + s].astype(np.float32); mm = (m * fade)[..., None]
-        f[y0:y0 + s, x0:x0 + s] = np.clip(roi * (1 - mm) + kf * mm + 0.5, 0, 255).astype(np.uint8)
+        bx, by = bxy(k)
+        if a.tex > 0 or a.cavity > 0: kf = fix_ks(kf, i, m, f[by:by + s, bx:bx + s])
+        roi = f[by:by + s, bx:bx + s].astype(np.float32); mm = (m * fade)[..., None]
+        f[by:by + s, bx:bx + s] = np.clip(roi * (1 - mm) + kf * mm + 0.5, 0, 255).astype(np.uint8)
     w.stdin.write(f.tobytes())
 w.stdin.close(); w.wait(); print(f"plain paste -> {a.out} ({n} frames; cavity lifted in {NT[0]}, texture on {NT[1]})", flush=True)
