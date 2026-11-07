@@ -1,6 +1,143 @@
 {
  "keep_source_all": false,
- "keep_source_ranges": [
+ "faces": [
+  {
+   "track": 0,
+   "mode": "lipsync",
+   "present_s": [
+    0.56,
+    15.76
+   ],
+   "box_center_xy": [
+    1004.4,
+    281.7
+   ],
+   "speak_ranges": [
+    [
+     1.162,
+     2.883
+    ],
+    [
+     4.435,
+     10.983
+    ],
+    [
+     15.1,
+     15.76
+    ]
+   ],
+   "silence_ranges": [
+    [
+     12.365,
+     15.1
+    ]
+   ],
+   "silence_s": 2.73
+  },
+  {
+   "track": 1,
+   "mode": "lipsync",
+   "present_s": [
+    15.8,
+    19.8
+   ],
+   "box_center_xy": [
+    1318.6,
+    393.2
+   ],
+   "speak_ranges": [
+    [
+     15.8,
+     19.8
+    ]
+   ],
+   "silence_ranges": [],
+   "silence_s": 0
+  },
+  {
+   "track": 2,
+   "mode": "lipsync",
+   "present_s": [
+    23.84,
+    33.92
+   ],
+   "box_center_xy": [
+    1025.7,
+    261.8
+   ],
+   "speak_ranges": [
+    [
+     23.84,
+     27.503
+    ],
+    [
+     29.393,
+     33.92
+    ]
+   ],
+   "silence_ranges": [],
+   "silence_s": 0
+  },
+  {
+   "track": 3,
+   "mode": "lipsync",
+   "present_s": [
+    33.96,
+    36.48
+   ],
+   "box_center_xy": [
+    1283.0,
+    329.3
+   ],
+   "speak_ranges": [
+    [
+     33.96,
+     36.025
+    ]
+   ],
+   "silence_ranges": [],
+   "silence_s": 0
+  },
+  {
+   "track": 4,
+   "mode": "lipsync",
+   "present_s": [
+    36.52,
+    43.88
+   ],
+   "box_center_xy": [
+    968.7,
+    257.3
+   ],
+   "speak_ranges": [
+    [
+     39.586,
+     43.88
+    ]
+   ],
+   "silence_ranges": [
+    [
+     36.52,
+     38.913
+    ]
+   ],
+   "silence_s": 2.39
+  },
+  {
+   "track": 5,
+   "mode": "source",
+   "present_s": [
+    43.92,
+    44.92
+   ],
+   "box_center_xy": [
+    1259.6,
+    347.3
+   ],
+   "conf_whole": 4.518
+  }
+ ],
+ "offscreen_speech_ranges": [
   [
    12.365,
    15.1
@@ -10,7 +147,7 @@
    38.913
   ]
  ],
- "keep_source_s": 5.3,
+ "offscreen_speech_s": 5.3,
  "lipsync_track": 0,
  "lipsync_box_center_xy": [
   1004.4,

@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """r16 Q: DUB_FACE=auto routing = active speaker (r16q_active_speaker.py) + beard (r16q_beard.py) -> route.json.
 
-  keep_source_ranges: [[t0, t1], ...] seconds where diarization has speech but NO visible face speaks it in the source
-                      (off-screen voice, a silent listener on screen: q02). The paste must show the SOURCE face there
-                      (no lip-sync); the dub audio still plays. Merged, padded by PAD s, minus the on-screen turns.
+  faces[]:            per S3FD track (match to MediaPipe tracks by box_center_xy):
+                      mode "lipsync" = the face speaks some turn in the source -> lip-synced for its whole presence, its generator
+                        input = the dub with SILENCE over silence_ranges (speech that is not its own, padded), so the mouth stays
+                        closed and the face never switches between generated and source pixels (Irina: no slideshow morph);
+                      mode "source" = never speaks in the shot -> no lip-sync, keep the source, subtract from the paste masks.
+  offscreen_speech_ranges: info - speech no visible face speaks (q02 narrator 7.1-40.3 s).
   keep_source_all:    no turn has a visible speaker -> skip the face stage entirely (voice-only result).
   lipsync_track:      the SyncNet / S3FD track that speaks most (box centre given, to match MediaPipe tracks by centre).
   face_engine:        latentsync if that face has a beard / stubble (KeySync is weak on beards), else keysync.
@@ -54,8 +57,55 @@ if tr and tr.get("box_center_xy") and B.get("faces"):
     face = min(B["faces"], key=lambda f: (f["center_xy"][0] - cx) ** 2 + (f["center_xy"][1] - cy) ** 2)
     if ((face["center_xy"][0] - cx) ** 2 + (face["center_xy"][1] - cy) ** 2) ** 0.5 > 2.5 * (tr.get("box_size") or 1e9): face = None
 eng = os.environ.get("DUB_FACE_ENGINE") or (face["face_engine"] if face else "keysync")
-route = {"keep_source_all": bool(A["hook"]["keep_source_all"] or main is None), "keep_source_ranges": keep,
-         "keep_source_s": round(sum(e - s for s, e in keep), 2), "lipsync_track": main,
+# Irina 07.11: NO lip-sync <-> source pixel switches on a visible face (a fade reads as a slideshow morph).
+#  - a face that speaks somewhere in the shot = "lipsync" for its WHOLE presence; its generator input is SILENCE outside its own
+#    turns (silence_ranges), so it stays continuous with a closed mouth while the narrator / someone else talks;
+#  - a face that never speaks = "source": no lip-sync at all, subtracted from the paste masks (m03 child, q07 reporters).
+allspeech = merge([[t["start"], t["end"]] for t in A["turns"]])
+TR = {x["id"]: x for x in A["tracks"]}
+span = {i: (x["f0"] / 25.0, (x["f0"] + x["frames"] + 4) / 25.0) for i, x in TR.items()}
+spk_of = {}
+for t in A["turns"]:
+    if t["on_screen"] and t.get("track") is not None: spk_of.setdefault(t["track"], set()).add(t["speaker"])
+
+
+def clip(iv, t0, t1):
+    return [[round(max(s, t0), 3), round(min(e, t1), 3)] for s, e in iv if e > t0 and s < t1 and min(e, t1) - max(s, t0) >= 0.1]
+
+
+def same_person(i, j):
+    """S3FD breaks one person into tracks at detection gaps (dark / profile / a cup): adjacent in time (< 0.5 s) and the box nearby."""
+    (a0, a1), (b0, b1) = span[i], span[j]
+    if not (abs(b0 - a1) < 0.5 or abs(a0 - b1) < 0.5): return False
+    ci, cj = TR[i].get("box_center_xy"), TR[j].get("box_center_xy")
+    if not ci or not cj: return False
+    return ((ci[0] - cj[0]) ** 2 + (ci[1] - cj[1]) ** 2) ** 0.5 < 1.0 * max(TR[i].get("box_size") or 0, TR[j].get("box_size") or 0)
+
+
+# a non-speaking piece next to a speaking piece of the same person inherits that person's speakers (repeat: chains of pieces)
+for _ in range(len(TR)):
+    changed = False
+    for i in TR:
+        if i in spk_of: continue
+        nb = [j for j in spk_of if same_person(i, j)]
+        if nb: spk_of[i] = set().union(*(spk_of[j] for j in nb)); changed = True
+    if not changed: break
+faces = []
+for x in A["tracks"]:
+    t0, t1 = span[x["id"]]
+    conc = {k for k in TR if k != x["id"] and min(span[k][1], t1) - max(span[k][0], t0) > 0.2}   # other faces visible at the same time
+    own = merge([[t["start"], t["end"]] for t in A["turns"] if t["on_screen"] and (t.get("track") == x["id"] or (
+        t["speaker"] in spk_of.get(x["id"], ()) and t.get("track") not in conc))])
+    own = clip(own, t0, t1)
+    if own:
+        sil = minus(merge([[max(t0, s - PAD), min(t1, e + PAD)] for s, e in allspeech if e > t0 and s < t1]), own)
+        faces.append({"track": x["id"], "mode": "lipsync", "present_s": [round(t0, 2), round(t1, 2)], "box_center_xy": x.get("box_center_xy"),
+                      "speak_ranges": own, "silence_ranges": sil, "silence_s": round(sum(e - s for s, e in sil), 2)})
+    else:
+        faces.append({"track": x["id"], "mode": "source", "present_s": [round(t0, 2), round(t1, 2)], "box_center_xy": x.get("box_center_xy"),
+                      "conf_whole": x.get("conf_whole")})
+route = {"keep_source_all": bool(A["hook"]["keep_source_all"] or main is None), "faces": faces,
+         "offscreen_speech_ranges": keep, "offscreen_speech_s": round(sum(e - s for s, e in keep), 2), "lipsync_track": main,
          "lipsync_box_center_xy": tr.get("box_center_xy") if tr else None, "lipsync_speech_s": round(talk.get(main, 0.0), 2),
          "face_engine": eng, "beard": None if face is None else {k: face.get(k) for k in ("beard", "speck", "dark", "texture_reliable")},
          "why": ("override" if os.environ.get("DUB_FACE_ENGINE") else "beard/stubble -> latentsync" if eng == "latentsync"

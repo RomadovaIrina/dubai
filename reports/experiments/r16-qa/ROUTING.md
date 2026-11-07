@@ -16,12 +16,33 @@ python3 scripts/r16q/face_route.py --active as.json --beard beard.json --out rou
 
 ## route.json = the hook for the e2e (T)
 
+**Design rule (Irina, 07.11): NO switching between lip-sync and source pixels on a visible face.** A fade reads as a "slideshow morph".
+
+- `faces[]`: one entry per S3FD track; match it to the MediaPipe tracks by `box_center_xy`.
+  - `mode: "lipsync"`: the face speaks at least one turn in the source.
+    - It is lip-synced for its **whole** presence (`present_s`).
+    - Its generator input is the dub with **SILENCE over `silence_ranges`**: speech that is not its own, padded by 0.12 s.
+    - So the mouth stays closed and continuous while the narrator / someone else talks.
+    - `speak_ranges` = its own turns.
+  - `mode: "source"`: the face never speaks in the shot.
+    - No lip-sync at all.
+    - Subtract it from the paste masks (`--others`).
+    - Examples: the m03 child, the q07 reporters.
+  - S3FD splits one person into several tracks at detection gaps (dark, profile, a cup).
+    - A non-speaking piece adjacent (< 0.5 s) to a speaking piece of the same person (box within one box size) inherits that person's speakers.
+    - So no source piece appears inside a speaker's shot.
+    - Before this, q06 had 5 of 12 pieces as "source"; now 0.
 - `keep_source_all`: no turn has a visible speaker → skip the face stage (voice-only).
-- `keep_source_ranges`:
-  - seconds where diarization has speech but no visible face speaks it in the source (an off-screen voice, a silent listener on screen);
-  - **the paste must show the SOURCE face there** (no lip-sync; cross-fade ~3 frames);
-  - the dub audio plays unchanged;
-  - padded by 0.12 s, minus the on-screen turns.
+- `offscreen_speech_ranges`: info only: speech that no visible face speaks (q02: 7.1–40.3 s).
+
+| clip | faces |
+|---|---|
+| q02_vera | Vera (0–40.9 s): lipsync, speaks 0–6.2 s, **silence 31.6 s**; the man (40.9–44.9 s): lipsync |
+| m03 | mother: lipsync; child: **source** |
+| q07_altapress | interviewee (2 shots): lipsync; 4 reporter tracks: **source** |
+| q05_rozhkov | 5 pieces lipsync (silence 2.7 + 2.4 s = the off-screen interviewer); a 1 s piece at the end: source |
+| q06_suvorov | all 12 pieces: lipsync |
+| q01 / q03 / q04 / q08 | one speaker: lipsync |
 - `face_engine`: `latentsync` when the main on-screen speaker has a beard / stubble, else `keysync`.
   - `DUB_FACE_ENGINE` overrides it;
   - an unmeasured beard (too dark / small / profile) → `keysync`.
@@ -37,7 +58,7 @@ A silent face scores at random offsets with conf < 1.2. Turns shorter than 1.5 s
 
 A mouth-landmark ↔ speech-envelope correlation was tried first and fails: 0.07 even on SyncNet-synced KeySync output.
 
-| clip | result | keep_source |
+| clip | result | off-screen speech |
 |---|---|---|
 | **q02_vera** | Vera speaks 0–6.2 s (conf 5.9 / 4.2). **7.1–40.3 s: off-screen narrator** (Vera conf 0.04–1.1 at random offsets). From 40.9 s the man is on screen (conf 7.1). | **31.6 s** |
 | **m03** | mother track conf 7.0. The child's 1 s turn overlaps the mother's speech → mapped to the mother; the child's face (conf 0.13) is never lip-synced. | 0 |

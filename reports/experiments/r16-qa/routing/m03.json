@@ -1,7 +1,70 @@
 {
  "keep_source_all": false,
- "keep_source_ranges": [],
- "keep_source_s": 0,
+ "faces": [
+  {
+   "track": 0,
+   "mode": "source",
+   "present_s": [
+    0.0,
+    40.44
+   ],
+   "box_center_xy": [
+    168.0,
+    622.3
+   ],
+   "conf_whole": 0.128
+  },
+  {
+   "track": 1,
+   "mode": "lipsync",
+   "present_s": [
+    0.0,
+    40.44
+   ],
+   "box_center_xy": [
+    454.5,
+    436.0
+   ],
+   "speak_ranges": [
+    [
+     1.313,
+     9.835
+    ],
+    [
+     10.443,
+     17.632
+    ],
+    [
+     18.104,
+     22.357
+    ],
+    [
+     22.711,
+     29.157
+    ],
+    [
+     29.427,
+     32.617
+    ],
+    [
+     32.785,
+     34.169
+    ],
+    [
+     35.722,
+     36.532
+    ],
+    [
+     36.785,
+     38.675
+    ]
+   ],
+   "silence_ranges": [],
+   "silence_s": 0
+  }
+ ],
+ "offscreen_speech_ranges": [],
+ "offscreen_speech_s": 0,
  "lipsync_track": 1,
  "lipsync_box_center_xy": [
   454.5,
