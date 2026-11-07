@@ -53,3 +53,24 @@ The full outputs carry the accepted `final_mix_aac.m4a` unchanged (packet md5 ch
 - Tone the bank teeth down (they are a bit grey / contrasty): match the bank interior's L / chroma to KeySync's own teeth tone.
 - Smooth the bank pick over time (110 switches on 283 touched m03 frames, held by hysteresis; check for teeth jumping in motion).
 - Add tsmooth α 0.8 before the plain paste for #11.
+
+## Round 2 (Irina, m03 ~25 s: "все еще немножко черновато, но хотя бы есть зубы"): interior tone
+- `k2_mouth.py --tone T`: per open frame, the generated inner-mouth luminance histogram is mapped to the source's open-mouth frames.
+  - Lighten only, so teeth that are already brighter keep their tone, and the chroma is pulled toward the source interior.
+  - Applied on top of the bank (strength 0.6 + detail 0.8).
+- Black-cavity share: 0 % on all three videos. Mean interior L on m03: plain 25.6, bank 27.7, tone 0.7: 29.3, tone 1.0: 30.1.
+
+| SyncNet speech@0 | m03 | old03 | m18 |
+|---|---|---|---|
+| plain | 8.636 | 7.681 | 7.989 |
+| bank | 8.508 | 7.667 | 7.803 |
+| bank + tone 0.7 | 8.422 (−0.21) | 7.598 (−0.08) | 7.721 (−0.27) |
+| bank + tone 1.0 | 8.371 (−0.27) | 7.553 (−0.13) | 7.680 (−0.31) |
+
+- The drop comes from lifting the black-hole frames themselves (tone only on dark-gated frames gives the same −0.28 on m03): SyncNet treats a dark open mouth as a strong cue. A lighter interior trades directly against SyncNet.
+  - Tone 1.0 is the closest to the source interior by eye (sheet m03 24.9–25.9 s).
+  - Tone 0.7 stays inside −0.3 on all three videos.
+- Files:
+  - `clips/<v>_teeth_tone_4panel_plain_bank_tone07_tone10_*_half_speed.mp4` (m03 23–27 and 0–4 s, m18 2–6 s, old03 37–40 s);
+  - `full/<v>_keysync_fast2_a_bank_tone{07,10}.mp4`.
+  - All yuv420p with +faststart; the full files carry the original audio (packet md5 checked).

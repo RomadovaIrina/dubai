@@ -22,7 +22,7 @@ OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379
 ap = argparse.ArgumentParser()
 for k in ("mode", "ks", "ks_lm", "master", "box", "lm", "out"): ap.add_argument("--" + k.replace("_", "-"), required=True, dest=k)
 ap.add_argument("--others", default=""); ap.add_argument("--strength", type=float, default=0.85); ap.add_argument("--hyst", type=float, default=1.0)
-ap.add_argument("--json", default=""); ap.add_argument("--detail", type=float, default=0.0, help="bank: source interior luma HF on every open frame (#6 flat teeth)"); ap.add_argument("--teeth", type=float, default=0.8, help="synth: upper-teeth band opacity")
+ap.add_argument("--json", default=""); ap.add_argument("--tone-all", type=float, default=1.0, dest="tone_all", help="tone weight on open frames that KeySync did NOT draw dark (1 = all open frames)"); ap.add_argument("--tone", type=float, default=0.0, help="interior L histogram match to the source's open frames, lighten only (0..1)"); ap.add_argument("--detail", type=float, default=0.0, help="bank: source interior luma HF on every open frame (#6 flat teeth)"); ap.add_argument("--teeth", type=float, default=0.8, help="synth: upper-teeth band opacity")
 a = ap.parse_args()
 b = json.load(open(a.box)); x0, y0, s, W, H = b["x"], b["y"], b["side"], b["W"], b["H"]; S = 512; sc = S / s
 z = np.load(a.lm); LM = z["lm"][..., :2].astype(np.float32); J = z["j"] if "j" in z.files else np.arange(len(LM))
@@ -164,6 +164,22 @@ def bank(kf, p, w, i, wd=0.0):
     return out
 
 
+SQ = np.percentile(SC[:, 0], np.arange(101)) if len(SC) else np.zeros(0)   # the source's open-interior L distribution (101 quantiles)
+
+
+def tone(kf, p, w):   # r16 Irina "still a bit dark": per frame, the generated interior's L histogram -> the source's (lighten only) + chroma toward the source interior
+    mc = inner_mask(p, 1)
+    if mc.sum() <= 30: return kf
+    lab = cv2.cvtColor(kf / 255, cv2.COLOR_RGB2LAB); L = lab[..., 0]; Li = L[mc > 0]
+    qs = np.percentile(Li, np.arange(101)); rk = np.interp(L, qs + np.arange(101) * 1e-4, np.arange(101))   # each pixel's rank in this frame's interior
+    tgt = np.interp(rk, np.arange(101), SQ)
+    m = cv2.GaussianBlur(mc.astype(np.float32), (0, 0), 1.5) * a.tone * w
+    d = np.clip(tgt - L, 0, None) * m   # lift the shadows only; teeth already brighter than the source quantile stay
+    f = np.clip(d / 12, 0, 1)
+    lab[..., 0] = L + d; lab[..., 1:] += (f * 0.6)[..., None] * (CAV_AB - lab[..., 1:])
+    return np.clip(cv2.cvtColor(lab, cv2.COLOR_LAB2RGB) * 255, 0, 255)
+
+
 n = 0; KF = list(frames(a.ks, S, S))
 TP = []   # KeySync's OWN teeth tone: bright interior pixels of the frames where it does draw teeth (consistent with the rest of the video)
 for i in range(0, len(KF), 2):
@@ -191,6 +207,8 @@ for i, f in enumerate(KF):
         ST["fixed"] += 1
         kf = lift(kf, p, 0.8 * w) if a.mode == "lift" else synth(kf, p, w) if a.mode == "synth" else bank(kf, p, w, i)
     else: last[0] = None if a.mode == "bank" and o < 0.06 else last[0]
+    wt = max(w, a.tone_all * wd)   # dark-gated frames fully; the rest at --tone-all
+    if a.tone > 0 and wt > 0 and len(SQ): kf = tone(kf, p, wt)
     wr.stdin.write(np.clip(kf + 0.5, 0, 255).astype(np.uint8).tobytes())
 wr.stdin.close(); wr.wait()
 ST["frames"] = len(KF); ST["bank_size"] = len(BANK_I); ST["picks"] = ST["picks"][:: max(1, len(ST["picks"]) // 40)]
