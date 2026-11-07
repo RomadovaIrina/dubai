@@ -12,7 +12,7 @@
 # usage: ks_face.sh <id> <src video> <audio dir: dubbed_16k.wav + final_mix_aac.m4a> <work dir> <out.mp4> [route.json]
 # exit 0 = OUT written; 3 = nothing to lip-sync (keep the source picture, not an error); other = failed.
 # Env: KS_DELAY KS_PROBE_S KS_REF KS_CROP KS_PAD KS_GATE KS_TSMOOTH KS_PAUSE KS_PASTE_SHIFT KS_PLAIN_ARGS KS_PLAIN_EXTRA KS_INTERP_STEPS KS_SYNC_MAX_S
-#      KS_PASTE_JOBS KS_HELD_FD KS_MIN_IOD KS_NUM_FACES
+#      KS_PASTE_JOBS KS_MIN_IOD KS_NUM_FACES KS_PROBE_MIN_CONF KS_PROBE_MAX KS_CHECK; GPU_RDY (gpulock.sh hand-off)
 set -o pipefail
 ID=$1; SRC=$2; AD=$3; W=$4; OUTV=$5; ROUTE=${6:-}
 R=$(cd "$(dirname "$0")/../../.." && pwd); KS=${KS_ROOT:-/workspace/dub/keysync}; LOCK=${KS_GPU_LOCK:-/workspace/dub/gpu.lock}
@@ -76,32 +76,51 @@ PY
 done
 
 # ---- GPU section = ONE hold of the GPU lock (engines, probe, full KeySync, SyncNet checks); released before the CPU post / paste.
-# KS_HELD_FD: the caller (e2e.sh with R10_HEAVY_LOCK) already holds the lock on that fd since its audio stage: no second wait in the queue.
-if [ -n "${KS_HELD_FD:-}" ]; then REL="flock -u $KS_HELD_FD"; else t wait_gpu; exec 7>$LOCK; flock 7; REL="flock -u 7"; fi
-export KS_GPU_LOCK=/dev/null   # (ks_engines.sh: the lock is held here)
-t engines; ENG=$(bash $R/scripts/keysync/r16/ks_engines.sh 2> $KW/engines.log | tail -1); [ -d "$ENG" ] || { tail -5 $KW/engines.log; exit 1; }
+# GPU_RDY (scripts/keysync/r16/gpulock.sh): the caller (e2e.sh with R10_HEAVY_LOCK) already holds the GPU lock since its audio stage -> no second
+# wait in the queue; released here (gpu_release) before the CPU post. Without it this script takes the lock itself. No lock fd is ever inherited.
+. $R/scripts/keysync/r16/gpulock.sh
+gpu_held || { t wait_gpu; gpu_acquire $$ || { echo "KS: could not take the GPU lock"; exit 1; }; }
+t engines; ENG=$(KS_GPU_LOCK=/dev/null bash $R/scripts/keysync/r16/ks_engines.sh 2> $KW/engines.log | tail -1); [ -d "$ENG" ] || { tail -5 $KW/engines.log; exit 1; }
 LMK=${KS_LMK_CACHE:-$KS/lmk}; mkdir -p $LMK; [ -n "${KS_TORCH_HOME:-}" ] && export TORCH_HOME=$KS_TORCH_HOME   # (image: face_alignment's weights on the volume)
-ksfast() {   # ksfast <jobs> <out> <log> [gate]: the resident KeySync-fast worker (fast2: TRT keyframes + 2-step LCM student, compiled VAE decode)
-  ( cd $KS/code && . ../venv/bin/activate && env KS_DC=2:0 KS_LMK_CACHE=$LMK TORCHINDUCTOR_CACHE_DIR=${TORCHINDUCTOR_CACHE_DIR:-$KS/inductor} ${4:+KS_GATE=$4} \
+GATE="${KS_GATE-thr=0.12,cap=0.25,hi=8,lo=2}"
+ksfast() {   # ksfast <jobs> <out> <log>: the resident KeySync-fast worker (fast2: TRT keyframes + 2-step LCM student + the K2 gate, compiled VAE decode)
+  ( cd $KS/code && . ../venv/bin/activate && env KS_DC=2:0 KS_LMK_CACHE=$LMK TORCHINDUCTOR_CACHE_DIR=${TORCHINDUCTOR_CACHE_DIR:-$KS/inductor} ${GATE:+KS_GATE=$GATE} \
     python $KT/ks_fast.py --jobs $1 --out $2 --cfg _s8 --vae-half --compile unet --trt $ENG --interp-lora $LORA --interp-steps ${KS_INTERP_STEPS:-2} \
       --vae-batch 8 --vae-compile ) > $3 2>&1 || { tail -5 $3; return 1; }; grep "^KS_JOB" $3 | cut -c1-400; }
+flag() { echo "$1" >> $KW/flags.txt; echo "KS_FLAG $1 ${2:-}"; }
 declare -A DLY
 if [ "${KS_DELAY:-probe}" = probe ]; then
   t probe; : > $KW/probe/jobs.txt; PS=${KS_PROBE_S:-10}
-  for f in $TAGS; do   # the window: KS_PROBE_S s from the first own speech of this face (the dub it hears, silence elsewhere)
-    S0=$(python3 - $KW/dub_$f.wav $PS <<'PY'
-import sys, wave, numpy as np
-w = wave.open(sys.argv[1]); sr = w.getframerate(); x = np.frombuffer(w.readframes(w.getnframes()), np.int16).astype(np.float32); ps = float(sys.argv[2])
-e = np.sqrt(np.convolve(x ** 2, np.ones(sr // 10) / (sr // 10), "same")); on = np.flatnonzero(e > 0.05 * (e.max() + 1e-6))
-print(max(0.0, min((on[0] / sr - 0.5) if len(on) else 0.0, len(x) / sr - ps)))
+  for f in $TAGS; do   # a FRAME-ALIGNED window of KS_PROBE_S s from the face's first own speech; the same reference (frame 0) + gate as the full run
+    $MPY - $KW/dub_$f.wav $KW/data/crop_$f.mp4 $(cat $KW/ref_$f.txt) $PS $KW/probe/v_$f.mp4 $KW/probe/a_$f.wav <<'PY' || exit 1
+import subprocess, sys, wave, numpy as np, cv2
+wav, crop, ref, ps, ov, oa = sys.argv[1], sys.argv[2], int(sys.argv[3]), float(sys.argv[4]), sys.argv[5], sys.argv[6]
+w = wave.open(wav); sr = w.getframerate(); x = np.frombuffer(w.readframes(w.getnframes()), np.int16); spf = sr // 25
+e = np.sqrt(np.convolve(x.astype(np.float32) ** 2, np.ones(sr // 10) / (sr // 10), "same")); on = np.flatnonzero(e > 0.05 * (e.max() + 1e-6))
+c = cv2.VideoCapture(crop); n = int(c.get(cv2.CAP_PROP_FRAME_COUNT)); L = int(ps * 25)
+k0 = int(max(0, min(round(((on[0] / sr) - 0.5) * 25) if len(on) else 0, n - L)))   # whole frames: video frame k0 <-> audio sample k0 * spf exactly
+c.set(cv2.CAP_PROP_POS_FRAMES, ref); fr = c.read()[1]; c.set(cv2.CAP_PROP_POS_FRAMES, k0); F = [fr]
+for _ in range(L):
+    ok, f = c.read()
+    if not ok: break
+    F.append(f)
+p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", "512x512", "-r", "25", "-i", "-", "-c:v", "libx264", "-crf", "10", "-pix_fmt", "yuv420p", ov], stdin=subprocess.PIPE)
+for f in F: p.stdin.write(f.tobytes())
+p.stdin.close(); p.wait()
+seg = np.concatenate([np.zeros(spf, np.int16), x[k0 * spf:(k0 + len(F) - 1) * spf]])   # frame 0 = the reference <-> one frame of silence
+with wave.open(oa, "wb") as o: o.setnchannels(1); o.setsampwidth(2); o.setframerate(sr); o.writeframes(seg.tobytes())
+print(f"probe window frames {k0}..{k0 + len(F) - 1} (+ ref {ref} as frame 0)", file=sys.stderr)
 PY
-)
-    ffmpeg -v error -y -ss $S0 -i $KW/data/crop_$f.mp4 -t $PS -c:v libx264 -crf 10 -pix_fmt yuv420p $KW/probe/v_$f.mp4 && ffmpeg -v error -y -ss $S0 -i $KW/dub_$f.wav -t $PS $KW/probe/a_$f.wav || exit 1
-    echo "$f $KW/probe/v_$f.mp4 $KW/probe/a_$f.wav" >> $KW/probe/jobs.txt
+    echo "$f $KW/probe/v_$f.mp4 $KW/probe/a_$f.wav 0" >> $KW/probe/jobs.txt
   done
   ksfast $KW/probe/jobs.txt $KW/probe/out $KW/probe/ks_fast.log || exit 1
-  for f in $TAGS; do O=$(sync_off $(ls $KW/probe/out/$f/*.mp4 | head -1) $KW/probe/a_$f.wav $KW/probe/sync_$f.json)
-    [ "$O" = x ] && { echo "KS WARN probe sync failed ($f): delay 0"; O=0; }; DLY[$f]=$(( -O * 40 )); echo "KS_PROBE $f av_offset $O -> dub delay ${DLY[$f]} ms"; done
+  for f in $TAGS; do   # delay = -offset x 40 ms; |offset| clamped to KS_PROBE_MAX (2) frames; SyncNet conf < KS_PROBE_MIN_CONF (3) or no result -> 0 + a flag
+    O=$(sync_off $(ls $KW/probe/out/$f/*.mp4 | head -1) $KW/probe/a_$f.wav $KW/probe/sync_$f.json)
+    C=$(python3 -c "import json; print(json.load(open('$KW/probe/sync_$f.json'))['global']['conf'])" 2>/dev/null || echo 0)
+    if [ "$O" = x ]; then flag ks_probe_failed "$f: no SyncNet result -> delay 0"; O=0
+    elif python3 -c "import sys; sys.exit(0 if float('$C') < float('${KS_PROBE_MIN_CONF:-3}') else 1)"; then flag ks_probe_low_conf "$f: conf $C, offset $O -> delay 0"; O=0
+    elif [ "${O#-}" -gt "${KS_PROBE_MAX:-2}" ]; then flag ks_probe_clamped "$f: offset $O -> +-${KS_PROBE_MAX:-2}"; O=$(( O > 0 ? ${KS_PROBE_MAX:-2} : -${KS_PROBE_MAX:-2} )); fi
+    DLY[$f]=$(( -O * 40 )); echo "KS_PROBE $f av_offset $O conf $C -> dub delay ${DLY[$f]} ms"; done
 else for f in $TAGS; do DLY[$f]=${KS_DELAY}; done; fi
 t keysync; : > $KW/jobs.txt
 for f in $TAGS; do   # the dub KeySync hears: delayed (or advanced) by the probe, padded with silence to the padded crop (the final mix is never touched)
@@ -114,16 +133,18 @@ for f in $TAGS; do   # the dub KeySync hears: delayed (or advanced) by the probe
       >> $KW/jobs.txt 2> $KW/chunk_$f.log || { tail -3 $KW/chunk_$f.log; exit 1; }; grep KS_CHUNKS $KW/chunk_$f.log
   else echo "$f $KW/data/pad_$f.mp4 $KW/data/dubp_$f.wav $(cat $KW/ref_$f.txt)" >> $KW/jobs.txt; fi
 done
-ksfast $KW/jobs.txt $KW/out $KW/ks_fast.log "${KS_GATE-thr=0.12,cap=0.25,hi=8,lo=2}" || exit 1
+ksfast $KW/jobs.txt $KW/out $KW/ks_fast.log || exit 1
 for f in $TAGS; do [ -d $KW/data/chunks_$f ] || continue; mkdir -p $KW/out/$f
   $PY $KT/ks_chunk.py join --dir $KW/data/chunks_$f --renders $KW/out --out $KW/out/$f/joined.mp4 --tag $f || exit 1; done
 t check; declare -A SHF
-for f in $TAGS; do SH=${KS_PASTE_SHIFT:-auto}
-  if [ "$SH" = auto ]; then O=$(sync_off $(ls $KW/out/$f/*.mp4 | head -1) $KW/data/dubo_$f.wav $KW/sync_$f.json)   # vs the ORIGINAL dub (K2): still off after the delay -> paste shift (K1 fallback)
-    [ "$O" = x ] && O=0; SH=$(( -O )); fi
-  SHF[$f]=$SH; echo "KS_CHECK $f delay ${DLY[$f]} ms, paste shift $SH"
+for f in $TAGS; do   # the raw render vs the ORIGINAL dub (K2): ~0 after the probe delay. KS_PASTE_SHIFT: 0 (default, the probe only) | auto (= -offset) | N
+  SH=${KS_PASTE_SHIFT:-0}; O=x
+  if [ "${KS_CHECK:-on}" = on ] || [ "$SH" = auto ]; then O=$(sync_off $(ls $KW/out/$f/*.mp4 | head -1) $KW/data/dubo_$f.wav $KW/sync_$f.json); fi
+  [ "$O" != x ] && [ "${O#-}" -ge 2 ] && flag ks_check_offset "$f: raw render vs the original dub still $O frames after the probe delay"
+  if [ "$SH" = auto ]; then [ "$O" = x ] && O=0; SH=$(( -O )); fi
+  SHF[$f]=$SH; echo "KS_CHECK $f delay ${DLY[$f]} ms, raw offset vs the original dub $O, paste shift $SH"
 done
-$REL   # GPU done: the post + paste below are CPU only
+gpu_release   # GPU done: the post + paste below are CPU only
 
 CUR=$KW/master_25fps.mp4; n=0
 for f in $TAGS; do

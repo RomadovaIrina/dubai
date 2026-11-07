@@ -61,6 +61,12 @@ tail -1 $L/precheck.log | tee -a $L/e2e.log
 PF=$(python3 -c "import json; print(' '.join(json.load(open('$W/precheck.json')).get('flags', [])))" 2>/dev/null)
 for f in $PF; do FL+=("$f"); done
 case " $PF " in *" unreadable_input "*|*" no_audio "*) fail no_usable_input ERROR "${PF}"; finish;; esac
+if [ "${E2E_LIPSYNC:-on}" != off ]; then   # r16 T: every weight the face path needs, before any GPU work (a missing file = a loud failure, not a quiet source picture)
+  WF=$(python3 scripts/keysync/r16/weights_check.py --face ${DUB_FACE:-auto} --nc ${DUB_ALLOW_NC:-1} 2>> $L/e2e.log); WRC=$?
+  for f in $WF; do FL+=("$f"); done
+  [ $WRC = 2 ] && { fail weights_missing ERROR "model weights missing for DUB_FACE=${DUB_FACE:-auto}: see logs/e2e.log"; finish; }
+  [[ " $WF " == *" face_latentsync_unavailable "* ]] && export DUB_FACE_ENGINE=${DUB_FACE_ENGINE:-keysync}   # beards then go to KeySync (flagged)
+fi
 EXT=${IN##*.}; ln "$IN" $DUB_INPUTS/$ID.$EXT 2>/dev/null || cp "$IN" $DUB_INPUTS/$ID.$EXT   # a real file named <id>: the stages name their work dirs after the resolved input
 if [[ " $PF " == *" rotated_source "* ]]; then   # the pipeline reads coded frames: bake the display rotation in (near-lossless), same display orientation
   st upright
@@ -89,7 +95,10 @@ if [ "$FMS" != 0 ] && [ "${E2E_LIPSYNC:-on}" != off ] && [[ " $PF " != *" no_fac
   fi
 fi
 
-if [ -n "${R10_HEAVY_LOCK:-}" ]; then st wait_heavy; exec 8>"$R10_HEAVY_LOCK"; flock 8; fi   # r10 worker: audio + sep + face_gen (the heavy GPU stages) hold ONE exclusive lock; the wait is its own stage
+. scripts/keysync/r16/gpulock.sh   # r16 T (audit 08.11): the GPU lock is held by a holder process, never by an fd this shell's children inherit
+if [ -n "${R10_HEAVY_LOCK:-}" ]; then st wait_heavy   # audio + route + the KeySync GPU section / face_gen hold ONE GPU lock (= GPU_LOCK, gpu.lock)
+  [ "$R10_HEAVY_LOCK" = "$GPU_LOCK" ] || echo "== $ID WARN R10_HEAVY_LOCK=$R10_HEAVY_LOCK is not the GPU lock $GPU_LOCK: the GPU lock is used" | tee -a $L/e2e.log
+  gpu_acquire $$ || { fail gpu_lock_failed ERROR "could not take the GPU lock $GPU_LOCK"; finish; }; fi   # r10 worker: audio + sep + face_gen (the heavy GPU stages) hold ONE exclusive lock; the wait is its own stage
 LONG_S=${E2E_LONG_AUDIO_S:-120}   # r15 T (long5 / long10: the in-process retake ran out of VRAM next to the resident pipeline models, 27-31 GB): above this
 DUR_S=$(python3 -c "import json; print(json.load(open('$W/precheck.json'))['probe']['duration_s'])" 2>/dev/null || echo 0)   # many seconds the TTS stage (retake ->
 if [ "$LONG_S" != 0 ] && python3 -c "import sys; sys.exit(0 if float(sys.argv[1]) > float(sys.argv[2]) else 1)" "$DUR_S" "$LONG_S"; then   # clause -> burst_align)
@@ -102,10 +111,13 @@ export DUB_SEP_STEMS=/workspace/dub/r8a
 OVL=${R9_SEP_OVERLAP:-on}   # r9 speed O: the htdemucs stems while the audio stage runs, the demucs remix in parallel with the Spleeter one (same commands = same files)
 if [ "$OVL" = on ]; then
   rm -rf $DUB_SEP_STEMS/stems_htdemucs/$ID $A/$HT
-  bash scripts/r9/sep_overlap.sh start $ID $DUB_SEP_STEMS/stems_htdemucs $W $L 8>&-   # (its background demucs must not inherit the lock fd)
+  bash scripts/r9/sep_overlap.sh start $ID $DUB_SEP_STEMS/stems_htdemucs $W $L
   export R9_ON_MIXSRC="bash $DUB_ROOT/scripts/r9/sep_overlap.sh mix $ID $AT $HT $W $L"
 fi
-bash scripts/r8/r8_audio.sh $AT $ID > $L/audio.log 2>&1
+if [ -n "${DUB_AUDIO_FROM:-}" ]; then   # r16 T golden test: an ACCEPTED dub (dubbed_16k.wav + final_mix_aac.m4a [+ *.manifest.json]) instead of a new one
+  mkdir -p $A/$AT/$ID; cp $DUB_AUDIO_FROM/dubbed_16k.wav $DUB_AUDIO_FROM/final_mix_aac.m4a $A/$AT/$ID/; cp $DUB_AUDIO_FROM/*.manifest.json $A/$AT/$ID/ 2>/dev/null
+  FL+=("audio_reused"); echo "== $ID audio reused from $DUB_AUDIO_FROM" | tee -a $L/e2e.log
+else bash scripts/r8/r8_audio.sh $AT $ID > $L/audio.log 2>&1; fi
 unset R9_ON_MIXSRC
 AD=$A/$AT/$ID
 if ! { [ -f $AD/final_mix_aac.m4a ] && [ -f $AD/dubbed_16k.wav ]; }; then   # r13: a clip with no speech (silence / music only) is its own, clear ERROR
@@ -118,7 +130,7 @@ if [ "$OVL" = on ] && timeout 900 bash scripts/r9/sep_overlap.sh wait $W; then :
 elif [ "$OVL" = on ] && [ -f $W/sepmix.done ]; then fail htdemucs_stems_failed PARTIAL_SUCCESS "see logs/sep_stems.log"
 else   # sequential (R9_SEP_OVERLAP=off, or the overlap never started)
 rm -rf $DUB_SEP_STEMS/stems_htdemucs/$ID $A/$HT
-( export PYTHONPATH=/workspace/dub/sep_pylib:${PYTHONPATH:-}; flock /workspace/dub/gpu.lock python scripts/r8/sep_stems.py --sep htdemucs --out $DUB_SEP_STEMS/stems_htdemucs $ID ) > $L/sep_stems.log 2>&1 \
+( export PYTHONPATH=/workspace/dub/sep_pylib:${PYTHONPATH:-}; gpu_run python scripts/r8/sep_stems.py --sep htdemucs --out $DUB_SEP_STEMS/stems_htdemucs $ID ) > $L/sep_stems.log 2>&1 \
   || fail htdemucs_stems_failed PARTIAL_SUCCESS "see logs/sep_stems.log"
 SEP_SRC=$AT SEP_PREV=$AT bash scripts/r8/sep_mix.sh $HT htdemucs stems "--bed-pauses source --bed-noise-back on --src-duck-db -3" $ID > $L/sep_mix.log 2>&1
 fi
@@ -140,32 +152,40 @@ if [ "${DUB_PACE_FIX:-0}" = 1 ] && [ -z "${DUB_POLYGLOT:-}" ]; then   # r13 7.3 
 fi
 
 VID=""; FACE=${DUB_FACE:-auto}; ROUTE=""
-if [ "${E2E_LIPSYNC:-on}" != off ] && [[ " $PF " != *" no_face "* ]] && [ "$FACE" != latentsync ] && [ "${DUB_ROUTE:-on}" != off ]; then
+if [ -n "${DUB_ROUTE_JSON:-}" ] && [ "${DUB_ROUTE:-on}" != off ]; then   # r16 T: a given route.json (golden test / the backend) instead of computing one
+  mkdir -p $W/route; cp $DUB_ROUTE_JSON $W/route/route.json; DUB_ROUTE=given; FL+=("face_route_given")
+  ROUTE=$W/route/route.json; read -r KSA ENG < <(python3 -c "import json; d=json.load(open('$ROUTE')); print(int(bool(d.get('keep_source_all'))), d.get('face_engine') or 'keysync')")
+  [ "$KSA" = 1 ] && FL+=("face_keep_source_no_visible_speaker"); [ "$FACE" = auto ] && FACE=${DUB_FACE_ENGINE:-$ENG}
+fi
+if [ "${E2E_LIPSYNC:-on}" != off ] && [[ " $PF " != *" no_face "* ]] && [ "$FACE" != latentsync ] && [ "${DUB_ROUTE:-on}" = on ]; then
   st face_route   # r16 Q (reports/experiments/r16-qa/ROUTING.md): which visible face speaks which turn (SyncNet on the SOURCE) + beard -> the engine
   RD=$W/route; mkdir -p $RD; MAN=$(ls $AD/${ID}_*.manifest.json 2>/dev/null | head -1)
   if ffmpeg -loglevel error -y -i $SRC -map 0:v:0 -map 0:a:0 -vf fps=25 -c:v libx264 -preset fast -crf 12 -pix_fmt yuv420p -c:a aac $RD/master_25fps.mp4 \
-     && python scripts/quality/r16q_active_speaker.py --video $RD/master_25fps.mp4 --manifest $MAN --out $RD/as.json --device ${DUB_ROUTE_DEVICE:-cuda} > $L/face_route.log 2>&1 \
+     && gpu_run python scripts/quality/r16q_active_speaker.py --video $RD/master_25fps.mp4 --manifest $MAN --out $RD/as.json --device ${DUB_ROUTE_DEVICE:-cuda} > $L/face_route.log 2>&1 \
      && ${DUB_MEDIAPIPE_PY:-/venv/mediapipe/bin/python} scripts/quality/r16q_beard.py $SRC --out $RD/beard.json >> $L/face_route.log 2>&1 \
      && python3 scripts/r16q/face_route.py --active $RD/as.json --beard $RD/beard.json --out $RD/route.json >> $L/face_route.log 2>&1; then
     ROUTE=$RD/route.json; read -r KSA ENG < <(python3 -c "import json; d=json.load(open('$ROUTE')); print(int(bool(d.get('keep_source_all'))), d.get('face_engine') or 'keysync')")
     echo "== $ID route: keep_source_all $KSA, engine $ENG, faces $(python3 -c "import json; print([(f['mode'], round(f.get('silence_s', 0), 1)) for f in json.load(open('$ROUTE'))['faces']])")" | tee -a $L/e2e.log
-    [ "$KSA" = 1 ] && FL+=("face_keep_source_no_visible_speaker")
+    [ "$KSA" = 1 ] && FL+=("face_keep_source_no_visible_speaker")   # (made a visible PARTIAL_SUCCESS below)
     [ "$FACE" = auto ] && FACE=${DUB_FACE_ENGINE:-$ENG}
   else FL+=("face_route_failed"); echo "== $ID WARN face_route failed (see logs/face_route.log): the dubbed-units mapping is used" | tee -a $L/e2e.log; ROUTE=""; fi
 fi
 [ "$FACE" = auto ] && FACE=keysync
 if [ "${E2E_LIPSYNC:-on}" = off ]; then FL+=("lipsync_off_by_request")   # r13 interface: the user asked for a voice-only dub
 elif [[ " $PF " == *" no_face "* ]]; then FL+=("face_skipped_no_face")
-elif [[ " ${FL[*]} " == *" face_keep_source_no_visible_speaker "* ]]; then :   # r16: the dub voice belongs to no visible face: the source picture
+elif [[ " ${FL[*]} " == *" face_keep_source_no_visible_speaker "* ]]; then   # r16: the dub voice belongs to no visible face: the source picture
+  fail face_keep_source_no_visible_speaker PARTIAL_SUCCESS "nobody on screen speaks the dubbed lines (off-screen voice): no lip-sync, the source picture"
 elif [ "$FACE" = keysync ]; then   # r16 T: the KeySync chain (scripts/keysync/r16/ks_face.sh: K1 paste + K2 mouth + Q route, accepted by eye 07.11)
   st face_keysync                 # DUB_FACE=latentsync (or auto + a beard) = the r15 LatentSync path below
-  FL+=("face_keysync"); HFD=""; [ -n "${R10_HEAVY_LOCK:-}" ] && HFD=8   # the GPU lock held since the audio stage goes on to ks_face.sh's GPU section,
-  KS_HELD_FD=$HFD bash scripts/keysync/r16/ks_face.sh $ID $SRC $AD $W $W/ks_face.mp4 $ROUTE > $L/face_keysync.log 2>&1; KRC=$?   # which releases it before its CPU post
+  FL+=("face_keysync")   # a GPU lock held since the audio stage (GPU_RDY) goes on to ks_face.sh's GPU section, which releases it before its CPU post
+  bash scripts/keysync/r16/ks_face.sh $ID $SRC $AD $W $W/ks_face.mp4 $ROUTE > $L/face_keysync.log 2>&1; KRC=$?   # which releases it before its CPU post
   if [ $KRC = 0 ] && [ -s $W/ks_face.mp4 ]; then
     VID=$W/ks_face.mp4; grep -E "^KS_(FACES|PROBE|CHECK|PASTE|FACE_DONE)" $L/face_keysync.log | cut -c1-400 | tee -a $L/e2e.log
     python3 -c "import json,sys; d=json.load(open('$W/ks/faces.json')); sys.exit(0 if len(d['faces']) > 1 or d.get('source_tracks') or d['mode'] == 'multi_face' else 1)" 2>/dev/null && FL+=("face_keysync_multi_face")
     KS25=$W/ks/master_25fps.mp4   # the KeySync result is on the 25 fps master grid (no retime)
-  elif [ $KRC = 3 ]; then FL+=("face_keysync_no_face"); grep -E "^KS_FACE_KEEP_SOURCE" $L/face_keysync.log | tee -a $L/e2e.log   # no-face rule: the source picture
+    for f in $(cat $W/ks/flags.txt 2>/dev/null); do FL+=("$f"); done   # ks_probe_failed / ks_probe_low_conf / ks_probe_clamped / ks_check_offset
+  elif [ $KRC = 3 ]; then grep -E "^KS_FACE_KEEP_SOURCE" $L/face_keysync.log | tee -a $L/e2e.log   # no-face rule (too small / inset / absent): the source picture
+    fail face_keysync_no_face PARTIAL_SUCCESS "no face fit for lip-sync (too small, inset or absent): the source picture with the dub"
   else fail face_gen_failed PARTIAL_SUCCESS "see logs/face_keysync.log: source picture used"; fi
 else
   st face_gen
@@ -178,7 +198,7 @@ else
     WV=$B/$GT/work_${ID}_$GT/video; TD=$B/$GT/timing
     ( for i in $(seq 1800); do [ -s $WV/master_mediapipe.npz ] && break; sleep 2; done; [ -s $WV/master_mediapipe.npz ] || exit 0; mkdir -p $TD; TJ=$TD/${ID}_master_timing_F.json; SL=$TD/${ID}_source_lm_F.npz
       python scripts/quality/r3_master_timing.py --src $SRC --master $WV/master_25fps.mp4 --vf fps=25 --out $TJ && python scripts/quality/r3_source_lm.py --src $SRC --timing $TJ --out $SL \
-        && python scripts/r9/r9_source_rigid.py --src $SRC --source-lm $SL ) > $L/srcprep.log 2>&1 8>&- & SP=$!
+        && python scripts/r9/r9_source_rigid.py --src $SRC --source-lm $SL ) > $L/srcprep.log 2>&1 & SP=$!
   fi
   export R13_GPU_DONE_FILE=$W/gen_gpu_done; rm -f $R13_GPU_DONE_FILE   # read by the resident generator only (R10_GEN_EARLY_RELEASE)
   CFX="--codeformer optimized --codeformer-w 1.0 --codeformer-parse off --codeformer-batch 16"; CFDV=self   # r15 T: DUB_ALLOW_NC=0 -> the clean face
@@ -187,14 +207,14 @@ else
     export DUB_ALLOW_NC=0; FL+=("codeformer_missing_clean_face"); fi
   [ "$DUB_ALLOW_NC" = 1 ] || { CFX="--codeformer off"; CFDV=""; FL+=("face_clean_no_codeformer"); }
   AUDIO=$A/$AT TAG=$GT SKIP_SCORE=1 VIDEO_EXTRA="$CFX --steps 10 --steps-silent 20 $REFX" \
-    bash scripts/r7/r7_e2e.sh $ID > $L/face_gen.log 2>&1 8>&- & GENP=$!   # (the lock stays with this shell: a background child never holds fd 8)
+    bash scripts/r7/r7_e2e.sh $ID > $L/face_gen.log 2>&1 & GENP=$!
   if [ "${R10_GEN_EARLY_RELEASE:-0}" = 1 ] && [ -n "${R10_HEAVY_LOCK:-}" ]; then   # r13: the resident generator signals the end of its GPU work (scripts/r10/gen_worker.py)
-    while kill -0 $GENP 2>/dev/null; do [ -f $W/gen_gpu_done ] && { flock -u 8; echo "== $ID heavy lock released early: generator GPU done $(date +%T)" | tee -a $L/e2e.log; break; }; sleep 0.5; done
+    while kill -0 $GENP 2>/dev/null; do [ -f $W/gen_gpu_done ] && { gpu_release; echo "== $ID heavy lock released early: generator GPU done $(date +%T)" | tee -a $L/e2e.log; break; }; sleep 0.5; done
   fi
   wait $GENP
   if [ -n "$SP" ]; then [ -f $B/$GT/work_${ID}_$GT/${ID}_${GT}_25fps.manifest.json ] || kill $SP 2>/dev/null; wait $SP 2>/dev/null; fi   # r13: no generator output -> stop the source prep (it would wait 1 h for the master)
   if [ -f $B/$GT/work_${ID}_$GT/${ID}_${GT}_25fps.manifest.json ]; then
-    [ -n "${R10_HEAVY_LOCK:-}" ] && flock -u 8   # r10 worker: the next job's audio + face_gen may start
+    gpu_release   # r10 worker: the next job's audio + face_gen may start
     if [ -n "${R10_COMP_GATE:-}" ]; then st wait_comp; touch $W/comp_ready; until [ -f $W/comp_go ]; do sleep 1; done; fi   # r10 worker: the composite (~12 GB) starts only once no other job is in its audio stage (~30 GB)
     st face_comp
     [ "$E2E_FX" = 1 ] && export REP=1 CFD_LABEL=ia04 CFD_ARGS="--inner-alpha 0.4 ${CFD_EXTRA:-}"   # r9: short mouth glitches re-drawn in the layer, long ones -> smooth source fallback; CodeFormer detail at 0.4 inside the mouth
@@ -214,7 +234,7 @@ else
     [ -f $B/$FT/${ID}_$FT.mp4 ] && VID=$B/$FT/${ID}_$FT.mp4 || fail face_comp_failed PARTIAL_SUCCESS "see logs/face_comp.log: source picture used"
   else fail face_gen_failed PARTIAL_SUCCESS "see logs/face_gen.log: source picture used"; fi
 fi
-[ -n "${R10_HEAVY_LOCK:-}" ] && flock -u 8
+gpu_release
 [ -n "$VID" ] || VID=$SRC
 if [ -n "$HIRES" ]; then   # r15 T: the face work was downscaled: back to the source resolution
   if [ "$VID" = "$SRC" ]; then VID=$HIRES   # no face result: the full-res source picture
@@ -259,11 +279,11 @@ export METRICS=on
   python scripts/r8/pacing.py --run $O/$ID --id $ID --label $AT --face $A/sep/$ID/source_mediapipe.npz --out $O/cov/pace_$ID | tail -1
   python scripts/r8/cuts.py --run $O/$ID --id $ID --label $AT --out $O/cov/cuts_$ID | tail -1
   python scripts/r8/mixdrop.py --run $O/$ID --id $ID --label $AT --out $O/cov/mix_$ID | tail -1
-  flock /workspace/dub/gpu.lock python scripts/r7/gap_metrics.py --tag $AT --clips $O/gaps $ID || echo "WARN gaps spleeter"
+  gpu_run python scripts/r7/gap_metrics.py --tag $AT --clips $O/gaps $ID || echo "WARN gaps spleeter"
   if [ -f $A/$HT/$ID/final_mix_aac.m4a ]; then mkdir -p $A/$HT/cov
     python scripts/r8/mixdrop.py --run $A/$HT/$ID --id $ID --label $HT --out $A/$HT/cov/mix_$ID | tail -1
     python scripts/r7/clicks.py --tag $HT --prev $AT --json $A/$HT/cov/clicks.json $ID
-    flock /workspace/dub/gpu.lock python scripts/r7/gap_metrics.py --tag $HT --prev $AT --clips $A/$HT/gaps $ID || echo "WARN gaps demucs"; fi
+    gpu_run python scripts/r7/gap_metrics.py --tag $HT --prev $AT --clips $A/$HT/gaps $ID || echo "WARN gaps demucs"; fi
   if [ -f $B/$FT/${ID}_$FT.mp4 ]; then
     python scripts/r4/r4_gate.py score --label $FT --dir $B/$FT --ids $ID > $L/face_score.log 2>&1 || echo "WARN face score"
     MAN=$B/$FT/%s_$FT.manifest.json bash scripts/r6/r6_twitch.sh $FT $B/$FT _$FT $ID | grep '=='
@@ -274,6 +294,6 @@ export METRICS=on
 } > $L/metrics.log 2>&1
 if [ "${E2E_FRAME_GATE:-on}" = on ] && [ -f $B/$FT/${ID}_$FT.mp4 ]; then   # the whole-frame gate is one CPU core for ~1 s per frame at 1080p: in the background (next video starts), then the rows again
   ( bash scripts/r7/r7_frame_gate.sh $B/$FT:$FT $ID | grep "^=="; python scripts/r7/r7_baseline.py freeze --tag $FT --audio $A/$AT --ids $ID --out $W/face_gate.json | tail -2
-    collect | tail -1; echo "R9_FRAME_GATE_DONE $ID" ) > $L/frame_gate.log 2>&1 < /dev/null 8>&- &
+    collect | tail -1; echo "R9_FRAME_GATE_DONE $ID" ) > $L/frame_gate.log 2>&1 < /dev/null &
   disown; fi
 finish

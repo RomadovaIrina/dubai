@@ -83,7 +83,7 @@ ENV DUB_ROOT=/workspace/dub/dubai DUB_ENV=/venv/dabai VIRTUAL_ENV=/venv/dabai DU
     DABAI_STUDENT_LORA=/workspace/dub/dubai/models/student/latentsync_student_r2_s4_step01500_ema.pt \
     KS_ROOT=/opt/keysync KS_LORA=/workspace/dub/dubai/models/keysync/student/lora_pick.pt KS_TRT_CAP=/workspace/dub/dubai/models/keysync/trt_cap \
     KS_TRT_CACHE=/workspace/dub/dubai/models/keysync/trt_cache TORCHINDUCTOR_CACHE_DIR=/workspace/dub/dubai/models/keysync/inductor \
-    KS_LMK_CACHE=/data/ks_lmk KS_TORCH_HOME=/workspace/dub/dubai/models/keysync/torch DABAI_FACE_DEFAULT=keysync \
+    KS_LMK_CACHE=/data/ks_lmk KS_TORCH_HOME=/workspace/dub/dubai/models/keysync/torch DABAI_FACE_DEFAULT=auto \
     PYTHONUNBUFFERED=1 NVIDIA_VISIBLE_DEVICES=all NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
 VOLUME ["/workspace/dub/dubai/models", "/data"]
 WORKDIR /workspace/dub/dubai

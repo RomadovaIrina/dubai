@@ -37,6 +37,10 @@ STEPS = {
 }
 # flag -> (code, EN, RU); None = technical flag (listed, no user message)
 MESSAGES = {
+    "face_keysync_no_face": ("W_NO_FACE", "No face suitable for lip-sync was found (too small, inset or absent): the video is dubbed with the translated voice, without lip-sync.",
+                             "Не найдено лицо, подходящее для синхронизации губ (слишком мелкое, во врезке или отсутствует): видео озвучено переведённым голосом, без синхронизации губ."),
+    "face_keep_source_no_visible_speaker": ("W_OFFSCREEN_VOICE", "Nobody on screen speaks the dubbed lines (an off-screen voice): the picture is left as it is, without lip-sync.",
+                                            "Никто в кадре не произносит озвученные фразы (голос за кадром): изображение оставлено без изменений, без синхронизации губ."),
     "no_face": ("W_NO_FACE", "No face was found in the video: it is dubbed with the translated voice only, without lip-sync.",
                 "В видео не найдено лицо: озвучили переведённым голосом, без синхронизации губ."),
     "no_lipsync_head_pose": ("W_HEAD_POSE", "The head is turned away too often (more than 30 % of the frames): the video is dubbed with the translated voice, without lip-sync.",
@@ -82,7 +86,8 @@ ERRORS = {   # terminal error code -> (status, EN, RU, retryable)
 }
 TECH = {"low_res", "long_video", "landscape", "rotated_source", "high_fps", "odd_fps", "variable_fps", "hdr_or_10bit", "face_partly_absent",
         "face_work_downscaled", "bed_spleeter_only", "face_clean_no_codeformer", "lipsync_off_by_request", "face_skipped_no_face",
-        "voice_only_pose_precheck", "htdemucs_stems_failed", "htdemucs_mix_failed", "face_keysync", "face_keysync_multi_face", "face_keysync_no_face", "face_route_failed", "face_keep_source_no_visible_speaker", "codeformer_missing_clean_face"}
+        "voice_only_pose_precheck", "htdemucs_stems_failed", "htdemucs_mix_failed", "face_keysync", "face_keysync_multi_face", "face_keysync_no_face", "face_route_failed", "codeformer_missing_clean_face", "face_route_given", "audio_reused", "face_latentsync_unavailable",
+        "ks_probe_failed", "ks_probe_low_conf", "ks_probe_clamped", "ks_check_offset"}
 STYLES = ("white", "yellow", "trendy", "outline")
 _LANGS = None
 
