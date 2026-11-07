@@ -12,6 +12,8 @@ prep)
   git -C /workspace/dub/int archive ${2:-HEAD} | tar -x -C $C/root
   mkdir -p $C/root/third_party; for d in llama_cuda latentsync; do [ -e $C/root/third_party/$d ] || ln -s /workspace/dub/dubai/third_party/$d $C/root/third_party/$d; done   # (= the builder's third_party; NO CodeFormer)
   for d in $(ls $RM); do [ -e $C/models/$d ] || ln -s $RM/$d $C/models/$d; done
+  [ -d $C/models/cache/pyannote ] || { mkdir -p $C/models/cache; cp -aL /root/.cache/torch/pyannote $C/models/cache/pyannote; }   # (= the volume layout of fetch-models 5/7)
+  [ -s $C/models/realesrgan/RealESRGAN_x2plus.pth ] || { mkdir -p $C/models/realesrgan; curl -fsSL --retry 3 -o $C/models/realesrgan/RealESRGAN_x2plus.pth https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth; }
   for f in WavLM-Base+.pt keyframe_dub.pt interpolation_dub.pt; do [ -e $C/models/keysync/checkpoints/$f ] || ln $KSRC/code/pretrained_models/checkpoints/$f $C/models/keysync/checkpoints/$f; done
   cp -L $KSRC/student/lora_pick.pt $KSRC/student/lora_meta.json $C/models/keysync/student/; cp $KSRC/trt/cap/kf.pt $KSRC/trt/cap/interp.pt $C/models/keysync/trt_cap/
   t0=$(date +%s); KS_ROOT=$C/opt/keysync KS_NO_WEIGHTS=1 bash $C/root/scripts/keysync/r16/ks_install.sh > $C/ks_install.log 2>&1; echo "ks_install rc=$? $(( $(date +%s) - t0 )) s"
@@ -26,6 +28,6 @@ job)
   unset HF_TOKEN HUGGING_FACE_HUB_TOKEN
   [ -L $C/root/models ] || { rm -rf $C/root/models; ln -s $C/models $C/root/models; }
   mkdir -p $KS_ROOT/code/pretrained_models; ln -sfn $C/models/keysync/checkpoints $KS_ROOT/code/pretrained_models/checkpoints   # = entrypoint link_runtime
-  [ -s $C/check.log ] || { bash $C/root/infra/docker/check.sh > $C/check.log 2>&1; echo "check rc=$? $(tail -1 $C/check.log)"; }
+  [ -s $C/check.log ] || { rc=0; bash $C/root/infra/docker/check.sh > $C/check.log 2>&1 || rc=$?; echo "check rc=$rc $(tail -1 $C/check.log)"; }
   exec /venv/dabai/bin/python $C/root/scripts/job/dabai_job.py $2;;
 esac

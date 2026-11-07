@@ -31,9 +31,11 @@ else
 fi
 KS=${KS_ROOT:-/opt/keysync}
 $KS/venv/bin/python -c "import tensorrt, torch; assert torch.cuda.is_available(); print('     keysync venv: torch', torch.__version__, 'tensorrt', tensorrt.__version__)" && ok "KeySync venv (TensorRT)" || bad "KeySync venv"
-for f in checkpoints/keyframe_dub.pt checkpoints/interpolation_dub.pt checkpoints/WavLM-Base+.pt student/lora_pick.pt student/lora_meta.json trt_cap/kf.pt trt_cap/interp.pt; do
+for f in torch/hub/checkpoints/s3fd-619a316812.pth torch/hub/checkpoints/2DFAN4-cd938726ad.zip ../hf/hub/models--facebook--hubert-base-ls960/snapshots/dba3bb02fda4248b6e082697eee756de8fe8aa8a/pytorch_model.bin \
+         ../hf/hub/models--stabilityai--stable-video-diffusion-img2vid/snapshots/9cf024d5bfa8f56622af86c884f26a52f6676f2e/vae/diffusion_pytorch_model.fp16.safetensors \
+         checkpoints/keyframe_dub.pt checkpoints/interpolation_dub.pt checkpoints/WavLM-Base+.pt student/lora_pick.pt student/lora_meta.json trt_cap/kf.pt trt_cap/interp.pt; do
   [ -s $M/keysync/$f ] || { bad "KeySync: $M/keysync/$f missing (fetch-models 8/8, KS_KIT_DIR)"; continue; }; done
-ls ${KS_TRT_CACHE:-$M/keysync/trt_cache}/*/eng_s/interp/full.plan > /dev/null 2>&1 && ok "KeySync TensorRT engines cached" || echo "WARN no KeySync TensorRT engines yet: the first job builds them (~5 min)"
+ls ${KS_TRT_CACHE:-$M/keysync/trt_cache}/*/eng_s/interp/full.plan > /dev/null 2>&1 && ok "KeySync TensorRT engines cached" || echo "WARN no KeySync TensorRT engines yet: the first job builds them (~12 min on a 5090) + the VAE autotune (~4 min)"
 [ -s "${DABAI_STUDENT_LORA:-/nonexistent}" ] && ok "student LoRA (mode fast)" || echo "WARN no student LoRA: mode fast unavailable"
 df -BG --output=avail /data 2>/dev/null | tail -1 | awk '{g=$1+0; if (g < 60) print "WARN /data has only " g " GB free (a job needs >= 10 GB per video minute while it runs: 5 min >= 60 GB, 15 min ~150 GB)"; else print "OK   /data " g " GB free"}'
 [ $F = 0 ] && echo "CHECK_OK" || echo "CHECK_FAILED"; exit $F
