@@ -74,7 +74,8 @@ if [[ " $PF " == *" variable_fps "* ]]; then   # r13: a VFR phone clip -> consta
   ffmpeg -loglevel error -y -i "$SRC" -map 0:v:0 -map 0:a:0 -fps_mode cfr -r "$AFR" -c:v libx264 -preset medium -crf 12 -pix_fmt yuv420p -c:a copy $W/cfr.mp4 \
     && { rm -f $DUB_INPUTS/$ID.*; mv $W/cfr.mp4 $DUB_INPUTS/$ID.mp4; SRC=$DUB_INPUTS/$ID.mp4; } || fail cfr_failed PARTIAL_SUCCESS "VFR -> constant frame rate failed"
 fi
-HIRES=""; FMS=${E2E_FACE_MAXSIDE:-1920}   # r15 T (edge res4k_vertical: face_gen_failed on 2160x3840): above FMS px on the long side the face stages
+FMS_DEF=1920; [ "${DUB_FACE:-auto}" != latentsync ] && FMS_DEF=1280   # r16: KeySync draws 512 px; its paste cost grows with the crop side (coordinator 07.11: 1280 default)
+HIRES=""; FMS=${E2E_FACE_MAXSIDE:-$FMS_DEF}   # r15 T (edge res4k_vertical: face_gen_failed on 2160x3840): above FMS px on the long side the face stages
 if [ "$FMS" != 0 ] && [ "${E2E_LIPSYNC:-on}" != off ] && [[ " $PF " != *" no_face "* ]]; then   # (generator + composite) run on a copy scaled to FMS
   IFS=, read -r SW SH _ < <(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 "$SRC")   # (r15: csv s=' ' fails to parse in ffprobe 6.1)
   [ -n "${SW:-}" ] && [ -n "${SH:-}" ] || echo "WARN $ID face_res: could not read the source size, face work at full resolution" | tee -a $L/e2e.log   # (the audio stage reads it too:
@@ -138,16 +139,33 @@ if [ "${DUB_PACE_FIX:-0}" = 1 ] && [ -z "${DUB_POLYGLOT:-}" ]; then   # r13 7.3 
     fail pace_fix_failed PARTIAL_SUCCESS "see logs/pace_fix.log: the accepted dub kept"; fi
 fi
 
-VID=""
+VID=""; FACE=${DUB_FACE:-auto}; ROUTE=""
+if [ "${E2E_LIPSYNC:-on}" != off ] && [[ " $PF " != *" no_face "* ]] && [ "$FACE" != latentsync ] && [ "${DUB_ROUTE:-on}" != off ]; then
+  st face_route   # r16 Q (reports/experiments/r16-qa/ROUTING.md): which visible face speaks which turn (SyncNet on the SOURCE) + beard -> the engine
+  RD=$W/route; mkdir -p $RD; MAN=$(ls $AD/${ID}_*.manifest.json 2>/dev/null | head -1)
+  if ffmpeg -loglevel error -y -i $SRC -map 0:v:0 -map 0:a:0 -vf fps=25 -c:v libx264 -preset fast -crf 12 -pix_fmt yuv420p -c:a aac $RD/master_25fps.mp4 \
+     && python scripts/quality/r16q_active_speaker.py --video $RD/master_25fps.mp4 --manifest $MAN --out $RD/as.json --device ${DUB_ROUTE_DEVICE:-cuda} > $L/face_route.log 2>&1 \
+     && ${DUB_MEDIAPIPE_PY:-/venv/mediapipe/bin/python} scripts/quality/r16q_beard.py $SRC --out $RD/beard.json >> $L/face_route.log 2>&1 \
+     && python3 scripts/r16q/face_route.py --active $RD/as.json --beard $RD/beard.json --out $RD/route.json >> $L/face_route.log 2>&1; then
+    ROUTE=$RD/route.json; read -r KSA ENG < <(python3 -c "import json; d=json.load(open('$ROUTE')); print(int(bool(d.get('keep_source_all'))), d.get('face_engine') or 'keysync')")
+    echo "== $ID route: keep_source_all $KSA, engine $ENG, faces $(python3 -c "import json; print([(f['mode'], round(f.get('silence_s', 0), 1)) for f in json.load(open('$ROUTE'))['faces']])")" | tee -a $L/e2e.log
+    [ "$KSA" = 1 ] && FL+=("face_keep_source_no_visible_speaker")
+    [ "$FACE" = auto ] && FACE=${DUB_FACE_ENGINE:-$ENG}
+  else FL+=("face_route_failed"); echo "== $ID WARN face_route failed (see logs/face_route.log): the dubbed-units mapping is used" | tee -a $L/e2e.log; ROUTE=""; fi
+fi
+[ "$FACE" = auto ] && FACE=keysync
 if [ "${E2E_LIPSYNC:-on}" = off ]; then FL+=("lipsync_off_by_request")   # r13 interface: the user asked for a voice-only dub
 elif [[ " $PF " == *" no_face "* ]]; then FL+=("face_skipped_no_face")
-elif [ "${DUB_FACE:-keysync}" = keysync ]; then   # r16 T (#25): KeySync fast2 (TRT engines built on first use) + the plain paste; LatentSync frozen since 06.11
-  st face_keysync                                 # (DUB_FACE=latentsync = the r15 path below). Hooks: KS_DUB_DELAY_MS, KS_PASTE_SHIFT, KS_PLAIN_ARGS (scripts/keysync/r16/ks_face.sh)
+elif [[ " ${FL[*]} " == *" face_keep_source_no_visible_speaker "* ]]; then :   # r16: the dub voice belongs to no visible face: the source picture
+elif [ "$FACE" = keysync ]; then   # r16 T: the KeySync chain (scripts/keysync/r16/ks_face.sh: K1 paste + K2 mouth + Q route, accepted by eye 07.11)
+  st face_keysync                 # DUB_FACE=latentsync (or auto + a beard) = the r15 LatentSync path below
   FL+=("face_keysync"); HFD=""; [ -n "${R10_HEAVY_LOCK:-}" ] && HFD=8   # the GPU lock held since the audio stage goes on to ks_face.sh's GPU section,
-  if KS_HELD_FD=$HFD bash scripts/keysync/r16/ks_face.sh $ID $SRC $AD $W $W/ks_face.mp4 > $L/face_keysync.log 2>&1 && [ -s $W/ks_face.mp4 ]; then
-    VID=$W/ks_face.mp4; grep -E "^KS_(FACES|PASTE|FACE_DONE)" $L/face_keysync.log | cut -c1-400 | tee -a $L/e2e.log
-    grep -q '"mode": "multi_face"' $W/ks/faces.json 2>/dev/null && FL+=("face_keysync_multi_face")
+  KS_HELD_FD=$HFD bash scripts/keysync/r16/ks_face.sh $ID $SRC $AD $W $W/ks_face.mp4 $ROUTE > $L/face_keysync.log 2>&1; KRC=$?   # which releases it before its CPU post
+  if [ $KRC = 0 ] && [ -s $W/ks_face.mp4 ]; then
+    VID=$W/ks_face.mp4; grep -E "^KS_(FACES|PROBE|CHECK|PASTE|FACE_DONE)" $L/face_keysync.log | cut -c1-400 | tee -a $L/e2e.log
+    python3 -c "import json,sys; d=json.load(open('$W/ks/faces.json')); sys.exit(0 if len(d['faces']) > 1 or d.get('source_tracks') or d['mode'] == 'multi_face' else 1)" 2>/dev/null && FL+=("face_keysync_multi_face")
     KS25=$W/ks/master_25fps.mp4   # the KeySync result is on the 25 fps master grid (no retime)
+  elif [ $KRC = 3 ]; then FL+=("face_keysync_no_face"); grep -E "^KS_FACE_KEEP_SOURCE" $L/face_keysync.log | tee -a $L/e2e.log   # no-face rule: the source picture
   else fail face_gen_failed PARTIAL_SUCCESS "see logs/face_keysync.log: source picture used"; fi
 else
   st face_gen

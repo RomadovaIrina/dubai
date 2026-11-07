@@ -1,2 +1,2 @@
-{"job_id": "demo1", "input": "/data/in/clip.mp4", "out_dir": "/data/jobs/demo1", "target_lang": "en", "face": "keysync", "mode": "quality",
+{"job_id": "demo1", "input": "/data/in/clip.mp4", "out_dir": "/data/jobs/demo1", "target_lang": "en", "face": "auto", "mode": "quality",
  "subs": {"enabled": true, "style": "yellow", "lang": "dub", "karaoke": true}, "watermark": {"enabled": true, "text": "DabAI", "corner": "br", "opacity": 0.6}}
