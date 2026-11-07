@@ -244,10 +244,11 @@ fps_m = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-sh
 w = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", fps_m, "-i", "-", "-i", a.audio, "-map", "0:v", "-map", "1:a",
                       "-c:v", "libx264", "-crf", "16", "-preset", "medium"] + ks_cms.enc() + ["-c:a", "aac", "-b:a", "192k", "-shortest", a.out], stdin=subprocess.PIPE)
 last[0] = None; nk = len(K)
+if nk - a.shift < n: print(f"WARNING: KeySync has {nk} frames < master {n} (+ shift {a.shift}): the last {n - nk + a.shift} frames fall back to the source with a 1 s fade; pad the KeySync inputs", flush=True)
 for k, f in enumerate(frames(a.master, W, H)):
     f = f.copy(); i = kidx(k); m, _ = mask(k)
     if m is not None:
-        fade = 1.0 if i < nk - 8 else max(0.0, (nk - i) / 8.0)   # KeySync's output ends a few frames early: fade to the master
+        fade = 1.0 if i < nk - 25 else max(0.0, (nk - i) / 25.0)   # r16: only if KeySync is SHORTER than the master (pad the inputs: ks_pad); 1 s fade as a last resort
         kf = scale_fix(warp_ks(K[int(np.clip(i, 0, nk - 1))].astype(np.float32), k, i), k)
         if not a.no_cm:
             lab = cv2.cvtColor(kf / 255, cv2.COLOR_RGB2LAB) * gain + off
