@@ -42,7 +42,12 @@ t shift; declare -A SHF
 for f in $TAGS; do
   KO=$KW/out/$f/${f}_$f.mp4; [ -s $KO ] || { echo "KS: no output for $f"; exit 1; }; SH=${KS_PASTE_SHIFT:-auto}
   if [ "$SH" = auto ]; then   # = r15 K: the raw output's SyncNet AV offset (vs the audio KeySync heard), pasted with shift = -offset
-    ( cd $R && $PY scripts/quality/sync_perframe.py --video $KO --audio $KW/data/audios/$f.wav --out $KW/raw_sync_$f.json ) > $KW/raw_sync_$f.log 2>&1 \
+    SV=$KO; SA=$KW/data/audios/$f.wav; MX=${KS_SYNC_MAX_S:-60}   # one global offset: the first MX s are enough (5 min: 438 -> ~90 GPU-s)
+    if [ "$MX" != 0 ] && python3 -c "import sys; sys.exit(0 if float(sys.argv[1]) > float(sys.argv[2]) else 1)" "$(ffprobe -v error -show_entries format=duration -of csv=p=0 $KO)" "$MX"; then
+      SV=$KW/sync_$f.mp4; SA=$KW/sync_$f.wav
+      ffmpeg -v error -y -i $KO -t $MX -an -c:v copy $SV && ffmpeg -v error -y -i $KW/data/audios/$f.wav -t $MX $SA || { SV=$KO; SA=$KW/data/audios/$f.wav; }
+    fi
+    ( cd $R && $PY scripts/quality/sync_perframe.py --video $SV --audio $SA --out $KW/raw_sync_$f.json ) > $KW/raw_sync_$f.log 2>&1 \
       && SH=$(python3 -c "import json; print(-int(json.load(open('$KW/raw_sync_$f.json'))['global']['av_offset']))") || { echo "KS WARN sync offset failed ($f): shift 0"; SH=0; }
   fi
   SHF[$f]=$SH
