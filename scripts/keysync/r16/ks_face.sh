@@ -2,12 +2,12 @@
 # r16 T: the KeySync face stage of the e2e (DUB_FACE=keysync | auto -> keysync). The r16 chain accepted by Irina's eye (K1 r16-paste 5c07cf7,
 # K2 r16-mouth 8d07fc6 / k2_k1chain_tag.sh, Q r16-qa 84031e1 route.json), per speaking face:
 #   plan      ks_e2e_prep.py: route.json faces (lipsync with SILENCE outside own speech / source -> --others) or the dubbed-units fallback; no-face rule
-#   crop      K2 tracked crop (k2_prep_track.py; KS_CROP=static = r15 ks_prep) + K1 pad: the last KS_PAD (60) frames mirrored, the seam frame not repeated
+#   crop      KS_CROP=auto: K2 tracked crop (k2_prep_track.py) if the static face share < 0.45 or the head travels > 0.4 face heights, else the r15 static crop + K1 pad: the last KS_PAD (60) frames mirrored, the seam frame not repeated
 #   ref       K2 k2_refpick.py -> the reference frame (KS_REF=auto | <frame> | 0)
 #   [GPU]     delay probe (KS_DELAY=probe | <ms>): KeySync on KS_PROBE_S (10) s from the face's first own speech, SyncNet AV offset of the raw render
 #             vs the dub it heard -> delay = -offset x 40 ms (old03 0, m03 / m18 40); the full KeySync (fast2 + K2 gate KS_GATE) on the padded crop with
 #             the delayed + padded dub; check: SyncNet of the full raw render -> if still != 0, the paste shift = -offset (K1 fallback)
-#   post      ECC align (k_ecc) -> ks_tsmooth (KS_TSMOOTH gate:0.5) -> ks_snap -> ks_guard -> K2 pause lip-close warp (KS_PAUSE=warp | off)
+#   post      ECC align (k_ecc) -> ks_tsmooth (KS_TSMOOTH gate:0.5) -> ks_snap -> ks_guard -> K2 pause lip-close warp (KS_PAUSE=warp; default off: Irina pending)
 #   paste     ks_plain (K1 + K2): ECC align, scale locked, lfm 6, upper-src, keep-nose, tex 2, others-grow 1.3, --absent skip; KS_PASTE_JOBS workers
 # usage: ks_face.sh <id> <src video> <audio dir: dubbed_16k.wav + final_mix_aac.m4a> <work dir> <out.mp4> [route.json]
 # exit 0 = OUT written; 3 = nothing to lip-sync (keep the source picture, not an error); other = failed.
@@ -39,12 +39,18 @@ TAGS=$(python3 -c "import json; print(' '.join(f['tag'] for f in json.load(open(
 
 t crop
 for f in $TAGS; do
-  if [ "${KS_CROP:-track}" = track ]; then   # K2: constant side 1.8 face heights, the centre follows the face (smoothed)
-    TK=${KS_TRACK_K:-1.8}; [ -s $KW/others_$f.npz ] && TK=${KS_TRACK_K2:-1.25}   # another face in the shot: the tight crop (r15 K m03: 1.25), so KeySync / SyncNet see one face
-    $MPY $KT/k2_prep_track.py --master $KW/master_25fps.mp4 --lm $KW/lm_$f.npz --out $KW/data/crop_$f --k $TK > $KW/crop_$f.log 2>&1 || { tail -3 $KW/crop_$f.log; exit 1; }
+  # the r15 static crop (ks_prep rule; another face in the shot: the tight 1.25 / 0.4 box of r15 K m03, so KeySync / SyncNet see one face)
+  BK=""; [ -s $KW/others_$f.npz ] && BK="KS_BOX_K=${KS_BOX_K:-1.25} KS_BOX_M=${KS_BOX_M:-0.4}"
+  ( mkdir -p $KW/data/st/videos $KW/data/st/audios; cd $KW && env $BK $PY $KT/ks_prep.py $KW/master_25fps.mp4 $KW/lm_$f.npz $KW/dub_$f.wav $KW/data/st $f ) > $KW/crop_$f.log 2>&1 || { tail -3 $KW/crop_$f.log; exit 1; }
+  CR=${KS_CROP:-auto}
+  if [ "$CR" = auto ]; then   # K2 rule: the tracked crop when the static face share < 0.45 (q05 small face) or the head travels > 0.4 face heights (q02 blob)
+    CR=$(python3 -c "import json; b=json.load(open('$KW/data/st/box_$f.json')); print('track' if b['face_h'] / b['side'] < 0.45 or b['move'] / b['face_h'] > 0.4 else 'static')"); fi
+  echo "KS_CROP $f $CR $(python3 -c "import json; b=json.load(open('$KW/data/st/box_$f.json')); print('static face share %.2f, head travel %.2f face heights' % (b['face_h'] / b['side'], b['move'] / b['face_h']))")"
+  if [ "$CR" = track ]; then   # K2: constant side, the centre follows the face (smoothed)
+    TK=${KS_TRACK_K:-1.8}; [ -s $KW/others_$f.npz ] && TK=${KS_TRACK_K2:-1.25}
+    $MPY $KT/k2_prep_track.py --master $KW/master_25fps.mp4 --lm $KW/lm_$f.npz --out $KW/data/crop_$f --k $TK >> $KW/crop_$f.log 2>&1 || { tail -3 $KW/crop_$f.log; exit 1; }
     mv $KW/data/crop_${f}_box.json $KW/data/box_$f.json
   else
-    ( mkdir -p $KW/data/st/videos $KW/data/st/audios; cd $KW && $PY $KT/ks_prep.py $KW/master_25fps.mp4 $KW/lm_$f.npz $KW/dub_$f.wav $KW/data/st $f ) > $KW/crop_$f.log 2>&1 || { tail -3 $KW/crop_$f.log; exit 1; }
     mv $KW/data/st/videos/$f.mp4 $KW/data/crop_$f.mp4; mv $KW/data/st/box_$f.json $KW/data/box_$f.json
   fi
   $MPY - $KW/data/crop_$f.mp4 $KW/data/pad_$f.mp4 $PAD <<'PY' >> $KW/crop_$f.log 2>&1 || exit 1
@@ -130,7 +136,7 @@ for f in $TAGS; do
     && L=$P/ts.mp4 || { tail -3 $P/ts.log; exit 1; }; grep -h "gate:" $P/ts.log | head -1; fi
   $PY $KT/ks_snap.py --layer $L --lm $P/raw_lm.npz --out $P/snap.mp4 > $P/snap.log 2>&1 && L=$P/snap.mp4 || { tail -3 $P/snap.log; exit 1; }
   $PY $KT/ks_guard.py --layer $L --src $KW/data/pad_$f.mp4 --n $N --out $P/guard.mp4 > $P/guard.log 2>&1 && L=$P/guard.mp4 || { tail -3 $P/guard.log; exit 1; }
-  if [ "${KS_PAUSE:-warp}" = warp ]; then   # K2 pause (b): the lips closed in the dub's pauses (the layer is on the dub timeline: shift 0)
+  if [ "${KS_PAUSE:-off}" = warp ]; then   # K2 pause (b), default OFF until Irina picks it: the lips closed in the dub's pauses (the layer is on the dub timeline: shift 0)
     $MPY $KT/k2_pause.py --mode warp --ks $L --ks-lm $P/raw_lm.npz --wav $KW/dub_$f.wav --shift 0 --out $P/pause.mp4 > $P/pause.log 2>&1 && L=$P/pause.mp4 || { tail -3 $P/pause.log; exit 1; }; fi
   t paste_$f; n=$((n + 1)); NXT=$KW/paste_$n.mp4
   OTH=""; [ -s $KW/others_$f.npz ] && OTH="--others $KW/others_$f.npz --others-grow ${KS_OTHERS_GROW:-1.3}"
