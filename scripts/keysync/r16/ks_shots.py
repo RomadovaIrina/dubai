@@ -8,7 +8,8 @@ ks_face.sh once per shot, so every temporal filter is shot-local by construction
            step 0.067, q05's real cuts 0.23-0.29). (2) with --mp: a run of > --gap-s (2 s) with NO face between two face runs (fades / dissolves
            through a title card, q03) -> a bound in its middle. Bounds closer than --min-s (0.4 s) to the previous one / the end are dropped.
            A dissolve straight from face A to face B (no faceless gap) is NOT split. "segments": each shot cut to its face range (first -> last
-           face frame; KeySync crashes on a clip that starts faceless); the faceless head / tail (>= --tail-s) / faceless shots = "source".
+           face frame; KeySync crashes on a clip that starts faceless), minus the fade / dissolve frames at those edges (up to --trans-max-s);
+           the faceless or fading head / tail (>= --tail-s) / faceless shots = "source".
   slice    --mp NPZ --k0 --k1 --out: the MediaPipe npz cut to one shot (ks_face.sh KS_MP_NPZ: no second landmark pass).
   route    --route R --t0 --t1 --out R_shot: the route.json restricted to [t0, t1) and shifted to the shot's time (faces outside dropped).
   manifest --manifest M --t0 --t1 --out M_shot: the dub manifest's units the same way (the no-route fallback of ks_e2e_prep.py).
@@ -22,7 +23,8 @@ sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 FPS = 25.0
 ap = argparse.ArgumentParser(); ap.add_argument("cmd", choices=["detect", "slice", "route", "manifest", "encode", "concat"])
 ap.add_argument("--mp", default=""); ap.add_argument("--gap-s", type=float, default=2.0, dest="gap_s"); ap.add_argument("--dy", type=float, default=0.10)
-ap.add_argument("--tail-s", type=float, default=1.0, dest="tail_s")
+ap.add_argument("--tail-s", type=float, default=1.0, dest="tail_s"); ap.add_argument("--trans-thr", type=float, default=0.08, dest="trans_thr")
+ap.add_argument("--trans-n", type=int, default=3, dest="trans_n"); ap.add_argument("--trans-max-s", type=float, default=2.0, dest="trans_max_s")
 ap.add_argument("--video"); ap.add_argument("--out", required=True); ap.add_argument("--route"); ap.add_argument("--manifest")
 ap.add_argument("--t0", type=float); ap.add_argument("--t1", type=float); ap.add_argument("--k0", type=int); ap.add_argument("--k1", type=int)
 ap.add_argument("--list", nargs="+"); ap.add_argument("--audio"); ap.add_argument("--frames", type=int, default=0)
@@ -69,13 +71,22 @@ if a.cmd == "detect":
     b.append(n); shots = [[b[i], b[i + 1]] for i in range(len(b) - 1)]
     # segments: per shot, KeySync runs only from its first to its last face frame (KeySync cannot START on a faceless frame: "No valid landmarks
     # found", q03 shot 2 opens on the title card); a faceless head (>= 1 frame) / tail (>= --tail-s 1 s) / whole shot = the source picture
+    # + transition frames at a face range's edges stay source too (q03 29.5 s: the face dissolving in under a title -> KeySync's opaque, globally
+    # colour-matched lower face pasted over a half-transparent frame = a bright patch erasing the title). Transition zone = >= --trans-n frames with
+    # d > --trans-thr within +-5 frames, dilated 2 frames (static talking heads: <= 2 isolated frames > 0.08 per clip -> never a zone).
+    B = (d > a.trans_thr).astype(int); Z = np.convolve(B, np.ones(11, int), "same") >= a.trans_n
+    Z = np.convolve(Z.astype(int), np.ones(5, int), "same") > 0; TM = int(round(a.trans_max_s * FPS))
     segs = []
     for s0, s1 in shots:
         if not a.mp: segs.append([s0, s1, "face"]); continue
         on = np.flatnonzero(pres[s0:s1])
         if len(on) == 0: segs.append([s0, s1, "source"]); continue
         f0, f1 = s0 + int(on[0]), s0 + int(on[-1]) + 1
-        if s1 - f1 < int(round(a.tail_s * FPS)): f1 = s1
+        g0, g1 = f0, f1
+        while f0 < min(f1, g0 + TM) and Z[f0]: f0 += 1
+        while f1 > max(f0, g1 - TM) and Z[f1 - 1]: f1 -= 1
+        if f1 - f0 <= 0: segs.append([s0, s1, "source"]); continue
+        if s1 - f1 < int(round(a.tail_s * FPS)) and not Z[f1:s1].any(): f1 = s1
         if f0 > s0: segs.append([s0, f0, "source"])
         segs.append([f0, f1, "face"])
         if f1 < s1: segs.append([f1, s1, "source"])
