@@ -1,0 +1,16 @@
+{
+ "job_id": "gold_m03",
+ "input": "/workspace/dub/inputs/mamakris/story-1774249919482-367803614.MOV",
+ "out_dir": "/workspace/dub/r16t/golden/jobs/gold_m03",
+ "target_lang": "en",
+ "face": "auto",
+ "timeout_s": 14400,
+ "debug_env": {
+  "DUB_AUDIO_FROM": "/workspace/dub/r16in/HANDOFF_K/paste_inputs/m03",
+  "DUB_ALLOW_NC_BED": "0",
+  "DUB_ROUTE_JSON": "/workspace/dub/r16t/golden/in/route_m03.json"
+ },
+ "output": {
+  "keep_intermediate": true
+ }
+}
