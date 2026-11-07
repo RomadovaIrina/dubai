@@ -1,0 +1,14 @@
+{
+ "video": "/workspace/dub/r16q/clips/q06_suvorov.mp4",
+ "size": [
+  1920,
+  1080
+ ],
+ "sampled": 40,
+ "thr": {
+  "speck": 2.0,
+  "dark": 0.5,
+  "iod_min": 50.0
+ },
+ "faces": []
+}

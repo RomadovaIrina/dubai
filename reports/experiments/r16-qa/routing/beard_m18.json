@@ -1,0 +1,34 @@
+{
+ "video": "/workspace/dub/r16l/data/videos/m18_src.mp4",
+ "size": [
+  512,
+  512
+ ],
+ "sampled": 40,
+ "thr": {
+  "speck": 2.0,
+  "dark": 0.5,
+  "iod_min": 50.0
+ },
+ "faces": [
+  {
+   "face": 0,
+   "center_xy": [
+    323.1,
+    284.2
+   ],
+   "frames": 40,
+   "dark": 0.218,
+   "must": 0.139,
+   "tex": 0.939,
+   "speck": 0.724,
+   "speck_abs": 0.026,
+   "refL": 57.647,
+   "iod": 125.168,
+   "texture_reliable": true,
+   "beard_score": 0.362,
+   "beard": false,
+   "face_engine": "keysync"
+  }
+ ]
+}

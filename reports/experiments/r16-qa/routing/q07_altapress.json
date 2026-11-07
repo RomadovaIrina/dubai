@@ -1,0 +1,120 @@
+{
+ "keep_source_all": false,
+ "faces": [
+  {
+   "track": 0,
+   "mode": "lipsync",
+   "present_s": [
+    0.0,
+    24.52
+   ],
+   "box_center_xy": [
+    568.2,
+    195.4
+   ],
+   "speak_ranges": [
+    [
+     0.031,
+     16.99
+    ],
+    [
+     17.851,
+     24.52
+    ]
+   ],
+   "silence_ranges": [],
+   "silence_s": 0
+  },
+  {
+   "track": 1,
+   "mode": "source",
+   "present_s": [
+    0.0,
+    24.52
+   ],
+   "box_center_xy": [
+    1222.4,
+    320.9
+   ],
+   "conf_whole": 0.072
+  },
+  {
+   "track": 2,
+   "mode": "source",
+   "present_s": [
+    0.0,
+    24.52
+   ],
+   "box_center_xy": [
+    1125.5,
+    376.9
+   ],
+   "conf_whole": 0.019
+  },
+  {
+   "track": 3,
+   "mode": "lipsync",
+   "present_s": [
+    24.56,
+    46.96
+   ],
+   "box_center_xy": [
+    586.1,
+    205.1
+   ],
+   "speak_ranges": [
+    [
+     24.56,
+     28.33
+    ],
+    [
+     28.921,
+     30.98
+    ],
+    [
+     31.418,
+     46.96
+    ]
+   ],
+   "silence_ranges": [],
+   "silence_s": 0
+  },
+  {
+   "track": 4,
+   "mode": "source",
+   "present_s": [
+    24.56,
+    46.96
+   ],
+   "box_center_xy": [
+    1170.0,
+    388.4
+   ],
+   "conf_whole": 0.012
+  },
+  {
+   "track": 5,
+   "mode": "source",
+   "present_s": [
+    24.56,
+    46.96
+   ],
+   "box_center_xy": [
+    1251.5,
+    337.1
+   ],
+   "conf_whole": 0.036
+  }
+ ],
+ "offscreen_speech_ranges": [],
+ "offscreen_speech_s": 0,
+ "lipsync_track": 0,
+ "lipsync_box_center_xy": [
+  568.2,
+  195.4
+ ],
+ "lipsync_speech_s": 27.44,
+ "face_engine": "keysync",
+ "beard": null,
+ "why": "beard unmeasured -> keysync default"
+}

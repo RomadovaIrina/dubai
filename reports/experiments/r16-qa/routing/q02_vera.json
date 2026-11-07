@@ -1,0 +1,111 @@
+{
+ "keep_source_all": false,
+ "faces": [
+  {
+   "track": 0,
+   "mode": "lipsync",
+   "present_s": [
+    0.0,
+    40.88
+   ],
+   "box_center_xy": [
+    861.5,
+    425.9
+   ],
+   "speak_ranges": [
+    [
+     0.031,
+     1.853
+    ],
+    [
+     3.271,
+     6.224
+    ]
+   ],
+   "silence_ranges": [
+    [
+     7.117,
+     13.432
+    ],
+    [
+     13.63,
+     20.232
+    ],
+    [
+     21.005,
+     33.428
+    ],
+    [
+     33.796,
+     37.225
+    ],
+    [
+     37.441,
+     40.297
+    ]
+   ],
+   "silence_s": 31.62
+  },
+  {
+   "track": 1,
+   "mode": "lipsync",
+   "present_s": [
+    40.92,
+    44.92
+   ],
+   "box_center_xy": [
+    934.4,
+    263.4
+   ],
+   "speak_ranges": [
+    [
+     40.92,
+     43.906
+    ],
+    [
+     44.075,
+     44.497
+    ]
+   ],
+   "silence_ranges": [],
+   "silence_s": 0
+  }
+ ],
+ "offscreen_speech_ranges": [
+  [
+   7.117,
+   13.432
+  ],
+  [
+   13.63,
+   20.232
+  ],
+  [
+   21.005,
+   33.428
+  ],
+  [
+   33.796,
+   37.225
+  ],
+  [
+   37.441,
+   40.297
+  ]
+ ],
+ "offscreen_speech_s": 31.62,
+ "lipsync_track": 0,
+ "lipsync_box_center_xy": [
+  861.5,
+  425.9
+ ],
+ "lipsync_speech_s": 4.77,
+ "face_engine": "keysync",
+ "beard": {
+  "beard": false,
+  "speck": 1.603,
+  "dark": 0.356,
+  "texture_reliable": true
+ },
+ "why": "no beard"
+}

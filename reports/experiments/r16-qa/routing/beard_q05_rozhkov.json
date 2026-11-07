@@ -1,0 +1,34 @@
+{
+ "video": "/workspace/dub/r16q/clips/q05_rozhkov.mp4",
+ "size": [
+  1920,
+  1080
+ ],
+ "sampled": 40,
+ "thr": {
+  "speck": 2.0,
+  "dark": 0.5,
+  "iod_min": 50.0
+ },
+ "faces": [
+  {
+   "face": 0,
+   "center_xy": [
+    1023.8,
+    289.0
+   ],
+   "frames": 25,
+   "dark": 0.66,
+   "must": 0.921,
+   "tex": 6.152,
+   "speck": 16.62,
+   "speck_abs": 0.17,
+   "refL": 69.02,
+   "iod": 84.287,
+   "texture_reliable": true,
+   "beard_score": 8.31,
+   "beard": true,
+   "face_engine": "latentsync"
+  }
+ ]
+}

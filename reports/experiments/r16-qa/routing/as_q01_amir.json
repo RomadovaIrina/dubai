@@ -1,0 +1,49 @@
+{
+ "thr": {
+  "conf": 2.0,
+  "off_win": 3,
+  "min_frames": 25
+ },
+ "tracks": [
+  {
+   "id": 0,
+   "f0": 0,
+   "frames": 1120,
+   "box_center_xy": [
+    542.3,
+    222.7
+   ],
+   "box_size": 182.2,
+   "conf_whole": 2.889,
+   "offset_whole": 0
+  }
+ ],
+ "speakers": {
+  "SPEAKER_00": {
+   "track": 0,
+   "conf": 2.889,
+   "offset": 0,
+   "frames": 1120,
+   "speech_s": 45.06,
+   "on_screen": true
+  }
+ },
+ "turns": [
+  {
+   "start": 0.031,
+   "end": 45.087,
+   "speaker": "SPEAKER_00",
+   "track": 0,
+   "conf": 2.889,
+   "offset": 0,
+   "frames": 1120,
+   "on_screen": true,
+   "from": "turn"
+  }
+ ],
+ "hook": {
+  "off_screen_speakers": [],
+  "keep_source_all": false,
+  "note": "mute the off-screen speakers' units in every face's generator input (T: ks_e2e_prep units filter); keep_source_all -> skip the face stage"
+ }
+}

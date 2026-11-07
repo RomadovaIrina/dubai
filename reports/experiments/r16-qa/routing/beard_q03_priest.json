@@ -1,0 +1,34 @@
+{
+ "video": "/workspace/dub/r16q/clips/q03_priest.mp4",
+ "size": [
+  1920,
+  1080
+ ],
+ "sampled": 40,
+ "thr": {
+  "speck": 2.0,
+  "dark": 0.5,
+  "iod_min": 50.0
+ },
+ "faces": [
+  {
+   "face": 0,
+   "center_xy": [
+    978.5,
+    336.1
+   ],
+   "frames": 22,
+   "dark": 0.387,
+   "must": 0.975,
+   "tex": 1.632,
+   "speck": 2.502,
+   "speck_abs": 0.097,
+   "refL": 77.647,
+   "iod": 113.919,
+   "texture_reliable": true,
+   "beard_score": 1.251,
+   "beard": true,
+   "face_engine": "latentsync"
+  }
+ ]
+}

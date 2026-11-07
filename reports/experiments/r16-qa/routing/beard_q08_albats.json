@@ -1,0 +1,34 @@
+{
+ "video": "/workspace/dub/r16q/clips/q08_albats.mp4",
+ "size": [
+  640,
+  480
+ ],
+ "sampled": 40,
+ "thr": {
+  "speck": 2.0,
+  "dark": 0.5,
+  "iod_min": 50.0
+ },
+ "faces": [
+  {
+   "face": 0,
+   "center_xy": [
+    331.9,
+    153.4
+   ],
+   "frames": 37,
+   "dark": 0.084,
+   "must": 0.063,
+   "tex": 1.567,
+   "speck": 3.158,
+   "speck_abs": 0.032,
+   "refL": 67.451,
+   "iod": 38.526,
+   "texture_reliable": false,
+   "beard_score": 0.0,
+   "beard": false,
+   "face_engine": "keysync"
+  }
+ ]
+}

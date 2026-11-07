@@ -1,0 +1,34 @@
+{
+ "video": "/workspace/dub/r16q/clips/q01_amir.mp4",
+ "size": [
+  1080,
+  606
+ ],
+ "sampled": 40,
+ "thr": {
+  "speck": 2.0,
+  "dark": 0.5,
+  "iod_min": 50.0
+ },
+ "faces": [
+  {
+   "face": 0,
+   "center_xy": [
+    544.6,
+    243.2
+   ],
+   "frames": 40,
+   "dark": 1.0,
+   "must": 1.0,
+   "tex": 3.851,
+   "speck": 13.556,
+   "speck_abs": 0.136,
+   "refL": 72.157,
+   "iod": 77.898,
+   "texture_reliable": true,
+   "beard_score": 6.778,
+   "beard": true,
+   "face_engine": "latentsync"
+  }
+ ]
+}

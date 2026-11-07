@@ -1,0 +1,123 @@
+{
+ "thr": {
+  "conf": 2.0,
+  "off_win": 3,
+  "min_frames": 25
+ },
+ "tracks": [
+  {
+   "id": 0,
+   "f0": 0,
+   "frames": 1120,
+   "box_center_xy": [
+    1283.6,
+    441.8
+   ],
+   "box_size": 190.3,
+   "conf_whole": 2.823,
+   "offset_whole": 0
+  }
+ ],
+ "speakers": {
+  "SPEAKER_00": {
+   "track": 0,
+   "conf": 2.971,
+   "offset": 0,
+   "frames": 985,
+   "speech_s": 39.46,
+   "on_screen": true
+  }
+ },
+ "turns": [
+  {
+   "start": 0.031,
+   "end": 1.685,
+   "speaker": "SPEAKER_00",
+   "track": 0,
+   "conf": 3.265,
+   "offset": -1,
+   "frames": 41,
+   "on_screen": true,
+   "from": "turn"
+  },
+  {
+   "start": 2.528,
+   "end": 5.954,
+   "speaker": "SPEAKER_00",
+   "track": 0,
+   "conf": 2.848,
+   "offset": 0,
+   "frames": 85,
+   "on_screen": true,
+   "from": "turn"
+  },
+  {
+   "start": 5.988,
+   "end": 8.755,
+   "speaker": "SPEAKER_00",
+   "track": 0,
+   "conf": 1.825,
+   "offset": 0,
+   "frames": 69,
+   "on_screen": true,
+   "from": "turn"
+  },
+  {
+   "start": 9.43,
+   "end": 13.835,
+   "speaker": "SPEAKER_00",
+   "track": 0,
+   "conf": 2.739,
+   "offset": 0,
+   "frames": 110,
+   "on_screen": true,
+   "from": "turn"
+  },
+  {
+   "start": 14.645,
+   "end": 16.248,
+   "speaker": "SPEAKER_00",
+   "track": 0,
+   "conf": 2.013,
+   "offset": 0,
+   "frames": 40,
+   "on_screen": true,
+   "from": "turn"
+  },
+  {
+   "start": 17.024,
+   "end": 35.519,
+   "speaker": "SPEAKER_00",
+   "track": 0,
+   "conf": 3.436,
+   "offset": 0,
+   "frames": 462,
+   "on_screen": true,
+   "from": "turn"
+  },
+  {
+   "start": 35.857,
+   "end": 41.662,
+   "speaker": "SPEAKER_00",
+   "track": 0,
+   "conf": 2.839,
+   "offset": 0,
+   "frames": 145,
+   "on_screen": true,
+   "from": "turn"
+  },
+  {
+   "start": 43.028,
+   "end": 44.328,
+   "speaker": "SPEAKER_00",
+   "track": 0,
+   "on_screen": true,
+   "from": "speaker"
+  }
+ ],
+ "hook": {
+  "off_screen_speakers": [],
+  "keep_source_all": false,
+  "note": "mute the off-screen speakers' units in every face's generator input (T: ks_e2e_prep units filter); keep_source_all -> skip the face stage"
+ }
+}

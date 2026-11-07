@@ -1,0 +1,34 @@
+{
+ "video": "/workspace/dub/inputs/test_videos_raw/03.mp4",
+ "size": [
+  464,
+  848
+ ],
+ "sampled": 40,
+ "thr": {
+  "speck": 2.0,
+  "dark": 0.5,
+  "iod_min": 50.0
+ },
+ "faces": [
+  {
+   "face": 0,
+   "center_xy": [
+    263.9,
+    449.8
+   ],
+   "frames": 40,
+   "dark": 0.003,
+   "must": 0.113,
+   "tex": 1.568,
+   "speck": 2.892,
+   "speck_abs": 0.029,
+   "refL": 65.294,
+   "iod": 89.101,
+   "texture_reliable": true,
+   "beard_score": 1.446,
+   "beard": true,
+   "face_engine": "latentsync"
+  }
+ ]
+}
