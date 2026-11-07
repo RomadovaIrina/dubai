@@ -2,7 +2,7 @@
 # r15-K: KeySync env (r13 patch) + weights
 set -e; cd /workspace/dub/keysync
 [ -d code ] || git clone -q https://github.com/antonibigata/keysync code
-cd code && git checkout -q 5e2503b && (git apply --check ../keysync_5e2503b_sm120_r13.patch 2>/dev/null && git apply ../keysync_5e2503b_sm120_r13.patch && echo PATCH_OK || echo PATCH_ALREADY_OR_FAIL)
+cd code && git checkout -q 5e2503b && (git apply --check ../keysync_5e2503b_sm120_r15.patch 2>/dev/null && git apply ../keysync_5e2503b_sm120_r15.patch && echo PATCH_OK || echo PATCH_ALREADY_OR_FAIL)
 for n in 6 8; do for c in keyframe interpolation; do sed "s/num_steps: 10/num_steps: $n/" scripts/sampling/configs/$c.yaml > scripts/sampling/configs/${c}_s$n.yaml; done; done
 cd ..; grep -v -i -E "^(torch==|torchvision|torchaudio|nvidia-|triton|xformers|deepspeed|bitsandbytes|dlib|face-recognition|face_recognition|insightface|onnx)" code/requirements.txt > req_ks.txt
 [ -d venv ] || uv venv -q -p 3.11 venv; . venv/bin/activate

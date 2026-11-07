@@ -29,6 +29,18 @@ if a.alpha == "auto":
     AL = np.zeros(n, np.float32); AL[:m] = al
     json.dump({"mean_alpha": round(float(AL.mean()), 3), "frac_on": round(float((AL > 0.05).mean()), 3), "rate_layer": round(float(rK.mean()), 4), "rate_src": round(float(rS.mean()), 4)},
               open(a.out + ".alpha.json", "w")); np.save(a.out + ".alpha.npy", AL)
+elif a.alpha.startswith("gate"):   # r16 K1 (#9): constant alpha (gate:A, default 0.5) ONLY if the layer's mouth-jerk spike rate > KS_TS_RATIO (1.3) x the source's, else 0
+    sl = np.load(a.src_lm)["lm"][..., :2]; m = min(n, len(sl)); A = float(a.alpha.split(":")[1]) if ":" in a.alpha else 0.5
+    jo, jc = jerk(lm[:m]); so, sc = jerk(sl[:m]); to, tc = 4 * np.median(so[so > 0]), 4 * np.median(sc[sc > 0])
+    rK = float(((jo > to) | (jc > tc)).mean()); rS = float(((so > to) | (sc > tc)).mean()); on = rK > float(__import__("os").environ.get("KS_TS_RATIO", 1.3)) * rS
+    AL = np.full(n, A if on else 0.0, np.float32); print(f"gate: jerk rate layer {rK:.3f} source {rS:.3f} -> alpha {A if on else 0.0}", flush=True)
+    json.dump({"rate_layer": round(rK, 4), "rate_src": round(rS, 4), "alpha": A if on else 0.0}, open(a.out + ".alpha.json", "w"))
+elif a.alpha.startswith("spike"):   # r16 K1: per-frame gate: amax only on the layer's own mouth-jerk spikes (+-1 frame) where the source has none
+    sl = np.load(a.src_lm)["lm"][..., :2]; m = min(n, len(sl))
+    jo, jc = jerk(lm[:m]); so, sc = jerk(sl[:m]); to, tc = 4 * np.median(so[so > 0]), 4 * np.median(sc[sc > 0])
+    sp = ((jo > to) | (jc > tc)) & ~((so > to) | (sc > tc)); sp = np.convolve(sp.astype(float), [1, 1, 1], "same") > 0
+    AL = np.zeros(n, np.float32); AL[:m] = a.amax * sp
+    json.dump({"mean_alpha": round(float(AL.mean()), 3), "frac_on": round(float((AL > 0.05).mean()), 3)}, open(a.out + ".alpha.json", "w"))
 else:
     AL = np.full(n, float(a.alpha), np.float32)
 LOW = [1, 2, 98, 327, 205, 425, 50, 280, 187, 411, 192, 416, 214, 434, 138, 367, 135, 364, 169, 394, 170, 395, 140, 369, 171, 396, 175, 152, 148, 377, 176, 400, 149, 378, 150, 379, 136, 365, 172, 397, 58, 288]
