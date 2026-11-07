@@ -97,3 +97,36 @@ The full outputs carry the accepted `final_mix_aac.m4a` unchanged (packet md5 ch
   - `clips/{m03,m18}_steps_4panel_plain_b8full_b8gate_b4gate_*_half_speed.mp4` (m03 23–27 and 0–4 s, m18 2–6 s);
   - `full/<v>_keysync_fast2_{plain_tex2,b8_full,b8_gate,b4_gate}.mp4`.
   - All with tex2 (now the ks_plain default), the original audio, yuv420p with +faststart.
+
+## Round 4: generator levers for the black hole (b8 gate accepted by Irina as the default)
+Window tests (m03 22–28 s, m18 2–6 s; the window clip = [reference frame] + window, KS_REF_IDX=0, first output frame dropped). Black-cavity share of open frames (small samples: ~80 / ~35 open frames):
+
+| arm | m03 | m18 | note |
+|---|---|---|---|
+| base (identity = frame 0) | 13.8 % | 22.9 % | |
+| **ref_teeth: identity = a source frame with visible upper teeth (m03 #84 = 3.36 s, m18 #238 = 9.52 s)** | **8.1 %** | **7.9 %** | teeth share 0.028 → 0.047 (m03); free |
+| ref #25 / #887 (m03), #76 / #7 (m18) | 9.4 / 12.6 % | 23 / 27 % | |
+| keyframe audio guidance 3 / 7 | 11.4 / 13.8 % | 31 / 15 % | noise |
+| keyframe ref guidance 1 / 3 | 12.5 / 10.1 % | 24 / 12 % | rr3 over-sharpens (m18 dark cheek spots, harsh contrast) |
+| keyframes 12 / 16 steps (all keyframes) | 13.6 / 12.2 % | 22 / 19 % | +3 / +6 s/vmin keyframe stage; little effect |
+| keyframes without DeepCache | 13.3 % | 22.9 % | |
+
+With the b8 gate on top:
+
+| arm | black-cavity m03 / m18 | SyncNet conf at best offset m03 / m18 |
+|---|---|---|
+| base | 20 % / 15 % | 7.70 / 6.30 |
+| ref_teeth | 8.1 % / 9.1 % | 7.95 / 7.60 |
+| ref_teeth + rr3 | 9.0 % / 16 % | 7.76 / 7.30 |
+| rr3 | 16 % / 11 % | 7.45 / 6.88 |
+
+- SyncNet at offset 0 is not usable on these windows (the window cut leaves a −2 offset for all arms alike).
+- With ref_teeth the gate flags fewer segments (16 vs 40 %), so it is cheaper.
+- Hooks:
+  - `KS_REF_IDX` (dubbing_pipeline_raw.py: random_cond_idx; scripts/keysync/r16/keysync_r16_refidx.patch);
+  - `KS_KF_AR` / `KS_KF_RR` (ks_fast.py: keyframe guider ratios).
+- Picking the frame automatically: a slightly open mouth (opening 0.08–0.25), visible upper teeth, sharp, good light; it needs an eye check per speaker (m03 #84 has the child's finger by his own mouth, which is harmless).
+- Panels:
+  - `clips/m03_keyframe_ref_b8gate_base_refteeth_refteeth-rr3_rr3_23-27s_half_speed.mp4`;
+  - `clips/m18_…_2-6s_half_speed.mp4`.
+  - Raw 512 KeySync windows with the final-mix audio; at m03 25.56 s ref_teeth shows upper teeth where base has the black "O".
