@@ -30,7 +30,7 @@ for t in range(n):
     d = np.zeros((y1 - y0, x1 - x0, 2), np.float32); ws = 0.0
     for j, wj in w.items():
         if 0 <= t + j < n:
-            d += wj * DIS.calc(G[t][y0:y1, x0:x1], G[t + j][y0:y1, x0:x1], None); ws += wj
+            d += wj * DIS.calc(np.ascontiguousarray(G[t][y0:y1, x0:x1]), np.ascontiguousarray(G[t + j][y0:y1, x0:x1]), None); ws += wj
     if ws == 0: continue
     d *= a.alpha / ws; yy, xx = GY[y0:y1, x0:x1], GX[y0:y1, x0:x1]
     wp = cv2.remap(F[t], xx + d[..., 0], yy + d[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
