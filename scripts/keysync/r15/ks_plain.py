@@ -39,6 +39,10 @@ ap.add_argument("--tex", type=float, default=2.0, help="r15 stubble / pores: the
                 "geometry, replace KeySync's inside the face mask outside the generated lips (dilated 0.15 IOD); 0 = off")
 ap.add_argument("--cavity", type=float, default=0.0, help="r15 black-hole mouth: lift strength (0..1) of the near-black inner-mouth pixels toward the source's open-mouth "
                 "interior tone (L 30th percentile + mean a / b of the source's open frames); 0 = off")
+ap.add_argument("--cm-file", default="", help="r16 T (parallel paste, ks_plain_par.py): the global colour match: loaded (gain / off) if the file exists, else computed and saved with its sufficient statistics (Lab sums of the sampled skin pixels, so chunks combine exactly)")
+ap.add_argument("--cm-only", action="store_true", help="r16 T: compute --cm-file over --write-range and exit")
+ap.add_argument("--write-range", default="", help="r16 T: 'A:B' = process and write only master frames A <= k < B (a chunk; the frames around it are context)")
+ap.add_argument("--absent", default="hold", choices=["hold", "skip"], help="r16 T: a master frame with no source landmarks (NaN): hold = paste with the last mask (r15), skip = leave the source frame (e2e: the face is absent there - a cutaway / outside its presence; ks_e2e_prep bridges short gaps)")
 ap.add_argument("--lip-keep", default="", help="r16 K2: per-master-frame weights (.npy, k2_pause.py): the SOURCE lips (hull + 0.10 IOD) show through the paste mask")
 a = ap.parse_args()
 b = json.load(open(a.box)); x0, y0, s, W, H = b["x"], b["y"], b["side"], b["W"], b["H"]
@@ -88,7 +92,7 @@ last = [None]
 
 def mask(k):
     i = int(J[min(k, len(J) - 1)]); p = LM[min(i, len(LM) - 1)]
-    if not np.isfinite(p).all(): return last[0], None
+    if not np.isfinite(p).all(): return (None, None) if a.absent == "skip" else (last[0], None)
     iod = float(np.linalg.norm(p[33] - p[263])); q = p - BXY(k); mk = np.zeros((s, s), np.uint8)
     hp = hull(q[OVAL]); cv2.fillPoly(mk, [hp], 1); cv2.fillPoly(mk, [hp + np.array([0, int(round(a.down * iod))], np.int32)], 1)
     own = mk.copy()   # r16 K1: the speaker's own face (oval + the room below the chin): the other-face protection must never cover it
@@ -164,7 +168,9 @@ def warp_ks(kf, k, i):
     return cv2.warpAffine(kf, M, (s, s), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
 gain = np.ones(3, np.float32); off = np.zeros(3, np.float32); CAV = None
 is_open = lambda p: np.isfinite(p).all() and np.linalg.norm(p[61] - p[291]) > 5 and np.linalg.norm(p[13] - p[14]) / np.linalg.norm(p[61] - p[291]) > 0.15
-if not a.no_cm or a.cavity > 0:   # pass 1: the global colour match on the skin; the source's open-mouth interior tone (for --cavity)
+CMF = bool(a.cm_file) and os.path.exists(a.cm_file) and not a.cm_only
+WR = tuple(int(x) for x in a.write_range.split(":")) if a.write_range else (0, 1 << 30)
+if (not a.no_cm or a.cavity > 0) and not CMF:   # pass 1: the global colour match on the skin; the source's open-mouth interior tone (for --cavity)
     SK, SM, SC, HFR = [], [], [], []
     for k, f in enumerate(frames(a.master, W, H)):
         if a.cavity > 0 and k % 3 == 0:
@@ -172,7 +178,7 @@ if not a.no_cm or a.cavity > 0:   # pass 1: the global colour match on the skin;
             if is_open(p):
                 mk = np.zeros((H, W), np.uint8); cv2.fillPoly(mk, [hull(p[INNER])], 1); mk = cv2.erode(mk, np.ones((3, 3), np.uint8))
                 if mk.sum() > 30: SC.append(cv2.cvtColor(f.astype(np.float32) / 255, cv2.COLOR_RGB2LAB)[mk > 0])
-        if a.no_cm or k % 5 or not (0 <= kidx(k) < len(K)): continue
+        if a.no_cm or k % 5 or not (0 <= kidx(k) < len(K)) or not (WR[0] <= k < WR[1]): continue
         _, sk = mask(k)
         if sk is None or sk.sum() < 500: continue
         lk = cv2.cvtColor(K[kidx(k)].astype(np.float32) / 255, cv2.COLOR_RGB2LAB)[sk]; lm_ = cv2.cvtColor(crop(f, k).astype(np.float32) / 255, cv2.COLOR_RGB2LAB)[sk]
@@ -181,7 +187,10 @@ if not a.no_cm or a.cavity > 0:   # pass 1: the global colour match on the skin;
             core = sk & (cv2.erode(sk.astype(np.uint8), el(0.1 * IODM)) > 0)
             HFR.append((hf_energy(cv2.cvtColor(crop(f, k), cv2.COLOR_RGB2GRAY).astype(np.float32), core), hf_energy(cv2.cvtColor(K[kidx(k)], cv2.COLOR_RGB2GRAY).astype(np.float32), core)))
     if not a.no_cm:
+        if a.cm_only and not SK: np.savez(a.cm_file, n=0); sys.exit(0)
         SK, SM = np.concatenate(SK), np.concatenate(SM)
+        if a.cm_file: np.savez(a.cm_file, n=len(SK), s1k=SK.sum(0, dtype=np.float64), s2k=(SK.astype(np.float64) ** 2).sum(0), s1m=SM.sum(0, dtype=np.float64), s2m=(SM.astype(np.float64) ** 2).sum(0))
+        if a.cm_only: sys.exit(0)
         gain = np.clip(SM.std(0) / np.maximum(SK.std(0), 1e-3), 0.9, 1.1).astype(np.float32); off = (SM.mean(0) - SK.mean(0) * gain).astype(np.float32)
         print(f"global colour match (Lab): gain {gain.round(3).tolist()} offset {off.round(2).tolist()}", flush=True)
     if a.sharp == "auto" and HFR:
@@ -190,6 +199,10 @@ if not a.no_cm or a.cavity > 0:   # pass 1: the global colour match on the skin;
     if a.cavity > 0 and SC:
         SC = np.concatenate(SC); CAV = (float(np.percentile(SC[:, 0], 30)), SC[:, 1:].mean(0).astype(np.float32))
         print(f"source open-mouth interior: L p30 {CAV[0]:.1f}, a/b {CAV[1].round(1).tolist()} ({len(SC)} px)", flush=True)
+if CMF:
+    _c = np.load(a.cm_file); gain, off = _c["gain"].astype(np.float32), _c["off"].astype(np.float32)
+    print(f"colour match from {a.cm_file}: gain {gain.round(3).tolist()} offset {off.round(2).tolist()}", flush=True)
+if a.cm_only: sys.exit(0)
 NT = [0, 0]
 
 
@@ -260,6 +273,8 @@ w = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt
 last[0] = None; nk = len(K)
 if nk - a.shift < n: print(f"WARNING: KeySync has {nk} frames < master {n} (+ shift {a.shift}): the last {n - nk + a.shift} frames fall back to the source with a 1 s fade; pad the KeySync inputs", flush=True)
 for k, f in enumerate(frames(a.master, W, H)):
+    if k < WR[0]: continue
+    if k >= WR[1]: break
     f = f.copy(); i = kidx(k); m, _ = mask(k)
     if m is not None:
         fade = 1.0 if i < nk - 25 else max(0.0, (nk - i) / 25.0)   # r16: only if KeySync is SHORTER than the master (pad the inputs: ks_pad); 1 s fade as a last resort

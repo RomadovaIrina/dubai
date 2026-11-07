@@ -3,7 +3,7 @@
 face_alignment) loaded once; each video runs the authors' sample() unchanged, with the same arguments as scripts/infer_raw.sh.
 Per-stage GPU timing (cuda-synchronised wall) by wrapping the pipeline's own functions; one JSON line per video.
     python ks_fast.py --jobs jobs.txt --out OUTDIR [--cfg _s6] [--decoding-t 1] [--compile unet|none]
-jobs.txt: "<tag> <video 25 fps 512^2> <audio 16 kHz>" per line. Run from the keysync code dir."""
+jobs.txt: "<tag> <video 25 fps 512^2> <audio 16 kHz> [ref frame]" per line. Run from the keysync code dir."""
 import argparse, json, os, sys, time
 sys.path.insert(0, os.getcwd()); sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))   # r15: ks_student / ks_trt next to this script
 import torch
@@ -178,7 +178,8 @@ def main():
         type(g).__call__ = lambda self, x, sig: call(x, sig) if self is g else call0.__func__(self, x, sig)
     for line in open(a.jobs):
         if not line.strip() or line.startswith("#"): continue
-        tag, vid, aud = line.split()
+        tag, vid, aud, *ex = line.split()   # r16 T: an optional 4th column = this job's KeySync reference frame (KS_REF_IDX, k2_refpick.py)
+        if ex: os.environ["KS_REF_IDX"] = ex[0]
         T.clear(); torch.cuda.synchronize(); t1 = time.perf_counter()
         d.sample(model, model_kf, video_path=vid, audio_path=aud, num_frames=14, resize_size=512, video_folder="videos", latent_folder="videos",
                  landmark_folder="landmarks", audio_folder="audios", audio_emb_folder="audios", fps_id=24, cond_aug=0.0, decoding_t=a.decoding_t,
