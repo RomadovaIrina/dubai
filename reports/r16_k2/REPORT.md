@@ -157,3 +157,22 @@ With the b8 gate on top:
   - Panel: `clips/q05_crop_source_static_tracked_{2-6,28-32}s_half_speed.mp4`.
   - Still broken: the 20 s cut to a product shot with a small picture-in-picture of him, in every crop. Needs shot handling: no KeySync on shots where the face is small / inset.
 - q06: VHS, near-profile, heavy gestures; MediaPipe finds a face in only 19 % of frames (27–38 s). KeySync's own detector found none in the static crop (crash: "No valid landmarks found"). The tracked crop is rendering.
+
+## Round 6: full finals = ref_teeth + b8 gate + K1 chain (k1/r16-paste 5c07cf7) + pause arm b
+Script: `scripts/keysync/r16/k2_k1chain.sh <v> <ref>` (run dir /workspace/dub/k1run with K1's tools).
+- The chain: the pad60 crop (no duplicated seam frame) + the 40 ms delayed, silence-padded dub, then ECC, tsmooth gate:0.5, snap, guard, ks_plain (lfm 6, upper-src, keep-nose, align 2, tex 2).
+- Optionally `k2_pause.py` warp on the guarded layer.
+
+| video (ref) | SyncNet speech@0 base / + pause b | black-cavity raw | guard replaced | last 30 frames |
+|---|---|---|---|---|
+| m03 (auto #46) | 8.71 / 8.73 | 8.0 % | 0 | clean (2.3×) |
+| **m03 (manual #84)** | 8.60 / 8.62 | 6.7 % | 1 (24.96 s) | clean |
+| m18 (#242) | 7.68 / 7.67 | – | 0 | clean (2.3×) |
+| old03 (#2002), shift −1 | 7.56 / 7.56 | – | 23 (42–85 s) | clean (2.8×) |
+
+- **The fixed 40 ms delay is wrong for old03** (its raw render was already at offset 0, so the final came out +1 frame late: SyncNet 4.63). Set shift = −(raw offset vs the ORIGINAL dub) per video.
+- m03 at 25.3–25.5 s: the auto-pick (#46, a smile) still draws a dark "O"; #84 (3.36 s, more open with upper teeth) shows the teeth. The picker is a candidate generator; a human picks from the contact sheet.
+- Files:
+  - `full/<v>_keysync_r16_refteeth_b8gate_k1chain{,_pauseB}.mp4` and `full/m03_keysync_r16_ref84_b8gate_k1chain{,_pauseB}.mp4`;
+  - `clips/<v>_final_k1chain_refteeth_pauseB_source_*` and `clips/m03_final_k1chain_ref46_ref84_ref84pauseB_source_23-27s_half_speed.mp4`.
+- q06: not KeySync-able (KeySync's detector finds no face even in the tracked crop); needs a no-face → skip / LatentSync rule.
