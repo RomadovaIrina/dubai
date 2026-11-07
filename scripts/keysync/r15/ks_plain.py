@@ -43,6 +43,11 @@ ap.add_argument("--cm-file", default="", help="r16 T (parallel paste, ks_plain_p
 ap.add_argument("--cm-only", action="store_true", help="r16 T: compute --cm-file over --write-range and exit")
 ap.add_argument("--write-range", default="", help="r16 T: 'A:B' = process and write only master frames A <= k < B (a chunk; the frames around it are context)")
 ap.add_argument("--absent", default="hold", choices=["hold", "skip"], help="r16 T: a master frame with no source landmarks (NaN): hold = paste with the last mask (r15), skip = leave the source frame (e2e: the face is absent there - a cutaway / outside its presence; ks_e2e_prep bridges short gaps)")
+ap.add_argument("--k-base", type=int, default=0, help="r16 K1 (set by ks_plain_par): the GLOBAL master index of this run's frame 0 (the k %% 3 / 5 / 10 sampling grids follow the global index)")
+ap.add_argument("--ks-base", type=int, default=0, help="r16 K1 (set by ks_plain_par): the GLOBAL KeySync index of this run's KeySync frame 0")
+ap.add_argument("--ks-total", type=int, default=-1, help="r16 K1 (set by ks_plain_par): the GLOBAL KeySync frame count (the end fade fires only when KeySync is really shorter than the master)")
+ap.add_argument("--n-total", type=int, default=-1, help="r16 K1 (set by ks_plain_par): the GLOBAL master frame count")
+ap.add_argument("--video-only", action="store_true", help="r16 K1 (set by ks_plain_par): write no audio (the chunks are joined and muxed with the mix once)")
 ap.add_argument("--lip-keep", default="", help="r16 K2: per-master-frame weights (.npy, k2_pause.py): the SOURCE lips (hull + 0.10 IOD) show through the paste mask")
 a = ap.parse_args()
 b = json.load(open(a.box)); x0, y0, s, W, H = b["x"], b["y"], b["side"], b["W"], b["H"]
@@ -161,47 +166,64 @@ if a.align > 0 and KL is not None:   # r16 K1: per-frame similarity KeySync -> s
         iodm = float(np.nanmedian(np.linalg.norm(LM[:, 33] - LM[:, 263], axis=1))); lim = 0.06 * iodm
         prm[:, :2] = np.clip(prm[:, :2], -lim, lim); prm[:, 2] = np.clip(prm[:, 2], -0.03, 0.03); prm[:, 3] = np.clip(prm[:, 3], -np.radians(2), np.radians(2))
         AT = prm; print(f"align: |t| mean {np.linalg.norm(prm[:, :2], axis=1).mean():.2f} px, scale {np.abs(prm[:, 2]).mean() * 100:.2f} %, rot {np.degrees(np.abs(prm[:, 3])).mean():.2f} deg", flush=True)
+KC = None
+if KL is not None and len(KL):
+    KC = KL[:, [33, 263, 133, 362, 168, 6]].mean(1); ok_ = np.isfinite(KC).all(1)
+    if ok_.any() and not ok_.all():
+        for d in range(2): KC[~ok_, d] = np.interp(np.flatnonzero(~ok_), np.flatnonzero(ok_), KC[ok_, d])
+    elif not ok_.any(): KC = None
 def warp_ks(kf, k, i):
     if AT is None or not (0 <= i < len(KL)): return kf
-    tx, ty, ds, th = AT[k]; c0 = KL[i][[33, 263, 133, 362, 168, 6]].mean(0) if np.isfinite(KL[i]).all() else np.array([s / 2, s / 2])
+    tx, ty, ds, th = AT[k]; c0 = KC[i] if KC is not None else np.array([s / 2, s / 2])
     M = cv2.getRotationMatrix2D((float(c0[0]), float(c0[1])), float(np.degrees(-th)), float(1 + ds)); M[:, 2] += [tx, ty]
     return cv2.warpAffine(kf, M, (s, s), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
 gain = np.ones(3, np.float32); off = np.zeros(3, np.float32); CAV = None
 is_open = lambda p: np.isfinite(p).all() and np.linalg.norm(p[61] - p[291]) > 5 and np.linalg.norm(p[13] - p[14]) / np.linalg.norm(p[61] - p[291]) > 0.15
 CMF = bool(a.cm_file) and os.path.exists(a.cm_file) and not a.cm_only
+CMZ = np.load(a.cm_file) if CMF else None
 WR = tuple(int(x) for x in a.write_range.split(":")) if a.write_range else (0, 1 << 30)
-if (not a.no_cm or a.cavity > 0) and not CMF:   # pass 1: the global colour match on the skin; the source's open-mouth interior tone (for --cavity)
+need_cm = not a.no_cm and (CMZ is None or "gain" not in CMZ.files)
+need_cav = a.cavity > 0 and (CMZ is None or "cav_l" not in CMZ.files)
+need_sh = a.sharp == "auto" and (CMZ is None or "sharp" not in CMZ.files)
+if CMZ is not None and (need_cav or need_sh): print(f"WARNING: {a.cm_file} has no {'cavity tone ' if need_cav else ''}{'sharp auto' if need_sh else ''}: computed from THIS run's frames only", flush=True)
+if need_cm or need_cav or need_sh:   # pass 1: the global colour match on the skin; the source's open-mouth interior tone (for --cavity)
     SK, SM, SC, HFR = [], [], [], []
     for k, f in enumerate(frames(a.master, W, H)):
-        if a.cavity > 0 and k % 3 == 0:
+        if need_cav and (k + a.k_base) % 3 == 0 and WR[0] <= k < WR[1]:
             p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)]
             if is_open(p):
                 mk = np.zeros((H, W), np.uint8); cv2.fillPoly(mk, [hull(p[INNER])], 1); mk = cv2.erode(mk, np.ones((3, 3), np.uint8))
                 if mk.sum() > 30: SC.append(cv2.cvtColor(f.astype(np.float32) / 255, cv2.COLOR_RGB2LAB)[mk > 0])
-        if a.no_cm or k % 5 or not (0 <= kidx(k) < len(K)) or not (WR[0] <= k < WR[1]): continue
+        if not (need_cm or need_sh) or (k + a.k_base) % 5 or not (0 <= kidx(k) < len(K)) or not (WR[0] <= k < WR[1]): continue
         _, sk = mask(k)
         if sk is None or sk.sum() < 500: continue
         lk = cv2.cvtColor(K[kidx(k)].astype(np.float32) / 255, cv2.COLOR_RGB2LAB)[sk]; lm_ = cv2.cvtColor(crop(f, k).astype(np.float32) / 255, cv2.COLOR_RGB2LAB)[sk]
-        SK.append(lk[:: 7]); SM.append(lm_[:: 7])
-        if a.sharp == "auto" and k % 10 == 0:
+        if need_cm: SK.append(lk[:: 7]); SM.append(lm_[:: 7])
+        if need_sh and (k + a.k_base) % 10 == 0:
             core = sk & (cv2.erode(sk.astype(np.uint8), el(0.1 * IODM)) > 0)
             HFR.append((hf_energy(cv2.cvtColor(crop(f, k), cv2.COLOR_RGB2GRAY).astype(np.float32), core), hf_energy(cv2.cvtColor(K[kidx(k)], cv2.COLOR_RGB2GRAY).astype(np.float32), core)))
-    if not a.no_cm:
-        if a.cm_only and not SK: np.savez(a.cm_file, n=0); sys.exit(0)
+    if a.cm_only:   # r16 K1: the sufficient statistics of EVERY global estimate (colour match sums, sharp-auto pairs, cavity samples): the parent combines them exactly
+        ex_ = {"hfr": np.array(HFR, np.float64).reshape(-1, 2), "sc": (np.concatenate(SC) if SC else np.zeros((0, 3), np.float32))}
+        if SK:
+            SK, SM = np.concatenate(SK), np.concatenate(SM)
+            np.savez(a.cm_file, n=len(SK), s1k=SK.sum(0, dtype=np.float64), s2k=(SK.astype(np.float64) ** 2).sum(0), s1m=SM.sum(0, dtype=np.float64), s2m=(SM.astype(np.float64) ** 2).sum(0), **ex_)
+        else: np.savez(a.cm_file, n=0, **ex_)
+        sys.exit(0)
+    if need_cm and SK:
         SK, SM = np.concatenate(SK), np.concatenate(SM)
-        if a.cm_file: np.savez(a.cm_file, n=len(SK), s1k=SK.sum(0, dtype=np.float64), s2k=(SK.astype(np.float64) ** 2).sum(0), s1m=SM.sum(0, dtype=np.float64), s2m=(SM.astype(np.float64) ** 2).sum(0))
-        if a.cm_only: sys.exit(0)
         gain = np.clip(SM.std(0) / np.maximum(SK.std(0), 1e-3), 0.9, 1.1).astype(np.float32); off = (SM.mean(0) - SK.mean(0) * gain).astype(np.float32)
         print(f"global colour match (Lab): gain {gain.round(3).tolist()} offset {off.round(2).tolist()}", flush=True)
-    if a.sharp == "auto" and HFR:
+    if need_sh and HFR:
         h_ = np.array([x for x in HFR if np.isfinite(x).all() and x[1] > 0]); r_ = float(np.median(h_[:, 0] / h_[:, 1])) if len(h_) else 1.0
         SHARP = float(np.clip((r_ - 1) * 1.5, 0, 1.5)); print(f"sharp auto: skin HF source / KeySync {r_:.3f} -> unsharp {SHARP:.2f}", flush=True)
-    if a.cavity > 0 and SC:
+    if need_cav and SC:
         SC = np.concatenate(SC); CAV = (float(np.percentile(SC[:, 0], 30)), SC[:, 1:].mean(0).astype(np.float32))
         print(f"source open-mouth interior: L p30 {CAV[0]:.1f}, a/b {CAV[1].round(1).tolist()} ({len(SC)} px)", flush=True)
-if CMF:
-    _c = np.load(a.cm_file); gain, off = _c["gain"].astype(np.float32), _c["off"].astype(np.float32)
-    print(f"colour match from {a.cm_file}: gain {gain.round(3).tolist()} offset {off.round(2).tolist()}", flush=True)
+if CMZ is not None:
+    if "gain" in CMZ.files and not a.no_cm:
+        gain, off = CMZ["gain"].astype(np.float32), CMZ["off"].astype(np.float32); print(f"colour match from {a.cm_file}: gain {gain.round(3).tolist()} offset {off.round(2).tolist()}", flush=True)
+    if a.sharp == "auto" and "sharp" in CMZ.files: SHARP = float(CMZ["sharp"]); print(f"sharp auto from {a.cm_file}: unsharp {SHARP:.2f}", flush=True)
+    if a.cavity > 0 and "cav_l" in CMZ.files and float(CMZ["cav_l"]) >= 0: CAV = (float(CMZ["cav_l"]), CMZ["cav_ab"].astype(np.float32)); print(f"cavity tone from {a.cm_file}: L p30 {CAV[0]:.1f}", flush=True)
 if a.cm_only: sys.exit(0)
 NT = [0, 0]
 
@@ -268,16 +290,29 @@ def scale_fix(kf, k):
     return cv2.warpAffine(kf, M, (s, s), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
 DG = []
 fps_m = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=r_frame_rate", "-of", "csv=p=0", a.master], capture_output=True, text=True).stdout.strip()
-w = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", fps_m, "-i", "-", "-i", a.audio, "-map", "0:v", "-map", "1:a",
-                      "-c:v", "libx264", "-crf", "16", "-preset", "medium"] + ks_cms.enc() + ["-c:a", "aac", "-b:a", "192k", "-shortest", a.out], stdin=subprocess.PIPE)
+def audio_args(audio, nv, fps):   # r16 K1: the accepted mix is stream-copied (no AAC re-encode); -shortest kept, with a WARNING when it would cut either stream
+    pr = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name:format=duration", "-of", "json", audio], capture_output=True, text=True).stdout
+    js = json.loads(pr or "{}"); codec = (js.get("streams") or [{}])[0].get("codec_name", ""); dur = float(js.get("format", {}).get("duration", 0) or 0)
+    fr = eval(fps) if isinstance(fps, str) else float(fps); vd = nv / fr
+    if abs(dur - vd) > 1.0 / fr: print(f"WARNING: audio {dur:.3f} s vs video {vd:.3f} s ({nv} frames): -shortest cuts the {'audio' if dur > vd else 'VIDEO'} by {abs(dur - vd):.3f} s", flush=True)
+    if codec in ("aac", "mp3", "ac3", "eac3", "alac"): return ["-c:a", "copy", "-shortest"]
+    print(f"WARNING: audio codec '{codec}' cannot be stream-copied into mp4: re-encoded to AAC 192k", flush=True); return ["-c:a", "aac", "-b:a", "192k", "-shortest"]
+nw_ = (min(WR[1], n) - WR[0]) if a.write_range else n
+AU = ["-an"] if a.video_only else ["-i", a.audio, "-map", "0:v", "-map", "1:a"]
+w = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", fps_m, "-i", "-"] + AU +
+                     ["-c:v", "libx264", "-crf", "16", "-preset", "medium"] + ks_cms.enc() + ([] if a.video_only else audio_args(a.audio, nw_, fps_m)) + [a.out], stdin=subprocess.PIPE)
 last[0] = None; nk = len(K)
-if nk - a.shift < n: print(f"WARNING: KeySync has {nk} frames < master {n} (+ shift {a.shift}): the last {n - nk + a.shift} frames fall back to the source with a 1 s fade; pad the KeySync inputs", flush=True)
+NKT = a.ks_total if a.ks_total >= 0 else nk; NTT = a.n_total if a.n_total >= 0 else n; SHG = a.k_base - a.ks_base + a.shift   # global KeySync length / master length / shift
+KS_SHORT = NKT - SHG < NTT   # the end fade exists ONLY for a KeySync output that is really shorter than the master (never because a chunk was cut)
+if KS_SHORT: print(f"WARNING: KeySync has {NKT} frames < master {NTT} (+ shift {SHG}): the last {NTT - NKT + SHG} frames fall back to the source with a 1 s fade; pad the KeySync inputs", flush=True)
+NFADE = 0
 for k, f in enumerate(frames(a.master, W, H)):
     if k < WR[0]: continue
     if k >= WR[1]: break
     f = f.copy(); i = kidx(k); m, _ = mask(k)
     if m is not None:
-        fade = 1.0 if i < nk - 25 else max(0.0, (nk - i) / 25.0)   # r16: only if KeySync is SHORTER than the master (pad the inputs: ks_pad); 1 s fade as a last resort
+        ig = i + a.ks_base; fade = 1.0 if (not KS_SHORT or ig < NKT - 25) else max(0.0, (NKT - ig) / 25.0)   # r16: only if KeySync is SHORTER than the master (pad the inputs); 1 s fade as a last resort
+        NFADE += fade < 1.0
         kf = scale_fix(warp_ks(K[int(np.clip(i, 0, nk - 1))].astype(np.float32), k, i), k)
         if not a.no_cm:
             lab = cv2.cvtColor(kf / 255, cv2.COLOR_RGB2LAB) * gain + off
@@ -311,4 +346,5 @@ if a.diag and DG:
     out_ = {"edge_dE_mean": round(float(de.mean()), 3), "edge_dL_mean": round(float(dg[:, 1].mean()), 3), "edge_da_mean": round(float(dg[:, 2].mean()), 3), "edge_db_mean": round(float(dg[:, 3].mean()), 3),
             "drift_std_L": round(float(slow[6:-6, 0].std()), 3), "drift_std_ab": round(float(np.linalg.norm(slow[6:-6, 1:3].std(0))), 3), "hf_ratio_core": round(float(np.nanmedian(dg[:, 4])), 3)}
     json.dump(out_, open(a.diag, "w")); print("diag", json.dumps(out_), flush=True)
+if NFADE: print(f"WARNING: end fade KeySync -> source on {NFADE} frames (global KeySync {NKT} frames, master {NTT}, shift {SHG})", flush=True)
 w.stdin.close(); w.wait(); print(f"plain paste -> {a.out} ({n} frames; cavity lifted in {NT[0]}, texture on {NT[1]})", flush=True)
