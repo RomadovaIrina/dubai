@@ -14,23 +14,8 @@ while read tag vid aud; do
   [ -s $R/data/videos/$tag.mp.npz ] || /venv/mediapipe/bin/python $Q/mp_landmarks.py --video $vid --out $R/data/videos/$tag.mp.npz > /dev/null 2>&1
   /venv/mediapipe/bin/python $Q/mp_landmarks.py --video $G --out $O/$tag.mp.npz > /dev/null 2>&1
   python3 $R/repo/scripts/keysync/r16/l/l_cheek.py --gen $O/$tag.mp.npz --src $R/data/videos/$tag.mp.npz --out $O/$tag.cheek.json > /dev/null
-  (cd /workspace/dub/dubai && flock /workspace/dub/gpu.lock /venv/dabai/bin/python $Q/sync_perframe.py --video $G --audio $aud --out $O/$tag.sync.json > $O/$tag.sync.log 2>&1)
+  (cd /workspace/dub/dubai && SYNC_DEVICE=cpu /venv/dabai/bin/python $R/repo/scripts/quality/sync_perframe.py --video $G --audio $aud --out $O/$tag.sync.json > $O/$tag.sync.log 2>&1; echo cpu > $O/$tag.sync.dev)
   /venv/dabai/bin/python $K/k_cavity.py --pairs gen=$G:$O/$tag.mp.npz src=$vid:$R/data/videos/$tag.mp.npz > $O/$tag.cav.json 2>/dev/null
   /venv/dabai/bin/python $R/repo/scripts/keysync/r16/l/l_flow.py --gen $G --gen-lm $O/$tag.mp.npz --src $vid --src-lm $R/data/videos/$tag.mp.npz --out $O/$tag.flow.json > /dev/null 2>&1
 done < $J
-python3 - $O <<'EOF'
-import json, sys, glob, os
-O = sys.argv[1]; res = {}
-for f in sorted(glob.glob(f"{O}/*.cheek.json")):
-    t = os.path.basename(f).split(".")[0]; c = json.load(open(f)); r = {"cheek": c["ratio"], "gen": c["gen"], "src": c["src"]}
-    try: s = json.load(open(f"{O}/{t}.sync.json"))["global"]; r["sync"] = {"conf": s["conf"], "off": s["av_offset"]}
-    except Exception as e: r["sync"] = str(e)
-    try:
-        cv = json.load(open(f"{O}/{t}.cav.json")); r["cavity"] = {k: {kk: v.get(kk) for kk in ("open_frames", "black_hole_frames", "black_hole_share", "black_hole_times")} for k, v in cv.items()}
-    except Exception: pass
-    try: r["flow"] = json.load(open(f"{O}/{t}.flow.json"))
-    except Exception: pass
-    res[t] = r
-json.dump(res, open(f"{O}/metrics.json", "w"), indent=1)
-for t, r in res.items(): print(t, "flow", r.get("flow", {}).get("ratio"), "sync", r["sync"], "cav", {k: (v["black_hole_frames"], v["open_frames"]) for k, v in (r.get("cavity") or {}).items()})
-EOF
+python3 $R/repo/scripts/keysync/r16/l/l_agg.py $O

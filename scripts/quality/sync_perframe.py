@@ -109,7 +109,7 @@ def main():
     ap.add_argument("--mp-npz", default=None); ap.add_argument("--out", required=True); ap.add_argument("--bin", type=float, default=1.0); ap.add_argument("--ctx", type=float, default=0.5)
     ap.add_argument("--frames", default=None, help="a:b restrict the per-second table to these frames")
     a = ap.parse_args()
-    tracks = syncnet_dists(pathlib.Path(a.video), pathlib.Path(a.audio) if a.audio else None)
+    tracks = syncnet_dists(pathlib.Path(a.video), pathlib.Path(a.audio) if a.audio else None, device=os.environ.get("SYNC_DEVICE", "cuda"))
     res = {"video": a.video, "audio": a.audio, "tracks": []}
     confs, offs = [], []
     for t in tracks:
