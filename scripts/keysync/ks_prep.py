@@ -11,6 +11,7 @@ cx, cy = np.median((mn[:, 0] + mx[:, 0]) / 2), np.median((mn[:, 1] + mx[:, 1]) /
 fh = np.percentile(mx[:, 1] - mn[:, 1], 90); mov = max(np.ptp((mn[:, 0] + mx[:, 0]) / 2), np.ptp((mn[:, 1] + mx[:, 1]) / 2))
 side = int(min(W, H, float(__import__("os").environ.get("KS_BOX_K", 1.7)) * fh + float(__import__("os").environ.get("KS_BOX_M", 1)) * mov)) // 2 * 2
 x0 = int(np.clip(cx - side / 2, 0, W - side)); y0 = int(np.clip(cy - side / 2 + 0.05 * side, 0, H - side))
+x0, y0 = x0 // 2 * 2, y0 // 2 * 2   # r16b K1 (audit P2): even origin = what ffmpeg's yuv420p crop really does, so box.json and the crop agree
 json.dump({"x": x0, "y": y0, "side": side, "W": W, "H": H, "face_h": float(fh), "move": float(mov)}, open(f"{out}/box_{tag}.json", "w"))
 subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", vid, "-an", "-vf", f"crop={side}:{side}:{x0}:{y0},fps=25,scale=512:512:flags=lanczos", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", f"{out}/videos/{tag}.mp4"], check=True)
 subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", wav, "-ac", "1", "-ar", "16000", f"{out}/audios/{tag}.wav"], check=True)

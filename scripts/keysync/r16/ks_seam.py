@@ -14,7 +14,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ks_cms
 ap = argparse.ArgumentParser(); [ap.add_argument("--" + k, required=True) for k in ("layer", "src", "out")]
 ap.add_argument("--chunks", default="", help="ks_chunk.py chunks.json: the KeySync runs [a, b) on the joined layer (the 13-frame grid restarts in each)")
-ap.add_argument("--period", type=int, default=13); ap.add_argument("--ratio", type=float, default=2.0); ap.add_argument("--force-phase", type=int, default=-1)
+ap.add_argument("--period", type=int, default=13); ap.add_argument("--ratio", type=float, default=2.0, help="ratio where the smoothing STARTS (weight 0)")
+ap.add_argument("--ratio-full", type=float, default=3.0, help="r16b K1 (audit P1): ratio where the weight reaches 1; linear in between, so near-identical runs give near-identical output (no 0 / 82-boundary flip)"); ap.add_argument("--force-phase", type=int, default=-1)
 ap.add_argument("--min-run", type=int, default=78, help="a run shorter than this (6 periods) is left unchanged (too few boundaries to detect the phase)")
 a = ap.parse_args()
 def rd(p, fmt="bgr24", ch=3):
@@ -38,11 +39,16 @@ for r0, r1 in runs:
     tt = np.arange(r0, min(r1, n) - 1); e_ = ex[tt]; ok = np.isfinite(e_); ph_ = (tt - r0) % a.period
     ph = np.array([e_[ok & (ph_ == q)].mean() if (ok & (ph_ == q)).any() else np.nan for q in range(a.period)])
     q = int(np.nanargmax(ph)) if a.force_phase < 0 else a.force_phase
-    rest = float(np.nanmedian(np.delete(ph, q))); r = float(ph[q] / max(rest, 0.05)); nb = 0
-    if r >= a.ratio or a.force_phase >= 0:
-        for t in range(r0 + q, min(r1, n) - 1, a.period):   # the jump t -> t+1 (both frames inside this run)
-            A, B = F[t], F[t + 1]; out[t] = interp(A, B, G[t], G[t + 1], 1 / 3); out[t + 1] = interp(A, B, G[t], G[t + 1], 2 / 3); nb += 1
-    info.append({"run": [r0, r1], "phase": q, "peak_excess": round(float(ph[q]), 3), "rest_median": round(rest, 3), "ratio": round(r, 2), "boundaries_fixed": nb})
+    rest = float(np.nanmedian(np.delete(ph, q))); r = float(ph[q] / max(rest, 0.05)); nb = 0; wgt = 0.0
+    wgt = 1.0 if a.force_phase >= 0 else float(np.clip((r - a.ratio) / max(a.ratio_full - a.ratio, 1e-6), 0, 1))
+    if wgt > 0:
+        for t in range(r0 + q, min(r1, n) - 1, a.period):   # the jump t -> t+1 (both frames inside this run); blended with the original by the weight
+            A, B = F[t], F[t + 1]
+            for u, tau, X in ((t, 1 / 3, A), (t + 1, 2 / 3, B)):
+                I_ = interp(A, B, G[t], G[t + 1], tau).astype(np.float32)
+                out[u] = np.clip((1 - wgt) * X.astype(np.float32) + wgt * I_ + 0.5, 0, 255).astype(np.uint8)
+            nb += 1
+    info.append({"run": [r0, r1], "phase": q, "peak_excess": round(float(ph[q]), 3), "rest_median": round(rest, 3), "ratio": round(r, 2), "weight": round(wgt, 3), "boundaries_fixed": nb})
 p_ = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", "512x512", "-r", "25", "-i", "-", "-c:v", "libx264", "-crf", "10"] + ks_cms.enc() + [a.out], stdin=subprocess.PIPE)
 p_.stdin.write(out.tobytes()); p_.stdin.close(); p_.wait(); json.dump(info, open(a.out + ".seam.json", "w"))
 for x in info: print("== ks_seam", json.dumps(x))

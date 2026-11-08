@@ -39,7 +39,6 @@ ap.add_argument("--tex", type=float, default=2.0, help="r15 stubble / pores: the
                 "geometry, replace KeySync's inside the face mask outside the generated lips (dilated 0.15 IOD); 0 = off")
 ap.add_argument("--tex-rgb", type=int, default=0, help="r16b K1 texture-keep: 1 = the source high frequencies on all 3 channels (beard / skin colour boil), 0 = luma only")
 ap.add_argument("--tex-flow", type=int, default=1, help="r16b K1: 1 = DIS-warp the source texture onto KeySync's geometry (per frame), 0 = no warp (box / ECC aligned only)")
-ap.add_argument("--tex-flow-ema", type=float, default=0.0, help="r16b K1: temporal EMA of the texture flow (0 = per-frame flow; 0.8 = smoothed: the source texture follows the jaw slowly, no per-frame boil)")
 ap.add_argument("--tex-dil", type=float, default=0.15, help="r16b K1: the generated-lip keep zone = the outer-lip hull dilated by this x IOD (soft edge 0.05 IOD)")
 ap.add_argument("--cavity", type=float, default=0.0, help="r15 black-hole mouth: lift strength (0..1) of the near-black inner-mouth pixels toward the source's open-mouth "
                 "interior tone (L 30th percentile + mean a / b of the source's open frames); 0 = off")
@@ -232,7 +231,6 @@ if a.cm_only: sys.exit(0)
 NT = [0, 0]
 
 
-FLE = [None, -9]   # r16b K1: the EMA texture flow state (flow, layer index)
 def fix_ks(kf, i, m, src_crop):   # r15 --cavity / --tex on one KeySync crop (float RGB 0..255) -> float RGB
     kp = KL[int(np.clip(i, 0, len(KL) - 1))] if KL is not None else None
     if a.cavity > 0 and CAV is not None and kp is not None and is_open(kp):
@@ -249,9 +247,6 @@ def fix_ks(kf, i, m, src_crop):   # r15 --cavity / --tex on one KeySync crop (fl
         if a.tex_flow:
             fl = DIS.calc(cv2.resize(gk, (h2, h2), interpolation=cv2.INTER_AREA), cv2.resize(gs, (h2, h2), interpolation=cv2.INTER_AREA), None)
             fl = cv2.resize(fl, (s, s)) * (s / h2)
-            if a.tex_flow_ema > 0:
-                if FLE[0] is not None and FLE[1] == i - 1: fl = a.tex_flow_ema * FLE[0] + (1 - a.tex_flow_ema) * fl
-                FLE[0], FLE[1] = fl, i
         else: fl = np.zeros((s, s, 2), np.float32)
         yk = cv2.cvtColor(kf.astype(np.float32), cv2.COLOR_RGB2YCrCb); ys = cv2.cvtColor(sc, cv2.COLOR_RGB2YCrCb)[..., 0]
         ws = cv2.remap(ys, GX + fl[..., 0], GY + fl[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
