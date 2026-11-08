@@ -1,0 +1,25 @@
+{
+ "label": "q02_golden",
+ "final": "/workspace/dub/r16in/golden/q02_keysync_r16_route_track.mp4",
+ "dub": "/workspace/dub/r16in/day1/HANDOFF_Q/mixes/q02_vera/dubbed_16k.wav",
+ "wh": "1920,1080",
+ "status": "OK",
+ "speech_at0": 1.805,
+ "noise_pm": 0.075,
+ "n_speech_sec": 3,
+ "n_offscreen_sec": 23,
+ "speech_at0_all_dub": 0.211,
+ "face_lost_share": 0.0,
+ "face_lost_max": 0.05,
+ "global_conf": 0.172,
+ "av_offset": -7,
+ "speaker_select": "route",
+ "multi_face_frames": 0,
+ "other_tracks": [],
+ "cpu_minus_gpu": null,
+ "variants": {
+  "main": 1.805,
+  "dec": 1.73,
+  "crop": 1.815
+ }
+}

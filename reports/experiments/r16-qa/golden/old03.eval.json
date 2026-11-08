@@ -1,0 +1,23 @@
+{
+ "label": "old03_golden",
+ "final": "/workspace/dub/r16in/golden/old03_keysync_clean5.mp4",
+ "dub": "/workspace/dub/r16in/HANDOFF_K/paste_inputs/old03/dubbed_16k.wav",
+ "wh": "464,848",
+ "status": "OK",
+ "speech_at0": 7.551,
+ "noise_pm": 0.033,
+ "n_speech_sec": 53,
+ "face_lost_share": 0.0,
+ "face_lost_max": 0.05,
+ "global_conf": 5.938,
+ "av_offset": 0,
+ "speaker_select": "largest_box",
+ "multi_face_frames": 0,
+ "other_tracks": [],
+ "cpu_minus_gpu": null,
+ "variants": {
+  "main": 7.551,
+  "dec": 7.53,
+  "crop": 7.518
+ }
+}

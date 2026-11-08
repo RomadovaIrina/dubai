@@ -1,0 +1,24 @@
+{
+ "label": "m18_golden",
+ "final": "/workspace/dub/r16in/golden/m18_keysync_clean5.mp4",
+ "dub": "/workspace/dub/r16in/HANDOFF_K/paste_inputs/m18/dubbed_16k.wav",
+ "wh": "720,1280",
+ "status": "OK",
+ "speech_at0": 7.927,
+ "noise_pm": 0.009,
+ "n_speech_sec": 18,
+ "face_lost_share": 0.0,
+ "face_lost_max": 0.05,
+ "global_conf": 7.742,
+ "av_offset": 0,
+ "speaker_select": "largest_box",
+ "multi_face_frames": 0,
+ "other_tracks": [],
+ "cpu_minus_gpu": 0.006,
+ "variants": {
+  "main": 7.927,
+  "dec": 7.929,
+  "crop": 7.936,
+  "cpu": 7.921
+ }
+}

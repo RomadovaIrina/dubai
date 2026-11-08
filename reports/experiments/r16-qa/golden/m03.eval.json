@@ -1,0 +1,33 @@
+{
+ "label": "m03_golden",
+ "final": "/workspace/dub/r16in/golden/m03_keysync_clean5.mp4",
+ "dub": "/workspace/dub/r16in/HANDOFF_K/paste_inputs/m03/dubbed_16k.wav",
+ "wh": "720,1280",
+ "status": "OK",
+ "speech_at0": 8.676,
+ "noise_pm": 0.051,
+ "n_speech_sec": 34,
+ "n_offscreen_sec": 0,
+ "speech_at0_all_dub": 8.676,
+ "face_lost_share": 0.0,
+ "face_lost_max": 0.05,
+ "global_conf": 7.966,
+ "av_offset": 0,
+ "speaker_select": "route",
+ "multi_face_frames": 1006,
+ "other_tracks": [
+  {
+   "id": 0,
+   "speech_frames": 850,
+   "conf": 0.262,
+   "offset": 13,
+   "conf_at0": -0.102
+  }
+ ],
+ "cpu_minus_gpu": null,
+ "variants": {
+  "main": 8.676,
+  "dec": 8.625,
+  "crop": 8.63
+ }
+}

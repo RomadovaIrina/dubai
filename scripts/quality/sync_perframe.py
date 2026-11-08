@@ -126,14 +126,13 @@ def main():
     if a.device == "cpu":
         import torch; torch.set_num_threads(int(os.environ.get("SPF_THREADS", "24")))
     tracks = syncnet_dists(pathlib.Path(a.video), pathlib.Path(a.audio) if a.audio else None, device=a.device)
-    spk_xy = None
-    if a.speaker_xy: spk_xy = tuple(map(float, a.speaker_xy.split(",")))
+    spk_xy = None; spk_list = []   # every face the route lip-syncs (q02: Vera + the man) counts as a speaker
+    if a.speaker_xy: spk_xy = tuple(map(float, a.speaker_xy.split(","))); spk_list = [spk_xy]
     elif a.route:
-        c = json.load(open(a.route)).get("lipsync_box_center_xy")
-        if c:
-            sx = sy = 1.0
-            if a.route_wh: rw, rh = map(float, a.route_wh.split(",")); sx, sy = VW / rw, VH / rh
-            spk_xy = (c[0] * sx, c[1] * sy)
+        R = json.load(open(a.route)); sx = sy = 1.0
+        if a.route_wh: rw, rh = map(float, a.route_wh.split(",")); sx, sy = VW / rw, VH / rh
+        cs = [f["box_center_xy"] for f in R.get("faces", []) if f.get("mode") == "lipsync" and f.get("box_center_xy")] or ([R["lipsync_box_center_xy"]] if R.get("lipsync_box_center_xy") else [])
+        spk_list = [(c[0] * sx, c[1] * sy) for c in cs]; spk_xy = spk_list[0] if spk_list else None
     for t in tracks:
         bb = t["bbox"]
         t["cxy"] = None if bb is None else (float(np.median((bb[:, 0] + bb[:, 2]) / 2)), float(np.median((bb[:, 1] + bb[:, 3]) / 2)))
@@ -142,10 +141,10 @@ def main():
             sz = dict(zip(t["bframes"].tolist(), (bb[:, 2] - bb[:, 0]).tolist()))
             t["fsize"] = np.array([sz.get(int(f), t["size"]) for f in t["frame"]], np.float32)
         else: t["fsize"] = np.zeros(len(t["d"]), np.float32)
-        t["speaker"] = None if spk_xy is None or t["cxy"] is None else bool(np.hypot(t["cxy"][0] - spk_xy[0], t["cxy"][1] - spk_xy[1]) < 1.5 * max(t["size"], 1.0))
+        t["speaker"] = None if spk_xy is None or t["cxy"] is None else any(bool(np.hypot(t["cxy"][0] - x, t["cxy"][1] - y) < 1.5 * max(t["size"], 1.0)) for x, y in spk_list)
     sel = "route" if spk_xy is not None else "largest_box"
     if spk_xy is not None and not any(t["speaker"] for t in tracks): sel = "largest_box (no track near the speaker xy)"
-    res = {"video": a.video, "audio": a.audio, "speaker_select": sel, "speaker_xy": spk_xy, "tracks": []}
+    res = {"video": a.video, "audio": a.audio, "speaker_select": sel, "speaker_xy": spk_list, "tracks": []}
     D = np.full((N, 2 * VSHIFT + 1), np.nan, np.float32); Dsz = np.full(N, -1.0, np.float32); owner = np.full(N, -1, np.int32); cover = np.zeros(N, np.int32)
     for i, t in enumerate(tracks):
         ok = t["frame"] < N; fr = t["frame"][ok]; cover[fr] += 1
