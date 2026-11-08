@@ -36,8 +36,17 @@ URL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_land
 ALL = ["black", "slide", "swap", "overlap", "texture", "explode", "edge", "flicker"]
 # thresholds (calibrated r16 on m03 / m18 / old03, see reports/experiments/r16-qa/DETECTORS.md)
 THR = dict(black_L=15.0, black_bright=0.02, black_open=0.15, slide=4.0, overlap=0.03, texture=0.6, explode_shape=0.10, explode_px=3.5,
-           edge=3.0, flicker=2.0, swap=0.4)
+           edge=3.0, flicker=2.0, swap=0.4, black_rel=8.0, explode_srcx=2.0)   # r16 audit: black_rel L* / explode_srcx = ours must snap >= 2x the source
 MINLEN = dict(black=3, slide=2, swap=3, overlap=3, texture=8, explode=1, edge=5, flicker=6)
+
+
+def fingerprint(v):
+    """size + sha1 of the first / last 4 MB: a re-render with the same name gets a new key (audit r16: stale det.npz)"""
+    import hashlib
+    v = pathlib.Path(v); n = v.stat().st_size; h = hashlib.sha1(str(n).encode())
+    with open(v, "rb") as f:
+        h.update(f.read(4 << 20)); f.seek(max(0, n - (4 << 20))); h.update(f.read(4 << 20))
+    return h.hexdigest()[:16]
 
 
 def probe(v):
@@ -126,8 +135,14 @@ def main():
 
     # ---- pass 1: faces on the source (full frame, downscaled) -> target track + others
     cache = pathlib.Path(a.npz) if a.npz else None
+    KEY = f"{fingerprint(a.src)}:{fingerprint(a.ours)}:{a.t0:g}:{a.t1:g}"
     if cache and cache.exists():
-        z = np.load(cache, allow_pickle=True); cen, fw, others = z["cen"], z["fw"], list(z["others"]); lmS, lmO = z["lmS"], z["lmO"]; boxes = z["boxes"]
+        z = np.load(cache, allow_pickle=True)
+        if "key" not in z.files or str(z["key"]) != KEY:
+            print(f"det cache {cache}: key mismatch (stale: other video / t0 / t1) -> recomputed", file=sys.stderr); z = None
+    else: z = None
+    if z is not None:
+        cen, fw, others = z["cen"], z["fw"], list(z["others"]); lmS, lmO = z["lmS"], z["lmO"]; boxes = z["boxes"]
         have_crop_lm = True
     else:
         have_crop_lm = False
@@ -156,7 +171,7 @@ def main():
         mp, lkS = landmarker(1); _, lkO = landmarker(1); lmS = np.full((N, 478, 2), np.nan, np.float32); lmO = lmS.copy()
     nanv = lambda: np.full(N, np.nan)
     M = {k: nanv() for k in ["iod", "open_o", "cavL_o", "cavB_o", "open_s", "cavL_s", "cavB_s", "slide", "slide_up", "slide_lc", "slide_rc", "slide_ch",
-                             "overlap", "mdiff", "hf_o", "hf_s", "gap_o", "mw_o", "mpx_o", "mpx_s", "edge", "edge_in", "lipL_o", "lipA_o", "lipL_s", "lipA_s"]}
+                             "overlap", "mdiff", "hf_o", "hf_s", "gap_o", "mw_o", "gap_s", "mw_s", "mpx_o", "mpx_s", "edge", "edge_in", "lipL_o", "lipA_o", "lipL_s", "lipA_s"]}
     gS, gO, prevO, prevS = None, None, None, None
     for k, (fS, fO) in enumerate(zip(reader(a.src, W, H, a.t0, a.t1), reader(a.ours, W, H, a.t0, a.t1))):
         if k >= N: break
@@ -176,7 +191,7 @@ def main():
             if not np.isfinite(p).all(): continue
             gap, mw = float(np.linalg.norm(p[13] - p[14])), float(np.linalg.norm(p[61] - p[291]))
             M["open_" + tag][k] = gap / max(mw, 1e-6)
-            if tag == "o": M["gap_o"][k], M["mw_o"][k] = gap / iod, mw / iod
+            M["gap_" + tag][k], M["mw_" + tag][k] = gap / iod, mw / iod
             if gap / max(mw, 1e-6) > THR["black_open"]:
                 mk = cv2.erode(hull_mask(sh, p[INNER]), np.ones((3, 3), np.uint8))
                 if mk.sum() > 30:
@@ -237,7 +252,7 @@ def main():
             if sh_: M["overlap"][k] = max(sh_)
     if not have_crop_lm:
         lkS.close(); lkO.close()
-        if cache: np.savez_compressed(cache, cen=cen, fw=fw, others=np.array(others, dtype=object), lmS=lmS, lmO=lmO, boxes=boxes)
+        if cache: np.savez_compressed(cache, key=np.array(KEY), cen=cen, fw=fw, others=np.array(others, dtype=object), lmS=lmS, lmO=lmO, boxes=boxes)
 
     # ---- per-detector flags
     R = {"label": a.label, "src": a.src, "ours": a.ours, "frames": int(N), "t0": a.t0, "fps": FPS, "size": [W, H],
@@ -247,8 +262,12 @@ def main():
         R["det"][name] = {"flag_frames": int(flag.sum()), "flag_share": round(float(flag.mean()), 4), "ranges": runs(flag, val, MINLEN[name]), **extra}
     if "black" in only:
         bo = (M["cavL_o"] < THR["black_L"]) & (M["cavB_o"] < THR["black_bright"]); bs = (M["cavL_s"] < THR["black_L"]) & (M["cavB_s"] < THR["black_bright"])
+        # relative to the source (audit r16): a dark cavity the SOURCE also has at that frame (same lighting / no teeth shown) is not ours;
+        # flagged = ours black AND (the source black is False there AND, when the source mouth is open too, ours is >= BLACK_REL L* darker)
+        bo_abs = bo.copy(); srcL = M["cavL_s"]
+        bo = bo & ~bs & ~(np.isfinite(srcL) & (srcL - M["cavL_o"] < THR["black_rel"]))
         no, ns = int(np.isfinite(M["cavL_o"]).sum()), int(np.isfinite(M["cavL_s"]).sum())
-        put("black", bo, 100 - np.nan_to_num(M["cavL_o"], nan=100), {"open_frames_ours": no, "black_share_ours": round(bo.sum() / max(no, 1), 3),
+        put("black", bo, 100 - np.nan_to_num(M["cavL_o"], nan=100), {"abs_flag_frames": int(np.nansum(bo_abs)), "open_frames_ours": no, "black_share_ours": round(bo.sum() / max(no, 1), 3),
             "open_frames_src": ns, "black_share_src": round(bs.sum() / max(ns, 1), 3)})
     if "slide" in only:
         s = M["slide"]; put("slide", s > THR["slide"], s, {"median_pct_iod": round(float(np.nanmedian(s)), 2), "p95": round(float(np.nanpercentile(s, 95)), 2),
@@ -268,11 +287,13 @@ def main():
         def d2(x):
             y = np.full_like(x, np.nan); y[1:-1] = np.abs(x[2:] - 2 * x[1:-1] + x[:-2]); return y
         shp = np.fmax(np.fmax(d2(M["gap_o"]), d2(M["mw_o"])), d2(M["open_o"]) * THR["explode_shape"] / 0.15)   # open ratio snap 0.15 = the m03 8.68 s LatentSync tear
+        shs = np.fmax(np.fmax(d2(M["gap_s"]), d2(M["mw_s"])), d2(M["open_s"]) * THR["explode_shape"] / 0.15)   # the SAME snap measure on the source
+        shp_abs = shp.copy(); shp = np.where(np.nan_to_num(shs) * THR["explode_srcx"] >= shp, 0.0, shp)   # audit r16: a snap the source has too (cut, fast real move) is not ours
         loc = median_filter(np.nan_to_num(M["mpx_o"], nan=0), size=25, mode="nearest")
         pz = M["mpx_o"] / np.maximum(loc, 0.5); rel = M["mpx_o"] / np.maximum(M["mpx_s"], 1.0)
         px = (pz > THR["explode_px"]) & (rel > 2.5) & (M["mpx_o"] > 6.0)
         put("explode", (shp > THR["explode_shape"]) | px, np.fmax(np.nan_to_num(shp) / THR["explode_shape"], np.nan_to_num(pz) / THR["explode_px"]),
-            {"shape_snaps": int(np.nansum(shp > THR["explode_shape"])), "pixel_snaps": int(px.sum())})
+            {"shape_snaps": int(np.nansum(shp > THR["explode_shape"])), "shape_snaps_abs": int(np.nansum(shp_abs > THR["explode_shape"])), "pixel_snaps": int(px.sum())})
     if "edge" in only:
         e = M["edge"] - M["edge_in"]; put("edge", e > THR["edge"], e, {"median": round(float(np.nanmedian(e)), 2), "p95": round(float(np.nanpercentile(e, 95)), 2)})
     if "flicker" in only:
