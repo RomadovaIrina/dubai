@@ -158,6 +158,8 @@ pick_engine() {   # face=auto: KeySync for every face. Irina 08.11 on the beard 
   [ "$FACE" = auto ] || return 0   # so the route's beard -> latentsync choice is only an OPT-IN (DUB_BEARD_LATENTSYNC=1); DUB_FACE_ENGINE still overrides
   if [ "${DUB_BEARD_LATENTSYNC:-0}" = 1 ]; then FACE=${DUB_FACE_ENGINE:-$1}
   else FACE=${DUB_FACE_ENGINE:-keysync}; [ "$1" = latentsync ] && FL+=("beard_keysync"); fi; }
+gpu_release   # r16 T (Q audit O4): the CPU work from here on (route encode / beard, ks_face master / landmarks / shots / crop) runs OUTSIDE the GPU lock;
+              # the route active speaker (gpu_run) and ks_face.sh GPU section take it again
 if [ -n "${DUB_ROUTE_JSON:-}" ] && [ "${DUB_ROUTE:-on}" != off ]; then   # r16 T: a given route.json (golden test / the backend) instead of computing one
   mkdir -p $W/route; cp $DUB_ROUTE_JSON $W/route/route.json; DUB_ROUTE=given; FL+=("face_route_given")
   ROUTE=$W/route/route.json; read -r KSA ENG < <(python3 -c "import json; d=json.load(open('$ROUTE')); print(int(bool(d.get('keep_source_all'))), d.get('face_engine') or 'keysync')")
