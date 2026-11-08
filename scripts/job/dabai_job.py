@@ -81,12 +81,14 @@ ERRORS = {   # terminal error code -> (status, EN, RU, retryable)
     "E_NO_OUTPUT": ("ERROR", MESSAGES["no_output"][1], MESSAGES["no_output"][2], True),
     "E_TIMEOUT": ("TIMEOUT", "The job took too long and was stopped.", "Обработка заняла слишком много времени и была остановлена.", True),
     "E_CANCELLED": ("ERROR", "The job was cancelled.", "Задача отменена.", False),
+    "E_JOB_ID_BUSY": ("ERROR", "Another job with the same job_id is running on this worker (job ids name the shared work folders): choose another job_id.",
+                      "На этом воркере уже выполняется задача с таким же job_id (по нему называются общие рабочие папки): укажите другой job_id.", True),
     "E_WORKER_RESTART": ("ERROR", "The worker restarted while the job was running.", "Воркер перезапустился во время обработки.", True),
     "E_INTERNAL": ("ERROR", "Internal error of the pipeline.", "Внутренняя ошибка конвейера.", True),
 }
 TECH = {"low_res", "long_video", "landscape", "rotated_source", "high_fps", "odd_fps", "variable_fps", "hdr_or_10bit", "face_partly_absent",
         "face_work_downscaled", "bed_spleeter_only", "face_clean_no_codeformer", "lipsync_off_by_request", "face_skipped_no_face",
-        "voice_only_pose_precheck", "htdemucs_stems_failed", "htdemucs_mix_failed", "face_keysync", "face_keysync_multi_face", "face_keysync_no_face", "face_route_failed", "codeformer_missing_clean_face", "face_route_given", "audio_reused", "face_latentsync_unavailable",
+        "voice_only_pose_precheck", "htdemucs_stems_failed", "htdemucs_mix_failed", "face_keysync", "face_keysync_multi_face", "face_keysync_no_face", "face_route_failed", "codeformer_missing_clean_face", "face_route_given", "audio_reused", "face_latentsync_unavailable", "ks_shots",
         "ks_probe_failed", "ks_probe_low_conf", "ks_probe_clamped", "ks_check_offset"}
 STYLES = ("white", "yellow", "trendy", "outline")
 _LANGS = None
@@ -293,7 +295,16 @@ def keep_logs(arts: list[pathlib.Path], dst: pathlib.Path, cap_mb: float = 50.0)
 
 
 # ------------------------------------------------------------------ the job
+JL: list = []   # the job-id lock of the running job (released by run_job)
+
+
 def run_job(job: dict, on_event=None, cancel: threading.Event | None = None) -> dict:
+    try: return _run_job(job, on_event, cancel)
+    finally:
+        while JL: JL.pop().close()   # the job-id lock ends with the job (the API runs jobs one after another in one process)
+
+
+def _run_job(job: dict, on_event=None, cancel: threading.Event | None = None) -> dict:
     t_start = time.time(); p, errs = validate(job)
     out = pathlib.Path(p.get("out_dir") or job.get("out_dir") or "/tmp/dabai_job_invalid").resolve(); out.mkdir(parents=True, exist_ok=True)
     sp, ev = out / "status.json", Events(out / "events.jsonl", on_event); e2e = out / "e2e"
@@ -330,6 +341,14 @@ def run_job(job: dict, on_event=None, cancel: threading.Event | None = None) -> 
         vmin = pr["duration_s"] / 60; st["video_minutes"] = round(vmin, 3); st["input_probe"] = pr
         if pr["size_mb"] > MAX_MB or vmin > MAX_MIN:
             return finish(code="E_INPUT_TOO_LARGE", detail=f"{vmin:.2f} min / {pr['size_mb']} MB (worker limits {MAX_MIN} min / {MAX_MB:.0f} MB)")
+        # r16 T (audit orch. 11): the job id names the GLOBAL work dirs (artifacts/r4a/r9_<id>, ...) that e2e clears; two jobs with the same id
+        # on one worker destroyed each other. One exclusive lock per id for the whole job (the HTTP API already rejects a duplicate with 409).
+        import fcntl
+        jl_dir = pathlib.Path(os.environ.get("DABAI_JOBID_LOCKS", "/workspace/dub/artifacts/.jobid_locks")); jl_dir.mkdir(parents=True, exist_ok=True)
+        jl = open(jl_dir / f"{p['job_id']}.lock", "w")
+        try: fcntl.flock(jl, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError: return finish(code="E_JOB_ID_BUSY", detail=p["job_id"])
+        JL.append(jl)   # (released when run_job returns; Popen closes inherited fds, so e2e never holds it)
         env = {**os.environ, **e2e_env(p)}; log = open(out / "job.log", "w")
         proc = subprocess.Popen(["bash", str(ROOT / "scripts" / "r9" / "e2e.sh"), src, str(e2e)], cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
         st["pipeline_pgid"] = proc.pid   # its own session / process group: a restarted service kills it (job_api._kill_orphan)
