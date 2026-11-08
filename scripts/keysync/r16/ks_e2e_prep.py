@@ -93,6 +93,31 @@ def silence(x, ranges, keep=()):
     return x, round(muted, 2)
 
 
+def dub_vad(x, thr_rel=0.03, gap=0.25, min_len=0.1):
+    """r16 T (Q audit O6): speech segments of the DUB (20 ms RMS > thr_rel x the clip's p99, gaps < gap s merged). The route's speak / silence ranges
+    come from the SOURCE diarization; an EN phrase can run past its RU turn, so a face keeps every dub speech segment that overlaps its own turns."""
+    hop = sr // 50; nf = len(x) // hop
+    if nf == 0: return []
+    e = np.sqrt((x[:nf * hop].astype(np.float32).reshape(nf, hop) ** 2).mean(1)); on = e > thr_rel * max(float(np.percentile(e, 99)), 1.0)
+    segs, k = [], 0
+    while k < nf:
+        if on[k]:
+            j = k
+            while j < nf and on[j]: j += 1
+            if segs and k / 50 - segs[-1][1] < gap: segs[-1][1] = j / 50
+            else: segs.append([k / 50, j / 50])
+            k = j
+        else: k += 1
+    return [g for g in segs if g[1] - g[0] >= min_len]
+
+
+def extend_keep(keep, vad):   # every dub speech segment overlapping an own turn is kept whole
+    out = list(keep)
+    for v0, v1 in vad:
+        if any(v0 < k1 and v1 > k0 for k0, k1 in keep): out.append((v0, v1))
+    return out
+
+
 def add_face(j, lm, x, info):
     tag = f"f{len(plan['faces'])}"; v = iod(lm); pr = float(np.isfinite(lm[:, 0, 0]).mean())
     if v < MIN_IOD or pr < 0.10:
@@ -102,6 +127,7 @@ def add_face(j, lm, x, info):
 
 
 route = json.load(open(a.route)) if a.route and os.path.exists(a.route) else None
+VAD = dub_vad(pcm) if route is not None else []
 if route is not None:
     plan["mode"] = "route"
     if route.get("keep_source_all"):
@@ -126,7 +152,8 @@ if route is not None:
             lm = np.full_like(tr[:, j], np.nan); keep = np.zeros(T, bool)
             for _, k0, k1 in rfs: keep[k0:k1] = True
             lm[keep] = tr[keep, j]; lm = bridge(hold(lm), keep)
-            x, muted = silence(pcm, [r for rf, _, _ in rfs for r in rf.get("silence_ranges", [])], keep=[r for rf, _, _ in rfs for r in rf.get("speak_ranges", [])])
+            own = [r for rf, _, _ in rfs for r in rf.get("speak_ranges", [])]; keep = extend_keep(own, VAD)   # (O6: the own turns grown to the dub's speech)
+            x, muted = silence(pcm, [r for rf, _, _ in rfs for r in rf.get("silence_ranges", [])], keep=keep)
             tag = add_face(j, lm, x, {"route_faces": [rf.get("track") for rf, _, _ in rfs], "muted_s": muted})
             if tag: others_npz(f"{a.out}/others_{tag}.npz", sorted(src_tracks | (set(groups) - {j})))
         plan["source_tracks"] = sorted(int(j) for j in src_tracks)
