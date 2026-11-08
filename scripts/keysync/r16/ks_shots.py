@@ -81,7 +81,7 @@ if a.cmd == "detect":
     # d > --trans-thr within +-5 frames, dilated 2 frames (static talking heads: <= 2 isolated frames > 0.08 per clip -> never a zone).
     B = (d > a.trans_thr).astype(int); Z = np.convolve(B, np.ones(11, int), "same") >= a.trans_n
     Z = np.convolve(Z.astype(int), np.ones(5, int), "same") > 0; TM = int(round(a.trans_max_s * FPS))
-    segs = []
+    segs = []; trans = []   # r16 T: the transition zones trimmed off a face range's edges (ks_dissolve check / unmix / assemble in ks_shots.sh)
     for s0, s1 in shots:
         if not a.mp: segs.append([s0, s1, "face"]); continue
         on = np.flatnonzero(pres[s0:s1])
@@ -92,10 +92,18 @@ if a.cmd == "detect":
         while f1 > max(f0, g1 - TM) and Z[f1 - 1]: f1 -= 1
         if f1 - f0 <= 0: segs.append([s0, s1, "source"]); continue
         if s1 - f1 < int(round(a.tail_s * FPS)) and not Z[f1:s1].any(): f1 = s1
+        if f0 > g0:   # face dissolving IN over [z0, f0): T = the frame before the zone, B = the first clean face frame
+            z0 = f0
+            while z0 > s0 and Z[z0 - 1]: z0 -= 1
+            if z0 > 0: trans.append({"seg": [f0, f1], "edge": "in", "d0": int(z0), "d1": int(f0), "t_frame": int(z0 - 1), "b_frame": int(f0)})
+        if f1 < g1:   # face dissolving OUT over [f1, z1): T = the frame after the zone, B = the last clean face frame
+            z1 = f1
+            while z1 < s1 and Z[z1]: z1 += 1
+            if z1 < n: trans.append({"seg": [f0, f1], "edge": "out", "d0": int(f1), "d1": int(z1), "t_frame": int(z1), "b_frame": int(f1 - 1)})
         if f0 > s0: segs.append([s0, f0, "source"])
         segs.append([f0, f1, "face"])
         if f1 < s1: segs.append([f1, s1, "source"])
-    out = {"video": a.video, "frames": n, "fps": FPS, "shots": shots, "segments": segs, "bounds": [[int(k), w_] for k, w_ in zip(b[1:-1], why)], "face_gaps": gaps,
+    out = {"video": a.video, "frames": n, "fps": FPS, "shots": shots, "segments": segs, "transitions": trans, "bounds": [[int(k), w_] for k, w_ in zip(b[1:-1], why)], "face_gaps": gaps,
            "cut_scores": {int(k): [round(float(d[k]), 3), round(float(dy[k]), 3)] for w_, k in cuts if w_ == "cut"},
            "params": {"thr": a.thr, "ratio": a.ratio, "dy": a.dy, "min_s": a.min_s, "gap_s": a.gap_s if a.mp else None}}
     json.dump(out, open(a.out, "w"), indent=1)

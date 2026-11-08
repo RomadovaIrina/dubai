@@ -24,18 +24,33 @@ for i, (k0, k1, kd) in sorted(enumerate(s), key=lambda x: -(x[1][1] - x[1][0])):
     if kd == 'face': print(i, k0, k1)")
 NS=$(python3 -c "import json; print(len(json.loads('$SEGS')))"); echo "KS_SHOTS_RUN $ID: $NS segments, ${#FS[@]} with a face (longest first: ${FS[*]})"
 if [[ "${KS_REF:-0}" =~ ^[0-9]+$ ]] && [ "${KS_REF:-0}" != 0 ]; then echo "KS WARN KS_REF=$KS_REF is a frame of the whole video: 0 (the first frame) per shot"; export KS_REF=0; fi   # KS_REF=0 = each shot's first frame
-DELAY=${KS_DELAY:-probe}; MIN=$(python3 -c "print(round(${KS_SHOT_MIN_S:-1.0} * 25))"); LS=0; declare -A PART
+DELAY=${KS_DELAY:-probe}; MIN=$(python3 -c "print(round(${KS_SHOT_MIN_S:-1.0} * 25))"); LS=0; declare -A PART ALPHA
 for row in "${FS[@]}"; do
-  read -r i k0 k1 <<< "$row"; S=$SW/s$i; mkdir -p $S/audio; t0=$(python3 -c "print($k0 / 25)"); t1=$(python3 -c "print($k1 / 25)")
-  if [ $((k1 - k0)) -lt $MIN ]; then echo "KS_SHOT $i [$k0, $k1) $t0-$t1 s: shorter than ${KS_SHOT_MIN_S:-1.0} s -> source"; continue; fi
-  ffmpeg -v error -y -i $PK/master_25fps.mp4 -vf "select=between(n\,$k0\,$((k1 - 1))),setpts=N/25/TB" -r 25 -c:v libx264 -qp 0 -preset ultrafast -pix_fmt yuv420p $S/master.mp4 || exit 1
-  $PY $KT/ks_shots.py slice --mp $PK/master_mp.npz --k0 $k0 --k1 $k1 --out $S/master_mp.npz || exit 1
+  read -r i k0 k1 <<< "$row"; S=$SW/s$i; mkdir -p $S/audio
+  if [ $((k1 - k0)) -lt $MIN ]; then echo "KS_SHOT $i [$k0, $k1): shorter than ${KS_SHOT_MIN_S:-1.0} s -> source"; continue; fi
+  ZS=(); if [ "${KS_DISSOLVE:-auto}" = auto ]; then   # r16 T + K2 ks_dissolve.py: alpha-paste through clean linear crossfades at this segment's edges
+    while read -r d0 d1 tf bf; do [ -n "$d0" ] || continue
+      $PY $KT/ks_dissolve.py check --master $PK/master_25fps.mp4 --d0 $d0 --d1 $d1 --t-frame $tf --b-frame $bf --out $S/dissolve_$d0.json 2>/dev/null | grep -E "^KS_(DISSOLVE_CHECK|WARN)" | sed "s/^/KS_SHOT $i /"
+      if python3 -c "import json,sys; sys.exit(0 if json.load(open('$S/dissolve_$d0.json'))['ok'] else 1)" 2>/dev/null; then ZS+=("$d0:$d1:$tf:$bf")
+      else echo "KS_FLAG ks_dissolve_hard_switch segment $i frames $d0-$d1"; echo ks_dissolve_hard_switch >> $PK/flags.txt; fi
+    done < <(python3 -c "import json; [print(t['d0'], t['d1'], t['t_frame'], t['b_frame']) for t in json.load(open('$PK/shots.json')).get('transitions', []) if t['seg'] == [$k0, $k1]]")
+  fi
+  if [ ${#ZS[@]} -gt 0 ]; then   # extend the segment over the clean zones; the KeySync input = the unmixed face (ks_alpha.py); its own landmark pass
+    for z in "${ZS[@]}"; do IFS=: read -r d0 d1 _ _ <<< "$z"; [ $d0 -lt $k0 ] && k0=$d0; [ $d1 -gt $k1 ] && k1=$d1; done
+    $PY $KT/ks_alpha.py --master $PK/master_25fps.mp4 --k0 $k0 --k1 $k1 $(for z in "${ZS[@]}"; do echo --zone $z; done) --out $S/master.mp4 | sed "s/^/KS_SHOT $i /" || exit 1
+    MPX=""; ALPHA[$i]="$k0"
+  else
+    ffmpeg -v error -y -i $PK/master_25fps.mp4 -vf "select=between(n\,$k0\,$((k1 - 1))),setpts=N/25/TB" -r 25 -c:v libx264 -qp 0 -preset ultrafast -pix_fmt yuv420p $S/master.mp4 || exit 1
+    $PY $KT/ks_shots.py slice --mp $PK/master_mp.npz --k0 $k0 --k1 $k1 --out $S/master_mp.npz || exit 1; MPX=$S/master_mp.npz
+  fi
+  t0=$(python3 -c "print($k0 / 25)"); t1=$(python3 -c "print($k1 / 25)")
   ffmpeg -v error -y -i $AD/dubbed_16k.wav -af "atrim=start_sample=$((k0 * 640)):end_sample=$((k1 * 640)),asetpts=PTS-STARTPTS,apad=whole_len=$(((k1 - k0) * 640))" -ar 16000 -ac 1 $S/audio/dubbed_16k.wav || exit 1
   ffmpeg -v error -y -i $AD/final_mix_aac.m4a -af "atrim=start=$t0:end=$t1,asetpts=PTS-STARTPTS,apad=whole_dur=$(python3 -c "print($t1 - $t0 + 0.2)")" -c:a aac -b:a 192k $S/audio/final_mix_aac.m4a || exit 1
   for m in $AD/*.manifest.json; do [ -f "$m" ] && $PY $KT/ks_shots.py manifest --manifest $m --t0 $t0 --t1 $t1 --out $S/audio/$(basename $m) > /dev/null; done
   RS=""; if [ -n "$ROUTE" ] && [ -f "$ROUTE" ]; then $PY $KT/ks_shots.py route --route $ROUTE --t0 $t0 --t1 $t1 --out $S/route.json | sed "s/^/KS_SHOT $i /"; RS=$S/route.json; fi
-  env KS_IN_SHOT=1 KS_MASTER_IN=$S/master.mp4 KS_MP_NPZ=$S/master_mp.npz KS_DELAY=$DELAY bash $R/scripts/keysync/r16/ks_face.sh ${ID}_s$i $S/master.mp4 $S/audio $S $S/out.mp4 $RS > $S/face.log 2>&1
-  rc=$?; grep -E "^KS_(CROP|PROBE|CHECK|PASTE|FACE_KEEP|FACE_DONE)|WARN" $S/face.log | cut -c1-300 | sed "s/^/KS_SHOT $i [$k0, $k1) /"
+  env KS_IN_SHOT=1 KS_MASTER_IN=$S/master.mp4 KS_MP_NPZ=$MPX KS_DELAY=$DELAY bash $R/scripts/keysync/r16/ks_face.sh ${ID}_s$i $S/master.mp4 $S/audio $S $S/out.mp4 $RS > $S/face.log 2>&1
+  rc=$?; cat $S/ks/flags.txt >> $PK/flags.txt 2>/dev/null   # (r16 T: the shot's flags reach the job status)
+  grep -E "^KS_(CROP|PROBE|CHECK|PASTE|FACE_KEEP|FACE_DONE|FLAG)|WARN" $S/face.log | cut -c1-300 | sed "s/^/KS_SHOT $i [$k0, $k1) /"
   # (r16 T: a GPU lock handed over by e2e (GPU_RDY, gpulock.sh) is released by the first run's GPU section; later runs take it themselves)
   if [ $rc = 3 ]; then echo "KS_SHOT $i [$k0, $k1) $t0-$t1 s: nothing to lip-sync -> source"; continue; fi
   [ $rc = 0 ] || { echo "KS_SHOT $i FAILED (rc $rc)"; tail -5 $S/face.log; exit 1; }
@@ -46,8 +61,12 @@ for row in "${FS[@]}"; do
 done
 [ $LS -gt 0 ] || { echo "KS_FACE_KEEP_SOURCE $ID: nothing lip-synced in $NS segments"; exit 3; }
 L=(); for i in $(seq 0 $((NS - 1))); do   # in time order; the source segments re-encoded like ks_plain's output (concat -c copy needs the same stream)
-  if [ -n "${PART[$i]:-}" ]; then L+=(${PART[$i]}); else
+  if [ -n "${PART[$i]:-}" ] && [ -z "${ALPHA[$i]:-}" ]; then L+=(${PART[$i]}); else
     read -r k0 k1 <<< "$(python3 -c "import json; s = json.loads('$SEGS')[$i]; print(s[0], s[1])")"
     ( cd $KT && KS_CMS=1 $PY $KT/ks_shots.py encode --video $PK/master_25fps.mp4 --k0 $k0 --k1 $k1 --out $SW/src_$i.mp4 ) || exit 1; L+=($SW/src_$i.mp4); fi; done
-( cd $KT && $PY $KT/ks_shots.py concat --list ${L[@]} --audio $AD/final_mix_aac.m4a --frames $N --out $OUTV ) || exit 1
+if [ ${#ALPHA[@]} -gt 0 ]; then   # the alpha-pasted segments: out = S + a (P - U) over the concat of the rest (K2 ks_dissolve assemble; the mix stream-copied)
+  ( cd $KT && $PY $KT/ks_shots.py concat --list ${L[@]} --audio $AD/final_mix_aac.m4a --frames $N --out $SW/concat_base.mp4 ) || exit 1
+  PA=(); for i in "${!ALPHA[@]}"; do PA+=("${PART[$i]}:${ALPHA[$i]}:$SW/s$i/master.mp4"); done
+  ( cd $KT && KS_CMS=1 $PY $KT/ks_dissolve.py assemble --master $SW/concat_base.mp4 --audio $AD/final_mix_aac.m4a --part ${PA[@]} --out $OUTV ) | sed "s/^/KS_SHOTS /" || exit 1
+else ( cd $KT && $PY $KT/ks_shots.py concat --list ${L[@]} --audio $AD/final_mix_aac.m4a --frames $N --out $OUTV ) || exit 1; fi
 echo "KS_FACE_DONE $ID segments $NS lip-synced $LS"

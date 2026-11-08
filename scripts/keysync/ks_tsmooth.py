@@ -7,14 +7,23 @@ For frame t: Farneback flow t->t-1 (F-) and t->t+1 (F+) inside the lower face; d
 (--src-lm: landmarks of the 25 fps master, same frames) in a --win frame window centred on t (spike = ks_lag.py's: jerk > 4 x the source median),
 gaussian-smoothed; so only the stretches where KeySync jitters more than the source get smoothed, the rest stays untouched.
     ks_tsmooth.py --layer L.mp4 --lm L.mediapipe.npz --out OUT.mp4 [--alpha 0.7 | --alpha auto --src-lm MASTER.mediapipe.npz] [--passes 1]"""
-import argparse, json, subprocess, numpy as np, cv2, ks_cms
+import sys, argparse, json, subprocess, numpy as np, cv2, ks_cms
 ap = argparse.ArgumentParser(); ap.add_argument("--layer"); ap.add_argument("--lm"); ap.add_argument("--out"); ap.add_argument("--alpha", default="0.7")
 ap.add_argument("--passes", type=int, default=1); ap.add_argument("--src-lm"); ap.add_argument("--amax", type=float, default=0.8)
 ap.add_argument("--win", type=int, default=25); ap.add_argument("--ramp", type=float, default=0.1); a = ap.parse_args()
 pr = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0", a.layer], capture_output=True, text=True).stdout.strip().split(",")
 W, H = int(pr[0]), int(pr[1])
 F = np.frombuffer(subprocess.run(["ffmpeg", "-v", "error", "-i", a.layer] + ks_cms.dec() + ["-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True, check=True).stdout, np.uint8).reshape(-1, H, W, 3).copy()
-d = np.load(a.lm); lm = d["lm"][..., :2].astype(np.float32)
+def fillnan(l):   # r16 T (audit paste 10, q05 head turns): NaN landmark rows -> interpolated over time (edges: nearest valid); none valid -> None
+    l = np.asarray(l, np.float32).copy(); ok = np.isfinite(l.reshape(len(l), -1)).all(1)
+    if not ok.any(): return None
+    if ok.all(): return l
+    idx = np.arange(len(l)); f = l.reshape(len(l), -1)
+    for c in range(f.shape[1]): f[~ok, c] = np.interp(idx[~ok], idx[ok], f[ok, c])
+    print(f"ks_tsmooth: {int((~ok).sum())} landmark frames without a face filled by interpolation", flush=True); return f.reshape(l.shape)
+d = np.load(a.lm); lm = fillnan(d["lm"][..., :2].astype(np.float32))
+if lm is None:   # no landmarks at all: nothing to smooth, the layer passes through unchanged
+    import shutil; shutil.copy(a.layer, a.out); json.dump({"alpha": 0.0, "note": "no landmarks"}, open(a.out + ".alpha.json", "w")); print("gate: no landmarks -> alpha 0.0 (copied)"); sys.exit(0)
 if lm.max() < 2: lm = lm * np.array([W, H], np.float32)
 n = min(len(F), len(lm))
 def jerk(l):   # ks_lag.py's per-frame mouth jerks: opening and lip centre relative to the nose, / IOD
@@ -22,7 +31,7 @@ def jerk(l):   # ks_lag.py's per-frame mouth jerks: opening and lip centre relat
     op = np.linalg.norm(l[:, 13] - l[:, 14], axis=1) / iod; c = l[:, [61, 291, 13, 14]].mean(1) / iod[:, None] - l[:, 1] / iod[:, None]
     return np.pad(np.abs(np.diff(op, 2)), (1, 1)), np.pad(np.linalg.norm(np.diff(c, 2, axis=0), axis=1), (1, 1))
 if a.alpha == "auto":
-    sl = np.load(a.src_lm)["lm"][..., :2]; m = min(n, len(sl))
+    sl = fillnan(np.load(a.src_lm)["lm"][..., :2]); sl = lm[:0] if sl is None else sl; m = min(n, len(sl))
     jo, jc = jerk(lm[:m]); so, sc = jerk(sl[:m]); to, tc = 4 * np.median(so[so > 0]), 4 * np.median(sc[sc > 0])
     k = np.ones(a.win) / a.win; rK = np.convolve(((jo > to) | (jc > tc)).astype(float), k, "same"); rS = np.convolve(((so > to) | (sc > tc)).astype(float), k, "same")
     al = a.amax * np.clip((rK - rS) / a.ramp, 0, 1); al = cv2.GaussianBlur(al.reshape(1, -1).astype(np.float32), (0, 0), 3).ravel()
@@ -30,13 +39,13 @@ if a.alpha == "auto":
     json.dump({"mean_alpha": round(float(AL.mean()), 3), "frac_on": round(float((AL > 0.05).mean()), 3), "rate_layer": round(float(rK.mean()), 4), "rate_src": round(float(rS.mean()), 4)},
               open(a.out + ".alpha.json", "w")); np.save(a.out + ".alpha.npy", AL)
 elif a.alpha.startswith("gate"):   # r16 K1 (#9): constant alpha (gate:A, default 0.5) ONLY if the layer's mouth-jerk spike rate > KS_TS_RATIO (1.3) x the source's, else 0
-    sl = np.load(a.src_lm)["lm"][..., :2]; m = min(n, len(sl)); A = float(a.alpha.split(":")[1]) if ":" in a.alpha else 0.5
+    sl = fillnan(np.load(a.src_lm)["lm"][..., :2]); sl = lm[:0] if sl is None else sl; m = min(n, len(sl)); A = float(a.alpha.split(":")[1]) if ":" in a.alpha else 0.5
     jo, jc = jerk(lm[:m]); so, sc = jerk(sl[:m]); to, tc = 4 * np.median(so[so > 0]), 4 * np.median(sc[sc > 0])
     rK = float(((jo > to) | (jc > tc)).mean()); rS = float(((so > to) | (sc > tc)).mean()); on = rK > float(__import__("os").environ.get("KS_TS_RATIO", 1.3)) * rS
     AL = np.full(n, A if on else 0.0, np.float32); print(f"gate: jerk rate layer {rK:.3f} source {rS:.3f} -> alpha {A if on else 0.0}", flush=True)
     json.dump({"rate_layer": round(rK, 4), "rate_src": round(rS, 4), "alpha": A if on else 0.0}, open(a.out + ".alpha.json", "w"))
 elif a.alpha.startswith("spike"):   # r16 K1: per-frame gate: amax only on the layer's own mouth-jerk spikes (+-1 frame) where the source has none
-    sl = np.load(a.src_lm)["lm"][..., :2]; m = min(n, len(sl))
+    sl = fillnan(np.load(a.src_lm)["lm"][..., :2]); sl = lm[:0] if sl is None else sl; m = min(n, len(sl))
     jo, jc = jerk(lm[:m]); so, sc = jerk(sl[:m]); to, tc = 4 * np.median(so[so > 0]), 4 * np.median(sc[sc > 0])
     sp = ((jo > to) | (jc > tc)) & ~((so > to) | (sc > tc)); sp = np.convolve(sp.astype(float), [1, 1, 1], "same") > 0
     AL = np.zeros(n, np.float32); AL[:m] = a.amax * sp
