@@ -37,6 +37,10 @@ ap.add_argument("--align", type=float, default=0.0, help="r16 K1 smart paste: pe
 ap.add_argument("--ks-lm", default="", help="landmarks of the raw KeySync output (512 grid, its frame index): the GENERATED lips for --tex / --cavity")
 ap.add_argument("--tex", type=float, default=2.0, help="r15 stubble / pores: the source's luma high frequencies (gaussian sigma px), DIS-flow-warped onto KeySync's "
                 "geometry, replace KeySync's inside the face mask outside the generated lips (dilated 0.15 IOD); 0 = off")
+ap.add_argument("--tex-rgb", type=int, default=0, help="r16b K1 texture-keep: 1 = the source high frequencies on all 3 channels (beard / skin colour boil), 0 = luma only")
+ap.add_argument("--tex-flow", type=int, default=1, help="r16b K1: 1 = DIS-warp the source texture onto KeySync's geometry (per frame), 0 = no warp (box / ECC aligned only)")
+ap.add_argument("--tex-flow-ema", type=float, default=0.0, help="r16b K1: temporal EMA of the texture flow (0 = per-frame flow; 0.8 = smoothed: the source texture follows the jaw slowly, no per-frame boil)")
+ap.add_argument("--tex-dil", type=float, default=0.15, help="r16b K1: the generated-lip keep zone = the outer-lip hull dilated by this x IOD (soft edge 0.05 IOD)")
 ap.add_argument("--cavity", type=float, default=0.0, help="r15 black-hole mouth: lift strength (0..1) of the near-black inner-mouth pixels toward the source's open-mouth "
                 "interior tone (L 30th percentile + mean a / b of the source's open frames); 0 = off")
 ap.add_argument("--cm-file", default="", help="r16 T (parallel paste, ks_plain_par.py): the global colour match: loaded (gain / off) if the file exists, else computed and saved with its sufficient statistics (Lab sums of the sampled skin pixels, so chunks combine exactly)")
@@ -228,6 +232,7 @@ if a.cm_only: sys.exit(0)
 NT = [0, 0]
 
 
+FLE = [None, -9]   # r16b K1: the EMA texture flow state (flow, layer index)
 def fix_ks(kf, i, m, src_crop):   # r15 --cavity / --tex on one KeySync crop (float RGB 0..255) -> float RGB
     kp = KL[int(np.clip(i, 0, len(KL) - 1))] if KL is not None else None
     if a.cavity > 0 and CAV is not None and kp is not None and is_open(kp):
@@ -241,19 +246,28 @@ def fix_ks(kf, i, m, src_crop):   # r15 --cavity / --tex on one KeySync crop (fl
     if a.tex > 0 and m is not None:
         sc = src_crop.astype(np.float32); h2 = s // 2
         gk = cv2.cvtColor(kf.astype(np.uint8), cv2.COLOR_RGB2GRAY); gs = cv2.cvtColor(src_crop, cv2.COLOR_RGB2GRAY)
-        fl = DIS.calc(cv2.resize(gk, (h2, h2), interpolation=cv2.INTER_AREA), cv2.resize(gs, (h2, h2), interpolation=cv2.INTER_AREA), None)
-        fl = cv2.resize(fl, (s, s)) * (s / h2)
+        if a.tex_flow:
+            fl = DIS.calc(cv2.resize(gk, (h2, h2), interpolation=cv2.INTER_AREA), cv2.resize(gs, (h2, h2), interpolation=cv2.INTER_AREA), None)
+            fl = cv2.resize(fl, (s, s)) * (s / h2)
+            if a.tex_flow_ema > 0:
+                if FLE[0] is not None and FLE[1] == i - 1: fl = a.tex_flow_ema * FLE[0] + (1 - a.tex_flow_ema) * fl
+                FLE[0], FLE[1] = fl, i
+        else: fl = np.zeros((s, s, 2), np.float32)
         yk = cv2.cvtColor(kf.astype(np.float32), cv2.COLOR_RGB2YCrCb); ys = cv2.cvtColor(sc, cv2.COLOR_RGB2YCrCb)[..., 0]
         ws = cv2.remap(ys, GX + fl[..., 0], GY + fl[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
         lx = np.zeros((s, s), np.uint8)
         lp = kp if kp is not None and np.isfinite(kp).all() else LM[min(int(J[min(i + a.shift, len(J) - 1)]), len(LM) - 1)] - BXY(i + a.shift)
         if np.isfinite(lp).all():
-            iod = float(np.linalg.norm(lp[33] - lp[263])); cv2.fillPoly(lx, [hull(lp[LIPS_O])], 1); lx = cv2.dilate(lx, el(0.15 * iod))
+            iod = float(np.linalg.norm(lp[33] - lp[263])); cv2.fillPoly(lx, [hull(lp[LIPS_O])], 1); lx = cv2.dilate(lx, el(a.tex_dil * iod))
             lx = cv2.GaussianBlur(lx.astype(np.float32), (0, 0), max(1.0, 0.05 * iod))
         T = m * (1 - lx)
         hp = lambda img: img - cv2.GaussianBlur(img, (0, 0), a.tex)
-        yk[..., 0] += T * (hp(ws) - hp(yk[..., 0])); NT[1] += 1
-        kf = np.clip(cv2.cvtColor(yk, cv2.COLOR_YCrCb2RGB), 0, 255)
+        if a.tex_rgb:   # r16b K1 texture-keep: all channels; the source HF (warped) replaces KeySync's outside the lip zone
+            wr = cv2.remap(sc, GX + fl[..., 0], GY + fl[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+            kf = np.clip(kf + T[..., None] * (hp(wr) - hp(kf.astype(np.float32))), 0, 255); NT[1] += 1
+        else:
+            yk[..., 0] += T * (hp(ws) - hp(yk[..., 0])); NT[1] += 1
+            kf = np.clip(cv2.cvtColor(yk, cv2.COLOR_YCrCb2RGB), 0, 255)
     return kf
 LG = 64; LFM = None
 if a.lfm > 0:   # r16 K1: per-frame low-frequency Lab difference maps (LG x LG), temporally smoothed
