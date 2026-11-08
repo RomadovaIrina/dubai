@@ -23,7 +23,7 @@ import json; s = json.loads('$SEGS')
 for i, (k0, k1, kd) in sorted(enumerate(s), key=lambda x: -(x[1][1] - x[1][0])):
     if kd == 'face': print(i, k0, k1)")
 NS=$(python3 -c "import json; print(len(json.loads('$SEGS')))"); echo "KS_SHOTS_RUN $ID: $NS segments, ${#FS[@]} with a face (longest first: ${FS[*]})"
-if [[ "${KS_REF:-auto}" =~ ^[0-9]+$ ]]; then echo "KS WARN KS_REF=$KS_REF is a frame of the whole video: auto per shot"; export KS_REF=auto; fi
+if [[ "${KS_REF:-auto}" =~ ^[0-9]+$ ]] && [ "$KS_REF" != 0 ]; then echo "KS WARN KS_REF=$KS_REF is a frame of the whole video: auto per shot"; export KS_REF=auto; fi
 DELAY=${KS_DELAY:-probe}; MIN=$(python3 -c "print(round(${KS_SHOT_MIN_S:-1.0} * 25))"); LS=0; declare -A PART
 for row in "${FS[@]}"; do
   read -r i k0 k1 <<< "$row"; S=$SW/s$i; mkdir -p $S/audio; t0=$(python3 -c "print($k0 / 25)"); t1=$(python3 -c "print($k1 / 25)")
