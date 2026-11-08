@@ -1,0 +1,14 @@
+{
+ "job_id": "shots_q02",
+ "input": "/workspace/dub/r16in/day1/HANDOFF_Q/clips/q02_vera.mp4",
+ "out_dir": "/workspace/dub/r16t/golden/jobs/shots_q02",
+ "target_lang": "en",
+ "timeout_s": 14400,
+ "debug_env": {
+  "DUB_AUDIO_FROM": "/workspace/dub/r16in/day1/HANDOFF_Q/mixes/q02_vera",
+  "DUB_ROUTE_JSON": "/workspace/dub/dubai/reports/experiments/r16-qa/routing/q02_vera.json"
+ },
+ "output": {
+  "keep_intermediate": true
+ }
+}

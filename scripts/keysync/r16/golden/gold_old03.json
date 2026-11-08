@@ -3,11 +3,9 @@
  "input": "/workspace/dub/inputs/test_videos_raw/03.mp4",
  "out_dir": "/workspace/dub/r16t/golden/jobs/gold_old03",
  "target_lang": "en",
- "face": "keysync",
  "timeout_s": 14400,
  "debug_env": {
   "DUB_AUDIO_FROM": "/workspace/dub/r16in/HANDOFF_K/paste_inputs/old03",
-  "DUB_ALLOW_NC_BED": "0",
   "DUB_ROUTE": "off"
  },
  "output": {
