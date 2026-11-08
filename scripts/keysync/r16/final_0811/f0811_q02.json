@@ -1,0 +1,10 @@
+{
+ "job_id": "f0811_q02",
+ "input": "/workspace/dub/r16in/day1/HANDOFF_Q/clips/q02_vera.mp4",
+ "out_dir": "/workspace/dub/r16t/final/jobs/f0811_q02",
+ "target_lang": "en",
+ "timeout_s": 10800,
+ "output": {
+  "keep_intermediate": true
+ }
+}

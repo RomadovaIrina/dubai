@@ -1,0 +1,10 @@
+{
+ "job_id": "f0811_m03",
+ "input": "/workspace/dub/inputs/mamakris/story-1774249919482-367803614.MOV",
+ "out_dir": "/workspace/dub/r16t/final/jobs/f0811_m03",
+ "target_lang": "en",
+ "timeout_s": 10800,
+ "output": {
+  "keep_intermediate": true
+ }
+}

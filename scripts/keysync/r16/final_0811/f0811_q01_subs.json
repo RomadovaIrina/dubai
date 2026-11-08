@@ -1,0 +1,22 @@
+{
+ "job_id": "f0811_q01_subs",
+ "input": "/workspace/dub/r16in/day1/HANDOFF_Q/clips/q01_amir.mp4",
+ "out_dir": "/workspace/dub/r16t/final/jobs/f0811_q01_subs",
+ "target_lang": "en",
+ "timeout_s": 10800,
+ "subs": {
+  "enabled": true,
+  "style": "yellow",
+  "lang": "dub",
+  "karaoke": true
+ },
+ "watermark": {
+  "enabled": true,
+  "text": "DabAI",
+  "corner": "br",
+  "opacity": 0.6
+ },
+ "output": {
+  "keep_intermediate": true
+ }
+}
