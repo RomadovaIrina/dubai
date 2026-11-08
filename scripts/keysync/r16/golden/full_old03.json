@@ -1,0 +1,10 @@
+{
+ "job_id": "full_old03",
+ "input": "/workspace/dub/inputs/test_videos_raw/03.mp4",
+ "out_dir": "/workspace/dub/r16t/golden/jobs/full_old03",
+ "target_lang": "en",
+ "timeout_s": 10800,
+ "output": {
+  "keep_intermediate": true
+ }
+}

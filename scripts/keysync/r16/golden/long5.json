@@ -1,0 +1,10 @@
+{
+ "job_id": "long5",
+ "input": "/workspace/dub/r16t/long/long5_stories.mp4",
+ "out_dir": "/workspace/dub/r16t/golden/jobs/long5",
+ "target_lang": "en",
+ "timeout_s": 21600,
+ "output": {
+  "keep_intermediate": true
+ }
+}
