@@ -28,3 +28,16 @@ Suggested pass rule for the golden test: e2e speech@0 ≥ golden − max(0.15, 3
 | l_boundary ratio | argmax phase → biased up | fix proposed to L (fixed phase 13k); L's file | after L applies it |
 | beard score | 2.0 threshold, thin margin | unchanged | routing default; a low-light guard is still missing |
 | SyncNet in general | rewards a dark open mouth | unchanged | never the only judge of black-hole fixes; Irina's eye decides |
+
+## Detectors on the eye-ACCEPTED golden finals (= the false-positive floor), golden/det_new_<id>.json
+| clip | black abs → rel | black share ours / src | explode (shape abs → rel, px) | slide | texture | edge | flicker | swap |
+|---|---|---|---|---|---|---|---|---|
+| old03 | 15 → 15 | 0.036 / 0.002 | 2 → 2, 3 | 111 | 736 | 14 | 254 | 0 |
+| m03 | 42 → 40 | 0.104 / 0.027 | 3 → 3, 0 | 40 | 0 | 22 | 17 | 5 |
+| q02 (KeySync, day 1) | 119 → 53 | — / 0.719 | 16 → 9 | | | | | |
+
+Reading:
+- The source-relative change removes flags only where the source itself is dark or snapping (q02). On the golden clips the sources are bright, so black is nearly unchanged.
+- The golden finals still raise black 15–40 frames, slide 40–111 frames, texture 736 (old03 low light) and flicker 254 (old03). These are false positives on finals Irina accepted.
+- So a detector count is only meaningful RELATIVE to the golden one for the same clip. Never use an absolute "0 flags" target.
+- texture / flicker on old03 are not usable as gates.
