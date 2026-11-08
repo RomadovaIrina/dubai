@@ -97,6 +97,12 @@ ksfast() {   # ksfast <jobs> <out> <log>: the resident KeySync-fast worker (fast
     python $KT/ks_fast.py --jobs $1 --out $2 --cfg _s8 --vae-half --compile unet --trt $ENG --interp-lora $LORA --interp-steps ${KS_INTERP_STEPS:-2} \
       --vae-batch 8 --vae-compile ) > $3 2>&1 || { tail -5 $3; return 1; }; grep "^KS_JOB" $3 | cut -c1-400; }
 flag() { echo "$1" >> $KW/flags.txt; echo "KS_FLAG $1 ${2:-}"; }
+FJ=$KW/jobs_follow.txt; : > $FJ
+( cd $KS/code && . ../venv/bin/activate && env KS_DC=2:0 KS_LMK_CACHE=$LMK TORCHINDUCTOR_CACHE_DIR=${TORCHINDUCTOR_CACHE_DIR:-$KS/inductor} ${GATE:+KS_GATE=$GATE} \
+  python $KT/ks_fast.py --follow --jobs $FJ --out $KW/out --cfg _s8 --vae-half --compile unet --trt $ENG --interp-lora $LORA --interp-steps ${KS_INTERP_STEPS:-2} \
+    --vae-batch 8 --vae-compile ) > $KW/ks_fast.log 2>&1 & KSP=$!
+trap '[ -n "${KSP:-}" ] && kill $KSP 2>/dev/null' EXIT   # never leave a --follow ks_fast behind (it would wait for END forever)
+waitjob() { until grep -q "^KS_JOB {\"tag\": \"$1\"" $KW/ks_fast.log; do kill -0 $KSP 2>/dev/null || { echo "KS: ks_fast died before job $1"; tail -5 $KW/ks_fast.log; return 1; }; sleep 0.5; done; }
 declare -A DLY
 if [ "${KS_DELAY:-probe}" = probe ]; then
   t probe; : > $KW/probe/jobs.txt; PS=${KS_PROBE_S:-10}
@@ -120,11 +126,11 @@ seg = np.concatenate([np.zeros(spf, np.int16), x[k0 * spf:(k0 + len(F) - 1) * sp
 with wave.open(oa, "wb") as o: o.setnchannels(1); o.setsampwidth(2); o.setframerate(sr); o.writeframes(seg.tobytes())
 print(f"probe window frames {k0}..{k0 + len(F) - 1} (+ ref {ref} as frame 0)", file=sys.stderr)
 PY
-    echo "$f $KW/probe/v_$f.mp4 $KW/probe/a_$f.wav 0" >> $KW/probe/jobs.txt
+    echo "p_$f $KW/probe/v_$f.mp4 $KW/probe/a_$f.wav 0" >> $FJ
   done
-  ksfast $KW/probe/jobs.txt $KW/probe/out $KW/probe/ks_fast.log || exit 1
+  for f in $TAGS; do waitjob p_$f || exit 1; done; grep "^KS_JOB" $KW/ks_fast.log | cut -c1-400
   for f in $TAGS; do   # delay = -offset x 40 ms; |offset| clamped to KS_PROBE_MAX (2) frames; SyncNet conf < KS_PROBE_MIN_CONF (3) or no result -> 0 + a flag
-    O=$(sync_off $(ls $KW/probe/out/$f/*.mp4 | head -1) $KW/probe/a_$f.wav $KW/probe/sync_$f.json)
+    O=$(sync_off $(ls $KW/out/p_$f/*.mp4 | head -1) $KW/probe/a_$f.wav $KW/probe/sync_$f.json)
     C=$(python3 -c "import json; print(json.load(open('$KW/probe/sync_$f.json'))['global']['conf'])" 2>/dev/null || echo 0)
     if [ "$O" = x ]; then flag ks_probe_failed "$f: no SyncNet result -> delay 0"; O=0
     elif python3 -c "import sys; sys.exit(0 if float('$C') < float('${KS_PROBE_MIN_CONF:-3}') else 1)"; then flag ks_probe_low_conf "$f: conf $C, offset $O -> delay 0"; O=0
@@ -142,7 +148,7 @@ for f in $TAGS; do   # the dub KeySync hears: delayed (or advanced) by the probe
       >> $KW/jobs.txt 2> $KW/chunk_$f.log || { tail -3 $KW/chunk_$f.log; exit 1; }; grep KS_CHUNKS $KW/chunk_$f.log
   else echo "$f $KW/data/pad_$f.mp4 $KW/data/dubp_$f.wav $(cat $KW/ref_$f.txt)" >> $KW/jobs.txt; fi
 done
-ksfast $KW/jobs.txt $KW/out $KW/ks_fast.log || exit 1
+cat $KW/jobs.txt >> $FJ; echo END >> $FJ; wait $KSP || { tail -5 $KW/ks_fast.log; exit 1; }; grep "^KS_JOB" $KW/ks_fast.log | tail -n +2 | cut -c1-400
 for f in $TAGS; do [ -d $KW/data/chunks_$f ] || continue; mkdir -p $KW/out/$f
   $PY $KT/ks_chunk.py join --dir $KW/data/chunks_$f --renders $KW/out --out $KW/out/$f/joined.mp4 --tag $f || exit 1; done
 t check; declare -A SHF
