@@ -3,7 +3,7 @@
 # K2 r16-mouth 8d07fc6 / k2_k1chain_tag.sh, Q r16-qa 84031e1 route.json), per speaking face:
 #   plan      ks_e2e_prep.py: route.json faces (lipsync with SILENCE outside own speech / source -> --others) or the dubbed-units fallback; no-face rule
 #   crop      KS_CROP=auto: K2 tracked crop (k2_prep_track.py) if the static face share < 0.45 or the head travels > 0.4 face heights, else the r15 static crop + K1 pad: the last KS_PAD (60) frames mirrored, the seam frame not repeated
-#   ref       K2 k2_refpick.py -> the reference frame (KS_REF=auto | <frame> | 0)
+#   ref       KS_REF=0 (default, Irina 08.11: frame 0 of this run = of the shot in multi-shot) | auto (K2 k2_refpick.py) | <frame>
 #   [GPU]     delay probe (KS_DELAY=probe | <ms>): KeySync on KS_PROBE_S (10) s from the face's first own speech, SyncNet AV offset of the raw render
 #             vs the dub it heard -> delay = -offset x 40 ms (old03 0, m03 / m18 40); the full KeySync (fast2 + K2 gate KS_GATE) on the padded crop with
 #             the delayed + padded dub; check: SyncNet of the full raw render -> if still != 0, the paste shift = -offset (K1 fallback)
@@ -76,7 +76,7 @@ for f in F: p.stdin.write(f.tobytes())
 p.stdin.close(); p.wait(); print("pad", len(F), "frames")
 PY
   $MPY $R/scripts/quality/mp_landmarks.py --video $KW/data/crop_$f.mp4 --out $KW/crop_lm_$f.npz > /dev/null 2>&1 || { echo "KS: crop landmarks failed ($f)"; exit 1; }
-  REF=${KS_REF:-auto}
+  REF=${KS_REF:-0}   # Irina 08.11 (m18 clip): ref 0 + the gate = the default; KS_REF=auto = K2 refpick (option)
   if [ "$REF" = auto ]; then   # K2: a frame with the upper teeth showing as KeySync's identity (black-hole mouths roughly halved); 0 if the pick fails
     REF=$($MPY $KT/k2_refpick.py --video $KW/data/crop_$f.mp4 --lm $KW/crop_lm_$f.npz --face-lm $KW/lm_$f.npz --box $KW/data/box_$f.json --out $KW/ref_$f 2> $KW/ref_$f.log | grep "^K2_REFPICK" | python3 -c "import json,sys; print(json.loads(sys.stdin.read()[11:])['pick'])" 2>/dev/null)
     [ -n "$REF" ] || { echo "KS WARN refpick failed ($f): ref 0"; REF=0; }
