@@ -205,7 +205,7 @@ def main():
                 mk = hull_mask(sh, pS[ix]) & (1 - mouthX)
                 if mk.sum() < 50: vals.append(np.nan); continue
                 v = np.median(fl[mk > 0], 0); vals.append(float(np.linalg.norm(v)) / iod * 100)
-            M["slide_up"][k], M["slide_lc"][k], M["slide_rc"][k], M["slide_ch"][k] = vals; M["slide"][k] = np.nanmax(vals) if np.isfinite(vals).any() else np.nan
+            M["slide_up"][k], M["slide_lc"][k], M["slide_rc"][k], M["slide_ch"][k] = vals; M["slide"][k] = np.nanmax(vals[:3]) if np.isfinite(vals[:3]).any() else np.nan   # r16 Q 08.11: upper + cheeks only; the chin moves with the jaw (old03 e2e +255 slide frames were all chin = wider jaw opening, not a slide), it stays in slide_ch
         # texture: HF energy on the jaw / cheeks minus the lips
         if "texture" in only:
             mk = poly_mask(sh, pS[LOW]) & (1 - mouthX)

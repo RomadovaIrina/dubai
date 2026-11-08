@@ -22,7 +22,9 @@ Suggested pass rule for the golden test: e2e speech@0 ≥ golden − max(0.15, 3
 | r16q_detect black | absolute (flagged the source's own dark mouths) | relative to the source (q02 119 → 53 frames) | spot finding; thresholds still from 3 videos, no false-positive rate yet |
 | r16q_detect explode | no source reference | snaps the source also has are removed (q02 16 → 9) | spot finding |
 | r16q_detect cache | stale det.npz reused | keyed by both videos' fingerprint + t0/t1 | — |
-| r16q_detect slide / texture / num_faces / edge | audit #11 open | unchanged | spot finding only; texture flags low-light noise |
+| r16q_detect slide | included the chin (moves with the jaw) | 08.11: upper + cheeks only; the chin is its own slide_ch. old03 e2e +255 slide frames were ALL chin = a wider jaw opening | spot finding |
+| r16q_detect texture / num_faces / edge | audit #11 open | unchanged | spot finding only; texture flags low-light noise |
+| **r16q_spring.py** (K1 spring3 + Q floor / CI) | not existing | **USABLE for KeySync vs LatentSync / vs golden on one clip** (beards: KeySync 1.8x floor, CI clear); NOT for ranking clips against each other; see SPRING.md | the beard bounce |
 | k_lag_final (eye anchors) | ~0 by design | r16q_klag.py: lower-face contour (+ eye anchors as a ~0 sanity check). Untested | after one validation run |
 | k2_lipmetrics share_12.5Hz | abs() before the FFT → blind | r16q_k2lip.py: signed series, longest valid run. Untested | after one validation run |
 | l_boundary ratio | argmax phase → biased up | fix proposed to L (fixed phase 13k); L's file | after L applies it |
