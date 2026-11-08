@@ -12,7 +12,8 @@ g = subprocess.run(["nvidia-smi", "--query-gpu=name,driver_version", "--format=c
 print(re.sub(r"[^A-Za-z0-9.]+", "_", f"{g}_trt{tensorrt.__version__}"))
 PY
 )
-D=${KS_TRT_CACHE:-$KS/trt/cache}/$KEY; mkdir -p $D
+HX=$(cat $LORA $CAP/kf.pt $CAP/interp.pt 2>/dev/null | md5sum | cut -c1-8)   # r16 T (audit #8): a new student / capture = new engines
+D=${KS_TRT_CACHE:-$KS/trt/cache}/${KEY}_$HX; mkdir -p $D
 ok() { python3 - "$1" "${KS_TRT_MIN_DB:-56}" <<'PY'
 import json, sys
 try: v = json.load(open(sys.argv[1] + "/verify.json"))
