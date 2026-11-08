@@ -1,0 +1,111 @@
+{
+ "final": "/workspace/dub/outbox/r16_t/full/full_m18.mp4",
+ "master": "/workspace/dub/r16t/golden/jobs/full_m18/e2e/work/ks/master_25fps.mp4",
+ "fps": 25.0,
+ "region": [
+  201,
+  557,
+  679,
+  963
+ ],
+ "final_metric": {
+  "spring_scale_pct": [
+   0.3861,
+   0.3212,
+   0.4537
+  ],
+  "spring_t_px": [
+   0.9199,
+   0.7285,
+   1.1335
+  ],
+  "parts_scale_pct": {
+   "cheekL": 0.3071,
+   "cheekR": 0.4651,
+   "nose": 0.3116,
+   "jaw": 0.1682,
+   "upper": 0.0517
+  },
+  "parts_t_px": {
+   "cheekL": 0.714,
+   "cheekR": 1.1258,
+   "nose": 0.6678,
+   "jaw": 0.8467,
+   "upper": 0.3001
+  },
+  "worst_seconds": [
+   [
+    17,
+    0.723
+   ],
+   [
+    7,
+    0.7
+   ],
+   [
+    18,
+    0.663
+   ],
+   [
+    6,
+    0.478
+   ],
+   [
+    8,
+    0.436
+   ]
+  ]
+ },
+ "floor_bitrate": 3813497,
+ "floor_metric": {
+  "spring_scale_pct": [
+   0.2519,
+   0.2074,
+   0.2988
+  ],
+  "spring_t_px": [
+   0.6328,
+   0.5119,
+   0.7662
+  ],
+  "parts_scale_pct": {
+   "cheekL": 0.2007,
+   "cheekR": 0.3031,
+   "nose": 0.2217,
+   "jaw": 0.0859,
+   "upper": 0.0496
+  },
+  "parts_t_px": {
+   "cheekL": 0.5042,
+   "cheekR": 0.7614,
+   "nose": 0.4722,
+   "jaw": 0.3553,
+   "upper": 0.3353
+  },
+  "worst_seconds": [
+   [
+    7,
+    0.461
+   ],
+   [
+    18,
+    0.448
+   ],
+   [
+    17,
+    0.418
+   ],
+   [
+    8,
+    0.351
+   ],
+   [
+    6,
+    0.339
+   ]
+  ]
+ },
+ "spring_ratio": 1.533,
+ "spring_above_floor": true,
+ "upper_ratio": 1.042
+}

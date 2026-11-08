@@ -1,0 +1,23 @@
+{
+ "label": "full_old03",
+ "final": "/workspace/dub/outbox/r16_t/full/full_old03.mp4",
+ "dub": "/workspace/dub/artifacts/r4a/r9_full_old03/full_old03/dubbed_16k.wav",
+ "wh": "464,848",
+ "status": "OK",
+ "speech_at0": 7.167,
+ "noise_pm": null,
+ "n_speech_sec": 43,
+ "n_offscreen_sec": 9,
+ "speech_at0_all_dub": 7.038,
+ "face_lost_share": 0.0,
+ "face_lost_max": 0.05,
+ "global_conf": 5.483,
+ "av_offset": 0,
+ "speaker_select": "route",
+ "multi_face_frames": 0,
+ "other_tracks": [],
+ "cpu_minus_gpu": null,
+ "variants": {
+  "main": 7.167
+ }
+}

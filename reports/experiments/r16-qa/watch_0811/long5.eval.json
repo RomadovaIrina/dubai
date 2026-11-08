@@ -1,0 +1,23 @@
+{
+ "label": "long5",
+ "final": "/workspace/dub/outbox/r16_t/full/long5.mp4",
+ "dub": "/workspace/dub/artifacts/r4a/r9_long5/long5/dubbed_16k.wav",
+ "wh": "720,1280",
+ "status": "OK",
+ "speech_at0": 5.088,
+ "noise_pm": null,
+ "n_speech_sec": 218,
+ "n_offscreen_sec": 29,
+ "speech_at0_all_dub": 5.089,
+ "face_lost_share": 0.0,
+ "face_lost_max": 0.05,
+ "global_conf": 7.789,
+ "av_offset": 1,
+ "speaker_select": "route",
+ "multi_face_frames": 0,
+ "other_tracks": [],
+ "cpu_minus_gpu": null,
+ "variants": {
+  "main": 5.088
+ }
+}

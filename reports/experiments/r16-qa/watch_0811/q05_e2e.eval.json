@@ -1,0 +1,23 @@
+{
+ "label": "q05_e2e",
+ "final": "/workspace/dub/outbox/r16_t/alpha/q05_e2e_full.mp4",
+ "dub": "/workspace/dub/artifacts/r4a/r9_q05_e2e/q05_e2e/dubbed_16k.wav",
+ "wh": "1920,1080",
+ "status": "OK",
+ "speech_at0": 4.566,
+ "noise_pm": null,
+ "n_speech_sec": 15,
+ "n_offscreen_sec": 5,
+ "speech_at0_all_dub": 3.744,
+ "face_lost_share": 0.0,
+ "face_lost_max": 0.05,
+ "global_conf": 3.068,
+ "av_offset": 0,
+ "speaker_select": "route",
+ "multi_face_frames": 0,
+ "other_tracks": [],
+ "cpu_minus_gpu": null,
+ "variants": {
+  "main": 4.566
+ }
+}
