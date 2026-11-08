@@ -1,0 +1,45 @@
+{
+ "id": "q04_cs8",
+ "var": {
+  "speech_at0": 4.905,
+  "status": "OK",
+  "spring_ratio": 1.683,
+  "spring": [
+   0.2898,
+   0.2626,
+   0.3164
+  ],
+  "floor": [
+   0.1722,
+   0.1496,
+   0.1955
+  ],
+  "upper_ratio": 0.865,
+  "chin_median": 1.598,
+  "chin_p95": 4.928,
+  "slide_flags": 0
+ },
+ "twin": {
+  "speech_at0": 5.063,
+  "status": "OK",
+  "spring_ratio": 1.666,
+  "spring": [
+   0.2831,
+   0.2539,
+   0.3097
+  ],
+  "floor": [
+   0.1699,
+   0.1467,
+   0.1945
+  ],
+  "upper_ratio": 1.085,
+  "chin_median": 1.666,
+  "chin_p95": 5.039,
+  "slide_flags": 0
+ },
+ "d_speech": -0.158,
+ "d_spring_ratio": 0.017,
+ "d_chin_median": -0.068,
+ "verdict": "speech_drop/spring_same_or_up"
+}

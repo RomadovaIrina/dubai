@@ -40,3 +40,13 @@ The upper control ratio is 1.05–1.22 everywhere.
 - The content leaks in: LatentSync q01 and KeySync q01 share the worst second (15 s, a fast head move), so per-second peaks partly follow the source motion. Use the whole-clip ratio for decisions and the worst seconds only for where to look.
 
 Suggested gate (not yet eye-validated): spring_ratio ≤ golden ratio + 0.2, or ≤ 1.3 where there is no golden. KeySync beards (1.8) fail it.
+
+## 08.11 evening: K1 paste arms (q04 re-render) + golden baseline
+- Raw cheek spring is deterministic; the matched floor re-encode is not (same twin a2s0, 6 reruns: floor 0.163-0.173, ratio 1.64-1.73).
+  So within ONE clip judge the RAW spring vs the twin CI; score_pair.sh verdict now does that (d_spring_raw). Ratio deltas < 0.1 are noise.
+- q04 arms vs a2s0 (raw 0.283 [0.254, 0.310] %): a2s1 0.291, a2s2 0.277, a1s1 0.304, cs8 0.290, cs9 0.300 = all inside the twin CI (no change);
+  stab 0.344 [0.314, 0.375] = WORSE (above CI). Speech@0 twin 5.063: a2s*/a1s1/stab within -0.05; cs8 -0.158, cs9 -0.134 (drop). Chin: no change (|d| <= 0.11).
+  Confirms K1: the paste side does not move the spring.
+- Golden baseline (accepted / e2e, region auto from accepted, raw % [CI], ratio): m03 0.442 / 0.423 (1.17 / 1.20, CI overlaps the floor),
+  m18 0.414 / 0.366 (1.44 / 1.51), old03 0.131 / 0.124 (1.34 / 1.53). e2e <= accepted on all three. No-beard clips sit at ratio 1.2-1.5;
+  KeySync beards 1.75-1.96. q02: n/a (auto region 868x600 spans the scene, floor 2.9 %); needs a hand region.

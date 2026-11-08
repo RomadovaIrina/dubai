@@ -1,0 +1,45 @@
+{
+ "id": "q04_cs9",
+ "var": {
+  "speech_at0": 4.929,
+  "status": "OK",
+  "spring_ratio": 1.791,
+  "spring": [
+   0.3004,
+   0.2709,
+   0.3304
+  ],
+  "floor": [
+   0.1677,
+   0.1442,
+   0.193
+  ],
+  "upper_ratio": 0.877,
+  "chin_median": 1.556,
+  "chin_p95": 5.008,
+  "slide_flags": 0
+ },
+ "twin": {
+  "speech_at0": 5.063,
+  "status": "OK",
+  "spring_ratio": 1.641,
+  "spring": [
+   0.2831,
+   0.2539,
+   0.3097
+  ],
+  "floor": [
+   0.1725,
+   0.1479,
+   0.1984
+  ],
+  "upper_ratio": 1.05,
+  "chin_median": 1.666,
+  "chin_p95": 5.039,
+  "slide_flags": 0
+ },
+ "d_speech": -0.134,
+ "d_spring_ratio": 0.15,
+ "d_chin_median": -0.11,
+ "verdict": "speech_drop/spring_same_or_up"
+}

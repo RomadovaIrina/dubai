@@ -1,0 +1,45 @@
+{
+ "id": "q04_a1s1",
+ "var": {
+  "speech_at0": 5.052,
+  "status": "OK",
+  "spring_ratio": 1.817,
+  "spring": [
+   0.3043,
+   0.2766,
+   0.3304
+  ],
+  "floor": [
+   0.1675,
+   0.1454,
+   0.1907
+  ],
+  "upper_ratio": 0.829,
+  "chin_median": 1.692,
+  "chin_p95": 5.207,
+  "slide_flags": 0
+ },
+ "twin": {
+  "speech_at0": 5.063,
+  "status": "OK",
+  "spring_ratio": 1.721,
+  "spring": [
+   0.2831,
+   0.2539,
+   0.3097
+  ],
+  "floor": [
+   0.1645,
+   0.1428,
+   0.1884
+  ],
+  "upper_ratio": 0.987,
+  "chin_median": 1.666,
+  "chin_p95": 5.039,
+  "slide_flags": 0
+ },
+ "d_speech": -0.011,
+ "d_spring_ratio": 0.096,
+ "d_chin_median": 0.026,
+ "verdict": "ok_speech/spring_same_or_up"
+}

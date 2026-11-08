@@ -27,8 +27,10 @@ v, t = r["var"], r["twin"]
 r["d_speech"] = round(v["speech_at0"] - t["speech_at0"], 3) if None not in (v["speech_at0"], t["speech_at0"]) else None
 r["d_spring_ratio"] = round(v["spring_ratio"] - t["spring_ratio"], 3) if None not in (v["spring_ratio"], t["spring_ratio"]) else None
 r["d_chin_median"] = round(v["chin_median"] - t["chin_median"], 3)
+# 08.11: the floor re-encode jitters (same twin, 6 reruns: ratio 1.64-1.73), the raw spring does not -> judge the RAW spring vs the twin's CI
+r["d_spring_raw"] = round(v["spring"][0] - t["spring"][0], 4)
 r["verdict"] = ("speech_drop" if r["d_speech"] is not None and r["d_speech"] < -0.1 else "ok_speech") + "/" + \
-               ("spring_down" if r["d_spring_ratio"] is not None and r["d_spring_ratio"] < -0.1 else "spring_same_or_up")
+               ("spring_down" if v["spring"][0] < t["spring"][1] else "spring_up" if v["spring"][0] > t["spring"][2] else "spring_same")
 json.dump(r, open(f"{O}/pair.json", "w"), indent=1)
-print("PAIR " + json.dumps({k: r[k] for k in ("id", "d_speech", "d_spring_ratio", "d_chin_median", "verdict")} | {"var": {k: v[k] for k in ("speech_at0", "spring_ratio", "chin_median")}, "twin": {k: t[k] for k in ("speech_at0", "spring_ratio", "chin_median")}}))
+print("PAIR " + json.dumps({k: r[k] for k in ("id", "d_speech", "d_spring_ratio", "d_chin_median", "d_spring_raw", "verdict")} | {"var": {k: v[k] for k in ("speech_at0", "spring_ratio", "chin_median")}, "twin": {k: t[k] for k in ("speech_at0", "spring_ratio", "chin_median")}}))
 PY
