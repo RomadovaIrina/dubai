@@ -107,14 +107,15 @@ t3 = time.time()
 open(f"{T}/list.txt", "w").write("".join(f"file '{j['dir']}/out.mp4'\n" for j in jobs))
 pr = json.loads(subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name:format=duration", "-of", "json", val("--audio")], capture_output=True, text=True).stdout or "{}")
 acod = (pr.get("streams") or [{}])[0].get("codec_name", ""); adur = float(pr.get("format", {}).get("duration", 0) or 0)
-if abs(adur - n / 25) > 0.04: print(f"WARNING: audio {adur:.3f} s vs master {n / 25:.3f} s: -shortest cuts the {'audio' if adur > n / 25 else 'VIDEO'} by {abs(adur - n / 25):.3f} s", flush=True)
+NOUT = min(n, int(math.floor(adur * 25 + 1e-3))) or n   # frames out = min(master, floor(audio * 25)), the same rule as the serial ks_plain
+if abs(adur - n / 25) > 0.04: print(f"WARNING: audio {adur:.3f} s vs master {n / 25:.3f} s: the output is cut to {NOUT} frames", flush=True)
 AC = ["-c:a", "copy"] if acod in ("aac", "mp3", "ac3", "eac3", "alac") else ["-c:a", "aac", "-b:a", "192k"]
 if AC[1] != "copy": print(f"WARNING: audio codec '{acod}' cannot be stream-copied into mp4: re-encoded to AAC 192k", flush=True)
-subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", f"{T}/list.txt", "-i", val("--audio"), "-map", "0:v", "-map", "1:a", "-c:v", "copy"] + AC +
-               ["-shortest", "-movflags", "+faststart", a.out], check=True)
+subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", f"{T}/list.txt", "-i", val("--audio"), "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-frames:v", str(NOUT)] + AC +
+               ["-t", f"{NOUT / 25:.6f}", "-movflags", "+faststart", a.out], check=True)
 got = nframes(a.out)
 print(f"plain paste: KeySync {nk} frames, master {n}, shift {SH} -> {a.out} ({got} frames; {J} workers: slicing {t1 - t0:.0f} s, colour match {t2 - t1:.0f} s, "
       f"paste {t3 - t2:.0f} s, total {time.time() - t0:.0f} s)", flush=True)
-if got != n: print(f"WARNING: {got} frames written != master {n} (-shortest: the mix ends earlier, as in the serial paste)", flush=True)
+if got != NOUT: print(f"WARNING: {got} frames written != expected {NOUT} (master {n}, audio {adur:.3f} s)", flush=True)
 if got < n - 13: sys.exit(1)
 if not os.environ.get("KS_PAR_KEEP"): shutil.rmtree(T, ignore_errors=True)
