@@ -28,6 +28,7 @@ ap.add_argument("--trans-n", type=int, default=3, dest="trans_n"); ap.add_argume
 ap.add_argument("--video"); ap.add_argument("--out", required=True); ap.add_argument("--route"); ap.add_argument("--manifest")
 ap.add_argument("--t0", type=float); ap.add_argument("--t1", type=float); ap.add_argument("--k0", type=int); ap.add_argument("--k1", type=int)
 ap.add_argument("--list", nargs="+"); ap.add_argument("--audio"); ap.add_argument("--frames", type=int, default=0)
+ap.add_argument("--dy-cut", type=float, default=0.15, dest="dy_cut"); ap.add_argument("--ratio-y", type=float, default=8.0, dest="ratio_y"); ap.add_argument("--thr2", type=float, default=0.15)
 ap.add_argument("--thr", type=float, default=0.35); ap.add_argument("--ratio", type=float, default=4.0); ap.add_argument("--min-s", type=float, default=0.4, dest="min_s")
 a = ap.parse_args()
 
@@ -53,7 +54,11 @@ if a.cmd == "detect":
     cuts = []
     for k in range(1, n):
         nb = np.r_[d[max(1, k - 12):k], d[k + 1:k + 13]]; med = float(np.median(nb)) if len(nb) else 0.0
+        nby = np.r_[dy[max(1, k - 12):k], dy[k + 1:k + 13]]; medy = float(np.median(nby)) if len(nby) else 0.0
         if d[k] > a.thr and d[k] > a.ratio * max(med, 0.01) and dy[k] > a.dy: cuts.append(("cut", k))
+        # r16 T: a cut between two shots of the SAME room / palette (q02 40.9 s Vera -> the man: d 0.23 < thr, but the luma structure jumps 0.167):
+        # a strong structural spike (dy > --dy-cut, > --ratio-y x the neighbours' median) with a clear histogram step (d > --thr2)
+        elif dy[k] > a.dy_cut and dy[k] > a.ratio_y * max(medy, 0.005) and d[k] > a.thr2: cuts.append(("cut", k))
     # gradual transitions (fades / dissolves through a title card, q03) are not cut above; the face presence splits them: every run of > --gap-s
     # (2 s = ks_e2e_prep's bridge) without ANY face between two face runs -> a boundary in its middle (no face there: source pixels either way)
     gaps = []
