@@ -24,6 +24,7 @@ def timed(name, f):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--follow", action="store_true", help="r16 T: keep reading --jobs as it grows until a line END (one process for the delay probe AND the full run: one model load / TRT load / VAE compile)")
     ap.add_argument("--jobs", required=True); ap.add_argument("--out", required=True); ap.add_argument("--cfg", default="")
     ap.add_argument("--decoding-t", type=int, default=1, help="frames per VAE decode call (the authors' script: 1)")
     ap.add_argument("--compile", default="none", choices=["none", "unet", "all"])
@@ -176,10 +177,20 @@ def main():
             return e_ref + g.audio_ratio * (c_ar - e_ref)
         g.prepare_inputs = prep; g.__call__ = call; model.sampler.guider = g
         type(g).__call__ = lambda self, x, sig: call(x, sig) if self is g else call0.__func__(self, x, sig)
-    for line in open(a.jobs):
+    def job_lines():   # r16 T --follow: the caller appends jobs while this process is resident; "END" stops it
+        if not a.follow:
+            yield from open(a.jobs); return
+        f = open(a.jobs); buf = ""
+        while True:
+            ln = f.readline()
+            if not ln or not ln.endswith("\n"): buf += ln; time.sleep(0.2); continue
+            ln, buf = buf + ln, ""
+            if ln.strip() == "END": return
+            yield ln
+    for line in job_lines():
         if not line.strip() or line.startswith("#"): continue
-        tag, vid, aud, *ex = line.split()   # r16 T: an optional 4th column = this job's KeySync reference frame (KS_REF_IDX, k2_refpick.py)
-        if ex: os.environ["KS_REF_IDX"] = ex[0]
+        tag, vid, aud, *ex = line.split()   # r16 T: an optional 4th column = this job's KeySync reference frame (KS_REF_IDX); default 0
+        os.environ["KS_REF_IDX"] = ex[0] if ex else "0"   # (audit #13: no leak of the previous job's reference)
         T.clear(); torch.cuda.synchronize(); t1 = time.perf_counter()
         d.sample(model, model_kf, video_path=vid, audio_path=aud, num_frames=14, resize_size=512, video_folder="videos", latent_folder="videos",
                  landmark_folder="landmarks", audio_folder="audios", audio_emb_folder="audios", fps_id=24, cond_aug=0.0, decoding_t=a.decoding_t,

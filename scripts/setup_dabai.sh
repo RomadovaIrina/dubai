@@ -33,7 +33,7 @@ stage_4(){ # prebuilt CPU wheel (AVX2/FMA = EPYC Zen2); fallback: native source 
   $PIP -r "${REQ}/40-llama.txt" || CMAKE_ARGS="-DGGML_NATIVE=ON" CMAKE_BUILD_PARALLEL_LEVEL=16 $PIP --no-binary llama-cpp-python llama-cpp-python==0.3.35
 }
 stage_5(){ # Chatterbox Multilingual v3 lives only in git master; it hard-pins torch 2.6 -> --no-deps
-  local ref="${CHATTERBOX_REF:-master}"
+  local ref="${CHATTERBOX_REF:-5de7a54aa4e5e2baadb0182dde554908b48b85c2}"   # r16 T: the ACCEPTED voice (never master / HEAD: ab55923 is a different voice)
   uv pip install --python "${PY}" --no-deps "git+https://github.com/resemble-ai/chatterbox.git@${ref}"
   uv pip install --python "${PY}" --no-deps s3tokenizer==0.3.0   # its metadata drags pre-commit etc.
   $PIP onnx ml_dtypes protobuf
@@ -74,6 +74,12 @@ stage_8(){ # Jupyter kernel for the notebook
   grep -q '^ACTIVE_VENV=' /workspace/.env 2>/dev/null || echo 'ACTIVE_VENV=dabai' >> /workspace/.env
   grep -q '^HF_HOME=' /workspace/.env 2>/dev/null || echo "HF_HOME=${DUB_ROOT}/models/hf" >> /workspace/.env
 }
+stage_10(){ # r16 T: the validated lock (= the image) on top of the stages, --no-deps (no resolver), then the accepted-voice guard (FAILS loudly)
+  uv pip install --python "${PY}" --no-deps -r "${DUB_ROOT}/infra/docker/requirements.dabai.lock.txt"
+  [ -x /venv/main/bin/python ] && uv pip install --python /venv/main/bin/python --no-deps -r "${DUB_ROOT}/infra/docker/requirements.main.lock.txt"
+  [ -x /venv/mediapipe/bin/python ] && uv pip install --python /venv/mediapipe/bin/python --no-deps -r "${DUB_ROOT}/infra/docker/requirements.mediapipe.lock.txt"
+  "${PY}" "${DUB_ROOT}/scripts/voice_env_check.py" --python "${PY}" || { echo "SETUP FAILED: the voice environment is not the accepted one (see above)" >&2; exit 3; }
+}
 stage_9(){ # freeze
   uv pip freeze --python "${PY}" > "${DUB_ROOT}/reports/pip-freeze.lock.txt"
   { for r in latentsync CodeFormer; do echo "$r $(git -C "${DUB_ROOT}/third_party/$r" rev-parse HEAD)"; done; } > "${DUB_ROOT}/reports/third_party-commits.txt"
@@ -81,6 +87,6 @@ stage_9(){ # freeze
   cat "${DUB_ROOT}/reports/pip-check.txt"
 }
 
-STAGES=("$@"); [ ${#STAGES[@]} -eq 0 ] && STAGES=(0 1 2 3 4 5 6 7 8 9)
+STAGES=("$@"); [ ${#STAGES[@]} -eq 0 ] && STAGES=(0 1 2 3 4 5 6 7 8 10 9)   # r16 T: 10 = the lock + the voice guard, before the freeze
 for s in "${STAGES[@]}"; do run_stage "$s"; done
 log "all requested stages finished"
