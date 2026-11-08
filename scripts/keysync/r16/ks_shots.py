@@ -22,7 +22,7 @@ import numpy as np, cv2
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 FPS = 25.0
 ap = argparse.ArgumentParser(); ap.add_argument("cmd", choices=["detect", "slice", "route", "manifest", "encode", "concat"])
-ap.add_argument("--mp", default=""); ap.add_argument("--gap-s", type=float, default=2.0, dest="gap_s"); ap.add_argument("--dy", type=float, default=0.10)
+ap.add_argument("--mp", default=""); ap.add_argument("--gap-s", type=float, default=2.0, dest="gap_s"); ap.add_argument("--gap-change", type=float, default=0.30, dest="gap_change"); ap.add_argument("--dy", type=float, default=0.10)
 ap.add_argument("--tail-s", type=float, default=1.0, dest="tail_s"); ap.add_argument("--trans-thr", type=float, default=0.08, dest="trans_thr")
 ap.add_argument("--trans-n", type=int, default=3, dest="trans_n"); ap.add_argument("--trans-max-s", type=float, default=2.0, dest="trans_max_s")
 ap.add_argument("--video"); ap.add_argument("--out", required=True); ap.add_argument("--route"); ap.add_argument("--manifest")
@@ -57,13 +57,21 @@ if a.cmd == "detect":
     # gradual transitions (fades / dissolves through a title card, q03) are not cut above; the face presence splits them: every run of > --gap-s
     # (2 s = ks_e2e_prep's bridge) without ANY face between two face runs -> a boundary in its middle (no face there: source pixels either way)
     gaps = []
+    YN = np.array(Y).reshape(n, -1); YN = YN - YN.mean(1, keepdims=True); YN = YN / (np.linalg.norm(YN, axis=1, keepdims=True) + 1e-6)
     if a.mp:
         z = np.load(a.mp); LA = z["lm_all"] if "lm_all" in z.files else z["lm"][:, None]
         pres = np.isfinite(LA.reshape(len(LA), LA.shape[1], -1)).all(2).any(1)[:n]; i = 0; G = int(round(a.gap_s * FPS))
         while i < len(pres):
             j = i
             while j < len(pres) and pres[j] == pres[i]: j += 1
-            if not pres[i] and i > 0 and j < len(pres) and j - i > G: gaps.append([i, j]); cuts.append(("gap", (i + j) // 2))
+            if not pres[i] and i > 0 and j < len(pres) and j - i > G:
+                # only if the PICTURE changes inside the gap: some gap frame is unlike BOTH the last face frame before and the first after it,
+                # by 1 - normalised correlation of the 32 x 18 grey thumbnails (exposure-invariant; histograms are not: q06's handheld VHS
+                # with auto-exposure reached 0.67, more than q03's title card). q03 title card 0.39, q05 product cutaway 1.20 -> split;
+                # q06 MediaPipe misses on the same shot <= 0.24 -> not split.
+                ch = float(max(1 - max(float(YN[k] @ YN[i - 1]), float(YN[k] @ YN[j])) for k in range(i, j)))
+                if ch > a.gap_change: gaps.append([i, j, round(ch, 3)]); cuts.append(("gap", (i + j) // 2))
+                else: gaps.append([i, j, round(ch, 3), "same picture: not split"])
             i = j
     cuts.sort(key=lambda c: c[1]); mn = int(round(a.min_s * FPS)); b = [0]; why = []
     for w_, k in cuts:
