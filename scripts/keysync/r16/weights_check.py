@@ -11,9 +11,14 @@ KS = pathlib.Path(os.environ.get("KS_ROOT", "/workspace/dub/keysync")); KM = M /
 lora = pathlib.Path(os.environ.get("KS_LORA", str(KS / "student/lora_pick.pt"))); cap = pathlib.Path(os.environ.get("KS_TRT_CAP", str(KS / "trt/cap")))
 ks = [KS / "code/pretrained_models/checkpoints" / f for f in ("keyframe_dub.pt", "interpolation_dub.pt", "WavLM-Base+.pt")] + \
      [lora, lora.parent / "lora_meta.json", cap / "kf.pt", cap / "interp.pt", M / "mediapipe/face_landmarker.task", KS / "venv/bin/python"]
+import glob   # r16 T (Q audit O2): sync_perframe.py (probe + route) needs SyncNet + S3FD; ks_fast needs HuBERT + the SVD VAE from the HF cache
+AUX = R / "third_party/latentsync/checkpoints/auxiliary"; HF = pathlib.Path(os.environ.get("HF_HOME", str(M / "hf"))) / "hub"
+hf = lambda repo, f: next(iter(sorted(glob.glob(str(HF / f"models--{repo.replace('/', '--')}/snapshots/*/{f}")))), str(HF / f"models--{repo.replace('/', '--')}/snapshots/MISSING/{f}"))
+ks += [AUX / "syncnet_v2.model", AUX / "sfd_face.pth", pathlib.Path(hf("facebook/hubert-base-ls960", "pytorch_model.bin")),
+       pathlib.Path(hf("stabilityai/stable-video-diffusion-img2vid", "vae/diffusion_pytorch_model.fp16.safetensors"))]
 ls = [M / "latentsync/latentsync_unet.pt", M / "realesrgan/RealESRGAN_x2plus.pth", M / "mediapipe/face_landmarker.task"]
 cf = R / "third_party/CodeFormer/weights/CodeFormer/codeformer.pth"
-miss = lambda L: [str(p) for p in L if not (p.exists() and (p.is_dir() or p.stat().st_size > 0))]
+miss = lambda L: [str(p) for p in L if not (p.exists() and (p.is_dir() or p.stat().st_size > 0))]   # (exists() follows symlinks: a dangling volume link = missing)
 mk, ml = miss(ks), miss(ls); flags = []; rc = 0
 for f in mk: print(f"WEIGHTS MISSING (KeySync): {f}", file=sys.stderr)
 for f in ml: print(f"WEIGHTS MISSING (LatentSync): {f}", file=sys.stderr)

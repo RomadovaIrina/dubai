@@ -52,7 +52,7 @@ finish() {
     --vmin $(python3 -c "import json; print(json.load(open('$OUT/timing.json'))['video_min'] or 1)" 2>/dev/null || echo 1) > $OUT/gpu_time.json 2>> $L/gpu_sampler.log \
     && python3 -c "import json; t = json.load(open('$OUT/gpu_time.json'))['total']; print('== $ID NVML GPU-busy', t.get('gpu_busy_s_per_vmin'), 's/vmin, weighted', t.get('gpu_weighted_s_per_vmin'), ', wall', t.get('wall_s_per_vmin'))" | tee -a $L/e2e.log
   STATUS=$(python3 -c "import json; print(json.load(open('$OUT/manifest.json'))['status'])" 2>/dev/null || echo $STATUS)   # r13: collect folds in the stage verdicts (11.3 2 % rule)
-  echo "R9_E2E_DONE $ID $STATUS" | tee -a $L/e2e.log; exit 0
+  echo "R9_E2E_DONE $ID $STATUS" | tee -a $L/e2e.log; [ "$STATUS" = ERROR ] && exit 1; exit 0   # (Q audit O3: a failed job exits non-zero)
 }
 
 st precheck
@@ -64,7 +64,7 @@ case " $PF " in *" unreadable_input "*|*" no_audio "*) fail no_usable_input ERRO
 if [ "${E2E_LIPSYNC:-on}" != off ]; then   # r16 T: every weight the face path needs, before any GPU work (a missing file = a loud failure, not a quiet source picture)
   WF=$(python3 scripts/keysync/r16/weights_check.py --face ${DUB_FACE:-auto} --nc ${DUB_ALLOW_NC:-1} 2>> $L/e2e.log); WRC=$?
   for f in $WF; do FL+=("$f"); done
-  [ $WRC = 2 ] && { fail weights_missing ERROR "model weights missing for DUB_FACE=${DUB_FACE:-auto}: see logs/e2e.log"; finish; }
+  [ $WRC != 0 ] && { fail weights_missing ERROR "model weights missing / the weights check failed (rc $WRC) for DUB_FACE=${DUB_FACE:-auto}: see logs/e2e.log"; finish; }
   [[ " $WF " == *" face_latentsync_unavailable "* ]] && export DUB_FACE_ENGINE=${DUB_FACE_ENGINE:-keysync}   # beards then go to KeySync (flagged)
 fi
 EXT=${IN##*.}; ln "$IN" $DUB_INPUTS/$ID.$EXT 2>/dev/null || cp "$IN" $DUB_INPUTS/$ID.$EXT   # a real file named <id>: the stages name their work dirs after the resolved input

@@ -37,6 +37,11 @@ STEPS = {
 }
 # flag -> (code, EN, RU); None = technical flag (listed, no user message)
 MESSAGES = {
+    "voice_env_mismatch": ("E_VOICE_ENV", "The worker's voice software is not the accepted version: nothing was dubbed (an operator must fix the worker).",
+                           "Голосовой модуль воркера не той версии: озвучка не выполнена (нужно исправить воркер)."),
+    "weights_missing": ("E_WEIGHTS_MISSING", "Model files are missing on the worker: nothing was dubbed (an operator must fix the worker).",
+                        "На воркере нет файлов моделей: озвучка не выполнена (нужно исправить воркер)."),
+    "gpu_lock_failed": ("E_GPU_LOCK", "The worker could not get its GPU: nothing was dubbed.", "Воркер не смог занять видеокарту: озвучка не выполнена."),
     "face_keysync_no_face": ("W_NO_FACE", "No face suitable for lip-sync was found (too small, inset or absent): the video is dubbed with the translated voice, without lip-sync.",
                              "Не найдено лицо, подходящее для синхронизации губ (слишком мелкое, во врезке или отсутствует): видео озвучено переведённым голосом, без синхронизации губ."),
     "face_keep_source_no_visible_speaker": ("W_OFFSCREEN_VOICE", "Nobody on screen speaks the dubbed lines (an off-screen voice): the picture is left as it is, without lip-sync.",
@@ -80,6 +85,9 @@ ERRORS = {   # terminal error code -> (status, EN, RU, retryable)
     "E_AUDIO_FAILED": ("ERROR", MESSAGES["audio_failed"][1], MESSAGES["audio_failed"][2], True),
     "E_NO_OUTPUT": ("ERROR", MESSAGES["no_output"][1], MESSAGES["no_output"][2], True),
     "E_TIMEOUT": ("TIMEOUT", "The job took too long and was stopped.", "Обработка заняла слишком много времени и была остановлена.", True),
+    "E_VOICE_ENV": ("ERROR", MESSAGES["voice_env_mismatch"][1], MESSAGES["voice_env_mismatch"][2], False),
+    "E_WEIGHTS_MISSING": ("ERROR", MESSAGES["weights_missing"][1], MESSAGES["weights_missing"][2], False),
+    "E_GPU_LOCK": ("ERROR", MESSAGES["gpu_lock_failed"][1], MESSAGES["gpu_lock_failed"][2], False),
     "E_CANCELLED": ("ERROR", "The job was cancelled.", "Задача отменена.", False),
     "E_JOB_ID_BUSY": ("ERROR", "Another job with the same job_id is running on this worker (job ids name the shared work folders): choose another job_id.",
                       "На этом воркере уже выполняется задача с таким же job_id (по нему называются общие рабочие папки): укажите другой job_id.", True),
@@ -89,7 +97,7 @@ ERRORS = {   # terminal error code -> (status, EN, RU, retryable)
 TECH = {"low_res", "long_video", "landscape", "rotated_source", "high_fps", "odd_fps", "variable_fps", "hdr_or_10bit", "face_partly_absent",
         "face_work_downscaled", "bed_spleeter_only", "face_clean_no_codeformer", "lipsync_off_by_request", "face_skipped_no_face",
         "voice_only_pose_precheck", "htdemucs_stems_failed", "htdemucs_mix_failed", "face_keysync", "face_keysync_multi_face", "face_keysync_no_face", "face_route_failed", "codeformer_missing_clean_face", "face_route_given", "audio_reused", "face_latentsync_unavailable", "ks_shots",
-        "ks_probe_failed", "ks_probe_low_conf", "ks_probe_clamped", "ks_check_offset", "ks_paste_par_retry", "beard_keysync", "voice_env_mismatch", "ks_dissolve_hard_switch"}
+        "ks_probe_failed", "ks_probe_low_conf", "ks_probe_clamped", "ks_check_offset", "ks_paste_par_retry", "beard_keysync", "ks_dissolve_hard_switch"}
 STYLES = ("white", "yellow", "trendy", "outline")
 _LANGS = None
 
