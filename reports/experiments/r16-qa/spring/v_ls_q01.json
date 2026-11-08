@@ -1,0 +1,111 @@
+{
+ "final": "/workspace/dub/r16in/day1/HANDOFF_Q/ls_clean/q01_amir.mp4",
+ "master": "/workspace/dub/r16in/day1/HANDOFF_Q/clips/q01_amir.mp4",
+ "fps": 23.976023976023978,
+ "region": [
+  414,
+  194,
+  678,
+  402
+ ],
+ "final_metric": {
+  "spring_scale_pct": [
+   0.1808,
+   0.1637,
+   0.2037
+  ],
+  "spring_t_px": [
+   0.3126,
+   0.2773,
+   0.3497
+  ],
+  "parts_scale_pct": {
+   "cheekL": 0.1638,
+   "cheekR": 0.196,
+   "nose": 0.2774,
+   "jaw": 0.1011,
+   "upper": 0.0733
+  },
+  "parts_t_px": {
+   "cheekL": 0.2773,
+   "cheekR": 0.3493,
+   "nose": 0.3143,
+   "jaw": 0.314,
+   "upper": 0.2565
+  },
+  "worst_seconds": [
+   [
+    15,
+    0.521
+   ],
+   [
+    18,
+    0.264
+   ],
+   [
+    24,
+    0.238
+   ],
+   [
+    23,
+    0.229
+   ],
+   [
+    39,
+    0.226
+   ]
+  ]
+ },
+ "floor_bitrate": 4083028,
+ "floor_metric": {
+  "spring_scale_pct": [
+   0.1316,
+   0.1201,
+   0.1434
+  ],
+  "spring_t_px": [
+   0.23,
+   0.2044,
+   0.2586
+  ],
+  "parts_scale_pct": {
+   "cheekL": 0.1247,
+   "cheekR": 0.1381,
+   "nose": 0.1937,
+   "jaw": 0.0699,
+   "upper": 0.0612
+  },
+  "parts_t_px": {
+   "cheekL": 0.2093,
+   "cheekR": 0.252,
+   "nose": 0.2108,
+   "jaw": 0.1924,
+   "upper": 0.2079
+  },
+  "worst_seconds": [
+   [
+    15,
+    0.212
+   ],
+   [
+    43,
+    0.212
+   ],
+   [
+    19,
+    0.193
+   ],
+   [
+    31,
+    0.177
+   ],
+   [
+    30,
+    0.177
+   ]
+  ]
+ },
+ "spring_ratio": 1.374,
+ "spring_above_floor": true,
+ "upper_ratio": 1.198
+}

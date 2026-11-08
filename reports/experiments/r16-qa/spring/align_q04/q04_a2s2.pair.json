@@ -1,0 +1,45 @@
+{
+ "id": "q04_a2s2",
+ "var": {
+  "speech_at0": 5.015,
+  "status": "OK",
+  "spring_ratio": 1.623,
+  "spring": [
+   0.2767,
+   0.2501,
+   0.3006
+  ],
+  "floor": [
+   0.1705,
+   0.1453,
+   0.1968
+  ],
+  "upper_ratio": 0.843,
+  "chin_median": 1.644,
+  "chin_p95": 5.182,
+  "slide_flags": 0
+ },
+ "twin": {
+  "speech_at0": 5.063,
+  "status": "OK",
+  "spring_ratio": 1.733,
+  "spring": [
+   0.2831,
+   0.2539,
+   0.3097
+  ],
+  "floor": [
+   0.1634,
+   0.1415,
+   0.1868
+  ],
+  "upper_ratio": 0.979,
+  "chin_median": 1.666,
+  "chin_p95": 5.039,
+  "slide_flags": 0
+ },
+ "d_speech": -0.048,
+ "d_spring_ratio": -0.11,
+ "d_chin_median": -0.022,
+ "verdict": "ok_speech/spring_down"
+}
