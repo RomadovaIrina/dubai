@@ -37,6 +37,13 @@ STEPS = {
 }
 # flag -> (code, EN, RU); None = technical flag (listed, no user message)
 MESSAGES = {
+    "ks_probe_failed": ("W_SYNC_UNCERTAIN", "The lip-sync timing could not be verified for this video (or is still off): the lips may run slightly early or late.", "Синхрон губ для этого видео не удалось проверить (или он смещён): губы могут слегка опережать или отставать от речи."),
+    "ks_probe_low_conf": ("W_SYNC_UNCERTAIN", "The lip-sync timing could not be verified for this video (or is still off): the lips may run slightly early or late.", "Синхрон губ для этого видео не удалось проверить (или он смещён): губы могут слегка опережать или отставать от речи."),
+    "ks_check_offset": ("W_SYNC_UNCERTAIN", "The lip-sync timing could not be verified for this video (or is still off): the lips may run slightly early or late.", "Синхрон губ для этого видео не удалось проверить (или он смещён): губы могут слегка опережать или отставать от речи."),
+    "ks_dissolve_hard_switch": ("W_HARD_SWITCH", "A scene transition could not be lip-synced smoothly: at that point the mouth switches between the original and the dub.",
+                                "Переход между сценами не удалось синхронизировать плавно: в этом месте рот переключается между оригиналом и дубляжом."),
+    "face_route_failed": ("W_ROUTE_FAILED", "It could not be determined who speaks on screen: the lips were assigned by matching voices to faces.",
+                          "Не удалось определить, кто говорит в кадре: губы назначены по сопоставлению голосов и лиц."),
     "voice_env_mismatch": ("E_VOICE_ENV", "The worker's voice software is not the accepted version: nothing was dubbed (an operator must fix the worker).",
                            "Голосовой модуль воркера не той версии: озвучка не выполнена (нужно исправить воркер)."),
     "weights_missing": ("E_WEIGHTS_MISSING", "Model files are missing on the worker: nothing was dubbed (an operator must fix the worker).",
@@ -96,8 +103,8 @@ ERRORS = {   # terminal error code -> (status, EN, RU, retryable)
 }
 TECH = {"low_res", "long_video", "landscape", "rotated_source", "high_fps", "odd_fps", "variable_fps", "hdr_or_10bit", "face_partly_absent",
         "face_work_downscaled", "bed_spleeter_only", "face_clean_no_codeformer", "lipsync_off_by_request", "face_skipped_no_face",
-        "voice_only_pose_precheck", "htdemucs_stems_failed", "htdemucs_mix_failed", "face_keysync", "face_keysync_multi_face", "face_keysync_no_face", "face_route_failed", "codeformer_missing_clean_face", "face_route_given", "audio_reused", "face_latentsync_unavailable", "ks_shots",
-        "ks_probe_failed", "ks_probe_low_conf", "ks_probe_clamped", "ks_check_offset", "ks_paste_par_retry", "beard_keysync", "ks_dissolve_hard_switch"}
+        "voice_only_pose_precheck", "htdemucs_stems_failed", "htdemucs_mix_failed", "face_keysync", "face_keysync_multi_face", "face_keysync_no_face", "codeformer_missing_clean_face", "face_route_given", "audio_reused", "face_latentsync_unavailable", "ks_shots",
+        "ks_probe_clamped", "ks_paste_par_retry", "beard_keysync"}
 STYLES = ("white", "yellow", "trendy", "outline")
 _LANGS = None
 
