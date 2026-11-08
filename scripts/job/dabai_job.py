@@ -89,7 +89,7 @@ ERRORS = {   # terminal error code -> (status, EN, RU, retryable)
 TECH = {"low_res", "long_video", "landscape", "rotated_source", "high_fps", "odd_fps", "variable_fps", "hdr_or_10bit", "face_partly_absent",
         "face_work_downscaled", "bed_spleeter_only", "face_clean_no_codeformer", "lipsync_off_by_request", "face_skipped_no_face",
         "voice_only_pose_precheck", "htdemucs_stems_failed", "htdemucs_mix_failed", "face_keysync", "face_keysync_multi_face", "face_keysync_no_face", "face_route_failed", "codeformer_missing_clean_face", "face_route_given", "audio_reused", "face_latentsync_unavailable", "ks_shots",
-        "ks_probe_failed", "ks_probe_low_conf", "ks_probe_clamped", "ks_check_offset"}
+        "ks_probe_failed", "ks_probe_low_conf", "ks_probe_clamped", "ks_check_offset", "ks_paste_par_retry"}
 STYLES = ("white", "yellow", "trendy", "outline")
 _LANGS = None
 
