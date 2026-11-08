@@ -10,7 +10,7 @@
 # landmark pass), the dub wav cut by samples, the mix cut (only for ks_plain's mux; dropped at the concat), route.json / manifest cut + shifted.
 # Face segments run LONGEST FIRST: the first one whose delay probe SUCCEEDS sets KS_DELAY for the rest (one delay per video; no 10 s probe on
 # short shots). A face segment < KS_SHOT_MIN_S (1.0 s) or with nothing to lip-sync (ks_face exit 3) keeps the source picture.
-# KS_HELD_FD (e2e holds the GPU lock): the first ks_face run releases it; later segments take KS_GPU_LOCK themselves.
+# GPU_RDY (e2e holds the GPU lock, gpulock.sh): the first ks_face run releases it; later segments take the lock themselves.
 # exit: 0 = OUT written; 3 = nothing lip-synced (keep the source); other = failed.
 set -o pipefail
 ID=$1; AD=$2; W=$3; OUTV=$4; ROUTE=$5; PK=$6
@@ -36,11 +36,11 @@ for row in "${FS[@]}"; do
   RS=""; if [ -n "$ROUTE" ] && [ -f "$ROUTE" ]; then $PY $KT/ks_shots.py route --route $ROUTE --t0 $t0 --t1 $t1 --out $S/route.json | sed "s/^/KS_SHOT $i /"; RS=$S/route.json; fi
   env KS_IN_SHOT=1 KS_MASTER_IN=$S/master.mp4 KS_MP_NPZ=$S/master_mp.npz KS_DELAY=$DELAY bash $R/scripts/keysync/r16/ks_face.sh ${ID}_s$i $S/master.mp4 $S/audio $S $S/out.mp4 $RS > $S/face.log 2>&1
   rc=$?; grep -E "^KS_(CROP|PROBE|CHECK|PASTE|FACE_KEEP|FACE_DONE)|WARN" $S/face.log | cut -c1-300 | sed "s/^/KS_SHOT $i [$k0, $k1) /"
-  [ -n "${KS_HELD_FD:-}" ] && grep -q "^KS_T engines" $S/face.log && unset KS_HELD_FD   # (the first run's GPU section released it)
+  # (r16 T: a GPU lock handed over by e2e (GPU_RDY, gpulock.sh) is released by the first run's GPU section; later runs take it themselves)
   if [ $rc = 3 ]; then echo "KS_SHOT $i [$k0, $k1) $t0-$t1 s: nothing to lip-sync -> source"; continue; fi
   [ $rc = 0 ] || { echo "KS_SHOT $i FAILED (rc $rc)"; tail -5 $S/face.log; exit 1; }
-  if [ "$DELAY" = probe ] && ! grep -q "probe sync failed" $S/face.log; then
-    P=$(grep -o "KS_PROBE f[0-9]* av_offset [-0-9]* -> dub delay [-0-9]* ms" $S/face.log | head -1 | awk '{print $(NF-1)}')
+  if [ "$DELAY" = probe ] && ! grep -q -E "KS_FLAG ks_probe_(failed|low_conf)" $S/face.log; then   # r16 T: only a CONFIDENT probe sets the video's delay
+    P=$(grep -o -E "KS_PROBE f[0-9]+ av_offset [-0-9]+( conf [0-9.]+)? -> dub delay [-0-9]+ ms" $S/face.log | head -1 | awk '{print $(NF-1)}')
     [ -n "$P" ] && { DELAY=$P; echo "KS_SHOTS delay $DELAY ms (probed in segment $i) for the remaining segments"; }; fi
   PART[$i]=$S/out.mp4; LS=$((LS + 1))
 done
