@@ -8,7 +8,7 @@ x the box-edge feather (24 px, none on a frame border). ONE global colour match:
 the mask (lips excluded) over every 5th frame -> a constant gain / offset per channel (no per-frame colour match). After KeySync's output
 ends, a fade to the master over 8 frames. Colour-managed I/O (ks_cms, BT.709).
     KS_CMS=1 python ks_plain.py --ks KS.mp4 --master master_25fps.mp4 --box box.json --lm source_lm_F.npz [--others faces2.npz] --shift 1 --audio MIX --out OUT.mp4"""
-import argparse, json, os, subprocess, sys
+import argparse, json, math, os, subprocess, sys
 import numpy as np, cv2
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ks_cms
@@ -290,17 +290,21 @@ def scale_fix(kf, k):
     return cv2.warpAffine(kf, M, (s, s), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
 DG = []
 fps_m = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=r_frame_rate", "-of", "csv=p=0", a.master], capture_output=True, text=True).stdout.strip()
-def audio_args(audio, nv, fps):   # r16 K1: the accepted mix is stream-copied (no AAC re-encode); -shortest kept, with a WARNING when it would cut either stream
+def audio_probe(audio):
     pr = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name:format=duration", "-of", "json", audio], capture_output=True, text=True).stdout
-    js = json.loads(pr or "{}"); codec = (js.get("streams") or [{}])[0].get("codec_name", ""); dur = float(js.get("format", {}).get("duration", 0) or 0)
-    fr = eval(fps) if isinstance(fps, str) else float(fps); vd = nv / fr
-    if abs(dur - vd) > 1.0 / fr: print(f"WARNING: audio {dur:.3f} s vs video {vd:.3f} s ({nv} frames): -shortest cuts the {'audio' if dur > vd else 'VIDEO'} by {abs(dur - vd):.3f} s", flush=True)
-    if codec in ("aac", "mp3", "ac3", "eac3", "alac"): return ["-c:a", "copy", "-shortest"]
-    print(f"WARNING: audio codec '{codec}' cannot be stream-copied into mp4: re-encoded to AAC 192k", flush=True); return ["-c:a", "aac", "-b:a", "192k", "-shortest"]
-nw_ = (min(WR[1], n) - WR[0]) if a.write_range else n
+    js = json.loads(pr or "{}"); return (js.get("streams") or [{}])[0].get("codec_name", ""), float(js.get("format", {}).get("duration", 0) or 0)
+def audio_args(audio, nv, fps):   # r16 K1: the accepted mix is stream-copied (no AAC re-encode); the length is set explicitly (-frames:v / -t), never by -shortest
+    codec, dur = audio_probe(audio); fr = eval(fps) if isinstance(fps, str) else float(fps)
+    if abs(dur - nv / fr) > 1.0 / fr: print(f"WARNING: audio {dur:.3f} s vs video {nv / fr:.3f} s ({nv} frames): the output is cut to {nv} frames", flush=True)
+    ac = ["-c:a", "copy"] if codec in ("aac", "mp3", "ac3", "eac3", "alac") else ["-c:a", "aac", "-b:a", "192k"]
+    if ac[1] != "copy": print(f"WARNING: audio codec '{codec}' cannot be stream-copied into mp4: re-encoded to AAC 192k", flush=True)
+    return ac + ["-t", f"{nv / fr:.6f}"]
+FR_M = eval(fps_m)   # frames out = min(master, floor(audio * fps)), the same rule as ks_plain_par (it was -shortest, which dropped 1 extra frame)
+NOUT = n if a.video_only else (min(n, int(math.floor(audio_probe(a.audio)[1] * FR_M + 1e-3))) or n)
+nw_ = (min(WR[1], n) - WR[0]) if a.write_range else NOUT
 AU = ["-an"] if a.video_only else ["-i", a.audio, "-map", "0:v", "-map", "1:a"]
 w = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", fps_m, "-i", "-"] + AU +
-                     ["-c:v", "libx264", "-crf", "16", "-preset", "medium"] + ks_cms.enc() + ([] if a.video_only else audio_args(a.audio, nw_, fps_m)) + [a.out], stdin=subprocess.PIPE)
+                     ["-c:v", "libx264", "-crf", os.environ.get("KS_PLAIN_CRF", "16"), "-preset", "medium"] + ks_cms.enc() + ["-frames:v", str(nw_)] + ([] if a.video_only else audio_args(a.audio, nw_, fps_m)) + [a.out], stdin=subprocess.PIPE)
 last[0] = None; nk = len(K)
 NKT = a.ks_total if a.ks_total >= 0 else nk; NTT = a.n_total if a.n_total >= 0 else n; SHG = a.k_base - a.ks_base + a.shift   # global KeySync length / master length / shift
 KS_SHORT = NKT - SHG < NTT   # the end fade exists ONLY for a KeySync output that is really shorter than the master (never because a chunk was cut)
@@ -308,7 +312,7 @@ if KS_SHORT: print(f"WARNING: KeySync has {NKT} frames < master {NTT} (+ shift {
 NFADE = 0
 for k, f in enumerate(frames(a.master, W, H)):
     if k < WR[0]: continue
-    if k >= WR[1]: break
+    if k >= WR[1] or (not a.write_range and k >= NOUT): break
     f = f.copy(); i = kidx(k); m, _ = mask(k)
     if m is not None:
         ig = i + a.ks_base; fade = 1.0 if (not KS_SHORT or ig < NKT - 25) else max(0.0, (NKT - ig) / 25.0)   # r16: only if KeySync is SHORTER than the master (pad the inputs); 1 s fade as a last resort
