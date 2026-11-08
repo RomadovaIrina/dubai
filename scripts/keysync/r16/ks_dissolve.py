@@ -8,13 +8,22 @@ crossfade: q03 residual <= 4.7 grey levels). Then
   assemble out_k = S_k + a_k (P_k - B^_k) inside each part (P = the pasted KeySync render of the unmixed master): only the LIP CHANGE goes in,
            scaled by how visible the face is (a_k = 1 -> P_k; a_k -> 0 -> the source), the rest of the frame stays the source; outside the
            parts the source. Colour-managed (ks_cms), x264 crf 16 like ks_plain, the final mix stream-COPIED.
+  check    is a transition a clean linear crossfade? Fits a_k over [d0, d1) against the T and B frames; ok when the worst residual is
+           < --max-rel (0.10) x mean |B - T| AND a_k is monotone (Spearman |rho| > 0.9) and spans >= 0.8. Prints KS_DISSOLVE_CHECK {...}
+           and writes <out> (json). ok -> alpha-paste; not ok -> keep the hard switch AND show the flag (KS WARN line + "flag" in the
+           json: q03 37.72 s, the fresco pans during its fade: residual 0.285 of |B - T|). q03 22.76 s / 30.4 s: 0.029 / 0.031 -> ok.
+  Accepted by Irina's eye 08.11 on q03: "альфа пейст не плавает не дергается" (it doesn't float, doesn't jerk).
+  Wiring (T): per face-segment edge that ks_shots.py marked as a transition zone: T frame = the first frame outside the zone on the other
+  side, B frame = the first clean face frame; check -> unmix (segment extended over the zone, KS_MASTER_IN = the unmixed master) ->
+  ks_face.sh -> assemble. Paste shift / delay as for any segment (q03 shot B needed shift +1 on its own run).
+    python ks_dissolve.py check --master M.mp4 --d0 D0 --d1 D1 --t-frame T --b-frame B --out check.json
     python ks_dissolve.py unmix --master M.mp4 --k0 K0 --k1 K1 --d0 D0 --d1 D1 --t-frame T --b-frame B --out seg_unmixed.mp4
     KS_CMS=1 python ks_dissolve.py assemble --master M.mp4 --audio MIX --part P.mp4:K0:seg_unmixed.mp4 [...] --out OUT.mp4"""
 import argparse, json, os, subprocess, sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__))); sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), ".."))
-ap = argparse.ArgumentParser(); ap.add_argument("cmd", choices=["unmix", "assemble"]); ap.add_argument("--master", required=True); ap.add_argument("--out", required=True)
+ap = argparse.ArgumentParser(); ap.add_argument("cmd", choices=["check", "unmix", "assemble"]); ap.add_argument("--max-rel", type=float, default=0.10, dest="max_rel"); ap.add_argument("--master", required=True); ap.add_argument("--out", required=True)
 ap.add_argument("--k0", type=int); ap.add_argument("--k1", type=int); ap.add_argument("--t-frame", type=int, dest="tf"); ap.add_argument("--b-frame", type=int, dest="bf")
 ap.add_argument("--d0", type=int, default=-1); ap.add_argument("--d1", type=int, default=-1)   # the dissolve frames [d0, d1); a = 1 elsewhere
 ap.add_argument("--amin", type=float, default=0.3); ap.add_argument("--audio"); ap.add_argument("--part", nargs="*", default=[]); a = ap.parse_args()
@@ -32,7 +41,27 @@ def reader(path, cms=False):
         yield np.frombuffer(b, np.uint8).reshape(H, W, 3)
 
 
-if a.cmd == "unmix":
+if a.cmd == "check":
+    lo, hi = min(a.d0, a.tf, a.bf), max(a.d1 - 1, a.tf, a.bf); F = {}
+    for k, f in enumerate(reader(a.master)):
+        if lo <= k <= hi: F[k] = f[::4, ::4].astype(np.float32)
+        if k >= hi: break
+    T, B = F[a.tf], F[a.bf]; D = (B - T).ravel(); DD = float(np.dot(D, D)); dbt = float(np.abs(B - T).mean())
+    ks = list(range(a.d0, a.d1)); al = [float(np.dot((F[k] - T).ravel(), D) / DD) for k in ks]
+    res = [float(np.abs(F[k] - (x * B + (1 - x) * T)).mean()) for k, x in zip(ks, al)]
+    rk = lambda v: np.argsort(np.argsort(v)).astype(float)
+    rho = float(np.corrcoef(rk(ks), rk(al))[0, 1]) if len(ks) > 2 else 0.0
+    rel = max(res) / max(dbt, 1e-6); span = max(al) - min(al)
+    ok = rel < a.max_rel and abs(rho) > 0.9 and span >= 0.8
+    why = [] if ok else [w for w, c in (("residual %.2f of |B-T| >= %.2f (not a linear crossfade: camera / content moves)" % (rel, a.max_rel), rel >= a.max_rel),
+                                         ("alpha not monotone (rho %.2f)" % rho, abs(rho) <= 0.9), ("alpha span %.2f < 0.8" % span, span < 0.8)) if c]
+    out = {"ok": ok, "d0": a.d0, "d1": a.d1, "t_frame": a.tf, "b_frame": a.bf, "max_rel_resid": round(rel, 3), "rho": round(rho, 3), "span": round(span, 3),
+           "mean_BT": round(dbt, 1), "alpha": [round(x, 3) for x in al], "flag": None if ok else "hard switch kept at frames %d-%d (%.2f s): %s" % (a.d0, a.d1, a.d0 / 25, "; ".join(why))}
+    json.dump(out, open(a.out, "w"), indent=1)
+    print("KS_DISSOLVE_CHECK " + json.dumps({k: out[k] for k in ("ok", "d0", "d1", "max_rel_resid", "rho", "span", "flag")}), flush=True)
+    if not ok: print("KS WARN " + out["flag"], flush=True)
+
+elif a.cmd == "unmix":
     F = {}
     for k, f in enumerate(reader(a.master)):
         if k in (a.tf, a.bf) or a.k0 <= k < a.k1: F[k] = f
