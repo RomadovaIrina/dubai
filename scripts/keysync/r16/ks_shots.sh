@@ -24,7 +24,10 @@ for i, (k0, k1, kd) in sorted(enumerate(s), key=lambda x: -(x[1][1] - x[1][0])):
     if kd == 'face': print(i, k0, k1)")
 NS=$(python3 -c "import json; print(len(json.loads('$SEGS')))"); echo "KS_SHOTS_RUN $ID: $NS segments, ${#FS[@]} with a face (longest first: ${FS[*]})"
 if [[ "${KS_REF:-0}" =~ ^[0-9]+$ ]] && [ "${KS_REF:-0}" != 0 ]; then echo "KS WARN KS_REF=$KS_REF is a frame of the whole video: 0 (the first frame) per shot"; export KS_REF=0; fi   # KS_REF=0 = each shot's first frame
-DELAY=${KS_DELAY:-probe}; MIN=$(python3 -c "print(round(${KS_SHOT_MIN_S:-1.0} * 25))"); LS=0; declare -A PART ALPHA
+DELAY=${KS_DELAY:-probe}; MIN=$(python3 -c "print(round(${KS_SHOT_MIN_S:-1.0} * 25))"); LS=0; declare -A PART ALPHA SHOTARGS SPAN; READY=(); NFAIL=0
+shot_log() { grep -h -E "^KS_(CROP|PROBE|CHECK|PASTE|FACE_KEEP|FACE_DONE|FLAG)|WARN" $SW/s$1/face_$2.log 2>/dev/null | cut -c1-300 | sed "s/^/KS_SHOT $1 ${SPAN[$1]} /"; }
+shot_fail() {   # r16 T (Q audit O5): ONE failed segment keeps ITS source picture (flagged); the rest of the video is still lip-synced
+  echo "KS_SHOT $1 ${SPAN[$1]} FAILED in $2 (${3:-}) -> source"; tail -3 $SW/s$1/face_$2.log 2>/dev/null; echo ks_shot_failed >> $PK/flags.txt; unset "ALPHA[$1]"; NFAIL=$((NFAIL + 1)); }
 for row in "${FS[@]}"; do
   read -r i k0 k1 <<< "$row"; S=$SW/s$i; mkdir -p $S/audio
   if [ $((k1 - k0)) -lt $MIN ]; then echo "KS_SHOT $i [$k0, $k1): shorter than ${KS_SHOT_MIN_S:-1.0} s -> source"; continue; fi
@@ -48,17 +51,48 @@ for row in "${FS[@]}"; do
   ffmpeg -v error -y -i $AD/final_mix_aac.m4a -af "atrim=start=$t0:end=$t1,asetpts=PTS-STARTPTS,apad=whole_dur=$(python3 -c "print($t1 - $t0 + 0.2)")" -c:a aac -b:a 192k $S/audio/final_mix_aac.m4a || exit 1
   for m in $AD/*.manifest.json; do [ -f "$m" ] && $PY $KT/ks_shots.py manifest --manifest $m --t0 $t0 --t1 $t1 --out $S/audio/$(basename $m) > /dev/null; done
   RS=""; if [ -n "$ROUTE" ] && [ -f "$ROUTE" ]; then $PY $KT/ks_shots.py route --route $ROUTE --t0 $t0 --t1 $t1 --out $S/route.json | sed "s/^/KS_SHOT $i /"; RS=$S/route.json; fi
-  env KS_IN_SHOT=1 KS_MASTER_IN=$S/master.mp4 KS_MP_NPZ=$MPX KS_DELAY=$DELAY bash $R/scripts/keysync/r16/ks_face.sh ${ID}_s$i $S/master.mp4 $S/audio $S $S/out.mp4 $RS > $S/face.log 2>&1
-  rc=$?; cat $S/ks/flags.txt >> $PK/flags.txt 2>/dev/null   # (r16 T: the shot's flags reach the job status)
-  grep -E "^KS_(CROP|PROBE|CHECK|PASTE|FACE_KEEP|FACE_DONE|FLAG)|WARN" $S/face.log | cut -c1-300 | sed "s/^/KS_SHOT $i [$k0, $k1) /"
-  # (r16 T: a GPU lock handed over by e2e (GPU_RDY, gpulock.sh) is released by the first run's GPU section; later runs take it themselves)
-  if [ $rc = 3 ]; then echo "KS_SHOT $i [$k0, $k1) $t0-$t1 s: nothing to lip-sync -> source"; continue; fi
-  [ $rc = 0 ] || { echo "KS_SHOT $i FAILED (rc $rc)"; tail -5 $S/face.log; exit 1; }
-  if [ "$DELAY" = probe ] && ! grep -q -E "KS_FLAG ks_probe_(failed|low_conf)" $S/face.log; then   # r16 T: only a CONFIDENT probe sets the video's delay
-    P=$(grep -o -E "KS_PROBE f[0-9]+ av_offset [-0-9]+( conf [0-9.]+)? -> dub delay [-0-9]+ ms" $S/face.log | head -1 | awk '{print $(NF-1)}')
-    [ -n "$P" ] && { DELAY=$P; echo "KS_SHOTS delay $DELAY ms (probed in segment $i) for the remaining segments"; }; fi
+  SHOTARGS[$i]="${ID}_s$i $S/master.mp4 $S/audio $S $S/out.mp4 $RS"; SPAN[$i]="[$k0, $k1)"
+  env KS_IN_SHOT=1 KS_PHASE=prep KS_MASTER_IN=$S/master.mp4 KS_MP_NPZ=$MPX bash $R/scripts/keysync/r16/ks_face.sh ${SHOTARGS[$i]} > $S/face_prep.log 2>&1; rc=$?
+  shot_log $i prep
+  if [ $rc = 3 ]; then echo "KS_SHOT $i ${SPAN[$i]}: nothing to lip-sync -> source"; unset "ALPHA[$i]"; continue; fi
+  [ $rc = 0 ] || { shot_fail $i prep $rc; continue; }
+  READY+=($i)
+done
+# ---- r16 T (Q audit O5): ONE GPU-lock hold + ONE resident ks_fast (one model / TRT load + VAE compile) for EVERY shot's probe + render
+OKG=()
+if [ ${#READY[@]} -gt 0 ]; then
+  . $R/scripts/keysync/r16/gpulock.sh; gpu_held || { echo "KS_T wait_gpu $(date +%s.%N)"; gpu_acquire $$ || { echo "KS_SHOTS: could not take the GPU lock"; exit 1; }; }
+  KS=${KS_ROOT:-/workspace/dub/keysync}; LORA=${KS_LORA:-$KS/student/lora_pick.pt}; LMK=${KS_LMK_CACHE:-$KS/lmk}; mkdir -p $LMK; [ -n "${KS_TORCH_HOME:-}" ] && export TORCH_HOME=$KS_TORCH_HOME
+  GATE="${KS_GATE-thr=0.12,cap=0.25,hi=8,lo=2}"
+  ENG=$(KS_GPU_LOCK=/dev/null bash $R/scripts/keysync/r16/ks_engines.sh 2> $SW/engines.log | tail -1); [ -d "$ENG" ] || { tail -5 $SW/engines.log; exit 1; }
+  KFJ=$SW/jobs_follow.txt; : > $KFJ; KOUT=$SW/ksout; mkdir -p $KOUT
+  ( cd $KS/code && . ../venv/bin/activate && env KS_DC=2:0 KS_LMK_CACHE=$LMK TORCHINDUCTOR_CACHE_DIR=${TORCHINDUCTOR_CACHE_DIR:-$KS/inductor} ${GATE:+KS_GATE=$GATE} \
+    python $KT/ks_fast.py --follow --jobs $KFJ --out $KOUT --cfg _s8 --vae-half --compile unet --trt $ENG --interp-lora $LORA --interp-steps ${KS_INTERP_STEPS:-2} \
+      --vae-batch 8 --vae-compile ) > $SW/ks_fast.log 2>&1 & KSP=$!
+  trap '[ -n "${KSP:-}" ] && kill $KSP 2>/dev/null' EXIT   # never leave the --follow ks_fast behind
+  for i in "${READY[@]}"; do S=$SW/s$i
+    if ! kill -0 $KSP 2>/dev/null; then shot_fail $i gpu "ks_fast died"; continue; fi
+    env KS_IN_SHOT=1 KS_PHASE=gpu KS_DELAY=$DELAY KS_FAST_FJ=$KFJ KS_FAST_LOG=$SW/ks_fast.log KS_FAST_OUT=$KOUT KS_FAST_PID=$KSP KS_TAG_PREFIX=s${i}_ \
+      bash $R/scripts/keysync/r16/ks_face.sh ${SHOTARGS[$i]} > $S/face_gpu.log 2>&1; rc=$?
+    shot_log $i gpu
+    [ $rc = 0 ] || { shot_fail $i gpu $rc; continue; }
+    if [ "$DELAY" = probe ] && ! grep -q -E "KS_FLAG ks_probe_(failed|low_conf)" $S/face_gpu.log; then   # only a CONFIDENT probe sets the video's delay
+      P=$(grep -o -E "KS_PROBE f[0-9]+ av_offset [-0-9]+( conf [0-9.]+)? -> dub delay [-0-9]+ ms" $S/face_gpu.log | head -1 | awk '{print $(NF-1)}')
+      [ -n "$P" ] && { DELAY=$P; echo "KS_SHOTS delay $DELAY ms (probed in segment $i) for the remaining segments"; }; fi
+    OKG+=($i)
+  done
+  echo END >> $KFJ; wait $KSP 2>/dev/null; KSP=""; gpu_release
+  grep -c "^KS_JOB" $SW/ks_fast.log | sed "s/^/KS_SHOTS one ks_fast: jobs /"
+fi
+# ---- the CPU post + paste of each shot (outside the GPU lock)
+for i in "${OKG[@]}"; do S=$SW/s$i
+  env KS_IN_SHOT=1 KS_PHASE=post bash $R/scripts/keysync/r16/ks_face.sh ${SHOTARGS[$i]} > $S/face_post.log 2>&1; rc=$?
+  shot_log $i post
+  [ $rc = 0 ] || { shot_fail $i post $rc; continue; }
   PART[$i]=$S/out.mp4; LS=$((LS + 1))
 done
+for i in "${!SHOTARGS[@]}"; do cat $SW/s$i/ks/flags.txt >> $PK/flags.txt 2>/dev/null; done   # the shots' flags reach the job status
+[ $LS -gt 0 ] || [ $NFAIL = 0 ] || { echo "KS_SHOTS: every lip-sync segment failed ($NFAIL)"; exit 1; }
 [ $LS -gt 0 ] || { echo "KS_FACE_KEEP_SOURCE $ID: nothing lip-synced in $NS segments"; exit 3; }
 L=(); for i in $(seq 0 $((NS - 1))); do   # in time order; the source segments re-encoded like ks_plain's output (concat -c copy needs the same stream)
   if [ -n "${PART[$i]:-}" ] && [ -z "${ALPHA[$i]:-}" ]; then L+=(${PART[$i]}); else

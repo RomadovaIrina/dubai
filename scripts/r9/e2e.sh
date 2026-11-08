@@ -244,7 +244,7 @@ else
 fi
 gpu_release
 [ -n "$VID" ] || VID=$SRC
-for f in ks_probe_failed ks_probe_low_conf ks_check_offset ks_dissolve_hard_switch face_route_failed; do   # r16 T (Q audit O1): degraded sync is not SUCCESS
+for f in ks_probe_failed ks_probe_low_conf ks_check_offset ks_dissolve_hard_switch face_route_failed ks_shot_failed; do   # r16 T (Q audit O1): degraded sync is not SUCCESS
   if [[ " ${FL[*]} " == *" $f "* ]]; then ER+=("$f: lip-sync degraded (see logs)"); [ $STATUS = SUCCESS ] && STATUS=PARTIAL_SUCCESS; echo "== $ID PARTIAL_SUCCESS: $f" | tee -a $L/e2e.log; fi
 done
 if [ -n "$HIRES" ]; then   # r15 T: the face work was downscaled: back to the source resolution
