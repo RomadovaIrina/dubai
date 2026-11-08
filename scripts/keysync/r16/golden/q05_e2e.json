@@ -1,0 +1,14 @@
+{
+ "job_id": "q05_e2e",
+ "input": "/workspace/dub/r16in/day1/HANDOFF_Q/clips/q05_rozhkov.mp4",
+ "out_dir": "/workspace/dub/r16t/golden/jobs/q05_e2e",
+ "target_lang": "en",
+ "timeout_s": 7200,
+ "debug_env": {
+  "DUB_AUDIO_FROM": "/workspace/dub/r16in/day1/HANDOFF_Q/mixes/q05_rozhkov",
+  "DUB_ROUTE_JSON": "/workspace/dub/dubai/reports/experiments/r16-qa/routing/q05_rozhkov.json"
+ },
+ "output": {
+  "keep_intermediate": true
+ }
+}
