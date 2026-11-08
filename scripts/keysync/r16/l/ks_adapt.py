@@ -5,6 +5,9 @@
   2. train: a small LoRA (rank --rank on every Linear / Conv of the keyframe UNet), EDM denoising loss inside the mask,
      sigma from the production AYS-8 grid (log-uniform between its ends), full condition, for --seconds of GPU;
   3. save lora + lora_meta.json (ks_fast_l.py merges it with KS_KF_LORA=<path>).
+  colour-neutral (--prior > 0, r16 day 2: "the adapted face is pinker"): with prob --prior-p a second term on a DUB-LIKE sample (the call's audio
+  swapped for another call's): || pool(D_lora - D_base) ||^2 on the mask OUTSIDE the mouth zone, pooled --prior-pool latent px (= the coarse
+  skin colour / shape stay the base model's), while the mouth interior (teeth / cavity) and the fine detail are free to adapt.
 Timing (dump / train) is printed as ADAPT_TIME for the GPU-s/vmin budget.
     python ks_adapt.py --video SRC512.mp4 --audio SRC16k.wav --out DIR [--seconds 120 --rank 16 --lr 2e-4]"""
 import argparse, functools, json, math, os, random, sys, time
@@ -14,7 +17,8 @@ import torch
 import torch.utils.checkpoint as tuc
 from einops import rearrange
 import scripts.sampling.dubbing_pipeline_raw as d
-from ks_lcm import add_lora, lora_state
+import torch.nn.functional as F
+from ks_lcm import add_lora, lora_state, LORA_ON
 
 
 class Dumper:
@@ -36,6 +40,8 @@ def main():
     ap.add_argument("--cfg", default="_s8"); ap.add_argument("--seconds", type=float, default=120); ap.add_argument("--rank", type=int, default=16)
     ap.add_argument("--alpha", type=float, default=16); ap.add_argument("--lr", type=float, default=2e-4); ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--save-at", default="", help="also save at these train seconds, e.g. 60,120")
+    ap.add_argument("--prior", type=float, default=0.0, help="colour-neutral prior weight (0 = off)")
+    ap.add_argument("--prior-p", type=float, default=0.5); ap.add_argument("--prior-pool", type=int, default=4)
     a = ap.parse_args(); os.makedirs(a.out, exist_ok=True); dev = "cuda"; random.seed(a.seed); torch.manual_seed(a.seed)
     torch.cuda.synchronize(); t0 = time.perf_counter()
     model, _, n_batch = d.load_model(f"scripts/sampling/configs/interpolation{a.cfg}.yaml", dev, 14, "latents", "pretrained_models/checkpoints/interpolation_dub.pt")
@@ -69,7 +75,7 @@ def main():
     names = add_lora(dm, a.rank, a.alpha); dm.to(dev)
     params = [p for n, p in dm.named_parameters() if ".down." in n or ".up." in n]
     for p in params: p.requires_grad_(True)
-    json.dump({"rank": a.rank, "alpha": a.alpha, "modules": names, "cfg": a.cfg, "model": "keyframe"}, open(f"{a.out}/lora_meta.json", "w"))
+    json.dump({"rank": a.rank, "alpha": a.alpha, "modules": names, "cfg": a.cfg, "model": "keyframe", "hparams": vars(a)}, open(f"{a.out}/lora_meta.json", "w"))
     opt = torch.optim.AdamW(params, lr=a.lr, weight_decay=0.0)
     sig = disc(8, device=dev).float(); smax, smin = float(sig[0]), float(sig[7])
     print(f"LORA kf modules {len(names)} params {sum(p.numel() for p in params) / 1e6:.1f}M sigma {smin:.3f}..{smax:.2f}", flush=True)
@@ -77,6 +83,14 @@ def main():
     def D(x, s, c, n):
         return mk.denoiser(mk.model, x, s, c, image_only_indicator=torch.zeros(1, n, device=dev), num_video_frames=n)
 
+    def skin_w(m):   # the mask box minus the central mouth zone -> (1, 1, h, w)
+        mm = (m[:, :1] > 0.5).float().amax(0, keepdim=True); ys, xs = torch.nonzero(mm[0, 0], as_tuple=True)
+        if len(ys) < 16: return mm * 0
+        r0, r1, c0, c1 = int(ys.min()), int(ys.max()) + 1, int(xs.min()), int(xs.max()) + 1; h, w = r1 - r0, c1 - c0
+        W_ = mm.clone(); W_[..., r0 + int(0.2 * h):r1 - int(0.15 * h), c0 + int(0.28 * w):c1 - int(0.28 * w)] = 0
+        return W_
+
+    hp = []
     saves = sorted(float(x) for x in a.save_at.split(",") if x); torch.cuda.synchronize(); t2 = time.perf_counter(); step = 0; hist = []
     while time.perf_counter() - t2 < a.seconds:
         call = random.choice(C); c = call["c"]; n = call["n"]
@@ -88,11 +102,22 @@ def main():
             dx = D(xn, xn.new_ones([n]) * s, c, n).float()
         wgt = (s ** 2 + 1) / s ** 2 if s > 0.5 else (0.25 + 1) / 0.25   # EDM weighting (sigma_data 1), capped for small sigma
         loss = (((dx - x0) ** 2) * m).sum() / (m.sum() * 4).clamp(min=1) * min(wgt, 5.0)
+        if a.prior > 0 and random.random() < a.prior_p:
+            c2 = dict(c); o = random.choice(C)["c"]
+            if o["crossattn"].shape == c["crossattn"].shape: c2["crossattn"] = o["crossattn"]   # dub-like: another moment's audio
+            s2 = math.exp(random.uniform(math.log(smin), math.log(smax))); x2 = x0 + s2 * torch.randn_like(x0)
+            with torch.no_grad(), torch.autocast(dev, dtype=torch.bfloat16):
+                LORA_ON[0] = False; db = D(x2, x2.new_ones([n]) * s2, c2, n).float(); LORA_ON[0] = True
+            with torch.autocast(dev, dtype=torch.bfloat16):
+                dl = D(x2, x2.new_ones([n]) * s2, c2, n).float()
+            Wk = skin_w(m); P = lambda z: F.avg_pool2d(z * Wk, a.prior_pool) / F.avg_pool2d(Wk, a.prior_pool).clamp(min=1e-3)
+            cw = (F.avg_pool2d(Wk, a.prior_pool) > 0.5).float(); lp = (((P(dl) - P(db)) ** 2) * cw).sum() / (cw.sum() * 4 * n).clamp(min=1)
+            loss = loss + a.prior * lp; hp.append(float(lp))
         loss.backward(); torch.nn.utils.clip_grad_norm_(params, 1.0)
         for g_ in opt.param_groups: g_["lr"] = a.lr * min(1.0, (step + 1) / 10)
         opt.step(); opt.zero_grad(set_to_none=True); step += 1; hist.append(float(loss))
         el = time.perf_counter() - t2
-        if step % 20 == 0: print(f"STEP {step} loss {sum(hist[-20:]) / 20:.5f} {el:.0f}s", flush=True)
+        if step % 20 == 0: print(f"STEP {step} loss {sum(hist[-20:]) / 20:.5f} prior {sum(hp[-10:]) / max(len(hp[-10:]), 1):.6f} {el:.0f}s", flush=True)
         if saves and el >= saves[0]:
             torch.save({k: v.half() for k, v in lora_state(dm).items()}, f"{a.out}/kf_lora_{int(saves[0])}s.pt"); saves.pop(0)
     torch.cuda.synchronize(); t_train = time.perf_counter() - t2
