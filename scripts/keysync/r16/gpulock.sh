@@ -23,4 +23,4 @@ gpu_release() {
   if [ -e "$GPU_RDY" ]; then touch "$GPU_RDY.rel"; for _ in $(seq 40); do [ -e "$GPU_RDY" ] || break; sleep 0.1; done; fi
   rm -f "$GPU_RDY.rel"; GPU_RDY=""
 }
-gpu_run() { if gpu_held; then "$@"; else flock "$GPU_LOCK" "$@"; fi; }
+gpu_run() { if gpu_held; then "$@"; else flock -o "$GPU_LOCK" "$@"; fi; }

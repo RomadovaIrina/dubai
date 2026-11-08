@@ -29,12 +29,12 @@ cd $KS/code
 exec 9>$D/.build.lock; flock 9   # two workers on one cache: one builds, the other waits and reuses
 if ! { [ -s $D/eng/kf/full.plan ] && ok $D/eng/kf; }; then
   echo "== KS engines: building keyframes into $D/eng (one-time per GPU / driver / TensorRT)" >&2; t0=$(date +%s)
-  flock $LOCK python ../ks_trt.py --cap $CAP --which kf --out $D/eng >&2 || { echo "KS_ENGINES_FAIL kf build" >&2; exit 1; }
+  flock -o $LOCK python ../ks_trt.py --cap $CAP --which kf --out $D/eng >&2 || { echo "KS_ENGINES_FAIL kf build" >&2; exit 1; }
   ok $D/eng/kf || { echo "KS_ENGINES_FAIL kf verify" >&2; exit 1; }; echo "== KS engines: kf $(( $(date +%s) - t0 )) s" >&2
 fi
 if ! { [ -s $D/eng_s/interp/full.plan ] && ok $D/eng_s/interp; }; then
   echo "== KS engines: building the student interpolation into $D/eng_s" >&2; t0=$(date +%s)
-  flock $LOCK python ../ks_trt.py --cap $CAP --which interp --out $D/eng_s --lora $LORA --no-dc >&2 || { echo "KS_ENGINES_FAIL interp build" >&2; exit 1; }
+  flock -o $LOCK python ../ks_trt.py --cap $CAP --which interp --out $D/eng_s --lora $LORA --no-dc >&2 || { echo "KS_ENGINES_FAIL interp build" >&2; exit 1; }
   ok $D/eng_s/interp || { echo "KS_ENGINES_FAIL interp verify" >&2; exit 1; }; echo "== KS engines: interp $(( $(date +%s) - t0 )) s" >&2
 fi
 ln -sfn ../eng/kf $D/eng_s/kf
