@@ -154,10 +154,14 @@ if [ "${DUB_PACE_FIX:-0}" = 1 ] && [ -z "${DUB_POLYGLOT:-}" ]; then   # r13 7.3 
 fi
 
 VID=""; FACE=${DUB_FACE:-auto}; ROUTE=""
+pick_engine() {   # face=auto: KeySync for every face. Irina 08.11 on the beard panels: "кейсинку явно получше стало" (KeySync beats LatentSync on beards),
+  [ "$FACE" = auto ] || return 0   # so the route's beard -> latentsync choice is only an OPT-IN (DUB_BEARD_LATENTSYNC=1); DUB_FACE_ENGINE still overrides
+  if [ "${DUB_BEARD_LATENTSYNC:-0}" = 1 ]; then FACE=${DUB_FACE_ENGINE:-$1}
+  else FACE=${DUB_FACE_ENGINE:-keysync}; [ "$1" = latentsync ] && FL+=("beard_keysync"); fi; }
 if [ -n "${DUB_ROUTE_JSON:-}" ] && [ "${DUB_ROUTE:-on}" != off ]; then   # r16 T: a given route.json (golden test / the backend) instead of computing one
   mkdir -p $W/route; cp $DUB_ROUTE_JSON $W/route/route.json; DUB_ROUTE=given; FL+=("face_route_given")
   ROUTE=$W/route/route.json; read -r KSA ENG < <(python3 -c "import json; d=json.load(open('$ROUTE')); print(int(bool(d.get('keep_source_all'))), d.get('face_engine') or 'keysync')")
-  [ "$KSA" = 1 ] && FL+=("face_keep_source_no_visible_speaker"); [ "$FACE" = auto ] && FACE=${DUB_FACE_ENGINE:-$ENG}
+  [ "$KSA" = 1 ] && FL+=("face_keep_source_no_visible_speaker"); pick_engine "$ENG"
 fi
 if [ "${E2E_LIPSYNC:-on}" != off ] && [[ " $PF " != *" no_face "* ]] && [ "$FACE" != latentsync ] && [ "${DUB_ROUTE:-on}" = on ]; then
   st face_route   # r16 Q (reports/experiments/r16-qa/ROUTING.md): which visible face speaks which turn (SyncNet on the SOURCE) + beard -> the engine
@@ -169,7 +173,7 @@ if [ "${E2E_LIPSYNC:-on}" != off ] && [[ " $PF " != *" no_face "* ]] && [ "$FACE
     ROUTE=$RD/route.json; read -r KSA ENG < <(python3 -c "import json; d=json.load(open('$ROUTE')); print(int(bool(d.get('keep_source_all'))), d.get('face_engine') or 'keysync')")
     echo "== $ID route: keep_source_all $KSA, engine $ENG, faces $(python3 -c "import json; print([(f['mode'], round(f.get('silence_s', 0), 1)) for f in json.load(open('$ROUTE'))['faces']])")" | tee -a $L/e2e.log
     [ "$KSA" = 1 ] && FL+=("face_keep_source_no_visible_speaker")   # (made a visible PARTIAL_SUCCESS below)
-    [ "$FACE" = auto ] && FACE=${DUB_FACE_ENGINE:-$ENG}
+    pick_engine "$ENG"
   else FL+=("face_route_failed"); echo "== $ID WARN face_route failed (see logs/face_route.log): the dubbed-units mapping is used" | tee -a $L/e2e.log; ROUTE=""; fi
 fi
 [ "$FACE" = auto ] && FACE=keysync
