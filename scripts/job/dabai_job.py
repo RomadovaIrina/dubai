@@ -407,6 +407,7 @@ def _run_job(job: dict, on_event=None, cancel: threading.Event | None = None) ->
         st["outputs"] = {n: str(f) for n, f in outs.items()} if p["output"]["both_beds"] else ({st["bed_used"]: str(main)} if main and not killed else {})
         st["flags"] = flags
         st["warnings"] = [{"flag": f, "code": MESSAGES[f][0], "en": MESSAGES[f][1], "ru": MESSAGES[f][2]} for f in flags if f in MESSAGES and MESSAGES[f][0].startswith("W_")]
+        _seen = set(); st["warnings"] = [w for w in st["warnings"] if not (w["code"] in _seen or _seen.add(w["code"]))]   # one warning per code
         st["messages"] = [{"flag": w["flag"], "en": w["en"], "ru": w["ru"]} for w in st["warnings"]]   # v1 name
         tm = man.get("timing") or {}
         st.update(gpu_busy_s=round((tm.get("gpu_busy_total_s_per_video_min") or 0) * vmin, 1) if vmin else None, spec=man.get("spec"),
