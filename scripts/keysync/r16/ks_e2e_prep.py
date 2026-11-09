@@ -136,6 +136,8 @@ if route is not None:
         groups, src_tracks = {}, set()
         for rf in route.get("faces", []):
             t0, t1 = rf.get("present_s", [0, T / FPS]); k0, k1 = max(0, int(t0 * FPS)), min(T, int(np.ceil(t1 * FPS)))
+            SNAP = int(os.environ.get("KS_EDGE_SNAP", "13"))   # r16c T: a route span ending < 0.5 s before the video end (m03: 40.44 of 40.52 s) reaches the end, else the last frames jump to the source
+            k0, k1 = (0 if k0 <= SNAP else k0), (T if T - k1 <= SNAP else k1)
             if k1 <= k0 or not present: continue
             cx, cy = rf.get("box_center_xy", [np.nan, np.nan])
             def score(j):
