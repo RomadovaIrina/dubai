@@ -14,6 +14,7 @@
 # multi-shot (K2): KS_SHOTS=auto (default) -> ks_shots.py detect after the landmarks; > 1 shot -> ks_shots.sh runs this script once per shot (own
 #   plan / crop / ref / KeySync / post / paste per shot, nothing smoothed across a cut), concat -c copy + the mix stream-copied. KS_SHOTS=off = one run.
 # Env: KS_SHOTS KS_SHOT_MIN_S KS_DELAY KS_PROBE_S KS_REF KS_CROP KS_PAD KS_GATE KS_TSMOOTH KS_PAUSE KS_PASTE_SHIFT KS_PLAIN_ARGS KS_PLAIN_EXTRA KS_INTERP_STEPS KS_SYNC_MAX_S
+#      KS_MASK (oval|tight) KS_OCCL (off|on) KS_OCCL_ARGS KS_ZEROFIX KS_OFFSCREEN_CONF KS_EDGE_SNAP
 #      KS_PASTE_JOBS KS_MIN_IOD KS_NUM_FACES KS_PROBE_MIN_CONF KS_PROBE_MAX KS_CHECK; GPU_RDY (gpulock.sh hand-off)
 set -o pipefail
 ID=$1; SRC=$2; AD=$3; W=$4; OUTV=$5; ROUTE=${6:-}
@@ -206,12 +207,17 @@ for f in $TAGS; do
   t paste_$f; n=$((n + 1)); NXT=$KW/paste_$n.mp4
   OTH=""; [ -s $KW/others_$f.npz ] && OTH="--others $KW/others_$f.npz --others-grow ${KS_OTHERS_GROW:-1.3}"
   ARGS="--ks $L --ks-lm $P/raw_lm.npz --master $CUR --box $KW/data/box_$f.json --lm $KW/lm_$f.npz --audio $AD/final_mix_aac.m4a --shift ${SHF[$f]} --absent skip $OTH \
-        ${KS_PLAIN_ARGS---lfm 6 --upper-src 0.12:0.32 --keep-nose 0.04 --align 2 --align-ecc $P/ecc.npz --align-scale 0 --tex 2} ${KS_PLAIN_EXTRA:-}"
+        ${KS_PLAIN_ARGS---lfm 6 --upper-src 0.12:0.32 --keep-nose 0.04 --align 2 --align-ecc $P/ecc.npz --align-scale 0 --tex 2} ${KS_MASK:+--mask $KS_MASK} ${KS_PLAIN_EXTRA:-}"   # KS_MASK=tight: K1 rule-5 mask (default oval, Irina pending)
   if [ "${KS_PASTE_JOBS:-0}" != 1 ] && [ -f $KT/ks_plain_par.py ]; then
     ( cd $KT && KS_CMS=1 $PY $KT/ks_plain_par.py --jobs ${KS_PASTE_JOBS:-$(( $(nproc) / 3 ))} --out $NXT -- $ARGS ) > $P/plain.log 2>&1 || {   # a failed parallel paste -> the serial one (== by K1 a6ded57)
       flag ks_paste_par_retry "$f: parallel paste failed ($(grep -a -E "Error" $P/plain.log | tail -1 | cut -c1-120)) -> serial"; mv $P/plain.log $P/plain_par_failed.log
       ( cd $KT && KS_CMS=1 $PY $KT/ks_plain.py $ARGS --out $NXT ) > $P/plain.log 2>&1 || { tail -5 $P/plain.log; exit 1; }; }
   else ( cd $KT && KS_CMS=1 $PY $KT/ks_plain.py $ARGS --out $NXT ) > $P/plain.log 2>&1 || { tail -5 $P/plain.log; exit 1; }; fi
-  echo "KS_PASTE $f delay ${DLY[$f]} ms shift ${SHF[$f]} ref $(cat $KW/ref_$f.txt) $(grep -E 'plain paste:' $P/plain.log | head -1)"; CUR=$NXT
+  echo "KS_PASTE $f delay ${DLY[$f]} ms shift ${SHF[$f]} ref $(cat $KW/ref_$f.txt) $(grep -E 'plain paste:' $P/plain.log | head -1)"
+  if [ "${KS_OCCL:-off}" = on ]; then   # r16c T: K2 ks_occl.py occlusion guard + pose gate (Irina 09.11 rules 3-4) on this face's paste; default off (Irina pending)
+    if ( cd $KT && $MPY $KT/ks_occl.py --master $CUR --paste $NXT --lm $KW/lm_$f.npz --out $KW/occl_$n.mp4 --dump $P/occl.json ${KS_OCCL_ARGS:-} ) > $P/occl.log 2>&1 && [ -s $KW/occl_$n.mp4 ]; then
+      grep -E "^KS_OCCL (\{|pose)" $P/occl.log | cut -c1-300; NXT=$KW/occl_$n.mp4
+    else flag ks_occl_failed "$f: the occlusion guard failed ($(tail -1 $P/occl.log | cut -c1-120)) -> the paste without it"; fi; fi
+  CUR=$NXT
 done
 t end; mv $CUR $OUTV && echo "KS_FACE_DONE $ID faces $TAGS"
