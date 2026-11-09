@@ -188,7 +188,7 @@ fi   # ==== end of gpu
 [ "$PH" = post ] && . $KW/state.sh   # ==== post (CPU)
 [ -n "${OFFS:-}" ] && TAGS=$(for f in $TAGS; do [[ " $OFFS " == *" $f "* ]] || echo -n "$f "; done)   # (r16c T: no post / paste for an off-screen-voice face)
 
-export KS_CMS=${KS_CMS:-1}   # r16c K1 root cause (Irina 09.11 "Да, применить"): ks_tsmooth / ks_snap / ks_guard / ks_seam decode + encode BT.709 (ks_cms), not ffmpeg BT.601 (raw -> guard dL -2.3, db +1.7 on m18); KS_CMS=0 = the old chain
+[ "${KS_CMS:-0}" = 1 ] && export KS_CMS   # r16c: KS_CMS=1 = BT.709 colour-managed tsmooth / snap / guard / seam (K1 root cause; drift raw -> seam -2.9 L -> 0). OPT-IN: Irina 10.11 preferred the old look by eye on long5 / m03 / m18
 CUR=$KW/master_25fps.mp4; n=0
 for f in $TAGS; do
   RAW=$(ls $KW/out/$f/*.mp4 | head -1); P=$KW/post_$f; mkdir -p $P
