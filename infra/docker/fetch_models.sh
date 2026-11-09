@@ -2,7 +2,7 @@
 # DabAI image (r15 T): fill the MODELS VOLUME once (the image has no weights). Commercially clean set only; idempotent (re-run = resume).
 #     docker run --rm --gpus all -e HF_TOKEN=<token with the pyannote 3.1 terms accepted> -v dabai-models:/workspace/dub/dubai/models \
 #         [-v /path/with/student:/in:ro -e STUDENT_LORA_FILE=/in/latentsync_student_r2_s4_step01500_ema.pt] <image> fetch-models
-# What lands on the volume (~24 GB; list + licences: infra/docker/models.lock.json, reports/experiments/r13-spec/IMAGE/MODELS.md):
+# What lands on the volume (~38 GB with KeySync, r16 TZ: models.lock.json 69 files 37.6 GB; list + licences: infra/docker/models.lock.json, reports/experiments/r13-spec/IMAGE/MODELS.md):
 #   whisper-large-v3 (MIT) · Qwen2.5-14B-Instruct Q5_K_M (Apache-2.0) · Chatterbox Multilingual v3 (MIT) · LatentSync 1.6 (OpenRAIL++, approved)
 #   sd-vae-ft-mse (MIT) · wav2vec2-base-960h (Apache-2.0) · MediaPipe Face Landmarker (Apache-2.0) · Real-ESRGAN x2plus (BSD-3) · Spleeter 2stems (MIT)
 #   pyannote speaker-diarization-3.1 (MIT, gated) -> cache/pyannote · Chatterbox's pkuseg model -> cache/pkuseg · the student LoRA (ours) -> student/
@@ -17,10 +17,11 @@ dl(){ [ -s "$2" ] || { mkdir -p "$(dirname "$2")"; curl -fsSL --retry 3 -o "$2.p
 log "1/7 whisper large-v3, Chatterbox v3, LatentSync 1.6, sd-vae, wav2vec2, MediaPipe task (scripts/download_models.sh, Qwen 7B skipped)"
 DUB_SKIP_QWEN7B=1 PY=$PY bash $R/scripts/download_models.sh
 log "2/7 Qwen2.5-14B-Instruct GGUF Q5_K_M (10.5 GB, revision pinned)"
-$PY - <<'PY'
-from huggingface_hub import snapshot_download
+$PY - $M/qwen2.5-14b-instruct-gguf <<'PY'
+import sys
+from huggingface_hub import snapshot_download   # r16 TZ: local_dir from DUB_ROOT (was hard-coded to /workspace/dub/dubai: research boxes got no Qwen 14B)
 snapshot_download("Qwen/Qwen2.5-14B-Instruct-GGUF", revision="b466e1f8c07172155743e8e1307507d8a4f91fbd", allow_patterns=["*q5_k_m*.gguf"],
-                  local_dir="/workspace/dub/dubai/models/qwen2.5-14b-instruct-gguf"); print("qwen14b ok")
+                  local_dir=sys.argv[1]); print("qwen14b ok")
 PY
 log "3/7 Real-ESRGAN x2plus (sha256 pinned)"
 dl https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth $M/realesrgan/RealESRGAN_x2plus.pth
@@ -46,12 +47,12 @@ elif [ -n "${STUDENT_LORA_URL:-}" ]; then dl "$STUDENT_LORA_URL" $S
 else echo "WARNING: no student LoRA (STUDENT_LORA_FILE / STUDENT_LORA_URL): mode fast is unavailable until $S exists"; fi
 log "8/8 KeySync (r16 face): toninio19/keysync checkpoints (pinned revision) + the LCM student + the TensorRT capture (ours: KS_KIT_DIR)"
 K=$M/keysync; mkdir -p $K/checkpoints $K/student $K/trt_cap $K/trt_cache $K/inductor $K/torch
-$PY - $K/checkpoints <<'PY'
-import os, sys, shutil, pathlib
-from huggingface_hub import hf_hub_download
+$PY - $K <<'PY'
+import os, sys, pathlib
+from huggingface_hub import hf_hub_download   # r16 TZ: straight into $K/checkpoints (local_dir); the HF-cache copy doubled the 13 GB on the volume
 for f in ["WavLM-Base+.pt", "keyframe_dub.pt", "interpolation_dub.pt"]:
-    d = pathlib.Path(sys.argv[1]) / f
-    if not d.exists(): shutil.copy(hf_hub_download("toninio19/keysync", "checkpoints/" + f, revision=os.environ.get("KS_HF_REVISION", "main")), d)
+    d = pathlib.Path(sys.argv[1]) / "checkpoints" / f
+    if not d.exists(): hf_hub_download("toninio19/keysync", "checkpoints/" + f, revision=os.environ.get("KS_HF_REVISION", "main"), local_dir=sys.argv[1])
     print("keysync", f, d.stat().st_size)
 PY
 # KeySync's own runtime downloads (found by the r16 clean room, HF offline): HuBERT (audio features) + the SVD VAE (gated repo: the HF_TOKEN must

@@ -14,6 +14,12 @@ SET = {
     "mediapipe": ("Apache-2.0", "faces / head pose (5.4)"), "realesrgan": ("BSD-3-Clause", "composite layer SR"),
     "spleeter": ("MIT", "background bed"), "cache/pyannote": ("MIT (gated)", "diarization (6.3)"), "cache/pkuseg": ("MIT", "Chatterbox zh segmenter"),
     "student": ("own (LatentSync OpenRAIL++ derivative)", "mode fast"),
+    # r16 TZ (5.1 / 10.2): the KeySync face (the r16 default) + its runtime downloads, so check / weights_check agree on ONE list
+    "keysync/checkpoints": ("KeySync weights, toninio19/keysync (approved 06.11)", "lip-sync KeySync (8.1, r16 default)"),
+    "keysync/student": ("own (KeySync LCM student LoRA)", "KeySync fast2 interpolation"), "keysync/trt_cap": ("own (captured UNet inputs)", "KeySync TensorRT build"),
+    "keysync/torch": ("BSD-3-Clause (face_alignment S3FD + 2DFAN4)", "KeySync landmarks"),
+    "hf/hub/models--facebook--hubert-base-ls960/snapshots": ("Apache-2.0", "KeySync audio features"),
+    "hf/hub/models--stabilityai--stable-video-diffusion-img2vid/snapshots": ("Stability AI Community (gated, approved with KeySync)", "KeySync VAE"),
 }
 OPTIONAL = {"cache/pkuseg", "student"}
 EXCLUDE = {"latentsync/stable_syncnet.pt"}   # training / metric only (distillation, sync_speech), not fetched for the worker
@@ -31,10 +37,11 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument("cmd", choices=["make", "check"]); ap.add_argument("--models", required=True)
     ap.add_argument("--out", default=str(LOCK)); ap.add_argument("--deep", action="store_true"); a = ap.parse_args(); M = pathlib.Path(a.models)
     if a.cmd == "make":
-        rows = []
+        rows = []; old = json.loads(pathlib.Path(a.out).read_text()) if pathlib.Path(a.out).exists() else {"files": []}
         for d, (lic, use) in SET.items():
             base = M / d
-            if not base.exists(): print("absent on this server:", d); continue
+            if not base.exists() or not any(x.is_file() for x in base.rglob("*")):   # r16 TZ: keep what the lock already says about a set this server does not have / has empty (the LatentSync student)
+                kept = [r for r in old["files"] if r["set"] == d]; rows += kept; print(f"absent on this server: {d} (kept {len(kept)} rows from the lock)"); continue
             fs = [pathlib.Path(r_) / n for r_, _, ns in os.walk(base, followlinks=True) for n in ns]   # the set dirs may be symlinks (a clean-room view)
             for f in sorted(x for x in fs if x.is_file() and not {".cache", ".locks"} & set(x.relative_to(M).parts) and not x.name.startswith("._") and not x.name.endswith((".lock", ".metadata", ".part")) and str(x.relative_to(M)) not in EXCLUDE and not str(x.relative_to(M)).startswith(EXCLUDE_PREFIX)):
                 rows.append({"path": str(f.relative_to(M)), "bytes": f.stat().st_size, "sha256": sha(f), "set": d})

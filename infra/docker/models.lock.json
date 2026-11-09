@@ -60,9 +60,39 @@
    "licence": "own (LatentSync OpenRAIL++ derivative)",
    "used_by": "mode fast",
    "optional": true
+  },
+  "keysync/checkpoints": {
+   "licence": "KeySync weights, toninio19/keysync (approved 06.11)",
+   "used_by": "lip-sync KeySync (8.1, r16 default)",
+   "optional": false
+  },
+  "keysync/student": {
+   "licence": "own (KeySync LCM student LoRA)",
+   "used_by": "KeySync fast2 interpolation",
+   "optional": false
+  },
+  "keysync/trt_cap": {
+   "licence": "own (captured UNet inputs)",
+   "used_by": "KeySync TensorRT build",
+   "optional": false
+  },
+  "keysync/torch": {
+   "licence": "BSD-3-Clause (face_alignment S3FD + 2DFAN4)",
+   "used_by": "KeySync landmarks",
+   "optional": false
+  },
+  "hf/hub/models--facebook--hubert-base-ls960/snapshots": {
+   "licence": "Apache-2.0",
+   "used_by": "KeySync audio features",
+   "optional": false
+  },
+  "hf/hub/models--stabilityai--stable-video-diffusion-img2vid/snapshots": {
+   "licence": "Stability AI Community (gated, approved with KeySync)",
+   "used_by": "KeySync VAE",
+   "optional": false
   }
  },
- "total_gb": 23.23,
+ "total_gb": 37.64,
  "files": [
   {
    "path": "whisper-large-v3/.gitattributes",
@@ -393,6 +423,90 @@
    "bytes": 30228073,
    "sha256": "cfc2428556ce0bf07928b18e5eebfdd8c4601684e96bd22dc733520fd7c2b717",
    "set": "student"
+  },
+  {
+   "path": "keysync/checkpoints/WavLM-Base+.pt",
+   "bytes": 377604817,
+   "sha256": "fcbcf2a94def92e90e086bb0727275d53b75a9c0e483e2abfa560ac951986b6d",
+   "set": "keysync/checkpoints"
+  },
+  {
+   "path": "keysync/checkpoints/interpolation_dub.pt",
+   "bytes": 6417049794,
+   "sha256": "dfc92729489191b68fa5b45e3c64c0280bf70c6f9e8d720a61fdf7ba9c193551",
+   "set": "keysync/checkpoints"
+  },
+  {
+   "path": "keysync/checkpoints/keyframe_dub.pt",
+   "bytes": 6358089031,
+   "sha256": "0c84a09743883db3b1c1a45838c347faa15cccb1aa8ccaaf981fee8ee967b7e0",
+   "set": "keysync/checkpoints"
+  },
+  {
+   "path": "keysync/student/lora_meta.json",
+   "bytes": 23662,
+   "sha256": "591b81400d1abc9fa6e83f853885b8b5687a62dccb1de853366f037d86150972",
+   "set": "keysync/student"
+  },
+  {
+   "path": "keysync/student/lora_pick.pt",
+   "bytes": 461504071,
+   "sha256": "a8e6a89d6158dfb5aa288ba4adbb1cf9c62fee5ed2f534d3c6b467ada63a9d3c",
+   "set": "keysync/student"
+  },
+  {
+   "path": "keysync/trt_cap/interp.pt",
+   "bytes": 12562797,
+   "sha256": "61cc908da22603b9122cede8d59ae28816c698e1fa33d7dc4b9f75fbaf4b4474",
+   "set": "keysync/trt_cap"
+  },
+  {
+   "path": "keysync/trt_cap/kf.pt",
+   "bytes": 16777893,
+   "sha256": "b5c46d569fc2f192044ba8229d8132aafddcba4d1c569b290c4a9bd3ac280461",
+   "set": "keysync/trt_cap"
+  },
+  {
+   "path": "keysync/torch/hub/checkpoints/2DFAN4-cd938726ad.zip",
+   "bytes": 96316515,
+   "sha256": "cd938726adb1f15f361263cce2db9cb820c42585fa8796ec72ce19107f369a46",
+   "set": "keysync/torch"
+  },
+  {
+   "path": "keysync/torch/hub/checkpoints/s3fd-619a316812.pth",
+   "bytes": 89843225,
+   "sha256": "619a31681264d3f7f7fc7a16a42cbbe8b23f31a256f75a366e5a1bcd59b33543",
+   "set": "keysync/torch"
+  },
+  {
+   "path": "hf/hub/models--facebook--hubert-base-ls960/snapshots/dba3bb02fda4248b6e082697eee756de8fe8aa8a/config.json",
+   "bytes": 1385,
+   "sha256": "56be398848bbd9cbc720172b0d45b2f01cac7652f2968f0f31f5faf9f2986acc",
+   "set": "hf/hub/models--facebook--hubert-base-ls960/snapshots"
+  },
+  {
+   "path": "hf/hub/models--facebook--hubert-base-ls960/snapshots/dba3bb02fda4248b6e082697eee756de8fe8aa8a/preprocessor_config.json",
+   "bytes": 213,
+   "sha256": "4a93853b74278b7c769d07f5a861e5d12ceb5db2bced5620d335f87238cb9e86",
+   "set": "hf/hub/models--facebook--hubert-base-ls960/snapshots"
+  },
+  {
+   "path": "hf/hub/models--facebook--hubert-base-ls960/snapshots/dba3bb02fda4248b6e082697eee756de8fe8aa8a/pytorch_model.bin",
+   "bytes": 377569754,
+   "sha256": "062249fffb353eab67547a2fbc129f7c31a2f459faf641b19e8fb007cc5c48ad",
+   "set": "hf/hub/models--facebook--hubert-base-ls960/snapshots"
+  },
+  {
+   "path": "hf/hub/models--stabilityai--stable-video-diffusion-img2vid/snapshots/9cf024d5bfa8f56622af86c884f26a52f6676f2e/vae/config.json",
+   "bytes": 609,
+   "sha256": "aab2b8766d6db1bf742fa0e3bf217fae64e67a20e7e0fe78de84f79007100ffb",
+   "set": "hf/hub/models--stabilityai--stable-video-diffusion-img2vid/snapshots"
+  },
+  {
+   "path": "hf/hub/models--stabilityai--stable-video-diffusion-img2vid/snapshots/9cf024d5bfa8f56622af86c884f26a52f6676f2e/vae/diffusion_pytorch_model.fp16.safetensors",
+   "bytes": 195531910,
+   "sha256": "af602cd0eb4ad6086ec94fbf1438dfb1be5ec9ac03fd0215640854e90d6463a3",
+   "set": "hf/hub/models--stabilityai--stable-video-diffusion-img2vid/snapshots"
   }
  ]
 }
