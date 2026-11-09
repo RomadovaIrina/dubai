@@ -11,7 +11,7 @@
 #   paste     ks_plain (K1 + K2): ECC align, scale locked, lfm 6, upper-src, keep-nose, tex 2, others-grow 1.3, --absent skip; KS_PASTE_JOBS workers
 # usage: ks_face.sh <id> <src video> <audio dir: dubbed_16k.wav + final_mix_aac.m4a> <work dir> <out.mp4> [route.json]
 # exit 0 = OUT written; 3 = nothing to lip-sync (keep the source picture, not an error); other = failed.
-# Env: KS_DELAY KS_PROBE_S KS_REF KS_CROP KS_PAD KS_GATE KS_TSMOOTH KS_PAUSE KS_PASTE_SHIFT KS_PLAIN_ARGS KS_PLAIN_EXTRA KS_INTERP_STEPS KS_SYNC_MAX_S
+# Env: KS_MASK (oval | tight) KS_CM_SHADOW KS_DELAY KS_PROBE_S KS_REF KS_CROP KS_PAD KS_GATE KS_TSMOOTH KS_PAUSE KS_PASTE_SHIFT KS_PLAIN_ARGS KS_PLAIN_EXTRA KS_INTERP_STEPS KS_SYNC_MAX_S
 #      KS_PASTE_JOBS KS_HELD_FD KS_MIN_IOD KS_NUM_FACES
 set -o pipefail
 ID=$1; SRC=$2; AD=$3; W=$4; OUTV=$5; ROUTE=${6:-}
@@ -140,8 +140,14 @@ for f in $TAGS; do
     $MPY $KT/k2_pause.py --mode warp --ks $L --ks-lm $P/raw_lm.npz --wav $KW/dub_$f.wav --shift 0 --out $P/pause.mp4 > $P/pause.log 2>&1 && L=$P/pause.mp4 || { tail -3 $P/pause.log; exit 1; }; fi
   t paste_$f; n=$((n + 1)); NXT=$KW/paste_$n.mp4
   OTH=""; [ -s $KW/others_$f.npz ] && OTH="--others $KW/others_$f.npz --others-grow ${KS_OTHERS_GROW:-1.3}"
+  MK=""   # r16c K1 rule 5 (opt-in until Irina's eye): KS_MASK=tight = the tight mask (chin kept) + face parsing (hair / hands / clothes -> source) + shadow-safe colour
+  if [ "${KS_MASK:-oval}" = tight ]; then
+    PM=$R/models/mediapipe/selfie_multiclass_256x256.tflite
+    if [ -s $PM ] && $MPY $KT/face_parse.py --video $CUR --box $KW/data/box_$f.json --out $P/parse.npz --model $PM > $P/parse.log 2>&1; then MK="--mask tight --mask-chin 1 --parse $P/parse.npz ${KS_CM_SHADOW---cm-shadow 10:30}"
+    else MK="--mask tight --mask-chin 1 ${KS_CM_SHADOW---cm-shadow 10:30}"; echo "KS_MASK f0: face_parse unavailable (model $PM) -> tight mask without parsing"; fi
+  fi
   ARGS="--ks $L --ks-lm $P/raw_lm.npz --master $CUR --box $KW/data/box_$f.json --lm $KW/lm_$f.npz --audio $AD/final_mix_aac.m4a --shift ${SHF[$f]} --absent skip $OTH \
-        ${KS_PLAIN_ARGS---lfm 6 --upper-src 0.12:0.32 --keep-nose 0.04 --align 2 --align-ecc $P/ecc.npz --align-scale 0 --tex 2} ${KS_PLAIN_EXTRA:-}"
+        ${KS_PLAIN_ARGS---lfm 6 --upper-src 0.12:0.32 --keep-nose 0.04 --align 2 --align-ecc $P/ecc.npz --align-scale 0 --tex 2} ${KS_PLAIN_EXTRA:-} $MK"
   if [ "${KS_PASTE_JOBS:-0}" != 1 ] && [ -f $KT/ks_plain_par.py ]; then
     ( cd $KT && KS_CMS=1 $PY $KT/ks_plain_par.py --jobs ${KS_PASTE_JOBS:-0} --out $NXT -- $ARGS ) > $P/plain.log 2>&1 || { tail -5 $P/plain.log; exit 1; }
   else ( cd $KT && KS_CMS=1 $PY $KT/ks_plain.py $ARGS --out $NXT ) > $P/plain.log 2>&1 || { tail -5 $P/plain.log; exit 1; }; fi

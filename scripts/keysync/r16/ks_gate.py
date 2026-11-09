@@ -54,6 +54,7 @@ class GatedLCM(ks_student.LCMSampler):
         if hi is not None and len(hi) and R % len(hi) == 0:
             rh = torch.as_tensor(np.repeat(hi, R // len(hi)), device=x.device)
         elif hi is not None: print(f"KS_GATE plan mismatch: {R} rows, {len(hi)} segments -> all lo", flush=True)
+        n0 = x.clone() if os.environ.get("KS_NOISE") else None   # r16c K1: re-noise with the shared initial field
         steps = sorted(set(self.ih) | set(self.il)); x = x * math.sqrt(1.0 + G[0] ** 2); out = torch.zeros_like(x)
         for gi in steps:
             act = (rh & (gi in self.ih)) | (~rh & (gi in self.il))
@@ -67,9 +68,9 @@ class GatedLCM(ks_student.LCMSampler):
                 if not r.any(): continue
                 k = grid.index(gi)
                 if k == len(grid) - 1: out[r] = f[r]
-                else: x[r] = f[r] + G[grid[k + 1]] * torch.randn_like(f[r])
+                else: x[r] = f[r] + G[grid[k + 1]] * (n0[r] if n0 is not None else torch.randn_like(f[r]))
         ST["active"] = None
-        return out
+        return ks_student.ks_lsmooth(out) * m + g * (1 - m)
 
 
 def install(d, model):
