@@ -25,10 +25,13 @@ def load(path):
     d = np.load(path); return {"prob": d["prob"], "res": int(d["res"])}
 
 
-def _probs(P, k):
+def _probs(P, k, half=None):   # r16c K1: temporally smoothed (triangular +-half frames; env FACE_PARSE_T, default 2) -> no frame-to-frame flicker of the parse mask
     pr = P["prob"]
     if k < 0 or k >= len(pr): return None
-    return pr[k].astype(np.float32) / 255.0
+    h = int(os.environ.get("FACE_PARSE_T", "2")) if half is None else half
+    if h <= 0: return pr[k].astype(np.float32) / 255.0
+    js = range(max(0, k - h), min(len(pr), k + h + 1)); ws = np.array([h + 1 - abs(j - k) for j in js], np.float32)
+    return np.tensordot(ws / ws.sum(), pr[list(js)].astype(np.float32), 1) / 255.0
 
 
 def face_prob(P, k, s, beard_y=None):

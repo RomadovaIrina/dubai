@@ -23,6 +23,9 @@ ap.add_argument("--cm-lonly", type=int, default=0, help="r16c K1 colour in dark 
 ap.add_argument("--cm-shadow", default="", help="r16c K1 + K2 (long5 1:56 blue mouth): L0:L1 = fade the whole colour correction out in the darks by the RAW KeySync lightness (0 below L0, full above L1): the global offset no longer lifts the black floor or neutralises the warmth of a dark mouth / hair; e.g. 10:30")
 ap.add_argument("--mask", default="oval", choices=["oval", "tight"], help="r16c K1 rule 5: oval = the r15/r16 mask (oval + 0.15 IOD down + 0.10 IOD dilation: reaches neck / collar / background); tight = strictly INSIDE the face: the cheek / jaw contour (union of the source jaw and KeySync's generated jaw), inset, feathered inwards")
 ap.add_argument("--mask-chin", type=int, default=0, help="tight: 1 = do NOT inset the chin: the jaw below the mouth corners (source and generated) + the lips are added back un-eroded, so the generated chin motion is kept (the inset there cost SyncNet); the cheeks keep the inset")
+ap.add_argument("--mask-tsmooth", type=float, default=0.0, help="r16c K1 (Irina 09.11: the neck-face seam swims, in ALL videos): the mask polygon (oval or tight) from landmark tracks gaussian-smoothed over time (sigma in frames; source and generated); symmetric + global, so ks_plain_par == serial")
+ap.add_argument("--mask-chin-feather", type=float, default=0.0, help="tight + chin: an extra VERTICAL-only feather of the chin part (sigma x IOD), so the generated-jaw / source-neck step fades over a taller band")
+ap.add_argument("--neck-follow", type=float, default=0.0, help="r16c K1 (Irina 10.11 seam option a): warp the SOURCE neck / chin strip below the jaw so it follows the GENERATED jaw: per column dy = generated - source jaw y (clamped +-0.12 IOD, tapered at the jaw ends), weight 1 at the jaw line -> 0 at this many IOD below; temporal smoothing via --mask-tsmooth")
 ap.add_argument("--mask-inset", type=float, default=0.04, help="tight: inset from the face contour, x IOD")
 ap.add_argument("--mask-feather", type=float, default=0.04, help="tight: feather sigma, x IOD (the whole transition lies inside the inset contour)")
 ap.add_argument("--parse", default="", help="r16c K1: face_parse.py npz for the master (per-frame face-skin probability in box coords): inside the mask, non-face pixels (hair / hands / clothes / background) take the source; the generated lips stay")
@@ -112,23 +115,64 @@ def boxf(k):
 last = [None]
 
 
+def _tsm(A, sig):   # gaussian smoothing along time of an (n, P, 2) landmark track, NaN-aware
+    if A is None or sig <= 0: return A
+    A = A.astype(np.float32).copy(); n_ = len(A); ok = np.isfinite(A).all(axis=(1, 2))
+    if ok.sum() < 2: return A
+    idx = np.arange(n_); B = A.copy()
+    for pi in range(A.shape[1]):
+        for c in range(2): B[~ok, pi, c] = np.interp(idx[~ok], idx[ok], A[ok, pi, c])
+    r_ = int(3 * sig); g_ = np.exp(-0.5 * (np.arange(-r_, r_ + 1) / sig) ** 2); g_ /= g_.sum()
+    Bp = np.concatenate([np.repeat(B[:1], r_, 0), B, np.repeat(B[-1:], r_, 0)], 0)
+    S_ = sum(g_[j] * Bp[j:j + n_] for j in range(2 * r_ + 1)); S_[~ok] = np.nan; return S_
+LMS = _tsm(LM[..., :2], a.mask_tsmooth) if a.mask_tsmooth > 0 else None
+KLS = _tsm(KL, a.mask_tsmooth) if (a.mask_tsmooth > 0 and KL is not None) else KL
+
+
+
+def neck_warp(roi, k, i):   # r16c K1 option (a): the source neck follows the generated jaw (no step at a jaw-line seam)
+    src = LMS if LMS is not None else LM[..., :2]
+    ps = src[min(int(J[min(k, len(J) - 1)]), len(src) - 1)]; KK = KLS if KLS is not None else KL
+    if KK is None or not (0 <= i < len(KK)): return roi
+    kp = KK[i]
+    if not (np.isfinite(ps[JAWLOW]).all() and np.isfinite(kp[JAWLOW]).all() and np.isfinite(ps[[33, 263]]).all()): return roi
+    iod = float(np.linalg.norm(ps[33] - ps[263])); q_ = ps - BXY(k); xs_ = np.arange(s, dtype=np.float32)
+    def env(pts):   # the jaw polyline as y(x) on the columns it spans (nan outside)
+        o_ = np.argsort(pts[:, 0]); x_, y_ = pts[o_, 0], pts[o_, 1]; y = np.interp(xs_, x_, y_); y[(xs_ < x_[0]) | (xs_ > x_[-1])] = np.nan; return y, x_[0], x_[-1]
+    ys_, x0_, x1_ = env(q_[JAWLOW]); yg_, _, _ = env(kp[JAWLOW])
+    dy = np.clip(yg_ - ys_, -0.12 * iod, 0.12 * iod); dy[~np.isfinite(dy)] = 0
+    wdt = max(x1_ - x0_, 1.0); tp = np.clip(np.minimum(xs_ - x0_, x1_ - xs_) / (0.15 * wdt), 0, 1); dy = dy * (0.5 - 0.5 * np.cos(np.pi * tp))
+    ysf = np.where(np.isfinite(ys_), ys_, 1e9).astype(np.float32)[None, :]
+    below = np.clip(1 - (GY - ysf) / max(a.neck_follow * iod, 1.0), 0, 1) * (GY >= ysf)
+    above = np.clip(1 - (ysf - GY) / max(0.05 * iod, 1.0), 0, 1) * (GY < ysf)
+    wgt = (below + above).astype(np.float32)
+    if float(np.abs(dy).max()) < 0.25: return roi
+    return cv2.remap(roi, GX, (GY - dy[None, :] * wgt).astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+
+CZ = [None]
 def mask(k):
     i = int(J[min(k, len(J) - 1)]); p = LM[min(i, len(LM) - 1)]
     if not np.isfinite(p).all(): return (None, None) if a.absent == "skip" else (last[0], None)
     iod = float(np.linalg.norm(p[33] - p[263])); q = p - BXY(k); mk = np.zeros((s, s), np.uint8)
+    qs = q; CZ[0] = None
+    if LMS is not None:   # r16c K1: the mask polygon from the time-smoothed track (oval AND tight): the seam does not swim
+        ps_ = LMS[min(i, len(LMS) - 1)]
+        if np.isfinite(ps_).all(): qs = ps_ - BXY(k)
     if a.mask == "tight":   # r16c K1 rule 5: never neck / collar / hair / background
-        pts = [q[OVAL]]
+        pts = [qs[OVAL]]
         ii = kidx(k)
-        if KL is not None and 0 <= ii < len(KL) and np.isfinite(KL[ii][JAWC]).all(): pts.append(KL[ii][JAWC])   # the generated jaw may open lower than the source's
+        if KLS is not None and 0 <= ii < len(KLS) and np.isfinite(KLS[ii][JAWC]).all(): pts.append(KLS[ii][JAWC])   # the generated jaw may open lower than the source's
         cv2.fillPoly(mk, [hull(np.concatenate(pts))], 1); own = mk.copy()
         mk = cv2.erode(mk, el((a.mask_inset + 2 * a.mask_feather) * iod))
+        own = mk.copy()
         if a.mask_chin:   # the chin / lips area (below the mouth corners) un-eroded: source jaw U generated jaw U lips
-            yc = float(q[[61, 291], 1].mean()); low = [q[JAWLOW]]
-            if KL is not None and 0 <= ii < len(KL) and np.isfinite(KL[ii][JAWLOW]).all(): low.append(KL[ii][JAWLOW])
-            cz = np.zeros_like(mk); cv2.fillPoly(cz, [hull(np.concatenate(low + [q[LIPS]]))], 1); cz[:max(0, int(yc)), :] = 0
-            mk = np.maximum(mk, cz)
+            yc = float(qs[[61, 291], 1].mean()); low = [qs[JAWLOW]]
+            if KLS is not None and 0 <= ii < len(KLS) and np.isfinite(KLS[ii][JAWLOW]).all(): low.append(KLS[ii][JAWLOW])
+            cz = np.zeros_like(mk); cv2.fillPoly(cz, [hull(np.concatenate(low + [qs[LIPS]]))], 1); cz[:max(0, int(yc)), :] = 0
+            mk = np.maximum(mk, cz); CZ[0] = cz
+        own = mk.copy()   # r16c K1: m03 bug: the 2-face 'own face' re-fill used the full contour and undid the tight mask
     else:
-        hp = hull(q[OVAL]); cv2.fillPoly(mk, [hp], 1); cv2.fillPoly(mk, [hp + np.array([0, int(round(a.down * iod))], np.int32)], 1)
+        hp = hull(qs[OVAL]); cv2.fillPoly(mk, [hp], 1); cv2.fillPoly(mk, [hp + np.array([0, int(round(a.down * iod))], np.int32)], 1)
         own = mk.copy()   # r16 K1: the speaker's own face (oval + the room below the chin): the other-face protection must never cover it
         mk = cv2.dilate(mk, el(a.dil * iod))
     if OT is not None:
@@ -143,6 +187,11 @@ def mask(k):
                 if a.others_grow > 0: om[cv2.dilate(own, el(0.03 * iod)) > 0] = 0
                 mk[om > 0] = 0
     m = cv2.GaussianBlur(mk.astype(np.float32), (0, 0), max(1.0, (a.mask_feather if a.mask == "tight" else 0.04) * iod)) * boxf(k)
+    if a.mask == "tight" and a.mask_chin and a.mask_chin_feather > 0 and CZ[0] is not None:   # a taller, vertical-only fade of the chin edge
+        mc = cv2.GaussianBlur(CZ[0].astype(np.float32), (0, 0), sigmaX=max(1.0, a.mask_feather * iod), sigmaY=max(1.0, a.mask_chin_feather * iod)) * boxf(k)
+        yc_ = float(qs[152, 1]) - 0.15 * iod   # crossfade from the normal mask to the vertically feathered chin mask around the chin
+        wv = np.clip((GY - (yc_ - 0.1 * iod)) / max(0.2 * iod, 1.0), 0, 1).astype(np.float32)
+        m = m * (1 - wv) + mc * wv
     if PARSE is not None:   # r16c K1: hair / hands / clothes / background inside the mask -> the source (the generated lips stay)
         fs = face_parse.face_prob(PARSE, k + a.k_base, s)   # global master frame (beards are face skin to the model)
         if fs is not None:
@@ -377,6 +426,7 @@ for k, f in enumerate(frames(a.master, W, H)):
             kf = np.clip(cv2.cvtColor(yk, cv2.COLOR_YCrCb2RGB), 0, 255)
         if a.tex > 0 or a.cavity > 0: kf = fix_ks(kf, i, m, crop(f, k))
         roi = crop(f, k).astype(np.float32); mm2 = m * fade
+        if a.neck_follow > 0: roi = neck_warp(roi, k, i)
         p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)]; iod = float(np.linalg.norm(p[33] - p[263])) if np.isfinite(p).all() else IODM
         if UP is not None and np.isfinite(p[[33, 263, 133, 362, 152]]).all():
             em = p[[33, 263, 133, 362]].mean(0) - BXY(k); ax = (p[152] - BXY(k)) - em; L2 = float(ax @ ax)

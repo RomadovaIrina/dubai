@@ -125,6 +125,7 @@ for f in $TAGS; do SH=${KS_PASTE_SHIFT:-auto}
 done
 $REL   # GPU done: the post + paste below are CPU only
 
+export KS_CMS=${KS_CMS:-1}   # r16c K1 (Irina 09.11 approved): colour-managed BT.709 I/O for the post chain too (tsmooth / snap / guard ran with ffmpeg BT.601: -2.3 L, +1.7 b per 3 round trips)
 CUR=$KW/master_25fps.mp4; n=0
 for f in $TAGS; do
   RAW=$(ls $KW/out/$f/*.mp4 | head -1); P=$KW/post_$f; mkdir -p $P
