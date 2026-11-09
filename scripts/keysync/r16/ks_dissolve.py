@@ -62,22 +62,28 @@ if a.cmd == "check":
     if not ok: print("KS WARN " + out["flag"], flush=True)
 
 elif a.cmd == "unmix":
-    F = {}
+    # streaming (Q audit P3: a 5-min 1080p shot held whole = ~46 GB): pass 1 keeps only T, B and the dissolve window [d0, d1) (+1 frame each side
+    # for the held frames); pass 2 streams the segment, copying every frame outside the window
+    d0, d1 = max(a.d0, a.k0), min(a.d1, a.k1); F = {}
     for k, f in enumerate(reader(a.master)):
-        if k in (a.tf, a.bf) or a.k0 <= k < a.k1: F[k] = f
-        if k >= max(a.k1, a.tf, a.bf): break
+        if k in (a.tf, a.bf) or d0 <= k < d1: F[k] = f
+        if k >= max(d1, a.tf, a.bf): break
     T = F[a.tf].astype(np.float32); B = F[a.bf].astype(np.float32); D = (B - T)[::4, ::4].ravel(); DD = float(np.dot(D, D))
-    al = {k: (float(np.clip(np.dot((F[k].astype(np.float32) - T)[::4, ::4].ravel(), D) / DD, 0, 1)) if a.d0 <= k < a.d1 else 1.0) for k in range(a.k0, a.k1)}
+    al = {k: (float(np.clip(np.dot((F[k].astype(np.float32) - T)[::4, ::4].ravel(), D) / DD, 0, 1)) if d0 <= k < d1 else 1.0) for k in range(a.k0, a.k1)}
     U = {}
-    for k in range(a.k0, a.k1):
+    for k in range(d0, d1):
         if al[k] >= 0.995: U[k] = F[k]
         elif al[k] >= a.amin: U[k] = np.clip((F[k].astype(np.float32) - (1 - al[k]) * T) / al[k], 0, 255).astype(np.uint8)
     ok = sorted(U)
-    for k in range(a.k0, a.k1):   # a_k < amin: hold the nearest valid unmixed frame
-        if k not in U: U[k] = U[min(ok, key=lambda q: abs(q - k))]
+    for k in range(d0, d1):   # a_k < amin: hold the nearest valid unmixed frame (inside the window; else the nearest clean frame outside it)
+        if k not in U: U[k] = U[min(ok, key=lambda q: abs(q - k))] if ok else (F[a.bf])
+    del F
     w = subprocess.Popen(["ffmpeg", "-nostdin", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", "25", "-i", "-",
                           "-c:v", "libx264", "-qp", "0", "-preset", "ultrafast", "-pix_fmt", "yuv420p", a.out], stdin=subprocess.PIPE)
-    for k in range(a.k0, a.k1): w.stdin.write(U[k].tobytes())
+    for k, f in enumerate(reader(a.master)):
+        if k < a.k0: continue
+        if k >= a.k1: break
+        w.stdin.write((U[k] if k in U else f).tobytes())
     w.stdin.close(); w.wait()
     json.dump({"k0": a.k0, "k1": a.k1, "t_frame": a.tf, "b_frame": a.bf, "alpha": {str(k): round(v, 4) for k, v in al.items()}}, open(a.out + ".alpha.json", "w"))
     dz = [k for k in al if al[k] < 0.995]
