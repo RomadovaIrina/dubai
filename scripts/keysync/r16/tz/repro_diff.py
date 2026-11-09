@@ -52,7 +52,24 @@ def main():
         r = wcmp(os.path.join(a.a, f), os.path.join(a.b, f)) if f.endswith(".wav") else {"same": md5(os.path.join(a.a, f)) == md5(os.path.join(a.b, f))}
         step(f"8 {f}", r["same"], None if r["same"] else r)
     first = next((r["stage"] for r in res if not r["same"]), None)
-    out = {"a": a.a, "b": a.b, "bit_identical_final": res[-1]["same"], "first_difference": first, "stages": res}
+    # the whole r9_<id> tree (placed / hushed / soft / mix_src / the id dir): every differing file, in the order run A wrote them (mtime =
+    # pipeline order), names normalised by the job id -> the earliest differing file is where the drift enters
+    pa, ia = os.path.dirname(os.path.abspath(a.a)), os.path.basename(os.path.abspath(a.a)); pb, ib = os.path.dirname(os.path.abspath(a.b)), os.path.basename(os.path.abspath(a.b))
+    tree = []
+    if os.path.basename(pa).startswith("r9_") and os.path.basename(pb).startswith("r9_"):
+        for root, _, fs in os.walk(pa):
+            for f in fs:
+                fa = os.path.join(root, f); rel = os.path.relpath(fa, pa); fb = os.path.join(pb, rel.replace(ia, ib))
+                if not os.path.exists(fb) or f.endswith((".log", ".mp4")): continue
+                if md5(fa) == md5(fb): continue
+                r = wcmp(fa, fb) if f.endswith(".wav") else {"same": False}
+                if f.endswith(".json"):
+                    try: r["json_equal"] = json.load(open(fa)) == json.load(open(fb))
+                    except Exception: pass
+                tree.append({"file": rel, "mtime": os.path.getmtime(fa), **r})
+        tree.sort(key=lambda x: x["mtime"])
+        print(f"TREE {len(tree)} differing files (earliest first):"); [print("  ", x["file"], {k: v for k, v in x.items() if k not in ("file", "mtime", "same")}) for x in tree[:12]]
+    out = {"a": a.a, "b": a.b, "bit_identical_final": res[-1]["same"], "first_difference": first, "stages": res, "tree_differing_earliest_first": tree}
     if a.out: json.dump(out, open(a.out, "w"), indent=1, ensure_ascii=False)
     for r in res: print(("SAME " if r["same"] else "DIFF ") + r["stage"] + ("" if r["same"] or "detail" not in r else "  " + json.dumps(r["detail"], ensure_ascii=False)[:300]))
     print("REPRO", json.dumps({"bit_identical_final": out["bit_identical_final"], "first_difference": first}, ensure_ascii=False))
