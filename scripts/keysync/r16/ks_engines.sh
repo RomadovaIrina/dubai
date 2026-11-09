@@ -6,6 +6,7 @@
 set -o pipefail
 KS=${KS_ROOT:-/workspace/dub/keysync}; CAP=${KS_TRT_CAP:-$KS/trt/cap}; LORA=${KS_LORA:-$KS/student/lora_pick.pt}; LOCK=${KS_GPU_LOCK:-/workspace/dub/gpu.lock}
 . $KS/venv/bin/activate
+( cd $KS/code && python3 $(dirname "$0")/ks_zeroflag.py >&2 ) || { echo "KS_ENGINES_FAIL the KeySync zero-slot fix (ks_zeroflag.py) did not apply" >&2; exit 1; }   # r16c T: every face run gets the scheduler fix (old installs too)
 KEY=$(python - <<'PY'
 import re, subprocess, tensorrt
 g = subprocess.run(["nvidia-smi", "--query-gpu=name,driver_version", "--format=csv,noheader", "-i", "0"], capture_output=True, text=True).stdout.strip()

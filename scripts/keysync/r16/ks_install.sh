@@ -12,6 +12,7 @@ if git apply --check ../keysync_5e2503b_sm120_r15.patch 2>/dev/null; then git ap
 elif git apply -R --check ../keysync_5e2503b_sm120_r15.patch 2>/dev/null; then echo PATCH_ALREADY
 else echo "PATCH_FAIL (another patch applied?)"; git status --short | head; exit 1; fi
 python3 $R/scripts/keysync/r16/ks_refidx.py   # r16 K2: KS_REF_IDX
+python3 $R/scripts/keysync/r16/ks_zeroflag.py   # r16c T: one reference slot per 13 keyframes (the broken tails)
 for n in 6 8; do for c in keyframe interpolation; do sed "s/num_steps: 10/num_steps: $n/" scripts/sampling/configs/$c.yaml > scripts/sampling/configs/${c}_s$n.yaml; done; done
 cd ..; grep -v -i -E "^(torch==|torchvision|torchaudio|nvidia-|triton|xformers|deepspeed|bitsandbytes|dlib|face-recognition|face_recognition|insightface|onnx)" code/requirements.txt > req_ks.txt
 [ -x venv/bin/python ] || uv venv -q -p 3.11 venv
