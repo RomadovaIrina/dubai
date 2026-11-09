@@ -34,10 +34,19 @@ if phase rc; then
     echo "$n e2e_rc=$rc manifest: $(python3 -c "import json; m=json.load(open('$O/$n/manifest.json')); print(m['status'], m.get('errors'))" 2>&1 | cut -c1-300)" >> $O/rc.txt
   done; touch $Q/rc.done; log "rc: $(tr '\n' '|' < $O/rc.txt)"
 fi
+while pgrep -f "[t]z_suite.py --out $Q/edge" > /dev/null; do sleep 30; done   # (restarted queue: an edge suite already running finishes first; tz_suite resumes)
 if phase edge; then
   J=""; for n in no_face tiny_face two_faces two_shots_cut res4k_vertical silence music_only no_audio short_3s vfr rotated_meta90 hdr_hlg_10bit fps60_real \
                  face_half_out very_dark horizontal_1920x1080 square_720 odd_fps_29.58_real; do J="$J --job $n=$IN/$n.mp4"; done
   mkdir -p $Q/edge; $S --out $Q/edge $J > $Q/edge/suite.log 2>&1 || true; touch $Q/edge.done; log "edge: $(tail -1 $Q/edge/suite.log)"
+fi
+if phase fps; then   # TZ 5.6 (Irina 09.11 "it just has to look good"): A = today's 25 fps output, kept intermediates -> B (source fps) + 0.5x clips
+  mkdir -p $Q/fpsA; S60=/workspace/dub/inputs/mamakris/story-1774249930391-60765207.MOV
+  $S --out $Q/fpsA --job fps60=$IN/fps60_real.mp4,keep=1 --job q09=/workspace/dub/r16in/day1/HANDOFF_Q/clips/q09_vertical.mp4,keep=1 --job s60vfr=$S60,keep=1 > $Q/fpsA/suite.log 2>&1
+  for n in fps60 q09 s60vfr; do J=$Q/fpsA/$n; src=$(ls $J/e2e/work/in/tz_$n.* 2>/dev/null | head -1)
+    [ -n "$src" ] && [ -f $J/tz_$n.mp4 ] && $E /venv/dabai/bin/python scripts/keysync/r16/tz/fps_ab.py --e2e $J/e2e --a $J/tz_$n.mp4 --src $src --out $Q/fps/$n --modes flow,flownear \
+      > $Q/fps/$n.log 2>&1; log "fps $n: $(tail -1 $Q/fps/$n.log | cut -c1-300)"; done
+  touch $Q/fps.done
 fi
 if phase long; then mkdir -p $Q/long; $S --out $Q/long --job long10=$IN/long_10min.mp4 > $Q/long/suite.log 2>&1; touch $Q/long.done; log "long: $(tail -1 $Q/long/suite.log)"; fi
 if phase subs; then
