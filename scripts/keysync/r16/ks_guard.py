@@ -17,6 +17,10 @@ for t in range(1, n):
     loc = np.median(jk[max(1, t - 12): t + 13])
     if jk[t] > a.k * loc and (not np.isfinite(js[t]) or jk[t] > a.k * max(js[t], 0.5)): bad[t] = True
 bad[n:] = True   # nothing after the master end counts as a good neighbour (the padding tail may degenerate)
+import os as _os
+_fk = _os.environ.get("KS_FAULT", "")
+if _fk.startswith("guard:"):   # r16 TZ 11.2 / 11.3 fault injection: every k-th frame counts as broken (k = 1 / share), replaced like a real one
+    _st = max(2, int(round(1 / float(_fk.split(":")[1])))); bad[np.arange(10, max(10, n - 1), _st)] = True; bad[n:] = True
 DIS = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM); GY, GX = np.mgrid[0:512, 0:512].astype(np.float32)
 def interp(A, B, gA, gB, tau):
     fab = DIS.calc(gA, gB, None); fba = DIS.calc(gB, gA, None)
@@ -30,5 +34,5 @@ for t in range(1, n):
     out[t] = interp(out[p], F[q], cv2.cvtColor(out[p], cv2.COLOR_BGR2GRAY), G[q], (t - p) / (q - p)) if q is not None else out[p]
     fixed.append(round(t / 25, 2))
 p_ = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", "512x512", "-r", "25", "-i", "-", "-c:v", "libx264", "-crf", "10"] + ks_cms.enc() + [a.out], stdin=subprocess.PIPE)
-p_.stdin.write(out.tobytes()); p_.stdin.close(); p_.wait(); json.dump({"fixed_s": fixed}, open(a.out + ".guard.json", "w"))
+p_.stdin.write(out.tobytes()); p_.stdin.close(); p_.wait(); json.dump({"fixed_s": fixed, "frames": int(n), "replaced": len(fixed)}, open(a.out + ".guard.json", "w"))
 print(f"== ks_guard {n} frames: {len(fixed)} broken frames replaced at {fixed} -> {a.out}")

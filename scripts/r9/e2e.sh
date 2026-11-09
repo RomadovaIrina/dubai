@@ -44,7 +44,7 @@ trap 'kill $NV $NM 2>/dev/null' EXIT
 st() { echo -e "$1\t$(date +%s.%N)" >> $T; echo "== $ID stage $1 $(date +%T)" | tee -a $L/e2e.log; }   # stage start; the next st (or 'end') closes it
 fail() { FL+=("$1"); ER+=("$1: ${3:-}"); [ "$2" = ERROR ] && STATUS=ERROR || { [ $STATUS = SUCCESS ] && STATUS=$2; }; echo "== $ID $2: $1 ${3:-}" | tee -a $L/e2e.log; }   # fail <flag> <status> [detail]
 collect() { python scripts/r9/collect.py --id $ID --out $OUT --status $STATUS --flags "${FL[*]:-}" --errors "$(printf '%s\n' "${ER[@]:-}")" --stages $T --nvsmi $W/nvsmi.csv --precheck $W/precheck.json \
-    --audio $A/$AT --htd $A/$HT --face $B/$FT --gen $B/$GT --input "$IN"; }
+    --audio $A/$AT --htd $A/$HT --face $B/$FT --gen $B/$GT --input "$IN" --ks-subst $W/ks/subst.json; }   # r16 TZ 11.2 / 11.3
 finish() {
   st end; kill $NV $NM 2>/dev/null; wait $NV $NM 2>/dev/null
   collect 2>&1 | tee -a $L/e2e.log

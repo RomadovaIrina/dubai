@@ -198,6 +198,8 @@ for f in $TAGS; do
     && L=$P/ts.mp4 || { tail -3 $P/ts.log; exit 1; }; grep -h "gate:" $P/ts.log | head -1; fi
   $PY $KT/ks_snap.py --layer $L --lm $P/raw_lm.npz --out $P/snap.mp4 > $P/snap.log 2>&1 && L=$P/snap.mp4 || { tail -3 $P/snap.log; exit 1; }
   $PY $KT/ks_guard.py --layer $L --src $KW/data/pad_$f.mp4 --n $N --out $P/guard.mp4 > $P/guard.log 2>&1 && L=$P/guard.mp4 || { tail -3 $P/guard.log; exit 1; }
+  python3 -c "import json, sys; g = json.load(open(sys.argv[1])); json.dump({'tag': sys.argv[2], 'frames': int(sys.argv[3]), 'guard_replaced': len(g.get('fixed_s', []))}, open(sys.argv[4], 'w'))" \
+    $P/guard.mp4.guard.json $f $N $KW/subst_$f.json   # r16 TZ 11.2: the frames substituted on this face (guard), for the 2 % rule
   if [ "${KS_SEAM:-on}" = on ]; then   # K1 r16-paste2: KeySync's 13-frame segment-boundary jumps spread over 3 transitions (per KeySync run: ks_chunk chunks)
     CJ=""; [ -s $KW/data/chunks_$f/chunks.json ] && CJ="--chunks $KW/data/chunks_$f/chunks.json"
     $PY $KT/ks_seam.py --layer $L --src $KW/data/pad_$f.mp4 --out $P/seam.mp4 $CJ > $P/seam.log 2>&1 && L=$P/seam.mp4 || { tail -3 $P/seam.log; exit 1; }; tail -1 $P/seam.log | cut -c1-200; fi
@@ -214,4 +216,11 @@ for f in $TAGS; do
   else ( cd $KT && KS_CMS=1 $PY $KT/ks_plain.py $ARGS --out $NXT ) > $P/plain.log 2>&1 || { tail -5 $P/plain.log; exit 1; }; fi
   echo "KS_PASTE $f delay ${DLY[$f]} ms shift ${SHF[$f]} ref $(cat $KW/ref_$f.txt) $(grep -E 'plain paste:' $P/plain.log | head -1)"; CUR=$NXT
 done
+python3 - $KW <<'PY'   # r16 TZ 11.2 / 11.3: this run's substituted frames (guard-replaced) vs its lip-synced frames -> subst.json (collect.py: the 2 % rule)
+import glob, json, os, sys
+kw = sys.argv[1]; rows = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(kw, "subst_*.json")))]
+json.dump({"eligible_frames": sum(r["frames"] for r in rows), "guard_replaced": sum(r["guard_replaced"] for r in rows), "failed_frames": 0, "faces": rows},
+          open(os.path.join(kw, "subst.json"), "w"))
+print("KS_SUBST", json.dumps({"eligible_frames": sum(r["frames"] for r in rows), "guard_replaced": sum(r["guard_replaced"] for r in rows)}))
+PY
 t end; mv $CUR $OUTV && echo "KS_FACE_DONE $ID faces $TAGS"
