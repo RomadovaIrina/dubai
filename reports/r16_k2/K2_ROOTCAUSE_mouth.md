@@ -67,10 +67,16 @@ Definitions:
 
 - **old03 whole video:** lower / upper sharpness ours 0.44 vs source 0.65 (0.67 of the source).
 - **Events:** 56.04–56.76, 72.96–73.88, 87.16–87.84, 89.32–89.84 s, ratio 0.46–0.49. All in pauses (dub 51 dB, F1 band 0.08–0.12), i.e. where the gate keeps the 2-step student.
-- **Cause:**
-  - the 2-step LCM student is softer than the source's skin detail;
-  - on a low-res source (464×848 upscaled into the 512 crop) the difference shows most.
-  - The reference does not matter: B 0.66, the same as A 0.72.
+- **Cause on old03 = the GENERATOR (verified in crop space):**
+  - old03's box is 464 px, so the 512 KeySync render is scaled DOWN 0.91× into the frame, not up;
+  - the RAW KeySync crop is already soft: lower / upper sharpness 0.37 vs 0.67 for the source crop at the same 512 scale, i.e. 0.56 of the source before any paste;
+  - so it's the 2-step LCM student on a low-res source;
+  - the reference does not matter: B 0.66, the same as A 0.72.
+- **Cause on m18 = the PASTE (K1, measured on raw → post → final):**
+  - raw KeySync ≈ the source (0.87–0.93 at 9–10 s);
+  - the final is 0.68–0.78 of raw in every second;
+  - m18's box is 720 px, so the 512 render is UPSCALED 1.4× and warped. That is K1's file.
+- **Rule:** box > 512 → soft from the paste upscale; box ≤ 512 → soft from the generator.
 - **Other videos are not soft:**
 
 | video | sharpness vs source |
@@ -119,7 +125,12 @@ Candidates (Max gave no timestamps), ranked:
 | 3.2, 8.3, 13.5–14.1 | black hole | open 0.19–0.24 vs 0.03–0.13 | generator, a teeth-free ref; partly shared with golden (K1: 4 / 8 / 12 s) |
 | 18.3–20.0 | tail | | T: the zero-slot chunk + the paste writing N−1 frames |
 
-Paste-side (K1, running): raw vs final at these seconds. The colour match likely adds the "painted" lip colour (K1: lip a* +3.1 vs the source at 9 s).
+Paste-side (K1, measured raw → post → final on today's default render, r16-k2:/workspace/dub/k1/ana/m18/m18_raw_post_final.json):
+- **Lip colour is NOT the paste.** Lip-ring a*: raw 21–24 → post 20–23 → final 18.5–20.6 vs the source 16.6–19.0. The colour match pulls the red DOWN, so the "painted / swollen" look is the generator.
+- **Black share** (raw → post → final): 10 s 0.50 → 0.64 → 0.30; 16 s 0.44 → 0.56 → 0.30; 8 s 0.69 → 0.77 → 0.48. The generator makes it, the post chain (tsmooth / snap / guard) deepens it by 0.08–0.14, the paste's colour lift reduces it.
+- **The post chain also darkens the lips** by ~2.2 L* (K1 to check in ks_snap / guard).
+- **The m18 softness at 10–11 s is the paste upscale,** not the generator (see 2).
+- **Seam wobble is worst exactly at the swollen-lip seconds:** 6 s 3.92, 7 s 4.17 (median 2.18). The generated chin moves a lot there (dchin 0.025).
 
 ## 5. What the analysis says about fixes (not done; for the coordinator / Irina to pick)
 1. **Black hole:** the cause is a teeth-free identity frame + wide openings. Options, by evidence:
