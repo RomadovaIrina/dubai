@@ -54,6 +54,7 @@ def main():
         if name in res and res[name].get("status") not in (None, "WORKER_CRASH"): print(f"skip {name} (done)", flush=True); continue
         job = {"job_id": f"tz_{name}", "input": inp, "out_dir": str(out / name), "target_lang": kv.get("lang", "en"), "face": kv.get("face", "keysync"),
                "output": {"keep_intermediate": kv.get("keep") == "1"}}
+        if kv.get("lipsync") == "off": job["lipsync"] = "off"   # audio only (+ mux): reproducibility runs
         de = {k[2:]: v for k, v in kv.items() if k.startswith("E.")}   # E.KEY=VAL -> the job's debug_env (fault injection / golden dub reuse)
         if de: job["debug_env"] = de
         if kv.get("subs"): job["subs"] = {"enabled": True, "style": kv["subs"], "lang": "dub", "karaoke": True}
