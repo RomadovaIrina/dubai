@@ -14,9 +14,16 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ks_cms
 
 OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109]
+JAWC = [234, 93, 132, 58, 172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365, 397, 288, 361, 323, 454]   # r16c K1: cheek + jaw contour (ear to ear via the chin)
 LIPS = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185]
 ap = argparse.ArgumentParser()
 for k in ("ks", "master", "box", "lm", "audio", "out"): ap.add_argument("--" + k, required=True)
+ap.add_argument("--cm-lonly", type=int, default=0, help="r16c K1 colour in dark / warm scenes: 1 = the colour match (global gain / offset + --lfm maps) corrects LIGHTNESS only; KeySync's chroma is not shifted (the a / b offset turned dark areas blue)")
+ap.add_argument("--cm-shadow", default="", help="r16c K1 + K2 (long5 1:56 blue mouth): L0:L1 = fade the whole colour correction out in the darks by the RAW KeySync lightness (0 below L0, full above L1): the global offset no longer lifts the black floor or neutralises the warmth of a dark mouth / hair; e.g. 10:30")
+ap.add_argument("--mask", default="oval", choices=["oval", "tight"], help="r16c K1 rule 5: oval = the r15/r16 mask (oval + 0.15 IOD down + 0.10 IOD dilation: reaches neck / collar / background); tight = strictly INSIDE the face: the cheek / jaw contour (union of the source jaw and KeySync's generated jaw), inset, feathered inwards")
+ap.add_argument("--mask-inset", type=float, default=0.04, help="tight: inset from the face contour, x IOD")
+ap.add_argument("--mask-feather", type=float, default=0.04, help="tight: feather sigma, x IOD (the whole transition lies inside the inset contour)")
+ap.add_argument("--parse", default="", help="r16c K1: face_parse.py npz for the master (per-frame face-skin probability in box coords): inside the mask, non-face pixels (hair / hands / clothes / background) take the source; the generated lips stay")
 ap.add_argument("--others", default=""); ap.add_argument("--shift", type=int, default=0); ap.add_argument("--dil", type=float, default=0.10); ap.add_argument("--down", type=float, default=0.15)
 ap.add_argument("--no-cm", action="store_true")
 ap.add_argument("--align-ecc", default="", help="r16 K1: k_ecc.py npz (per-frame KS -> source affine in 512 px, image-based) instead of the landmark fit for --align")
@@ -56,6 +63,11 @@ a = ap.parse_args()
 b = json.load(open(a.box)); x0, y0, s, W, H = b["x"], b["y"], b["side"], b["W"], b["H"]
 z = np.load(a.lm); LM = z["lm"][..., :2].astype(np.float32); J = z["j"] if "j" in z.files else np.arange(len(LM))
 OT = np.load(a.others)["others"] if a.others else None
+SHW = tuple(float(x) for x in a.cm_shadow.split(':')) if a.cm_shadow else None
+PARSE = None
+if a.parse:   # r16c K1: ONE parser module (also T's occlusion guard): the flat kit dir or ../r16
+    sys.path[:0] = [os.path.dirname(os.path.abspath(__file__)), os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'r16')]
+    import face_parse; PARSE = face_parse.load(a.parse)
 LK = np.load(a.lip_keep) if a.lip_keep else None
 XS, YS = b.get("xs"), b.get("ys")   # r16 K2: a TRACKED box (k2_prep_track.py): constant side, per-master-frame corner
 def bxy(k): return (int(XS[min(max(k, 0), len(XS) - 1)]), int(YS[min(max(k, 0), len(YS) - 1)])) if XS else (x0, y0)
@@ -102,9 +114,16 @@ def mask(k):
     i = int(J[min(k, len(J) - 1)]); p = LM[min(i, len(LM) - 1)]
     if not np.isfinite(p).all(): return (None, None) if a.absent == "skip" else (last[0], None)
     iod = float(np.linalg.norm(p[33] - p[263])); q = p - BXY(k); mk = np.zeros((s, s), np.uint8)
-    hp = hull(q[OVAL]); cv2.fillPoly(mk, [hp], 1); cv2.fillPoly(mk, [hp + np.array([0, int(round(a.down * iod))], np.int32)], 1)
-    own = mk.copy()   # r16 K1: the speaker's own face (oval + the room below the chin): the other-face protection must never cover it
-    mk = cv2.dilate(mk, el(a.dil * iod))
+    if a.mask == "tight":   # r16c K1 rule 5: never neck / collar / hair / background
+        pts = [q[OVAL]]
+        ii = kidx(k)
+        if KL is not None and 0 <= ii < len(KL) and np.isfinite(KL[ii][JAWC]).all(): pts.append(KL[ii][JAWC])   # the generated jaw may open lower than the source's
+        cv2.fillPoly(mk, [hull(np.concatenate(pts))], 1); own = mk.copy()
+        mk = cv2.erode(mk, el((a.mask_inset + 2 * a.mask_feather) * iod))
+    else:
+        hp = hull(q[OVAL]); cv2.fillPoly(mk, [hp], 1); cv2.fillPoly(mk, [hp + np.array([0, int(round(a.down * iod))], np.int32)], 1)
+        own = mk.copy()   # r16 K1: the speaker's own face (oval + the room below the chin): the other-face protection must never cover it
+        mk = cv2.dilate(mk, el(a.dil * iod))
     if OT is not None:
         for f2 in OT[min(i, len(OT) - 1)]:
             if np.isfinite(f2).all():
@@ -116,7 +135,15 @@ def mask(k):
                     cv2.fillPoly(om, [hull(f2[OVAL] - BXY(k))], 1); om = cv2.dilate(om, el(0.08 * oi))
                 if a.others_grow > 0: om[cv2.dilate(own, el(0.03 * iod)) > 0] = 0
                 mk[om > 0] = 0
-    m = cv2.GaussianBlur(mk.astype(np.float32), (0, 0), max(1.0, 0.04 * iod)) * boxf(k)
+    m = cv2.GaussianBlur(mk.astype(np.float32), (0, 0), max(1.0, (a.mask_feather if a.mask == "tight" else 0.04) * iod)) * boxf(k)
+    if PARSE is not None:   # r16c K1: hair / hands / clothes / background inside the mask -> the source (the generated lips stay)
+        fs = face_parse.face_prob(PARSE, k + a.k_base, s)   # global master frame (beards are face skin to the model)
+        if fs is not None:
+            lz = np.zeros((s, s), np.uint8); cv2.fillPoly(lz, [hull(q[LIPS])], 1)
+            ii = kidx(k)
+            if KL is not None and 0 <= ii < len(KL) and np.isfinite(KL[ii][LIPS]).all(): cv2.fillPoly(lz, [hull(KL[ii][LIPS])], 1)
+            lz = cv2.GaussianBlur(cv2.dilate(lz, el(0.12 * iod)).astype(np.float32), (0, 0), max(1.0, 0.03 * iod))
+            m = m * np.maximum(fs, lz)
     if OT is not None and a.others_grow > 0:   # the feather of the cut lies OUTSIDE the speaker's face: fully KeySync inside her oval
         m = np.maximum(m, np.clip(2 * cv2.GaussianBlur(own.astype(np.float32), (0, 0), max(1.0, 0.04 * iod)), 0, 1) * boxf(k))
     if LK is not None and k < len(LK) and LK[k] > 0.01:   # r16 K2 pause closure: the source lips through the mask
@@ -328,8 +355,15 @@ for k, f in enumerate(frames(a.master, W, H)):
         NFADE += fade < 1.0
         kf = scale_fix(warp_ks(K[int(np.clip(i, 0, nk - 1))].astype(np.float32), k, i), k)
         if not a.no_cm:
-            lab = cv2.cvtColor(kf / 255, cv2.COLOR_RGB2LAB) * gain + off
-            if LFM is not None: lab += cv2.resize(LFM[min(k, n - 1)], (s, s), interpolation=cv2.INTER_CUBIC)
+            lab = cv2.cvtColor(kf / 255, cv2.COLOR_RGB2LAB); lab0 = lab.copy() if SHW else None
+            if a.cm_lonly: lab[..., 0] = lab[..., 0] * gain[0] + off[0]
+            else: lab = lab * gain + off
+            if LFM is not None:
+                d_ = cv2.resize(LFM[min(k, n - 1)], (s, s), interpolation=cv2.INTER_CUBIC)
+                if a.cm_lonly: lab[..., 0] += d_[..., 0]
+                else: lab += d_
+            if SHW:   # fade the correction out in the darks (by the raw lightness)
+                w_ = np.clip((lab0[..., 0] - SHW[0]) / max(SHW[1] - SHW[0], 1e-3), 0, 1)[..., None]; lab = lab0 + w_ * (lab - lab0)
             kf = np.clip(cv2.cvtColor(lab, cv2.COLOR_LAB2RGB) * 255, 0, 255)
         if SHARP > 0:
             yk = cv2.cvtColor(kf.astype(np.float32), cv2.COLOR_RGB2YCrCb); yk[..., 0] += SHARP * (yk[..., 0] - cv2.GaussianBlur(yk[..., 0], (0, 0), max(0.6, s / 512.0)))
