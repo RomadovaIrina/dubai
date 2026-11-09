@@ -1,0 +1,14 @@
+--- scripts/sampling/dubbing_pipeline_raw.py
++++ scripts/sampling/dubbing_pipeline_raw.py
+@@ -806,6 +806,11 @@
+                     c[k] = rearrange(c[k], "b t ... -> (b t) ...", t=num_frames)
+ 
+             video = torch.randn(shape, device=device)
++            _kn = os.environ.get("KS_NOISE", "")   # r16c K1: shared noise across frames / windows (texture boil)
++            if _kn:
++                _g = torch.Generator(device=device).manual_seed(int(os.environ.get("KS_NOISE_SEED", "1234")))
++                if _kn == "static": video = torch.randn((1,) + tuple(shape[1:]), device=device, generator=_g).expand(*shape).contiguous()
++                elif _kn == "window": video = torch.randn((num_frames,) + tuple(shape[1:]), device=device, generator=_g).repeat(shape[0] // num_frames, 1, 1, 1)
+ 
+             additional_model_inputs: Dict[str, torch.Tensor] = {}
+             additional_model_inputs["image_only_indicator"] = torch.zeros(

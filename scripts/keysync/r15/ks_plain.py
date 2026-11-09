@@ -15,12 +15,14 @@ import ks_cms
 
 OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109]
 JAWC = [234, 93, 132, 58, 172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365, 397, 288, 361, 323, 454]   # r16c K1: cheek + jaw contour (ear to ear via the chin)
+JAWLOW = [58, 172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365, 397, 288]   # r16c K1: the jaw below the mouth corners
 LIPS = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185]
 ap = argparse.ArgumentParser()
 for k in ("ks", "master", "box", "lm", "audio", "out"): ap.add_argument("--" + k, required=True)
 ap.add_argument("--cm-lonly", type=int, default=0, help="r16c K1 colour in dark / warm scenes: 1 = the colour match (global gain / offset + --lfm maps) corrects LIGHTNESS only; KeySync's chroma is not shifted (the a / b offset turned dark areas blue)")
 ap.add_argument("--cm-shadow", default="", help="r16c K1 + K2 (long5 1:56 blue mouth): L0:L1 = fade the whole colour correction out in the darks by the RAW KeySync lightness (0 below L0, full above L1): the global offset no longer lifts the black floor or neutralises the warmth of a dark mouth / hair; e.g. 10:30")
 ap.add_argument("--mask", default="oval", choices=["oval", "tight"], help="r16c K1 rule 5: oval = the r15/r16 mask (oval + 0.15 IOD down + 0.10 IOD dilation: reaches neck / collar / background); tight = strictly INSIDE the face: the cheek / jaw contour (union of the source jaw and KeySync's generated jaw), inset, feathered inwards")
+ap.add_argument("--mask-chin", type=int, default=0, help="tight: 1 = do NOT inset the chin: the jaw below the mouth corners (source and generated) + the lips are added back un-eroded, so the generated chin motion is kept (the inset there cost SyncNet); the cheeks keep the inset")
 ap.add_argument("--mask-inset", type=float, default=0.04, help="tight: inset from the face contour, x IOD")
 ap.add_argument("--mask-feather", type=float, default=0.04, help="tight: feather sigma, x IOD (the whole transition lies inside the inset contour)")
 ap.add_argument("--parse", default="", help="r16c K1: face_parse.py npz for the master (per-frame face-skin probability in box coords): inside the mask, non-face pixels (hair / hands / clothes / background) take the source; the generated lips stay")
@@ -120,6 +122,11 @@ def mask(k):
         if KL is not None and 0 <= ii < len(KL) and np.isfinite(KL[ii][JAWC]).all(): pts.append(KL[ii][JAWC])   # the generated jaw may open lower than the source's
         cv2.fillPoly(mk, [hull(np.concatenate(pts))], 1); own = mk.copy()
         mk = cv2.erode(mk, el((a.mask_inset + 2 * a.mask_feather) * iod))
+        if a.mask_chin:   # the chin / lips area (below the mouth corners) un-eroded: source jaw U generated jaw U lips
+            yc = float(q[[61, 291], 1].mean()); low = [q[JAWLOW]]
+            if KL is not None and 0 <= ii < len(KL) and np.isfinite(KL[ii][JAWLOW]).all(): low.append(KL[ii][JAWLOW])
+            cz = np.zeros_like(mk); cv2.fillPoly(cz, [hull(np.concatenate(low + [q[LIPS]]))], 1); cz[:max(0, int(yc)), :] = 0
+            mk = np.maximum(mk, cz)
     else:
         hp = hull(q[OVAL]); cv2.fillPoly(mk, [hp], 1); cv2.fillPoly(mk, [hp + np.array([0, int(round(a.down * iod))], np.int32)], 1)
         own = mk.copy()   # r16 K1: the speaker's own face (oval + the room below the chin): the other-face protection must never cover it

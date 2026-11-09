@@ -28,6 +28,18 @@ def merge_lora(dm, path):
     print(f"LORA merged {n} modules from {path}", flush=True)
 
 
+
+def ks_lsmooth(f):   # r16c K1: temporal smoothing of the latent's spatial HF (texture boil), LF (shape) kept
+    w = float(os.environ.get("KS_LSMOOTH", "0") or 0)
+    T = int(os.environ.get("KS_LSMOOTH_T", "14")); kk = int(os.environ.get("KS_LSMOOTH_K", "3")); npass = int(os.environ.get("KS_LSMOOTH_N", "1"))
+    if w <= 0 or f.shape[0] % T: return f
+    lf = torch.nn.functional.avg_pool2d(f, kk, stride=1, padding=kk // 2, count_include_pad=False); hf = f - lf
+    B = f.shape[0] // T; h = hf.view(B, T, *hf.shape[1:])
+    for _ in range(npass):
+        hp = torch.cat([h[:, :1], h, h[:, -1:]], 1); h = w * hp[:, :-2] + (1 - 2 * w) * hp[:, 1:-1] + w * hp[:, 2:]
+    return lf + h.reshape(hf.shape)
+
+
 class LCMSampler:
     def __init__(self, base_sampler, steps=4, noise="fresh"):
         self.guider = base_sampler.guider; self.discretization = base_sampler.discretization; self.noise = noise
@@ -38,11 +50,12 @@ class LCMSampler:
         G = self.grid; m, g = cond["masks"], cond["gt"]
         m = rearrange(m, "b c t h w -> (b t) c h w") if m.dim() == 5 else m
         g = rearrange(g, "b c t h w -> (b t) c h w") if g.dim() == 5 else g
+        n0 = x.clone() if os.environ.get("KS_NOISE") else None   # r16c K1: re-noise with the shared initial field
         x = x * math.sqrt(1.0 + G[0] ** 2)
         for k, gi in enumerate(self.idx):
             s = G[gi]; cs, co = cm_coef(s)
             f = cs * x + co * denoiser(x, x.new_ones([x.shape[0]]) * s, cond)
             f = f * m + g * (1 - m)
-            if k == len(self.idx) - 1: return f
-            n = torch.randn_like(x) if self.noise == "fresh" else (x - f) / s
+            if k == len(self.idx) - 1: return ks_lsmooth(f) * m + g * (1 - m)
+            n = n0 if n0 is not None else (torch.randn_like(x) if self.noise == "fresh" else (x - f) / s)
             x = f + G[self.idx[k + 1]] * n
