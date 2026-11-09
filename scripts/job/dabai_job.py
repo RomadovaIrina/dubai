@@ -54,6 +54,8 @@ MESSAGES = {
                              "Не найдено лицо, подходящее для синхронизации губ (слишком мелкое, во врезке или отсутствует): видео озвучено переведённым голосом, без синхронизации губ."),
     "face_keep_source_no_visible_speaker": ("W_OFFSCREEN_VOICE", "Nobody on screen speaks the dubbed lines (an off-screen voice): the picture is left as it is, without lip-sync.",
                                             "Никто в кадре не произносит озвученные фразы (голос за кадром): изображение оставлено без изменений, без синхронизации губ."),
+    "ks_offscreen_voice": ("W_OFFSCREEN_VOICE", "A face on screen does not speak the dubbed lines (an off-screen voice): that face is left as it is, without lip-sync.",
+                           "Лицо в кадре не произносит озвученные фразы (голос за кадром): это лицо оставлено как есть, без синхронизации губ."),
     "no_face": ("W_NO_FACE", "No face was found in the video: it is dubbed with the translated voice only, without lip-sync.",
                 "В видео не найдено лицо: озвучили переведённым голосом, без синхронизации губ."),
     "no_lipsync_head_pose": ("W_HEAD_POSE", "The head is turned away too often (more than 30 % of the frames): the video is dubbed with the translated voice, without lip-sync.",

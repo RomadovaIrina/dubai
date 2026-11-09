@@ -115,7 +115,7 @@ else FJ=$KW/jobs_follow.txt; : > $FJ; KLOG=$KW/ks_fast.log; KOUT=$KW/out; PFX=""
 trap '[ -n "${KSP:-}" ] && kill $KSP 2>/dev/null' EXIT; fi   # never leave a --follow ks_fast behind (it would wait for END forever)
 waitjob() { until grep -q "^KS_JOB {\"tag\": \"$1\"" $KLOG; do kill -0 $KSP 2>/dev/null || { echo "KS: ks_fast died before job $1"; tail -5 $KLOG; return 1; }; sleep 0.5; done; }
 if [ "${KS_DELAY:-probe}" = probe ]; then
-  t probe; : > $KW/probe/jobs.txt; PS=${KS_PROBE_S:-10}
+  t probe; : > $KW/probe/jobs.txt; PS=${KS_PROBE_S:-10}; OFFS=""
   for f in $TAGS; do   # a FRAME-ALIGNED window of KS_PROBE_S s from the face's first own speech; the same reference (frame 0) + gate as the full run
     $MPY - $KW/dub_$f.wav $KW/data/crop_$f.mp4 $(cat $KW/ref_$f.txt) $PS $KW/probe/v_$f.mp4 $KW/probe/a_$f.wav <<'PY' || exit 1
 import subprocess, sys, wave, numpy as np, cv2
@@ -143,9 +143,14 @@ PY
     O=$(sync_off $(ls $KOUT/${PFX}p_$f/*.mp4 | head -1) $KW/probe/a_$f.wav $KW/probe/sync_$f.json)
     C=$(python3 -c "import json; print(json.load(open('$KW/probe/sync_$f.json'))['global']['conf'])" 2>/dev/null || echo 0)
     if [ "$O" = x ]; then flag ks_probe_failed "$f: no SyncNet result -> delay 0"; O=0
+    elif python3 -c "import sys; sys.exit(0 if float('$C') < float('${KS_OFFSCREEN_CONF:-1.5}') else 1)"; then   # r16c T (Irina 09.11 rule 2): this face does NOT speak the dub
+      flag ks_offscreen_voice "$f: probe conf $C < ${KS_OFFSCREEN_CONF:-1.5}: the voice is not this face's (off-screen) -> its source picture"; OFFS="$OFFS $f"; O=0   # (q02 0.08; every real speaker >= 3.4)
     elif python3 -c "import sys; sys.exit(0 if float('$C') < float('${KS_PROBE_MIN_CONF:-3}') else 1)"; then flag ks_probe_low_conf "$f: conf $C, offset $O -> delay 0"; O=0
     elif [ "${O#-}" -gt "${KS_PROBE_MAX:-2}" ]; then flag ks_probe_clamped "$f: offset $O -> +-${KS_PROBE_MAX:-2}"; O=$(( O > 0 ? ${KS_PROBE_MAX:-2} : -${KS_PROBE_MAX:-2} )); fi
     DLY[$f]=$(( -O * 40 )); echo "KS_PROBE $f av_offset $O conf $C -> dub delay ${DLY[$f]} ms"; done
+  if [ -n "$OFFS" ]; then TAGS=$(for f in $TAGS; do [[ " $OFFS " == *" $f "* ]] || echo -n "$f "; done)   # the off-screen-voice faces get no render
+    if [ -z "${TAGS// }" ]; then echo "KS_FACE_KEEP_SOURCE $ID: off-screen voice (faces$OFFS): the source picture with the dub"
+      [ -n "$SHR" ] || { echo END >> $FJ; wait $KSP 2>/dev/null; KSP=""; gpu_release; }; exit 3; fi; fi
 else for f in $TAGS; do DLY[$f]=${KS_DELAY}; done; fi
 t keysync; : > $KW/jobs.txt
 for f in $TAGS; do   # the dub KeySync hears: delayed (or advanced) by the probe, padded with silence to the padded crop (the final mix is never touched)
@@ -176,10 +181,11 @@ for f in $TAGS; do   # the raw render vs the ORIGINAL dub (K2): ~0 after the pro
   SHF[$f]=$SH; echo "KS_CHECK $f delay ${DLY[$f]} ms, raw offset vs the original dub $O, paste shift $SH"
 done
 [ -n "$SHR" ] || gpu_release   # GPU done: the post + paste below are CPU only
-declare -p DLY SHF > $KW/state.sh
+declare -p DLY SHF > $KW/state.sh; echo "OFFS='${OFFS:-}'" >> $KW/state.sh
 fi   # ==== end of gpu
 [ "$PH" = gpu ] && { echo "KS_PHASE_DONE gpu $ID"; exit 0; }
 [ "$PH" = post ] && . $KW/state.sh   # ==== post (CPU)
+[ -n "${OFFS:-}" ] && TAGS=$(for f in $TAGS; do [[ " $OFFS " == *" $f "* ]] || echo -n "$f "; done)   # (r16c T: no post / paste for an off-screen-voice face)
 
 CUR=$KW/master_25fps.mp4; n=0
 for f in $TAGS; do

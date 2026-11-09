@@ -75,6 +75,7 @@ if [ ${#READY[@]} -gt 0 ]; then
     env KS_IN_SHOT=1 KS_PHASE=gpu KS_DELAY=$DELAY KS_FAST_FJ=$KFJ KS_FAST_LOG=$SW/ks_fast.log KS_FAST_OUT=$KOUT KS_FAST_PID=$KSP KS_TAG_PREFIX=s${i}_ \
       bash $R/scripts/keysync/r16/ks_face.sh ${SHOTARGS[$i]} > $S/face_gpu.log 2>&1; rc=$?
     shot_log $i gpu
+    if [ $rc = 3 ]; then echo "KS_SHOT $i ${SPAN[$i]}: off-screen voice -> source"; unset "ALPHA[$i]"; continue; fi   # r16c T: not a failure (flag ks_offscreen_voice)
     [ $rc = 0 ] || { shot_fail $i gpu $rc; continue; }
     if [ "$DELAY" = probe ] && ! grep -q -E "KS_FLAG ks_probe_(failed|low_conf)" $S/face_gpu.log; then   # only a CONFIDENT probe sets the video's delay
       P=$(grep -o -E "KS_PROBE f[0-9]+ av_offset [-0-9]+( conf [0-9.]+)? -> dub delay [-0-9]+ ms" $S/face_gpu.log | head -1 | awk '{print $(NF-1)}')

@@ -182,7 +182,7 @@ fi
 if [ "${E2E_LIPSYNC:-on}" = off ]; then FL+=("lipsync_off_by_request")   # r13 interface: the user asked for a voice-only dub
 elif [[ " $PF " == *" no_face "* ]]; then FL+=("face_skipped_no_face")
 elif [[ " ${FL[*]} " == *" face_keep_source_no_visible_speaker "* ]]; then   # r16: the dub voice belongs to no visible face: the source picture
-  fail face_keep_source_no_visible_speaker PARTIAL_SUCCESS "nobody on screen speaks the dubbed lines (off-screen voice): no lip-sync, the source picture"
+  echo "== $ID off-screen voice: nobody on screen speaks the dubbed lines -> the source picture with the dub (SUCCESS + W_OFFSCREEN_VOICE, Irina 09.11)" | tee -a $L/e2e.log
 elif [ "$FACE" = keysync ]; then   # r16 T: the KeySync chain (scripts/keysync/r16/ks_face.sh: K1 paste + K2 mouth + Q route, accepted by eye 07.11)
   st face_keysync                 # DUB_FACE=latentsync (or auto + a beard) = the r15 LatentSync path below
   FL+=("face_keysync")   # a GPU lock held since the audio stage (GPU_RDY) goes on to ks_face.sh's GPU section, which releases it before its CPU post
@@ -192,8 +192,9 @@ elif [ "$FACE" = keysync ]; then   # r16 T: the KeySync chain (scripts/keysync/r
     python3 -c "import json,sys; d=json.load(open('$W/ks/faces.json')); sys.exit(0 if len(d['faces']) > 1 or d.get('source_tracks') or d['mode'] == 'multi_face' else 1)" 2>/dev/null && FL+=("face_keysync_multi_face")
     KS25=$W/ks/master_25fps.mp4   # the KeySync result is on the 25 fps master grid (no retime)
     for f in $(cat $W/ks/flags.txt 2>/dev/null); do FL+=("$f"); done   # ks_probe_failed / ks_probe_low_conf / ks_probe_clamped / ks_check_offset
-  elif [ $KRC = 3 ]; then grep -E "^KS_FACE_KEEP_SOURCE" $L/face_keysync.log | tee -a $L/e2e.log   # no-face rule (too small / inset / absent): the source picture
-    fail face_keysync_no_face PARTIAL_SUCCESS "no face fit for lip-sync (too small, inset or absent): the source picture with the dub"
+  elif [ $KRC = 3 ]; then grep -E "^KS_FACE_KEEP_SOURCE" $L/face_keysync.log | tee -a $L/e2e.log   # no-face rule (too small / inset / absent) or off-screen voice: the source picture
+    if grep -q -x ks_offscreen_voice $W/ks/flags.txt 2>/dev/null; then FL+=("ks_offscreen_voice")   # r16c T (Irina 09.11 rule 2): SUCCESS + W_OFFSCREEN_VOICE, no refund
+    else fail face_keysync_no_face PARTIAL_SUCCESS "no face fit for lip-sync (too small, inset or absent): the source picture with the dub"; fi
   else fail face_gen_failed PARTIAL_SUCCESS "see logs/face_keysync.log: source picture used"; fi
 else
   st face_gen
