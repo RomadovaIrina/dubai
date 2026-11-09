@@ -9,7 +9,7 @@ Vast containers cannot run Docker, so `docker build` has never run. This is what
 | Docker | Docker Engine ≥ 24 with BuildKit / `docker buildx`; **NVIDIA Container Toolkit** (`--gpus all` works) | build + GPU containers |
 | CPU / RAM | ≥ 16 cores, ≥ 64 GB RAM (128 GB comfortable) | the composite / paste are CPU-bound; long videos |
 | Disk | **≥ 200 GB free** under /var/lib/docker: build cache ~60 GB, image ~20 GB, models volume ~37 GB, TensorRT plans + inductor ~17–35 GB, jobs | |
-| Network | ~38 GB (models.lock.json: 37.6 GB) down once (~10 GB base layers + wheels, ~37 GB weights); HF ≥ 40 MB/s recommended (~20 min) | fetch-models |
+| Network | ~48 GB down once (~10 GB base layers + wheels, ~38 GB weights: models.lock.json 37.6 GB); one TCP connection may be throttled (r16-q: PyPI 0.06–0.2 MB/s, HF 4 MB/s; many connections 60–200 MB/s) | fetch-models |
 | OS | Ubuntu 22.04 / 24.04, root or docker group | |
 
 Typical offers: a bare-metal / VM 5090 host (RunPod "GPU Pod" with Docker is a container, not enough; needs a VM such as RunPod / Lambda / Hetzner GEX / OVH bare metal / Vast "VM" instances where available).
