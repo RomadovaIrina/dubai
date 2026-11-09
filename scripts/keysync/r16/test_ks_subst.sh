@@ -17,6 +17,15 @@ run few  '{"eligible_frames": 1000, "guard_replaced": 10, "failed_frames": 0}' S
 run many '{"eligible_frames": 1000, "guard_replaced": 50, "failed_frames": 0}' PARTIAL_SUCCESS frames_substituted_over_2pct
 run shot '{"eligible_frames": 1000, "guard_replaced": 5, "failed_frames": 300, "failed_shots": 1}' PARTIAL_SUCCESS frames_substituted_over_2pct
 run zero '{"eligible_frames": 1000, "guard_replaced": 0, "failed_frames": 0}' SUCCESS -
+mkdir -p $T/crash   # the generator died: no subst.json, face_gen_failed -> every frame substituted (500 = 20 s x 25)
+python3 scripts/r9/collect.py --id t --out $T/crash --status PARTIAL_SUCCESS --flags "face_keysync face_gen_failed" --errors "" --stages $T/stages.tsv --nvsmi /nonexistent --precheck $T/precheck.json --ks-subst /nonexistent > /dev/null 2>&1
+python3 - $T/crash/manifest.json <<'PY' || ok=0
+import json, sys
+m = json.load(open(sys.argv[1])); v = m["spec"]["video_status"] or {}
+good = m["status"] == "PARTIAL_SUCCESS" and v.get("substituted_frames") == v.get("eligible_lipsync_frames") == 500 and v.get("degraded_ratio") == 1.0 and "frames_substituted_over_2pct" not in m["flags"]
+print(("PASS " if good else "FAIL ") + f"crash: status {m['status']} video_status {json.dumps({k: v.get(k) for k in ('eligible_lipsync_frames', 'substituted_frames', 'degraded_ratio', 'status')})}")
+sys.exit(0 if good else 1)
+PY
 echo "" > $T/subst.json; mkdir -p $T/none
 python3 scripts/r9/collect.py --id t --out $T/none --status SUCCESS --flags "face_keysync" --errors "" --stages $T/stages.tsv --nvsmi /nonexistent --precheck $T/precheck.json --ks-subst /nonexistent > /dev/null 2>&1 \
   && python3 -c "import json; m=json.load(open('$T/none/manifest.json')); print('PASS none: no subst file -> status', m['status'], 'video_status', m['spec']['video_status'])" || { echo "FAIL none"; ok=0; }

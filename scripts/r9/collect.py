@@ -89,11 +89,15 @@ def main():
         vs = {"engine": "keysync", "eligible_lipsync_frames": e_, "substituted_frames": g_ + f_, "guard_replaced_frames": g_, "failed_frames": f_,
               "failed_shots": ks.get("failed_shots", 0), "degraded_ratio": round(r_, 4), "status": "PARTIAL_SUCCESS" if r_ > 0.02 else "SUCCESS",
               "rule": "PARTIAL_SUCCESS if substituted > 2 % of the lip-synced frames (TZ 11.3)"}
+    elif not vs and "face_keysync" in flags and "face_gen_failed" in flags:   # r16 TZ 11.2: the generator died -> every frame is the source picture
+        e_ = int(round(float(((pc.get("probe") or {}).get("duration_s")) or 0) * 25))   # (the KeySync 25 fps grid; no per-face plan survived)
+        vs = {"engine": "keysync", "eligible_lipsync_frames": e_, "substituted_frames": e_, "guard_replaced_frames": 0, "failed_frames": e_, "failed_shots": None,
+              "degraded_ratio": 1.0 if e_ else None, "status": "PARTIAL_SUCCESS", "rule": "the lip-sync generator failed: the whole picture is the source (TZ 11.1 / 11.2)"}
     for f in (am.get("result_flags") or []) + (vs.get("flags") or []):
         if f not in flags: flags.append(f)
     if vs.get("status") == "PARTIAL_SUCCESS" and status == "SUCCESS": status = "PARTIAL_SUCCESS"
     if vs.get("voice_only") and "no_lipsync_head_pose" not in flags: flags.append("no_lipsync_head_pose")   # spec 5.5: > 30 % of face frames |yaw| > 30 deg
-    if vs.get("degraded_ratio", 0) > 0.02 and "frames_substituted_over_2pct" not in flags: flags.append("frames_substituted_over_2pct")
+    if vs.get("degraded_ratio", 0) > 0.02 and "frames_substituted_over_2pct" not in flags and "face_gen_failed" not in flags: flags.append("frames_substituted_over_2pct")   # (a dead generator says so itself: W_LIPSYNC_FAILED)
     fs = gm.get("face_stack") or {}
     spec = {"voice_policy": am.get("voice_policy"), "speakers": (am.get("diarization") or {}).get("speakers"),
             "faces": fs.get("faces"), "pose": fs.get("pose"), "video_status": vs or None}
