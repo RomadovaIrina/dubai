@@ -93,7 +93,7 @@ Definitions:
   K1 finds m18 10–11 s locally soft (12.9 vs 19.8).
 - **Measured remedy:**
   - paste-side `--sharp auto` (unsharp 0.60, auto) takes old03 to 0.80 of the source (63–67 s: 0.90);
-  - the 8-step-everywhere arm (do more steps sharpen?) is re-queued after a pid-limit crash.
+  - **More steps do NOT sharpen it:** the 8-step-everywhere arm (gate on every segment, 250 GPU-s/vmin) has raw lower / upper sharpness 0.373, identical to 2 steps (0.374), both 0.56 of the source crop. The softness is the model's output detail on a low-res input, not the step count, so neither the gate nor the teacher steps can fix it; only a paste-side sharpen (or a better generator) can.
 
 ## 3. Lip shape: 13 events
 
