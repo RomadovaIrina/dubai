@@ -1,0 +1,25 @@
+{
+ "rows": [
+  {"video": "long5", "t0": 116.0, "t1": 117.0, "cls": "colour", "sev": 3, "metric": "dark mouth raw KeySync BGR 0/2/28 -> after paste 23/20/32", "cause": "paste", "note": "PASTE global Lab colour match: offset +7.5 L lifts the black floor, b gain 0.90 / -2.1 shifts darks to blue (K1 / K2)", "owner": "K1", "src": "K1"},
+  {"video": "long5", "t0": 126.0, "t1": 127.0, "cls": "colour", "sev": 3, "metric": "blue cheek at the hair (2:06)", "cause": "paste", "note": "same global colour match", "owner": "K1", "src": "K1"},
+  {"video": "f0811_m03", "t0": 28.0, "t1": 40.0, "cls": "colour", "sev": 2, "metric": "lower jaw band dL -7.8, db -4.9, |dL| p95 19 (cheek body -0.9 / -0.8)", "cause": "paste", "note": "shadow on the LOWER jaw inside the contour (Irina: 'shadow on the cheek'); worst 28, 30, 31, 39 s; same in today's render", "owner": "K1", "src": "K1"},
+  {"video": "full_m18", "t0": 7.0, "t1": 10.0, "cls": "colour", "sev": 2, "metric": "lip ring a* +2.4 / +3.1 vs source (golden +1.9 / +2.5)", "cause": "generator", "note": "generator lips redder; the paste colour match is global", "owner": "K2", "src": "K1"},
+  {"video": "full_m18", "t0": 1.0, "t1": 2.0, "cls": "black hole", "sev": 2, "metric": "black 0.50 (golden 0.18, source 0.00)", "cause": "generator", "note": "e2e-specific (ref 0 vs golden ref)", "owner": "K2", "src": "K1"},
+  {"video": "full_m18", "t0": 7.0, "t1": 8.0, "cls": "lip shape", "sev": 3, "metric": "mouth stays shut: gap 0.033 (golden 0.108, source 0.070)", "cause": "generator", "note": "e2e barely opens where source and golden open (Max: m18 mouth)", "owner": "K2", "src": "K1"},
+  {"video": "full_m18", "t0": 9.0, "t1": 10.0, "cls": "lip shape", "sev": 2, "metric": "gap 0.039 (golden 0.070), lips a* +3.1", "cause": "generator", "note": "barely opens + redder lips", "owner": "K2", "src": "K1"},
+  {"video": "full_m18", "t0": 10.0, "t1": 12.0, "cls": "soft mouth", "sev": 3, "metric": "mouth sharpness 0.65 / 0.74 of source (golden 13.8 / 16.6 vs e2e 12.9 / 13.7)", "cause": "generator", "note": "2-step student softness (the teacher keeps the mouth sharp); Irina 0:10 'lips eaten'", "owner": "K2/L", "src": "K1"},
+  {"video": "full_m18", "t0": 16.0, "t1": 17.0, "cls": "black hole", "sev": 2, "metric": "black 0.41 (golden 0.22, source 0.02)", "cause": "generator", "note": "e2e-specific", "owner": "K2", "src": "K1"}
+ ],
+ "seam_cause": {
+  "q03_e2e_alpha_full": "C1 collar / neck inside the mask (neck excess 6.27 vs outside 0.97) + C4 head motion; worst 7, 8, 10, 16, 18 s",
+  "q05_e2e_full": "C1 + head turns (pose gate, T)",
+  "f0811_q02": "off-screen voice: should not be lip-synced at all (T rule 2)",
+  "full_old03": "C1 (neck 4.86 vs 0.65) + C2 generated chin moves (rho dchin 0.52) + C3 landmark jitter (0.46); worst 48, 49, 64, 75, 77 s",
+  "f0811_q01": "C1 (neck 2.72) + C4 head motion (rho 0.68); worst 11, 12, 13, 17, 18 s",
+  "f0811_q01_subs": "as q01",
+  "f0811_m03": "C2 generated chin (rho 0.36) + C4 head (0.62) + the 2-face bypass bug that cancelled the tight mask (fixed by K1 09.11)",
+  "full_m18": "C1 + the tail",
+  "f0811_q04": "small seam; the boil is generator texture (spring 1.62; tight mask -> 1.27)",
+  "long5": "C2 (rho dchin 0.48) + C3 (0.42) + hair inside the mask (woman shot)"
+ }
+}

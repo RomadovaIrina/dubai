@@ -1,0 +1,10 @@
+01|full_m18|18.0|2.3|m18_0-19_tail_swollen_lower_face
+02|full_m18|6.5|5.5|m18_0-07to0-12_mouth_shut_then_lips_eaten_soft
+03|f0811_m03|38.0|2.4|m03_0-40_tail_momo_face
+04|long5|114.5|3.5|long5_1-56_blue_black_hole
+05|long5|124.5|3.5|long5_2-06_hair_edge_blue_cheek_neck
+06|q03_e2e_alpha_full|17.0|4.0|q03_0-18_collar_neck_seam_2.56
+07|q05_e2e_full|10.5|3.5|q05_0-12_cup_painted_turn
+08|full_old03|63.0|4.0|old03_1-04_right_cheek_edge
+09|f0811_q02|34.0|4.0|q02_0-35_hand_at_mouth_seam_6.8
+10|f0811_q04|13.0|4.0|q04_0-14_beard_spring_1.76

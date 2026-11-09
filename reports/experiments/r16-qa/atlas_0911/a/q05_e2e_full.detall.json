@@ -1,0 +1,192 @@
+{
+ "label": "q05_e2e_full",
+ "src": "/workspace/dub/r16in/day1/HANDOFF_Q/clips/q05_rozhkov.mp4",
+ "ours": "/workspace/dub/r16in/day3/e2e_0811/q05_e2e_full.mp4",
+ "frames": 1125,
+ "t0": 0,
+ "fps": 25.0,
+ "size": [
+  1920,
+  1080
+ ],
+ "face_frames": 1015,
+ "iod_px_crop": 147.0,
+ "det": {
+  "black": {
+   "flag_frames": 1,
+   "flag_share": 0.0009,
+   "ranges": [],
+   "abs_flag_frames": 1,
+   "open_frames_ours": 86,
+   "black_share_ours": 0.012,
+   "open_frames_src": 37,
+   "black_share_src": 0.0
+  },
+  "slide": {
+   "flag_frames": 5,
+   "flag_share": 0.0044,
+   "ranges": [
+    [
+     10.84,
+     10.92,
+     5.9
+    ],
+    [
+     43.8,
+     43.88,
+     4.196
+    ]
+   ],
+   "median_pct_iod": 0.1,
+   "p95": 0.33,
+   "regions_p95": {
+    "upper": 0.04,
+    "lcheek": 0.33,
+    "rcheek": 0.18,
+    "chin": 9.19
+   }
+  },
+  "swap": {
+   "flag_frames": 59,
+   "flag_share": 0.0524,
+   "ranges": [
+    [
+     0.0,
+     0.56,
+     0.949
+    ],
+    [
+     15.76,
+     15.92,
+     0.904
+    ],
+    [
+     36.48,
+     36.88,
+     0.911
+    ],
+    [
+     43.88,
+     45.0,
+     0.931
+    ]
+   ],
+   "mouth_diff_median": 16.23,
+   "note": "range = the source face shown; floats at its edges"
+  },
+  "overlap": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "frames_with_others": 0,
+   "p95": null
+  },
+  "texture": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "median_ratio": 0.954,
+   "p05_ratio": 0.831
+  },
+  "explode": {
+   "flag_frames": 4,
+   "flag_share": 0.0036,
+   "ranges": [
+    [
+     11.96,
+     12.2,
+     1.378
+    ]
+   ],
+   "shape_snaps": 4,
+   "shape_snaps_abs": 5,
+   "pixel_snaps": 1
+  },
+  "edge": {
+   "flag_frames": 7,
+   "flag_share": 0.0062,
+   "ranges": [],
+   "median": 0.79,
+   "p95": 1.47
+  },
+  "flicker": {
+   "flag_frames": 193,
+   "flag_share": 0.1716,
+   "ranges": [
+    [
+     3.8,
+     4.08,
+     2.54
+    ],
+    [
+     5.04,
+     6.12,
+     5.762
+    ],
+    [
+     9.36,
+     9.8,
+     2.463
+    ],
+    [
+     11.8,
+     12.4,
+     3.032
+    ],
+    [
+     13.96,
+     14.24,
+     2.809
+    ],
+    [
+     14.8,
+     15.04,
+     2.785
+    ],
+    [
+     15.52,
+     15.84,
+     2.78
+    ],
+    [
+     24.48,
+     24.88,
+     3.851
+    ],
+    [
+     27.28,
+     27.64,
+     2.467
+    ],
+    [
+     30.04,
+     30.64,
+     3.376
+    ],
+    [
+     31.24,
+     32.28,
+     3.882
+    ],
+    [
+     33.32,
+     33.6,
+     2.565
+    ],
+    [
+     36.6,
+     37.44,
+     2.942
+    ],
+    [
+     42.84,
+     43.16,
+     2.568
+    ]
+   ],
+   "ours_mean": 0.92,
+   "src_mean": 0.612
+  }
+ },
+ "sec": 156.2
+}

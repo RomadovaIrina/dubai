@@ -22,7 +22,7 @@ import r16q_detect as D
 
 STABLE = [1, 4, 98, 327, 33, 133, 263, 362, 168]
 JAW = [58, 172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365, 397, 288]   # same band as K1's seam_jitter.py (one definition)
-THR = dict(seam_band=0.08, paint=10.0, paint_rel=4.0, out_ratio_p95=1.2, tail_local=1.5, out_px=6.0, out_share=0.10, occl_rel=0.20, tail=1.5, outside=1.6, outside_abs=1.2, chroma=4.0, chroma_share=0.25, occl=0.25, yaw=0.45)
+THR = dict(soft=0.70, lip_thin=0.65, lip_fat=1.5, seam_band=0.08, paint=10.0, paint_rel=4.0, out_ratio_p95=1.2, tail_local=1.5, out_px=6.0, out_share=0.10, occl_rel=0.20, tail=1.5, outside=1.6, outside_abs=1.2, chroma=4.0, chroma_share=0.25, occl=0.25, yaw=0.45)
 
 
 def lab(img): return cv2.cvtColor(img, cv2.COLOR_BGR2LAB).astype(np.float32) * np.array([100 / 255, 1, 1], np.float32) - np.array([0, 128, 128], np.float32)
@@ -49,7 +49,7 @@ def main():
         M = np.array([[s_, 0, -x0 * s_], [0, s_, -y0 * s_]], np.float32)
         return cv2.warpAffine(f, M, (D.CROP, D.CROP), flags=cv2.INTER_AREA if s_ < 1 else cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
 
-    S = {k: np.full(N, np.nan) for k in ["res_out", "res_low", "sharp", "jaw_dev", "lm_dev", "wob_l", "wob_r", "wob_n", "wob_in", "out_l", "out_r", "out_n", "out_up", "seam_in", "seam_out", "seam_up", "seam_src", "seam_fin", "blue", "blue_share", "dark_n", "occl", "yaw", "edge_box"]}
+    S = {k: np.full(N, np.nan) for k in ["res_out", "res_low", "sharp", "jaw_dev", "lm_dev", "wob_l", "wob_r", "wob_n", "wob_in", "out_l", "out_r", "out_n", "out_up", "seam_in", "seam_out", "seam_up", "seam_src", "seam_fin", "mouth_sharp", "lip_thick", "mouth_open_o", "mouth_open_s", "blue", "blue_share", "dark_n", "occl", "yaw", "edge_box"]}
     prevR = None; prevLS = None; prevLO = None
     if a.from_series:
         zz = np.load(a.from_series); S.update({k: zz[k] for k in zz.files})
@@ -66,6 +66,16 @@ def main():
         R = LO - LS   # residual (Lab)
         m = (low & (1 - mouthX)) > 0
         if m.sum() > 200: S["res_out"][k] = float(np.abs(R[m]).sum(1).mean())
+        # soft mouth: Laplacian energy ours / source inside the lips (+0.15 IOD); lip shape: lip ring area (outer - inner) ours / source
+        mm = D.hull_mask(sh, pS[D.LIPS], dil=0.15 * iod) > 0
+        if np.isfinite(pO).all(): mm |= D.hull_mask(sh, pO[D.LIPS], dil=0.15 * iod) > 0
+        if mm.sum() > 100:
+            gS_ = np.abs(cv2.Laplacian(LS[..., 0], cv2.CV_32F))[mm].mean(); gO_ = np.abs(cv2.Laplacian(LO[..., 0], cv2.CV_32F))[mm].mean()
+            S["mouth_sharp"][k] = float(gO_ / max(gS_, 1e-3))
+        def parea(P): x, y = P[:, 0], P[:, 1]; return 0.5 * abs(float(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1))))
+        aS = parea(pS[D.LIPS]) - parea(pS[D.INNER]); S["mouth_open_s"][k] = parea(pS[D.INNER]) / iod ** 2
+        if np.isfinite(pO).all():
+            aO = parea(pO[D.LIPS]) - parea(pO[D.INNER]); S["lip_thick"][k] = float(aO / max(aS, 1e-3)); S["mouth_open_o"][k] = parea(pO[D.INNER]) / iod ** 2
         ml = low > 0
         if ml.sum() > 200:
             S["res_low"][k] = float(np.abs(R[ml]).sum(1).mean())
@@ -163,6 +173,13 @@ def main():
         fl_any |= out[nm]["flag"]
     out["flag"] = bool(fl_any)
     res["outside"] = out
+    # soft mouth / lip shape: per-second medians + runs (1-s rolling median below / above the thresholds)
+    def rmed(x, h=12): return np.array([np.nanmedian(x[max(0, i - h):i + h + 1]) if np.isfinite(x[max(0, i - h):i + h + 1]).any() else np.nan for i in range(len(x))])
+    ms = rmed(S["mouth_sharp"], 3); lt = rmed(S["lip_thick"], 3)
+    res["mouth"] = {"sharp_median": round(float(np.nanmedian(S["mouth_sharp"])), 3) if np.isfinite(S["mouth_sharp"]).any() else None,
+                    "soft_runs": D.runs(ms < THR["soft"], -ms, 6)[:30],
+                    "lip_thick_median": round(float(np.nanmedian(S["lip_thick"])), 3) if np.isfinite(S["lip_thick"]).any() else None,
+                    "lip_thin_runs": D.runs(lt < THR["lip_thin"], -lt, 6)[:30], "lip_fat_runs": D.runs(lt > THR["lip_fat"], lt, 6)[:30]}
     # seam jitter: residual wobble in the jaw band minus the forehead-ring codec floor (L* units / frame); per second + worst seconds
     sx = np.fmax(S["seam_in"], S["seam_out"]) - np.where(np.isfinite(S["seam_up"]), S["seam_up"], 0)
     per_s = [float(np.nanmean(sx[i:i + int(fps)])) if np.isfinite(sx[i:i + int(fps)]).any() else np.nan for i in range(0, n, int(fps))]

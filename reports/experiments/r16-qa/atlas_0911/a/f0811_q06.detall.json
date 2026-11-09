@@ -1,0 +1,169 @@
+{
+ "label": "f0811_q06",
+ "src": "/workspace/dub/r16in/day1/HANDOFF_Q/clips/q06_suvorov.mp4",
+ "ours": "/workspace/dub/r16in/day3/e2e_0811/f0811_q06.mp4",
+ "frames": 1125,
+ "t0": 0,
+ "fps": 25.0,
+ "size": [
+  1920,
+  1080
+ ],
+ "face_frames": 598,
+ "iod_px_crop": 159.4,
+ "det": {
+  "black": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "abs_flag_frames": 4,
+   "open_frames_ours": 21,
+   "black_share_ours": 0.0,
+   "open_frames_src": 21,
+   "black_share_src": 0.19
+  },
+  "slide": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "median_pct_iod": 0.0,
+   "p95": 0.0,
+   "regions_p95": {
+    "upper": 0.0,
+    "lcheek": 0.0,
+    "rcheek": 0.0,
+    "chin": 0.0
+   }
+  },
+  "swap": {
+   "flag_frames": 598,
+   "flag_share": 0.5316,
+   "ranges": [
+    [
+     2.68,
+     2.92,
+     1.0
+    ],
+    [
+     3.08,
+     4.4,
+     1.0
+    ],
+    [
+     4.6,
+     6.04,
+     1.0
+    ],
+    [
+     6.2,
+     7.08,
+     1.0
+    ],
+    [
+     8.04,
+     9.6,
+     1.0
+    ],
+    [
+     10.52,
+     10.64,
+     1.0
+    ],
+    [
+     10.76,
+     10.88,
+     1.0
+    ],
+    [
+     11.0,
+     13.64,
+     1.0
+    ],
+    [
+     16.32,
+     16.92,
+     1.0
+    ],
+    [
+     18.72,
+     19.36,
+     1.0
+    ],
+    [
+     20.16,
+     22.28,
+     1.0
+    ],
+    [
+     22.64,
+     23.48,
+     1.0
+    ],
+    [
+     25.08,
+     30.04,
+     1.0
+    ],
+    [
+     30.16,
+     31.24,
+     1.0
+    ],
+    [
+     31.72,
+     35.96,
+     1.0
+    ],
+    [
+     36.36,
+     37.92,
+     1.0
+    ],
+    [
+     42.76,
+     43.32,
+     1.0
+    ]
+   ],
+   "mouth_diff_median": 0.0,
+   "note": "range = the source face shown; floats at its edges"
+  },
+  "overlap": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "frames_with_others": 0,
+   "p95": null
+  },
+  "texture": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "median_ratio": 1.0,
+   "p05_ratio": 1.0
+  },
+  "explode": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "shape_snaps": 0,
+   "shape_snaps_abs": 39,
+   "pixel_snaps": 0
+  },
+  "edge": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "median": 0.0,
+   "p95": 0.0
+  },
+  "flicker": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "ours_mean": 2.138,
+   "src_mean": 2.138
+  }
+ },
+ "sec": 451.9
+}

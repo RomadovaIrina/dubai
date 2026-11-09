@@ -1,0 +1,450 @@
+{
+ "label": "f0811_q06",
+ "src": "/workspace/dub/r16in/day1/HANDOFF_Q/clips/q06_suvorov.mp4",
+ "ours": "/workspace/dub/r16in/day3/e2e_0811/f0811_q06.mp4",
+ "frames": 1125,
+ "thr": {
+  "soft": 0.7,
+  "lip_thin": 0.65,
+  "lip_fat": 1.5,
+  "seam_band": 0.08,
+  "paint": 10.0,
+  "paint_rel": 4.0,
+  "out_ratio_p95": 1.2,
+  "tail_local": 1.5,
+  "out_px": 6.0,
+  "out_share": 0.1,
+  "occl_rel": 0.2,
+  "tail": 1.5,
+  "outside": 1.6,
+  "outside_abs": 1.2,
+  "chroma": 4.0,
+  "chroma_share": 0.25,
+  "occl": 0.25,
+  "yaw": 0.45
+ },
+ "tail": {
+  "local": {},
+  "local_max": 0.0,
+  "flag_local": false,
+  "score": 0.0,
+  "at_s": 43.0,
+  "flag_global": false,
+  "flag": false,
+  "per_feature": {
+   "res_out": {
+    "z": 0.0,
+    "at_s": 43.0
+   },
+   "res_low": {
+    "z": 0.0,
+    "at_s": 43.0
+   },
+   "lm_dev": {
+    "z": 0.0,
+    "at_s": 43.0
+   },
+   "jaw_dev": {
+    "z": 0.0,
+    "at_s": 43.0
+   },
+   "sharp": {
+    "z": 0.0,
+    "at_s": 43.0
+   }
+  },
+  "mid_max": 0.0,
+  "last_frames": {
+   "res_out": [
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN
+   ],
+   "res_low": [
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN
+   ],
+   "lm_dev": [
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN
+   ],
+   "jaw_dev": [
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN
+   ],
+   "sharp": [
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN
+   ]
+  }
+ },
+ "outside": {
+  "wob_l": {
+   "median_ratio": 0.0,
+   "share": 0.0,
+   "runs": [],
+   "ratio_p95": 0.0,
+   "flag": false,
+   "runs_1s": []
+  },
+  "wob_r": {
+   "median_ratio": 0.0,
+   "share": 0.0,
+   "runs": [],
+   "ratio_p95": 0.0,
+   "flag": false,
+   "runs_1s": []
+  },
+  "wob_n": {
+   "median_ratio": 0.0,
+   "share": 0.0,
+   "runs": [],
+   "ratio_p95": 0.0,
+   "flag": false,
+   "runs_1s": []
+  },
+  "out_l": {
+   "median_excess": 0.0,
+   "p90_excess": 0.0,
+   "share": 0.0,
+   "runs": []
+  },
+  "out_r": {
+   "median_excess": 0.0,
+   "p90_excess": 0.0,
+   "share": 0.0,
+   "runs": []
+  },
+  "out_n": {
+   "median_excess": 0.0,
+   "p90_excess": 0.0,
+   "share": 0.0,
+   "runs": []
+  },
+  "flag": false
+ },
+ "mouth": {
+  "sharp_median": 1.0,
+  "soft_runs": [],
+  "lip_thick_median": 1.0,
+  "lip_thin_runs": [],
+  "lip_fat_runs": []
+ },
+ "seam": {
+  "excess_median": 0.0,
+  "excess_p95": 0.0,
+  "in_median": 0.0,
+  "out_median": 0.0,
+  "floor_median": 0.0,
+  "src_motion_median": 2.554,
+  "k1_ratio": 1.0,
+  "k1_extra_mean": 0.0,
+  "worst_s": [
+   [
+    3,
+    0.0
+   ],
+   [
+    2,
+    0.0
+   ],
+   [
+    5,
+    0.0
+   ],
+   [
+    4,
+    0.0
+   ],
+   [
+    6,
+    0.0
+   ]
+  ],
+  "per_s": [
+   null,
+   null,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   null,
+   null,
+   0.0,
+   null,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   null,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   null,
+   null,
+   null,
+   null,
+   0.0,
+   0.0,
+   null
+  ]
+ },
+ "chroma": {
+  "median_blue": 0.0,
+  "share": 0.0,
+  "runs": []
+ },
+ "occlude": {
+  "occl_runs": [
+   [
+    4.76,
+    5.0,
+    0.528
+   ],
+   [
+    8.04,
+    8.36,
+    0.643
+   ],
+   [
+    26.44,
+    26.68,
+    0.562
+   ],
+   [
+    27.4,
+    27.72,
+    0.638
+   ],
+   [
+    35.36,
+    35.64,
+    0.765
+   ],
+   [
+    37.04,
+    37.32,
+    0.619
+   ]
+  ],
+  "turn_runs": [
+   [
+    3.08,
+    4.4,
+    1.0
+   ],
+   [
+    4.6,
+    5.96,
+    1.0
+   ],
+   [
+    6.2,
+    7.08,
+    1.0
+   ],
+   [
+    8.04,
+    9.6,
+    1.0
+   ],
+   [
+    11.0,
+    13.64,
+    1.0
+   ],
+   [
+    18.72,
+    19.36,
+    0.999
+   ],
+   [
+    21.4,
+    22.28,
+    1.0
+   ],
+   [
+    22.64,
+    23.48,
+    1.0
+   ],
+   [
+    25.08,
+    26.04,
+    0.997
+   ],
+   [
+    26.56,
+    28.48,
+    0.999
+   ],
+   [
+    28.72,
+    30.04,
+    0.991
+   ],
+   [
+    30.16,
+    31.24,
+    1.0
+   ],
+   [
+    31.72,
+    32.48,
+    1.0
+   ],
+   [
+    34.4,
+    35.96,
+    0.88
+   ],
+   [
+    36.36,
+    37.92,
+    1.0
+   ],
+   [
+    42.8,
+    43.32,
+    0.999
+   ]
+  ],
+  "paint_runs": [],
+  "occl_share": 0.064,
+  "turn_share": 0.445
+ }
+}

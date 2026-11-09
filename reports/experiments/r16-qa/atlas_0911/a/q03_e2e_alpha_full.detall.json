@@ -1,0 +1,105 @@
+{
+ "label": "q03_e2e_alpha_full",
+ "src": "/workspace/dub/r16in/day1/HANDOFF_Q/clips/q03_priest.mp4",
+ "ours": "/workspace/dub/r16in/day3/e2e_0811/q03_e2e_alpha_full.mp4",
+ "frames": 1125,
+ "t0": 0,
+ "fps": 25.0,
+ "size": [
+  1920,
+  1080
+ ],
+ "face_frames": 802,
+ "iod_px_crop": 152.5,
+ "det": {
+  "black": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "abs_flag_frames": 0,
+   "open_frames_ours": 185,
+   "black_share_ours": 0.0,
+   "open_frames_src": 140,
+   "black_share_src": 0.0
+  },
+  "slide": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "median_pct_iod": 0.05,
+   "p95": 0.11,
+   "regions_p95": {
+    "upper": 0.03,
+    "lcheek": 0.11,
+    "rcheek": 0.05,
+    "chin": 5.24
+   }
+  },
+  "swap": {
+   "flag_frames": 30,
+   "flag_share": 0.0267,
+   "ranges": [
+    [
+     23.2,
+     23.48,
+     0.974
+    ],
+    [
+     29.52,
+     30.08,
+     0.946
+    ],
+    [
+     37.72,
+     38.12,
+     0.95
+    ]
+   ],
+   "mouth_diff_median": 20.98,
+   "note": "range = the source face shown; floats at its edges"
+  },
+  "overlap": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "frames_with_others": 0,
+   "p95": null
+  },
+  "texture": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "median_ratio": 1.057,
+   "p05_ratio": 0.877
+  },
+  "explode": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "shape_snaps": 0,
+   "shape_snaps_abs": 2,
+   "pixel_snaps": 0
+  },
+  "edge": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "median": 0.52,
+   "p95": 1.73
+  },
+  "flicker": {
+   "flag_frames": 9,
+   "flag_share": 0.008,
+   "ranges": [
+    [
+     17.56,
+     17.92,
+     2.566
+    ]
+   ],
+   "ours_mean": 0.549,
+   "src_mean": 0.355
+  }
+ },
+ "sec": 281.1
+}

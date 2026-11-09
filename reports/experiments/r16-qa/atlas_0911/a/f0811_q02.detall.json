@@ -1,0 +1,116 @@
+{
+ "label": "f0811_q02",
+ "src": "/workspace/dub/r16in/day1/HANDOFF_Q/clips/q02_vera.mp4",
+ "ours": "/workspace/dub/r16in/day3/e2e_0811/f0811_q02.mp4",
+ "frames": 1125,
+ "t0": 0,
+ "fps": 25.0,
+ "size": [
+  1920,
+  1080
+ ],
+ "face_frames": 1124,
+ "iod_px_crop": 155.8,
+ "det": {
+  "black": {
+   "flag_frames": 15,
+   "flag_share": 0.0133,
+   "ranges": [
+    [
+     13.92,
+     14.12,
+     88.76
+    ],
+    [
+     33.72,
+     33.88,
+     88.884
+    ],
+    [
+     43.44,
+     43.56,
+     92.253
+    ]
+   ],
+   "abs_flag_frames": 29,
+   "open_frames_ours": 180,
+   "black_share_ours": 0.083,
+   "open_frames_src": 390,
+   "black_share_src": 0.731
+  },
+  "slide": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "median_pct_iod": 0.46,
+   "p95": 1.15,
+   "regions_p95": {
+    "upper": 0.01,
+    "lcheek": 0.84,
+    "rcheek": 1.05,
+    "chin": 5.37
+   }
+  },
+  "swap": {
+   "flag_frames": 3,
+   "flag_share": 0.0027,
+   "ranges": [],
+   "mouth_diff_median": 23.05,
+   "note": "range = the source face shown; floats at its edges"
+  },
+  "overlap": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "frames_with_others": 0,
+   "p95": null
+  },
+  "texture": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "median_ratio": 1.053,
+   "p05_ratio": 0.9
+  },
+  "explode": {
+   "flag_frames": 1,
+   "flag_share": 0.0009,
+   "ranges": [
+    [
+     44.92,
+     44.96,
+     2.378
+    ]
+   ],
+   "shape_snaps": 0,
+   "shape_snaps_abs": 0,
+   "pixel_snaps": 1
+  },
+  "edge": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "median": 0.36,
+   "p95": 1.46
+  },
+  "flicker": {
+   "flag_frames": 38,
+   "flag_share": 0.0338,
+   "ranges": [
+    [
+     0.56,
+     1.24,
+     3.378
+    ],
+    [
+     40.44,
+     40.68,
+     2.573
+    ]
+   ],
+   "ours_mean": 0.694,
+   "src_mean": 0.614
+  }
+ },
+ "sec": 178.9
+}

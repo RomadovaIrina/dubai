@@ -1,0 +1,149 @@
+{
+ "label": "f0811_q04",
+ "src": "/workspace/dub/r16in/day1/HANDOFF_Q/clips/q04_farikh.mp4",
+ "ours": "/workspace/dub/r16in/day3/e2e_0811/f0811_q04.mp4",
+ "frames": 1125,
+ "t0": 0,
+ "fps": 25.0,
+ "size": [
+  1920,
+  1080
+ ],
+ "face_frames": 1125,
+ "iod_px_crop": 154.7,
+ "det": {
+  "black": {
+   "flag_frames": 112,
+   "flag_share": 0.0996,
+   "ranges": [
+    [
+     1.4,
+     1.64,
+     90.728
+    ],
+    [
+     5.24,
+     5.36,
+     90.844
+    ],
+    [
+     10.56,
+     11.12,
+     89.434
+    ],
+    [
+     11.76,
+     12.04,
+     92.325
+    ],
+    [
+     13.6,
+     13.84,
+     90.842
+    ],
+    [
+     18.8,
+     19.28,
+     90.37
+    ],
+    [
+     20.24,
+     20.44,
+     92.847
+    ],
+    [
+     21.6,
+     22.52,
+     93.903
+    ],
+    [
+     23.84,
+     24.24,
+     92.657
+    ],
+    [
+     26.4,
+     26.68,
+     91.072
+    ],
+    [
+     30.8,
+     30.96,
+     93.1
+    ],
+    [
+     32.8,
+     32.92,
+     92.076
+    ],
+    [
+     40.08,
+     40.52,
+     89.624
+    ]
+   ],
+   "abs_flag_frames": 112,
+   "open_frames_ours": 125,
+   "black_share_ours": 0.896,
+   "open_frames_src": 108,
+   "black_share_src": 0.796
+  },
+  "slide": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "median_pct_iod": 0.03,
+   "p95": 0.07,
+   "regions_p95": {
+    "upper": 0.04,
+    "lcheek": 0.07,
+    "rcheek": 0.02,
+    "chin": 4.67
+   }
+  },
+  "swap": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "mouth_diff_median": 7.15,
+   "note": "range = the source face shown; floats at its edges"
+  },
+  "overlap": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "frames_with_others": 0,
+   "p95": null
+  },
+  "texture": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "median_ratio": 1.047,
+   "p05_ratio": 0.934
+  },
+  "explode": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "shape_snaps": 0,
+   "shape_snaps_abs": 0,
+   "pixel_snaps": 0
+  },
+  "edge": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "median": 0.62,
+   "p95": 0.99
+  },
+  "flicker": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "ours_mean": 0.386,
+   "src_mean": 0.355
+  }
+ },
+ "sec": 177.5
+}

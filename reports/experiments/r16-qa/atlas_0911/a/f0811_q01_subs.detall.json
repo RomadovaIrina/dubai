@@ -1,0 +1,183 @@
+{
+ "label": "f0811_q01_subs",
+ "src": "/workspace/dub/r16in/day1/HANDOFF_Q/clips/q01_amir.mp4",
+ "ours": "/workspace/dub/r16in/day3/e2e_0811/f0811_q01_subs.mp4",
+ "frames": 1125,
+ "t0": 0,
+ "fps": 25.0,
+ "size": [
+  1080,
+  606
+ ],
+ "face_frames": 1125,
+ "iod_px_crop": 161.2,
+ "det": {
+  "black": {
+   "flag_frames": 9,
+   "flag_share": 0.008,
+   "ranges": [
+    [
+     8.8,
+     8.92,
+     88.829
+    ],
+    [
+     22.64,
+     22.76,
+     86.382
+    ]
+   ],
+   "abs_flag_frames": 11,
+   "open_frames_ours": 641,
+   "black_share_ours": 0.014,
+   "open_frames_src": 732,
+   "black_share_src": 0.012
+  },
+  "slide": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "median_pct_iod": 0.1,
+   "p95": 0.25,
+   "regions_p95": {
+    "upper": 0.04,
+    "lcheek": 0.14,
+    "rcheek": 0.25,
+    "chin": 4.51
+   }
+  },
+  "swap": {
+   "flag_frames": 4,
+   "flag_share": 0.0036,
+   "ranges": [
+    [
+     0.0,
+     0.2,
+     0.713
+    ]
+   ],
+   "mouth_diff_median": 17.97,
+   "note": "range = the source face shown; floats at its edges"
+  },
+  "overlap": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "frames_with_others": 0,
+   "p95": null
+  },
+  "texture": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "median_ratio": 0.836,
+   "p05_ratio": 0.745
+  },
+  "explode": {
+   "flag_frames": 9,
+   "flag_share": 0.008,
+   "ranges": [
+    [
+     6.92,
+     6.96,
+     1.011
+    ],
+    [
+     8.76,
+     8.8,
+     1.181
+    ],
+    [
+     22.36,
+     22.44,
+     1.056
+    ],
+    [
+     23.0,
+     23.04,
+     1.002
+    ],
+    [
+     25.16,
+     25.2,
+     1.043
+    ],
+    [
+     30.76,
+     30.8,
+     1.026
+    ],
+    [
+     36.88,
+     36.92,
+     1.052
+    ],
+    [
+     40.64,
+     40.68,
+     1.193
+    ]
+   ],
+   "shape_snaps": 6,
+   "shape_snaps_abs": 6,
+   "pixel_snaps": 3
+  },
+  "edge": {
+   "flag_frames": 23,
+   "flag_share": 0.0204,
+   "ranges": [
+    [
+     18.56,
+     18.84,
+     4.279
+    ]
+   ],
+   "median": 0.97,
+   "p95": 2.53
+  },
+  "flicker": {
+   "flag_frames": 89,
+   "flag_share": 0.0791,
+   "ranges": [
+    [
+     1.32,
+     1.8,
+     2.954
+    ],
+    [
+     4.88,
+     5.4,
+     2.877
+    ],
+    [
+     10.96,
+     11.24,
+     2.796
+    ],
+    [
+     12.16,
+     12.48,
+     2.345
+    ],
+    [
+     20.04,
+     20.56,
+     2.786
+    ],
+    [
+     27.88,
+     28.16,
+     2.981
+    ],
+    [
+     37.76,
+     38.2,
+     3.6
+    ]
+   ],
+   "ours_mean": 0.827,
+   "src_mean": 0.7
+  }
+ },
+ "sec": 164.0
+}

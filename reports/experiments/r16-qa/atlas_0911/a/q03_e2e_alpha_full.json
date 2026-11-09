@@ -1,0 +1,442 @@
+{
+ "label": "q03_e2e_alpha_full",
+ "src": "/workspace/dub/r16in/day1/HANDOFF_Q/clips/q03_priest.mp4",
+ "ours": "/workspace/dub/r16in/day3/e2e_0811/q03_e2e_alpha_full.mp4",
+ "frames": 1125,
+ "thr": {
+  "soft": 0.7,
+  "lip_thin": 0.65,
+  "lip_fat": 1.5,
+  "seam_band": 0.08,
+  "paint": 10.0,
+  "paint_rel": 4.0,
+  "out_ratio_p95": 1.2,
+  "tail_local": 1.5,
+  "out_px": 6.0,
+  "out_share": 0.1,
+  "occl_rel": 0.2,
+  "tail": 1.5,
+  "outside": 1.6,
+  "outside_abs": 1.2,
+  "chroma": 4.0,
+  "chroma_share": 0.25,
+  "occl": 0.25,
+  "yaw": 0.45
+ },
+ "tail": {
+  "local": {},
+  "local_max": 0.0,
+  "flag_local": false,
+  "score": -Infinity,
+  "at_s": 43.0,
+  "flag_global": false,
+  "flag": false,
+  "per_feature": {
+   "res_out": {
+    "z": 0,
+    "at_s": 43.0
+   },
+   "res_low": {
+    "z": 0,
+    "at_s": 43.0
+   },
+   "lm_dev": {
+    "z": 0,
+    "at_s": 43.0
+   },
+   "jaw_dev": {
+    "z": 0,
+    "at_s": 43.0
+   },
+   "sharp": {
+    "z": 0,
+    "at_s": 43.0
+   }
+  },
+  "mid_max": 1.4,
+  "last_frames": {
+   "res_out": [
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN
+   ],
+   "res_low": [
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN
+   ],
+   "lm_dev": [
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN
+   ],
+   "jaw_dev": [
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN
+   ],
+   "sharp": [
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN
+   ]
+  }
+ },
+ "outside": {
+  "wob_l": {
+   "median_ratio": 0.29,
+   "share": 0.0,
+   "runs": [],
+   "ratio_p95": 0.65,
+   "flag": false,
+   "runs_1s": []
+  },
+  "wob_r": {
+   "median_ratio": 0.6,
+   "share": 0.003,
+   "runs": [],
+   "ratio_p95": 1.08,
+   "flag": false,
+   "runs_1s": []
+  },
+  "wob_n": {
+   "median_ratio": 1.51,
+   "share": 0.264,
+   "runs": [
+    [
+     2.88,
+     4.08,
+     3.14
+    ],
+    [
+     4.4,
+     6.64,
+     3.476
+    ],
+    [
+     6.92,
+     8.48,
+     3.008
+    ],
+    [
+     9.88,
+     10.76,
+     2.35
+    ],
+    [
+     15.44,
+     16.08,
+     2.386
+    ],
+    [
+     16.2,
+     16.88,
+     2.722
+    ],
+    [
+     17.04,
+     19.12,
+     3.142
+    ],
+    [
+     19.36,
+     20.28,
+     2.475
+    ],
+    [
+     22.52,
+     23.04,
+     2.175
+    ]
+   ],
+   "ratio_p95": 2.58,
+   "flag": true,
+   "runs_1s": [
+    [
+     0.0,
+     12.28,
+     2.338
+    ],
+    [
+     12.72,
+     23.4,
+     2.375
+    ],
+    [
+     29.48,
+     32.36,
+     1.572
+    ],
+    [
+     32.84,
+     36.4,
+     1.529
+    ],
+    [
+     37.4,
+     38.6,
+     1.543
+    ]
+   ]
+  },
+  "out_l": {
+   "median_excess": 0.026,
+   "p90_excess": 0.045,
+   "share": 0.0,
+   "runs": []
+  },
+  "out_r": {
+   "median_excess": 0.076,
+   "p90_excess": 0.11,
+   "share": 0.14,
+   "runs": [
+    [
+     5.08,
+     6.04,
+     0.122
+    ],
+    [
+     30.16,
+     32.64,
+     0.158
+    ],
+    [
+     35.52,
+     36.44,
+     0.133
+    ],
+    [
+     37.08,
+     37.72,
+     0.127
+    ]
+   ]
+  },
+  "out_n": {
+   "median_excess": 0.2,
+   "p90_excess": 0.254,
+   "share": 0.688,
+   "runs": [
+    [
+     0.0,
+     23.2,
+     0.297
+    ],
+    [
+     29.88,
+     37.72,
+     0.268
+    ]
+   ]
+  },
+  "flag": true
+ },
+ "mouth": {
+  "sharp_median": 1.245,
+  "soft_runs": [],
+  "lip_thick_median": 1.088,
+  "lip_thin_runs": [],
+  "lip_fat_runs": []
+ },
+ "seam": {
+  "excess_median": 2.561,
+  "excess_p95": 5.214,
+  "in_median": 1.647,
+  "out_median": 2.886,
+  "floor_median": 0.335,
+  "src_motion_median": 1.584,
+  "k1_ratio": 1.292,
+  "k1_extra_mean": 0.537,
+  "worst_s": [
+   [
+    18,
+    4.3
+   ],
+   [
+    16,
+    3.991
+   ],
+   [
+    19,
+    3.576
+   ],
+   [
+    21,
+    3.554
+   ],
+   [
+    8,
+    3.476
+   ]
+  ],
+  "per_s": [
+   2.324,
+   2.915,
+   2.344,
+   3.103,
+   2.873,
+   3.079,
+   2.635,
+   3.257,
+   3.476,
+   2.886,
+   3.072,
+   2.777,
+   2.236,
+   2.087,
+   2.112,
+   2.908,
+   3.991,
+   2.94,
+   4.3,
+   3.576,
+   2.608,
+   3.554,
+   3.17,
+   2.043,
+   null,
+   null,
+   null,
+   null,
+   null,
+   1.241,
+   1.987,
+   2.064,
+   2.46,
+   2.655,
+   3.453,
+   2.918,
+   2.43,
+   1.955,
+   0.057,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ]
+ },
+ "chroma": {
+  "median_blue": -1.32,
+  "share": 0.0,
+  "runs": []
+ },
+ "occlude": {
+  "occl_runs": [],
+  "turn_runs": [],
+  "paint_runs": [],
+  "occl_share": 0.0,
+  "turn_share": 0.01
+ }
+}

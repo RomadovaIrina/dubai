@@ -1,0 +1,173 @@
+{
+ "label": "f0811_m03",
+ "src": "/workspace/dub/inputs/mamakris/story-1774249919482-367803614.MOV",
+ "ours": "/workspace/dub/r16in/day3/e2e_0811/f0811_m03.mp4",
+ "frames": 1013,
+ "t0": 0,
+ "fps": 25.0,
+ "size": [
+  720,
+  1280
+ ],
+ "face_frames": 1013,
+ "iod_px_crop": 171.9,
+ "det": {
+  "black": {
+   "flag_frames": 27,
+   "flag_share": 0.0267,
+   "ranges": [
+    [
+     7.76,
+     7.92,
+     87.356
+    ],
+    [
+     14.52,
+     14.68,
+     94.118
+    ],
+    [
+     18.04,
+     18.16,
+     86.665
+    ],
+    [
+     25.28,
+     25.6,
+     92.673
+    ]
+   ],
+   "abs_flag_frames": 28,
+   "open_frames_ours": 379,
+   "black_share_ours": 0.071,
+   "open_frames_src": 522,
+   "black_share_src": 0.025
+  },
+  "slide": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "median_pct_iod": 0.04,
+   "p95": 0.15,
+   "regions_p95": {
+    "upper": 0.01,
+    "lcheek": 0.15,
+    "rcheek": 0.04,
+    "chin": 4.4
+   }
+  },
+  "swap": {
+   "flag_frames": 5,
+   "flag_share": 0.0049,
+   "ranges": [
+    [
+     0.0,
+     0.16,
+     0.822
+    ]
+   ],
+   "mouth_diff_median": 15.62,
+   "note": "range = the source face shown; floats at its edges"
+  },
+  "overlap": {
+   "flag_frames": 1,
+   "flag_share": 0.001,
+   "ranges": [],
+   "frames_with_others": 1000,
+   "p95": 0.0
+  },
+  "texture": {
+   "flag_frames": 0,
+   "flag_share": 0.0,
+   "ranges": [],
+   "median_ratio": 0.954,
+   "p05_ratio": 0.755
+  },
+  "explode": {
+   "flag_frames": 7,
+   "flag_share": 0.0069,
+   "ranges": [
+    [
+     11.88,
+     11.92,
+     1.013
+    ],
+    [
+     25.24,
+     25.28,
+     1.136
+    ],
+    [
+     27.92,
+     27.96,
+     1.179
+    ],
+    [
+     29.28,
+     29.4,
+     1.217
+    ],
+    [
+     40.16,
+     40.2,
+     1.007
+    ],
+    [
+     40.44,
+     40.48,
+     1.182
+    ]
+   ],
+   "shape_snaps": 5,
+   "shape_snaps_abs": 6,
+   "pixel_snaps": 2
+  },
+  "edge": {
+   "flag_frames": 56,
+   "flag_share": 0.0553,
+   "ranges": [
+    [
+     14.4,
+     14.72,
+     3.659
+    ],
+    [
+     18.12,
+     18.44,
+     3.754
+    ],
+    [
+     20.36,
+     20.92,
+     5.065
+    ],
+    [
+     25.32,
+     25.64,
+     4.061
+    ],
+    [
+     27.12,
+     27.76,
+     4.475
+    ]
+   ],
+   "median": 1.24,
+   "p95": 3.04
+  },
+  "flicker": {
+   "flag_frames": 19,
+   "flag_share": 0.0188,
+   "ranges": [
+    [
+     29.44,
+     29.88,
+     3.079
+    ]
+   ],
+   "ours_mean": 0.487,
+   "src_mean": 0.317
+  }
+ },
+ "sec": 162.9
+}
