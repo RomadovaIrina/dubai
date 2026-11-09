@@ -9,6 +9,11 @@ log(){ echo "[$(date +%T)] $*" >> $L; }
 phase(){ [ -f $Q/$1.done ] && { log "skip $1"; return 1; }; log "start $1"; return 0; }
 while pgrep -f "[k]s_fault_suite.py" > /dev/null; do sleep 20; done; log "fault suite finished: $(tail -1 $Q/fault/suite.log | cut -c1-200)"
 DUB=$(ls -d /workspace/dub/artifacts/r4a/*/ksf_k_ok 2>/dev/null | head -1); log "dub for reuse: $DUB"
+if phase kwarm; then   # the fault suite's clean job ran into the 1800 s job timeout on the COLD worker (TRT build + VAE inductor compile): again, warm;
+  # the dub-reuse jobs again too: their route found no manifest (the reused <old id>_r4b.manifest.json; fixed in e2e.sh) -> a spurious face_route_failed
+  $E /venv/dabai/bin/python scripts/keysync/r16/ks_fault_suite.py --single $IN/m18_20s.mp4 --shots $IN/two_shots_cut.mp4 --out $Q/fault_warm --jobs k_ok,k_crash,k_few,k_many \
+     > $Q/fault_warm.log 2>&1; touch $Q/kwarm.done; log "kwarm: $(grep -E '^(PASS|FAIL)' $Q/fault_warm.log | cut -c1-300)"
+fi
 M18=/workspace/dub/inputs/mamakris/story-1774250817106-616905094.mp4; M03=/workspace/dub/inputs/mamakris/story-1774249919482-367803614.MOV
 [ -f $IN/m03_20s.mp4 ] || ffmpeg -loglevel error -y -i $M03 -t 20 -c:v libx264 -crf 18 -preset fast -pix_fmt yuv420p -c:a aac -b:a 160k $IN/m03_20s.mp4
 [ -f $IN/old03_20s.mp4 ] || ffmpeg -loglevel error -y -i /workspace/dub/inputs/test_videos_raw/03.mp4 -t 20 -c:v libx264 -crf 18 -preset fast -pix_fmt yuv420p -c:a aac -b:a 160k $IN/old03_20s.mp4

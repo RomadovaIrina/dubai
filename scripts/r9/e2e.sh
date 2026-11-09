@@ -117,7 +117,7 @@ fi
 if [ -z "${DUB_AUDIO_FROM:-}" ] && ! python3 scripts/voice_env_check.py --python ${DUB_ENV:-/venv/dabai}/bin/python 2>> $L/e2e.log; then   # r16 T: never a wrong voice silently
   fail voice_env_mismatch ERROR "the voice environment is not the accepted one (Chatterbox 5de7a54 + noisereduce): see logs/e2e.log"; finish; fi
 if [ -n "${DUB_AUDIO_FROM:-}" ]; then   # r16 T golden test: an ACCEPTED dub (dubbed_16k.wav + final_mix_aac.m4a [+ *.manifest.json]) instead of a new one
-  mkdir -p $A/$AT/$ID; cp $DUB_AUDIO_FROM/dubbed_16k.wav $DUB_AUDIO_FROM/final_mix_aac.m4a $A/$AT/$ID/; cp $DUB_AUDIO_FROM/*.manifest.json $A/$AT/$ID/ 2>/dev/null
+  mkdir -p $A/$AT/$ID; cp $DUB_AUDIO_FROM/dubbed_16k.wav $DUB_AUDIO_FROM/final_mix_aac.m4a $A/$AT/$ID/; for m_ in $DUB_AUDIO_FROM/*.manifest.json; do [ -f "$m_" ] && cp "$m_" $A/$AT/$ID/${ID}_${m_##*_}; done   # r16 TZ: renamed to THIS id (<old id>_r4b -> <id>_r4b): the route / subs look up $AD/${ID}_*.manifest.json
   FL+=("audio_reused"); echo "== $ID audio reused from $DUB_AUDIO_FROM" | tee -a $L/e2e.log
 else bash scripts/r8/r8_audio.sh $AT $ID > $L/audio.log 2>&1; fi
 unset R9_ON_MIXSRC
