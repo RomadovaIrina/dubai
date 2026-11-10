@@ -27,6 +27,8 @@ ap.add_argument("--mask-tsmooth", type=float, default=0.0, help="r16c K1 (Irina 
 ap.add_argument("--mask-chin-feather", type=float, default=0.0, help="tight + chin: an extra VERTICAL-only feather of the chin part (sigma x IOD), so the generated-jaw / source-neck step fades over a taller band")
 ap.add_argument("--neck-follow", type=float, default=0.0, help="r16c K1 (Irina 10.11 seam option a): warp the SOURCE neck / chin strip below the jaw so it follows the GENERATED jaw: per column dy = generated - source jaw y (clamped +-0.12 IOD, tapered at the jaw ends), weight 1 at the jaw line -> 0 at this many IOD below; temporal smoothing via --mask-tsmooth")
 ap.add_argument("--mask-chin-down", type=float, default=0.0, help="r16d K1 (ghost second chin): extend the chin part this many IOD BELOW the lower of the source / generated jaw, so the feather lies on plain neck, never on a jaw contour (no double chin); use with --neck-follow")
+ap.add_argument("--gen-jaw-cut", type=float, default=0.0, help="r16d K1 (m03 dark crescent under the jaw): the paste fades out ACROSS the GENERATED jaw line (per column, ramp width this many IOD), so KeySync's own under-jaw shading is never pasted; below it the source (warped by --neck-follow) wins")
+ap.add_argument("--jaw-lmatch", type=float, default=0.0, help="r16d K1 (m03 dark jaw crescent): per frame, in a band of this many IOD just INSIDE the source jaw contour (below the mouth corners), shift the pasted layer's L*a*b* to the source's band median (feathered); KeySync shades its lower face edge darker than the source")
 ap.add_argument("--mask-inset", type=float, default=0.04, help="tight: inset from the face contour, x IOD")
 ap.add_argument("--mask-feather", type=float, default=0.04, help="tight: feather sigma, x IOD (the whole transition lies inside the inset contour)")
 ap.add_argument("--parse", default="", help="r16c K1: face_parse.py npz for the master (per-frame face-skin probability in box coords): inside the mask, non-face pixels (hair / hands / clothes / background) take the source; the generated lips stay")
@@ -194,6 +196,13 @@ def mask(k):
         yc_ = float(qs[152, 1]) - 0.15 * iod   # crossfade from the normal mask to the vertically feathered chin mask around the chin
         wv = np.clip((GY - (yc_ - 0.1 * iod)) / max(0.2 * iod, 1.0), 0, 1).astype(np.float32)
         m = m * (1 - wv) + mc * wv
+    if a.mask == "tight" and a.gen_jaw_cut > 0:   # r16d K1: cut at the GENERATED jaw line (no generated under-jaw shading)
+        KK_ = KLS if KLS is not None else KL; ii_ = kidx(k)
+        if KK_ is not None and 0 <= ii_ < len(KK_) and np.isfinite(KK_[ii_][JAWLOW]).all():
+            g_ = KK_[ii_][JAWLOW]; o_ = np.argsort(g_[:, 0]); xs_ = np.arange(s, dtype=np.float32)
+            yj = np.interp(xs_, g_[o_, 0], g_[o_, 1]); out_ = (xs_ < g_[o_, 0][0]) | (xs_ > g_[o_, 0][-1]); yj[out_] = 1e9
+            hw = max(0.5 * a.gen_jaw_cut * iod, 1.0)
+            m = m * np.clip((yj[None, :] + hw - GY) / (2 * hw), 0, 1).astype(np.float32)
     if PARSE is not None:   # r16c K1: hair / hands / clothes / background inside the mask -> the source (the generated lips stay)
         fs = face_parse.face_prob(PARSE, k + a.k_base, s)   # global master frame (beards are face skin to the model)
         if fs is not None:
@@ -438,6 +447,15 @@ for k, f in enumerate(frames(a.master, W, H)):
         if a.keep_nose > 0 and np.isfinite(p[NOSE]).all():
             nmk = np.zeros((s, s), np.uint8); cv2.fillPoly(nmk, [hull(p[NOSE] - BXY(k))], 1)
             mm2 = mm2 * (1 - cv2.GaussianBlur(nmk.astype(np.float32), (0, 0), max(1.0, a.keep_nose * iod)))
+        if a.jaw_lmatch > 0 and np.isfinite(p[OVAL + [61, 291]]).all():   # r16d K1: lower-jaw band lightness -> the source's
+            fc_ = np.zeros((s, s), np.uint8); cv2.fillPoly(fc_, [hull(p[OVAL] - BXY(k))], 1)
+            dt_ = cv2.distanceTransform(fc_, cv2.DIST_L2, 3) / max(iod, 1.0); yb_ = float((p[[61, 291], 1] - BXY(k)[1]).mean())
+            band_ = (dt_ > 0) & (dt_ < a.jaw_lmatch) & (GY > yb_) & (mm2 > 0.3)
+            if band_.sum() > 40:
+                lk_ = cv2.cvtColor(np.clip(kf, 0, 255).astype(np.float32) / 255, cv2.COLOR_RGB2LAB); ls_ = cv2.cvtColor(roi / 255, cv2.COLOR_RGB2LAB)
+                dLab_ = np.median(ls_[band_] - lk_[band_], axis=0)   # L*, a*, b* (the band is darker AND bluer than the source)
+                wb_ = cv2.GaussianBlur(((dt_ > 0) & (dt_ < a.jaw_lmatch * 1.5) & (GY > yb_ - 0.05 * iod)).astype(np.float32), (0, 0), max(1.0, 0.04 * iod))
+                lk_ += dLab_[None, None, :] * wb_[..., None]; kf = np.clip(cv2.cvtColor(lk_, cv2.COLOR_LAB2RGB) * 255, 0, 255)
         mm = mm2[..., None]; comp = np.clip(roi * (1 - mm) + kf * mm + 0.5, 0, 255)
         if a.diag and k % 2 == 0:
             mz = mouth_zone(k, i, iod); band = (mm2 > 0.5) & (mm2 < 0.92) & ~mz; core = (mm2 > 0.97) & ~mz
