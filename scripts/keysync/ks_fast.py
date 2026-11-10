@@ -108,6 +108,8 @@ def main():
         print("KS_KF_GUIDE audio", _g.audio_ratio, "ref", _g.ref_ratio, flush=True)
     if os.environ.get("KS_GATE") and a.interp_lora:   # r16 K2: more interp steps only on wide-open segments (ks_gate.py)
         import ks_gate; ks_gate.install(d, model)
+    if os.environ.get("KS_NOISE"):   # r16c K2: shared noise across windows / keyframes (ks_noise.py)
+        import ks_noise; ks_noise.install(d)
     for n in ("compute_video_embedding", "get_audio_embeddings", "extract_video_landmarks", "sample_keyframes", "sample_interpolation", "save_audio_video"):
         setattr(d, n, timed(n, getattr(d, n)))
     if a.vae_batch > 1:   # r15: the authors decode one frame per call (decoding_t 1 -> timesteps 1: no temporal mixing); the same math batched N frames per call
