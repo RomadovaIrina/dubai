@@ -14,7 +14,7 @@
 # multi-shot (K2): KS_SHOTS=auto (default) -> ks_shots.py detect after the landmarks; > 1 shot -> ks_shots.sh runs this script once per shot (own
 #   plan / crop / ref / KeySync / post / paste per shot, nothing smoothed across a cut), concat -c copy + the mix stream-copied. KS_SHOTS=off = one run.
 # Env: KS_SHOTS KS_SHOT_MIN_S KS_DELAY KS_PROBE_S KS_REF KS_CROP KS_PAD KS_GATE KS_TSMOOTH KS_PAUSE KS_PASTE_SHIFT KS_PLAIN_ARGS KS_PLAIN_EXTRA KS_INTERP_STEPS KS_SYNC_MAX_S
-#      KS_MASK (oval|tight: K1 tight mask + chin + face parse + shadow-safe colour) KS_CM_SHADOW KS_OCCL (off|on) KS_OCCL_ARGS KS_TAIL_SRC (off|on) KS_TAIL_SRC_ARGS KS_ZEROFIX KS_OFFSCREEN_CONF KS_EDGE_SNAP
+#      KS_MASK (oval | tight = K1 A2 ghost-free | tight_nochin = A3 | tight_chin_legacy) KS_CM_SHADOW KS_OCCL (off|on) KS_OCCL_ARGS KS_TAIL_SRC (off|on) KS_TAIL_SRC_ARGS KS_ZEROFIX KS_OFFSCREEN_CONF KS_EDGE_SNAP
 #      KS_PASTE_JOBS KS_MIN_IOD KS_NUM_FACES KS_PROBE_MIN_CONF KS_PROBE_MAX KS_CHECK; GPU_RDY (gpulock.sh hand-off)
 set -o pipefail
 ID=$1; SRC=$2; AD=$3; W=$4; OUTV=$5; ROUTE=${6:-}
@@ -208,10 +208,17 @@ for f in $TAGS; do
   t paste_$f; n=$((n + 1)); NXT=$KW/paste_$n.mp4
   OTH=""; [ -s $KW/others_$f.npz ] && OTH="--others $KW/others_$f.npz --others-grow ${KS_OTHERS_GROW:-1.3}"
   MK=""   # r16c K1 rule 5 (opt-in until Irina's eye): KS_MASK=tight = the tight mask (chin kept) + face parsing (hair / hands / clothes -> source) + shadow-safe colour
-  if [ "${KS_MASK:-oval}" = tight ]; then
+  case "${KS_MASK:-oval}" in   # r16d: tight = K1 A2 (ghost-chin fix, 882a500); tight_nochin = A3 (zero ghost, ~-0.3 sync); tight_chin_legacy = the 10.11 tight + chin (ghost: never ship)
+    tight) MA="--mask tight --mask-chin 1 --mask-tsmooth 2 --neck-follow 0.15 --mask-chin-down 0.06";;
+    tight_nochin) MA="--mask tight";;
+    tight_chin_legacy) MA="--mask tight --mask-chin 1";;
+    *) MA="";;
+  esac
+  if [ -n "$MA" ]; then
     PM=$R/models/mediapipe/selfie_multiclass_256x256.tflite
-    if [ -s $PM ] && $MPY $KT/face_parse.py --video $CUR --box $KW/data/box_$f.json --out $P/parse.npz --model $PM > $P/parse.log 2>&1; then MK="--mask tight --mask-chin 1 --parse $P/parse.npz ${KS_CM_SHADOW---cm-shadow 10:30}"
-    else MK="--mask tight --mask-chin 1 ${KS_CM_SHADOW---cm-shadow 10:30}"; echo "KS_MASK f0: face_parse unavailable (model $PM) -> tight mask without parsing"; fi
+    if [ -s $PM ] && $MPY $KT/face_parse.py --video $CUR --box $KW/data/box_$f.json --out $P/parse.npz --model $PM > $P/parse.log 2>&1; then MK="$MA --parse $P/parse.npz ${KS_CM_SHADOW---cm-shadow 10:30}"
+    else MK="$MA ${KS_CM_SHADOW---cm-shadow 10:30}"; echo "KS_MASK $f: face_parse unavailable (model $PM) -> ${KS_MASK} without parsing"; fi
+    echo "KS_MASK $f ${KS_MASK}: $MK"
   fi
   ARGS="--ks $L --ks-lm $P/raw_lm.npz --master $CUR --box $KW/data/box_$f.json --lm $KW/lm_$f.npz --audio $AD/final_mix_aac.m4a --shift ${SHF[$f]} --absent skip $OTH \
         ${KS_PLAIN_ARGS---lfm 6 --upper-src 0.12:0.32 --keep-nose 0.04 --align 2 --align-ecc $P/ecc.npz --align-scale 0 --tex 2} ${KS_PLAIN_EXTRA:-} $MK"
