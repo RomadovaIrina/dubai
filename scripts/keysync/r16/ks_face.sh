@@ -234,7 +234,7 @@ for f in $TAGS; do
     else flag ks_occl_failed "$f: the occlusion guard failed ($(tail -1 $P/occl.log | cut -c1-120)) -> the paste without it"; fi; fi
   CUR=$NXT
 done
-if [ "${KS_TAIL_SRC:-off}" = on ]; then   # r16d T (Q / Irina: m03 37.9-39.9 s): after the shot's last dub phrase the face fades back to the source (opt-in)
+if [ "${KS_TAIL_SRC:-on}" = on ]; then   # r16d T (Q / Irina: m03 37.9-39.9 s): after the shot's last dub phrase the face fades back to the source (DEFAULT ON since 10.11: Irina + the m03 clip; KS_TAIL_SRC=off = the old tail)
   if $PY $KT/ks_tailsrc.py --master $KW/master_25fps.mp4 --paste $CUR --dub $AD/dubbed_16k.wav --out $KW/tailsrc.mp4 ${KS_TAIL_SRC_ARGS:-} > $KW/tailsrc.log 2>&1 && [ -s $KW/tailsrc.mp4 ]; then
     grep "^KS_TAILSRC" $KW/tailsrc.log; CUR=$KW/tailsrc.mp4
   else flag ks_tailsrc_failed "the silent-tail hand-over failed ($(tail -1 $KW/tailsrc.log | cut -c1-120)) -> the paste as is"; fi; fi
