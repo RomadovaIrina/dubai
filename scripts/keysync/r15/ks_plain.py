@@ -28,7 +28,9 @@ ap.add_argument("--mask-chin-feather", type=float, default=0.0, help="tight + ch
 ap.add_argument("--neck-follow", type=float, default=0.0, help="r16c K1 (Irina 10.11 seam option a): warp the SOURCE neck / chin strip below the jaw so it follows the GENERATED jaw: per column dy = generated - source jaw y (clamped +-0.12 IOD, tapered at the jaw ends), weight 1 at the jaw line -> 0 at this many IOD below; temporal smoothing via --mask-tsmooth")
 ap.add_argument("--mask-chin-down", type=float, default=0.0, help="r16d K1 (ghost second chin): extend the chin part this many IOD BELOW the lower of the source / generated jaw, so the feather lies on plain neck, never on a jaw contour (no double chin); use with --neck-follow")
 ap.add_argument("--gen-jaw-cut", type=float, default=0.0, help="r16d K1 (m03 dark crescent under the jaw): the paste fades out ACROSS the GENERATED jaw line (per column, ramp width this many IOD), so KeySync's own under-jaw shading is never pasted; below it the source (warped by --neck-follow) wins")
+ap.add_argument("--jaw-lmatch-local", type=float, default=0.0, help="r16d K1: with --jaw-lmatch, a LOCAL match: the band correction is the blurred (sigma this x IOD) per-pixel L*a*b* difference source - layer, normalised by the band coverage (fixes a crescent-shaped shadow, keeps fine texture)")
 ap.add_argument("--jaw-lmatch", type=float, default=0.0, help="r16d K1 (m03 dark jaw crescent): per frame, in a band of this many IOD just INSIDE the source jaw contour (below the mouth corners), shift the pasted layer's L*a*b* to the source's band median (feathered); KeySync shades its lower face edge darker than the source")
+ap.add_argument("--parse-gen", default="", help="r16d K1 (m03 jaw shadow): face_parse.py npz of the KEYSYNC layer (its 512 crop = the box): paste only where the GENERATED frame is face skin too (where KeySync's face is narrower than the source's it shows hair / neck, which must not be pasted); the generated lips always stay")
 ap.add_argument("--mask-inset", type=float, default=0.04, help="tight: inset from the face contour, x IOD")
 ap.add_argument("--mask-feather", type=float, default=0.04, help="tight: feather sigma, x IOD (the whole transition lies inside the inset contour)")
 ap.add_argument("--parse", default="", help="r16c K1: face_parse.py npz for the master (per-frame face-skin probability in box coords): inside the mask, non-face pixels (hair / hands / clothes / background) take the source; the generated lips stay")
@@ -72,7 +74,11 @@ b = json.load(open(a.box)); x0, y0, s, W, H = b["x"], b["y"], b["side"], b["W"],
 z = np.load(a.lm); LM = z["lm"][..., :2].astype(np.float32); J = z["j"] if "j" in z.files else np.arange(len(LM))
 OT = np.load(a.others)["others"] if a.others else None
 SHW = tuple(float(x) for x in a.cm_shadow.split(':')) if a.cm_shadow else None
-PARSE = None
+PARSE = None; PGEN = None
+if a.parse or a.parse_gen:
+    sys.path[:0] = [os.path.dirname(os.path.abspath(__file__)), os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'r16')]
+    import face_parse
+    if a.parse_gen: PGEN = face_parse.load(a.parse_gen)
 if a.parse:   # r16c K1: ONE parser module (also T's occlusion guard): the flat kit dir or ../r16
     sys.path[:0] = [os.path.dirname(os.path.abspath(__file__)), os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'r16')]
     import face_parse; PARSE = face_parse.load(a.parse)
@@ -203,6 +209,16 @@ def mask(k):
             yj = np.interp(xs_, g_[o_, 0], g_[o_, 1]); out_ = (xs_ < g_[o_, 0][0]) | (xs_ > g_[o_, 0][-1]); yj[out_] = 1e9
             hw = max(0.5 * a.gen_jaw_cut * iod, 1.0)
             m = m * np.clip((yj[None, :] + hw - GY) / (2 * hw), 0, 1).astype(np.float32)
+    if PGEN is not None:   # r16d K1: the GENERATED frame must be face skin too (no generated hair / neck at the jaw)
+        ig_ = kidx(k) + a.ks_base
+        fg_ = face_parse.face_prob(PGEN, ig_, s)
+        if fg_ is not None:
+            lz2 = np.zeros((s, s), np.uint8); cv2.fillPoly(lz2, [hull(q[LIPS])], 1)
+            ii2 = kidx(k)
+            if KL is not None and 0 <= ii2 < len(KL) and np.isfinite(KL[ii2][LIPS]).all(): cv2.fillPoly(lz2, [hull(KL[ii2][LIPS])], 1)
+            lz2 = cv2.GaussianBlur(cv2.dilate(lz2, el(0.12 * iod)).astype(np.float32), (0, 0), max(1.0, 0.03 * iod))
+            fg_ = cv2.GaussianBlur(fg_, (0, 0), max(1.0, 0.02 * iod))
+            m = m * np.maximum(fg_, lz2)
     if PARSE is not None:   # r16c K1: hair / hands / clothes / background inside the mask -> the source (the generated lips stay)
         fs = face_parse.face_prob(PARSE, k + a.k_base, s)   # global master frame (beards are face skin to the model)
         if fs is not None:
@@ -455,7 +471,12 @@ for k, f in enumerate(frames(a.master, W, H)):
                 lk_ = cv2.cvtColor(np.clip(kf, 0, 255).astype(np.float32) / 255, cv2.COLOR_RGB2LAB); ls_ = cv2.cvtColor(roi / 255, cv2.COLOR_RGB2LAB)
                 dLab_ = np.median(ls_[band_] - lk_[band_], axis=0)   # L*, a*, b* (the band is darker AND bluer than the source)
                 wb_ = cv2.GaussianBlur(((dt_ > 0) & (dt_ < a.jaw_lmatch * 1.5) & (GY > yb_ - 0.05 * iod)).astype(np.float32), (0, 0), max(1.0, 0.04 * iod))
-                lk_ += dLab_[None, None, :] * wb_[..., None]; kf = np.clip(cv2.cvtColor(lk_, cv2.COLOR_LAB2RGB) * 255, 0, 255)
+                if a.jaw_lmatch_local > 0:   # local: blurred per-pixel difference inside the band
+                    sg_ = max(1.0, a.jaw_lmatch_local * iod); bf_ = band_.astype(np.float32); den_ = cv2.GaussianBlur(bf_, (0, 0), sg_) + 1e-3
+                    D_ = np.stack([cv2.GaussianBlur((ls_[..., c] - lk_[..., c]) * bf_, (0, 0), sg_) / den_ for c in range(3)], -1)
+                    lk_ += D_ * wb_[..., None]
+                else: lk_ += dLab_[None, None, :] * wb_[..., None]
+                kf = np.clip(cv2.cvtColor(lk_, cv2.COLOR_LAB2RGB) * 255, 0, 255)
         mm = mm2[..., None]; comp = np.clip(roi * (1 - mm) + kf * mm + 0.5, 0, 255)
         if a.diag and k % 2 == 0:
             mz = mouth_zone(k, i, iod); band = (mm2 > 0.5) & (mm2 < 0.92) & ~mz; core = (mm2 > 0.97) & ~mz
