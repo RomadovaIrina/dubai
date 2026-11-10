@@ -26,6 +26,9 @@ ap.add_argument("--mask-chin", type=int, default=0, help="tight: 1 = do NOT inse
 ap.add_argument("--mask-tsmooth", type=float, default=0.0, help="r16c K1 (Irina 09.11: the neck-face seam swims, in ALL videos): the mask polygon (oval or tight) from landmark tracks gaussian-smoothed over time (sigma in frames; source and generated); symmetric + global, so ks_plain_par == serial")
 ap.add_argument("--mask-chin-feather", type=float, default=0.0, help="tight + chin: an extra VERTICAL-only feather of the chin part (sigma x IOD), so the generated-jaw / source-neck step fades over a taller band")
 ap.add_argument("--neck-follow", type=float, default=0.0, help="r16c K1 (Irina 10.11 seam option a): warp the SOURCE neck / chin strip below the jaw so it follows the GENERATED jaw: per column dy = generated - source jaw y (clamped +-0.12 IOD, tapered at the jaw ends), weight 1 at the jaw line -> 0 at this many IOD below; temporal smoothing via --mask-tsmooth")
+ap.add_argument("--lf-warp", type=float, default=0.0, help="r16d K1 A9: warp the whole SOURCE lower face (jaw, chin, lower cheeks, perioral) by the GENERATED landmark motion: dense thin-plate field from (generated - source) at the lower-face landmarks, clamped to this many IOD, 0 at the nose / eyes / upper cheeks / box edge and on a ring --lf-ring IOD outside the jaw; use with --mask mouth (0 = off)")
+ap.add_argument("--lf-ring", type=float, default=0.30, help="r16d K1 A9: distance (IOD) outside the jaw contour where the --lf-warp field is back to 0 (the neck / background stays put beyond it)")
+ap.add_argument("--lf-gain", type=float, default=1.0, help="r16d K1 A9: scale of the --lf-warp displacement (1 = follow the generated landmarks fully)")
 ap.add_argument("--mask-chin-down", type=float, default=0.0, help="r16d K1 (ghost second chin): extend the chin part this many IOD BELOW the lower of the source / generated jaw, so the feather lies on plain neck, never on a jaw contour (no double chin); use with --neck-follow")
 ap.add_argument("--gen-jaw-cut", type=float, default=0.0, help="r16d K1 (m03 dark crescent under the jaw): the paste fades out ACROSS the GENERATED jaw line (per column, ramp width this many IOD), so KeySync's own under-jaw shading is never pasted; below it the source (warped by --neck-follow) wins")
 ap.add_argument("--jaw-lmatch-local", type=float, default=0.0, help="r16d K1: with --jaw-lmatch, a LOCAL match: the band correction is the blurred (sigma this x IOD) per-pixel L*a*b* difference source - layer, normalised by the band coverage (fixes a crescent-shaped shadow, keeps fine texture)")
@@ -157,6 +160,33 @@ def neck_warp(roi, k, i):   # r16c K1 option (a): the source neck follows the ge
     wgt = (below + above).astype(np.float32)
     if float(np.abs(dy).max()) < 0.25: return roi
     return cv2.remap(roi, GX, (GY - dy[None, :] * wgt).astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+
+LF_MOVE = sorted(set(JAWLOW + LIPS + [17, 84, 314, 18, 83, 313, 200, 199, 175, 201, 421, 208, 428, 32, 262, 194, 418, 211, 431, 170, 395, 169, 394, 135, 364, 214, 434, 57, 287, 43, 273, 106, 335, 182, 406]))
+LF_FIX = [1, 2, 4, 5, 98, 327, 64, 294, 129, 358, 33, 263, 133, 362, 168, 6, 197, 195, 234, 454, 93, 323, 127, 356, 116, 345, 50, 280, 205, 425]
+def lf_warp(roi, k, i):   # r16d K1 A9: the source lower face follows the generated jaw / chin / perioral motion (dense, smooth)
+    from scipy.interpolate import RBFInterpolator
+    src = LMS if LMS is not None else LM[..., :2]
+    ps = src[min(int(J[min(k, len(J) - 1)]), len(src) - 1)]; KK = KLS if KLS is not None else KL
+    if KK is None or not (0 <= i < len(KK)): return roi
+    kp = KK[i]
+    if not (np.isfinite(ps[LF_MOVE + LF_FIX]).all() and np.isfinite(kp[LF_MOVE]).all()): return roi
+    iod = float(np.linalg.norm(ps[33] - ps[263])); q_ = (ps - BXY(k))[:, :2]
+    d = (kp[LF_MOVE, :2] - q_[LF_MOVE]) * a.lf_gain
+    nd = np.linalg.norm(d, axis=1, keepdims=True); cap = a.lf_warp * iod; d = d * np.minimum(1.0, cap / np.maximum(nd, 1e-6))
+    if float(np.abs(d).max()) < 0.25: return roi
+    tgt = q_[LF_MOVE] + d   # where the source lower-face points must go
+    jw = q_[JAWLOW]; c_ = q_[[61, 291]].mean(0); ring = []
+    for pt in jw:   # zero ring outside the jaw (neck / background stays put)
+        v_ = pt - c_; v_ = v_ / max(np.linalg.norm(v_), 1e-6); ring.append(pt + v_ * a.lf_ring * iod)
+    g_ = np.linspace(0, s - 1, 6, dtype=np.float32); edge = [(x_, y_) for x_ in g_ for y_ in g_ if x_ in (g_[0], g_[-1]) or y_ in (g_[0], g_[-1])]
+    fix = np.concatenate([q_[LF_FIX], np.array(ring, np.float32), np.array(edge, np.float32)])
+    P_ = np.concatenate([tgt, fix]).astype(np.float64); V_ = np.concatenate([-d, np.zeros_like(fix)]).astype(np.float64)   # backward map at the TARGET positions
+    st = 8; gs = np.arange(0, s + st, st, dtype=np.float64); GXc, GYc = np.meshgrid(gs, gs)
+    try: F = RBFInterpolator(P_, V_, kernel="thin_plate_spline", smoothing=1.0)(np.stack([GXc.ravel(), GYc.ravel()], 1)).reshape(len(gs), len(gs), 2)
+    except Exception: return roi
+    F = np.clip(F, -cap, cap).astype(np.float32)
+    F = cv2.resize(F, (len(gs) * st, len(gs) * st), interpolation=cv2.INTER_CUBIC)[:s, :s]
+    return cv2.remap(roi, GX + F[..., 0], GY + F[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
 
 CZ = [None]
 def mask(k):
@@ -459,6 +489,7 @@ for k, f in enumerate(frames(a.master, W, H)):
         if a.tex > 0 or a.cavity > 0: kf = fix_ks(kf, i, m, crop(f, k))
         roi = crop(f, k).astype(np.float32); mm2 = m * fade
         if a.neck_follow > 0: roi = neck_warp(roi, k, i)
+        if a.lf_warp > 0: roi = lf_warp(roi, k, i)
         p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)]; iod = float(np.linalg.norm(p[33] - p[263])) if np.isfinite(p).all() else IODM
         if UP is not None and np.isfinite(p[[33, 263, 133, 362, 152]]).all():
             em = p[[33, 263, 133, 362]].mean(0) - BXY(k); ax = (p[152] - BXY(k)) - em; L2 = float(ax @ ax)
