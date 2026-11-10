@@ -15,7 +15,7 @@
 set -o pipefail
 ID=$1; AD=$2; W=$3; OUTV=$4; ROUTE=$5; PK=$6
 R=$(cd "$(dirname "$0")/../../.." && pwd); PY=${DUB_PY:-/venv/dabai/bin/python}; KT=$PK/kit
-SW=$W/shots; rm -rf $SW; mkdir -p $SW
+SW=$W/shots; [ "${KS_SHOTS_REPOST:-0}" = 1 ] || rm -rf $SW; mkdir -p $SW   # (r16d T: a re-paste keeps the shots and their renders)
 N=$(python3 -c "import json; print(json.load(open('$PK/shots.json'))['frames'])")
 SEGS=$(python3 -c "import json; print(json.dumps(json.load(open('$PK/shots.json'))['segments']))")
 mapfile -t FS < <(python3 -c "
@@ -52,7 +52,8 @@ for row in "${FS[@]}"; do
   for m in $AD/*.manifest.json; do [ -f "$m" ] && $PY $KT/ks_shots.py manifest --manifest $m --t0 $t0 --t1 $t1 --out $S/audio/$(basename $m) > /dev/null; done
   RS=""; if [ -n "$ROUTE" ] && [ -f "$ROUTE" ]; then $PY $KT/ks_shots.py route --route $ROUTE --t0 $t0 --t1 $t1 --out $S/route.json | sed "s/^/KS_SHOT $i /"; RS=$S/route.json; fi
   SHOTARGS[$i]="${ID}_s$i $S/master.mp4 $S/audio $S $S/out.mp4 $RS"; SPAN[$i]="[$k0, $k1)"
-  env KS_IN_SHOT=1 KS_PHASE=prep KS_MASTER_IN=$S/master.mp4 KS_MP_NPZ=$MPX bash $R/scripts/keysync/r16/ks_face.sh ${SHOTARGS[$i]} > $S/face_prep.log 2>&1; rc=$?
+  if [ "${KS_SHOTS_REPOST:-0}" = 1 ]; then [ -f $S/ks/state.sh ] && rc=0 || rc=3   # r16d T: re-paste only: the shot keeps its prep + KeySync render (state.sh = rendered)
+  else env KS_IN_SHOT=1 KS_PHASE=prep KS_MASTER_IN=$S/master.mp4 KS_MP_NPZ=$MPX bash $R/scripts/keysync/r16/ks_face.sh ${SHOTARGS[$i]} > $S/face_prep.log 2>&1; rc=$?; fi
   shot_log $i prep
   if [ $rc = 3 ]; then echo "KS_SHOT $i ${SPAN[$i]}: nothing to lip-sync -> source"; unset "ALPHA[$i]"; continue; fi
   [ $rc = 0 ] || { shot_fail $i prep $rc; continue; }
@@ -60,7 +61,8 @@ for row in "${FS[@]}"; do
 done
 # ---- r16 T (Q audit O5): ONE GPU-lock hold + ONE resident ks_fast (one model / TRT load + VAE compile) for EVERY shot's probe + render
 OKG=()
-if [ ${#READY[@]} -gt 0 ]; then
+if [ "${KS_SHOTS_REPOST:-0}" = 1 ]; then OKG=("${READY[@]}"); echo "KS_SHOTS_REPOST: post + paste only for segments ${OKG[*]}"
+elif [ ${#READY[@]} -gt 0 ]; then
   . $R/scripts/keysync/r16/gpulock.sh; gpu_held || { echo "KS_T wait_gpu $(date +%s.%N)"; gpu_acquire $$ || { echo "KS_SHOTS: could not take the GPU lock"; exit 1; }; }
   KS=${KS_ROOT:-/workspace/dub/keysync}; LORA=${KS_LORA:-$KS/student/lora_pick.pt}; LMK=${KS_LMK_CACHE:-$KS/lmk}; mkdir -p $LMK; [ -n "${KS_TORCH_HOME:-}" ] && export TORCH_HOME=$KS_TORCH_HOME
   GATE="${KS_GATE-thr=0.12,cap=0.25,hi=8,lo=2}"
