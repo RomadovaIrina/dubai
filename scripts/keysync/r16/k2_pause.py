@@ -27,7 +27,9 @@ ap.add_argument("--cap", type=float, default=0.0, help="warp: cap the generated 
 ap.add_argument("--cap-q", type=float, default=0.9, dest="cap_q"); ap.add_argument("--cap-max", type=float, default=0.6, dest="cap_max")
 ap.add_argument("--cap-src-lm", default="", dest="cap_src_lm", help="the SOURCE crop landmarks (crop_lm_<tag>.npz) for the speaker's opening range")
 ap.add_argument("--pause-src", type=int, default=0, dest="pause_src", help="warp: in pauses close only DOWN TO the source crop's own lip gap of that frame (needs --cap-src-lm), not shut (old03 2-3 s glued lips)")
-ap.add_argument("--pause-lead", type=int, default=1, dest="pause_lead", help="warp: 0 = no pause closure in the silence before the first dub phrase"); a = ap.parse_args()
+ap.add_argument("--pause-lead", type=int, default=1, dest="pause_lead", help="warp: 0 = no pause closure in the silence before the first dub phrase")
+ap.add_argument("--smooth", type=int, default=0, help="warp: temporal smoothing of the warp strength, +-N frames (max-filter then Hann: peaks kept, no per-frame on/off; q03 lip twitch)")
+ap.add_argument("--dump", default="", help="warp: save the per-frame warp strength (.npy)"); a = ap.parse_args()
 
 
 def pause_weight(n):
@@ -78,6 +80,11 @@ if a.cap > 0 and a.cap_src_lm:   # r16d: the black hole = a generated opening fa
     wc = np.convolve(wc, np.array([1, 2, 3, 2, 1], np.float32) / 9, "same"); NCAP = int((wc > 0.02).sum())
     print("K2_PAUSE cap " + json.dumps({"cap_gap": round(capv, 3), "src_q": a.cap_q, "frames_capped": NCAP, "mean_close": round(float(wc[wc > 0.02].mean()) if NCAP else 0, 3)}), flush=True)
     wk = np.maximum(wk, wc)
+if a.smooth > 0:   # r16d K2: the cap weight follows KeySync's per-frame gap -> it toggles; close the gaps between warped frames and ease
+    k_ = a.smooth; pd_ = np.pad(wk, k_, mode="edge"); mx_ = np.array([pd_[i:i + 2 * k_ + 1].max() for i in range(nk)], np.float32)
+    hn_ = np.hanning(2 * k_ + 3)[1:-1]; hn_ /= hn_.sum(); sm_ = np.convolve(np.pad(mx_, k_, mode="edge"), hn_, "valid")[:nk].astype(np.float32)
+    print("K2_PAUSE smooth " + json.dumps({"n": k_, "jitter_before": round(float(np.abs(np.diff(wk, 2)).mean()), 4), "jitter_after": round(float(np.abs(np.diff(sm_, 2)).mean()), 4)}), flush=True); wk = sm_
+if a.dump: np.save(a.dump, wk)
 S = 512; GY = np.arange(S, dtype=np.float32)
 r = subprocess.Popen(["ffmpeg", "-v", "error", "-i", a.ks, "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], stdout=subprocess.PIPE)
 w = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{S}x{S}", "-r", "25", "-i", "-", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", a.out], stdin=subprocess.PIPE)
