@@ -20,7 +20,7 @@ LIPS = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0
 ap = argparse.ArgumentParser()
 for k in ("ks", "master", "box", "lm", "audio", "out"): ap.add_argument("--" + k, required=True)
 ap.add_argument("--cm-lonly", type=int, default=0, help="r16c K1 colour in dark / warm scenes: 1 = the colour match (global gain / offset + --lfm maps) corrects LIGHTNESS only; KeySync's chroma is not shifted (the a / b offset turned dark areas blue)")
-ap.add_argument("--cm-shadow", default="", help="r16c K1 + K2 (long5 1:56 blue mouth): L0:L1 = fade the whole colour correction out in the darks by the RAW KeySync lightness (0 below L0, full above L1): the global offset no longer lifts the black floor or neutralises the warmth of a dark mouth / hair; e.g. 10:30; 10:30:ab = fade only the chroma (a*/b*) correction, keep the L* lift")
+ap.add_argument("--cm-shadow", default="", help="r16c K1 + K2 (long5 1:56 blue mouth): L0:L1 = fade the whole colour correction out in the darks by the RAW KeySync lightness (0 below L0, full above L1): the global offset no longer lifts the black floor or neutralises the warmth of a dark mouth / hair; e.g. 10:30; 10:30:ab = fade only the chroma (a*/b*) correction, keep the L* lift; 10:30:warm[=a,b] = ab + the raw dark cavity chroma floored (default a* 10, b* 6: no navy)")
 ap.add_argument("--mask", default="oval", choices=["oval", "tight", "mouth"], help="r16c K1 rule 5: oval = the r15/r16 mask (oval + 0.15 IOD down + 0.10 IOD dilation: reaches neck / collar / background); tight = strictly INSIDE the face: the cheek / jaw contour (union of the source jaw and KeySync's generated jaw), inset, feathered inwards")
 ap.add_argument("--mask-chin", type=int, default=0, help="tight: 1 = do NOT inset the chin: the jaw below the mouth corners (source and generated) + the lips are added back un-eroded, so the generated chin motion is kept (the inset there cost SyncNet); the cheeks keep the inset")
 ap.add_argument("--mask-tsmooth", type=float, default=0.0, help="r16c K1 (Irina 09.11: the neck-face seam swims, in ALL videos): the mask polygon (oval or tight) from landmark tracks gaussian-smoothed over time (sigma in frames; source and generated); symmetric + global, so ks_plain_par == serial")
@@ -75,7 +75,8 @@ z = np.load(a.lm); LM = z["lm"][..., :2].astype(np.float32); J = z["j"] if "j" i
 OT = np.load(a.others)["others"] if a.others else None
 _shw = a.cm_shadow.split(':') if a.cm_shadow else []
 SHW = (float(_shw[0]), float(_shw[1])) if _shw else None
-SHW_AB = len(_shw) > 2 and _shw[2] == 'ab'   # r16d K2: L0:L1:ab = fade only the a*/b* correction in the darks, keep the L* lift (black holes filled, no navy)
+SHW_AB = len(_shw) > 2 and _shw[2].split('=')[0] in ('ab', 'warm')
+SHW_WARM = tuple(float(x) for x in (_shw[2].split('=')[1] if '=' in _shw[2] else '10,6').split(',')) if len(_shw) > 2 and _shw[2].startswith('warm') else None   # r16d K2: L0:L1:warm[=a,b] = ab + KeySync's raw dark cavity chroma floored at a*/b* (long5 navy: the blue is in the raw cavity, the L lift reveals it)   # r16d K2: L0:L1:ab = fade only the a*/b* correction in the darks, keep the L* lift (black holes filled, no navy)
 PARSE = None; PGEN = None
 if a.parse or a.parse_gen:
     sys.path[:0] = [os.path.dirname(os.path.abspath(__file__)), os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'r16')]
@@ -454,7 +455,11 @@ for k, f in enumerate(frames(a.master, W, H)):
                 else: lab += d_
             if SHW:   # fade the correction out in the darks (by the raw lightness)
                 w_ = np.clip((lab0[..., 0] - SHW[0]) / max(SHW[1] - SHW[0], 1e-3), 0, 1)[..., None]
-                if SHW_AB: lab[..., 1:] = lab0[..., 1:] + w_ * (lab[..., 1:] - lab0[..., 1:])
+                if SHW_AB:
+                    lab[..., 1:] = lab0[..., 1:] + w_ * (lab[..., 1:] - lab0[..., 1:])
+                    if SHW_WARM is not None:
+                        d_ = 1.0 - w_[..., 0]
+                        for c_, fl_ in ((1, SHW_WARM[0]), (2, SHW_WARM[1])): lab[..., c_] += d_ * np.maximum(0.0, fl_ - lab[..., c_])
                 else: lab = lab0 + w_ * (lab - lab0)
             kf = np.clip(cv2.cvtColor(lab, cv2.COLOR_LAB2RGB) * 255, 0, 255)
         if SHARP > 0:
