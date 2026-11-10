@@ -14,7 +14,7 @@
 # multi-shot (K2): KS_SHOTS=auto (default) -> ks_shots.py detect after the landmarks; > 1 shot -> ks_shots.sh runs this script once per shot (own
 #   plan / crop / ref / KeySync / post / paste per shot, nothing smoothed across a cut), concat -c copy + the mix stream-copied. KS_SHOTS=off = one run.
 # Env: KS_SHOTS KS_SHOT_MIN_S KS_DELAY KS_PROBE_S KS_REF KS_CROP KS_PAD KS_GATE KS_TSMOOTH KS_PAUSE KS_PASTE_SHIFT KS_PLAIN_ARGS KS_PLAIN_EXTRA KS_INTERP_STEPS KS_SYNC_MAX_S
-#      KS_MASK (oval|tight: K1 tight mask + chin + face parse + shadow-safe colour) KS_CM_SHADOW KS_OCCL (off|on) KS_OCCL_ARGS KS_ZEROFIX KS_OFFSCREEN_CONF KS_EDGE_SNAP
+#      KS_MASK (oval|tight: K1 tight mask + chin + face parse + shadow-safe colour) KS_CM_SHADOW KS_OCCL (off|on) KS_OCCL_ARGS KS_TAIL_SRC (off|on) KS_TAIL_SRC_ARGS KS_ZEROFIX KS_OFFSCREEN_CONF KS_EDGE_SNAP
 #      KS_PASTE_JOBS KS_MIN_IOD KS_NUM_FACES KS_PROBE_MIN_CONF KS_PROBE_MAX KS_CHECK; GPU_RDY (gpulock.sh hand-off)
 set -o pipefail
 ID=$1; SRC=$2; AD=$3; W=$4; OUTV=$5; ROUTE=${6:-}
@@ -227,4 +227,8 @@ for f in $TAGS; do
     else flag ks_occl_failed "$f: the occlusion guard failed ($(tail -1 $P/occl.log | cut -c1-120)) -> the paste without it"; fi; fi
   CUR=$NXT
 done
+if [ "${KS_TAIL_SRC:-off}" = on ]; then   # r16d T (Q / Irina: m03 37.9-39.9 s): after the shot's last dub phrase the face fades back to the source (opt-in)
+  if $PY $KT/ks_tailsrc.py --master $KW/master_25fps.mp4 --paste $CUR --dub $AD/dubbed_16k.wav --out $KW/tailsrc.mp4 ${KS_TAIL_SRC_ARGS:-} > $KW/tailsrc.log 2>&1 && [ -s $KW/tailsrc.mp4 ]; then
+    grep "^KS_TAILSRC" $KW/tailsrc.log; CUR=$KW/tailsrc.mp4
+  else flag ks_tailsrc_failed "the silent-tail hand-over failed ($(tail -1 $KW/tailsrc.log | cut -c1-120)) -> the paste as is"; fi; fi
 t end; mv $CUR $OUTV && echo "KS_FACE_DONE $ID faces $TAGS"
