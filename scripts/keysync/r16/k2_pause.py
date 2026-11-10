@@ -11,6 +11,7 @@ the dub voice is > --db below its peak. Two arms (Irina's rule: no KeySync <-> s
     python k2_pause.py --mode weights --src-lm source_crop.npz(or source_lm_F.npz) --wav dub16k.wav --n N --out keep.npy"""
 import argparse, json, subprocess, wave
 import numpy as np, cv2
+FIRST_SPEECH = 0
 
 UO = [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291]   # upper outer lip, corner -> corner
 UI = [78, 191, 80, 81, 82, 13, 312, 311, 310, 415, 308]  # upper inner
@@ -24,13 +25,16 @@ ap.add_argument("--closed", type=float, default=0.05, help="weights: source gap/
 ap.add_argument("--pause", type=int, default=1, help="warp: close the lips in dub pauses (arm b); 0 = only the cap")
 ap.add_argument("--cap", type=float, default=0.0, help="warp: cap the generated lip gap at CAP x the source speaker's --cap-q gap (0 = off; r16d black holes)")
 ap.add_argument("--cap-q", type=float, default=0.9, dest="cap_q"); ap.add_argument("--cap-max", type=float, default=0.6, dest="cap_max")
-ap.add_argument("--cap-src-lm", default="", dest="cap_src_lm", help="the SOURCE crop landmarks (crop_lm_<tag>.npz) for the speaker's opening range"); a = ap.parse_args()
+ap.add_argument("--cap-src-lm", default="", dest="cap_src_lm", help="the SOURCE crop landmarks (crop_lm_<tag>.npz) for the speaker's opening range")
+ap.add_argument("--pause-src", type=int, default=0, dest="pause_src", help="warp: in pauses close only DOWN TO the source crop's own lip gap of that frame (needs --cap-src-lm), not shut (old03 2-3 s glued lips)")
+ap.add_argument("--pause-lead", type=int, default=1, dest="pause_lead", help="warp: 0 = no pause closure in the silence before the first dub phrase"); a = ap.parse_args()
 
 
 def pause_weight(n):
     w = wave.open(a.wav); x = np.frombuffer(w.readframes(w.getnframes()), np.int16).astype(np.float32) / 32768; hop = w.getframerate() // 25
     db = np.array([20 * np.log10(np.sqrt((x[i * hop:(i + 1) * hop] ** 2).mean()) + 1e-9) if i * hop < len(x) else -120 for i in range(n)])
     sil = db < db.max() - a.db; out = np.zeros(n, np.float32); i = 0
+    global FIRST_SPEECH; FIRST_SPEECH = int(np.argmax(~sil)) if (~sil).any() else n
     while i < n:
         if not sil[i]: i += 1; continue
         j = i
@@ -54,6 +58,17 @@ fr = subprocess.run(["ffprobe", "-v", "error", "-count_packets", "-select_stream
 nk = int(fr); pw = pause_weight(nk + max(a.shift, 0) + 2)
 wk = np.array([pw[i + a.shift] if 0 <= i + a.shift < len(pw) else 0 for i in range(nk)], np.float32)   # KeySync frame i is shown at master frame i + shift
 if not a.pause: wk[:] = 0
+FIRST_KS = FIRST_SPEECH - a.shift   # KeySync frame of the first dub phrase
+if a.pause and not a.pause_lead and FIRST_KS > 0: wk[:min(FIRST_KS, nk)] = 0
+NPS = 0
+if a.pause and a.pause_src and a.cap_src_lm:   # r16d K2: close to the speaker's own gap of that frame (a slightly open source mouth stays slightly open)
+    z_ = np.load(a.cap_src_lm); SL0 = z_["lm"][..., :2].astype(np.float32); J0 = z_["j"] if "j" in z_.files else np.arange(len(SL0))
+    for i in np.nonzero(wk > 0)[0]:
+        kgi = op(KL[min(i, len(KL) - 1)]); m_ = min(i + a.shift, len(J0) - 1)
+        sgi = op(SL0[min(int(J0[m_]), len(SL0) - 1)]) if m_ >= 0 else 0.0
+        if not np.isfinite(sgi) or sgi >= 1.0: sgi = 0.0   # no source face -> the old full closure
+        wk[i] = wk[i] * float(np.clip(1 - sgi / max(kgi, 1e-3), 0, 1)); NPS += 1
+    print("K2_PAUSE pause_src " + json.dumps({"frames": NPS, "mean_close": round(float(wk[wk > 0].mean()) if (wk > 0).any() else 0, 3), "first_speech_ks": int(FIRST_KS), "lead": a.pause_lead}), flush=True)
 NCAP = 0
 if a.cap > 0 and a.cap_src_lm:   # r16d: the black hole = a generated opening far wider than the speaker ever opens -> close it to CAP x her q-gap
     SL = np.load(a.cap_src_lm)["lm"][..., :2].astype(np.float32); sg = np.array([op(q) for q in SL]); sg = sg[np.isfinite(sg) & (sg > 0.03) & (sg < 1)]
