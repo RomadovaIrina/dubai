@@ -47,11 +47,14 @@ def main():
         ks_student.merge_lora(model.model.diffusion_model, a.interp_lora)
         model.model.diffusion_model._ks_dc_off = True   # DeepCache stays on the keyframes only
         model.sampler = ks_student.LCMSampler(model.sampler, a.interp_steps, a.lcm_noise)
+    if os.environ.get("KS_KF_LORA"):   # r16 L (B, day 4): the per-speaker keyframe LoRA (ks_adapt.py) merged into the keyframe UNet; the kf TRT engine is skipped (built without it)
+        import ks_student; ks_student.merge_lora(model_kf.model.diffusion_model, os.environ["KS_KF_LORA"])
     if a.trt_vae:   # r15: the interpolation model's VAE decode through a TensorRT engine (ks_trt_vae.py; per-frame math, N frames per call)
         import ks_trt_vae; ks_trt_vae.use_vae_engine(model, a.trt_vae)
     if a.trt:
         import ks_trt
         for m, tag in ((model, "interp"), (model_kf, "kf")):
+            if tag == "kf" and os.environ.get("KS_KF_LORA"): print("KS_KF_LORA: keyframes in torch (no kf engine)", flush=True); continue
             if os.path.exists(os.path.join(a.trt, tag, "full.plan")): ks_trt.use_engines(m, os.path.join(a.trt, tag))
     hubert = d.HubertModel.from_pretrained("facebook/hubert-base-ls960").cuda()
     wavlm = d.WavLM_wrapper(model_size="Base+", feed_as_frames=False, merge_type="None", model_path="pretrained_models/checkpoints/WavLM-Base+.pt").cuda()
