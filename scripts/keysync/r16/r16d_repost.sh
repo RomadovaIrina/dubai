@@ -4,7 +4,7 @@
 #   R16D_ENV="KS_MASK=tight KS_OCCL=on KS_TAIL_SRC=on KS_CAP=1.0" bash scripts/keysync/r16/r16d_repost.sh q03 q05 ...
 # Multi-shot jobs: ks_shots.sh with KS_SHOTS_REPOST=1 (keeps every shot's render; same post loop + join as the first run). Old final -> <v>_prev.mp4.
 set -u
-R=$(cd "$(dirname "$0")/../../.." && pwd); cd $R; . scripts/env.sh > /dev/null 2>&1; O=${R16D_OUT:-/workspace/dub/outbox/r16d}; JW=${R16D_WORK:-/workspace/dub/r16d}
+R=$(cd "$(dirname "$0")/../../.." && pwd); cd $R; . scripts/env.sh > /dev/null 2>&1; O=${R16D_OUT:-/workspace/dub/outbox/r16d}; JW=${R16D_WORK:-/workspace/dub/r16d}; mkdir -p $O
 ENVS=${R16D_ENV:?set R16D_ENV}; PY=/venv/dabai/bin/python
 for v in "$@"; do ID=r16d_$v; J=$JW/jobs/$ID; W=$J/e2e/work; KW=$W/ks; ST=$J/status.json; s=$(date +%s)
   [ -f $KW/shots.json ] || { echo "REPOST $v: no job work dir ($KW)"; continue; }
