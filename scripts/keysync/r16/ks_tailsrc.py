@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """r16d T: the silent tail of a shot -> the source picture (Irina 10.11 / Q: m03 37.9-39.9 s "scary face at the end": after the last dub phrase the
 face only smiles, and KeySync's silent render widens the face and draws its own jaw ~1 cm under the real one).
-After the LAST dub speech of the shot (+ --hold s), the paste fades to the source over --ramp s and stays the source to the end:
+From the LAST dub speech end of the shot + --hold s (default -0.15: on the falling edge, Irina 10.11 "starts earlier"), the paste fades to the source over --ramp s (0.25) and stays the source to the end:
   out_k = P_k + w_k (S_k - P_k), w = 0 before t0, linear 0 -> 1 over the ramp. Only when the silent tail is >= --min-tail s long.
 Dub speech = 20 ms RMS > --thr x the clip's p99 (gaps < 0.3 s merged). Video copied when nothing to do. Colour as ks_plain (KS_CMS).
-    python ks_tailsrc.py --master S.mp4 --paste P.mp4 --dub dub.wav --out OUT.mp4 [--hold 0.4 --ramp 0.5 --min-tail 1.0]"""
+    python ks_tailsrc.py --master S.mp4 --paste P.mp4 --dub dub.wav --out OUT.mp4 [--hold -0.15 --ramp 0.25 --min-tail 1.0]"""
 import argparse, json, shutil, subprocess, sys, os, wave
 import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 ap = argparse.ArgumentParser(); [ap.add_argument("--" + k, required=True) for k in ("master", "paste", "dub", "out")]
-ap.add_argument("--hold", type=float, default=0.4); ap.add_argument("--ramp", type=float, default=0.5); ap.add_argument("--min-tail", type=float, default=1.0, dest="min_tail")
+ap.add_argument("--hold", type=float, default=-0.15); ap.add_argument("--ramp", type=float, default=0.25); ap.add_argument("--min-tail", type=float, default=1.0, dest="min_tail")
 ap.add_argument("--thr", type=float, default=0.03); a = ap.parse_args()
 w = wave.open(a.dub); sr = w.getframerate(); x = np.frombuffer(w.readframes(w.getnframes()), np.int16).astype(np.float32); hop = sr // 50
 nf = len(x) // hop; e = np.sqrt((x[:nf * hop].reshape(nf, hop) ** 2).mean(1)) if nf else np.zeros(0); on = e > a.thr * max(float(np.percentile(e, 99)) if nf else 1.0, 1.0)
