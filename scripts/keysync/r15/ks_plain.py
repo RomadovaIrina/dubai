@@ -26,6 +26,7 @@ ap.add_argument("--mask-chin", type=int, default=0, help="tight: 1 = do NOT inse
 ap.add_argument("--mask-tsmooth", type=float, default=0.0, help="r16c K1 (Irina 09.11: the neck-face seam swims, in ALL videos): the mask polygon (oval or tight) from landmark tracks gaussian-smoothed over time (sigma in frames; source and generated); symmetric + global, so ks_plain_par == serial")
 ap.add_argument("--mask-chin-feather", type=float, default=0.0, help="tight + chin: an extra VERTICAL-only feather of the chin part (sigma x IOD), so the generated-jaw / source-neck step fades over a taller band")
 ap.add_argument("--neck-follow", type=float, default=0.0, help="r16c K1 (Irina 10.11 seam option a): warp the SOURCE neck / chin strip below the jaw so it follows the GENERATED jaw: per column dy = generated - source jaw y (clamped +-0.12 IOD, tapered at the jaw ends), weight 1 at the jaw line -> 0 at this many IOD below; temporal smoothing via --mask-tsmooth")
+ap.add_argument("--mask-chin-down", type=float, default=0.0, help="r16d K1 (ghost second chin): extend the chin part this many IOD BELOW the lower of the source / generated jaw, so the feather lies on plain neck, never on a jaw contour (no double chin); use with --neck-follow")
 ap.add_argument("--mask-inset", type=float, default=0.04, help="tight: inset from the face contour, x IOD")
 ap.add_argument("--mask-feather", type=float, default=0.04, help="tight: feather sigma, x IOD (the whole transition lies inside the inset contour)")
 ap.add_argument("--parse", default="", help="r16c K1: face_parse.py npz for the master (per-frame face-skin probability in box coords): inside the mask, non-face pixels (hair / hands / clothes / background) take the source; the generated lips stay")
@@ -168,6 +169,7 @@ def mask(k):
         if a.mask_chin:   # the chin / lips area (below the mouth corners) un-eroded: source jaw U generated jaw U lips
             yc = float(qs[[61, 291], 1].mean()); low = [qs[JAWLOW]]
             if KLS is not None and 0 <= ii < len(KLS) and np.isfinite(KLS[ii][JAWLOW]).all(): low.append(KLS[ii][JAWLOW])
+            if a.mask_chin_down > 0: low = low + [x_ + np.array([0, a.mask_chin_down * iod], np.float32) for x_ in low]   # r16d K1: the band below both jaws
             cz = np.zeros_like(mk); cv2.fillPoly(cz, [hull(np.concatenate(low + [qs[LIPS]]))], 1); cz[:max(0, int(yc)), :] = 0
             mk = np.maximum(mk, cz); CZ[0] = cz
         own = mk.copy()   # r16c K1: m03 bug: the 2-face 'own face' re-fill used the full contour and undid the tight mask
