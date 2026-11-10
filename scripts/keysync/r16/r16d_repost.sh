@@ -36,6 +36,6 @@ PY
   [ -f $O/$v.mp4 ] && mv -f $O/$v.mp4 $O/${v}_prev.mp4
   ffmpeg -loglevel error -y -i $VID -i $AD/final_mix_aac.m4a -map 0:v:0 -map 1:a:0 -c copy -movflags +faststart $O/$v.mp4 || { echo "REPOST $v: mux failed"; continue; }
   RA=(); [ -n "$RT" ] && RA=(--route $RT --route-wh $(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 $($PY -c "import json; print(json.load(open('$J/../../json/$ID.json'))['input'])" 2>/dev/null || echo x)))
-  bash scripts/r16q/eval_final.sh $O/$v.mp4 $AD/dubbed_16k.wav $JW/eval_repost_$v "${RA[@]}" --noise 0 --label repost_$v 2>&1 | grep -E "^EVAL" | cut -c1-220 | sed "s/^/REPOST $v /"
+  bash scripts/r16q/eval_final.sh $O/$v.mp4 $AD/dubbed_16k.wav $JW/eval_repost_$v "${RA[@]}" --noise 0 --device ${R16D_EVAL_DEVICE:-cuda} --label repost_$v 2>&1 | grep -E "^EVAL" | cut -c1-220 | sed "s/^/REPOST $v /"
   cp $JW/eval_repost_$v/eval.json $O/$v.eval.json 2>/dev/null; echo "REPOST_DONE $v env [$ENVS] $(( $(date +%s) - s )) s" | tee -a $O/run.log
 done
