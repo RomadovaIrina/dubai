@@ -13,7 +13,8 @@ ap.add_argument("--hold", type=float, default=0.0); ap.add_argument("--ramp", ty
 ap.add_argument("--thr", type=float, default=0.03); ap.add_argument("--end-thr", type=float, default=0.25, dest="end_thr"); a = ap.parse_args()
 w = wave.open(a.dub); sr = w.getframerate(); x = np.frombuffer(w.readframes(w.getnframes()), np.int16).astype(np.float32); hop = sr // 50
 nf = len(x) // hop; e = np.sqrt((x[:nf * hop].reshape(nf, hop) ** 2).mean(1)) if nf else np.zeros(0); on = e > a.thr * max(float(np.percentile(e, 99)) if nf else 1.0, 1.0)
-strong = e > a.end_thr * max(float(np.percentile(e, 99)) if nf else 1.0, 1.0)   # the end = the last STRONG speech (-12 dB rel p99): the weak phrase tail (m03 37.9-38.3 s) already shows a frozen generated mouth while the source talks
+es = np.convolve(e, np.ones(5) / 5, mode="same") if nf else e   # 100 ms mean: a 20 ms burst in the weak tail (m03 38.2 s) is not strong speech
+strong = es > a.end_thr * max(float(np.percentile(e, 99)) if nf else 1.0, 1.0)   # the end = the last STRONG speech (-12 dB rel p99): the weak phrase tail (m03 37.9-38.3 s) already shows a frozen generated mouth while the source talks
 last = (np.flatnonzero(strong)[-1] + 1) / 50 if strong.any() else ((np.flatnonzero(on)[-1] + 1) / 50 if on.any() else 0.0)
 pr = subprocess.run(["ffprobe", "-v", "error", "-count_packets", "-select_streams", "v:0", "-show_entries", "stream=width,height,nb_read_packets", "-of", "csv=p=0", a.paste], capture_output=True, text=True).stdout.strip().split(",")
 W, H, N = int(pr[0]), int(pr[1]), int(pr[2]); dur = N / 25; t0 = last + a.hold
