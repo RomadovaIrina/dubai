@@ -11,6 +11,7 @@ for v in "$@"; do ID=r16d_$v; J=$JW/jobs/$ID; W=$J/e2e/work; KW=$W/ks; ST=$J/sta
   AD=/workspace/dub/artifacts/r4a/r9_$ID/$ID   # = e2e AD exactly (the r9_<id>src stage folders hold earlier dubs / mixes)
   [ -n "$AD" ] && [ -f $AD/final_mix_aac.m4a ] || AD=$($PY -c "import json; print((json.load(open('$ST'))['params'].get('debug_env') or {}).get('DUB_AUDIO_FROM', ''))")
   RT=""; [ -f $W/route/route.json ] && RT=$W/route/route.json
+  for K in $KW/kit $W/shots/s*/ks/kit; do [ -d $K ] && cp scripts/keysync/*.py scripts/keysync/r15/*.py scripts/keysync/r16/*.py $K/ 2>/dev/null; done   # the kit dates from the job's prep: refresh it to this checkout (new ks_plain options)
   NSEG=$($PY -c "import json; print(len(json.load(open('$KW/shots.json'))['segments']))"); NEW=$W/ks_face_repost.mp4; rm -f $NEW
   if [ "$NSEG" -gt 1 ]; then env $ENVS KS_ROOT=${KS_ROOT:-/workspace/dub/keysync} KS_SHOTS_REPOST=1 bash scripts/keysync/r16/ks_shots.sh $ID $AD $W $NEW "$RT" $KW > $W/repost_face.log 2>&1
   else env $ENVS KS_ROOT=${KS_ROOT:-/workspace/dub/keysync} KS_PHASE=post bash scripts/keysync/r16/ks_face.sh $ID x $AD $W $NEW $RT > $W/repost_face.log 2>&1; fi
