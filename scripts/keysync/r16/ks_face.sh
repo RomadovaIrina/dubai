@@ -204,7 +204,8 @@ for f in $TAGS; do
     CJ=""; [ -s $KW/data/chunks_$f/chunks.json ] && CJ="--chunks $KW/data/chunks_$f/chunks.json"
     $PY $KT/ks_seam.py --layer $L --src $KW/data/pad_$f.mp4 --out $P/seam.mp4 $CJ > $P/seam.log 2>&1 && L=$P/seam.mp4 || { tail -3 $P/seam.log; exit 1; }; tail -1 $P/seam.log | cut -c1-200; fi
   if [ "${KS_PAUSE:-off}" = warp ] || [ -n "${KS_CAP:-}" ]; then   # + r16d KS_CAP=<k>[:q]: cap the generated lip gap at k x the source speaker's q-gap   # K2 pause (b), default OFF until Irina picks it: the lips closed in the dub's pauses (the layer is on the dub timeline: shift 0)
-    $MPY $KT/k2_pause.py --mode warp --ks $L --ks-lm $P/raw_lm.npz --wav $KW/dub_$f.wav --shift 0 --pause $([ "${KS_PAUSE:-off}" = warp ] && echo 1 || echo 0) --cap $(echo ${KS_CAP:-0} | cut -d: -f1) $([ "${KS_CAP#*:}" != "$KS_CAP" ] && echo "--cap-q ${KS_CAP#*:}") --cap-src-lm $KW/crop_lm_$f.npz --out $P/pause.mp4 > $P/pause.log 2>&1 && L=$P/pause.mp4 || { tail -3 $P/pause.log; exit 1; }; fi
+    PW=$KW/data/dubp_$f.wav; [ -s $PW ] || PW=$KW/dub_$f.wav   # r16d T: the dub the layer was generated on (probe-delayed): m03 +40 ms broke sync with the undelayed one
+    $MPY $KT/k2_pause.py --mode warp --ks $L --ks-lm $P/raw_lm.npz --wav $PW --shift 0 --pause $([ "${KS_PAUSE:-off}" = warp ] && echo 1 || echo 0) --cap $(echo ${KS_CAP:-0} | cut -d: -f1) $([ "${KS_CAP#*:}" != "$KS_CAP" ] && echo "--cap-q ${KS_CAP#*:}") --cap-src-lm $KW/crop_lm_$f.npz --out $P/pause.mp4 > $P/pause.log 2>&1 && L=$P/pause.mp4 || { tail -3 $P/pause.log; exit 1; }; fi
   t paste_$f; n=$((n + 1)); NXT=$KW/paste_$n.mp4
   OTH=""; [ -s $KW/others_$f.npz ] && OTH="--others $KW/others_$f.npz --others-grow ${KS_OTHERS_GROW:-1.3}"
   MK=""   # r16c K1 rule 5 (opt-in until Irina's eye): KS_MASK=tight = the tight mask (chin kept) + face parsing (hair / hands / clothes -> source) + shadow-safe colour
