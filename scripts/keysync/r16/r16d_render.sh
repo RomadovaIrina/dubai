@@ -27,7 +27,7 @@ PY
   OUT=$(python3 -c "import json; print(json.load(open('$ST')).get('output') or '')" 2>/dev/null)
   echo "R16D_JOB $v $(python3 -c "import json; d=json.load(open('$ST')); print(d['status'], sorted({w['code'] for w in d.get('warnings', [])}), d.get('error'))" 2>&1) $(( $(date +%s) - s )) s" | tee -a $O/run.log
   [ -s "$OUT" ] || continue; ffmpeg -v error -y -i "$OUT" -map 0 -c copy -movflags +faststart $O/$v.mp4
-  DUB=$(find /workspace/dub/artifacts -path "*r16d_$v*" -name dubbed_16k.wav 2>/dev/null | head -1)
+  DUB=/workspace/dub/artifacts/r4a/r9_r16d_$v/r16d_$v/dubbed_16k.wav; [ -s $DUB ] || DUB=""   # = e2e AD ($A/r9_$ID/$ID): NOT a find (the r9_<id>src stage folders hold earlier dubs: m03 scored 3.4 instead of 7.7)
   [ -n "$DUB" ] || DUB=$(python3 -c "import json; print((json.load(open('$J')).get('debug_env') or {}).get('DUB_AUDIO_FROM', ''))")/dubbed_16k.wav
   RT=$(ls $W/jobs/r16d_$v/e2e/work/route/route.json 2>/dev/null | head -1); RA=(); [ -n "$RT" ] && RA=(--route $RT --route-wh $(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 $(python3 -c "import json; print(json.load(open('$J'))['input'])")))
   [ -s "$DUB" ] && bash scripts/r16q/eval_final.sh $O/$v.mp4 $DUB $W/eval_$v "${RA[@]}" --noise 0 --label r16d_$v 2>&1 | grep -E "^EVAL" | cut -c1-260 | tee -a $O/run.log && cp $W/eval_$v/eval.json $O/$v.eval.json

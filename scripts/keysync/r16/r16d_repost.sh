@@ -8,7 +8,7 @@ R=$(cd "$(dirname "$0")/../../.." && pwd); cd $R; . scripts/env.sh > /dev/null 2
 ENVS=${R16D_ENV:?set R16D_ENV}; PY=/venv/dabai/bin/python
 for v in "$@"; do ID=r16d_$v; J=$JW/jobs/$ID; W=$J/e2e/work; KW=$W/ks; ST=$J/status.json; s=$(date +%s)
   [ -f $KW/shots.json ] || { echo "REPOST $v: no job work dir ($KW)"; continue; }
-  AD=$(find /workspace/dub/artifacts -maxdepth 4 -type d -name "$ID" 2>/dev/null | head -1)
+  AD=/workspace/dub/artifacts/r4a/r9_$ID/$ID   # = e2e AD exactly (the r9_<id>src stage folders hold earlier dubs / mixes)
   [ -n "$AD" ] && [ -f $AD/final_mix_aac.m4a ] || AD=$($PY -c "import json; print((json.load(open('$ST'))['params'].get('debug_env') or {}).get('DUB_AUDIO_FROM', ''))")
   RT=""; [ -f $W/route/route.json ] && RT=$W/route/route.json
   NSEG=$($PY -c "import json; print(len(json.load(open('$KW/shots.json'))['segments']))"); NEW=$W/ks_face_repost.mp4; rm -f $NEW
