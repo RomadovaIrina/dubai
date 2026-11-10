@@ -20,6 +20,7 @@ Detectors (all on the 512 crop unless noted; the mouth is excluded where the dub
 from __future__ import annotations
 import argparse, json, pathlib, subprocess, sys, time
 import numpy as np, cv2
+cv2.setNumThreads(4)
 
 FPS = 25.0
 OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109]
@@ -61,7 +62,7 @@ def probe(v):
 
 
 def reader(v, W, H, t0, t1):
-    cmd = ["ffmpeg", "-v", "error"] + (["-ss", str(t0)] if t0 > 0 else []) + ["-i", v] + (["-t", str(t1 - t0)] if t1 < 1e8 else []) + \
+    cmd = ["ffmpeg", "-v", "error", "-threads", "2"] + (["-ss", str(t0)] if t0 > 0 else []) + ["-i", v] + (["-t", str(t1 - t0)] if t1 < 1e8 else []) + \
           ["-vf", f"fps={FPS},scale={W}:{H}:flags=bicubic", "-pix_fmt", "bgr24", "-f", "rawvideo", "-"]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=W * H * 3 * 2); n = W * H * 3
     while True:

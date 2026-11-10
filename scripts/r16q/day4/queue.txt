@@ -1,0 +1,18 @@
+P0_oval|m03|KS_MASK=oval KS_OCCL=off KS_TAIL_SRC=off KS_PAUSE=off|
+P6_pause|old03|KS_MASK=tight KS_CM_SHADOW= KS_OCCL=on KS_TAIL_SRC=off KS_CAP=1.0 KS_PAUSE=warp|
+P5_cap|old03|KS_MASK=tight KS_CM_SHADOW= KS_OCCL=on KS_TAIL_SRC=off KS_PAUSE=off KS_CAP=1.0|
+P4_occl|m03|KS_MASK=tight KS_CM_SHADOW= KS_OCCL=on KS_TAIL_SRC=off KS_PAUSE=off|
+P0_oval|q01|KS_MASK=oval KS_OCCL=off KS_TAIL_SRC=off KS_PAUSE=off|
+P2_parse|old03|KS_MASK=tight KS_CM_SHADOW= KS_OCCL=off KS_TAIL_SRC=off KS_PAUSE=off|
+P4_occl|old03|KS_MASK=tight KS_CM_SHADOW= KS_OCCL=on KS_TAIL_SRC=off KS_PAUSE=off|
+P6_pause|m03|KS_MASK=tight KS_CM_SHADOW= KS_OCCL=on KS_TAIL_SRC=off KS_CAP=1.0 KS_PAUSE=warp|
+P5_cap|m03|KS_MASK=tight KS_CM_SHADOW= KS_OCCL=on KS_TAIL_SRC=off KS_PAUSE=off KS_CAP=1.0|
+P1_tight|q01|KS_MASK=oval KS_OCCL=off KS_TAIL_SRC=off KS_PAUSE=off|--mask tight --mask-chin 1 --mask-tsmooth 2 --neck-follow 0.15 --mask-chin-down 0.06
+P4_occl|q01|KS_MASK=tight KS_CM_SHADOW= KS_OCCL=on KS_TAIL_SRC=off KS_PAUSE=off|
+P4_occl|m18|KS_MASK=tight KS_CM_SHADOW= KS_OCCL=on KS_TAIL_SRC=off KS_PAUSE=off|
+P5_cap|q01|KS_MASK=tight KS_CM_SHADOW= KS_OCCL=on KS_TAIL_SRC=off KS_PAUSE=off KS_CAP=1.0|
+P6_pause|q01|KS_MASK=tight KS_CM_SHADOW= KS_OCCL=on KS_TAIL_SRC=off KS_CAP=1.0 KS_PAUSE=warp|
+P5_cap|m18|KS_MASK=tight KS_CM_SHADOW= KS_OCCL=on KS_TAIL_SRC=off KS_PAUSE=off KS_CAP=1.0|
+P6_pause|m18|KS_MASK=tight KS_CM_SHADOW= KS_OCCL=on KS_TAIL_SRC=off KS_CAP=1.0 KS_PAUSE=warp|
+P3_cmshadow|old03|KS_MASK=tight KS_OCCL=off KS_TAIL_SRC=off KS_PAUSE=off|
+P3_cmshadow|m03|KS_MASK=tight KS_OCCL=off KS_TAIL_SRC=off KS_PAUSE=off|

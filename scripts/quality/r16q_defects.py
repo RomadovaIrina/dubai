@@ -25,6 +25,34 @@ JAW = [58, 172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365, 397, 288]
 THR = dict(soft=0.70, lip_thin=0.65, lip_fat=1.5, seam_band=0.08, paint=10.0, paint_rel=4.0, out_ratio_p95=1.2, tail_local=1.5, out_px=6.0, out_share=0.10, occl_rel=0.20, tail=1.5, outside=1.6, outside_abs=1.2, chroma=4.0, chroma_share=0.25, occl=0.25, yaw=0.45)
 
 
+SIDE_L = [127, 234, 93, 132, 58, 172]; SIDE_R = [356, 454, 323, 361, 288, 397]   # oval contour, ear -> jaw corner (image-left / image-right)
+CHIN = [136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365]   # lower jaw / chin, where the ghost second chin shows (Irina 10.11)
+GD = np.linspace(-0.15, 0.6, 76)   # offsets along the outward jaw normal, in IOD
+
+
+def ghost_profile(Lc, P, iod):
+    """Mean L* profile across the chin contour along the outward normal -> (primary edge A, secondary parallel edge B, offset of B).
+    A semi-transparent duplicate chin = a second same-sign edge 0.10-0.50 IOD outside the jaw line."""
+    Q = P[CHIN].astype(np.float64); seg = np.linalg.norm(np.diff(Q, axis=0), axis=1); s = np.r_[0, np.cumsum(seg)]
+    if s[-1] < 5: return np.nan, np.nan, np.nan
+    u = np.linspace(0.08 * s[-1], 0.92 * s[-1], 24)
+    pts = np.stack([np.interp(u, s, Q[:, 0]), np.interp(u, s, Q[:, 1])], 1)
+    ep = 0.04 * s[-1]; at = lambda v: np.stack([np.interp(v, s, Q[:, 0]), np.interp(v, s, Q[:, 1])], 1)
+    tg = at(np.minimum(u + ep, s[-1])) - at(np.maximum(u - ep, 0))
+    nrm = np.stack([-tg[:, 1], tg[:, 0]], 1); nrm /= np.maximum(np.linalg.norm(nrm, axis=1, keepdims=True), 1e-6)
+    c = P[[1, 168]].mean(0); flip = ((pts - c) * nrm).sum(1) < 0; nrm[flip] *= -1   # outward (away from the nose)
+    xy = pts[:, None, :] + nrm[:, None, :] * (GD[None, :, None] * iod)
+    prof = cv2.remap(Lc, xy[..., 0].astype(np.float32), xy[..., 1].astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE).mean(0)
+    g = np.gradient(cv2.GaussianBlur(prof.reshape(1, -1).astype(np.float32), (1, 5), 1.0).ravel()) / (GD[1] - GD[0])
+    near = np.abs(GD) <= 0.08; far = (GD >= 0.10) & (GD <= 0.50)
+    k0 = int(np.argmax(np.abs(np.where(near, g, 0)))); sg = np.sign(g[k0]) or 1.0; A = abs(g[k0])
+    gf = np.where(far, sg * g, -np.inf)
+    # a real second peak: local max, above its neighbours' valley toward the jaw
+    k1 = int(np.argmax(gf)); B = max(0.0, float(gf[k1]))
+    valley = float(np.min(sg * g[k0:k1 + 1])) if k1 > k0 else 0.0
+    return float(A), float(max(0.0, B - max(valley, 0.0))), float(GD[k1])
+
+
 def lab(img): return cv2.cvtColor(img, cv2.COLOR_BGR2LAB).astype(np.float32) * np.array([100 / 255, 1, 1], np.float32) - np.array([0, 128, 128], np.float32)
 
 
@@ -49,7 +77,7 @@ def main():
         M = np.array([[s_, 0, -x0 * s_], [0, s_, -y0 * s_]], np.float32)
         return cv2.warpAffine(f, M, (D.CROP, D.CROP), flags=cv2.INTER_AREA if s_ < 1 else cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
 
-    S = {k: np.full(N, np.nan) for k in ["res_out", "res_low", "sharp", "jaw_dev", "lm_dev", "wob_l", "wob_r", "wob_n", "wob_in", "out_l", "out_r", "out_n", "out_up", "seam_in", "seam_out", "seam_up", "seam_src", "seam_fin", "mouth_sharp", "lip_thick", "mouth_open_o", "mouth_open_s", "blue", "blue_share", "dark_n", "occl", "yaw", "edge_box"]}
+    S = {k: np.full(N, np.nan) for k in ["res_out", "res_low", "sharp", "jaw_dev", "lm_dev", "wob_l", "wob_r", "wob_n", "wob_in", "out_l", "out_r", "out_n", "out_up", "seam_in", "seam_out", "seam_up", "seam_src", "seam_fin", "mouth_sharp", "lip_thick", "mouth_open_o", "mouth_open_s", "blue", "blue_share", "dark_n", "occl", "yaw", "edge_box", "gh_Ao", "gh_Bo", "gh_do", "gh_As", "gh_Bs", "gh_ds", "side_l", "side_r", "sres_l", "sres_r", "sres_j", "sdl_l", "sdl_r", "sdl_j"]}
     prevR = None; prevLS = None; prevLO = None
     if a.from_series:
         zz = np.load(a.from_series); S.update({k: zz[k] for k in zz.files})
@@ -63,6 +91,8 @@ def main():
         mouthX = D.hull_mask(sh, pS[D.LIPS], dil=0.3 * iod)
         if np.isfinite(pO).all(): mouthX |= D.hull_mask(sh, pO[D.LIPS], dil=0.3 * iod)
         low = D.poly_mask(sh, pS[D.LOW]); face = D.hull_mask(sh, pS[D.OVAL])
+        S["gh_As"][k], S["gh_Bs"][k], S["gh_ds"][k] = ghost_profile(LS[..., 0], pS, iod)
+        if np.isfinite(pO).all(): S["gh_Ao"][k], S["gh_Bo"][k], S["gh_do"][k] = ghost_profile(LO[..., 0], pO, iod)
         R = LO - LS   # residual (Lab)
         m = (low & (1 - mouthX)) > 0
         if m.sum() > 200: S["res_out"][k] = float(np.abs(R[m]).sum(1).mean())
@@ -98,9 +128,16 @@ def main():
         # jaw seam band: +-SEAM_W x face height around the jaw / chin contour (source landmarks), split inside / outside the face
         band = np.zeros(sh, np.uint8); cv2.polylines(band, [np.round(pS[JAW]).astype(np.int32)], False, 1, thickness=max(2, int(2 * THR["seam_band"] * iod)))
         band = band > 0; fin = face > 0
+        # side edge bands (Irina 10.11: trash along the cheek edge at the hair, m03; dark smudge at the jaw / hood, long5): the oval contour
+        # from the ear down to the jaw corner, image-left (SIDE_L) / image-right (SIDE_R = the speaker's LEFT cheek), +-seam_band IOD
+        sb = {}
+        for nm_, ix in (("l", SIDE_L), ("r", SIDE_R)):
+            q_ = np.zeros(sh, np.uint8); cv2.polylines(q_, [np.round(pS[ix]).astype(np.int32)], False, 1, thickness=max(2, int(2 * THR["seam_band"] * iod))); sb[nm_] = q_ > 0
+        for nm_, mk in (("l", sb["l"]), ("r", sb["r"]), ("j", band)):
+            if mk.sum() > 100: S["sres_" + nm_][k] = float(np.abs(R[mk]).sum(1).mean()); S["sdl_" + nm_][k] = float(R[..., 0][mk].mean())
         if prevR is not None:
             dR = np.abs(R[..., 0] - prevR[..., 0])
-            for nm, mk in {"seam_in": band & fin, "seam_out": band & ~fin, "seam_up": up}.items():
+            for nm, mk in {"seam_in": band & fin, "seam_out": band & ~fin, "seam_up": up, "side_l": sb["l"], "side_r": sb["r"]}.items():
                 if mk.sum() > 100: S[nm][k] = float(dR[mk].mean())
             if prevLS is not None and band.sum() > 100:
                 S["seam_src"][k] = float(np.abs(LS[..., 0] - prevLS[..., 0])[band].mean()); S["seam_fin"][k] = float(np.abs(LO[..., 0] - prevLO[..., 0])[band].mean())
@@ -202,6 +239,23 @@ def main():
     pt = jr > max(THR["paint"], THR["paint_rel"] * jm)
     res["occlude"] = {"occl_runs": D.runs(oc, S["occl"], 6)[:30], "turn_runs": D.runs(yw, np.abs(S["yaw"]), 12)[:30], "paint_runs": D.runs(pt, jr, 6)[:30],
                       "occl_share": round(float(np.nanmean(oc)), 3), "turn_share": round(float(np.nanmean(yw)), 3)}
+    # ghost second chin: secondary parallel edge / primary jaw edge, final (around ours' jaw) minus source (around the source's jaw)
+    ro = S["gh_Bo"] / np.fmax(S["gh_Ao"], 1.0); rs = S["gh_Bs"] / np.fmax(S["gh_As"], 1.0); gx = ro - rs
+    gm = rmed(gx, 6)
+    res["ghost"] = {"final_median": round(float(np.nanmedian(ro)), 3) if np.isfinite(ro).any() else None, "src_median": round(float(np.nanmedian(rs)), 3) if np.isfinite(rs).any() else None,
+                    "excess_median": round(float(np.nanmedian(gx)), 3) if np.isfinite(gx).any() else None,
+                    "excess_p95": round(float(np.nanpercentile(gx, 95)), 3) if np.isfinite(gx).any() else None,
+                    "runs": D.runs(gm > THR.get("ghost", 0.25), gm, 8)[:40]}
+    # edge bands: temporal excess (frame-to-frame residual change minus the forehead floor) + static residual (mean |dLab|, signed dL) per band
+    fl_ = np.where(np.isfinite(S["seam_up"]), S["seam_up"], 0); ed = {}
+    def st_(x): return [round(float(np.nanmedian(x)), 3), round(float(np.nanpercentile(x, 95)), 3)] if np.isfinite(x).any() else [None, None]
+    for nm_, tk in (("left", "side_l"), ("right", "side_r")):
+        x = S[tk] - fl_; ps_ = np.array([np.nanmean(x[i:i + 25]) if np.isfinite(x[i:i + 25]).any() else np.nan for i in range(0, n, 25)])
+        od = [int(i) for i in np.argsort(-np.nan_to_num(ps_, nan=-9))[:5] if np.isfinite(ps_[i])]
+        ed[nm_] = {"excess": st_(x), "worst_s": [[i, round(float(ps_[i]), 2)] for i in od], "per_s": [None if not np.isfinite(v) else round(float(v), 3) for v in ps_]}
+    for nm_, tk in (("left", "l"), ("right", "r"), ("jaw", "j")):
+        ed.setdefault(nm_, {}).update({"static_abs": st_(S["sres_" + tk]), "static_dL": st_(S["sdl_" + tk]), "dark_share": round(float(np.nanmean(S["sdl_" + tk] < -4.0)), 3) if np.isfinite(S["sdl_" + tk]).any() else None})
+    res["edge"] = ed
     json.dump(res, open(a.out, "w"), indent=1)
     if not a.from_series: np.savez_compressed(pathlib.Path(a.out).with_suffix(".series.npz"), **S)
     print("DEFECTS " + json.dumps({"label": a.label, "tail": {k: res["tail"][k] for k in ("score", "at_s", "flag")},
