@@ -1184,7 +1184,11 @@ def main() -> int:
                 dub_vad = run_vad(pathlib.Path(man["dubbed_track"]["wav16k"]))
                 mix = mix_background(sep, pathlib.Path(man["dubbed_track"]["wav24k"]), [(v["start"], v["end"]) for v in speech], [(v["start"], v["end"]) for v in dub_vad],
                                      duration, work, bg_offset_db=a.bg_offset_db, duck_db=a.bg_duck_db, src_duck_db=a.bg_src_duck_db,
-                                     residue_duck_db=a.bg_residue_duck_db, attack_s=a.bg_duck_attack_s, release_s=a.bg_duck_release_s)
+                                     residue_duck_db=a.bg_residue_duck_db, attack_s=a.bg_duck_attack_s, release_s=a.bg_duck_release_s,
+                                     margin_db=(float(os.environ["DUB_BED_MARGIN_DB"]) if os.environ.get("DUB_BED_MARGIN_DB") else None))   # r16d T: opt-in
+            json.dump({"sep": sep, "dubbed24k": man["dubbed_track"]["wav24k"], "speech": [(v["start"], v["end"]) for v in speech], "dub_vad": [(v["start"], v["end"]) for v in dub_vad],
+                       "duration": duration, "kw": {"bg_offset_db": a.bg_offset_db, "duck_db": a.bg_duck_db, "src_duck_db": a.bg_src_duck_db, "residue_duck_db": a.bg_residue_duck_db,
+                       "attack_s": a.bg_duck_attack_s, "release_s": a.bg_duck_release_s}}, open(work / "mix_inputs.json", "w"))   # r16d T: the bed A/B (bed_margin_ab.py) rebuilds the mix from these
             man["background"] = {"enabled": True, "separation": sep, "mix": mix}; mux_aac = pathlib.Path(mix["aac"])
             print(f"  [background] bed gain {mix['bg_gain_db']:+.1f} dB, duck {mix['duck_db']} dB, separation {sep['separate_s']}s (+load {sep['load_s']}s), bed in dub pauses {mix['bed_db_in_dub_pauses']} dBFS", flush=True)
         print(f"  [align] ratios tts/slot: " + " ".join(f"{u['alignment']['ratio_tts_to_slot']:.2f}" for u in units), flush=True)

@@ -272,6 +272,45 @@ def room_tone(bed: np.ndarray, source_speech: list, sr: int, n_out: int, frame_s
     return out[:n_out], floor
 
 
+FR_S = 0.05   # r16d T: 50 ms frames for the voice-over-bed margin
+
+
+def _frames(y: np.ndarray, h: int) -> np.ndarray:
+    return _frame_rms(y, h)
+
+
+def voice_over_bed(dub: np.ndarray, bed_mono: np.ndarray, speech: np.ndarray, sr: int = None) -> dict:
+    """Per second of dub speech: voice dB - bed dB (RMS of 50 ms frames where the dub speaks inside that second). The quiet-voice risk
+    = seconds whose margin < 6 dB (bed level with / above the voice)."""
+    sr = sr or SEP_SR; h = int(FR_S * sr); v = 20 * np.log10(_frames(dub, h) + 1e-9); b = 20 * np.log10(_frames(bed_mono, h) + 1e-9)
+    nf = len(v); sp = speech[: nf * h].reshape(nf, h).mean(1) > 0.5; per = int(round(1 / FR_S)); rows = []
+    for k in range(0, nf, per):
+        m = sp[k:k + per]
+        if m.sum() >= 4:   # >= 0.2 s of speech in the second
+            rows.append([round(k * FR_S, 1), round(float(np.mean(v[k:k + per][m]) - np.mean(b[k:k + per][m])), 1)])
+    mg = np.array([r[1] for r in rows]) if rows else np.zeros(0)
+    return {"seconds": len(rows), "p5_db": round(float(np.percentile(mg, 5)), 1) if len(mg) else None, "median_db": round(float(np.median(mg)), 1) if len(mg) else None,
+            "lt6_s": int((mg < 6).sum()), "lt3_s": int((mg < 3).sum()), "worst": sorted(rows, key=lambda r: r[1])[:8]}
+
+
+def _margin_duck(dub: np.ndarray, bg: np.ndarray, g: np.ndarray, speech: np.ndarray, margin_db: float, max_db: float):
+    """Extra bed attenuation (dB <= 0, >= max_db) wherever the dub speaks and the (already gained / ducked) bed is less than margin_db below
+    the voice, on 50 ms frames: the shortfall, held over +-0.15 s (a syllable), smoothed with 0.08 s attack / 0.4 s release, linear in samples.
+    Elsewhere the gain is untouched (the accepted mix)."""
+    sr = SEP_SR; h = int(FR_S * sr); n = len(g); nf = n // h
+    v = 20 * np.log10(_frames(dub, h) + 1e-9); b = 20 * np.log10(_frames(bg.mean(1) * g, h) + 1e-9)
+    sp = speech[: nf * h].reshape(nf, h).mean(1) > 0.5; voiced = sp & (v > -50)
+    need = np.where(voiced, np.clip((v - margin_db) - b, max_db, 0.0), 0.0)
+    w = int(round(0.15 / FR_S)); need = np.array([need[max(0, i - w):i + w + 1].min() for i in range(nf)])   # hold over a syllable
+    sm = np.zeros(nf); a_up, a_dn = np.exp(-FR_S / 0.08), np.exp(-FR_S / 0.4); y = 0.0
+    for i in range(nf):   # attack fast towards more attenuation, release slowly
+        y = (a_up * y + (1 - a_up) * need[i]) if need[i] < y else (a_dn * y + (1 - a_dn) * need[i]); sm[i] = y
+    ext = np.interp(np.arange(n), (np.arange(nf) + 0.5) * h, sm).astype(np.float32)
+    act = sm < -0.5
+    return g * (10 ** (ext / 20)), {"enabled": True, "margin_db": margin_db, "max_db": max_db, "seconds_active": round(float(act.sum() * FR_S), 2),
+                                    "mean_extra_db_when_active": round(float(sm[act].mean()), 2) if act.any() else 0.0, "min_extra_db": round(float(sm.min()), 2) if nf else 0.0}
+
+
 def bed_speech_runs(bg: np.ndarray, sr: int, thr: float = 0.5, min_s: float = 0.06, pad_s: float = 0.05) -> list:
     """Where the separated bed itself sounds like speech (Silero on the bed stem, 32 ms frames): the separator left part of the original voice in
     the accompaniment (r2 2026-10-17, Spleeter: 02 39.0-39.4 s a vocal sound p 0.99, 03 59.3 s a consonant onset). Returns padded (start, end) s."""
@@ -296,7 +335,7 @@ def bed_speech_runs(bg: np.ndarray, sr: int, thr: float = 0.5, min_s: float = 0.
 
 def mix_background(sep: dict, dubbed24k: pathlib.Path, source_speech: list, dub_speech: list, duration: float, work: pathlib.Path,
                    bg_offset_db: float = 0.0, duck_db: float = -6.0, max_bg_gain_db: float = 12.0, attack_s: float = 0.08, release_s: float = 0.35,
-                   room_fill: bool = True, src_duck_db: float = 0.0, residue_duck_db: float = 0.0) -> dict:
+                   room_fill: bool = True, src_duck_db: float = 0.0, residue_duck_db: float = 0.0, margin_db: float = None, margin_max_db: float = -12.0) -> dict:
     """final_mix_44k.wav (stereo) + final_mix_aac.m4a = dub voice (unchanged level, both channels) + background bed.
     Bed gain = (dub voice level in dub speech) - (original vocal level in source speech) + bg_offset_db, clamped to +-max_bg_gain_db, i.e. the
     original voice/background balance is reproduced; the bed is ducked by duck_db while the dub speaks (soft attack / release).
@@ -339,12 +378,16 @@ def mix_background(sep: dict, dubbed24k: pathlib.Path, source_speech: list, dub_
         d_ = np.diff(np.concatenate([[0], rm.astype(np.int8), [0]])); on_, off_ = np.flatnonzero(d_ == 1), np.flatnonzero(d_ == -1)
         residue = {"enabled": True, "duck_db": residue_duck_db, "runs": [[round(a_ / SEP_SR, 2), round(b_ / SEP_SR, 2)] for a_, b_ in zip(on_, off_)],
                    "seconds": round(float(rm.sum() / SEP_SR), 2)}
+    margin = {"enabled": margin_db is not None}
+    if margin_db is not None:   # r16d T (Irina 11.11 "местами не слышно говорящего"): the voice stays >= margin_db above the bed while the dub speaks
+        g, margin = _margin_duck(dub, bg, g, _mask(dub_speech, n, SEP_SR), margin_db, margin_max_db)
     bed = bg * g[:, None]; mix = bed + dub[:, None]
+    margin["voice_over_bed"] = voice_over_bed(dub, bed.mean(1), _mask(dub_speech, n, SEP_SR))   # measurement only (also with the option off)
     peak = float(np.abs(mix).max()) if n else 0.0; norm = 0.98 / peak if peak > 0.98 else 1.0; mix *= norm
     out = work / "final_mix_44k.wav"; sf.write(str(out), mix, SEP_SR, subtype="PCM_16")
     aac = work / "final_mix_aac.m4a"; ff(["-i", str(out), "-c:a", "aac", "-b:a", "192k", str(aac)])
     pause = ~_mask(dub_speech, n, SEP_SR)
-    return {"wav": str(out), "aac": str(aac), "room_fill": fill, "residue_duck": residue, "bg_gain_db": round(gain_db, 2), "duck_db": duck_db, "src_duck_db": src_duck_db, "attack_s": attack_s, "release_s": release_s, "bg_offset_db": bg_offset_db,
+    return {"wav": str(out), "aac": str(aac), "room_fill": fill, "residue_duck": residue, "margin_duck": margin, "bg_gain_db": round(gain_db, 2), "duck_db": duck_db, "src_duck_db": src_duck_db, "attack_s": attack_s, "release_s": release_s, "bg_offset_db": bg_offset_db,
             "dub_voice_db": round(voice_db, 2), "orig_vocals_db": round(orig_voice_db, 2), "peak_norm": round(norm, 4),
             "bed_db_in_dub_pauses": round(_db(bed.mean(1)[pause]), 2) if pause.any() else None,
             "mix_db_in_dub_pauses": round(_db(mix.mean(1)[pause]), 2) if pause.any() else None,
