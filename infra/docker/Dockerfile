@@ -39,6 +39,8 @@ RUN --mount=type=cache,target=/root/.cache/uv,sharing=locked UV_NO_CACHE=0 uv py
 WORKDIR /workspace/dub/dubai
 COPY infra/docker/install_env.sh infra/docker/requirements.*.lock.txt infra/docker/
 RUN --mount=type=cache,target=/root/.cache/uv,sharing=locked UV_NO_CACHE=0 bash infra/docker/install_env.sh venvs api
+# the scripts call bare python3 / python (ks_install.sh -> ks_refidx.py, ks_face.sh, e2e.sh): the CUDA base has none -> the pipeline venv first on PATH
+ENV PATH=/venv/dabai/bin:${PATH}
 ARG LATENTSYNC_COMMIT=a229c3948406bc2cf6eaf4873e662e70c6a04746
 RUN LATENTSYNC_COMMIT=${LATENTSYNC_COMMIT} bash infra/docker/install_env.sh latentsync
 ARG LLAMA_JOBS=16
@@ -64,7 +66,8 @@ RUN case "${DUB_PROFILE:-}" in clean|current) echo "profile ${DUB_PROFILE}";; \
       *) echo "build arg DUB_PROFILE=clean|current is REQUIRED (a product / licence decision, see scripts/job/INTERFACE.md section 8)" >&2; exit 1;; esac
 LABEL org.opencontainers.image.title="dabai-worker" org.opencontainers.image.revision="${GIT_SHA}" org.opencontainers.image.created="${BUILD_DATE}" \
       org.opencontainers.image.description="DabAI dubbing ML worker (one RTX 5090). Weights on a mounted volume; profile ${DUB_PROFILE}." \
-      ai.dabai.interface="dabai-job/2" ai.dabai.profile="${DUB_PROFILE}"
+      ai.dabai.interface="dabai-job/2" ai.dabai.profile="${DUB_PROFILE}" \
+      org.opencontainers.image.source="https://github.com/RomadovaIrina/dubai"
 ENV DEBIAN_FRONTEND=noninteractive
 # ffmpeg 6.1.1 (libass, libx264), fonts for the subtitles (DejaVu = the 4 styles; Noto / Noto CJK = glyph fallback for the other scripts),
 # GL / glib for OpenCV, libsndfile, OpenMP, tini as PID 1, procps (pkill / pgrep used by the stages)
@@ -102,7 +105,11 @@ ENV DUB_ROOT=/workspace/dub/dubai DUB_ENV=/venv/dabai VIRTUAL_ENV=/venv/dabai DU
 # management (paler frame, colr tag lost: C:\Users\irina\Videos\DabAI_AB\r16\АНАЛИЗ_0811_vs_1011.md 3.3-3.4), so they are OFF; cap / pause /
 # CMS stay off, the paste mask stays the oval. Change a default = edit this line and rebuild (or `-e KS_...` per container).
 # (KS_CAP must be EMPTY to be off: ks_face.sh runs the cap warp whenever it is non-empty, "0" included.)
-ENV KS_TAIL_SRC=off KS_OCCL=off KS_PAUSE=off KS_CAP="" KS_CMS=0 KS_MASK=oval
+# Rebuild with other defaults: --build-arg KS_TAIL_SRC=on ... (build.sh: FACE_ARGS="--build-arg K=V ..."). KS_CM_SHADOW="" = no cm-shadow even
+# when a container sets KS_MASK=tight.
+ARG KS_TAIL_SRC=off KS_OCCL=off KS_PAUSE=off KS_CAP="" KS_CMS=0 KS_MASK=oval KS_CM_SHADOW=""
+ENV KS_TAIL_SRC=${KS_TAIL_SRC} KS_OCCL=${KS_OCCL} KS_PAUSE=${KS_PAUSE} KS_CAP=${KS_CAP} KS_CMS=${KS_CMS} KS_MASK=${KS_MASK} KS_CM_SHADOW=${KS_CM_SHADOW} \
+    PATH=/venv/dabai/bin:${PATH}
 VOLUME ["/workspace/dub/dubai/models", "/data"]
 WORKDIR /workspace/dub/dubai
 EXPOSE 8000

@@ -17,7 +17,7 @@ PX=(); for v in HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy;
   [ -n "$val" ] && PX+=(--build-arg "$v=$(echo "$val" | sed -E 's#//(127\.0\.0\.1|localhost)([:/]|$)#//host.docker.internal\2#g')"); done
 DOCKER_BUILDKIT=1 docker build -f infra/docker/Dockerfile --platform ${PLATFORM:-linux/amd64} --build-arg DUB_PROFILE=$DUB_PROFILE \
   --build-arg GIT_SHA=$SHA --build-arg IMAGE_TAG=$IMAGE:$TAG --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) --build-arg LLAMA_JOBS=${LLAMA_JOBS:-16} \
-  "${PX[@]}" --progress=${PROGRESS:-plain} -t $IMAGE:$TAG .
+  "${PX[@]}" ${FACE_ARGS:-} --progress=${PROGRESS:-plain} -t $IMAGE:$TAG .   # FACE_ARGS = other KeySync image defaults, e.g. "--build-arg KS_TAIL_SRC=on"
 docker image inspect $IMAGE:$TAG --format 'built {{.RepoTags}} {{.Size}} bytes'
 NCV=""; [ $DUB_PROFILE = current ] && NCV=" -v dabai-nc:/opt/dabai-nc"
 cat <<EOF
