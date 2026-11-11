@@ -42,7 +42,7 @@ SCAN=$(docker run --rm --network none --entrypoint bash "$SRC" -c '
   cd /; X="-path /proc -prune -o -path /sys -prune -o -path /dev -prune -o"
   find / $X -type f \( -name "*.pt" -o -name "*.pth" -o -name "*.safetensors" -o -name "*.gguf" -o -name "*.onnx" -o -name "*.ckpt" -o -name "*.th" -o -name "*.tflite" -o -name "*.bin" -o -name "*.model" \) -size +1M -printf "WEIGHT %s %p\n" 2>/dev/null
   find / $X \( -name ".env" -o -name "*.env" -o -name ".netrc" -o -name ".git-credentials" -o -name "id_rsa*" -o -name "id_ed25519*" -o -name "token" -o -path "*/huggingface/token" \) -printf "SECRETFILE %p\n" 2>/dev/null
-  for d in /root/.cache/huggingface /root/.cache/torch /workspace/dub/dubai/models /data; do [ -n "$(ls -A $d 2>/dev/null)" ] && echo "NONEMPTY $d"; done
+  for d in /root/.cache/huggingface /root/.cache/torch /workspace/dub/dubai/models /data; do f=$(find $d -type f 2>/dev/null | head -1); [ -n "$f" ] && echo "NONEMPTY $d ($f)"; done   # files, not the empty mount-point dirs (/data/jobs)
   grep -rIlE "(hf_[A-Za-z0-9]{30,}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|sk-[A-Za-z0-9_-]{32,})" /workspace /root /etc /opt/keysync/code /opt/keysync/*.py 2>/dev/null | sed "s/^/TOKENPAT /"
   true')
 # the venvs ship a few small *.bin / *.model data files of libraries (tokenizer tables, ...): only > 1 MB are listed; weights are tens of MB+
