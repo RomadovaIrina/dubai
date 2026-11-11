@@ -261,6 +261,20 @@ Each comes with a ready user message in English and Russian. `flags[]` also list
 
 **Registry (Irina 11.11): public `ghcr.io/romadovairina/dubai`**, linked to the repo by the label `org.opencontainers.image.source=https://github.com/RomadovaIrina/dubai`. Public GHCR packages cost nothing. `infra/docker/push_ghcr.sh <local image:tag> [tags]` (on the GPU VM after the smoke, never through the laptop proxy) refuses to push unless: profile clean; every layer < 9 GB (GHCR limits: 10 GB per layer, 10 min per upload; the venvs are split into layers for that); no secret-looking string in `docker history` / the config; a file scan finds no weights, caches, `.env`, credentials or token patterns outside the libraries' site-packages. `DRY=1` = the checks only. The token (`GHCR_TOKEN`, `write:packages`) is read from the env and goes to `docker login --password-stdin`; it is never printed.
 
+**Resident worker (r17, `-e DABAI_RESIDENT=1`, API mode; default off).** The models load once per container and are parked off the GPU between stages (TZ 0.4: the ~30 GB audio peak and the ~28 GB KeySync peak never share the card):
+- KeySync: a daemon (`ks_fast.py --serve`).
+- Audio: the resident `audio_worker.py` with park / unpark.
+- Start / status: `scripts/job/resident.sh`.
+- Jobs posted before it is ready run cold (`/health` → `resident.state`: off | starting | ready).
+- A video longer than `E2E_LONG_AUDIO_S` (120 s) pauses it for that job (its own-process audio stage needs the whole card) → `status.resident_paused`.
+- Measured on a 5090, m03 20 s:
+  - ready 48–58 s after container start; GPU 0.6 GB while parked; KeySync unpark 5.7 s;
+  - the 2nd job 311 s vs 468 s cold, peak 28.5 GB;
+  - **bit-identical video and voice to the cold job**.
+- Caveat: the per-job NVML "weighted" figure does not see the resident processes. Use `gpu_busy_s` (device).
+
+**Synchronous route (Vast Serverless):** `POST /jobs/sync`. One request = one whole job, the final status in the response. Optional `output_put_url` / `output_put_subs_url` = presigned PUT URLs for the results (never logged). See `infra/vast_serverless/README.md`.
+
 **Run** (one container per GPU):
 ```bash
 docker run -d --gpus '"device=0"' --shm-size 16g -p 8000:8000 -e DABAI_API_TOKEN=<yours> \
