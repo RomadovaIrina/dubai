@@ -2,7 +2,7 @@
 """r9 E2E: manifest.json + timing.json of one scripts/r9/e2e.sh run (status, flags, outputs vs the source format, per-stage wall time,
 s/video-min, VRAM peak per stage, and the gate rows the stages already wrote: face score / frame gate, audio coverage / cuts / pacing / gaps / faith / WER)."""
 from __future__ import annotations
-import argparse, glob, json, pathlib, subprocess
+import argparse, glob, json, os, pathlib, shutil, subprocess
 
 
 def jl(p):
@@ -102,7 +102,7 @@ def main():
     spec = {"voice_policy": am.get("voice_policy"), "speakers": (am.get("diarization") or {}).get("speakers"),
             "faces": fs.get("faces"), "pose": fs.get("pose"), "video_status": vs or None}
     man = {"id": i_, "input": a.input, "status": status, "flags": flags, "spec": spec, "errors": [e for e in a.errors.split("\n") if e.strip()], "source": src, "precheck": pc, "outputs": outs, "timing": timing, "metrics": metrics,
-           "commit": subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()}
+           "commit": os.environ.get("DABAI_GIT_SHA") or (subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip() if shutil.which("git") else "unknown")}   # (the image has no git: its sha is baked in)
     (out / "timing.json").write_text(json.dumps(timing, indent=1)); (out / "manifest.json").write_text(json.dumps(man, indent=1, default=str))
     print(f"== {i_} {status} flags {flags}; total {timing['total_wall_s']} s = {timing['total_s_per_video_min']} s/video-min; VRAM peak {peak} MiB; "
           + "; ".join(f"{k} {v}" for k, v in (timing['s_per_video_min'] or {}).items()) + f"; GPU-busy {timing['gpu_busy_total_s_per_video_min']} s/video-min")

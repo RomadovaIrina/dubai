@@ -58,10 +58,15 @@ PY
 # KeySync's own runtime downloads (found by the r16 clean room, HF offline): HuBERT (audio features) + the SVD VAE (gated repo: the HF_TOKEN must
 # have accepted its terms) into HF_HOME = $M/hf, revisions pinned; face_alignment's S3FD + 2DFAN4 into KS_TORCH_HOME (sha256 pinned)
 $PY - <<'PY'
+import pathlib
 from huggingface_hub import snapshot_download
-snapshot_download("facebook/hubert-base-ls960", revision="dba3bb02fda4248b6e082697eee756de8fe8aa8a", allow_patterns=["config.json", "preprocessor_config.json", "pytorch_model.bin"])
-snapshot_download("stabilityai/stable-video-diffusion-img2vid", revision="9cf024d5bfa8f56622af86c884f26a52f6676f2e",
-                  allow_patterns=["vae/config.json", "vae/diffusion_pytorch_model.fp16.safetensors"]); print("keysync hub deps ok")
+for repo, rev, pats in (("facebook/hubert-base-ls960", "dba3bb02fda4248b6e082697eee756de8fe8aa8a", ["config.json", "preprocessor_config.json", "pytorch_model.bin"]),
+                        ("stabilityai/stable-video-diffusion-img2vid", "9cf024d5bfa8f56622af86c884f26a52f6676f2e", ["vae/config.json", "vae/diffusion_pytorch_model.fp16.safetensors"])):
+    snap = pathlib.Path(snapshot_download(repo, revision=rev, allow_patterns=pats))
+    # a pinned-revision download writes no refs/main, and KeySync loads these by NAME offline (HF_HUB_OFFLINE=1): from_pretrained("facebook/
+    # hubert-base-ls960") then fails "couldn't connect" (11.11 VM smoke: face_gen_failed). The ref makes the name resolve to the pinned snapshot.
+    ref = snap.parents[1] / "refs" / "main"; ref.parent.mkdir(parents=True, exist_ok=True); ref.write_text(rev)
+print("keysync hub deps ok")
 PY
 dl https://www.adrianbulat.com/downloads/python-fan/s3fd-619a316812.pth $K/torch/hub/checkpoints/s3fd-619a316812.pth
 dl https://www.adrianbulat.com/downloads/python-fan/2DFAN4-cd938726ad.zip $K/torch/hub/checkpoints/2DFAN4-cd938726ad.zip
