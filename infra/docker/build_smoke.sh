@@ -8,6 +8,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/../.."
 CLIP=$(readlink -f "${1:?usage: build_smoke.sh <smoke clip.mp4> [out dir]}"); OUT=$(mkdir -p "${2:-build_smoke_out}" && readlink -f "${2:-build_smoke_out}")
+[ -f "$CLIP" ] && [ -s "$CLIP" ] || { echo "smoke clip $CLIP is not a file (docker would mount a missing path as an empty dir)" >&2; exit 2; }
 VOL=${VOL:-dabai-models}; IMAGE=${IMAGE:-dabai-worker}; R=$OUT/report.json; LOG=$OUT/build_smoke.log; : > "$LOG"
 log(){ echo "[$(date +%T)] $*" | tee -a "$LOG"; }
 num(){ python3 - "$R" "$1" "$2" <<'PY'
