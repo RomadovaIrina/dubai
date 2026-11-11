@@ -391,7 +391,12 @@ def _run_job(job: dict, on_event=None, cancel: threading.Event | None = None) ->
         try: fcntl.flock(jl, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError: return finish(code="E_JOB_ID_BUSY", detail=p["job_id"])
         JL.append(jl)   # (released when run_job returns; Popen closes inherited fds, so e2e never holds it)
-        env = {**os.environ, **e2e_env(p)}; log = open(out / "job.log", "w")
+        env = {**os.environ, **e2e_env(p)}; log = open(out / "job.log", "w"); res_restart = False
+        if "R9_WORKER_SPOOL" in env and pr["duration_s"] > float(env.get("E2E_LONG_AUDIO_S", "120")):
+            # r17 (VM 11.11): a long video's audio stage runs as its own processes (~31 GB peak: e2e.sh LONG_S); the parked resident workers
+            # (~2-4 GB of CUDA contexts) made it OOM (Chatterbox "CUDA out of memory") -> they are stopped for this job, restarted after it
+            subprocess.run(["bash", str(ROOT / "scripts" / "job" / "resident.sh"), "stop"], cwd=ROOT, env=env, timeout=180, capture_output=True)
+            env.pop("R9_WORKER_SPOOL", None); env.pop("KS_SERVE_DIR", None); res_restart = True; st["resident_paused"] = True
         proc = subprocess.Popen(["bash", str(ROOT / "scripts" / "r9" / "e2e.sh"), src, str(e2e)], cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
         st["pipeline_pgid"] = proc.pid   # its own session / process group: a restarted service kills it (job_api._kill_orphan)
         to = float(p.get("timeout_s") or max(1800.0, 1200.0 * max(vmin, 0.5)))   # TZ 3.8; a hung stage must not hold the worker forever
@@ -415,6 +420,9 @@ def _run_job(job: dict, on_event=None, cancel: threading.Event | None = None) ->
                 break
             time.sleep(3)
         proc.wait(); log.close(); st["peak_rss_mb"] = round(rss_peak)
+        if res_restart:   # back in the background: the next jobs run cold until it is ready again (/health resident.state)
+            subprocess.Popen(["bash", str(ROOT / "scripts" / "job" / "resident.sh"), "start"], cwd=ROOT, start_new_session=True,
+                             stdout=open(pathlib.Path(os.environ.get("DABAI_RESIDENT_DIR", "/data/resident")) / "restart.log", "w"), stderr=subprocess.STDOUT)
         for n in stage_names(e2e)[n_seen:]:
             if n != "end": ev.emit("step", step=n, step_label=STEPS.get(n, (n,))[0], progress_pct=st["progress_pct"], eta_s=None)
         man = json.loads((e2e / "manifest.json").read_text()) if (e2e / "manifest.json").exists() else {}
