@@ -1,4 +1,5 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1.10
+# (1.10: COPY --exclude, used below to split the venvs into layers < 10 GB: GHCR refuses a layer over 10 GB and an upload over 10 min)
 # =====================================================================================================================================
 # DabAI ML worker (r15 T): the whole dubbing pipeline (scripts/r9/e2e.sh) + the job interface (scripts/job: CLI + FastAPI) for ONE
 # RTX 5090 (sm_120, 32 GB). Contract: scripts/job/INTERFACE.md. Build: infra/docker/build.sh (context = the repo root).
@@ -27,25 +28,29 @@ FROM nvidia/cuda:${CUDA_VERSION}-cudnn-devel-${UBUNTU} AS builder
 ARG PYTHON_VERSION
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive UV_PYTHON_INSTALL_DIR=/opt/uv/python UV_PYTHON_PREFERENCE=only-managed UV_NO_CACHE=1 UV_LINK_MODE=copy \
-    UV_HTTP_TIMEOUT=600 DUB_ROOT=/workspace/dub/dubai VENV_ROOT=/venv DABAI_PYTHON=${PYTHON_VERSION}
+    UV_HTTP_TIMEOUT=600 UV_HTTP_RETRIES=8 DUB_ROOT=/workspace/dub/dubai VENV_ROOT=/venv DABAI_PYTHON=${PYTHON_VERSION}
+# r16 TZ (11.11): the uv steps below use a BuildKit CACHE MOUNT (UV_NO_CACHE=0 there): a build that dies on a dropped connection (flaky proxies)
+# resumes with the wheels it already has. The cache is never part of an image layer (same image, faster / restartable builds).
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential cmake git ca-certificates curl pkg-config \
       ffmpeg libgl1 libglib2.0-0 libsndfile1 libgomp1 && rm -rf /var/lib/apt/lists/*
 COPY --from=uv /uv /usr/local/bin/uv
-RUN uv python install "${PYTHON_VERSION}"
+RUN --mount=type=cache,target=/root/.cache/uv,sharing=locked UV_NO_CACHE=0 uv python install "${PYTHON_VERSION}"
 WORKDIR /workspace/dub/dubai
 COPY infra/docker/install_env.sh infra/docker/requirements.*.lock.txt infra/docker/
-RUN bash infra/docker/install_env.sh venvs api
+RUN --mount=type=cache,target=/root/.cache/uv,sharing=locked UV_NO_CACHE=0 bash infra/docker/install_env.sh venvs api
 ARG LATENTSYNC_COMMIT=a229c3948406bc2cf6eaf4873e662e70c6a04746
 RUN LATENTSYNC_COMMIT=${LATENTSYNC_COMMIT} bash infra/docker/install_env.sh latentsync
 ARG LLAMA_JOBS=16
 # no driver at build time: libcuda comes from the toolkit's stubs for the link step only (the runtime gets the real one from the host)
-RUN LIBRARY_PATH=/usr/local/cuda/lib64/stubs JOBS=${LLAMA_JOBS} CUDACXX=/usr/local/cuda/bin/nvcc bash infra/docker/install_env.sh llama_cuda
+RUN --mount=type=cache,target=/root/.cache/uv,sharing=locked UV_NO_CACHE=0 \
+    LIBRARY_PATH=/usr/local/cuda/lib64/stubs JOBS=${LLAMA_JOBS} CUDACXX=/usr/local/cuda/bin/nvcc bash infra/docker/install_env.sh llama_cuda
 # r16 T: the KeySync-fast face (DUB_FACE=keysync, the r16 default): keysync 5e2503b + the sm120 r15 patch in its OWN venv (torch 2.7.1 cu128 +
 # TensorRT 10.16, ~6 GB) at /opt/keysync. Weights / the student / the TRT capture on the models volume (fetch-models 8/8); the TensorRT plans and
 # the inductor cache are built on the first job into the volume (KS_TRT_CACHE, TORCHINDUCTOR_CACHE_DIR: plans are tied to GPU + driver + TRT).
 COPY scripts/keysync scripts/keysync
-RUN KS_ROOT=/opt/keysync KS_NO_WEIGHTS=1 bash scripts/keysync/r16/ks_install.sh && rm -rf /opt/keysync/code/.git /opt/keysync/code/pretrained_models
+RUN --mount=type=cache,target=/root/.cache/uv,sharing=locked UV_NO_CACHE=0 \
+    KS_ROOT=/opt/keysync KS_NO_WEIGHTS=1 bash scripts/keysync/r16/ks_install.sh && rm -rf /opt/keysync/code/.git /opt/keysync/code/pretrained_models
 RUN find /venv /opt/keysync -depth -type d -name __pycache__ -exec rm -rf {} + ; rm -rf /root/.cache /tmp/*
 
 # ------------------------------------------------------------------------------------------------------------------------------------
@@ -67,8 +72,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libgl1 libglib2.0-0 libsndfile1 libgomp1 tini procps ca-certificates curl \
       fonts-dejavu-core fonts-noto-core fonts-noto-cjk && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /opt/uv/python /opt/uv/python
-COPY --from=builder /venv /venv
-COPY --from=builder /opt/keysync /opt/keysync
+# the venvs in several layers (GHCR: <= 10 GB per layer, <= 10 min per upload): the big CUDA / torch / TensorRT trees each in their own layer
+ARG SP=lib/python3.11/site-packages
+COPY --from=builder --exclude=dabai/${SP}/nvidia --exclude=dabai/${SP}/torch /venv /venv
+COPY --from=builder /venv/dabai/${SP}/nvidia /venv/dabai/${SP}/nvidia
+COPY --from=builder /venv/dabai/${SP}/torch /venv/dabai/${SP}/torch
+COPY --from=builder --exclude=venv/${SP}/nvidia --exclude=venv/${SP}/torch --exclude=venv/${SP}/tensorrt_libs /opt/keysync /opt/keysync
+COPY --from=builder /opt/keysync/venv/${SP}/nvidia /opt/keysync/venv/${SP}/nvidia
+COPY --from=builder /opt/keysync/venv/${SP}/torch /opt/keysync/venv/${SP}/torch
+COPY --from=builder /opt/keysync/venv/${SP}/tensorrt_libs /opt/keysync/venv/${SP}/tensorrt_libs
 COPY --from=uv /uv /usr/local/bin/uv
 ENV UV_PYTHON_INSTALL_DIR=/opt/uv/python UV_PYTHON_PREFERENCE=only-managed UV_NO_CACHE=1 UV_LINK_MODE=copy
 COPY . /workspace/dub/dubai
@@ -85,6 +97,12 @@ ENV DUB_ROOT=/workspace/dub/dubai DUB_ENV=/venv/dabai VIRTUAL_ENV=/venv/dabai DU
     KS_TRT_CACHE=/workspace/dub/dubai/models/keysync/trt_cache TORCHINDUCTOR_CACHE_DIR=/workspace/dub/dubai/models/keysync/inductor \
     KS_LMK_CACHE=/data/ks_lmk KS_TORCH_HOME=/workspace/dub/dubai/models/keysync/torch DABAI_FACE_DEFAULT=auto \
     PYTHONUNBUFFERED=1 NVIDIA_VISIBLE_DEVICES=all NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
+# r16 TZ (Irina 11.11): the image's KeySync QUALITY DEFAULTS, pinned here so a code-default change never alters the image silently: ONE encode
+# after the paste. The post-paste stages KS_TAIL_SRC (code default ON since 55df400) and KS_OCCL re-encode the WHOLE frame without colour
+# management (paler frame, colr tag lost: C:\Users\irina\Videos\DabAI_AB\r16\АНАЛИЗ_0811_vs_1011.md 3.3-3.4), so they are OFF; cap / pause /
+# CMS stay off, the paste mask stays the oval. Change a default = edit this line and rebuild (or `-e KS_...` per container).
+# (KS_CAP must be EMPTY to be off: ks_face.sh runs the cap warp whenever it is non-empty, "0" included.)
+ENV KS_TAIL_SRC=off KS_OCCL=off KS_PAUSE=off KS_CAP="" KS_CMS=0 KS_MASK=oval
 VOLUME ["/workspace/dub/dubai/models", "/data"]
 WORKDIR /workspace/dub/dubai
 EXPOSE 8000

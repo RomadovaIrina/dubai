@@ -2,7 +2,7 @@
 # DabAI image (r16 TZ 5.1 / 0.10 / 10.2): build + fill the models volume + self-test + COLD and WARM smoke on ONE Docker VM, with every
 # number recorded (image size, build time, volume size, fetch time, first-job time incl. the TensorRT build, warm job time, API time-to-healthy).
 # Pushes NOTHING. Run from the repo root on a Docker host with an RTX 5090 (see infra/docker/VM_REQUIREMENTS.md).
-#     export DUB_PROFILE=clean HF_TOKEN=... KS_KIT_DIR=/path/kit [STUDENT_LORA_FILE=/path/latentsync_student_r2_s4_step01500_ema.pt]
+#     export DUB_PROFILE=clean HF_TOKEN=... KS_KIT_DIR=/path/kit [STUDENT_LORA_FILE=/path/latentsync_student_r2_s4_step01500_ema.pt] [SMOKE_DUB_DIR=/path/fixed_dub]
 #     bash infra/docker/build_smoke.sh /path/to/smoke_clip.mp4 [out_dir]
 #   KS_KIT_DIR = lora_pick.pt + lora_meta.json + kf.pt + interp.pt (laptop: C:\repos\chkpts\keysync_student_r15_lcm_r1 + keysync_trt_r15/keysync/trt/cap)
 set -uo pipefail
@@ -45,11 +45,19 @@ num fetch_s "$(dt $t0)"; num volume_gb "$(docker run --rm -v "$VOL":/m --entrypo
 log "3/6 check"; docker run --rm --gpus all -v "$VOL":/workspace/dub/dubai/models "$TAG" check --deep > "$OUT/check.log" 2>&1; num check "$(tail -1 "$OUT/check.log")"
 # ---- 4. cold smoke (first job on this GPU / driver: builds the TensorRT plans + the inductor cache into the volume)
 mkdir -p "$OUT/jobs"; log "4/6 cold smoke on $(basename "$CLIP")"
-t0=$(t); docker run --rm --gpus all --shm-size 16g -v "$VOL":/workspace/dub/dubai/models -v "$OUT/jobs":/data/jobs -v "$CLIP":/in.mp4:ro "$TAG" smoke /in.mp4 > "$OUT/smoke_cold.log" 2>&1
+# r16 TZ (11.11): SMOKE_DUB_DIR = a FIXED dub (dubbed_16k.wav + final_mix_aac.m4a [+ *.manifest.json]) fed through the job's debug_env DUB_AUDIO_FROM:
+# a re-run never gives the same dub (translation / TTS), so picture comparisons need the same audio. Without it: a normal job (a fresh dub).
+smoke(){   # smoke <log>: one smoke job (status in $OUT/jobs/smoke)
+  if [ -n "${SMOKE_DUB_DIR:-}" ]; then
+    printf '{"job_id": "smoke", "input": "/in.mp4", "out_dir": "/data/jobs/smoke", "target_lang": "en", "debug_env": {"DUB_AUDIO_FROM": "/in_dub"}}\n' > "$OUT/smoke_job.json"
+    docker run --rm --gpus all --shm-size 16g -v "$VOL":/workspace/dub/dubai/models -v "$OUT/jobs":/data/jobs -v "$CLIP":/in.mp4:ro -v "$SMOKE_DUB_DIR":/in_dub:ro \
+      -v "$OUT/smoke_job.json":/job.json:ro "$TAG" job /job.json > "$1" 2>&1
+  else docker run --rm --gpus all --shm-size 16g -v "$VOL":/workspace/dub/dubai/models -v "$OUT/jobs":/data/jobs -v "$CLIP":/in.mp4:ro "$TAG" smoke /in.mp4 > "$1" 2>&1; fi; }
+t0=$(t); smoke "$OUT/smoke_cold.log"
 num smoke_cold_s "$(dt $t0)"; cp "$OUT/jobs/smoke/status.json" "$OUT/smoke_cold.status.json" 2>/dev/null; num smoke_cold_status "$(python3 -c "import json; print(json.load(open('$OUT/smoke_cold.status.json'))['status'])" 2>/dev/null || echo none)"
 # ---- 5. warm smoke (plans cached)
 log "5/6 warm smoke"; rm -rf "$OUT/jobs/smoke"
-t0=$(t); docker run --rm --gpus all --shm-size 16g -v "$VOL":/workspace/dub/dubai/models -v "$OUT/jobs":/data/jobs -v "$CLIP":/in.mp4:ro "$TAG" smoke /in.mp4 > "$OUT/smoke_warm.log" 2>&1
+t0=$(t); smoke "$OUT/smoke_warm.log"
 num smoke_warm_s "$(dt $t0)"; cp "$OUT/jobs/smoke/status.json" "$OUT/smoke_warm.status.json" 2>/dev/null; num smoke_warm_status "$(python3 -c "import json; print(json.load(open('$OUT/smoke_warm.status.json'))['status'])" 2>/dev/null || echo none)"
 num trt_cache_gb "$(docker run --rm -v "$VOL":/m --entrypoint du "$TAG" -s -B1G /m/keysync/trt_cache 2>/dev/null | cut -f1)"
 # ---- 6. API time-to-healthy (container start -> GET /health 200)

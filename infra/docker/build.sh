@@ -11,9 +11,13 @@ cd "$(dirname "$0")/../.."
 case "${DUB_PROFILE:-}" in clean|current) ;; *) echo "set DUB_PROFILE=clean or DUB_PROFILE=current (an explicit product / licence decision; no default)" >&2; exit 2;; esac
 IMAGE=${IMAGE:-dabai-worker}; SHA=$(git rev-parse --short=12 HEAD 2>/dev/null || echo unknown); TAG=${1:-$SHA-$DUB_PROFILE}
 [ -z "$(git status --porcelain -- scripts infra reports 2>/dev/null)" ] || echo "WARNING: uncommitted changes in scripts/ infra/ reports/: the image will not match $SHA"
+# r16 TZ (11.11): a host-side proxy (e.g. a laptop's 127.0.0.1:10809) reaches the build as host.docker.internal (predefined proxy build args:
+# used by apt / git / uv during the build, never baked into the image)
+PX=(); for v in HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy; do val=$(printenv $v || true)
+  [ -n "$val" ] && PX+=(--build-arg "$v=$(echo "$val" | sed -E 's#//(127\.0\.0\.1|localhost)([:/]|$)#//host.docker.internal\2#g')"); done
 DOCKER_BUILDKIT=1 docker build -f infra/docker/Dockerfile --platform ${PLATFORM:-linux/amd64} --build-arg DUB_PROFILE=$DUB_PROFILE \
   --build-arg GIT_SHA=$SHA --build-arg IMAGE_TAG=$IMAGE:$TAG --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) --build-arg LLAMA_JOBS=${LLAMA_JOBS:-16} \
-  -t $IMAGE:$TAG .
+  "${PX[@]}" --progress=${PROGRESS:-plain} -t $IMAGE:$TAG .
 docker image inspect $IMAGE:$TAG --format 'built {{.RepoTags}} {{.Size}} bytes'
 NCV=""; [ $DUB_PROFILE = current ] && NCV=" -v dabai-nc:/opt/dabai-nc"
 cat <<EOF
