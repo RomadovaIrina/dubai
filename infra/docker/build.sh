@@ -13,11 +13,15 @@ IMAGE=${IMAGE:-dabai-worker}; SHA=$(git rev-parse --short=12 HEAD 2>/dev/null ||
 [ -z "$(git status --porcelain -- scripts infra reports 2>/dev/null)" ] || echo "WARNING: uncommitted changes in scripts/ infra/ reports/: the image will not match $SHA"
 # r16 TZ (11.11): a host-side proxy (e.g. a laptop's 127.0.0.1:10809) reaches the build as host.docker.internal (predefined proxy build args:
 # used by apt / git / uv during the build, never baked into the image)
-PX=(); for v in HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy; do val=$(printenv $v || true)
-  [ -n "$val" ] && PX+=(--build-arg "$v=$(echo "$val" | sed -E 's#//(127\.0\.0\.1|localhost)([:/]|$)#//host.docker.internal\2#g')"); done
+# BUILD_NETWORK=host (plain Linux docker, e.g. WSL Ubuntu + docker.io with mirrored networking): the RUN steps share the host network, so
+# 127.0.0.1 stays as is (host.docker.internal does not exist there).
+NET=(); [ "${BUILD_NETWORK:-}" = host ] && NET=(--network host)
+PX=(); for v in HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy; do val=$(printenv $v || true); [ -n "$val" ] || continue
+  [ "${BUILD_NETWORK:-}" = host ] || val=$(echo "$val" | sed -E 's#//(127\.0\.0\.1|localhost)([:/]|$)#//host.docker.internal\2#g')
+  PX+=(--build-arg "$v=$val"); done
 DOCKER_BUILDKIT=1 docker build -f infra/docker/Dockerfile --platform ${PLATFORM:-linux/amd64} --build-arg DUB_PROFILE=$DUB_PROFILE \
   --build-arg GIT_SHA=$SHA --build-arg IMAGE_TAG=$IMAGE:$TAG --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) --build-arg LLAMA_JOBS=${LLAMA_JOBS:-16} \
-  "${PX[@]}" ${FACE_ARGS:-} --progress=${PROGRESS:-plain} -t $IMAGE:$TAG .   # FACE_ARGS = other KeySync image defaults, e.g. "--build-arg KS_TAIL_SRC=on"
+  "${NET[@]}" "${PX[@]}" ${FACE_ARGS:-} --progress=${PROGRESS:-plain} -t $IMAGE:$TAG .   # FACE_ARGS = other KeySync image defaults, e.g. "--build-arg KS_TAIL_SRC=on"
 docker image inspect $IMAGE:$TAG --format 'built {{.RepoTags}} {{.Size}} bytes'
 NCV=""; [ $DUB_PROFILE = current ] && NCV=" -v dabai-nc:/opt/dabai-nc"
 cat <<EOF
