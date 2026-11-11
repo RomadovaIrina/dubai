@@ -1,5 +1,5 @@
-# syntax=docker/dockerfile:1.10
-# (1.10: COPY --exclude, used below to split the venvs into layers < 10 GB: GHCR refuses a layer over 10 GB and an upload over 10 min)
+# syntax=docker/dockerfile:1.12
+# (>= 1.11: COPY --exclude, used below to split the venvs into layers < 10 GB: GHCR refuses a layer over 10 GB and an upload over 10 min)
 # =====================================================================================================================================
 # DabAI ML worker (r15 T): the whole dubbing pipeline (scripts/r9/e2e.sh) + the job interface (scripts/job: CLI + FastAPI) for ONE
 # RTX 5090 (sm_120, 32 GB). Contract: scripts/job/INTERFACE.md. Build: infra/docker/build.sh (context = the repo root).
