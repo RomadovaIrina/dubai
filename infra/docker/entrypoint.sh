@@ -38,7 +38,12 @@ link_runtime() {   # caches + checkpoints from the models volume (no download at
 }
 
 case "$mode" in
-  api)          link_runtime; cd $R/scripts/job; exec /venv/api/bin/python -m uvicorn job_api:app --host 0.0.0.0 --port "${PORT:-8000}" --workers 1 ;;
+  api)          link_runtime
+                if [ "${DABAI_RESIDENT:-0}" = 1 ]; then   # r17: the resident worker (models loaded once, parked between stages) starts beside the API;
+                  mkdir -p ${DABAI_RESIDENT_DIR:-/data/resident}   # jobs posted before it is ready run cold (/health: resident.state)
+                  ( cd $R && bash scripts/job/resident.sh start > ${DABAI_RESIDENT_DIR:-/data/resident}/start.log 2>&1 ) &
+                fi
+                cd $R/scripts/job; exec /venv/api/bin/python -m uvicorn job_api:app --host 0.0.0.0 --port "${PORT:-8000}" --workers 1 ;;
   job)          link_runtime; exec /venv/api/bin/python $R/scripts/job/dabai_job.py "$@" ;;
   fetch-models) exec bash $R/infra/docker/fetch_models.sh "$@" ;;
   check)        link_runtime; exec bash $R/infra/docker/check.sh "$@" ;;

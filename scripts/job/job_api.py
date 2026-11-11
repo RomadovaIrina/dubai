@@ -191,11 +191,19 @@ def _weights() -> list[str]:
     return miss
 
 
+def _resident():
+    if os.environ.get("DABAI_RESIDENT") != "1": return {"state": "off"}
+    f = pathlib.Path(os.environ.get("DABAI_RESIDENT_DIR", "/data/resident")) / "ready"
+    try: return {"state": "ready", **json.loads(f.read_text())}
+    except Exception: return {"state": "starting"}
+
+
 @app.get("/health")
 def health():
     g = _gpu(); miss = _weights(); free = shutil.disk_usage(JOBS).free / 1e9
     ok = g is not None and not [x for x in miss if not x.startswith("student")] and free >= MIN_FREE_GB
-    body = {"ok": ok, "busy": bool(RUNNING), "queue_depth": len(ORDER), "gpu": g, "missing_weights": miss, "disk_free_gb": round(free, 1), "versions": dj.versions()}
+    body = {"ok": ok, "busy": bool(RUNNING), "queue_depth": len(ORDER), "gpu": g, "missing_weights": miss, "disk_free_gb": round(free, 1), "versions": dj.versions(),
+            "resident": _resident()}   # r17: off | starting | ready (+ its load timings): jobs run cold until ready
     return JSONResponse(body, status_code=200 if ok else 503)
 
 

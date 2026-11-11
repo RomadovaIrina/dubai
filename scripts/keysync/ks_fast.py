@@ -25,7 +25,8 @@ def timed(name, f):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--follow", action="store_true", help="r16 T: keep reading --jobs as it grows until a line END (one process for the delay probe AND the full run: one model load / TRT load / VAE compile)")
-    ap.add_argument("--jobs", required=True); ap.add_argument("--out", required=True); ap.add_argument("--cfg", default="")
+    ap.add_argument("--serve", default="", help="r17 resident worker: serve requests from this spool dir across VIDEOS (models / TRT / compiled VAE loaded once, parked off the GPU between requests; scripts/keysync/r16/ks_serve.sh)")
+    ap.add_argument("--jobs", default=""); ap.add_argument("--out", default=""); ap.add_argument("--cfg", default="")
     ap.add_argument("--decoding-t", type=int, default=1, help="frames per VAE decode call (the authors' script: 1)")
     ap.add_argument("--compile", default="none", choices=["none", "unet", "all"])
     ap.add_argument("--compile-mode", default="max-autotune-no-cudagraphs", help="torch.compile mode for the UNets (max-autotune = + CUDA graphs)")
@@ -38,7 +39,10 @@ def main():
     ap.add_argument("--vae-compile", action="store_true", help="r15: torch.compile the VAE decoder (timesteps=1, fixed batch = --vae-batch)")
     ap.add_argument("--vae-batch", type=int, default=1, help="r15: frames per VAE decode call with timesteps=1 (= the authors' per-frame decode, batched)")
     ap.add_argument("--trt", default="", help="r15: TensorRT engine dir (ks_trt.py): <dir>/{kf,interp}/{full,shallow}.plan replace the UNets")
-    a = ap.parse_args(); os.makedirs(a.out, exist_ok=True)
+    a = ap.parse_args()
+    if not a.serve:
+        assert a.jobs and a.out, "--jobs and --out are required without --serve"
+        os.makedirs(a.out, exist_ok=True)
     t0 = time.perf_counter()
     model, _, n_batch = d.load_model(f"scripts/sampling/configs/interpolation{a.cfg}.yaml", "cuda", 14, "latents", "pretrained_models/checkpoints/interpolation_dub.pt")
     model_kf, _, n_batch_kf = d.load_model(f"scripts/sampling/configs/keyframe{a.cfg}.yaml", "cuda", 14, "latents", "pretrained_models/checkpoints/keyframe_dub.pt")
@@ -179,26 +183,30 @@ def main():
             return e_ref + g.audio_ratio * (c_ar - e_ref)
         g.prepare_inputs = prep; g.__call__ = call; model.sampler.guider = g
         type(g).__call__ = lambda self, x, sig: call(x, sig) if self is g else call0.__func__(self, x, sig)
-    def job_lines():   # r16 T --follow: the caller appends jobs while this process is resident; "END" stops it
-        if not a.follow:
-            yield from open(a.jobs); return
-        f = open(a.jobs); buf = ""
+    def job_lines(path, follow, alive=lambda: True):   # r16 T --follow: the caller appends jobs while this process is resident; "END" stops it
+        if not follow:
+            yield from open(path); return
+        f = open(path); buf = ""
         while True:
             ln = f.readline()
-            if not ln or not ln.endswith("\n"): buf += ln; time.sleep(0.2); continue
+            if not ln or not ln.endswith("\n"):
+                buf += ln
+                if not alive(): raise RuntimeError("the requesting job is gone (no END)")   # r17 --serve: never wait forever for a dead client
+                time.sleep(0.2); continue
             ln, buf = buf + ln, ""
             if ln.strip() == "END": return
             yield ln
-    for line in job_lines():
-        if not line.strip() or line.startswith("#"): continue
+
+    def run_line(line, out_dir):
+        if not line.strip() or line.startswith("#"): return
         tag, vid, aud, *ex = line.split()   # r16 T: an optional 4th column = this job's KeySync reference frame (KS_REF_IDX); default 0
         os.environ["KS_REF_IDX"] = ex[0] if ex else "0"   # (audit #13: no leak of the previous job's reference)
         if os.environ.get("KS_FAULT") == "crash" and not ("p_" in tag.split("_", 1)[-1] or tag.startswith("p_")):   # r16 TZ 11.1 fault injection
             raise RuntimeError(f"KS_FAULT=crash: injected generator failure in job {tag}")
-        T.clear(); torch.cuda.synchronize(); t1 = time.perf_counter()
+        T.clear(); a.serve and torch.cuda.reset_peak_memory_stats(); torch.cuda.synchronize(); t1 = time.perf_counter()   # (--serve: the peak per request)
         d.sample(model, model_kf, video_path=vid, audio_path=aud, num_frames=14, resize_size=512, video_folder="videos", latent_folder="videos",
                  landmark_folder="landmarks", audio_folder="audios", audio_emb_folder="audios", fps_id=24, cond_aug=0.0, decoding_t=a.decoding_t,
-                 output_folder=os.path.join(a.out, tag), force_uc_zero_embeddings=["cond_frames", "audio_emb"], chunk_size=2, add_zero_flag=True,
+                 output_folder=os.path.join(out_dir, tag), force_uc_zero_embeddings=["cond_frames", "audio_emb"], chunk_size=2, add_zero_flag=True,
                  n_batch=n_batch, n_batch_keyframes=n_batch_kf, extra_audio=None, compute_until="end", audio_emb_type="hubert", extra_naming=tag,
                  what_mask="box", fix_occlusion=False, position=None, start_frame=0, recompute=True,
                  hubert_model=hubert, wavlm_model=wavlm, vae_model=vae, landmarks_model=lmk)
@@ -207,6 +215,12 @@ def main():
         r = {"tag": tag, "video_s": round(dur, 2), "wall_s": round(wall, 1), "s_per_vmin": round(wall / dur * 60, 1), "stages_s": {k: round(v, 1) for k, v in T.items()},
              "peak_vram_gb": round(torch.cuda.max_memory_allocated() / 2**30, 1)}
         print("KS_JOB " + json.dumps(r), flush=True)
+    if a.serve:
+        import ks_serve
+        ks_serve.serve(a.serve, load_s, [model, model_kf, hubert, wavlm, vae, lmk], job_lines, run_line)
+        return
+    for line in job_lines(a.jobs, a.follow):
+        run_line(line, a.out)
     print("KS_FAST_DONE", flush=True)
 
 

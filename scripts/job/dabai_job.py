@@ -240,6 +240,9 @@ def e2e_env(p: dict) -> dict:
     w = p["watermark"]
     if w["enabled"]: e.update(E2E_WATERMARK=w["image"] or f"text:{w['text']}", E2E_WM_CORNER=w["corner"], E2E_WM_OPACITY=str(w["opacity"]))
     if p["lipsync"] == "off": e["E2E_LIPSYNC"] = "off"
+    rd = pathlib.Path(os.environ.get("DABAI_RESIDENT_DIR", "/data/resident"))   # r17 resident worker (scripts/job/resident.sh): its spools once it is ready;
+    if os.environ.get("DABAI_RESIDENT") == "1" and (rd / "ready").exists():      # a dead / busy half -> the pipeline runs that half cold by itself
+        e.update(R9_WORKER_SPOOL=str(rd / "audio"), KS_SERVE_DIR=str(rd / "ks"))
     e.update({k: str(v) for k, v in (p.get("debug_env") or {}).items()})   # tests only (fault injection, research arms)
     return e
 

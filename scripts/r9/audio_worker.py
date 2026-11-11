@@ -68,6 +68,62 @@ def cold_reset():
         if m is not None and hasattr(m, "STATS"): m.STATS.clear(); m.STATS.update({"takes": 0, "chunks": 0} if mod != "qa_batch" else {})
 
 
+def _gpu_used_gb():
+    import torch
+    f, t = torch.cuda.mem_get_info(); return round((t - f) / 2**30, 2)
+
+
+def park():
+    """r17 resident worker (R9_WORKER_PARK=1): the GPU handed over to the video stage between jobs (TZ 0.4: the audio peak ~30 GB and KeySync's
+    ~28 GB never share the 32 GB card). Qwen is FREED (its GGUF stays in the page cache: the next job's load_llm takes ~2-4 s, model_cache.py note);
+    the TTS QA Whisper (CTranslate2) is unloaded to the CPU, wav2vec2 / pyannote / Silero moved to the CPU. -> one JSON line (what, s, GPU used)"""
+    import gc, time, torch, audio_proc
+    t0 = time.time(); done = []
+    llm = audio_proc.KEEP.pop("llm", None)
+    try:
+        import qwen_batch; qwen_batch._ENGINES.clear()   # its batched engines hold contexts of this model
+    except Exception: pass
+    if llm is not None:
+        try: type(llm[0]).close(llm[0])   # (the instance's close() is a no-op patch: the class's frees the model + context)
+        except Exception: pass
+        del llm; done.append("qwen_freed")
+    qa = audio_proc.KEEP.get("qa")
+    if qa is not None:
+        try: qa.wh.model.unload_model(to_cpu=True); done.append("qa_whisper_cpu")
+        except Exception as e: done.append(f"qa_whisper_keep({type(e).__name__})")
+        try: qa.w2v.to("cpu"); done.append("qa_w2v_cpu")
+        except Exception: pass
+    try:
+        import model_cache
+        for k, v in model_cache._CACHE.items():
+            try: v.to(torch.device("cpu")); done.append(f"{model_cache._name(k)}_cpu")
+            except Exception: pass
+    except Exception: pass
+    gc.collect(); torch.cuda.synchronize(); torch.cuda.empty_cache()
+    return {"park": done, "s": round(time.time() - t0, 2), "gpu_used_gb": _gpu_used_gb()}
+
+
+def unpark():
+    """the inverse of park(), before a job (Qwen is reloaded lazily by the job's own load_llm)"""
+    import time, torch, audio_proc
+    t0 = time.time(); done = []
+    qa = audio_proc.KEEP.get("qa")
+    if qa is not None:
+        try:
+            if not qa.wh.model.model_is_loaded: qa.wh.model.load_model(); done.append("qa_whisper_gpu")
+        except Exception as e: done.append(f"qa_whisper({type(e).__name__})")
+        try: qa.w2v.to("cuda"); done.append("qa_w2v_gpu")
+        except Exception: pass
+    try:
+        import model_cache
+        for k, v in model_cache._CACHE.items():
+            try: v.to(torch.device("cuda")); done.append(f"{model_cache._name(k)}_gpu")
+            except Exception: pass
+    except Exception: pass
+    torch.cuda.synchronize()
+    return {"unpark": done, "s": round(time.time() - t0, 2), "gpu_used_gb": _gpu_used_gb()}
+
+
 def install_once():
     """the stage's caches (r8_tts_stage.install_caches) installed ONCE, so its fp32 Chatterbox / QA / aligner survive across jobs"""
     import r8_tts_stage
@@ -107,6 +163,7 @@ def main():
             (D / ".alive.tmp").write_text(str(time.time())); os.replace(D / ".alive.tmp", D / "alive"); time.sleep(1)
     threading.Thread(target=beat, daemon=True).start()
     import audio_proc
+    PARK = os.environ.get("R9_WORKER_PARK", "0") == "1"   # r17: the worker's own setting (each job's env replaces os.environ below)
     n = 0
     while not (D / "stop").exists():
         js = sorted((D / "jobs").glob("*.json"), key=lambda p: p.stat().st_mtime)
@@ -119,9 +176,13 @@ def main():
             os.environ["R9_TTS_PRELOAD"] = "off"   # the worker's own CPU master copy instead (chatterbox_from_master)
             sys.stdout = sys.stderr = log
             if not n: chatterbox_from_master(); share_whisper()
+            PK = PARK
+            if PK and n: print("[worker] " + json.dumps(unpark()), flush=True)
             audio_proc.setup(); cold_reset(); t0 = time.time(); snap = snapshot()   # setup() (the shared QA / Qwen memo) before the snapshot: kept
             try: rc = audio_proc.run_job(job["argv"])
-            finally: restore(snap)
+            finally:
+                restore(snap)
+                if PK: print("[worker] " + json.dumps(park()), flush=True)   # r17: the GPU free for the video stage before the client sees the rc
             rc = 0 if rc in (None, 0) else int(rc) if isinstance(rc, int) else 1
             print(f"[worker] job {n} done in {time.time() - t0:.1f} s (rc {rc})", flush=True)
         except BaseException:

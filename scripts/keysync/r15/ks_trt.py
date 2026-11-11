@@ -49,13 +49,21 @@ def add_capture(m, tag, path):
 class Engine:
     def __init__(self, path):
         import tensorrt as trt
-        self.logger = trt.Logger(trt.Logger.WARNING); rt = trt.Runtime(self.logger)
+        self.logger = trt.Logger(trt.Logger.WARNING); rt = trt.Runtime(self.logger); self.path = path
         self.eng = rt.deserialize_cuda_engine(open(path, "rb").read()); self.ctx = self.eng.create_execution_context()
         self.names = [self.eng.get_tensor_name(i) for i in range(self.eng.num_io_tensors)]
         self.inputs = [n for n in self.names if self.eng.get_tensor_mode(n) == trt.TensorIOMode.INPUT]
         self.outputs = [n for n in self.names if n not in self.inputs]
         self.shape = {n: tuple(self.eng.get_tensor_shape(n)) for n in self.names}; self.dtype = {n: _dt(self.eng.get_tensor_dtype(n)) for n in self.names}
         self.batch = self.shape[self.inputs[0]][0]
+
+    def park(self):   # r17 resident worker: free the engine's device memory (weights + context) between jobs; the plan file stays in the page cache
+        self.ctx = None; self.eng = None
+
+    def unpark(self):   # r17: re-deserialize the same plan (seconds from the page cache; the I/O names / shapes / dtypes are unchanged)
+        if self.eng is not None: return
+        import tensorrt as trt
+        self.eng = trt.Runtime(self.logger).deserialize_cuda_engine(open(self.path, "rb").read()); self.ctx = self.eng.create_execution_context()
 
     def __call__(self, **inp):
         keep = []
@@ -77,6 +85,15 @@ class TRTUNet(nn.Module):
         _dc = os.environ.get("KS_DC", "") if self.shallow is not None else ""
         self.dcn = int(_dc.split(":")[0]) if _dc else 0; self.st = None
         print(f"TRT {d}: batch {self.full.batch} dcn {self.dcn} inputs {self.full.inputs} outputs {self.full.outputs}", flush=True)
+
+    def park(self):   # r17: engines off the GPU + the DeepCache state (it holds CUDA feature tensors) dropped
+        self.st = None
+        for e in (self.full, self.shallow):
+            if e is not None: e.park()
+
+    def unpark(self):
+        for e in (self.full, self.shallow):
+            if e is not None: e.unpark()
 
     def forward(self, x, timesteps=None, context=None, y=None, audio_emb=None, image_only_indicator=None, num_video_frames=14, **kw):
         assert y is None and audio_emb is None, "TRT engines were exported without y / audio_emb"

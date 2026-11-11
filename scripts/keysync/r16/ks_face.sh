@@ -110,9 +110,7 @@ ksfast() {   # ksfast <jobs> <out> <log>: the resident KeySync-fast worker (fast
       --vae-batch 8 --vae-compile ) > $3 2>&1 || { tail -5 $3; return 1; }; grep "^KS_JOB" $3 | cut -c1-400; }
 if [ -n "$SHR" ]; then FJ=$SHR; KLOG=$KS_FAST_LOG; KOUT=$KS_FAST_OUT; KSP=$KS_FAST_PID; PFX=${KS_TAG_PREFIX:-}
 else FJ=$KW/jobs_follow.txt; : > $FJ; KLOG=$KW/ks_fast.log; KOUT=$KW/out; PFX=""
-( cd $KS/code && . ../venv/bin/activate && env KS_DC=2:0 KS_LMK_CACHE=$LMK TORCHINDUCTOR_CACHE_DIR=${TORCHINDUCTOR_CACHE_DIR:-$KS/inductor} ${GATE:+KS_GATE=$GATE} \
-  python $KT/ks_fast.py --follow --jobs $FJ --out $KW/out --cfg _s8 --vae-half --compile unet --trt $ENG --interp-lora $LORA --interp-steps ${KS_INTERP_STEPS:-2} \
-    --vae-batch 8 --vae-compile ) > $KW/ks_fast.log 2>&1 & KSP=$!
+. $R/scripts/keysync/r16/ks_serve.sh; ks_fast_launch $FJ $KW/out $KW/ks_fast.log   # r17: the resident KeySync daemon (KS_SERVE_DIR) when it is up with these settings, else a cold --follow ks_fast (as before)
 trap '[ -n "${KSP:-}" ] && kill $KSP 2>/dev/null' EXIT; fi   # never leave a --follow ks_fast behind (it would wait for END forever)
 waitjob() { until grep -q "^KS_JOB {\"tag\": \"$1\"" $KLOG; do kill -0 $KSP 2>/dev/null || { echo "KS: ks_fast died before job $1"; tail -5 $KLOG; return 1; }; sleep 0.5; done; }
 if [ "${KS_DELAY:-probe}" = probe ]; then

@@ -70,9 +70,7 @@ elif [ ${#READY[@]} -gt 0 ]; then
   GATE="${KS_GATE-thr=0.12,cap=0.25,hi=8,lo=2}"
   ENG=$(KS_GPU_LOCK=/dev/null bash $R/scripts/keysync/r16/ks_engines.sh 2> $SW/engines.log | tail -1); [ -d "$ENG" ] || { tail -5 $SW/engines.log; exit 1; }
   KFJ=$SW/jobs_follow.txt; : > $KFJ; KOUT=$SW/ksout; mkdir -p $KOUT
-  ( cd $KS/code && . ../venv/bin/activate && env KS_DC=2:0 KS_LMK_CACHE=$LMK TORCHINDUCTOR_CACHE_DIR=${TORCHINDUCTOR_CACHE_DIR:-$KS/inductor} ${GATE:+KS_GATE=$GATE} \
-    python $KT/ks_fast.py --follow --jobs $KFJ --out $KOUT --cfg _s8 --vae-half --compile unet --trt $ENG --interp-lora $LORA --interp-steps ${KS_INTERP_STEPS:-2} \
-      --vae-batch 8 --vae-compile ) > $SW/ks_fast.log 2>&1 & KSP=$!
+  . $R/scripts/keysync/r16/ks_serve.sh; ks_fast_launch $KFJ $KOUT $SW/ks_fast.log   # r17: resident KeySync daemon or a cold --follow ks_fast (ks_serve.sh)
   trap '[ -n "${KSP:-}" ] && kill $KSP 2>/dev/null' EXIT   # never leave the --follow ks_fast behind
   for i in "${READY[@]}"; do S=$SW/s$i
     if ! kill -0 $KSP 2>/dev/null; then shot_fail $i gpu "ks_fast died"; continue; fi
