@@ -38,11 +38,16 @@ sync_off() {   # sync_off <video> <wav> <json>: SyncNet global AV offset of a ra
 
 if [ "$PH" = all ] || [ "$PH" = prep ]; then   # ==== prep (CPU): master, landmarks, shots, plan, crop, pad, reference
 t master
+PRE=""   # r17 speed: e2e.sh's background ks_pre.sh (the same master + landmarks commands, run during the audio stage); waited for, else computed here
+if [ -z "${KS_MASTER_IN:-}" ] && [ -n "${KS_PRE_DIR:-}" ] && [ -d "$KS_PRE_DIR" ]; then
+  until [ -f $KS_PRE_DIR/done ] || [ -f $KS_PRE_DIR/failed ]; do sleep 0.5; done; [ -f $KS_PRE_DIR/done ] && PRE=$KS_PRE_DIR && echo "KS_PRE used (computed in $(cat $PRE/done) s during the audio stage)"; fi
 if [ -n "${KS_MASTER_IN:-}" ]; then cp "$KS_MASTER_IN" $KW/master_25fps.mp4   # (ks_shots.sh: this shot's frames of the parent master, lossless)
+elif [ -n "$PRE" ]; then cp $PRE/master_25fps.mp4 $KW/master_25fps.mp4
 else ffmpeg -v error -y -i "$SRC" -map 0:v:0 -an -vf fps=25 -c:v libx264 -preset fast -crf 10 -pix_fmt yuv420p $KW/master_25fps.mp4 || exit 1; fi
 N=$(ffprobe -v error -count_packets -select_streams v:0 -show_entries stream=nb_read_packets -of csv=p=0 $KW/master_25fps.mp4)
 t landmarks   # CPU; up to KS_NUM_FACES faces (route.json faces are matched to these tracks)
 if [ -n "${KS_MP_NPZ:-}" ]; then cp "$KS_MP_NPZ" $KW/master_mp.npz   # (ks_shots.sh: the parent's landmarks sliced to this shot)
+elif [ -n "$PRE" ]; then cp $PRE/master_mp.npz $KW/master_mp.npz
 else GLOG_minloglevel=2 OMP_NUM_THREADS=4 $MPY $R/scripts/pilot/mp_landmarks.py $KW/master_25fps.mp4 $KW/master_mp.npz --num-faces ${KS_NUM_FACES:-4} > $KW/mp.log 2>&1 || { tail -3 $KW/mp.log; exit 1; }; fi
 if [ "${KS_SHOTS:-auto}" != off ] && [ -z "${KS_IN_SHOT:-}" ]; then   # K2 multi-shot: > 1 segment (hard cuts + faceless gaps > 2 s, each cut to its face range) -> ks_shots.sh runs this script per face segment
   t shots; $PY $KT/ks_shots.py detect --video $KW/master_25fps.mp4 --mp $KW/master_mp.npz --out $KW/shots.json | cut -c1-600 || exit 1
@@ -224,7 +229,7 @@ for f in $TAGS; do
   ARGS="--ks $L --ks-lm $P/raw_lm.npz --master $CUR --box $KW/data/box_$f.json --lm $KW/lm_$f.npz --audio $AD/final_mix_aac.m4a --shift ${SHF[$f]} --absent skip $OTH \
         ${KS_PLAIN_ARGS---lfm 6 --upper-src 0.12:0.32 --keep-nose 0.04 --align 2 --align-ecc $P/ecc.npz --align-scale 0 --tex 2} ${KS_PLAIN_EXTRA:-} $MK"
   if [ "${KS_PASTE_JOBS:-0}" != 1 ] && [ -f $KT/ks_plain_par.py ]; then
-    ( cd $KT && KS_CMS=1 $PY $KT/ks_plain_par.py --jobs ${KS_PASTE_JOBS:-$(( $(nproc) / 3 ))} --out $NXT -- $ARGS ) > $P/plain.log 2>&1 || {   # a failed parallel paste -> the serial one (== by K1 a6ded57)
+    ( cd $KT && KS_CMS=1 $PY $KT/ks_plain_par.py --jobs ${KS_PASTE_JOBS:-$(( $(nproc --all) / 3 > 16 ? 16 : $(nproc --all) / 3 ))} --out $NXT -- $ARGS ) > $P/plain.log 2>&1 || {   # a failed parallel paste -> the serial one (== by K1 a6ded57)
       flag ks_paste_par_retry "$f: parallel paste failed ($(grep -a -E "Error" $P/plain.log | tail -1 | cut -c1-120)) -> serial"; mv $P/plain.log $P/plain_par_failed.log
       ( cd $KT && KS_CMS=1 $PY $KT/ks_plain.py $ARGS --out $NXT ) > $P/plain.log 2>&1 || { tail -5 $P/plain.log; exit 1; }; }
   else ( cd $KT && KS_CMS=1 $PY $KT/ks_plain.py $ARGS --out $NXT ) > $P/plain.log 2>&1 || { tail -5 $P/plain.log; exit 1; }; fi

@@ -114,6 +114,9 @@ if [ "$OVL" = on ]; then
   bash scripts/r9/sep_overlap.sh start $ID $DUB_SEP_STEMS/stems_htdemucs $W $L
   export R9_ON_MIXSRC="bash $DUB_ROOT/scripts/r9/sep_overlap.sh mix $ID $AT $HT $W $L"
 fi
+if [ "${E2E_KS_PRE:-on}" = on ] && [ "${DUB_FACE:-auto}" != latentsync ] && [ "${E2E_LIPSYNC:-on}" != off ]; then   # r17 speed (output-identical): the KeySync
+  export KS_PRE_DIR=$W/ks_pre; ( bash scripts/keysync/r16/ks_pre.sh "$SRC" $KS_PRE_DIR ) > $L/ks_pre.log 2>&1 &   # master + landmarks during the audio stage
+fi
 if [ -z "${DUB_AUDIO_FROM:-}" ] && ! python3 scripts/voice_env_check.py --python ${DUB_ENV:-/venv/dabai}/bin/python 2>> $L/e2e.log; then   # r16 T: never a wrong voice silently
   fail voice_env_mismatch ERROR "the voice environment is not the accepted one (Chatterbox 5de7a54 + noisereduce): see logs/e2e.log"; finish; fi
 if [ -n "${DUB_AUDIO_FROM:-}" ]; then   # r16 T golden test: an ACCEPTED dub (dubbed_16k.wav + final_mix_aac.m4a [+ *.manifest.json]) instead of a new one
