@@ -87,6 +87,13 @@ def park():
         try: type(llm[0]).close(llm[0])   # (the instance's close() is a no-op patch: the class's frees the model + context)
         except Exception: pass
         del llm; gc.collect(); done.append("qwen_freed"); steps["after_qwen"] = _gpu_used_gb()
+    tb = sys.modules.get("t3_batch")   # the T3 decode CUDA graphs (+ their memory pools and the job's GPU Chatterbox copy they reference): cold_reset()
+    if tb is not None and getattr(tb, "_DECODERS", None): tb._DECODERS.clear(); done.append("t3_graphs_freed")   # would drop them only at the NEXT job
+    for mod in ("s3_batch", "qa_batch"):
+        m = sys.modules.get(mod)
+        for attr in ("_GRAPHS", "_DECODERS", "_CACHE"):
+            if m is not None and isinstance(getattr(m, attr, None), dict) and getattr(m, attr): getattr(m, attr).clear(); done.append(f"{mod}.{attr}_freed")
+    gc.collect(); torch.cuda.empty_cache(); steps["after_graphs"] = _gpu_used_gb()
     qa = audio_proc.KEEP.get("qa")
     if qa is not None:
         try: qa.wh.model.unload_model(to_cpu=True); done.append("qa_whisper_cpu")
@@ -97,6 +104,7 @@ def park():
     try:
         import model_cache
         for k, v in model_cache._CACHE.items():
+            if "silero" in model_cache._name(k): continue   # TorchScript VAD: its state is device-bound (moving it broke the next job, VM 11.11); ~2 MB
             try: v.to(torch.device("cpu")); done.append(f"{model_cache._name(k)}_cpu")
             except Exception: pass
     except Exception: pass
@@ -120,6 +128,7 @@ def unpark():
     try:
         import model_cache
         for k, v in model_cache._CACHE.items():
+            if "silero" in model_cache._name(k): continue
             try: v.to(torch.device("cuda")); done.append(f"{model_cache._name(k)}_gpu")
             except Exception: pass
     except Exception: pass
