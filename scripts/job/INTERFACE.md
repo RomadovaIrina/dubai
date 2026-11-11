@@ -252,6 +252,15 @@ Each comes with a ready user message in English and Russian. `flags[]` also list
 - The look of both profiles: the A/B clips in `outbox/r15_t/` (old03 30 s, m03 20 s) and REPORT.md.
 - **On the research servers** (no `DUB_PROFILE`), `e2e.sh` keeps its old defaults (`DUB_ALLOW_NC=1`, `DUB_ALLOW_NC_BED=1` = `current`). Nothing flipped silently.
 
+**KeySync quality defaults of the image (r16, Irina 11.11): ONE encode after the paste.**
+- Pinned in the Dockerfile as build args → ENV, so a code-default change never alters the image silently: `KS_TAIL_SRC=off KS_OCCL=off KS_PAUSE=off KS_CAP= (empty) KS_CMS=0 KS_MASK=oval KS_CM_SHADOW= (empty)`.
+- Why: the post-paste stages `KS_TAIL_SRC` (code default on since 55df400) and `KS_OCCL` re-encode the whole frame without colour management: the frame goes paler and loses its `colr` tag (autopsy 08.11 vs 10.11, §3.3–3.4). With them off, the chain is the 08.11 one: layer → tsmooth → snap → guard → seam → ks_plain_par (`KS_CMS=1`, BT.709 tag) → mux `-c copy` (+ hires merge for sources above the 25 fps grid).
+- Change a default: rebuild with `FACE_ARGS="--build-arg KS_TAIL_SRC=on" bash infra/docker/build.sh`, or per container `-e KS_TAIL_SRC=on`, or per job `debug_env`. `KS_CAP` is off only when EMPTY (any value, `0` included, runs the cap warp).
+
+**A fixed dub (picture comparisons, re-runs).** ASR / translation / TTS differ from run to run, so a re-run gives another dub. To render the picture on an accepted dub, give the job `debug_env: {"DUB_AUDIO_FROM": "/in_dub"}` and mount a folder with `dubbed_16k.wav` (voice only, 16 kHz mono) + `final_mix_aac.m4a` (the mix that is muxed) [+ `*.manifest.json` for subtitles / per-shot audio] at `/in_dub:ro`. The status gets the flag `audio_reused`; the voice-env check is skipped. `build_smoke.sh` does this with `SMOKE_DUB_DIR=<dir>`.
+
+**Registry (Irina 11.11): public `ghcr.io/romadovairina/dubai`**, linked to the repo by the label `org.opencontainers.image.source=https://github.com/RomadovaIrina/dubai`. Public GHCR packages cost nothing. `infra/docker/push_ghcr.sh <local image:tag> [tags]` (on the GPU VM after the smoke, never through the laptop proxy) refuses to push unless: profile clean; every layer < 9 GB (GHCR limits: 10 GB per layer, 10 min per upload; the venvs are split into layers for that); no secret-looking string in `docker history` / the config; a file scan finds no weights, caches, `.env`, credentials or token patterns outside the libraries' site-packages. `DRY=1` = the checks only. The token (`GHCR_TOKEN`, `write:packages`) is read from the env and goes to `docker login --password-stdin`; it is never printed.
+
 **Run** (one container per GPU):
 ```bash
 docker run -d --gpus '"device=0"' --shm-size 16g -p 8000:8000 -e DABAI_API_TOKEN=<yours> \
