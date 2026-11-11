@@ -209,6 +209,27 @@ def mode_env(p: dict) -> dict:
     return q
 
 
+def ks_cold(p: dict, env: dict) -> bool:
+    """r16 TZ (0.10): True when this job will pay KeySync's ONE-TIME build on this worker: no TensorRT plans for this GPU + driver + student /
+    capture (ks_engines.sh: KS_TRT_CACHE/<gpu>_<driver>_trt<ver>_<md5[:8] of LoRA + kf.pt + interp.pt>/eng{,_s}) or an empty inductor cache
+    (the VAE max-autotune compile). r16-q 09.11: 574 s TensorRT + ~17 min VAE compile -> the first 20 s job hit the 1800 s timeout."""
+    if p.get("lipsync") == "off" or p.get("face") == "latentsync": return False
+    ks = pathlib.Path(env.get("KS_ROOT", "/workspace/dub/keysync"))
+    if not (ks / "code").exists(): return False
+    cap = pathlib.Path(env.get("KS_TRT_CAP", str(ks / "trt" / "cap"))); lora = pathlib.Path(env.get("KS_LORA", str(ks / "student" / "lora_pick.pt")))
+    try:
+        import hashlib; h = hashlib.md5()
+        for f in (lora, cap / "kf.pt", cap / "interp.pt"):
+            with open(f, "rb") as fh:
+                for b in iter(lambda: fh.read(1 << 22), b""): h.update(b)
+        g = subprocess.run(["nvidia-smi", "--query-gpu=name,driver_version", "--format=csv,noheader", "-i", "0"], capture_output=True, text=True, timeout=20).stdout.strip()
+    except Exception: return False   # (a missing weight is weights_check's job, no GPU = no KeySync)
+    cache = pathlib.Path(env.get("KS_TRT_CACHE", str(ks / "trt" / "cache"))); pre = re.sub(r"[^A-Za-z0-9.]+", "_", g + "_trt")
+    warm_trt = any((d / "eng" / "kf" / "full.plan").exists() and (d / "eng_s" / "interp" / "full.plan").exists() for d in cache.glob(f"{pre}*_{h.hexdigest()[:8]}"))
+    ind = pathlib.Path(env.get("TORCHINDUCTOR_CACHE_DIR", str(ks / "inductor")))
+    return not warm_trt or not ind.is_dir() or not any(ind.iterdir())
+
+
 def e2e_env(p: dict) -> dict:
     e = {"ID": p["job_id"], "E2E_METRICS": "off", "E2E_FRAME_GATE": "off", "E2E_SYNC": str(p.get("sync", "1")), "DUB_MAX_VOICES": str(p["max_voices"])}
     e.update(mode_env(p))
@@ -371,6 +392,8 @@ def _run_job(job: dict, on_event=None, cancel: threading.Event | None = None) ->
         proc = subprocess.Popen(["bash", str(ROOT / "scripts" / "r9" / "e2e.sh"), src, str(e2e)], cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
         st["pipeline_pgid"] = proc.pid   # its own session / process group: a restarted service kills it (job_api._kill_orphan)
         to = float(p.get("timeout_s") or max(1800.0, 1200.0 * max(vmin, 0.5)))   # TZ 3.8; a hung stage must not hold the worker forever
+        st["cold_start"] = ks_cold(p, env)   # r16 TZ 0.10: the first KeySync job on a fresh worker / volume builds TensorRT + compiles the VAE once
+        if st["cold_start"] and not p.get("timeout_s"): to += float(os.environ.get("DABAI_COLD_EXTRA_S", "2400"))   # (an explicit timeout_s is the caller's)
         t0 = time.time(); n_seen = 0; last_pct = 0.0; rss_peak = 0.0; killed = None; k = 0; plan = plan_of(p)
         while proc.poll() is None:
             cur, pct, eta = progress(e2e, vmin, plan)

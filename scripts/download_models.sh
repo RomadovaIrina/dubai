@@ -41,3 +41,4 @@ echo "skip BANNED weights (HDEMUCS / CodeFormer / ParseNet / RetinaFace R50 / bu
 # tripwires: insightface auto-downloads buffalo_l (NC) whenever its directory is missing; an empty directory makes it fail instead
 "${PY}" -c "import sys; sys.path.insert(0, '${DUB_ROOT}/scripts/pilot'); import clean_face_stack as c; print('tripwires', c.install_tripwires() or 'present'); c.assert_clean_tree()" || { echo "BANNED weight files present (see above): move them to /workspace/dub/quarantine_nc/"; exit 3; }
 echo "== done"; du -sh "$M"/* 2>/dev/null
+echo "NOTE: this is the base set only. ONE command for a box that passes weights_check (Qwen 14B, KeySync, HuBERT, SVD VAE, Spleeter, Real-ESRGAN, pyannote): bash scripts/setup_weights.sh"

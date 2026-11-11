@@ -24,10 +24,11 @@ for i, (k0, k1, kd) in sorted(enumerate(s), key=lambda x: -(x[1][1] - x[1][0])):
     if kd == 'face': print(i, k0, k1)")
 NS=$(python3 -c "import json; print(len(json.loads('$SEGS')))"); echo "KS_SHOTS_RUN $ID: $NS segments, ${#FS[@]} with a face (longest first: ${FS[*]})"
 if [[ "${KS_REF:-0}" =~ ^[0-9]+$ ]] && [ "${KS_REF:-0}" != 0 ]; then echo "KS WARN KS_REF=$KS_REF is a frame of the whole video: 0 (the first frame) per shot"; export KS_REF=0; fi   # KS_REF=0 = each shot's first frame
-DELAY=${KS_DELAY:-probe}; MIN=$(python3 -c "print(round(${KS_SHOT_MIN_S:-1.0} * 25))"); LS=0; declare -A PART ALPHA SHOTARGS SPAN; READY=(); NFAIL=0
+DELAY=${KS_DELAY:-probe}; MIN=$(python3 -c "print(round(${KS_SHOT_MIN_S:-1.0} * 25))"); LS=0; declare -A PART ALPHA SHOTARGS SPAN; READY=(); NFAIL=0; FAILF=()
 shot_log() { grep -h -E "^KS_(CROP|PROBE|CHECK|PASTE|FACE_KEEP|FACE_DONE|FLAG)|WARN" $SW/s$1/face_$2.log 2>/dev/null | cut -c1-300 | sed "s/^/KS_SHOT $1 ${SPAN[$1]} /"; }
 shot_fail() {   # r16 T (Q audit O5): ONE failed segment keeps ITS source picture (flagged); the rest of the video is still lip-synced
-  echo "KS_SHOT $1 ${SPAN[$1]} FAILED in $2 (${3:-}) -> source"; tail -3 $SW/s$1/face_$2.log 2>/dev/null; echo ks_shot_failed >> $PK/flags.txt; unset "ALPHA[$1]"; NFAIL=$((NFAIL + 1)); }
+  echo "KS_SHOT $1 ${SPAN[$1]} FAILED in $2 (${3:-}) -> source"; tail -3 $SW/s$1/face_$2.log 2>/dev/null; echo ks_shot_failed >> $PK/flags.txt; unset "ALPHA[$1]"; NFAIL=$((NFAIL + 1))
+  FAILF+=("$(echo "${SPAN[$1]}" | tr -d '[),' | awk '{print $2 - $1}')"); }   # r16 TZ 11.2: the source frames a failed shot keeps
 for row in "${FS[@]}"; do
   read -r i k0 k1 <<< "$row"; S=$SW/s$i; mkdir -p $S/audio
   if [ $((k1 - k0)) -lt $MIN ]; then echo "KS_SHOT $i [$k0, $k1): shorter than ${KS_SHOT_MIN_S:-1.0} s -> source"; continue; fi
@@ -52,6 +53,7 @@ for row in "${FS[@]}"; do
   for m in $AD/*.manifest.json; do [ -f "$m" ] && $PY $KT/ks_shots.py manifest --manifest $m --t0 $t0 --t1 $t1 --out $S/audio/$(basename $m) > /dev/null; done
   RS=""; if [ -n "$ROUTE" ] && [ -f "$ROUTE" ]; then $PY $KT/ks_shots.py route --route $ROUTE --t0 $t0 --t1 $t1 --out $S/route.json | sed "s/^/KS_SHOT $i /"; RS=$S/route.json; fi
   SHOTARGS[$i]="${ID}_s$i $S/master.mp4 $S/audio $S $S/out.mp4 $RS"; SPAN[$i]="[$k0, $k1)"
+  if [ "${KS_FAULT:-}" = "shot:$i" ]; then shot_fail $i prep "KS_FAULT=shot:$i injected"; continue; fi   # r16 TZ 11.1 / 11.2 fault injection
   if [ "${KS_SHOTS_REPOST:-0}" = 1 ]; then [ -f $S/ks/state.sh ] && rc=0 || rc=3   # r16d T: re-paste only: the shot keeps its prep + KeySync render (state.sh = rendered)
   else env KS_IN_SHOT=1 KS_PHASE=prep KS_MASTER_IN=$S/master.mp4 KS_MP_NPZ=$MPX bash $R/scripts/keysync/r16/ks_face.sh ${SHOTARGS[$i]} > $S/face_prep.log 2>&1; rc=$?; fi
   shot_log $i prep
@@ -95,6 +97,13 @@ for i in "${OKG[@]}"; do S=$SW/s$i
   PART[$i]=$S/out.mp4; LS=$((LS + 1))
 done
 for i in "${!SHOTARGS[@]}"; do cat $SW/s$i/ks/flags.txt >> $PK/flags.txt 2>/dev/null; done   # the shots' flags reach the job status
+python3 - $PK/subst.json "${FAILF[*]:-}" $SW/s*/ks/subst.json <<'PY'   # r16 TZ 11.2 / 11.3: the shots' substituted frames + the failed shots' source frames
+import json, sys
+out, failed = sys.argv[1], [int(x) for x in sys.argv[2].split()]; rows = [json.load(open(f)) for f in sys.argv[3:] if not f.endswith("*/ks/subst.json")]
+d = {"eligible_frames": sum(r["eligible_frames"] for r in rows) + sum(failed), "guard_replaced": sum(r["guard_replaced"] for r in rows),
+     "failed_frames": sum(failed), "failed_shots": len(failed), "shots": len(rows) + len(failed)}
+json.dump(d, open(out, "w")); print("KS_SUBST", json.dumps(d))
+PY
 [ $LS -gt 0 ] || [ $NFAIL = 0 ] || { echo "KS_SHOTS: every lip-sync segment failed ($NFAIL)"; exit 1; }
 [ $LS -gt 0 ] || { echo "KS_FACE_KEEP_SOURCE $ID: nothing lip-synced in $NS segments"; exit 3; }
 L=(); for i in $(seq 0 $((NS - 1))); do   # in time order; the source segments re-encoded like ks_plain's output (concat -c copy needs the same stream)
