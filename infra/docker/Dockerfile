@@ -1,5 +1,5 @@
-# syntax=docker/dockerfile:1.12
-# (>= 1.11: COPY --exclude, used below to split the venvs into layers < 10 GB: GHCR refuses a layer over 10 GB and an upload over 10 min)
+# syntax=docker/dockerfile:1.7
+# (no COPY --exclude: the venv split into < 10 GB layers is done by moving the big trees to /split in the builder, see below)
 # =====================================================================================================================================
 # DabAI ML worker (r15 T): the whole dubbing pipeline (scripts/r9/e2e.sh) + the job interface (scripts/job: CLI + FastAPI) for ONE
 # RTX 5090 (sm_120, 32 GB). Contract: scripts/job/INTERFACE.md. Build: infra/docker/build.sh (context = the repo root).
@@ -54,6 +54,12 @@ COPY scripts/keysync scripts/keysync
 RUN --mount=type=cache,target=/root/.cache/uv,sharing=locked UV_NO_CACHE=0 \
     KS_ROOT=/opt/keysync KS_NO_WEIGHTS=1 bash scripts/keysync/r16/ks_install.sh && rm -rf /opt/keysync/code/.git /opt/keysync/code/pretrained_models
 RUN find /venv /opt/keysync -depth -type d -name __pycache__ -exec rm -rf {} + ; rm -rf /root/.cache /tmp/*
+# the big CUDA / torch / TensorRT package trees moved OUT of the venvs into /split/<n> (each becomes its own runtime layer: GHCR <= 10 GB per
+# layer, <= 10 min per upload); the runtime stage puts them back at the same paths. Sizes logged for the record.
+ARG SP=lib/python3.11/site-packages
+RUN set -e; i=0; for d in /venv/dabai/${SP}/nvidia /venv/dabai/${SP}/torch /opt/keysync/venv/${SP}/nvidia /opt/keysync/venv/${SP}/torch \
+      /opt/keysync/venv/${SP}/tensorrt_libs; do i=$((i + 1)); mkdir -p /split/$i; [ -d $d ] && mv $d /split/$i/tree || mkdir /split/$i/tree; echo "$d" > /split/$i/path; done; \
+    du -sh /venv /opt/keysync /split/* | sed 's/^/SIZE /'
 
 # ------------------------------------------------------------------------------------------------------------------------------------
 FROM nvidia/cuda:${CUDA_VERSION}-cudnn-runtime-${UBUNTU} AS runtime
@@ -76,14 +82,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libgl1 l
       fonts-dejavu-core fonts-noto-core fonts-noto-cjk && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /opt/uv/python /opt/uv/python
 # the venvs in several layers (GHCR: <= 10 GB per layer, <= 10 min per upload): the big CUDA / torch / TensorRT trees each in their own layer
+#   (the builder moved them to /split/1..5; the order below = the builder's list)
 ARG SP=lib/python3.11/site-packages
-COPY --from=builder --exclude=dabai/${SP}/nvidia --exclude=dabai/${SP}/torch /venv /venv
-COPY --from=builder /venv/dabai/${SP}/nvidia /venv/dabai/${SP}/nvidia
-COPY --from=builder /venv/dabai/${SP}/torch /venv/dabai/${SP}/torch
-COPY --from=builder --exclude=venv/${SP}/nvidia --exclude=venv/${SP}/torch --exclude=venv/${SP}/tensorrt_libs /opt/keysync /opt/keysync
-COPY --from=builder /opt/keysync/venv/${SP}/nvidia /opt/keysync/venv/${SP}/nvidia
-COPY --from=builder /opt/keysync/venv/${SP}/torch /opt/keysync/venv/${SP}/torch
-COPY --from=builder /opt/keysync/venv/${SP}/tensorrt_libs /opt/keysync/venv/${SP}/tensorrt_libs
+COPY --from=builder /venv /venv
+COPY --from=builder /opt/keysync /opt/keysync
+COPY --from=builder /split/1/tree /venv/dabai/${SP}/nvidia
+COPY --from=builder /split/2/tree /venv/dabai/${SP}/torch
+COPY --from=builder /split/3/tree /opt/keysync/venv/${SP}/nvidia
+COPY --from=builder /split/4/tree /opt/keysync/venv/${SP}/torch
+COPY --from=builder /split/5/tree /opt/keysync/venv/${SP}/tensorrt_libs
 COPY --from=uv /uv /usr/local/bin/uv
 ENV UV_PYTHON_INSTALL_DIR=/opt/uv/python UV_PYTHON_PREFERENCE=only-managed UV_NO_CACHE=1 UV_LINK_MODE=copy
 COPY . /workspace/dub/dubai
