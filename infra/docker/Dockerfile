@@ -79,7 +79,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # GL / glib for OpenCV, libsndfile, OpenMP, tini as PID 1, procps (pkill / pgrep used by the stages)
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libgl1 libglib2.0-0 libsndfile1 libgomp1 tini procps ca-certificates curl \
-      fonts-dejavu-core fonts-noto-core fonts-noto-cjk && rm -rf /var/lib/apt/lists/*
+      fonts-dejavu-core fonts-noto-core fonts-noto-cjk gcc libc6-dev && rm -rf /var/lib/apt/lists/*   # gcc + libc6-dev: Triton (torch.compile / inductor: the KeySync VAE) compiles its launcher at run time (11.11 VM smoke: "Failed to find C compiler")
 COPY --from=builder /opt/uv/python /opt/uv/python
 # the venvs in several layers (GHCR: <= 10 GB per layer, <= 10 min per upload): the big CUDA / torch / TensorRT trees each in their own layer
 #   (the builder moved them to /split/1..5; the order below = the builder's list)
