@@ -59,7 +59,7 @@ PY
 # have accepted its terms) into HF_HOME = $M/hf, revisions pinned; face_alignment's S3FD + 2DFAN4 into KS_TORCH_HOME (sha256 pinned)
 $PY - <<'PY'
 from huggingface_hub import snapshot_download
-snapshot_download("facebook/hubert-base-ls960", revision="dba3bb02fda4248b6e082697eee756de8fe8aa8a", allow_patterns=["config.json", "pytorch_model.bin"])
+snapshot_download("facebook/hubert-base-ls960", revision="dba3bb02fda4248b6e082697eee756de8fe8aa8a", allow_patterns=["config.json", "preprocessor_config.json", "pytorch_model.bin"])
 snapshot_download("stabilityai/stable-video-diffusion-img2vid", revision="9cf024d5bfa8f56622af86c884f26a52f6676f2e",
                   allow_patterns=["vae/config.json", "vae/diffusion_pytorch_model.fp16.safetensors"]); print("keysync hub deps ok")
 PY
