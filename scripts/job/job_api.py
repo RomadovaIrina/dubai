@@ -124,6 +124,33 @@ def submit(job: dict = Body(...)):
     return {"job_id": jid, "status": "QUEUED", "queue_position": pos, "status_url": f"/jobs/{jid}"}
 
 
+@app.post("/jobs/sync")
+def submit_sync(job: dict = Body(...)):
+    """r17 (Vast Serverless, TZ 10.1): ONE request = one whole job, for a router that sends every request of a client to ANY worker (the async
+    POST /jobs + GET /jobs/{id} pair would poll the wrong worker). Body = a POST /jobs body + optional "output_put_url" (a presigned PUT URL:
+    the result video is uploaded there; the URL is never logged or stored) + optional "output_put_subs_url". Blocks until SUCCESS / PARTIAL /
+    ERROR (one job at a time per worker: the queue applies) and returns the final status (+ "uploaded": {video, subs})."""
+    import urllib.request
+    job = dict(job); put = {"video": job.pop("output_put_url", None), "subs": job.pop("output_put_subs_url", None)}
+    jid = submit(job)["job_id"]
+    while True:
+        s = _status(jid)
+        if s.get("status") in ("SUCCESS", "PARTIAL_SUCCESS", "ERROR"): break
+        time.sleep(1.0)
+    up = {}
+    for kind, url in put.items():
+        f = s.get("output") if kind == "video" else s.get("subs_ass")
+        if not url or not f or not pathlib.Path(f).is_file(): continue
+        try:
+            with open(f, "rb") as fh:
+                rq = urllib.request.Request(url, data=fh, method="PUT", headers={"content-length": str(pathlib.Path(f).stat().st_size),
+                                                                                 "content-type": "video/mp4" if kind == "video" else "text/plain"})
+                with urllib.request.urlopen(rq, timeout=3600) as r: up[kind] = r.status in (200, 201, 204)
+        except Exception as e:
+            up[kind] = False; s.setdefault("warnings", []).append({"code": "W_UPLOAD_FAILED", "message": f"{kind} upload failed: {type(e).__name__}"})
+    return {**s, "uploaded": up}
+
+
 @app.get("/jobs")
 def list_jobs(limit: int = 100):
     rows = []
