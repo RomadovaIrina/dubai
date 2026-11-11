@@ -78,7 +78,7 @@ def park():
     ~28 GB never share the 32 GB card). Qwen is FREED (its GGUF stays in the page cache: the next job's load_llm takes ~2-4 s, model_cache.py note);
     the TTS QA Whisper (CTranslate2) is unloaded to the CPU, wav2vec2 / pyannote / Silero moved to the CPU. -> one JSON line (what, s, GPU used)"""
     import gc, time, torch, audio_proc
-    t0 = time.time(); done = []
+    t0 = time.time(); done = []; steps = {"start": _gpu_used_gb()}
     llm = audio_proc.KEEP.pop("llm", None)
     try:
         import qwen_batch; qwen_batch._ENGINES.clear()   # its batched engines hold contexts of this model
@@ -86,11 +86,12 @@ def park():
     if llm is not None:
         try: type(llm[0]).close(llm[0])   # (the instance's close() is a no-op patch: the class's frees the model + context)
         except Exception: pass
-        del llm; done.append("qwen_freed")
+        del llm; gc.collect(); done.append("qwen_freed"); steps["after_qwen"] = _gpu_used_gb()
     qa = audio_proc.KEEP.get("qa")
     if qa is not None:
         try: qa.wh.model.unload_model(to_cpu=True); done.append("qa_whisper_cpu")
         except Exception as e: done.append(f"qa_whisper_keep({type(e).__name__})")
+        steps["after_whisper"] = _gpu_used_gb()
         try: qa.w2v.to("cpu"); done.append("qa_w2v_cpu")
         except Exception: pass
     try:
@@ -100,7 +101,9 @@ def park():
             except Exception: pass
     except Exception: pass
     gc.collect(); torch.cuda.synchronize(); torch.cuda.empty_cache()
-    return {"park": done, "s": round(time.time() - t0, 2), "gpu_used_gb": _gpu_used_gb()}
+    steps["end"] = _gpu_used_gb()
+    return {"park": done, "s": round(time.time() - t0, 2), "gpu_used_gb": steps["end"], "steps_gb": steps,
+            "torch_alloc_gb": round(torch.cuda.memory_allocated() / 2**30, 2), "torch_reserved_gb": round(torch.cuda.memory_reserved() / 2**30, 2)}
 
 
 def unpark():

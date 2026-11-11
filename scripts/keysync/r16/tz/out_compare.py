@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """r17 quality guard for speedups: two outputs of the same input (+ the same dub) compared.
-  video: PSNR over the whole frame and inside the KeySync-changed box (the bounding box of the pixels where output 1 differs from the SOURCE by
-         > 8 levels, over all frames; = the pasted mouth / face region), per-frame min / mean; identical = every frame bit-equal
+  video: PSNR over the whole frame and inside the box where the two outputs differ by > 12 levels over all frames (= the generated region), per-frame min / mean; identical = every frame bit-equal
   audio: md5 of the decoded PCM (s16le) of both
     python3 out_compare.py --a OUT1.mp4 --b OUT2.mp4 --src SRC.mp4 [--json out.json]"""
 import argparse, hashlib, json, subprocess, sys
@@ -35,8 +34,8 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--a", required=True); ap.add_argument("--b", required=True); ap.add_argument("--src", required=True)
     ap.add_argument("--json", default=""); a = ap.parse_args()
     w, h = size(a.a); box = None
-    for fa, fs in zip(frames(a.a, w, h), frames(a.src, w, h)):   # pass 1: the changed box
-        m = np.abs(fa.astype(np.int16) - fs.astype(np.int16)).max(-1) > 8
+    for fa, fs in zip(frames(a.a, w, h), frames(a.b, w, h)):   # pass 1: the box where the two outputs differ by > 12 levels (= the generated mouth / face;
+        m = np.abs(fa.astype(np.int16) - fs.astype(np.int16)).max(-1) > 12   # the source is at its own fps, so it cannot be paired frame by frame)
         ys, xs = np.nonzero(m)
         if len(ys):
             b = (xs.min(), ys.min(), xs.max() + 1, ys.max() + 1)
