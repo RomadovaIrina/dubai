@@ -6,13 +6,15 @@ the final status). One job at a time per worker (allow_parallel_requests=False):
 input video minutes (the client sends "video_minutes"; a missing value counts as 1).
     PYWORKER_REPO=<a public repo with this file + requirements.txt at its root>   (the Serverless template runs `python worker.py`)
 Log readiness: /data/resident/start.log gets "RESIDENT_READY" once the KeySync models are loaded + parked and the audio worker is up."""
+import os
 from vastai import BenchmarkConfig, HandlerConfig, LogActionConfig, Worker, WorkerConfig
 
-BENCH_CLIP = "/workspace/dub/dubai/infra/vast_serverless/bench_10s.mp4"   # a 10 s CC0 face clip baked into the image (TODO: add one)
+BENCH_CLIP = os.environ.get("BENCH_CLIP", "/data/bench_5s.mp4")   # start.sh: a 5 s synthetic clip (no face: a fast round trip)
 
 
 def bench_payload() -> dict:
-    return {"input": BENCH_CLIP, "target_lang": "en", "video_minutes": 10 / 60}
+    import uuid
+    return {"job_id": "bench_" + uuid.uuid4().hex[:8], "input": BENCH_CLIP, "target_lang": "en", "video_minutes": 5 / 60}
 
 
 worker_config = WorkerConfig(
