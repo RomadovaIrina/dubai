@@ -27,6 +27,7 @@ ks_serve_live() {   # ks_serve_live <spool>: 0 when a daemon is up, loaded (read
 
 ks_fast_launch() {   # needs ENG LORA LMK GATE KT (as set by ks_face.sh / ks_shots.sh)
   local FJ=$1 OUT=$2 LOG=$3 D=${KS_SERVE_DIR:-}; KS_SERVED=0
+  if [ -n "$D" ] && [ -f $D/starting ]; then local w=0; while [ -f $D/starting ] && [ $w -lt ${KS_SERVE_WAIT_S:-300} ]; do sleep 1; w=$((w + 1)); done; echo "KS_SERVE waited ${w} s for the (re)starting daemon"; fi
   if ks_serve_live "$D"; then
     local SIG; SIG=$(ks_sig $ENG $LORA $LMK "$GATE")
     if python3 -c "import json, sys; sys.exit(0 if json.load(open('$D/ready')).get('sig') == '$SIG' else 1)" 2>/dev/null; then
@@ -56,6 +57,7 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then   # run directly: start / stop the daemo
     stop) touch $D/stop; [ -s $D/pid ] && { for i in $(seq 60); do kill -0 $(cat $D/pid) 2>/dev/null || break; sleep 0.5; done; kill $(cat $D/pid) 2>/dev/null; }; exit 0;;
     start)
       rm -f $D/stop $D/ready $D/alive $D/pid; rm -rf $D/req; mkdir -p $D/req $D/kit
+      touch $D/starting; trap 'rm -f $D/starting' EXIT   # r17: ks_fast_launch waits for a daemon that is (re)starting instead of going cold
       for f in $R/scripts/keysync/*.py $R/scripts/keysync/r15/*.py $R/scripts/keysync/r16/*.py; do cp $f $D/kit/; done
       LORA=${KS_LORA:-$KS/student/lora_pick.pt}; LMK=${KS_LMK_CACHE:-$KS/lmk}; mkdir -p $LMK; [ -n "${KS_TORCH_HOME:-}" ] && export TORCH_HOME=$KS_TORCH_HOME
       GATE="${KS_GATE-thr=0.12,cap=0.25,hi=8,lo=2}"

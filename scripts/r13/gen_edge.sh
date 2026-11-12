@@ -1,7 +1,7 @@
 #!/bin/bash
 # r13 round 3: edge-case inputs for the robustness suite, all made from our own videos (ffmpeg, CPU). -> /workspace/dub/r13s/edge/in/<case>.<ext>
 set -u
-T=/workspace/dub/inputs/test_videos_raw; M=/workspace/dub/inputs/mamakris; O=/workspace/dub/r13s/edge/in; mkdir -p $O; cd $O
+T=${EDGE_T:-/workspace/dub/inputs/test_videos_raw}; M=${EDGE_M:-/workspace/dub/inputs/mamakris}; O=${EDGE_O:-/workspace/dub/r13s/edge/in}; mkdir -p $O; cd $O   # r17: paths overridable (the VM)
 B=$M/story-1774250817106-616905094.mp4      # m18: 720x1280 30 fps, one face, 20 s of speech
 B3=$T/03.mp4
 F="-loglevel error -y"

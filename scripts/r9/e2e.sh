@@ -123,6 +123,9 @@ if [ "${E2E_ROUTE_PRE:-0}" = 1 ] && [ "${E2E_LIPSYNC:-on}" != off ] && [ "${DUB_
   ( ffmpeg -loglevel error -y -i $SRC -map 0:v:0 -map 0:a:0 -vf fps=25 -c:v libx264 -preset fast -crf 12 -pix_fmt yuv420p -c:a aac $RPRE/master_25fps.mp4 && touch $RPRE/master.done
     ${DUB_MEDIAPIPE_PY:-/venv/mediapipe/bin/python} scripts/quality/r16q_beard.py $SRC --out $RPRE/beard.json > $RPRE/beard.log 2>&1 && touch $RPRE/beard.done; touch $RPRE/finished ) &
 fi
+KSX=""   # r17 VRAM margin (KS_SERVE_AUDIO_EXIT=1, off by default until the VM check): the parked KeySync daemon still holds ~1.5-2 GB (CUDA context),
+if [ "${KS_SERVE_AUDIO_EXIT:-0}" = 1 ] && [ -n "${KS_SERVE_DIR:-}" ] && [ -z "${DUB_AUDIO_FROM:-}" ] && [ -s ${KS_SERVE_DIR}/pid ]; then   # next to the ~30 GB audio peak
+  KSX=$KS_SERVE_DIR; bash scripts/keysync/r16/ks_serve.sh stop $KSX > $L/ks_serve_stop.log 2>&1; echo "== $ID KeySync daemon stopped for the audio stage" | tee -a $L/e2e.log; fi
 if [ -z "${DUB_AUDIO_FROM:-}" ] && ! python3 scripts/voice_env_check.py --python ${DUB_ENV:-/venv/dabai}/bin/python 2>> $L/e2e.log; then   # r16 T: never a wrong voice silently
   fail voice_env_mismatch ERROR "the voice environment is not the accepted one (Chatterbox 5de7a54 + noisereduce): see logs/e2e.log"; finish; fi
 if [ -n "${DUB_AUDIO_FROM:-}" ]; then   # r16 T golden test: an ACCEPTED dub (dubbed_16k.wav + final_mix_aac.m4a [+ *.manifest.json]) instead of a new one
@@ -130,6 +133,8 @@ if [ -n "${DUB_AUDIO_FROM:-}" ]; then   # r16 T golden test: an ACCEPTED dub (du
   FL+=("audio_reused"); echo "== $ID audio reused from $DUB_AUDIO_FROM" | tee -a $L/e2e.log
 else bash scripts/r8/r8_audio.sh $AT $ID > $L/audio.log 2>&1; fi
 unset R9_ON_MIXSRC
+if [ -n "$KSX" ]; then   # back up while the route runs (its own session: it outlives this job, as the resident worker does)
+  setsid bash scripts/keysync/r16/ks_serve.sh start $KSX > $L/ks_serve_restart.log 2>&1 < /dev/null & echo "== $ID KeySync daemon restarting after the audio stage" | tee -a $L/e2e.log; fi
 AD=$A/$AT/$ID
 if ! { [ -f $AD/final_mix_aac.m4a ] && [ -f $AD/dubbed_16k.wav ]; }; then   # r13: a clip with no speech (silence / music only) is its own, clear ERROR
   if grep -qs "ASR produced no speech units" $A/${AT}pre/runs/$ID.log $L/audio.log; then fail no_speech ERROR "no speech found in the audio: nothing to dub"

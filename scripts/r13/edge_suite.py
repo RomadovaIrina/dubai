@@ -4,7 +4,7 @@ defaults), one at a time, in ONE process (the worker must survive all of them). 
 source as DISPLAYED (rotation applied): width, height, fps, duration.
     python scripts/r13/edge_suite.py --in DIR --out DIR [--cases a,b,...]"""
 import argparse, json, pathlib, subprocess, sys, time
-HERE = pathlib.Path(__file__).resolve().parent; sys.path.insert(0, str(HERE))
+HERE = pathlib.Path(__file__).resolve().parent; sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent / "job"))   # r17: the CURRENT job interface (scripts/job), not the r13 copy
 import dabai_job  # noqa: E402
 
 # case -> (expected statuses, flags that must be present, what it tests)
@@ -52,7 +52,7 @@ def main():
                                          and abs(s_out.get("dur", 0) - s_in.get("dur", 0)) < 0.25)
         ok = st["status"] in want and all(f in st["flags"] for f in need) and (fmt_ok is not False)
         res[c] = {"what": what, "status": st["status"], "expected": sorted(want), "flags": st["flags"], "need_flags": need, "ok": ok, "format_ok": fmt_ok,
-                  "src": s_in, "out": s_out, "messages": [m["en"] for m in st["messages"]], "errors": st["errors"][:3], "wall_s": round(time.time() - t0, 1),
+                  "src": s_in, "out": s_out, "messages": [m.get("en") for m in st.get("messages") or []], "errors": (st.get("errors") or ([st["error"]] if st.get("error") else []))[:3], "wall_s": round(time.time() - t0, 1),
                   "video_minutes": st.get("video_minutes"), "gpu_busy_s": st.get("gpu_busy_s")}
         (O / "edge.json").write_text(json.dumps(res, indent=1, ensure_ascii=False))
         print(f"== {c}: {st['status']} (want {sorted(want)}) flags {st['flags']} format_ok {fmt_ok} -> {'OK' if ok else 'FAIL'}  {res[c]['wall_s']} s", flush=True)

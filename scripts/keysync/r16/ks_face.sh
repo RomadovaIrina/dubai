@@ -120,7 +120,10 @@ else FJ=$KW/jobs_follow.txt; : > $FJ; KLOG=$KW/ks_fast.log; KOUT=$KW/out; PFX=""
 . $R/scripts/keysync/r16/ks_serve.sh; ks_fast_launch $FJ $KW/out $KW/ks_fast.log   # r17: the resident KeySync daemon (KS_SERVE_DIR) when it is up with these settings, else a cold --follow ks_fast (as before)
 trap '[ -n "${KSP:-}" ] && kill $KSP 2>/dev/null' EXIT; fi   # never leave a --follow ks_fast behind (it would wait for END forever)
 waitjob() { until grep -q "^KS_JOB {\"tag\": \"$1\"" $KLOG; do kill -0 $KSP 2>/dev/null || { echo "KS: ks_fast died before job $1"; tail -5 $KLOG; return 1; }; sleep 0.5; done; }
-if [ "${KS_DELAY:-probe}" = probe ]; then
+PBC=0   # r17 KS_PROBE_BY_CHECK=1 (OFF by default until scripts/keysync/r16/tz/probe_proof.sh): no separate probe render; the delay is verified by the check
+if [ "${KS_PROBE_BY_CHECK:-0}" = 1 ] && [ "${KS_DELAY:-probe}" = probe ] && [ -z "$SHR" ] && [ "$N" -le "$(( ${KS_CHUNK_MIN_S:-90} * 25 ))" ]; then PBC=1; fi
+if [ $PBC = 1 ]; then for f in $TAGS; do DLY[$f]=${KS_PBC_DELAY:-40}; done; echo "KS_PROBE_BY_CHECK: no probe render; delay ${KS_PBC_DELAY:-40} ms, verified after the render"
+elif [ "${KS_DELAY:-probe}" = probe ]; then
   t probe; : > $KW/probe/jobs.txt; PS=${KS_PROBE_S:-10}; OFFS=""
   for f in $TAGS; do   # a FRAME-ALIGNED window of KS_PROBE_S s from the face's first own speech; the same reference (frame 0) + gate as the full run
     $MPY - $KW/dub_$f.wav $KW/data/crop_$f.mp4 $(cat $KW/ref_$f.txt) $PS $KW/probe/v_$f.mp4 $KW/probe/a_$f.wav <<'PY' || exit 1
@@ -158,11 +161,14 @@ PY
     if [ -z "${TAGS// }" ]; then echo "KS_FACE_KEEP_SOURCE $ID: off-screen voice (faces$OFFS): the source picture with the dub"
       [ -n "$SHR" ] || { echo END >> $FJ; wait $KSP 2>/dev/null; KSP=""; gpu_release; sync_serve_stop; }; exit 3; fi; fi
 else for f in $TAGS; do DLY[$f]=${KS_DELAY}; done; fi
+mk_dubp() {   # mk_dubp <face> <delay ms>: the dub KeySync hears (r17: a function, so a KS_PROBE_BY_CHECK re-render uses the very same command)
+  local f=$1 D=$2 PD AF; PD=$(python3 -c "print(($N + $PAD) / 25)")
+  if [ "$D" -ge 0 ]; then AF="adelay=$D:all=1,apad=whole_dur=$PD"; else AF="atrim=start=$(python3 -c "print(-$D / 1000)"),asetpts=PTS-STARTPTS,apad=whole_dur=$PD"; fi
+  ffmpeg -v error -y -i $KW/dub_$f.wav -af "$AF" -t $PD -ar 16000 -ac 1 $KW/data/dubp_$f.wav; }
 t keysync; : > $KW/jobs.txt
 for f in $TAGS; do   # the dub KeySync hears: delayed (or advanced) by the probe, padded with silence to the padded crop (the final mix is never touched)
   D=${DLY[$f]}; PD=$(python3 -c "print(($N + $PAD) / 25)")
-  if [ "$D" -ge 0 ]; then AF="adelay=$D:all=1,apad=whole_dur=$PD"; else AF="atrim=start=$(python3 -c "print(-$D / 1000)"),asetpts=PTS-STARTPTS,apad=whole_dur=$PD"; fi
-  ffmpeg -v error -y -i $KW/dub_$f.wav -af "$AF" -t $PD -ar 16000 -ac 1 $KW/data/dubp_$f.wav || exit 1
+  mk_dubp $f $D || exit 1
   ffmpeg -v error -y -i $KW/dub_$f.wav -af "apad=whole_dur=$PD" -t $PD -ar 16000 -ac 1 $KW/data/dubo_$f.wav || exit 1   # the ORIGINAL timing, for the check
   if [ "$N" -gt "$(( ${KS_CHUNK_MIN_S:-90} * 25 ))" ]; then   # long video: ~KS_CHUNK_S pieces cut at dub pauses, the same reference in each (RAM flat)
     $PY $KT/ks_chunk.py split --video $KW/data/pad_$f.mp4 --audio $KW/data/dubp_$f.wav --ref $(cat $KW/ref_$f.txt) --chunk-s ${KS_CHUNK_S:-60} --out $KW/data/chunks_$f --tag $PFX$f \
@@ -171,21 +177,41 @@ for f in $TAGS; do   # the dub KeySync hears: delayed (or advanced) by the probe
 done
 cat $KW/jobs.txt >> $FJ
 if [ -n "$SHR" ]; then waitjob "$(tail -1 $KW/jobs.txt | awk '{print $1}')" || exit 1   # (jobs run in order: the last one done = all done)
+elif [ $PBC = 1 ]; then waitjob "$(tail -1 $KW/jobs.txt | awk '{print $1}')" || exit 1   # (r17 PBC: ks_fast stays up for a re-render)
 else echo END >> $FJ; wait $KSP || { tail -5 $KLOG; exit 1; }; fi
 grep "^KS_JOB" $KLOG | grep -v "\"tag\": \"${PFX}p_" | grep "\"tag\": \"$PFX" | cut -c1-400
 for f in $TAGS; do
   if [ -d $KW/data/chunks_$f ]; then rm -rf $KW/out/$f; mkdir -p $KW/out/$f
     $PY $KT/ks_chunk.py join --dir $KW/data/chunks_$f --renders $KOUT --out $KW/out/$f/joined.mp4 --tag $PFX$f || exit 1
   elif [ -n "$SHR" ]; then rm -rf $KW/out/$f; ln -sfn $KOUT/$PFX$f $KW/out/$f; fi; done
-t check; declare -A SHF
+t check; declare -A SHF CHO
 for f in $TAGS; do   # the raw render vs the ORIGINAL dub (K2): ~0 after the probe delay. KS_PASTE_SHIFT: 0 (default, the probe only) | auto (= -offset) | N
   SH=${KS_PASTE_SHIFT:-0}; O=x
   if [ "${KS_CHECK:-on}" = on ] || [ "$SH" = auto ]; then O=$(sync_off $(ls $KW/out/$f/*.mp4 | head -1) $KW/data/dubo_$f.wav $KW/sync_$f.json); fi
   [ "$O" = x ] && [ "${KS_CHECK:-on}" = on ] && flag ks_check_failed "$f: the post-render SyncNet check gave no result"   # (Q audit O9)
   [ "$O" != x ] && [ "${O#-}" -ge 2 ] && flag ks_check_offset "$f: raw render vs the original dub still $O frames after the probe delay"
   if [ "$SH" = auto ]; then [ "$O" = x ] && O=0; SH=$(( -O )); fi
-  SHF[$f]=$SH; echo "KS_CHECK $f delay ${DLY[$f]} ms, raw offset vs the original dub $O, paste shift $SH"
+  SHF[$f]=$SH; CHO[$f]=$O; echo "KS_CHECK $f delay ${DLY[$f]} ms, raw offset vs the original dub $O, paste shift $SH"
 done
+if [ $PBC = 1 ]; then   # r17 KS_PROBE_BY_CHECK: the probe decision from the check (scripts/keysync/r16/pbc_decide.py); a re-render only when it differs
+  RR=""
+  for f in $TAGS; do C=$(python3 -c "import json; print(json.load(open('$KW/sync_$f.json'))['global']['conf'])" 2>/dev/null || echo 0)
+    read -r ACT ND FLG < <(python3 $KT/pbc_decide.py --check-offset "${CHO[$f]:-x}" --conf "$C" --delay ${DLY[$f]})
+    echo "KS_PROBE $f (by check) check offset ${CHO[$f]:-x} conf $C -> $ACT $ND ms ($FLG)"
+    case $ACT in
+      offscreen) flag ks_offscreen_voice "$f: (by check) conf $C < ${KS_OFFSCREEN_CONF:-1.5}: the voice is not this face's (off-screen) -> its source picture"; OFFS="${OFFS:-} $f";;
+      rerender) [ "$FLG" != ok ] && flag $FLG "$f: (by check) conf $C, check offset ${CHO[$f]:-x} -> delay $ND"; DLY[$f]=$ND; RR="$RR $f";;
+    esac; done
+  for f in $RR; do mk_dubp $f ${DLY[$f]} || exit 1; echo "${f}_r $KW/data/pad_$f.mp4 $KW/data/dubp_$f.wav $(cat $KW/ref_$f.txt)" >> $FJ; done
+  for f in $RR; do waitjob ${f}_r || exit 1; rm -rf $KW/out/$f; mv $KW/out/${f}_r $KW/out/$f
+    SH=${KS_PASTE_SHIFT:-0}; O=$(sync_off $(ls $KW/out/$f/*.mp4 | head -1) $KW/data/dubo_$f.wav $KW/sync_$f.json)
+    [ "$O" != x ] && [ "${O#-}" -ge 2 ] && flag ks_check_offset "$f: raw render vs the original dub still $O frames after the delay (re-rendered)"
+    if [ "$SH" = auto ]; then [ "$O" = x ] && O=0; SH=$(( -O )); fi
+    SHF[$f]=$SH; echo "KS_CHECK $f delay ${DLY[$f]} ms (re-rendered), raw offset vs the original dub $O, paste shift $SH"; done
+  echo END >> $FJ; wait $KSP || { tail -5 $KLOG; exit 1; }; KSP=""
+  LEFT=$(for f in $TAGS; do [[ " ${OFFS:-} " == *" $f "* ]] || echo -n "$f "; done)
+  if [ -z "${LEFT// }" ]; then echo "KS_FACE_KEEP_SOURCE $ID: off-screen voice (faces${OFFS:-}): the source picture with the dub"; gpu_release; sync_serve_stop; exit 3; fi
+fi
 [ -n "$SHR" ] || { gpu_release; sync_serve_stop; }   # GPU done: the post + paste below are CPU only
 declare -p DLY SHF > $KW/state.sh; echo "OFFS='${OFFS:-}'" >> $KW/state.sh
 fi   # ==== end of gpu
