@@ -39,10 +39,10 @@ Vast workers are separate machines, and there is no shared network volume, so ea
 | cold_workers | 1 (or more) | stopped workers that keep their disk (weights + TRT plans) → wake without the 38 GB download / 14 min build |
 | max_workers | per budget | |
 | inactivity → stop | 15 min (Irina) | the docs call this the inactivity timeout: check its exact name in the console |
-| env | `DABAI_RESIDENT=1`, `HF_TOKEN` (only for fetch-models; Vast template secret), `PYWORKER_REPO` | never bake tokens into the image |
+| env | `DABAI_RESIDENT=1`, `HF_TOKEN` (fetch-models; Vast template secret), `KS_KIT_REPO=RomadovaIrina/dabai-keysync-kit` (PRIVATE: our KeySync student + TRT capture, read with the HF_TOKEN), `PYWORKER_REPO` | never bake tokens or our weights into the public image |
 
 ## What is still to do
-1. Push the image to GHCR (the token). The image is already checked: push_ghcr.sh PASS on 6b50043.
+1. The image is on GHCR (c358867, 12.11); the KeySync kit is in the private HF repo RomadovaIrina/dabai-keysync-kit (12.11).
 2. Add a 10 s CC0 benchmark clip to the image (the PyWorker benchmark runs one real job; this also warms a new worker's caches).
 3. The serverless start wrapper (fetch-models if needed → api + resident).
 4. A real endpoint test: scale 0 → 1 on the first request (measure the wake time on a fresh machine and on a stopped one), the 15-min idle stop,
