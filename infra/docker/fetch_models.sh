@@ -71,6 +71,8 @@ PY
 dl https://www.adrianbulat.com/downloads/python-fan/s3fd-619a316812.pth $K/torch/hub/checkpoints/s3fd-619a316812.pth
 dl https://www.adrianbulat.com/downloads/python-fan/2DFAN4-cd938726ad.zip $K/torch/hub/checkpoints/2DFAN4-cd938726ad.zip
 printf "619a31681264d3f7f7fc7a16a42cbbe8b23f31a256f75a366e5a1bcd59b33543  $K/torch/hub/checkpoints/s3fd-619a316812.pth\ncd938726adb1f15f361263cce2db9cb820c42585fa8796ec72ce19107f369a46  $K/torch/hub/checkpoints/2DFAN4-cd938726ad.zip\n" | sha256sum -c -
+if [ -z "${KS_KIT_DIR:-}" ] && [ -n "${KS_KIT_REPO:-}" ]; then   # r17 (Vast Serverless): our KeySync kit from a PRIVATE HF repo (HF_TOKEN), never in the public image
+  KS_KIT_DIR=$M/cache/ks_kit; $PY -c "import sys; from huggingface_hub import snapshot_download; snapshot_download(sys.argv[1], local_dir=sys.argv[2], allow_patterns=['lora_pick.pt', 'lora_meta.json', 'kf.pt', 'interp.pt'])" "$KS_KIT_REPO" $KS_KIT_DIR     && echo "keysync kit from $KS_KIT_REPO" || echo "WARNING: the KeySync kit download from $KS_KIT_REPO failed"; fi
 for f in student/lora_pick.pt student/lora_meta.json trt_cap/kf.pt trt_cap/interp.pt; do   # KS_KIT_DIR = a folder with these 4 files (HANDOFF / laptop chkpts)
   [ -s $K/$f ] || { [ -n "${KS_KIT_DIR:-}" ] && [ -s $KS_KIT_DIR/$(basename $f) ] && cp $KS_KIT_DIR/$(basename $f) $K/$f; } || echo "WARNING: no $K/$f (set KS_KIT_DIR): the KeySync face is unavailable"
 done
