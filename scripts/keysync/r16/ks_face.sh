@@ -29,11 +29,12 @@ KT=$KW/kit; PAD=${KS_PAD:-60}
 flag() { echo "$1" >> $KW/flags.txt; echo "KS_FLAG $1 ${2:-}"; }
 t() { echo "KS_T $1 $(date +%s.%N)"; }
 dur() { ffprobe -v error -show_entries format=duration -of csv=p=0 "$1"; }
+. $R/scripts/keysync/r16/sync_serve.sh   # r17: sync_run (resident SyncNet process when KS_SYNC_SERVE=1, else the cold call)
 sync_off() {   # sync_off <video> <wav> <json>: SyncNet global AV offset of a raw KeySync render (first KS_SYNC_MAX_S s); prints the offset or "x"
   local V=$1 A=$2 J=$3 MX=${KS_SYNC_MAX_S:-60}
   if [ "$MX" != 0 ] && python3 -c "import sys; sys.exit(0 if float(sys.argv[1]) > float(sys.argv[2]) else 1)" "$(dur $V)" "$MX"; then
     ffmpeg -v error -y -i $V -t $MX -an -c:v copy ${J%.json}.mp4 && ffmpeg -v error -y -i $A -t $MX ${J%.json}.wav && V=${J%.json}.mp4 A=${J%.json}.wav; fi
-  ( cd $R && $PY scripts/quality/sync_perframe.py --video $V --audio $A --out $J ) > ${J%.json}.log 2>&1 \
+  sync_run ${J%.json}.log --video $V --audio $A --out $J \
     && python3 -c "import json; print(int(json.load(open('$J'))['global']['av_offset']))" || echo x; }
 
 if [ "$PH" = all ] || [ "$PH" = prep ]; then   # ==== prep (CPU): master, landmarks, shots, plan, crop, pad, reference
@@ -105,6 +106,7 @@ if [ "$PH" = all ] || [ "$PH" = gpu ]; then   # ==== gpu
 # wait in the queue; released here (gpu_release) before the CPU post. Without it this script takes the lock itself. No lock fd is ever inherited.
 . $R/scripts/keysync/r16/gpulock.sh
 SHR=${KS_FAST_FJ:-}   # shared resident ks_fast (ks_shots.sh holds the GPU lock for all shots)
+[ -n "$SHR" ] || [ -n "${KS_IN_SHOT:-}" ] || sync_serve_start $KW/syncsrv   # r17 KS_SYNC_SERVE (a single-shot run owns its server; ks_shots.sh owns the shots')
 [ -n "$SHR" ] || gpu_held || { t wait_gpu; gpu_acquire $$ || { echo "KS: could not take the GPU lock"; exit 1; }; }
 t engines; ENG=$(KS_GPU_LOCK=/dev/null bash $R/scripts/keysync/r16/ks_engines.sh 2> $KW/engines.log | tail -1); [ -d "$ENG" ] || { tail -5 $KW/engines.log; exit 1; }
 LMK=${KS_LMK_CACHE:-$KS/lmk}; mkdir -p $LMK; [ -n "${KS_TORCH_HOME:-}" ] && export TORCH_HOME=$KS_TORCH_HOME   # (image: face_alignment's weights on the volume)
@@ -154,7 +156,7 @@ PY
     DLY[$f]=$(( -O * 40 )); echo "KS_PROBE $f av_offset $O conf $C -> dub delay ${DLY[$f]} ms"; done
   if [ -n "$OFFS" ]; then TAGS=$(for f in $TAGS; do [[ " $OFFS " == *" $f "* ]] || echo -n "$f "; done)   # the off-screen-voice faces get no render
     if [ -z "${TAGS// }" ]; then echo "KS_FACE_KEEP_SOURCE $ID: off-screen voice (faces$OFFS): the source picture with the dub"
-      [ -n "$SHR" ] || { echo END >> $FJ; wait $KSP 2>/dev/null; KSP=""; gpu_release; }; exit 3; fi; fi
+      [ -n "$SHR" ] || { echo END >> $FJ; wait $KSP 2>/dev/null; KSP=""; gpu_release; sync_serve_stop; }; exit 3; fi; fi
 else for f in $TAGS; do DLY[$f]=${KS_DELAY}; done; fi
 t keysync; : > $KW/jobs.txt
 for f in $TAGS; do   # the dub KeySync hears: delayed (or advanced) by the probe, padded with silence to the padded crop (the final mix is never touched)
@@ -184,7 +186,7 @@ for f in $TAGS; do   # the raw render vs the ORIGINAL dub (K2): ~0 after the pro
   if [ "$SH" = auto ]; then [ "$O" = x ] && O=0; SH=$(( -O )); fi
   SHF[$f]=$SH; echo "KS_CHECK $f delay ${DLY[$f]} ms, raw offset vs the original dub $O, paste shift $SH"
 done
-[ -n "$SHR" ] || gpu_release   # GPU done: the post + paste below are CPU only
+[ -n "$SHR" ] || { gpu_release; sync_serve_stop; }   # GPU done: the post + paste below are CPU only
 declare -p DLY SHF > $KW/state.sh; echo "OFFS='${OFFS:-}'" >> $KW/state.sh
 fi   # ==== end of gpu
 [ "$PH" = gpu ] && { echo "KS_PHASE_DONE gpu $ID"; exit 0; }

@@ -117,6 +117,12 @@ fi
 if [ "${E2E_KS_PRE:-on}" = on ] && [ "${DUB_FACE:-auto}" != latentsync ] && [ "${E2E_LIPSYNC:-on}" != off ]; then   # r17 speed (output-identical): the KeySync
   export KS_PRE_DIR=$W/ks_pre; ( bash scripts/keysync/r16/ks_pre.sh "$SRC" $KS_PRE_DIR ) > $L/ks_pre.log 2>&1 &   # master + landmarks during the audio stage
 fi
+RPRE=""   # r17 speed (E2E_ROUTE_PRE=1, off by default until the VM guard): the route's dub-independent parts (its 25 fps master + the beard check)
+if [ "${E2E_ROUTE_PRE:-0}" = 1 ] && [ "${E2E_LIPSYNC:-on}" != off ] && [ "${DUB_FACE:-auto}" != latentsync ] && [ "${DUB_ROUTE:-on}" = on ] && [ -z "${DUB_ROUTE_JSON:-}" ]; then
+  RPRE=$W/route_pre; mkdir -p $RPRE   # the SAME commands as the face_route stage below, run during the audio stage (CPU)
+  ( ffmpeg -loglevel error -y -i $SRC -map 0:v:0 -map 0:a:0 -vf fps=25 -c:v libx264 -preset fast -crf 12 -pix_fmt yuv420p -c:a aac $RPRE/master_25fps.mp4 && touch $RPRE/master.done
+    ${DUB_MEDIAPIPE_PY:-/venv/mediapipe/bin/python} scripts/quality/r16q_beard.py $SRC --out $RPRE/beard.json > $RPRE/beard.log 2>&1 && touch $RPRE/beard.done; touch $RPRE/finished ) &
+fi
 if [ -z "${DUB_AUDIO_FROM:-}" ] && ! python3 scripts/voice_env_check.py --python ${DUB_ENV:-/venv/dabai}/bin/python 2>> $L/e2e.log; then   # r16 T: never a wrong voice silently
   fail voice_env_mismatch ERROR "the voice environment is not the accepted one (Chatterbox 5de7a54 + noisereduce): see logs/e2e.log"; finish; fi
 if [ -n "${DUB_AUDIO_FROM:-}" ]; then   # r16 T golden test: an ACCEPTED dub (dubbed_16k.wav + final_mix_aac.m4a [+ *.manifest.json]) instead of a new one
@@ -171,9 +177,14 @@ fi
 if [ "${E2E_LIPSYNC:-on}" != off ] && [[ " $PF " != *" no_face "* ]] && [ "$FACE" != latentsync ] && [ "${DUB_ROUTE:-on}" = on ]; then
   st face_route   # r16 Q (reports/experiments/r16-qa/ROUTING.md): which visible face speaks which turn (SyncNet on the SOURCE) + beard -> the engine
   RD=$W/route; mkdir -p $RD; MAN=$(ls $AD/${ID}_*.manifest.json 2>/dev/null | head -1)
-  if ffmpeg -loglevel error -y -i $SRC -map 0:v:0 -map 0:a:0 -vf fps=25 -c:v libx264 -preset fast -crf 12 -pix_fmt yuv420p -c:a aac $RD/master_25fps.mp4 \
+  if [ -n "$RPRE" ]; then until [ -f $RPRE/finished ]; do sleep 0.5; done; fi   # r17 E2E_ROUTE_PRE: its master / beard, else computed here as before
+  rmaster() { if [ -n "$RPRE" ] && [ -f $RPRE/master.done ]; then cp $RPRE/master_25fps.mp4 $RD/master_25fps.mp4; else
+    ffmpeg -loglevel error -y -i $SRC -map 0:v:0 -map 0:a:0 -vf fps=25 -c:v libx264 -preset fast -crf 12 -pix_fmt yuv420p -c:a aac $RD/master_25fps.mp4; fi; }
+  rbeard() { if [ -n "$RPRE" ] && [ -f $RPRE/beard.done ]; then cp $RPRE/beard.json $RD/beard.json && cat $RPRE/beard.log >> $L/face_route.log; else
+    ${DUB_MEDIAPIPE_PY:-/venv/mediapipe/bin/python} scripts/quality/r16q_beard.py $SRC --out $RD/beard.json >> $L/face_route.log 2>&1; fi; }
+  if rmaster \
      && gpu_run python scripts/quality/r16q_active_speaker.py --video $RD/master_25fps.mp4 --manifest $MAN --out $RD/as.json --device ${DUB_ROUTE_DEVICE:-cuda} > $L/face_route.log 2>&1 \
-     && ${DUB_MEDIAPIPE_PY:-/venv/mediapipe/bin/python} scripts/quality/r16q_beard.py $SRC --out $RD/beard.json >> $L/face_route.log 2>&1 \
+     && rbeard \
      && python3 scripts/r16q/face_route.py --active $RD/as.json --beard $RD/beard.json --out $RD/route.json >> $L/face_route.log 2>&1; then
     ROUTE=$RD/route.json; read -r KSA ENG < <(python3 -c "import json; d=json.load(open('$ROUTE')); print(int(bool(d.get('keep_source_all'))), d.get('face_engine') or 'keysync')")
     echo "== $ID route: keep_source_all $KSA, engine $ENG, faces $(python3 -c "import json; print([(f['mode'], round(f.get('silence_s', 0), 1)) for f in json.load(open('$ROUTE'))['faces']])")" | tee -a $L/e2e.log

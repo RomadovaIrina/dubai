@@ -29,6 +29,13 @@ shot_log() { grep -h -E "^KS_(CROP|PROBE|CHECK|PASTE|FACE_KEEP|FACE_DONE|FLAG)|W
 shot_fail() {   # r16 T (Q audit O5): ONE failed segment keeps ITS source picture (flagged); the rest of the video is still lip-synced
   echo "KS_SHOT $1 ${SPAN[$1]} FAILED in $2 (${3:-}) -> source"; tail -3 $SW/s$1/face_$2.log 2>/dev/null; echo ks_shot_failed >> $PK/flags.txt; unset "ALPHA[$1]"; NFAIL=$((NFAIL + 1))
   FAILF+=("$(echo "${SPAN[$1]}" | tr -d '[),' | awk '{print $2 - $1}')"); }   # r16 TZ 11.2: the source frames a failed shot keeps
+# r17 speed (meant output-identical, OFF by default until the VM quality guard): the shots are independent ->
+#   KS_SHOT_PREP_JOBS=N  the heavy per-shot prep (ks_face.sh KS_PHASE=prep: crop / pad / landmarks / reference) of N shots at a time
+#   KS_SHOT_PIPE=1       shot i's CPU post + paste starts as soon as its GPU phase returns, while the GPU renders shot i+1 (KS_POST_JOBS at a time, 3)
+# Results are collected in the same order as the serial code (same READY / OKG / PART arrays, same flags); each shot keeps its own dirs.
+BGP=()
+slot() { while :; do local n=0 p; for p in "${BGP[@]}"; do kill -0 $p 2>/dev/null && n=$((n + 1)); done; [ $n -lt $1 ] && return 0; sleep 0.3; done; }
+PJ=${KS_SHOT_PREP_JOBS:-1}; PIPE=${KS_SHOT_PIPE:-0}; PDJ=${KS_POST_JOBS:-3}; PEND=()
 for row in "${FS[@]}"; do
   read -r i k0 k1 <<< "$row"; S=$SW/s$i; mkdir -p $S/audio
   if [ $((k1 - k0)) -lt $MIN ]; then echo "KS_SHOT $i [$k0, $k1): shorter than ${KS_SHOT_MIN_S:-1.0} s -> source"; continue; fi
@@ -55,12 +62,25 @@ for row in "${FS[@]}"; do
   SHOTARGS[$i]="${ID}_s$i $S/master.mp4 $S/audio $S $S/out.mp4 $RS"; SPAN[$i]="[$k0, $k1)"
   if [ "${KS_FAULT:-}" = "shot:$i" ]; then shot_fail $i prep "KS_FAULT=shot:$i injected"; continue; fi   # r16 TZ 11.1 / 11.2 fault injection
   if [ "${KS_SHOTS_REPOST:-0}" = 1 ]; then [ -f $S/ks/state.sh ] && rc=0 || rc=3   # r16d T: re-paste only: the shot keeps its prep + KeySync render (state.sh = rendered)
+  elif [ "$PJ" -gt 1 ]; then slot $PJ   # r17: in the background; its rc is collected below, in this loop's order
+    ( env KS_IN_SHOT=1 KS_PHASE=prep KS_MASTER_IN=$S/master.mp4 KS_MP_NPZ=$MPX bash $R/scripts/keysync/r16/ks_face.sh ${SHOTARGS[$i]} > $S/face_prep.log 2>&1; echo $? > $S/prep.rc ) &
+    BGP+=($!); PEND+=($i); continue
   else env KS_IN_SHOT=1 KS_PHASE=prep KS_MASTER_IN=$S/master.mp4 KS_MP_NPZ=$MPX bash $R/scripts/keysync/r16/ks_face.sh ${SHOTARGS[$i]} > $S/face_prep.log 2>&1; rc=$?; fi
   shot_log $i prep
   if [ $rc = 3 ]; then echo "KS_SHOT $i ${SPAN[$i]}: nothing to lip-sync -> source"; unset "ALPHA[$i]"; continue; fi
   [ $rc = 0 ] || { shot_fail $i prep $rc; continue; }
   READY+=($i)
 done
+if [ ${#PEND[@]} -gt 0 ]; then   # r17 KS_SHOT_PREP_JOBS: the parallel preps, collected exactly as the serial loop would have (longest first)
+  for p in "${BGP[@]}"; do wait $p; done; BGP=(); echo "KS_SHOTS prep: ${#PEND[@]} shots, $PJ at a time"
+  for i in "${PEND[@]}"; do S=$SW/s$i; rc=$(cat $S/prep.rc 2>/dev/null || echo 1); shot_log $i prep
+    if [ $rc = 3 ]; then echo "KS_SHOT $i ${SPAN[$i]}: nothing to lip-sync -> source"; unset "ALPHA[$i]"; continue; fi
+    [ $rc = 0 ] || { shot_fail $i prep $rc; continue; }
+    READY+=($i); done
+  RO=(); for row in "${FS[@]}"; do read -r i _ _ <<< "$row"; [[ " ${READY[*]} " == *" $i "* ]] && RO+=($i); done; READY=("${RO[@]}")   # (the serial order)
+fi
+declare -A POSTED
+post_bg() { POSTED[$1]=1; rm -f $SW/s$1/post.rc; slot $PDJ; ( env KS_IN_SHOT=1 KS_PHASE=post bash $R/scripts/keysync/r16/ks_face.sh ${SHOTARGS[$1]} > $SW/s$1/face_post.log 2>&1; echo $? > $SW/s$1/post.rc ) & BGP+=($!); }
 # ---- r16 T (Q audit O5): ONE GPU-lock hold + ONE resident ks_fast (one model / TRT load + VAE compile) for EVERY shot's probe + render
 OKG=()
 if [ "${KS_SHOTS_REPOST:-0}" = 1 ]; then OKG=("${READY[@]}"); echo "KS_SHOTS_REPOST: post + paste only for segments ${OKG[*]}"
@@ -70,6 +90,7 @@ elif [ ${#READY[@]} -gt 0 ]; then
   GATE="${KS_GATE-thr=0.12,cap=0.25,hi=8,lo=2}"
   ENG=$(KS_GPU_LOCK=/dev/null bash $R/scripts/keysync/r16/ks_engines.sh 2> $SW/engines.log | tail -1); [ -d "$ENG" ] || { tail -5 $SW/engines.log; exit 1; }
   KFJ=$SW/jobs_follow.txt; : > $KFJ; KOUT=$SW/ksout; mkdir -p $KOUT
+  . $R/scripts/keysync/r16/sync_serve.sh; sync_serve_start $SW/syncsrv   # r17 KS_SYNC_SERVE: one SyncNet process for every shot's probe + check
   . $R/scripts/keysync/r16/ks_serve.sh; ks_fast_launch $KFJ $KOUT $SW/ks_fast.log   # r17: resident KeySync daemon or a cold --follow ks_fast (ks_serve.sh)
   trap '[ -n "${KSP:-}" ] && kill $KSP 2>/dev/null' EXIT   # never leave the --follow ks_fast behind
   for i in "${READY[@]}"; do S=$SW/s$i
@@ -82,14 +103,18 @@ elif [ ${#READY[@]} -gt 0 ]; then
     if [ "$DELAY" = probe ] && ! grep -q -E "KS_FLAG ks_probe_(failed|low_conf)" $S/face_gpu.log; then   # only a CONFIDENT probe sets the video's delay
       P=$(grep -o -E "KS_PROBE f[0-9]+ av_offset [-0-9]+( conf [0-9.]+)? -> dub delay [-0-9]+ ms" $S/face_gpu.log | head -1 | awk '{print $(NF-1)}')
       [ -n "$P" ] && { DELAY=$P; echo "KS_SHOTS delay $DELAY ms (probed in segment $i) for the remaining segments"; }; fi
-    OKG+=($i)
+    OKG+=($i); [ "$PIPE" = 1 ] && { post_bg $i; echo "KS_SHOT $i ${SPAN[$i]}: post + paste started (KS_SHOT_PIPE) while the GPU goes on"; }
   done
-  echo END >> $KFJ; wait $KSP 2>/dev/null; KSP=""; gpu_release
+  echo END >> $KFJ; wait $KSP 2>/dev/null; KSP=""; gpu_release; sync_serve_stop
   grep -c "^KS_JOB" $SW/ks_fast.log | sed "s/^/KS_SHOTS one ks_fast: jobs /"
 fi
 # ---- the CPU post + paste of each shot (outside the GPU lock)
+if [ "$PIPE" = 1 ]; then   # r17: the posts not started during the GPU loop (KS_SHOTS_REPOST) start now; then all are collected in order
+  for i in "${OKG[@]}"; do [ -n "${POSTED[$i]:-}" ] || post_bg $i; done
+  for p in "${BGP[@]}"; do wait $p; done; BGP=(); fi
 for i in "${OKG[@]}"; do S=$SW/s$i
-  env KS_IN_SHOT=1 KS_PHASE=post bash $R/scripts/keysync/r16/ks_face.sh ${SHOTARGS[$i]} > $S/face_post.log 2>&1; rc=$?
+  if [ "$PIPE" = 1 ]; then rc=$(cat $S/post.rc 2>/dev/null || echo 1)
+  else env KS_IN_SHOT=1 KS_PHASE=post bash $R/scripts/keysync/r16/ks_face.sh ${SHOTARGS[$i]} > $S/face_post.log 2>&1; rc=$?; fi
   shot_log $i post
   [ $rc = 0 ] || { shot_fail $i post $rc; continue; }
   PART[$i]=$S/out.mp4; LS=$((LS + 1))
