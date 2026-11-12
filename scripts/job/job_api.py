@@ -52,9 +52,18 @@ async def auth(request: Request, call_next):
     return await call_next(request)
 
 
+def _resident_wait(limit_s=float(os.environ.get("DABAI_RESIDENT_WAIT_S", "600"))):
+    """r17 (VM load test 12.11: VRAM 31.6 of 32 GB): while the resident worker is LOADING (its KeySync models on the GPU), a cold job must not
+    start beside it -> wait until it is ready (or the limit: then the job runs cold, as before)"""
+    if os.environ.get("DABAI_RESIDENT") != "1": return
+    t0 = time.time()
+    while _resident().get("state") == "starting" and time.time() - t0 < limit_s: time.sleep(2)
+
+
 def _worker():
     while True:
         jid = Q.get()
+        _resident_wait()
         with LOCK:
             if jid in ORDER: ORDER.remove(jid)
             ev = CANCEL.get(jid)
