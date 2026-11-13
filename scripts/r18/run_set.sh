@@ -31,7 +31,7 @@ long5_src(){   # the 08.11 recipe (r16d_render.sh): 8 mamakris stories -> 720x12
 post(){ local id=$1 O=$B/out/$1 W=/data/jobs/$1/e2e/work; mkdir -p $O/det
   [ -s $B/data/jobs/$id/$id.mp4 ] || { log "POST $id: no job output"; return 1; }
   cp $B/data/jobs/$id/$id.mp4 $O/restored.mp4; cp $B/data/jobs/$id/status.json $O/status.json 2> /dev/null
-  bash $S/r18.sh repaste $id oval KS_MASK=oval   # (KS_MASK is always explicit: the code / image default is hybrid since Irina's pick 13.11)
+  bash $S/r18.sh repaste $id oval KS_MASK=oval KS_TAIL_FADE=off   # (KS_MASK is always explicit: the code / image default is hybrid since Irina's pick 13.11)
   bash $S/r18.sh repaste $id a KS_MASK=oval "KS_PLAIN_EXTRA=--mask-tsmooth 2"
   bash $S/r18.sh repaste $id b KS_MASK=oval "KS_PLAIN_EXTRA=--mask tight --mask-chin 1 $A2"
   bash $S/r18.sh repaste $id c KS_MASK=hybrid
@@ -48,7 +48,7 @@ BG=()
 for id in "$@"; do [ -n "${INP[$id]:-}" ] || { log "unknown video $id"; continue; }
   [ $id = long5 ] && { long5_src || continue; }
   if [[ " $STEPS " == *" dub "* ]] && [ ! -s $B/dubs/$id/dubbed_16k.wav ]; then bash $S/r18.sh dub $id ${REF[$id]} ${VOX[$id]} || continue; fi
-  if [[ " $STEPS " == *" job "* ]] && { [ "${R18_REDO:-0}" = 1 ] || [ ! -s $B/data/jobs/$id/$id.mp4 ]; }; then bash $S/r18.sh job $id ${INP[$id]} ${RTE[$id]} KS_MASK=oval; fi
+  if [[ " $STEPS " == *" job "* ]] && { [ "${R18_REDO:-0}" = 1 ] || [ ! -s $B/data/jobs/$id/$id.mp4 ]; }; then bash $S/r18.sh job $id ${INP[$id]} ${RTE[$id]} KS_MASK=oval KS_TAIL_FADE=off; fi
   if [[ " $STEPS " == *" post "* ]]; then post $id & BG+=($!); fi
 done
 for p in "${BG[@]:-}"; do [ -n "$p" ] && wait $p; done
