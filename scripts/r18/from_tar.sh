@@ -17,4 +17,8 @@ if [ "$(python3 -c "import json; print(len(json.load(open('$W/ks/shots.json'))['
     echo '64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff  models/mediapipe/face_landmarker.task' | sha256sum -c - > /dev/null
     GLOG_minloglevel=2 OMP_NUM_THREADS=8 /venv/mediapipe/bin/python scripts/pilot/mp_landmarks.py /data/jobs/$id/e2e/work/ks/master_25fps.mp4 /data/jobs/$id/e2e/work/ks/master_mp.npz --num-faces 4" > $B/log/from_tar_$id.log 2>&1 || { echo "FROM_TAR $id: master landmarks failed (log/from_tar_$id.log)"; exit 1; }
 fi
+for sd in $W/shots/s*; do [ -d $sd/ks ] && [ ! -s $sd/ks/master_25fps.mp4 ] || continue   # a shot's own master (= its lossless cut of the parent master) was not saved either
+  i=${sd##*/s}; read -r k0 k1 <<< "$(python3 -c "import json; s = json.load(open('$W/ks/shots.json'))['segments'][$i]; print(s[0], s[1])")"
+  bash $CODE/scripts/r18/r18.sh sh "ffmpeg -v error -y -i /data/jobs/$id/e2e/work/ks/master_25fps.mp4 -vf 'select=between(n\,$k0\,$((k1 - 1))),setpts=N/25/TB' -r 25 -c:v libx264 -qp 0 -preset ultrafast -pix_fmt yuv420p /data/jobs/$id/e2e/work/shots/s$i/ks/master_25fps.mp4" >> $B/log/from_tar_$id.log 2>&1 || echo "FROM_TAR $id: shot $i master cut failed"
+done   # (a shot pasted through a clean dissolve, ks_alpha.py, has an UNMIXED master: not rebuilt here; q03)
 echo "FROM_TAR $id: $n face layer(s) restored under $W"
