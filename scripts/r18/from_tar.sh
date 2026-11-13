@@ -9,6 +9,7 @@ tar xf $B/keep/layers_$id.tar -C $B/data/jobs || { echo "FROM_TAR $id: no tar"; 
 n=0; for P in $(find $W -type d -name "post_f*"); do [ -s $P/seam.mp4 ] || continue
   echo "/data/jobs/${P#$B/data/jobs/}/seam.mp4" > $P/layer.txt; mkdir -p $(dirname $P)/kit $(dirname $P)/out; n=$((n + 1)); done
 mkdir -p $W/ks/kit
+for d in $(find $W -name "dubp_f*.wav"); do t=$(dirname $(dirname $d))/$(basename $d | sed s/dubp_/dub_/); [ -s $t ] || cp $d $t; done   # dub_<f>.wav (KS_TAIL_FADE reads it) was not saved: the dub KeySync heard (delayed <= 40 ms, padded with silence) stands in
 [ -n "$HI" ] && cp $B/in/$HI $W/hires_src.${HI##*.}
 if [ "$(python3 -c "import json; print(len(json.load(open('$W/ks/shots.json'))['segments']))")" -gt 1 ] && [ ! -s $W/ks/master_mp.npz ]; then   # ks_shots.sh slices it per shot (the saved per-shot landmarks are what the paste uses)
   docker volume create dabai-models > /dev/null
