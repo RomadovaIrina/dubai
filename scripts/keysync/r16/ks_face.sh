@@ -15,6 +15,7 @@
 #   plan / crop / ref / KeySync / post / paste per shot, nothing smoothed across a cut), concat -c copy + the mix stream-copied. KS_SHOTS=off = one run.
 # Env: KS_SHOTS KS_SHOT_MIN_S KS_DELAY KS_PROBE_S KS_REF KS_CROP KS_PAD KS_GATE KS_TSMOOTH KS_PAUSE KS_PASTE_SHIFT KS_PLAIN_ARGS KS_PLAIN_EXTRA KS_INTERP_STEPS KS_SYNC_MAX_S
 #      KS_MASK (oval | tight = K1 A2 ghost-free | tight_nochin = A3 | tight_chin_legacy) KS_CM_SHADOW KS_OCCL (off|on) KS_OCCL_ARGS KS_TAIL_SRC (off|on) KS_TAIL_SRC_ARGS KS_ZEROFIX KS_OFFSCREEN_CONF KS_EDGE_SNAP
+#      KS_SEAM_ARGS (r18: "--ratio-full 2.0" = the 08.11 step rule: ratio > 2 -> every 13-frame boundary fully smoothed; default = b2a660b's 2.0 -> 3.0 ramp)
 #      KS_PASTE_JOBS KS_MIN_IOD KS_NUM_FACES KS_PROBE_MIN_CONF KS_PROBE_MAX KS_CHECK; GPU_RDY (gpulock.sh hand-off)
 set -o pipefail
 ID=$1; SRC=$2; AD=$3; W=$4; OUTV=$5; ROUTE=${6:-}
@@ -235,7 +236,7 @@ for f in $TAGS; do
     $P/guard.mp4.guard.json $f $N $KW/subst_$f.json   # r16 TZ 11.2: the frames substituted on this face (guard), for the 2 % rule
   if [ "${KS_SEAM:-on}" = on ]; then   # K1 r16-paste2: KeySync's 13-frame segment-boundary jumps spread over 3 transitions (per KeySync run: ks_chunk chunks)
     CJ=""; [ -s $KW/data/chunks_$f/chunks.json ] && CJ="--chunks $KW/data/chunks_$f/chunks.json"
-    $PY $KT/ks_seam.py --layer $L --src $KW/data/pad_$f.mp4 --out $P/seam.mp4 $CJ > $P/seam.log 2>&1 && L=$P/seam.mp4 || { tail -3 $P/seam.log; exit 1; }; tail -1 $P/seam.log | cut -c1-200; fi
+    $PY $KT/ks_seam.py --layer $L --src $KW/data/pad_$f.mp4 --out $P/seam.mp4 $CJ ${KS_SEAM_ARGS:-} > $P/seam.log 2>&1 && L=$P/seam.mp4 || { tail -3 $P/seam.log; exit 1; }; tail -1 $P/seam.log | cut -c1-200; fi
   if [ "${KS_PAUSE:-off}" = warp ] || [ -n "${KS_CAP:-}" ]; then   # + r16d KS_CAP=<k>[:q]: cap the generated lip gap at k x the source speaker's q-gap   # K2 pause (b), default OFF until Irina picks it: the lips closed in the dub's pauses (the layer is on the dub timeline: shift 0)
     PW=$KW/data/dubp_$f.wav; [ -s $PW ] || PW=$KW/dub_$f.wav   # r16d T: the dub the layer was generated on (probe-delayed): m03 +40 ms broke sync with the undelayed one
     $MPY $KT/k2_pause.py --mode warp --ks $L --ks-lm $P/raw_lm.npz --wav $PW --shift 0 --pause $([ "${KS_PAUSE:-off}" = warp ] && echo 1 || echo 0) --cap $(echo ${KS_CAP:-0} | cut -d: -f1) $([ "${KS_CAP#*:}" != "$KS_CAP" ] && echo "--cap-q ${KS_CAP#*:}") --cap-src-lm $KW/crop_lm_$f.npz --out $P/pause.mp4 > $P/pause.log 2>&1 && L=$P/pause.mp4 || { tail -3 $P/pause.log; exit 1; }; fi
