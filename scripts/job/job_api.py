@@ -12,6 +12,7 @@ Endpoints (INTERFACE.md):
     GET    /jobs/{id}/files/{kind}     video | subs | metrics | status | log
     DELETE /jobs/{id}                  cancel (queued: dropped; running: the pipeline is killed) -> status ERROR, error.code E_CANCELLED
     GET    /health                     200 when the node can take jobs (GPU visible, weights present, disk free), else 503
+    GET    /metrics                    r18 (TZ 10.4): Prometheus text: liveness, queue, stuck jobs, GPU hours, VRAM peak, wall per video minute (monitor.py)
     GET    /version                    interface / pipeline / image versions
     GET    /schema/job, /schema/status the JSON schemas
 Auth: when DABAI_API_TOKEN is set, every call except /health needs "Authorization: Bearer <token>" (the token is never logged or echoed).
@@ -20,8 +21,9 @@ from __future__ import annotations
 import json, os, pathlib, queue, re, shutil, subprocess, sys, threading, time, uuid
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import dabai_job as dj  # noqa: E402
+import monitor as mon  # noqa: E402
 from fastapi import Body, FastAPI, HTTPException, Request  # noqa: E402
-from fastapi.responses import FileResponse, JSONResponse  # noqa: E402
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse  # noqa: E402
 
 JOBS = pathlib.Path(os.environ.get("DABAI_JOBS_DIR", "/data/jobs")).resolve(); JOBS.mkdir(parents=True, exist_ok=True)
 INPUT_ROOTS = [pathlib.Path(x).resolve() for x in os.environ.get("DABAI_INPUT_ROOTS", "").split(":") if x]   # local inputs only under these (empty = any)
@@ -29,6 +31,10 @@ TOKEN = os.environ.get("DABAI_API_TOKEN") or None
 MIN_FREE_GB = float(os.environ.get("DABAI_MIN_FREE_GB", "30"))
 app = FastAPI(title="DabAI job API", version=dj.INTERFACE)
 Q: "queue.Queue[str]" = queue.Queue(); ORDER: list[str] = []; CANCEL: dict[str, threading.Event] = {}; RUNNING: list[str] = []; LOCK = threading.Lock()
+# r18 TZ 10.4: monitoring state (monitor.py). The ledger keeps one line per finished job (GPU hours survive deleted job dirs).
+LEDGER = mon.Ledger(pathlib.Path(os.environ.get("DABAI_MONITOR_DIR") or JOBS / ".monitor") / "ledger.jsonl")
+T_START = time.time(); HEART = [time.time()]; WORKER: list[threading.Thread] = []
+METRICS_PUBLIC = os.environ.get("DABAI_METRICS_PUBLIC") == "1"   # 1 = /metrics without the token (a scraper inside a private network)
 
 
 def _dir(jid: str) -> pathlib.Path:
@@ -47,7 +53,8 @@ def _status(jid: str) -> dict:
 
 @app.middleware("http")
 async def auth(request: Request, call_next):
-    if TOKEN and request.url.path != "/health" and request.headers.get("authorization") != f"Bearer {TOKEN}":
+    open_ = request.url.path == "/health" or (METRICS_PUBLIC and request.url.path == "/metrics")
+    if TOKEN and not open_ and request.headers.get("authorization") != f"Bearer {TOKEN}":
         return JSONResponse({"detail": "unauthorized"}, status_code=401)
     return await call_next(request)
 
@@ -62,7 +69,9 @@ def _resident_wait(limit_s=float(os.environ.get("DABAI_RESIDENT_WAIT_S", "600"))
 
 def _worker():
     while True:
-        jid = Q.get()
+        HEART[0] = time.time()   # r18: the idle loop ticks every 10 s (a job's own heartbeat is its status.json)
+        try: jid = Q.get(timeout=10)
+        except queue.Empty: continue
         _resident_wait()
         with LOCK:
             if jid in ORDER: ORDER.remove(jid)
@@ -74,8 +83,16 @@ def _worker():
         except Exception as x:   # never kill the worker thread
             print(f"worker: job {jid} crashed the wrapper: {type(x).__name__}", flush=True)
         finally:
+            _record(jid)
             with LOCK:
                 RUNNING.remove(jid); CANCEL.pop(jid, None)
+            HEART[0] = time.time()
+
+
+def _record(jid: str):
+    """r18: the finished job -> the monitoring ledger (never raises: monitoring must not break a job)"""
+    try: LEDGER.record(_dir(jid))
+    except Exception as x: print(f"monitor: ledger write failed for {jid}: {type(x).__name__}", flush=True)
 
 
 def _close(jid: str, code: str, detail: str | None = None):
@@ -84,6 +101,7 @@ def _close(jid: str, code: str, detail: str | None = None):
     st.update(status=s_, error={"code": code, "message": en, "message_ru": ru, "retryable": retry, "detail": detail}, refund_suggested=True,
               finished_at=dj.now_iso(), step="end", step_label="Done", progress_pct=100.0, eta_s=0)
     dj._write(d / "status.json", st); dj.Events(d / "events.jsonl").emit("done", status=s_, error=code, progress_pct=100.0)
+    _record(jid)
 
 
 def _kill_orphan(st: dict):
@@ -107,7 +125,9 @@ def _startup():   # TZ 12.4: a restart loses no job: RUNNING ones end as E_WORKE
             if (p.parent / "job.json").exists(): queued.append((s.get("submitted_ts") or (p.parent / "job.json").stat().st_mtime, p.parent.name))
             else: _close(p.parent.name, "E_WORKER_RESTART", "the job file is missing")
     for _, jid in sorted(queued): CANCEL[jid] = threading.Event(); ORDER.append(jid); Q.put(jid)
-    threading.Thread(target=_worker, daemon=True, name="dabai-worker").start()
+    try: LEDGER.backfill(JOBS)   # r18: finished jobs from before the ledger existed
+    except Exception as x: print(f"monitor: ledger backfill failed: {type(x).__name__}", flush=True)
+    t = threading.Thread(target=_worker, daemon=True, name="dabai-worker"); t.start(); WORKER.append(t)
 
 
 @app.post("/jobs", status_code=202)
@@ -234,13 +254,36 @@ def _resident():
     except Exception: return {"state": "starting"}
 
 
+def _worker_state() -> dict:
+    alive = bool(WORKER) and WORKER[0].is_alive(); age = 0.0 if RUNNING else max(0.0, time.time() - HEART[0])
+    return {"alive": alive and age < float(os.environ.get("DABAI_HEARTBEAT_MAX_S", "60")), "thread_alive": alive,
+            "heartbeat_age_s": round(age, 1), "uptime_s": round(time.time() - T_START, 1)}
+
+
+def _snapshot() -> dict:
+    with LOCK: running, order = list(RUNNING), list(ORDER)
+    return mon.snapshot(JOBS, LEDGER, running, order, _worker_state(), steps=dj.STEPS)
+
+
+def _health_body() -> dict:
+    g = _gpu(); miss = _weights(); free = shutil.disk_usage(JOBS).free / 1e9; w = _worker_state()
+    ok = g is not None and not [x for x in miss if not x.startswith("student")] and free >= MIN_FREE_GB and w["thread_alive"]
+    return {"ok": ok, "busy": bool(RUNNING), "queue_depth": len(ORDER), "gpu": g, "missing_weights": miss, "disk_free_gb": round(free, 1), "versions": dj.versions(),
+            "resident": _resident()}   # r17: off | starting | ready (+ its load timings): jobs run cold until ready
+
+
 @app.get("/health")
 def health():
-    g = _gpu(); miss = _weights(); free = shutil.disk_usage(JOBS).free / 1e9
-    ok = g is not None and not [x for x in miss if not x.startswith("student")] and free >= MIN_FREE_GB
-    body = {"ok": ok, "busy": bool(RUNNING), "queue_depth": len(ORDER), "gpu": g, "missing_weights": miss, "disk_free_gb": round(free, 1), "versions": dj.versions(),
-            "resident": _resident()}   # r17: off | starting | ready (+ its load timings): jobs run cold until ready
-    return JSONResponse(body, status_code=200 if ok else 503)
+    body = _health_body()
+    try: body["monitor"] = _snapshot()   # r18 TZ 10.4: worker / queue / stuck job ids / GPU hours / VRAM peak / wall per video minute
+    except Exception as x: body["monitor"] = {"error": f"{type(x).__name__}: {x}"}
+    return JSONResponse(body, status_code=200 if body["ok"] else 503)
+
+
+@app.get("/metrics")
+def metrics():
+    """r18 TZ 10.4: Prometheus text format (scrape every 15-60 s; alerts: scripts/job/alert.py or Prometheus rules in MONITORING.md)"""
+    return PlainTextResponse(mon.prom_text(_snapshot(), _health_body()), media_type="text/plain; version=0.0.4; charset=utf-8")
 
 
 @app.get("/version")

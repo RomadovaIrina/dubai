@@ -60,6 +60,17 @@ if $PY -c "import fastapi, uvicorn" 2>/dev/null; then
   c=$(curl -s -o /dev/null -w '%{http_code}' -H "$H" http://127.0.0.1:$P/jobs/a1/files/video); ok "GET files/video of an ERROR job -> 404" "[ $c = 404 ]"
   c=$(curl -s -o /dev/null -w '%{http_code}' -H "$H" http://127.0.0.1:$P/jobs/..%2Fetc); ok "path traversal job id -> 404" "[ $c = 404 ]"
   ok "GET /version + /schema/job" "curl -s -H '$H' http://127.0.0.1:$P/version | grep -q dabai-job/2 && curl -s -H '$H' http://127.0.0.1:$P/schema/job | grep -q additionalProperties"
+  # r18 TZ 10.4: monitoring (the stale job + a1 + a2 are finished: 3 rows in the ledger)
+  c=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:$P/metrics); ok "GET /metrics without the token -> 401" "[ $c = 401 ]"
+  c=$(curl -s -o $T/m.txt -w '%{http_code}' -H "$H" http://127.0.0.1:$P/metrics); ok "GET /metrics -> 200 Prometheus text" "[ $c = 200 ] && grep -q '^# TYPE dabai_queue_depth gauge' $T/m.txt"
+  ok "metrics: worker alive, queue 0, nothing stuck" "grep -qx 'dabai_worker_alive 1' $T/m.txt && grep -qx 'dabai_queue_depth 0' $T/m.txt && grep -qx 'dabai_jobs_stuck 0' $T/m.txt"
+  ok "metrics: 3 ERROR jobs in the ledger (restart + a1 + a2)" "grep -qx 'dabai_jobs_finished_total{status=\"ERROR\"} 3' $T/m.txt"
+  ok "metrics: every sample line parses" "! grep -v '^#' $T/m.txt | grep -vqE '^[a-z_]+(\{[^}]*\})? -?[0-9.]+(e[+-]?[0-9]+)?$'"
+  curl -s -o $T/h2.json http://127.0.0.1:$P/health
+  ok "health has the monitor block (ledger totals)" "python3 -c \"import json; m=json.load(open('$T/h2.json'))['monitor']; assert m['totals']['jobs']['ERROR']==3 and m['worker']['thread_alive']\""
+  ok "the ledger survives a deleted job dir" "rm -rf $JD/a2 && curl -s -H '$H' http://127.0.0.1:$P/metrics | grep -qx 'dabai_jobs_finished_total{status=\"ERROR\"} 3'"
+  python3 $J/alert.py --url http://127.0.0.1:$P > $T/alert.txt; e=$?
+  ok "alert.py answers (exit 0 = ok, 1 = alerts: no GPU here -> unhealthy)" "{ [ $e = 0 ] && grep -q '^OK' $T/alert.txt; } || { [ $e = 1 ] && grep -q '/health 503' $T/alert.txt; }"
   ok "the token never appears in the log / job files" "! grep -rq test-token-123 $T/api.log $JD"
   kill $AP 2>/dev/null; wait $AP 2>/dev/null
 else echo "SKIP the HTTP tests (no fastapi / uvicorn in $PY)"; fi

@@ -152,6 +152,7 @@ Each comes with a ready user message in English and Russian. `flags[]` also list
 | GET | `/jobs/{id}/files/{video\|subs\|metrics\|status\|log}` | The file; 404 until it exists. |
 | DELETE | `/jobs/{id}` | Cancel. A queued job is dropped; a running one has its pipeline killed. Result: ERROR `E_CANCELLED`. |
 | GET | `/health` | 200 when the node can take jobs (GPU visible, weights present, ≥ `DABAI_MIN_FREE_GB` free); 503 otherwise. No auth. |
+| GET | `/metrics` | r18 (TZ 10.4): Prometheus text: worker liveness, queue depth, stuck jobs, GPU hours, VRAM peak, wall per video minute. Token required unless `DABAI_METRICS_PUBLIC=1`. `/health` carries the same numbers in its `monitor` block. See [MONITORING.md](MONITORING.md); alerts: `alert.py`. |
 | GET | `/version` | `{interface, pipeline (git sha), image, profile: clean / current}`. |
 
 **Service environment:**
@@ -163,6 +164,9 @@ Each comes with a ready user message in English and Russian. `flags[]` also list
 | `DABAI_INPUT_ROOTS` | unset | Colon-separated dirs that local input paths must be under. |
 | `DABAI_MIN_FREE_GB` | 30 | Free disk below this makes `/health` return 503. |
 | `PORT` | 8000 | |
+| `DABAI_MONITOR_DIR` | `$DABAI_JOBS_DIR/.monitor` | r18: the ledger of finished jobs (the `/metrics` totals). |
+| `DABAI_METRICS_PUBLIC` | unset | `1` = `/metrics` without the token. |
+| `DABAI_STUCK_*` | see MONITORING.md | The stuck-job thresholds. |
 
 **Restart behaviour** (TZ 12.4, tested, section 10):
 - A job that was RUNNING ends as `E_WORKER_RESTART`, and its leftover pipeline is killed.
