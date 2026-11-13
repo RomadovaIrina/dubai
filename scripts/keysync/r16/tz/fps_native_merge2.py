@@ -55,13 +55,16 @@ class Takes(Layers):
         return {"roi": (y0, y1, x0, x1), "Y": sp[0], "C": [q.astype(np.float32) for q in cp], "M": M}
 
 
+INTERP = cv2.INTER_CUBIC
+
+
 def warp_planes(C, M, F, box):
     """backward-warp KeySync planes C (Y full, U/V half) and mask M by flow F (defined on box = y0,y1,x0,x1 in Y px) -> planes cut to box"""
     y0, y1, x0, x1 = box; gy, gx = np.mgrid[y0:y1, x0:x1].astype(np.float32); mx, my = gx + F[..., 0], gy + F[..., 1]
-    Y = cv2.remap(C[0], mx, my, cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+    Y = cv2.remap(C[0], mx, my, INTERP, borderMode=cv2.BORDER_REPLICATE)
     Mw = cv2.remap(M, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
     hw = ((x1 - x0) // 2, (y1 - y0) // 2); mxc, myc = cv2.resize(mx, hw) / 2, cv2.resize(my, hw) / 2
-    UV = [cv2.remap(C[i], mxc, myc, cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE) for i in (1, 2)]
+    UV = [cv2.remap(C[i], mxc, myc, INTERP, borderMode=cv2.BORDER_REPLICATE) for i in (1, 2)]
     return [Y] + UV, Mw
 
 
@@ -72,8 +75,10 @@ def main() -> int:
     ap.add_argument("--thr", type=float, default=3.0); ap.add_argument("--k", type=float, default=6.0); ap.add_argument("--blur", type=float, default=0.004)
     ap.add_argument("--min-px", type=int, default=64); ap.add_argument("--close", type=float, default=0.015); ap.add_argument("--dilate", type=float, default=0.008)
     ap.add_argument("--feather", type=float, default=0.006); ap.add_argument("--flow-pad", type=int, default=24)
+    ap.add_argument("--interp", choices=["cubic", "lanczos"], default="cubic"); ap.add_argument("--snap", type=float, default=0.02, help="retime: |u - nearest take| below this (in takes) -> the exact take, no warp")
     ap.add_argument("--crf", type=int, default=14); ap.add_argument("--preset", default="veryfast"); ap.add_argument("--threads", type=int, default=0); ap.add_argument("--json", default="")
     a = ap.parse_args(); t0 = time.perf_counter()
+    global INTERP; INTERP = cv2.INTER_LANCZOS4 if a.interp == "lanczos" else cv2.INTER_CUBIC
     import av
     info: dict = {}; G = yuv_frames(a.hi, info); next(G); G.close(); ratio = float(info["rate"]) / a.lo_fps
     j, n_src, cost = match(a.hi, a.lo_src, ratio); jinv = {}
@@ -94,7 +99,8 @@ def main() -> int:
             planes = hp; box = None
             if a.mode == "retime":
                 u = float((pts - pts_first) * hi_i["tb"]) * a.lo_fps; ka = int(np.floor(u + 1e-6)); f = u - ka
-                if f < 0.02 or ka + 1 >= len(j): f = 0.0
+                if f > 1 - a.snap and ka + 1 < len(j): ka, f = ka + 1, 0.0
+                if f < a.snap or ka + 1 >= len(j): f = 0.0
             if a.mode == "retime" and f == 0.0 and ka < len(j):
                 L, _ = Lz.get(ka)
                 if L is not None and L["roi"] is not None:
