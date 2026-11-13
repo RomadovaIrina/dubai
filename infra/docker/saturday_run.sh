@@ -26,9 +26,12 @@ O=$S/vram; mkdir -p $O/data; H=http://127.0.0.1:18800; AU=(-H "Authorization: Be
 CID=$(docker run -d --gpus all --shm-size 16g -p 18800:8000 -e DABAI_API_TOKEN=sat -e KS_SERVE_AUDIO_EXIT=1 -v dabai-models:/workspace/dub/dubai/models -v $O/data:/data -v $S/clips:/in:ro $IMG)
 for i in $(seq 600); do curl -sf $H/health > /dev/null && break; sleep 0.5; done; for i in $(seq 900); do curl -s $H/health | grep -q '"state": *"ready"' && break; sleep 1; done
 ( mx=0; while [ ! -f $O/stop ]; do v=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits); [ $v -gt $mx ] && { mx=$v; echo $mx > $O/vram_max.txt; }; sleep 1; done ) &
+mon(){ curl -s "${AU[@]}" $H/metrics > $O/metrics_$1.txt; curl -s $H/health > $O/health_$1.json   # r18 TZ 10.4 monitoring, in the real GPU image
+  log "2 /metrics ($1): HTTP $(curl -s -o /dev/null -w '%{http_code}' "${AU[@]}" $H/metrics), $(grep -c '^dabai_' $O/metrics_$1.txt) dabai_ lines; /health monitor: $(python3 -c "import json; print(json.load(open('$O/health_$1.json')).get('monitor', 'MISSING'))" 2>/dev/null | cut -c1-200)"; }
+mon before
 for j in v1 v2 v3; do curl -s -o /dev/null "${AU[@]}" -H "content-type: application/json" -d "{\"job_id\": \"$j\", \"input\": \"/in/m03.mp4\", \"target_lang\": \"en\"}" $H/jobs; done
 for i in $(seq 3600); do s=$(curl -s "${AU[@]}" $H/jobs/v3 | python3 -c "import json, sys; print(json.load(sys.stdin).get('status'))" 2>/dev/null); case $s in SUCCESS|PARTIAL_SUCCESS|ERROR) break;; esac; sleep 3; done
-touch $O/stop; docker stop $CID > /dev/null
+mon after; touch $O/stop; docker stop $CID > /dev/null
 for j in v1 v2 v3; do log "2 $j $(python3 -c "import json; s=json.load(open('$O/data/jobs/$j/status.json')); print(s['status'], 'wall', s.get('wall_s'))") $(grep -h 'KS_SERVE waited\|KS_SERVE resident' $O/data/jobs/$j/e2e/logs/face_keysync.log 2>/dev/null | head -2 | tr '\n' ' ' | cut -c1-160)"; done
 log "2 VRAM max with KS_SERVE_AUDIO_EXIT=1: $(cat $O/vram_max.txt) MiB (12.11 without: 31614)"
 docker run --rm -v /root:/root --entrypoint /venv/dabai/bin/python $IMG /root/dubai/scripts/keysync/r16/tz/out_compare.py --a $S/bs/jobs/smoke/smoke.mp4 --b $O/data/jobs/v2/v2.mp4 --src $S/clips/m03.mp4 2>/dev/null | grep OUT_COMPARE | sed 's/^/2 cold smoke vs resident v2 (same clip, fresh dubs): /' | tee -a $P
