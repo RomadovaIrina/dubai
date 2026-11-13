@@ -21,6 +21,8 @@ ap = argparse.ArgumentParser()
 for k in ("ks", "master", "box", "lm", "audio", "out"): ap.add_argument("--" + k, required=True)
 ap.add_argument("--cm-lonly", type=int, default=0, help="r16c K1 colour in dark / warm scenes: 1 = the colour match (global gain / offset + --lfm maps) corrects LIGHTNESS only; KeySync's chroma is not shifted (the a / b offset turned dark areas blue)")
 ap.add_argument("--cm-shadow", default="", help="r16c K1 + K2 (long5 1:56 blue mouth): L0:L1 = fade the whole colour correction out in the darks by the RAW KeySync lightness (0 below L0, full above L1): the global offset no longer lifts the black floor or neutralises the warmth of a dark mouth / hair; e.g. 10:30")
+ap.add_argument("--tail-src", default="", help="r18 (Irina 13.11: the m03 end face; = ks_tailsrc.py's rule, but INSIDE this paste: no second encode, nothing outside the face changes): the dub wav (16 kHz mono) of this face; from the end of its LAST STRONG speech (100 ms RMS > --tail-end-thr x p99) + --tail-hold s the paste mask fades to 0 over --tail-ramp s and the face stays the source to the end. Only when that silent tail is >= --tail-min s (of the WHOLE master: --n-total)")
+ap.add_argument("--tail-hold", type=float, default=0.0); ap.add_argument("--tail-ramp", type=float, default=0.25); ap.add_argument("--tail-min", type=float, default=1.0); ap.add_argument("--tail-end-thr", type=float, default=0.25)
 ap.add_argument("--hybrid-at", type=float, default=0.0, help="r18 hybrid: where the oval -> tight crossfade is centred, as a fraction of the way from the mouth corners (0) to the chin point (1)")
 ap.add_argument("--hybrid-band", type=float, default=0.12, help="r18 hybrid: half-height of the crossfade, x IOD")
 ap.add_argument("--mask", default="oval", choices=["oval", "tight", "mouth", "hybrid"], help="r16c K1 rule 5: oval = the r15/r16 mask (oval + 0.15 IOD down + 0.10 IOD dilation: reaches neck / collar / background); tight = strictly INSIDE the face: the cheek / jaw contour (union of the source jaw and KeySync's generated jaw), inset, feathered inwards")
@@ -451,11 +453,23 @@ last[0] = None; nk = len(K)
 NKT = a.ks_total if a.ks_total >= 0 else nk; NTT = a.n_total if a.n_total >= 0 else n; SHG = a.k_base - a.ks_base + a.shift   # global KeySync length / master length / shift
 KS_SHORT = NKT - SHG < NTT   # the end fade exists ONLY for a KeySync output that is really shorter than the master (never because a chunk was cut)
 if KS_SHORT: print(f"WARNING: KeySync has {NKT} frames < master {NTT} (+ shift {SHG}): the last {NTT - NKT + SHG} frames fall back to the source with a 1 s fade; pad the KeySync inputs", flush=True)
+TS0 = None
+if a.tail_src:   # the same detection as ks_tailsrc.py (20 ms RMS, 100 ms mean, the last STRONG speech), on the global timeline
+    import wave
+    w_ = wave.open(a.tail_src); sr_ = w_.getframerate(); x_ = np.frombuffer(w_.readframes(w_.getnframes()), np.int16).astype(np.float32); hop_ = sr_ // 50; nf_ = len(x_) // hop_
+    e_ = np.sqrt((x_[:nf_ * hop_].reshape(nf_, hop_) ** 2).mean(1)) if nf_ else np.zeros(0); p99_ = max(float(np.percentile(e_, 99)) if nf_ else 1.0, 1.0)
+    on_ = e_ > 0.03 * p99_; st_ = (np.convolve(e_, np.ones(5) / 5, mode="same") if nf_ else e_) > a.tail_end_thr * p99_
+    last_ = (np.flatnonzero(st_)[-1] + 1) / 50 if st_.any() else ((np.flatnonzero(on_)[-1] + 1) / 50 if on_.any() else 0.0)
+    t0_ = last_ + a.tail_hold; dur_ = NTT / FR_M
+    if on_.any() and dur_ - t0_ >= a.tail_min: TS0 = t0_
+    print("KS_TAILFADE " + json.dumps({"last_speech_s": round(last_, 2), "t0_s": round(t0_, 2), "tail_s": round(dur_ - t0_, 2), "ramp_s": a.tail_ramp, "applied": TS0 is not None}), flush=True)
 NFADE = 0
 for k, f in enumerate(frames(a.master, W, H)):
     if k < WR[0]: continue
     if k >= WR[1] or (not a.write_range and k >= NOUT): break
     f = f.copy(); i = kidx(k); m, _ = mask(k)
+    wt = 0.0 if TS0 is None else min(1.0, max(0.0, ((k + a.k_base) / FR_M - TS0) / max(a.tail_ramp, 1e-3)))   # r18 tail fade: 0 = the paste, 1 = the source
+    if wt >= 1.0: m = None
     if m is not None:
         ig = i + a.ks_base; fade = 1.0 if (not KS_SHORT or ig < NKT - 25) else max(0.0, (NKT - ig) / 25.0)   # r16: only if KeySync is SHORTER than the master (pad the inputs); 1 s fade as a last resort
         NFADE += fade < 1.0
@@ -475,8 +489,8 @@ for k, f in enumerate(frames(a.master, W, H)):
             yk = cv2.cvtColor(kf.astype(np.float32), cv2.COLOR_RGB2YCrCb); yk[..., 0] += SHARP * (yk[..., 0] - cv2.GaussianBlur(yk[..., 0], (0, 0), max(0.6, s / 512.0)))
             kf = np.clip(cv2.cvtColor(yk, cv2.COLOR_YCrCb2RGB), 0, 255)
         if a.tex > 0 or a.cavity > 0: kf = fix_ks(kf, i, m, crop(f, k))
-        roi = crop(f, k).astype(np.float32); mm2 = m * fade
-        if a.neck_follow > 0: roi = neck_warp(roi, k, i)
+        roi = crop(f, k).astype(np.float32); mm2 = m * fade * (1.0 - wt)
+        if a.neck_follow > 0: roi0 = roi; roi = neck_warp(roi, k, i); roi = roi if wt <= 0 else roi0 * wt + roi * (1.0 - wt)   # (the neck warp fades out with the paste)
         p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)]; iod = float(np.linalg.norm(p[33] - p[263])) if np.isfinite(p).all() else IODM
         if UP is not None and np.isfinite(p[[33, 263, 133, 362, 152]]).all():
             em = p[[33, 263, 133, 362]].mean(0) - BXY(k); ax = (p[152] - BXY(k)) - em; L2 = float(ax @ ax)

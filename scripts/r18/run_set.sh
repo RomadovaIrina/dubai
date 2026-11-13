@@ -4,7 +4,7 @@
 # Per video: dub (the accepted 08.11 mix, stream-copied; the voice KeySync hears) -> ONE e2e job on the image (the GPU part) -> CPU chain in the
 # background while the next job runs: re-pastes (oval = self-test of the re-paste path, a, b, c, c5) -> r18_check (audio md5 / colr / outside the
 # box vs the 08.11 file) -> Q's detectors vs the source. Progress: log/r18.log; per video out/<id>/{restored,oval,a,b,c,c5}.mp4 + *.check.json + det/.
-# R18_STEPS (default "dub job post") limits the steps; a finished job is kept unless R18_REDO=1.
+# The job itself runs with KS_MASK=oval (restored = the 08.11 paste). R18_STEPS (default "dub job post") limits the steps; a finished job is kept unless R18_REDO=1.
 set -uo pipefail
 B=${R18_ROOT:-/root/r18}; CODE=${R18_CODE:-$B/code}; S=$CODE/scripts/r18; STEPS=${R18_STEPS:-dub job post}; RT=reports/experiments/r16-qa/routing
 log(){ echo "[$(date -u +%T)] $*" | tee -a $B/log/r18.log; }
@@ -31,11 +31,11 @@ long5_src(){   # the 08.11 recipe (r16d_render.sh): 8 mamakris stories -> 720x12
 post(){ local id=$1 O=$B/out/$1 W=/data/jobs/$1/e2e/work; mkdir -p $O/det
   [ -s $B/data/jobs/$id/$id.mp4 ] || { log "POST $id: no job output"; return 1; }
   cp $B/data/jobs/$id/$id.mp4 $O/restored.mp4; cp $B/data/jobs/$id/status.json $O/status.json 2> /dev/null
-  bash $S/r18.sh repaste $id oval
-  bash $S/r18.sh repaste $id a "KS_PLAIN_EXTRA=--mask-tsmooth 2"
-  bash $S/r18.sh repaste $id b "KS_PLAIN_EXTRA=--mask tight --mask-chin 1 $A2"
-  bash $S/r18.sh repaste $id c "KS_PLAIN_EXTRA=--mask hybrid $A2"
-  bash $S/r18.sh repaste $id c5 "KS_PLAIN_EXTRA=--mask hybrid --hybrid-at 0.5 $A2"
+  bash $S/r18.sh repaste $id oval KS_MASK=oval   # (KS_MASK is always explicit: the code / image default is hybrid since Irina's pick 13.11)
+  bash $S/r18.sh repaste $id a KS_MASK=oval "KS_PLAIN_EXTRA=--mask-tsmooth 2"
+  bash $S/r18.sh repaste $id b KS_MASK=oval "KS_PLAIN_EXTRA=--mask tight --mask-chin 1 $A2"
+  bash $S/r18.sh repaste $id c KS_MASK=hybrid
+  bash $S/r18.sh repaste $id c5 KS_MASK=oval "KS_PLAIN_EXTRA=--mask hybrid --hybrid-at 0.5 $A2"
   log "SELFTEST $id restored vs oval re-paste: $(bash $S/r18.sh sh "/venv/dabai/bin/python scripts/keysync/r16/tz/out_compare.py --a /r18/out/$id/restored.mp4 --b /r18/out/$id/oval.mp4 --src /r18/in/${INP[$id]} --json /r18/out/$id/selftest.json" 2>&1 | grep OUT_COMPARE | cut -c1-300)"
   for v in restored a b c c5; do [ -s $O/$v.mp4 ] || continue
     log "CHECK $id $v: $(bash $S/r18.sh sh "/venv/dabai/bin/python scripts/r18/r18_check.py --new /r18/out/$id/$v.mp4 --ref /r18/ref/${REF[$id]} --work $W --out /r18/out/$id/$v.check.json" 2>&1 | grep R18_CHECK | cut -c1-420)"; done
@@ -48,7 +48,7 @@ BG=()
 for id in "$@"; do [ -n "${INP[$id]:-}" ] || { log "unknown video $id"; continue; }
   [ $id = long5 ] && { long5_src || continue; }
   if [[ " $STEPS " == *" dub "* ]] && [ ! -s $B/dubs/$id/dubbed_16k.wav ]; then bash $S/r18.sh dub $id ${REF[$id]} ${VOX[$id]} || continue; fi
-  if [[ " $STEPS " == *" job "* ]] && { [ "${R18_REDO:-0}" = 1 ] || [ ! -s $B/data/jobs/$id/$id.mp4 ]; }; then bash $S/r18.sh job $id ${INP[$id]} ${RTE[$id]}; fi
+  if [[ " $STEPS " == *" job "* ]] && { [ "${R18_REDO:-0}" = 1 ] || [ ! -s $B/data/jobs/$id/$id.mp4 ]; }; then bash $S/r18.sh job $id ${INP[$id]} ${RTE[$id]} KS_MASK=oval; fi
   if [[ " $STEPS " == *" post "* ]]; then post $id & BG+=($!); fi
 done
 for p in "${BG[@]:-}"; do [ -n "$p" ] && wait $p; done

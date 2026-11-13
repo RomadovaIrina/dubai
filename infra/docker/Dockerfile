@@ -114,7 +114,9 @@ ENV DUB_ROOT=/workspace/dub/dubai DUB_ENV=/venv/dabai VIRTUAL_ENV=/venv/dabai DU
 # (KS_CAP must be EMPTY to be off: ks_face.sh runs the cap warp whenever it is non-empty, "0" included.)
 # Rebuild with other defaults: --build-arg KS_TAIL_SRC=on ... (build.sh: FACE_ARGS="--build-arg K=V ..."). KS_CM_SHADOW="" = no cm-shadow even
 # when a container sets KS_MASK=tight.
-ARG KS_TAIL_SRC=off KS_OCCL=off KS_PAUSE=off KS_CAP="" KS_CMS=0 KS_MASK=oval KS_CM_SHADOW=""
+# r18 (Irina's blind pick 13.11, long5 / old03 / m03 grids): KS_MASK=hybrid = the 08.11 oval above the mouth corners + the tight chin below (the chin / neck
+# seam; on old03 the oval pulled background into the stubble). Still ONE encode after the paste. KS_MASK=oval = the 08.11 paste exactly.
+ARG KS_TAIL_SRC=off KS_OCCL=off KS_PAUSE=off KS_CAP="" KS_CMS=0 KS_MASK=hybrid KS_CM_SHADOW=""
 ENV KS_TAIL_SRC=${KS_TAIL_SRC} KS_OCCL=${KS_OCCL} KS_PAUSE=${KS_PAUSE} KS_CAP=${KS_CAP} KS_CMS=${KS_CMS} KS_MASK=${KS_MASK} KS_CM_SHADOW=${KS_CM_SHADOW} \
     PATH=/venv/dabai/bin:${PATH}
 # r17 (12.11-12.11, VM speed_guard on a 3-shot clip): the wall-time speedups, ON in the image. Verified within the run-to-run floor
