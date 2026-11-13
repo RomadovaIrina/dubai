@@ -267,7 +267,18 @@ gpu_release
 for f in ks_probe_failed ks_probe_low_conf ks_check_offset ks_dissolve_hard_switch face_route_failed ks_shot_failed; do   # r16 T (Q audit O1): degraded sync is not SUCCESS
   if [[ " ${FL[*]} " == *" $f "* ]]; then ER+=("$f: lip-sync degraded (see logs)"); [ $STATUS = SUCCESS ] && STATUS=PARTIAL_SUCCESS; echo "== $ID PARTIAL_SUCCESS: $f" | tee -a $L/e2e.log; fi
 done
-if [ -n "$HIRES" ]; then   # r15 T: the face work was downscaled: back to the source resolution
+FPSN=0   # r18 TZ 9.4 (eye 13.11, m18: "достаточно адекватно", as steady as A): the KeySync result at the SOURCE frame rate AND size in one pass
+if [ -n "${KS25:-}" ] && [ "$VID" != "$SRC" ] && [ "${E2E_FPS_NATIVE:-on}" != off ]; then   # (scripts/keysync/r16/tz/fps_native_merge2.py = "B4 retime":
+  HI=${HIRES:-$SRC}; SFPS=$(ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate -of csv=p=0 "$HI")   # every source frame gets the mouth at its
+  if python3 -c "import sys; n, d = sys.argv[1].split('/'); sys.exit(0 if abs(float(n) / float(d) - 25) > 0.01 else 1)" "$SFPS" 2>/dev/null; then   # audio time); 25 fps
+    st face_fps   # sources keep the 25 fps path below. Subtitles / watermark re-encode after this step -> near-lossless here (an extra lossy generation shimmers, 13.11)
+    if [ "${E2E_SUBS:-off}" != off ] || [ -n "${E2E_WATERMARK:-}" ]; then FQ="--crf 10 --preset veryfast"; else FQ="--crf ${E2E_FPS_CRF:-18} --preset ${E2E_FPS_PRESET:-medium}"; fi
+    if python scripts/keysync/r16/tz/fps_native_merge2.py --hi $HI --lo-src $KS25 --lo-comp $VID --out $W/face_fps.mp4 --json $W/face_fps.json $FQ --threads ${HIRES_THREADS:-16} > $L/face_fps.log 2>&1; then
+      VID=$W/face_fps.mp4; FPSN=1; FL+=("fps_native"); tail -1 $L/face_fps.log | tee -a $L/e2e.log
+    else FL+=("fps_native_failed"); echo "== $ID WARN fps_native failed (see logs/face_fps.log): the 25 fps output" | tee -a $L/e2e.log; fi
+  fi
+fi
+if [ -n "$HIRES" ] && [ $FPSN = 0 ]; then   # r15 T: the face work was downscaled: back to the source resolution (fps_native did both already)
   if [ "$VID" = "$SRC" ]; then VID=$HIRES   # no face result: the full-res source picture
   else
     st face_hires; HI=$HIRES; LOS=$SRC

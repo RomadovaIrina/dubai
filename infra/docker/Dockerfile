@@ -123,6 +123,10 @@ ENV KS_TAIL_SRC=${KS_TAIL_SRC} KS_OCCL=${KS_OCCL} KS_PAUSE=${KS_PAUSE} KS_CAP=${
 # r17 13.11: KS_SERVE_AUDIO_EXIT=1 = the KeySync daemon off the GPU during audio (VM: peak 31.6 -> 30.4 GB, output within the floor)
 ARG KS_SHOT_PREP_JOBS=8 KS_SHOT_PIPE=1 KS_SYNC_SERVE=1 E2E_ROUTE_PRE=1 DABAI_RESIDENT=1 KS_SERVE_AUDIO_EXIT=1
 ENV KS_SHOT_PREP_JOBS=${KS_SHOT_PREP_JOBS} KS_SHOT_PIPE=${KS_SHOT_PIPE} KS_SYNC_SERVE=${KS_SYNC_SERVE} E2E_ROUTE_PRE=${E2E_ROUTE_PRE} DABAI_RESIDENT=${DABAI_RESIDENT} KS_SERVE_AUDIO_EXIT=${KS_SERVE_AUDIO_EXIT}
+# r18 TZ 9.4: the output at the SOURCE frame rate (scripts/keysync/r16/tz/fps_native_merge2.py "B4 retime", eye 13.11 on m18; CPU only,
+# fps classes checked on the laptop: Videos\DabAI_AB\r18\fps\). off = the old 25 fps KeySync output.
+ARG E2E_FPS_NATIVE=on
+ENV E2E_FPS_NATIVE=${E2E_FPS_NATIVE}
 VOLUME ["/workspace/dub/dubai/models", "/data"]
 WORKDIR /workspace/dub/dubai
 EXPOSE 8000
