@@ -51,7 +51,7 @@ It never raises. A crash anywhere in the pipeline ends as a status, and the call
 | `source_lang` | `auto` or a code | `auto` | Whisper detects the language. RU is the validated source. A code that differs from the detected language adds the warning `W_SOURCE_LANG`. |
 | `target_lang` | 22 Chatterbox ids | `en` | `en` = the accepted RU→EN path. The others and their quality group are in `reports/experiments/r13-spec/LANGS.md`. 7 of them need the external API (OpenAI key pending); until then they use the built-in voice and get the warning `W_DONOR_FALLBACK`. |
 | `polyglot` | null / object | null | A target language per sentence (TZ 2.7). Forms: `{"mode": "units", "units": {"0": "de", "3": "fr"}}` (by sentence index, the rest English); `{"mode": "ranges", "ranges": [{"start": 0, "end": 20, "lang": "de"}]}` (by source time); `{"mode": "cycle", "langs": [...]}`; `{"mode": "all", "lang": "de"}`. |
-| `face` | `keysync` / `latentsync` | `keysync` | r16: the lip-sync engine. `keysync` = KeySync fast2 (TensorRT keyframes + 2-step LCM student + plain paste; the face path since 06.11). Two faces: only faces that got a dubbed speaker are changed, the others stay untouched. Output on a 25 fps grid. `latentsync` = the frozen r15 stack. |
+| `face` | `keysync` / `latentsync` | `keysync` | r16: the lip-sync engine. `keysync` = KeySync fast2 (TensorRT keyframes + 2-step LCM student + plain paste; the face path since 06.11). Two faces: only faces that got a dubbed speaker are changed, the others stay untouched. KeySync renders on a 25 fps grid; since r18 the result goes back to the source frame rate (`E2E_FPS_NATIVE=on`, see below). `latentsync` = the frozen r15 stack. |
 | `mode` | `quality` / `fast` | `quality` | `face=latentsync` only, see below. With `keysync` both modes run fast2. |
 | `lipsync` | `auto` / `off` | `auto` | `off` = a voice-only dub, with no face work. |
 | `subs` | `{enabled, lang: dub/src, style: white/yellow/trendy/outline, karaoke}` | off | Burned-in subtitles (TZ 9.1–9.3). The `.ass` file is returned as well. |
@@ -75,6 +75,8 @@ Unknown fields are rejected with `E_BAD_REQUEST` (HTTP 422), and the response li
 | File | What |
 |---|---|
 | `<job_id>.mp4` | The dubbed video: H.264 + AAC, the source resolution / fps / aspect (TZ 5.6). Rotation is baked in, so it plays upright everywhere. |
+
+**Frame rate (r18, TZ 9.4).** KeySync draws the mouth on a 25 fps grid. With `E2E_FPS_NATIVE=on` (image default) `scripts/keysync/r16/tz/fps_native_merge2.py` moves it back onto the source frames: every source frame gets the KeySync mouth at its own audio time (the nearer KeySync frame moved by the KeySync-to-KeySync optical flow; no cross-fade). Background, head and hands stay the source picture at its own rate; the same pass restores the full resolution when the face work ran downscaled. CPU only. Job flags: `fps_native` (done) / `fps_native_failed` (fell back to the 25 fps output). Variable-frame-rate sources come out at their average rate (as before). `E2E_FPS_NATIVE=off` = the old 25 fps output. Eye check 13.11 (m18, 30 fps): as steady as the 25 fps output; the earlier "B2" (09.11) jittered.
 | `<job_id>.ass` | The subtitles (when `subs.enabled`). |
 | `status.json` | The status (section 4). Rewritten atomically every ~3 s; final when `status` is not QUEUED / RUNNING. |
 | `events.jsonl` | Append-only events, one JSON per line (section 4). |
