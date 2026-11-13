@@ -3,12 +3,13 @@
   audio    md5 of the decoded PCM (s16le) must be EQUAL (the accepted mix, stream-copied)
   colour   the colr box (nclx 1/1/1 = BT.709) + ffprobe colour tags, size, fps, frame count
   outside  pixels OUTSIDE the paste box (the job's box json(s), grown by --grow x side) must equal REF up to codec noise: per frame the mean
-           |NEW - REF| and the signed mean per channel (a paler / greener frame = the 10.11 defect: -2..-7 levels); pass: median |d| <= --tol
-           (Q's oval vs 08.11: 0.74) and every |signed channel mean| <= --tol-signed
+           |NEW - REF| and the signed mean per channel (a paler / greener frame = the 10.11 defect: -2..-7 levels); pass: the mean |gray diff| at half size
+           (median over frames) <= --tol (two independent x264 crf 16 encodes of the same source: ~0.7-1.0; the 10.11 builds: 2.3-5.4) and every
+           |signed channel mean| <= --tol-signed (the paler-frame test proper)
   inside   PSNR inside the box (info only: KeySync is unseeded, the floor between two identical runs is ~44 dB whole-frame)
     r18_check.py --new N.mp4 --ref R.mp4 --work /data/jobs/<id>/e2e/work [--step 3] --out check.json"""
 import argparse, glob, hashlib, json, os, subprocess, sys
-import numpy as np
+import numpy as np, cv2
 
 ap = argparse.ArgumentParser(); ap.add_argument("--new", required=True); ap.add_argument("--ref", required=True); ap.add_argument("--work", default="")
 ap.add_argument("--step", type=int, default=3); ap.add_argument("--grow", type=float, default=0.06); ap.add_argument("--tol", type=float, default=1.2)
@@ -61,7 +62,7 @@ res = {"new": a.new, "ref": a.ref, "audio_md5_equal": an[0] == ar[0] and an[1] >
        "format_equal": all(pn[k] == pr_[k] for k in ("width", "height", "r_frame_rate", "nb_read_packets", "pix_fmt"))}
 w, h = int(pr_["width"]), int(pr_["height"]); n = int(pr_["nb_read_packets"])
 BX = boxes(a.work, n) if a.work else [[] for _ in range(n)]
-ad, sg, ps_in, k = [], [], [], 0
+ad, sg, ps_in, gm, k = [], [], [], [], 0
 for k, (fn, fr) in enumerate(zip(frames(a.new, w, h), frames(a.ref, w, h))):
     if k % a.step: continue
     out = np.ones((h, w), bool); ins = np.zeros((h, w), bool)
@@ -69,14 +70,19 @@ for k, (fn, fr) in enumerate(zip(frames(a.new, w, h), frames(a.ref, w, h))):
         X0, Y0, X1, Y1 = max(0, int(x0 * w)), max(0, int(y0 * h)), min(w, int(x1 * w) + 1), min(h, int(y1 * h) + 1); out[Y0:Y1, X0:X1] = False; ins[Y0:Y1, X0:X1] = True
     d = fn.astype(np.int16) - fr.astype(np.int16)
     if out.any(): ad.append(float(np.abs(d[out]).mean())); sg.append(d[out].mean(0))
+    if out.any():   # the autopsy's measure (pic_cmp.py): the MEDIAN pixel of |gray, half size| outside (Q's oval vs 08.11: 0.74; the 10.11 builds: 2.3-5.4)
+        g = np.abs(cv2.resize(cv2.cvtColor(fn, cv2.COLOR_RGB2GRAY), (w // 2, h // 2), interpolation=cv2.INTER_AREA).astype(np.float32) -
+                   cv2.resize(cv2.cvtColor(fr, cv2.COLOR_RGB2GRAY), (w // 2, h // 2), interpolation=cv2.INTER_AREA).astype(np.float32))
+        gm.append(float(np.mean(g[cv2.resize(out.astype(np.uint8), (w // 2, h // 2), interpolation=cv2.INTER_NEAREST) > 0])))
     if ins.any(): m = float((d[ins].astype(np.float32) ** 2).mean()); ps_in.append(99.0 if m == 0 else float(10 * np.log10(255 ** 2 / m)))
 ad = np.array(ad); sg = np.array(sg) if sg else np.zeros((1, 3))
 res.update({"frames_compared": len(ad), "frames_with_box": len(ps_in), "outside_absdiff_median": round(float(np.median(ad)), 3), "outside_absdiff_p95": round(float(np.percentile(ad, 95)), 3),
             "outside_absdiff_max": round(float(ad.max()), 3), "outside_signed_rgb": [round(float(x), 3) for x in sg.mean(0)],
             "inside_psnr_mean": round(float(np.mean(ps_in)), 2) if ps_in else None, "inside_psnr_min": round(float(np.min(ps_in)), 2) if ps_in else None})
-res["outside_ok"] = bool(res["outside_absdiff_median"] <= a.tol and max(abs(x) for x in res["outside_signed_rgb"]) <= a.tol_signed)
+res["outside_gray_half_mean"] = round(float(np.median(gm)), 3) if gm else None
+res["outside_ok"] = bool(res["outside_gray_half_mean"] is not None and res["outside_gray_half_mean"] <= a.tol and max(abs(x) for x in res["outside_signed_rgb"]) <= a.tol_signed)
 res["PASS"] = bool(res["audio_md5_equal"] and res["colr_ok"] and res["format_equal"] and res["outside_ok"])
 if a.out: json.dump(res, open(a.out, "w"), indent=1)
-print("R18_CHECK " + json.dumps({k_: res[k_] for k_ in ("PASS", "audio_md5_equal", "colr_ok", "format_equal", "outside_ok", "outside_absdiff_median", "outside_absdiff_p95",
+print("R18_CHECK " + json.dumps({k_: res[k_] for k_ in ("PASS", "audio_md5_equal", "colr_ok", "format_equal", "outside_ok", "outside_gray_half_mean", "outside_absdiff_median", "outside_absdiff_p95",
                                                          "outside_signed_rgb", "inside_psnr_mean", "inside_psnr_min", "frames_compared")} | {"colr": [pn["colr"], pr_["colr"]]}))
 sys.exit(0 if res["PASS"] else 1)
