@@ -15,6 +15,7 @@
 #   plan / crop / ref / KeySync / post / paste per shot, nothing smoothed across a cut), concat -c copy + the mix stream-copied. KS_SHOTS=off = one run.
 # Env: KS_SHOTS KS_SHOT_MIN_S KS_DELAY KS_PROBE_S KS_REF KS_CROP KS_PAD KS_GATE KS_TSMOOTH KS_PAUSE KS_PASTE_SHIFT KS_PLAIN_ARGS KS_PLAIN_EXTRA KS_INTERP_STEPS KS_SYNC_MAX_S
 #      KS_MASK (oval | tight = K1 A2 ghost-free | tight_nochin = A3 | tight_chin_legacy) KS_CM_SHADOW KS_OCCL (off|on) KS_OCCL_ARGS KS_TAIL_SRC (off|on) KS_TAIL_SRC_ARGS KS_ZEROFIX KS_OFFSCREEN_CONF KS_EDGE_SNAP
+#      KS_OCCL=mask (r18): the occlusion / turn gate as a factor of the paste mask (no extra encode); KS_OCCL=on = the old re-encoding stage
 #      KS_MASK default = hybrid (r18, Irina 13.11); KS_TAIL_FADE (off|on) KS_TAIL_FADE_ARGS (r18: the tail hand-over inside ks_plain; NOT KS_TAIL_SRC, the re-encoding pass)
 #      KS_SEAM_ARGS (r18: "--ratio-full 2.0" = the 08.11 step rule: ratio > 2 -> every 13-frame boundary fully smoothed; default = b2a660b's 2.0 -> 3.0 ramp)
 #      KS_PASTE_JOBS KS_MIN_IOD KS_NUM_FACES KS_PROBE_MIN_CONF KS_PROBE_MAX KS_CHECK; GPU_RDY (gpulock.sh hand-off)
@@ -267,6 +268,10 @@ for f in $TAGS; do
     else MK="$MA ${KS_CM_SHADOW---cm-shadow 10:30}"; echo "KS_MASK $f: face_parse unavailable (model $PM) -> ${KS_MASK} without parsing"; fi
     echo "KS_MASK $f ${KS_MASK}: $MK"
   fi
+  if [ "${KS_OCCL:-off}" = mask ]; then   # r18: K2's occlusion / turn / hand-over-mouth scores (ks_occl.py pass 1 only: no composite, no encode) -> the paste mask (ks_plain --gate-w)
+    if ( cd $KT && $MPY $KT/ks_occl.py --master $CUR --paste $CUR --lm $KW/lm_$f.npz --dump $P/occl.json ${KS_OCCL_ARGS:-} ) > $P/occl.log 2>&1 && [ -s $P/occl.json ]; then
+      grep -E "^KS_OCCL \{" $P/occl.log | cut -c1-300; MK="$MK --gate-w $P/occl.json"
+    else flag ks_occl_failed "$f: the occlusion scores failed ($(tail -1 $P/occl.log | cut -c1-120)) -> the paste without the gate"; fi; fi
   [ "${KS_TAIL_FADE:-off}" = on ] && MK="$MK --tail-src $KW/dub_$f.wav ${KS_TAIL_FADE_ARGS:-}"   # r18: after this face's last strong dub phrase the face fades to the source INSIDE the paste (no re-encode; default off until Irina's blind pick)
   ARGS="--ks $L --ks-lm $P/raw_lm.npz --master $CUR --box $KW/data/box_$f.json --lm $KW/lm_$f.npz --audio $AD/final_mix_aac.m4a --shift ${SHF[$f]} --absent skip $OTH \
         ${KS_PLAIN_ARGS---lfm 6 --upper-src 0.12:0.32 --keep-nose 0.04 --align 2 --align-ecc $P/ecc.npz --align-scale 0 --tex 2} ${KS_PLAIN_EXTRA:-} $MK"
