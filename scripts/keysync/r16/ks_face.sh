@@ -15,6 +15,9 @@
 #   plan / crop / ref / KeySync / post / paste per shot, nothing smoothed across a cut), concat -c copy + the mix stream-copied. KS_SHOTS=off = one run.
 # Env: KS_SHOTS KS_SHOT_MIN_S KS_DELAY KS_PROBE_S KS_REF KS_CROP KS_PAD KS_GATE KS_TSMOOTH KS_PAUSE KS_PASTE_SHIFT KS_PLAIN_ARGS KS_PLAIN_EXTRA KS_INTERP_STEPS KS_SYNC_MAX_S
 #      KS_MASK (oval | tight = K1 A2 ghost-free | tight_nochin = A3 | tight_chin_legacy) KS_CM_SHADOW KS_OCCL (off|on) KS_OCCL_ARGS KS_TAIL_SRC (off|on) KS_TAIL_SRC_ARGS KS_ZEROFIX KS_OFFSCREEN_CONF KS_EDGE_SNAP
+#      KS_OCCL=mask (r18): the occlusion / turn gate as a factor of the paste mask (no extra encode); KS_OCCL=on = the old re-encoding stage
+#      KS_MASK default = hybrid (r18, Irina 13.11); KS_HYBRID_UP; KS_TAIL_FADE (on|off, default on) KS_TAIL_FADE_ARGS (r18: the tail hand-over inside ks_plain; NOT KS_TAIL_SRC, the re-encoding pass)
+#      KS_SEAM_ARGS (r18: "--ratio-full 2.0" = the 08.11 step rule: ratio > 2 -> every 13-frame boundary fully smoothed; default = b2a660b's 2.0 -> 3.0 ramp)
 #      KS_PASTE_JOBS KS_MIN_IOD KS_NUM_FACES KS_PROBE_MIN_CONF KS_PROBE_MAX KS_CHECK; GPU_RDY (gpulock.sh hand-off)
 set -o pipefail
 ID=$1; SRC=$2; AD=$3; W=$4; OUTV=$5; ROUTE=${6:-}
@@ -223,6 +226,12 @@ fi   # ==== end of gpu
 CUR=$KW/master_25fps.mp4; n=0
 for f in $TAGS; do
   RAW=$(ls $KW/out/$f/*.mp4 | head -1); P=$KW/post_$f; mkdir -p $P
+  # r18 KS_POST_REUSE (re-paste A/B only, KS_PHASE=post on a finished job): 1 = reuse this face's finished post layer ($P/layer.txt), so two
+  # re-pastes differ ONLY by the paste (the MediaPipe pass of the raw render is not repeatable run to run); seam = reuse up to ks_guard, redo ks_seam.
+  RU=${KS_POST_REUSE:-0}; L=""; RSEAM=1
+  if [ "$RU" = 1 ] && [ -s $P/layer.txt ] && [ -s "$(cat $P/layer.txt)" ] && [ -s $P/raw_lm.npz ] && [ -s $P/ecc.npz ]; then L=$(cat $P/layer.txt); RSEAM=0; echo "KS_POST_REUSE $f: layer $L"
+  elif [ "$RU" = seam ] && [ -s $P/guard.mp4 ] && [ -s $P/raw_lm.npz ] && [ -s $P/ecc.npz ]; then L=$P/guard.mp4; echo "KS_POST_REUSE $f: up to the guard, seam redone"; fi
+  if [ -z "$L" ]; then
   t post_$f
   $MPY $R/scripts/quality/mp_landmarks.py --video $RAW --out $P/raw_lm.npz > $P/raw_lm.log 2>&1 || { tail -3 $P/raw_lm.log; exit 1; }
   $PY $KT/$([ "${KS_ECC_PAR:-1}" = 1 ] && echo "k_ecc_par.py --warm 30" || echo k_ecc.py) --ks $RAW --src $KW/data/pad_$f.mp4 --lm $KW/crop_lm_$f.npz --out $P/ecc.npz > $P/ecc.log 2>&1 || { tail -3 $P/ecc.log; exit 1; }
@@ -233,16 +242,21 @@ for f in $TAGS; do
   $PY $KT/ks_guard.py --layer $L --src $KW/data/pad_$f.mp4 --n $N --out $P/guard.mp4 > $P/guard.log 2>&1 && L=$P/guard.mp4 || { tail -3 $P/guard.log; exit 1; }
   python3 -c "import json, sys; g = json.load(open(sys.argv[1])); json.dump({'tag': sys.argv[2], 'frames': int(sys.argv[3]), 'guard_replaced': len(g.get('fixed_s', []))}, open(sys.argv[4], 'w'))" \
     $P/guard.mp4.guard.json $f $N $KW/subst_$f.json   # r16 TZ 11.2: the frames substituted on this face (guard), for the 2 % rule
+  fi   # (r18: end of the part KS_POST_REUSE skips)
+  if [ $RSEAM = 1 ]; then
   if [ "${KS_SEAM:-on}" = on ]; then   # K1 r16-paste2: KeySync's 13-frame segment-boundary jumps spread over 3 transitions (per KeySync run: ks_chunk chunks)
     CJ=""; [ -s $KW/data/chunks_$f/chunks.json ] && CJ="--chunks $KW/data/chunks_$f/chunks.json"
-    $PY $KT/ks_seam.py --layer $L --src $KW/data/pad_$f.mp4 --out $P/seam.mp4 $CJ > $P/seam.log 2>&1 && L=$P/seam.mp4 || { tail -3 $P/seam.log; exit 1; }; tail -1 $P/seam.log | cut -c1-200; fi
+    $PY $KT/ks_seam.py --layer $L --src $KW/data/pad_$f.mp4 --out $P/seam.mp4 $CJ ${KS_SEAM_ARGS:-} > $P/seam.log 2>&1 && L=$P/seam.mp4 || { tail -3 $P/seam.log; exit 1; }; tail -1 $P/seam.log | cut -c1-200; fi
   if [ "${KS_PAUSE:-off}" = warp ] || [ -n "${KS_CAP:-}" ]; then   # + r16d KS_CAP=<k>[:q]: cap the generated lip gap at k x the source speaker's q-gap   # K2 pause (b), default OFF until Irina picks it: the lips closed in the dub's pauses (the layer is on the dub timeline: shift 0)
     PW=$KW/data/dubp_$f.wav; [ -s $PW ] || PW=$KW/dub_$f.wav   # r16d T: the dub the layer was generated on (probe-delayed): m03 +40 ms broke sync with the undelayed one
     $MPY $KT/k2_pause.py --mode warp --ks $L --ks-lm $P/raw_lm.npz --wav $PW --shift 0 --pause $([ "${KS_PAUSE:-off}" = warp ] && echo 1 || echo 0) --cap $(echo ${KS_CAP:-0} | cut -d: -f1) $([ "${KS_CAP#*:}" != "$KS_CAP" ] && echo "--cap-q ${KS_CAP#*:}") --cap-src-lm $KW/crop_lm_$f.npz --out $P/pause.mp4 > $P/pause.log 2>&1 && L=$P/pause.mp4 || { tail -3 $P/pause.log; exit 1; }; fi
+  echo $L > $P/layer.txt
+  fi   # (r18: end of seam / pause, skipped by KS_POST_REUSE=1)
   t paste_$f; n=$((n + 1)); NXT=$KW/paste_$n.mp4
   OTH=""; [ -s $KW/others_$f.npz ] && OTH="--others $KW/others_$f.npz --others-grow ${KS_OTHERS_GROW:-1.3}"
   MK=""   # r16c K1 rule 5 (opt-in until Irina's eye): KS_MASK=tight = the tight mask (chin kept) + face parsing (hair / hands / clothes -> source) + shadow-safe colour
-  case "${KS_MASK:-oval}" in   # r16d: tight = K1 A2 (ghost-chin fix, 882a500); tight_nochin = A3 (zero ghost, ~-0.3 sync); tight_chin_legacy = the 10.11 tight + chin (ghost: never ship)
+  case "${KS_MASK:-hybrid}" in   # r18 (Irina's blind pick 13.11: the seam): hybrid = the default = the 08.11 oval above the mouth corners, the tight chin below (ks_plain --mask hybrid), no parsing, no cm-shadow; oval = 08.11
+    hybrid) MK="--mask hybrid --hybrid-up ${KS_HYBRID_UP:-0} --mask-tsmooth 2 --neck-follow 0.15 --mask-chin-down 0.06"; MA="";;   # KS_HYBRID_UP: 0 = в (13.11 morning); 0.60 = в-new (the tight boundary up to the nose level: old03 stubble / background), Irina's blind verdict pending   # r16d: tight = K1 A2 (ghost-chin fix, 882a500); tight_nochin = A3 (zero ghost, ~-0.3 sync); tight_chin_legacy = the 10.11 tight + chin (ghost: never ship)
     tight) MA="--mask tight --mask-chin 1 --mask-tsmooth 2 --neck-follow 0.15 --mask-chin-down 0.06";;
     tight_nochin) MA="--mask tight";;
     tight_chin_legacy) MA="--mask tight --mask-chin 1";;
@@ -254,6 +268,11 @@ for f in $TAGS; do
     else MK="$MA ${KS_CM_SHADOW---cm-shadow 10:30}"; echo "KS_MASK $f: face_parse unavailable (model $PM) -> ${KS_MASK} without parsing"; fi
     echo "KS_MASK $f ${KS_MASK}: $MK"
   fi
+  if [ "${KS_OCCL:-off}" = mask ]; then   # r18: K2's occlusion / turn / hand-over-mouth scores (ks_occl.py pass 1 only: no composite, no encode) -> the paste mask (ks_plain --gate-w)
+    if ( cd $KT && $MPY $KT/ks_occl.py --master $CUR --paste $CUR --lm $KW/lm_$f.npz --dump $P/occl.json ${KS_OCCL_ARGS:-} ) > $P/occl.log 2>&1 && [ -s $P/occl.json ]; then
+      grep -E "^KS_OCCL \{" $P/occl.log | cut -c1-300; MK="$MK --gate-w $P/occl.json"
+    else flag ks_occl_failed "$f: the occlusion scores failed ($(tail -1 $P/occl.log | cut -c1-120)) -> the paste without the gate"; fi; fi
+  [ "${KS_TAIL_FADE:-on}" = on ] && [ -s $KW/dub_$f.wav ] && MK="$MK --tail-src $KW/dub_$f.wav ${KS_TAIL_FADE_ARGS:-}"   # r18: after this face's last strong dub phrase the face fades to the source INSIDE the paste (no re-encode). DEFAULT ON: Irina's blind pick 13.11 on the m03 end face ("вариант Б сильно лучше"); checked on old03 / long5 shot ends / q05
   ARGS="--ks $L --ks-lm $P/raw_lm.npz --master $CUR --box $KW/data/box_$f.json --lm $KW/lm_$f.npz --audio $AD/final_mix_aac.m4a --shift ${SHF[$f]} --absent skip $OTH \
         ${KS_PLAIN_ARGS---lfm 6 --upper-src 0.12:0.32 --keep-nose 0.04 --align 2 --align-ecc $P/ecc.npz --align-scale 0 --tex 2} ${KS_PLAIN_EXTRA:-} $MK"
   if [ "${KS_PASTE_JOBS:-0}" != 1 ] && [ -f $KT/ks_plain_par.py ]; then

@@ -21,7 +21,13 @@ ap = argparse.ArgumentParser()
 for k in ("ks", "master", "box", "lm", "audio", "out"): ap.add_argument("--" + k, required=True)
 ap.add_argument("--cm-lonly", type=int, default=0, help="r16c K1 colour in dark / warm scenes: 1 = the colour match (global gain / offset + --lfm maps) corrects LIGHTNESS only; KeySync's chroma is not shifted (the a / b offset turned dark areas blue)")
 ap.add_argument("--cm-shadow", default="", help="r16c K1 + K2 (long5 1:56 blue mouth): L0:L1 = fade the whole colour correction out in the darks by the RAW KeySync lightness (0 below L0, full above L1): the global offset no longer lifts the black floor or neutralises the warmth of a dark mouth / hair; e.g. 10:30")
-ap.add_argument("--mask", default="oval", choices=["oval", "tight", "mouth"], help="r16c K1 rule 5: oval = the r15/r16 mask (oval + 0.15 IOD down + 0.10 IOD dilation: reaches neck / collar / background); tight = strictly INSIDE the face: the cheek / jaw contour (union of the source jaw and KeySync's generated jaw), inset, feathered inwards")
+ap.add_argument("--tail-src", default="", help="r18 (Irina 13.11: the m03 end face; = ks_tailsrc.py's rule, but INSIDE this paste: no second encode, nothing outside the face changes): the dub wav (16 kHz mono) of this face; from the end of its LAST STRONG speech (100 ms RMS > --tail-end-thr x p99) + --tail-hold s the paste mask fades to 0 over --tail-ramp s and the face stays the source to the end. Only when that silent tail is >= --tail-min s (of the WHOLE master: --n-total)")
+ap.add_argument("--gate-w", default="", help="r18: per-GLOBAL-master-frame weights 'take the original' in [0, 1] (.npy, or a json with a 'w' list = ks_occl.py --dump: occlusion / strong turn / hand over the mouth): the paste mask is multiplied by (1 - w), INSIDE this single paste pass (Irina 09.11 rules 3-4 without ks_occl.py's second whole-frame encode)")
+ap.add_argument("--tail-hold", type=float, default=0.0); ap.add_argument("--tail-ramp", type=float, default=0.25); ap.add_argument("--tail-min", type=float, default=1.0); ap.add_argument("--tail-end-thr", type=float, default=0.25)
+ap.add_argument("--hybrid-at", type=float, default=0.0, help="r18 hybrid: where the oval -> tight crossfade is centred, as a fraction of the way from the mouth corners (0) to the chin point (1)")
+ap.add_argument("--hybrid-up", type=float, default=0.0, help="r18 hybrid (Irina 13.11, old03: the oval share left in the crossfade still pulled background into the stubble at the jaw edge by the mouth corners): the crossfade centre this many IOD ABOVE the mouth corners, so the tight boundary already holds at their level and below (0.15 with the 0.12 band = fully tight from 0.03 IOD above the corners)")
+ap.add_argument("--hybrid-band", type=float, default=0.12, help="r18 hybrid: half-height of the crossfade, x IOD")
+ap.add_argument("--mask", default="oval", choices=["oval", "tight", "mouth", "hybrid"], help="r16c K1 rule 5: oval = the r15/r16 mask (oval + 0.15 IOD down + 0.10 IOD dilation: reaches neck / collar / background); tight = strictly INSIDE the face: the cheek / jaw contour (union of the source jaw and KeySync's generated jaw), inset, feathered inwards")
 ap.add_argument("--mask-chin", type=int, default=0, help="tight: 1 = do NOT inset the chin: the jaw below the mouth corners (source and generated) + the lips are added back un-eroded, so the generated chin motion is kept (the inset there cost SyncNet); the cheeks keep the inset")
 ap.add_argument("--mask-tsmooth", type=float, default=0.0, help="r16c K1 (Irina 09.11: the neck-face seam swims, in ALL videos): the mask polygon (oval or tight) from landmark tracks gaussian-smoothed over time (sigma in frames; source and generated); symmetric + global, so ks_plain_par == serial")
 ap.add_argument("--mask-chin-feather", type=float, default=0.0, help="tight + chin: an extra VERTICAL-only feather of the chin part (sigma x IOD), so the generated-jaw / source-neck step fades over a taller band")
@@ -158,12 +164,12 @@ def neck_warp(roi, k, i):   # r16c K1 option (a): the source neck follows the ge
     if float(np.abs(dy).max()) < 0.25: return roi
     return cv2.remap(roi, GX, (GY - dy[None, :] * wgt).astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
 
-CZ = [None]
+CZ = [None]; HY = [None]
 def mask(k):
     i = int(J[min(k, len(J) - 1)]); p = LM[min(i, len(LM) - 1)]
     if not np.isfinite(p).all(): return (None, None) if a.absent == "skip" else (last[0], None)
     iod = float(np.linalg.norm(p[33] - p[263])); q = p - BXY(k); mk = np.zeros((s, s), np.uint8)
-    qs = q; CZ[0] = None
+    qs = q; CZ[0] = None; HY[0] = None
     if LMS is not None:   # r16c K1: the mask polygon from the time-smoothed track (oval AND tight): the seam does not swim
         ps_ = LMS[min(i, len(LMS) - 1)]
         if np.isfinite(ps_).all(): qs = ps_ - BXY(k)
@@ -186,6 +192,18 @@ def mask(k):
             cz = np.zeros_like(mk); cv2.fillPoly(cz, [hull(np.concatenate(low + [qs[LIPS]]))], 1); cz[:max(0, int(yc)), :] = 0
             mk = np.maximum(mk, cz); CZ[0] = cz
         own = mk.copy()   # r16c K1: m03 bug: the 2-face 'own face' re-fill used the full contour and undid the tight mask
+    elif a.mask == "hybrid":   # r18 (autopsy 6.3 c): the 08.11 oval ABOVE (cheeks / hair edge exactly as accepted), the K1 tight chin BELOW (the chin / neck seam):
+        # mo = the oval mask (as the else branch); mt = the face contour U the generated jaw (+ --mask-chin-down), NOT dilated, NOT cut (no inner edge to blur);
+        # the two SOFT masks are crossfaded by a vertical ramp (see HY below), so there is no notch where the wide oval meets the narrow chin.
+        hp = hull(qs[OVAL]); mo = np.zeros((s, s), np.uint8); cv2.fillPoly(mo, [hp], 1); cv2.fillPoly(mo, [hp + np.array([0, int(round(a.down * iod))], np.int32)], 1)
+        mo = cv2.dilate(mo, el(a.dil * iod))
+        ii = kidx(k); pts = [qs[OVAL]]; low = [qs[JAWLOW]]
+        if KLS is not None and 0 <= ii < len(KLS) and np.isfinite(KLS[ii][JAWC]).all(): pts.append(KLS[ii][JAWC]); low.append(KLS[ii][JAWLOW])
+        if a.mask_chin_down > 0: pts += [x_ + np.array([0, a.mask_chin_down * iod], np.float32) for x_ in low]
+        mt = np.zeros((s, s), np.uint8); cv2.fillPoly(mt, [hull(np.concatenate(pts))], 1)
+        yc = float(qs[[61, 291], 1].mean()); yb = yc + a.hybrid_at * (float(qs[152, 1]) - yc) - a.hybrid_up * iod; hw = max(a.hybrid_band * iod, 1.0)
+        wv = np.clip((GY - (yb - hw)) / (2 * hw), 0, 1).astype(np.float32); wv = wv * wv * (3 - 2 * wv)   # 0 above (oval) -> 1 below (tight), smoothstep
+        mk = np.where(wv < 0.5, mo, mt).astype(np.uint8); own = mk.copy(); HY[0] = (mo, mt, wv)
     else:
         hp = hull(qs[OVAL]); cv2.fillPoly(mk, [hp], 1); cv2.fillPoly(mk, [hp + np.array([0, int(round(a.down * iod))], np.int32)], 1)
         own = mk.copy()   # r16 K1: the speaker's own face (oval + the room below the chin): the other-face protection must never cover it
@@ -201,7 +219,11 @@ def mask(k):
                     cv2.fillPoly(om, [hull(f2[OVAL] - BXY(k))], 1); om = cv2.dilate(om, el(0.08 * oi))
                 if a.others_grow > 0: om[cv2.dilate(own, el(0.03 * iod)) > 0] = 0
                 mk[om > 0] = 0
+                if HY[0] is not None: HY[0][0][om > 0] = 0; HY[0][1][om > 0] = 0
     m = cv2.GaussianBlur(mk.astype(np.float32), (0, 0), max(1.0, (a.mask_feather if a.mask in ("tight", "mouth") else 0.04) * iod)) * boxf(k)
+    if HY[0] is not None:   # r18 hybrid: crossfade of the two soft masks (the same 0.04 IOD feather as the oval)
+        sg_ = max(1.0, 0.04 * iod); mo_, mt_, wv_ = HY[0]
+        m = (cv2.GaussianBlur(mo_.astype(np.float32), (0, 0), sg_) * (1 - wv_) + cv2.GaussianBlur(mt_.astype(np.float32), (0, 0), sg_) * wv_) * boxf(k)
     if a.mask == "tight" and a.mask_chin and a.mask_chin_feather > 0 and CZ[0] is not None:   # a taller, vertical-only fade of the chin edge
         mc = cv2.GaussianBlur(CZ[0].astype(np.float32), (0, 0), sigmaX=max(1.0, a.mask_feather * iod), sigmaY=max(1.0, a.mask_chin_feather * iod)) * boxf(k)
         yc_ = float(qs[152, 1]) - 0.15 * iod   # crossfade from the normal mask to the vertically feathered chin mask around the chin
@@ -433,11 +455,28 @@ last[0] = None; nk = len(K)
 NKT = a.ks_total if a.ks_total >= 0 else nk; NTT = a.n_total if a.n_total >= 0 else n; SHG = a.k_base - a.ks_base + a.shift   # global KeySync length / master length / shift
 KS_SHORT = NKT - SHG < NTT   # the end fade exists ONLY for a KeySync output that is really shorter than the master (never because a chunk was cut)
 if KS_SHORT: print(f"WARNING: KeySync has {NKT} frames < master {NTT} (+ shift {SHG}): the last {NTT - NKT + SHG} frames fall back to the source with a 1 s fade; pad the KeySync inputs", flush=True)
+GW = None
+if a.gate_w:
+    GW = np.asarray(json.load(open(a.gate_w))["w"] if a.gate_w.endswith(".json") else np.load(a.gate_w), np.float32)
+    print(f"KS_GATEW {a.gate_w}: {int((GW > 0.999).sum())} frames the original, {int(((GW > 0) & (GW <= 0.999)).sum())} in ramps, of {len(GW)}", flush=True)
+TS0 = None
+if a.tail_src:   # the same detection as ks_tailsrc.py (20 ms RMS, 100 ms mean, the last STRONG speech), on the global timeline
+    import wave
+    w_ = wave.open(a.tail_src); sr_ = w_.getframerate(); x_ = np.frombuffer(w_.readframes(w_.getnframes()), np.int16).astype(np.float32); hop_ = sr_ // 50; nf_ = len(x_) // hop_
+    e_ = np.sqrt((x_[:nf_ * hop_].reshape(nf_, hop_) ** 2).mean(1)) if nf_ else np.zeros(0); p99_ = max(float(np.percentile(e_, 99)) if nf_ else 1.0, 1.0)
+    on_ = e_ > 0.03 * p99_; st_ = (np.convolve(e_, np.ones(5) / 5, mode="same") if nf_ else e_) > a.tail_end_thr * p99_
+    last_ = (np.flatnonzero(st_)[-1] + 1) / 50 if st_.any() else ((np.flatnonzero(on_)[-1] + 1) / 50 if on_.any() else 0.0)
+    t0_ = last_ + a.tail_hold; dur_ = NTT / FR_M
+    if on_.any() and dur_ - t0_ >= a.tail_min: TS0 = t0_
+    print("KS_TAILFADE " + json.dumps({"last_speech_s": round(last_, 2), "t0_s": round(t0_, 2), "tail_s": round(dur_ - t0_, 2), "ramp_s": a.tail_ramp, "applied": TS0 is not None}), flush=True)
 NFADE = 0
 for k, f in enumerate(frames(a.master, W, H)):
     if k < WR[0]: continue
     if k >= WR[1] or (not a.write_range and k >= NOUT): break
     f = f.copy(); i = kidx(k); m, _ = mask(k)
+    wt = 0.0 if TS0 is None else min(1.0, max(0.0, ((k + a.k_base) / FR_M - TS0) / max(a.tail_ramp, 1e-3)))   # r18 tail fade: 0 = the paste, 1 = the source
+    if GW is not None and k + a.k_base < len(GW): wt = max(wt, float(GW[k + a.k_base]))   # (occlusion / turn gate: the same fade as the tail)
+    if wt >= 0.999: m = None
     if m is not None:
         ig = i + a.ks_base; fade = 1.0 if (not KS_SHORT or ig < NKT - 25) else max(0.0, (NKT - ig) / 25.0)   # r16: only if KeySync is SHORTER than the master (pad the inputs); 1 s fade as a last resort
         NFADE += fade < 1.0
@@ -457,8 +496,8 @@ for k, f in enumerate(frames(a.master, W, H)):
             yk = cv2.cvtColor(kf.astype(np.float32), cv2.COLOR_RGB2YCrCb); yk[..., 0] += SHARP * (yk[..., 0] - cv2.GaussianBlur(yk[..., 0], (0, 0), max(0.6, s / 512.0)))
             kf = np.clip(cv2.cvtColor(yk, cv2.COLOR_YCrCb2RGB), 0, 255)
         if a.tex > 0 or a.cavity > 0: kf = fix_ks(kf, i, m, crop(f, k))
-        roi = crop(f, k).astype(np.float32); mm2 = m * fade
-        if a.neck_follow > 0: roi = neck_warp(roi, k, i)
+        roi = crop(f, k).astype(np.float32); mm2 = m * fade * (1.0 - wt)
+        if a.neck_follow > 0: roi0 = roi; roi = neck_warp(roi, k, i); roi = roi if wt <= 0 else roi0 * wt + roi * (1.0 - wt)   # (the neck warp fades out with the paste)
         p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)]; iod = float(np.linalg.norm(p[33] - p[263])) if np.isfinite(p).all() else IODM
         if UP is not None and np.isfinite(p[[33, 263, 133, 362, 152]]).all():
             em = p[[33, 263, 133, 362]].mean(0) - BXY(k); ax = (p[152] - BXY(k)) - em; L2 = float(ax @ ax)

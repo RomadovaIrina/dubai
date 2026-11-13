@@ -114,8 +114,14 @@ ENV DUB_ROOT=/workspace/dub/dubai DUB_ENV=/venv/dabai VIRTUAL_ENV=/venv/dabai DU
 # (KS_CAP must be EMPTY to be off: ks_face.sh runs the cap warp whenever it is non-empty, "0" included.)
 # Rebuild with other defaults: --build-arg KS_TAIL_SRC=on ... (build.sh: FACE_ARGS="--build-arg K=V ..."). KS_CM_SHADOW="" = no cm-shadow even
 # when a container sets KS_MASK=tight.
-ARG KS_TAIL_SRC=off KS_OCCL=off KS_PAUSE=off KS_CAP="" KS_CMS=0 KS_MASK=oval KS_CM_SHADOW=""
-ENV KS_TAIL_SRC=${KS_TAIL_SRC} KS_OCCL=${KS_OCCL} KS_PAUSE=${KS_PAUSE} KS_CAP=${KS_CAP} KS_CMS=${KS_CMS} KS_MASK=${KS_MASK} KS_CM_SHADOW=${KS_CM_SHADOW} \
+# r18 (Irina's blind pick 13.11, long5 / old03 / m03 grids): KS_MASK=hybrid = the 08.11 oval above the mouth corners + the tight chin below (the chin / neck
+# seam; on old03 the oval pulled background into the stubble). Still ONE encode after the paste. KS_MASK=oval = the 08.11 paste exactly.
+# KS_TAIL_FADE=on (Irina's blind pick 13.11, the m03 end face): after a face's last strong dub phrase it fades to the source INSIDE the paste (ks_plain
+# --tail-src; not KS_TAIL_SRC, the re-encoding pass, which stays off). KS_HYBRID_UP: 0 = the hybrid of 13.11; 0.60 = the tight boundary up to the nose
+# level (old03: no background pulled into the stubble) - set it here once Irina's blind "в | в-new | б" verdict is in. KS_OCCL=mask (the cup / turn gate
+# as a mask factor, q05) is off until her blind pick.
+ARG KS_TAIL_SRC=off KS_OCCL=off KS_PAUSE=off KS_CAP="" KS_CMS=0 KS_MASK=hybrid KS_CM_SHADOW="" KS_TAIL_FADE=on KS_HYBRID_UP=0
+ENV KS_TAIL_SRC=${KS_TAIL_SRC} KS_OCCL=${KS_OCCL} KS_PAUSE=${KS_PAUSE} KS_CAP=${KS_CAP} KS_CMS=${KS_CMS} KS_MASK=${KS_MASK} KS_CM_SHADOW=${KS_CM_SHADOW} KS_TAIL_FADE=${KS_TAIL_FADE} KS_HYBRID_UP=${KS_HYBRID_UP} \
     PATH=/venv/dabai/bin:${PATH}
 # r17 (12.11-12.11, VM speed_guard on a 3-shot clip): the wall-time speedups, ON in the image. Verified within the run-to-run floor
 # (flags off vs flags off PSNR 44.04 / 38.55 dB; off vs on 44.16 / 38.61; dubs + route identical): 896 -> 668 s on the clip (KeySync -33 %).
