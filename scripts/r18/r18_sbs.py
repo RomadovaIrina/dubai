@@ -10,7 +10,7 @@ import numpy as np, cv2
 
 ap = argparse.ArgumentParser(); ap.add_argument("--in", dest="inp", action="append", required=True); ap.add_argument("--t0", type=float, required=True); ap.add_argument("--t1", type=float, required=True)
 ap.add_argument("--out", required=True); ap.add_argument("--crop", default=""); ap.add_argument("--work", default=""); ap.add_argument("--height", type=int, default=960)
-ap.add_argument("--speed", type=float, default=0.5); ap.add_argument("--audio", type=int, default=0); ap.add_argument("--blind", default=""); ap.add_argument("--seed", type=int, default=0)
+ap.add_argument("--cols", type=int, default=0, help="columns of the grid (0 = one row)"); ap.add_argument("--speed", type=float, default=0.5); ap.add_argument("--audio", type=int, default=0); ap.add_argument("--blind", default=""); ap.add_argument("--seed", type=int, default=0)
 a = ap.parse_args()
 IN = [x.split("=", 1) for x in a.inp]
 if a.blind:   # shuffle the named columns among their own positions, rename them A, B, ...
@@ -45,7 +45,8 @@ def rd(p):
         yield np.frombuffer(b, np.uint8).reshape(H, W, 3)
 
 
-OW = tw * len(IN) + 4 * (len(IN) - 1); OH = th + LB; OH += OH % 2; OW += OW % 2
+NC = a.cols or len(IN); NR = -(-len(IN) // NC)
+OW = tw * NC + 4 * (NC - 1); OH = (th + LB) * NR; OH += OH % 2; OW += OW % 2
 AU = [] if a.audio < 0 else ["-ss", f"{a.t0:.3f}", "-t", f"{a.t1 - a.t0:.3f}", "-i", IN[a.audio][1]]
 AM = ["-an"] if a.audio < 0 else ["-map", "0:v", "-map", "1:a:0", "-af", f"atempo={a.speed}", "-c:a", "aac", "-b:a", "128k"]
 w = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{OW}x{OH}", "-r", f"{25 * a.speed}", "-i", "-"] + AU + AM +
@@ -55,8 +56,8 @@ k = 0
 for fs in zip(*[rd(p) for _, p in IN]):
     can = np.zeros((OH, OW, 3), np.uint8)
     for j, f in enumerate(fs):
-        x = j * (tw + 4); can[LB:LB + th, x:x + tw] = cv2.resize(f[Y0:Y1, X0:X1], (tw, th), interpolation=cv2.INTER_LANCZOS4)
-        cv2.putText(can, IN[j][0], (x + 8, 31), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2, cv2.LINE_AA)
+        x = (j % NC) * (tw + 4); y = (j // NC) * (th + LB); can[y + LB:y + LB + th, x:x + tw] = cv2.resize(f[Y0:Y1, X0:X1], (tw, th), interpolation=cv2.INTER_LANCZOS4)
+        cv2.putText(can, IN[j][0], (x + 8, y + 31), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2, cv2.LINE_AA)
     cv2.putText(can, f"{a.t0 + k / 25:6.2f}s", (OW - 150, 31), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (160, 160, 160), 2, cv2.LINE_AA)
     w.stdin.write(can.tobytes()); k += 1
 w.stdin.close(); w.wait(); print(f"R18_SBS {a.out}: {k} frames, {len(IN)} columns {[l for l, _ in IN]}, crop {X0},{Y0}-{X1},{Y1} of {W}x{H}, tile {tw}x{th}")
