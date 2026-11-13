@@ -17,7 +17,7 @@ noise=${KS_NOISE:-} kfar=${KS_KF_AR:-} kfrr=${KS_KF_RR:-} iguide=${KS_IGUIDE:-} 
 ks_fast_cmd() {   # ks_fast_cmd <kit dir> <extra args...>: the ONE ks_fast command line (cold run and daemon alike)
   local K=$1; shift
   cd $KS/code && . ../venv/bin/activate && env KS_DC=2:0 KS_LMK_CACHE=$LMK TORCHINDUCTOR_CACHE_DIR=${TORCHINDUCTOR_CACHE_DIR:-$KS/inductor} ${GATE:+KS_GATE=$GATE} \
-    python $K/ks_fast.py "$@" --cfg _s8 --vae-half --compile unet --trt $ENG --interp-lora $LORA --interp-steps ${KS_INTERP_STEPS:-2} --vae-batch 8 --vae-compile
+    python $K/ks_fast.py "$@" --cfg _s8 --vae-half --compile unet $([ "${KS_TRT:-on}" = off ] || echo "--trt $ENG") --interp-lora $LORA --interp-steps ${KS_INTERP_STEPS:-2} --vae-batch 8 --vae-compile
 }
 
 ks_serve_live() {   # ks_serve_live <spool>: 0 when a daemon is up, loaded (ready) and beating
