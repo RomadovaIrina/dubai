@@ -120,8 +120,8 @@ ENV KS_TAIL_SRC=${KS_TAIL_SRC} KS_OCCL=${KS_OCCL} KS_PAUSE=${KS_PAUSE} KS_CAP=${
 # r17 (12.11-12.11, VM speed_guard on a 3-shot clip): the wall-time speedups, ON in the image. Verified within the run-to-run floor
 # (flags off vs flags off PSNR 44.04 / 38.55 dB; off vs on 44.16 / 38.61; dubs + route identical): 896 -> 668 s on the clip (KeySync -33 %).
 # The resident worker (models loaded once, parked between stages; bit-identical to cold, VM 11.11) is on in API mode.
-ARG KS_SHOT_PREP_JOBS=8 KS_SHOT_PIPE=1 KS_SYNC_SERVE=1 E2E_ROUTE_PRE=1 DABAI_RESIDENT=1
-ENV KS_SHOT_PREP_JOBS=${KS_SHOT_PREP_JOBS} KS_SHOT_PIPE=${KS_SHOT_PIPE} KS_SYNC_SERVE=${KS_SYNC_SERVE} E2E_ROUTE_PRE=${E2E_ROUTE_PRE} DABAI_RESIDENT=${DABAI_RESIDENT}
+ARG KS_SHOT_PREP_JOBS=8 KS_SHOT_PIPE=1 KS_SYNC_SERVE=1 E2E_ROUTE_PRE=1 DABAI_RESIDENT=1 KS_SERVE_AUDIO_EXIT=1
+ENV KS_SHOT_PREP_JOBS=${KS_SHOT_PREP_JOBS} KS_SHOT_PIPE=${KS_SHOT_PIPE} KS_SYNC_SERVE=${KS_SYNC_SERVE} E2E_ROUTE_PRE=${E2E_ROUTE_PRE} DABAI_RESIDENT=${DABAI_RESIDENT} KS_SERVE_AUDIO_EXIT=${KS_SERVE_AUDIO_EXIT}   # r17 13.11: the KeySync daemon off the GPU during audio (VM: peak 31.6 -> 30.4 GB, output within the floor)
 VOLUME ["/workspace/dub/dubai/models", "/data"]
 WORKDIR /workspace/dub/dubai
 EXPOSE 8000
