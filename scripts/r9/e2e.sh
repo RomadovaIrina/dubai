@@ -46,6 +46,7 @@ fail() { FL+=("$1"); ER+=("$1: ${3:-}"); [ "$2" = ERROR ] && STATUS=ERROR || { [
 collect() { python scripts/r9/collect.py --id $ID --out $OUT --status $STATUS --flags "${FL[*]:-}" --errors "$(printf '%s\n' "${ER[@]:-}")" --stages $T --nvsmi $W/nvsmi.csv --precheck $W/precheck.json \
     --audio $A/$AT --htd $A/$HT --face $B/$FT --gen $B/$GT --input "$IN" --ks-subst $W/ks/subst.json; }   # r16 TZ 11.2 / 11.3
 finish() {
+  [ -n "${KSX:-}" ] && [ "${KSPRE:-0}" = 1 ] && touch $KSX/go   # (r19: a job that ends inside the audio stage never leaves the pre-started daemon on hold)
   st end; kill $NV $NM 2>/dev/null; wait $NV $NM 2>/dev/null
   collect 2>&1 | tee -a $L/e2e.log
   [ -s $NVML ] && /venv/main/bin/python scripts/r10/gpu_sampler.py --summary $NVML --stages $T --job $ID \
@@ -55,6 +56,8 @@ finish() {
   echo "R9_E2E_DONE $ID $STATUS" | tee -a $L/e2e.log; [ "$STATUS" = ERROR ] && exit 1; exit 0   # (Q audit O3: a failed job exits non-zero)
 }
 
+VEP=""   # r19 speed (output-identical): the accepted-voice environment check (~1 s) runs beside the precheck; its verdict is read before the audio stage, as before
+if [ -z "${DUB_AUDIO_FROM:-}" ]; then ( python3 scripts/voice_env_check.py --python ${DUB_ENV:-/venv/dabai}/bin/python > $W/voice_env.out 2> $W/voice_env.err; echo $? > $W/voice_env.rc ) & VEP=$!; fi
 st precheck
 python scripts/r9/precheck.py --input "$IN" --out $W/precheck.json --work $W > $L/precheck.log 2>&1 || fail precheck_crashed PARTIAL_SUCCESS "see logs/precheck.log"
 tail -1 $L/precheck.log | tee -a $L/e2e.log
@@ -129,8 +132,14 @@ if [ "${E2E_ROUTE_PRE:-0}" = 1 ] && [ "${E2E_LIPSYNC:-on}" != off ] && [ "${DUB_
 fi
 KSX=""   # r17 VRAM margin (KS_SERVE_AUDIO_EXIT=1, off by default until the VM check): the parked KeySync daemon still holds ~1.5-2 GB (CUDA context),
 if [ "${KS_SERVE_AUDIO_EXIT:-0}" = 1 ] && [ -n "${KS_SERVE_DIR:-}" ] && [ -z "${DUB_AUDIO_FROM:-}" ] && [ -s ${KS_SERVE_DIR}/pid ]; then   # next to the ~30 GB audio peak
-  KSX=$KS_SERVE_DIR; bash scripts/keysync/r16/ks_serve.sh stop $KSX > $L/ks_serve_stop.log 2>&1; echo "== $ID KeySync daemon stopped for the audio stage" | tee -a $L/e2e.log; fi
-if [ -z "${DUB_AUDIO_FROM:-}" ] && ! python3 scripts/voice_env_check.py --python ${DUB_ENV:-/venv/dabai}/bin/python 2>> $L/e2e.log; then   # r16 T: never a wrong voice silently
+  KSX=$KS_SERVE_DIR; bash scripts/keysync/r16/ks_serve.sh stop $KSX > $L/ks_serve_stop.log 2>&1; echo "== $ID KeySync daemon stopped for the audio stage" | tee -a $L/e2e.log
+  # r19 speed (KS_SERVE_PRESTART=0 = as before): the NEW daemon process starts now and does its python imports during the audio stage, but HOLDS before
+  # its first CUDA call (ks_fast.py KS_SERVE_HOLD: no context, no VRAM) until $KSX/go appears after the audio stage: ~5 s less to wait for it then
+  KSPRE=${KS_SERVE_PRESTART:-1}
+  if [ "$KSPRE" = 1 ]; then rm -f $KSX/go; KS_SERVE_HOLD=$KSX/go setsid bash scripts/keysync/r16/ks_serve.sh start $KSX > $L/ks_serve_restart.log 2>&1 < /dev/null & fi
+fi
+[ -n "$VEP" ] && { wait $VEP; cat $W/voice_env.err >> $L/e2e.log 2>/dev/null; cat $W/voice_env.out 2>/dev/null; }
+if [ -z "${DUB_AUDIO_FROM:-}" ] && [ "$(cat $W/voice_env.rc 2>/dev/null || echo 1)" != 0 ]; then   # r16 T: never a wrong voice silently
   fail voice_env_mismatch ERROR "the voice environment is not the accepted one (Chatterbox 5de7a54 + noisereduce): see logs/e2e.log"; finish; fi
 if [ -n "${DUB_AUDIO_FROM:-}" ]; then   # r16 T golden test: an ACCEPTED dub (dubbed_16k.wav + final_mix_aac.m4a [+ *.manifest.json]) instead of a new one
   mkdir -p $A/$AT/$ID; cp $DUB_AUDIO_FROM/dubbed_16k.wav $DUB_AUDIO_FROM/final_mix_aac.m4a $A/$AT/$ID/; for m_ in $DUB_AUDIO_FROM/*.manifest.json; do [ -f "$m_" ] && cp "$m_" $A/$AT/$ID/${ID}_${m_##*_}; done   # r16 TZ: renamed to THIS id (<old id>_r4b -> <id>_r4b): the route / subs look up $AD/${ID}_*.manifest.json
@@ -138,7 +147,8 @@ if [ -n "${DUB_AUDIO_FROM:-}" ]; then   # r16 T golden test: an ACCEPTED dub (du
 else bash scripts/r8/r8_audio.sh $AT $ID > $L/audio.log 2>&1; fi
 unset R9_ON_MIXSRC
 if [ -n "$KSX" ]; then   # back up while the route runs (its own session: it outlives this job, as the resident worker does)
-  setsid bash scripts/keysync/r16/ks_serve.sh start $KSX > $L/ks_serve_restart.log 2>&1 < /dev/null & echo "== $ID KeySync daemon restarting after the audio stage" | tee -a $L/e2e.log; fi
+  if [ "$KSPRE" = 1 ]; then touch $KSX/go; echo "== $ID KeySync daemon (pre-started, on hold) released after the audio stage" | tee -a $L/e2e.log
+  else setsid bash scripts/keysync/r16/ks_serve.sh start $KSX > $L/ks_serve_restart.log 2>&1 < /dev/null & echo "== $ID KeySync daemon restarting after the audio stage" | tee -a $L/e2e.log; fi; fi
 AD=$A/$AT/$ID
 if ! { [ -f $AD/final_mix_aac.m4a ] && [ -f $AD/dubbed_16k.wav ]; }; then   # r13: a clip with no speech (silence / music only) is its own, clear ERROR
   if grep -qs "ASR produced no speech units" $A/${AT}pre/runs/$ID.log $L/audio.log; then fail no_speech ERROR "no speech found in the audio: nothing to dub"

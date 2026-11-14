@@ -43,6 +43,11 @@ def main():
     if not a.serve:
         assert a.jobs and a.out, "--jobs and --out are required without --serve"
         os.makedirs(a.out, exist_ok=True)
+    if a.serve and os.environ.get("KS_SERVE_HOLD"):   # r19 speed: the daemon process is started (python + every import) while the audio stage still
+        _h = os.environ["KS_SERVE_HOLD"]; print("KS_SERVE_HOLD waiting for " + _h, flush=True); _t = time.perf_counter()   # owns the GPU; it creates no CUDA
+        while not os.path.exists(_h) and not os.path.exists(os.path.join(a.serve, "stop")): time.sleep(0.05)              # context and loads nothing until this
+        print(f"KS_SERVE_HOLD released after {time.perf_counter() - _t:.1f} s", flush=True)                                # file appears (e2e.sh, after the audio)
+        if os.path.exists(os.path.join(a.serve, "stop")): return
     t0 = time.perf_counter()
     model, _, n_batch = d.load_model(f"scripts/sampling/configs/interpolation{a.cfg}.yaml", "cuda", 14, "latents", "pretrained_models/checkpoints/interpolation_dub.pt")
     model_kf, _, n_batch_kf = d.load_model(f"scripts/sampling/configs/keyframe{a.cfg}.yaml", "cuda", 14, "latents", "pretrained_models/checkpoints/keyframe_dub.pt")
@@ -218,7 +223,8 @@ def main():
     if a.serve:
         import ks_serve
         ks_serve.serve(a.serve, load_s, [model, model_kf, hubert, wavlm, vae, lmk], job_lines, run_line)
-        return
+        sys.stdout.flush(); sys.stderr.flush(); os._exit(0)   # r19 speed: a stopped daemon leaves at once (the interpreter teardown of the parked models took
+        return                                               # seconds while e2e.sh waited for it before the audio stage); nothing is written after KS_SERVE_STOP
     for line in job_lines(a.jobs, a.follow):
         run_line(line, a.out)
     print("KS_FAST_DONE", flush=True)
