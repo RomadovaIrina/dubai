@@ -15,12 +15,36 @@ K, S = rd(a.ks), rd(a.src); L = np.load(a.lm)["lm"][..., :2].astype(np.float32);
 h = 256; c = h / 512.0; crit = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 60, 1e-5)
 
 
+_ELR = {}
+def dil_ellipse(m, ks):
+    """r19 speed: == cv2.dilate(m, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (ks, ks))) bit for bit for a uint8 mask (0 = background): the
+    ellipse (here 0.7 IOD = ~120 px: the generic kernel loop was most of this script) as the maximum over its centred rectangles, on the bounding
+    box of the mask + the radius only. The same method as ks_plain.dil (c0b2a98); the kernel is checked to be such a union, else the plain call."""
+    if ks not in _ELR:
+        k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (ks, ks)); R = ks // 2; hw = (k.sum(1).astype(np.int64) - 1) // 2; out = {}; ok = ks % 2 == 1 and ks >= 3
+        for dy in range(R + 1):
+            if not ok: break
+            w = int(hw[R + dy])
+            if w < 0 or hw[R - dy] != w or k[R + dy].sum() != 2 * w + 1 or not (k[R + dy, R - w:R + w + 1] == 1).all(): ok = False; break
+            out[w] = max(out.get(w, 0), dy)
+        it = sorted(out.items()); _ELR[ks] = it if ok and all(h1 >= h2 for (_, h1), (_, h2) in zip(it, it[1:])) else None
+    rc = _ELR[ks]
+    if rc is None or os.environ.get("KS_PLAIN_DIL", "fast") == "cv2": return cv2.dilate(m, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (ks, ks)))
+    R = ks // 2; ys = np.flatnonzero(m.any(1))
+    if len(ys) == 0: return np.zeros_like(m)
+    xs = np.flatnonzero(m.any(0)); y0, y1 = max(0, ys[0] - R), min(m.shape[0], ys[-1] + R + 1); x0, x1 = max(0, xs[0] - R), min(m.shape[1], xs[-1] + R + 1)
+    c_ = np.ascontiguousarray(m[y0:y1, x0:x1]); o = None
+    for w, h_ in rc:
+        d = cv2.dilate(c_, np.ones((2 * h_ + 1, 2 * w + 1), np.uint8)); o = d if o is None else np.maximum(o, d)
+    out = np.zeros_like(m); out[y0:y1, x0:x1] = o; return out
+
+
 def one(i, prev):   # = k_ecc.py's loop body
     p = L[i]
     if not np.isfinite(p).all(): return None, prev
     iod = float(np.linalg.norm(p[33] - p[263])); m = np.zeros((512, 512), np.uint8)
     cv2.fillPoly(m, [cv2.convexHull(p[OVAL]).astype(np.int32)[:, 0]], 1); m = cv2.erode(m, np.ones((9, 9), np.uint8))
-    mz = np.zeros_like(m); cv2.fillPoly(mz, [cv2.convexHull(p[LIPS]).astype(np.int32)[:, 0]], 1); mz = cv2.dilate(mz, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (int(0.7 * iod) | 1,) * 2))
+    mz = np.zeros_like(m); cv2.fillPoly(mz, [cv2.convexHull(p[LIPS]).astype(np.int32)[:, 0]], 1); mz = dil_ellipse(mz, int(0.7 * iod) | 1)
     yl = int(p[[61, 291], 1].mean() - 0.1 * iod); m[yl:] = 0; m[mz > 0] = 0
     t, s_ = cv2.resize(S[i], (h, h), interpolation=cv2.INTER_AREA), cv2.resize(K[i], (h, h), interpolation=cv2.INTER_AREA)
     mk = cv2.resize(m, (h, h), interpolation=cv2.INTER_NEAREST); W = prev.copy()
