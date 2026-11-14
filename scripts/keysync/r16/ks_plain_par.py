@@ -99,7 +99,11 @@ if P1:   # phase 1: every GLOBAL estimate from every chunk's samples (exact: the
         G["cav_l"] = np.float64(np.percentile(sc[:, 0], 30)) if len(sc) else np.float64(-1); G["cav_ab"] = sc[:, 1:].mean(0).astype(np.float32) if len(sc) else np.zeros(2, np.float32)
     np.savez(f"{T}/cm.npz", **G)
 t2 = time.time()
-with cf.ThreadPoolExecutor(len(jobs)) as ex: list(ex.map(lambda j: run(j, (["--cm-file", f"{T}/cm.npz"] if P1 else []) + ["--out", f"{j['dir']}/out.mp4"], "paste.log"), jobs))
+# r19 speed (output-identical): a short clip gives few chunks (>= 120 frames each), so most cores idle through the paste: the per-frame work of
+# every chunk then runs on a few threads (ks_plain --threads; the frames reach each chunk's encoder in the same order). KS_PASTE_THREADS=<n> sets
+# it, 1 = off; default: the cores the chunks leave (2 per chunk are theirs already), at most 4; 1 inside a multi-shot run (several pastes at once).
+PT = int(os.environ.get("KS_PASTE_THREADS", "0")) or (1 if os.environ.get("KS_IN_SHOT") else max(1, min(4, (os.cpu_count() or 8) // (2 * len(jobs)))))
+with cf.ThreadPoolExecutor(len(jobs)) as ex: list(ex.map(lambda j: run(j, (["--cm-file", f"{T}/cm.npz"] if P1 else []) + ["--threads", str(PT), "--out", f"{j['dir']}/out.mp4"], "paste.log"), jobs))
 for j in jobs:   # surface every chunk WARNING (e.g. an end fade) in the parent log
     for ln in open(f"{j['dir']}/paste.log"):
         if "WARNING" in ln: print(f"chunk {j['c']}: {ln.rstrip()}", flush=True)
@@ -115,7 +119,7 @@ subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i
                ["-t", f"{NOUT / 25:.6f}", "-movflags", "+faststart", a.out], check=True)
 got = nframes(a.out)
 print(f"plain paste: KeySync {nk} frames, master {n}, shift {SH} -> {a.out} ({got} frames; {J} workers: slicing {t1 - t0:.0f} s, colour match {t2 - t1:.0f} s, "
-      f"paste {t3 - t2:.0f} s, total {time.time() - t0:.0f} s)", flush=True)
+      f"paste {t3 - t2:.0f} s ({PT} threads per chunk), total {time.time() - t0:.0f} s)", flush=True)
 if got != NOUT: print(f"WARNING: {got} frames written != expected {NOUT} (master {n}, audio {adur:.3f} s)", flush=True)
 if got < n - 13: sys.exit(1)
 if not os.environ.get("KS_PAR_KEEP"): shutil.rmtree(T, ignore_errors=True)

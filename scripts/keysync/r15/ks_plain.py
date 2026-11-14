@@ -8,7 +8,8 @@ x the box-edge feather (24 px, none on a frame border). ONE global colour match:
 the mask (lips excluded) over every 5th frame -> a constant gain / offset per channel (no per-frame colour match). After KeySync's output
 ends, a fade to the master over 8 frames. Colour-managed I/O (ks_cms, BT.709).
     KS_CMS=1 python ks_plain.py --ks KS.mp4 --master master_25fps.mp4 --box box.json --lm source_lm_F.npz [--others faces2.npz] --shift 1 --audio MIX --out OUT.mp4"""
-import argparse, json, math, os, subprocess, sys
+import argparse, collections, json, math, os, subprocess, sys, threading
+import concurrent.futures as _cf
 import numpy as np, cv2
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ks_cms
@@ -74,6 +75,9 @@ ap.add_argument("--ks-base", type=int, default=0, help="r16 K1 (set by ks_plain_
 ap.add_argument("--ks-total", type=int, default=-1, help="r16 K1 (set by ks_plain_par): the GLOBAL KeySync frame count (the end fade fires only when KeySync is really shorter than the master)")
 ap.add_argument("--n-total", type=int, default=-1, help="r16 K1 (set by ks_plain_par): the GLOBAL master frame count")
 ap.add_argument("--video-only", action="store_true", help="r16 K1 (set by ks_plain_par): write no audio (the chunks are joined and muxed with the mix once)")
+ap.add_argument("--threads", type=int, default=int(os.environ.get("KS_PLAIN_THREADS", "1")), help="r19 speed: the per-frame work (the --lfm pass and the paste itself) on this many "
+                "threads; the frames are read and written in order by the main thread, so the encoder gets the same frames in the same order (output-identical). "
+                "1 = the plain loop. Ignored with --absent hold / --diag (they carry state from frame to frame).")
 ap.add_argument("--lip-keep", default="", help="r16 K2: per-master-frame weights (.npy, k2_pause.py): the SOURCE lips (hull + 0.10 IOD) show through the paste mask")
 a = ap.parse_args()
 b = json.load(open(a.box)); x0, y0, s, W, H = b["x"], b["y"], b["side"], b["W"], b["H"]
@@ -99,6 +103,29 @@ KL = np.load(a.ks_lm)["lm"][..., :2].astype(np.float32) * (s / 512.0) if a.ks_lm
 LIPS_O = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185]
 INNER = [78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308, 415, 310, 311, 312, 13, 82, 81, 80, 191]
 DIS = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM) if a.tex > 0 else None
+_TL = threading.local(); _NTL = threading.Lock()
+def _dis():   # r19: one DIS object per thread (calc() keeps buffers; every call is independent of the previous one)
+    if threading.current_thread() is threading.main_thread(): return DIS
+    if not hasattr(_TL, "dis"): _TL.dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
+    return _TL.dis
+class _Slot(threading.local):   # r19: mask()'s scratch values (CZ[0], HY[0]) per thread
+    v = None
+    def __getitem__(s_, i_): return s_.v
+    def __setitem__(s_, i_, x_): s_.v = x_
+def _nt(i_):
+    with _NTL: NT[i_] += 1
+def pmap(fn, items, th):
+    """r19: fn(*item) for every item, results in the items' order; th worker threads, at most 3 * th items in flight (th <= 1: the plain loop)"""
+    if th <= 1:
+        for it in items: yield fn(*it)
+        return
+    with _cf.ThreadPoolExecutor(th) as ex:
+        q = collections.deque()
+        for it in items:
+            q.append(ex.submit(fn, *it))
+            if len(q) >= 3 * th: yield q.popleft().result()
+        while q: yield q.popleft().result()
+TH = a.threads if (a.absent == "skip" and not a.diag) else 1
 GX, GY = np.meshgrid(np.arange(s, dtype=np.float32), np.arange(s, dtype=np.float32))
 
 
@@ -188,7 +215,7 @@ def neck_warp(roi, k, i):   # r16c K1 option (a): the source neck follows the ge
     if float(np.abs(dy).max()) < 0.25: return roi
     return cv2.remap(roi, GX, (GY - dy[None, :] * wgt).astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
 
-CZ = [None]; HY = [None]
+CZ = _Slot(); HY = _Slot()
 def mask(k):
     i = int(J[min(k, len(J) - 1)]); p = LM[min(i, len(LM) - 1)]
     if not np.isfinite(p).all(): return (None, None) if a.absent == "skip" else (last[0], None)
@@ -400,13 +427,13 @@ def fix_ks(kf, i, m, src_crop):   # r15 --cavity / --tex on one KeySync crop (fl
             dn = cv2.distanceTransform(mc, cv2.DIST_L2, 3); dn = dn / max(float(dn.max()), 1.0)   # 0 at the lip rim, 1 at the cavity centre: a lighter rim, a darker throat
             mc = cv2.GaussianBlur(mc.astype(np.float32), (0, 0), 1.5); lab = cv2.cvtColor(kf / 255, cv2.COLOR_RGB2LAB); Lt, abt = CAV
             w_ = np.clip((Lt - lab[..., 0]) / max(Lt, 1.0), 0, 1) * mc * a.cavity * (1 - 0.65 * dn)
-            lab[..., 0] += w_ * (Lt - lab[..., 0]); lab[..., 1:] += w_[..., None] * (abt - lab[..., 1:]); NT[0] += 1
+            lab[..., 0] += w_ * (Lt - lab[..., 0]); lab[..., 1:] += w_[..., None] * (abt - lab[..., 1:]); _nt(0)
             kf = np.clip(cv2.cvtColor(lab, cv2.COLOR_LAB2RGB) * 255, 0, 255)
     if a.tex > 0 and m is not None:
         sc = src_crop.astype(np.float32); h2 = s // 2
         gk = cv2.cvtColor(kf.astype(np.uint8), cv2.COLOR_RGB2GRAY); gs = cv2.cvtColor(src_crop, cv2.COLOR_RGB2GRAY)
         if a.tex_flow:
-            fl = DIS.calc(cv2.resize(gk, (h2, h2), interpolation=cv2.INTER_AREA), cv2.resize(gs, (h2, h2), interpolation=cv2.INTER_AREA), None)
+            fl = _dis().calc(cv2.resize(gk, (h2, h2), interpolation=cv2.INTER_AREA), cv2.resize(gs, (h2, h2), interpolation=cv2.INTER_AREA), None)
             fl = cv2.resize(fl, (s, s)) * (s / h2)
         else: fl = np.zeros((s, s, 2), np.float32)
         yk = cv2.cvtColor(kf.astype(np.float32), cv2.COLOR_RGB2YCrCb); ys = cv2.cvtColor(sc, cv2.COLOR_RGB2YCrCb)[..., 0]
@@ -420,19 +447,19 @@ def fix_ks(kf, i, m, src_crop):   # r15 --cavity / --tex on one KeySync crop (fl
         hp = lambda img: img - cv2.GaussianBlur(img, (0, 0), a.tex)
         if a.tex_rgb:   # r16b K1 texture-keep: all channels; the source HF (warped) replaces KeySync's outside the lip zone
             wr = cv2.remap(sc, GX + fl[..., 0], GY + fl[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
-            kf = np.clip(kf + T[..., None] * (hp(wr) - hp(kf.astype(np.float32))), 0, 255); NT[1] += 1
+            kf = np.clip(kf + T[..., None] * (hp(wr) - hp(kf.astype(np.float32))), 0, 255); _nt(1)
         else:
-            yk[..., 0] += T * (hp(ws) - hp(yk[..., 0])); NT[1] += 1
+            yk[..., 0] += T * (hp(ws) - hp(yk[..., 0])); _nt(1)
             kf = np.clip(cv2.cvtColor(yk, cv2.COLOR_YCrCb2RGB), 0, 255)
     return kf
 LG = 64; LFM = None
 if a.lfm > 0:   # r16 K1: per-frame low-frequency Lab difference maps (LG x LG), temporally smoothed
     D = np.zeros((n, LG, LG, 3), np.float32); V = np.zeros((n, LG, LG, 1), np.float32)
-    for k, f in enumerate(frames(a.master, W, H)):
+    def _lfm_one(k, f):   # (r19: the loop body as a function: D[k] / V[k] only, so the frames can go to worker threads)
         i = kidx(k)
-        if not (0 <= i < len(K)): continue
+        if not (0 <= i < len(K)): return
         m, sk = mask(k)
-        if sk is None: continue
+        if sk is None: return
         p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)]; iod = float(np.linalg.norm(p[33] - p[263])) if np.isfinite(p).all() else IODM
         wm = ((m > 0.05) & ~mouth_zone(k, i, iod)).astype(np.float32)
         kf = warp_ks(K[i].astype(np.float32), k, i); lk = lab_of(kf) * gain + off; lm_ = lab_of(crop(f, k))
@@ -440,6 +467,7 @@ if a.lfm > 0:   # r16 K1: per-frame low-frequency Lab difference maps (LG x LG),
         wd = cv2.GaussianBlur(ds(wm), (0, 0), sg); ok_ = wd > 0.02
         dd = (cv2.GaussianBlur(ds(lm_ * wm[..., None]), (0, 0), sg) - cv2.GaussianBlur(ds(lk * wm[..., None]), (0, 0), sg)) / np.maximum(wd, 1e-3)[..., None]
         D[k] = dd * ok_[..., None]; V[k, ..., 0] = ok_
+    for _ in pmap(_lfm_one, enumerate(frames(a.master, W, H)), TH): pass
     r_ = int(3 * a.lfm); g = np.exp(-0.5 * (np.arange(-r_, r_ + 1) / a.lfm) ** 2).astype(np.float32); g /= g.sum()
     def sm(x):
         xp = np.concatenate([np.repeat(x[:1], r_, 0), x, np.repeat(x[-1:], r_, 0)], 0); o_ = np.zeros_like(x)
@@ -494,16 +522,15 @@ if a.tail_src:   # the same detection as ks_tailsrc.py (20 ms RMS, 100 ms mean, 
     if on_.any() and dur_ - t0_ >= a.tail_min: TS0 = t0_
     print("KS_TAILFADE " + json.dumps({"last_speech_s": round(last_, 2), "t0_s": round(t0_, 2), "tail_s": round(dur_ - t0_, 2), "ramp_s": a.tail_ramp, "applied": TS0 is not None}), flush=True)
 NFADE = 0
-for k, f in enumerate(frames(a.master, W, H)):
-    if k < WR[0]: continue
-    if k >= WR[1] or (not a.write_range and k >= NOUT): break
+def _paste_one(k, f):   # r19: one output frame = the former loop body (it reads only the precomputed arrays) -> (frame bytes, end-fade frame?)
+    nfade_ = False
     f = f.copy(); i = kidx(k); m, _ = mask(k)
     wt = 0.0 if TS0 is None else min(1.0, max(0.0, ((k + a.k_base) / FR_M - TS0) / max(a.tail_ramp, 1e-3)))   # r18 tail fade: 0 = the paste, 1 = the source
     if GW is not None and k + a.k_base < len(GW): wt = max(wt, float(GW[k + a.k_base]))   # (occlusion / turn gate: the same fade as the tail)
     if wt >= 0.999: m = None
     if m is not None:
         ig = i + a.ks_base; fade = 1.0 if (not KS_SHORT or ig < NKT - 25) else max(0.0, (NKT - ig) / 25.0)   # r16: only if KeySync is SHORTER than the master (pad the inputs); 1 s fade as a last resort
-        NFADE += fade < 1.0
+        nfade_ = fade < 1.0
         kf = scale_fix(warp_ks(K[int(np.clip(i, 0, nk - 1))].astype(np.float32), k, i), k)
         if not a.no_cm:
             lab = cv2.cvtColor(kf / 255, cv2.COLOR_RGB2LAB); lab0 = lab.copy() if SHW else None
@@ -552,7 +579,14 @@ for k, f in enumerate(frames(a.master, W, H)):
                 lc, ls_ = lab_of(comp), lab_of(roi); dl = (lc[band] - ls_[band]).mean(0)
                 DG.append([k, *dl.tolist(), hf_energy(cv2.cvtColor(comp.astype(np.uint8), cv2.COLOR_RGB2GRAY).astype(np.float32), core) / max(hf_energy(cv2.cvtColor(roi.astype(np.uint8), cv2.COLOR_RGB2GRAY).astype(np.float32), core), 1e-6)])
         crop(f, k)[:] = comp.astype(np.uint8)
-    w.stdin.write(f.tobytes())
+    return f.tobytes(), nfade_
+def _paste_items():
+    for k, f in enumerate(frames(a.master, W, H)):
+        if k < WR[0]: continue
+        if k >= WR[1] or (not a.write_range and k >= NOUT): break
+        yield k, f
+for b_, nf_ in pmap(_paste_one, _paste_items(), TH):
+    w.stdin.write(b_); NFADE += bool(nf_)
 if a.diag and DG:
     dg = np.array(DG, np.float64); de = np.linalg.norm(dg[:, 1:4], axis=1)
     slow = np.stack([np.convolve(dg[:, c], np.ones(13) / 13, "same") for c in (1, 2, 3)], 1)
