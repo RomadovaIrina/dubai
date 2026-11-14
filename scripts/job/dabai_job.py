@@ -397,6 +397,7 @@ def _run_job(job: dict, on_event=None, cancel: threading.Event | None = None) ->
             # (~2-4 GB of CUDA contexts) made it OOM (Chatterbox "CUDA out of memory") -> they are stopped for this job, restarted after it
             subprocess.run(["bash", str(ROOT / "scripts" / "job" / "resident.sh"), "stop"], cwd=ROOT, env=env, timeout=180, capture_output=True)
             env.pop("R9_WORKER_SPOOL", None); env.pop("KS_SERVE_DIR", None); res_restart = True; st["resident_paused"] = True
+            env["DABAI_RESIDENT_RESUME"] = os.environ.get("DABAI_RESIDENT_DIR", "/data/resident")   # r19: e2e.sh may bring it back once the audio stage's GPU work is over
         proc = subprocess.Popen(["bash", str(ROOT / "scripts" / "r9" / "e2e.sh"), src, str(e2e)], cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
         st["pipeline_pgid"] = proc.pid   # its own session / process group: a restarted service kills it (job_api._kill_orphan)
         to = float(p.get("timeout_s") or max(1800.0, 1200.0 * max(vmin, 0.5)))   # TZ 3.8; a hung stage must not hold the worker forever
@@ -421,7 +422,7 @@ def _run_job(job: dict, on_event=None, cancel: threading.Event | None = None) ->
             time.sleep(3)
         proc.wait(); log.close(); st["peak_rss_mb"] = round(rss_peak)
         if res_restart:   # back in the background: the next jobs run cold until it is ready again (/health resident.state)
-            subprocess.Popen(["bash", str(ROOT / "scripts" / "job" / "resident.sh"), "start"], cwd=ROOT, start_new_session=True,
+            subprocess.Popen(["bash", str(ROOT / "scripts" / "job" / "resident.sh"), "resume"], cwd=ROOT, start_new_session=True,   # (r19: a no-op when e2e.sh resumed it)
                              stdout=open(pathlib.Path(os.environ.get("DABAI_RESIDENT_DIR", "/data/resident")) / "restart.log", "w"), stderr=subprocess.STDOUT)
         for n in stage_names(e2e)[n_seen:]:
             if n != "end": ev.emit("step", step=n, step_label=STEPS.get(n, (n,))[0], progress_pct=st["progress_pct"], eta_s=None)
