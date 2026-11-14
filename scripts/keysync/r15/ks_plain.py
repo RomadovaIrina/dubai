@@ -25,6 +25,7 @@ ap.add_argument("--tail-src", default="", help="r18 (Irina 13.11: the m03 end fa
 ap.add_argument("--gate-w", default="", help="r18: per-GLOBAL-master-frame weights 'take the original' in [0, 1] (.npy, or a json with a 'w' list = ks_occl.py --dump: occlusion / strong turn / hand over the mouth): the paste mask is multiplied by (1 - w), INSIDE this single paste pass (Irina 09.11 rules 3-4 without ks_occl.py's second whole-frame encode)")
 ap.add_argument("--tail-hold", type=float, default=0.0); ap.add_argument("--tail-ramp", type=float, default=0.25); ap.add_argument("--tail-min", type=float, default=1.0); ap.add_argument("--tail-end-thr", type=float, default=0.25)
 ap.add_argument("--hybrid-at", type=float, default=0.0, help="r18 hybrid: where the oval -> tight crossfade is centred, as a fraction of the way from the mouth corners (0) to the chin point (1)")
+ap.add_argument("--cavity-p", type=float, default=30.0, help="r19: the percentile of the source open-mouth interior lightness that --cavity lifts toward (30 = r15: with --cavity 0.5 a black cavity moves ~5 L*: no visible change, Irina 14.11)")
 ap.add_argument("--neck-clamp", type=float, default=0.12, help="r18 (Irina 14.11, long5 head turns: the neck under the chin swells / shrinks): the limit of --neck-follow's vertical warp, x IOD (0.12 = K1's value)")
 ap.add_argument("--hybrid-up", type=float, default=0.0, help="r18 hybrid (Irina 13.11, old03: the oval share left in the crossfade still pulled background into the stubble at the jaw edge by the mouth corners): the crossfade centre this many IOD ABOVE the mouth corners, so the tight boundary already holds at their level and below (0.15 with the 0.12 band = fully tight from 0.03 IOD above the corners)")
 ap.add_argument("--hybrid-band", type=float, default=0.12, help="r18 hybrid: half-height of the crossfade, x IOD")
@@ -358,8 +359,8 @@ if need_cm or need_cav or need_sh:   # pass 1: the global colour match on the sk
         h_ = np.array([x for x in HFR if np.isfinite(x).all() and x[1] > 0]); r_ = float(np.median(h_[:, 0] / h_[:, 1])) if len(h_) else 1.0
         SHARP = float(np.clip((r_ - 1) * 1.5, 0, 1.5)); print(f"sharp auto: skin HF source / KeySync {r_:.3f} -> unsharp {SHARP:.2f}", flush=True)
     if need_cav and SC:
-        SC = np.concatenate(SC); CAV = (float(np.percentile(SC[:, 0], 30)), SC[:, 1:].mean(0).astype(np.float32))
-        print(f"source open-mouth interior: L p30 {CAV[0]:.1f}, a/b {CAV[1].round(1).tolist()} ({len(SC)} px)", flush=True)
+        SC = np.concatenate(SC); CAV = (float(np.percentile(SC[:, 0], a.cavity_p)), SC[:, 1:].mean(0).astype(np.float32))
+        print(f"source open-mouth interior: L p{a.cavity_p:g} {CAV[0]:.1f}, a/b {CAV[1].round(1).tolist()} ({len(SC)} px)", flush=True)
 if CMZ is not None:
     if "gain" in CMZ.files and not a.no_cm:
         gain, off = CMZ["gain"].astype(np.float32), CMZ["off"].astype(np.float32); print(f"colour match from {a.cm_file}: gain {gain.round(3).tolist()} offset {off.round(2).tolist()}", flush=True)
