@@ -45,6 +45,8 @@ post_layer() {   # post_layer <face>: this face's post layer, raw KeySync render
   local f=$1 RAW P RU L RSEAM CJ PW LMP
   [ "${KS_CMS:-0}" = 1 ] && export KS_CMS   # r16c: KS_CMS=1 = BT.709 colour-managed tsmooth / snap / guard / seam (K1 root cause; drift raw -> seam -2.9 L -> 0). OPT-IN: Irina 10.11 preferred the old look by eye on long5 / m03 / m18
   RAW=$(ls $KW/out/$f/*.mp4 | head -1); P=$KW/post_$f; mkdir -p $P
+  if [ -f $KW/crop_lm_$f.bg ]; then until [ -f $KW/crop_lm_$f.rc ]; do sleep 0.2; done   # (r19 KS_PREP_BG: the crop landmarks started at the prep)
+    [ "$(cat $KW/crop_lm_$f.rc)" = 0 ] || { echo "KS: crop landmarks failed ($f)"; return 1; }; fi
   # r18 KS_POST_REUSE (re-paste A/B only, KS_PHASE=post on a finished job): 1 = reuse this face's finished post layer ($P/layer.txt), so two
   # re-pastes differ ONLY by the paste (the MediaPipe pass of the raw render is not repeatable run to run); seam = reuse up to ks_guard, redo ks_seam.
   RU=${KS_POST_REUSE:-0}; L=""; RSEAM=1
@@ -79,6 +81,28 @@ post_layer() {   # post_layer <face>: this face's post layer, raw KeySync render
 post_layer_bg() {   # r19 speed: post_layer <face> in the background -> $P/layer.out (its log lines), $P/layer.rc (its exit code), $P/layer.t (start, end);
   local f=$1 P=$KW/post_$1; rm -rf $P; mkdir -p $P; date +%s.%N > $P/layer.started   # it outlives a KS_PHASE=gpu run: the later KS_PHASE=post run collects it
   ( post_layer $f > $P/layer.out 2>&1; rc=$?; echo "$(cat $P/layer.started) $(date +%s.%N)" > $P/layer.t; echo $rc > $P/layer.rc ) & }
+gpu_begin() {   # r19 speed: the start of the GPU section as a function (once): the GPU lock, the engines, the KeySync worker launch (the resident
+  # daemon unparks at once). A single-shot run calls it BEFORE the crop (KS_GPU_EARLY=1, default), so these ~6 s overlap the CPU crop / pad;
+  # the multi-shot gpu phase and KS_GPU_EARLY=0 call it at the GPU section, as before. Same commands.
+  [ -z "${GPU_BEGUN:-}" ] || return 0; GPU_BEGUN=1
+  . $R/scripts/keysync/r16/gpulock.sh
+  SHR=${KS_FAST_FJ:-}   # shared resident ks_fast (ks_shots.sh holds the GPU lock for all shots)
+  [ -n "$SHR" ] || [ -n "${KS_IN_SHOT:-}" ] || sync_serve_start $KW/syncsrv   # r17 KS_SYNC_SERVE (a single-shot run owns its server; ks_shots.sh owns the shots')
+  [ -n "$SHR" ] || gpu_held || { t wait_gpu; gpu_acquire $$ || { echo "KS: could not take the GPU lock"; exit 1; }; }
+  t engines; ENG=$(KS_GPU_LOCK=/dev/null bash $R/scripts/keysync/r16/ks_engines.sh 2> $KW/engines.log | tail -1); [ -d "$ENG" ] || { tail -5 $KW/engines.log; exit 1; }
+  LMK=${KS_LMK_CACHE:-$KS/lmk}; mkdir -p $LMK; [ -n "${KS_TORCH_HOME:-}" ] && export TORCH_HOME=$KS_TORCH_HOME   # (image: face_alignment's weights on the volume)
+  GATE="${KS_GATE-thr=0.12,cap=0.25,hi=8,lo=2}"
+  ksfast() {   # ksfast <jobs> <out> <log>: the resident KeySync-fast worker (fast2: TRT keyframes + 2-step LCM student + the K2 gate, compiled VAE decode)
+    ( cd $KS/code && . ../venv/bin/activate && env KS_DC=2:0 KS_LMK_CACHE=$LMK TORCHINDUCTOR_CACHE_DIR=${TORCHINDUCTOR_CACHE_DIR:-$KS/inductor} ${GATE:+KS_GATE=$GATE} \
+      python $KT/ks_fast.py --jobs $1 --out $2 --cfg _s8 --vae-half --compile unet --trt $ENG --interp-lora $LORA --interp-steps ${KS_INTERP_STEPS:-2} \
+        --vae-batch 8 --vae-compile ) > $3 2>&1 || { tail -5 $3; return 1; }; grep "^KS_JOB" $3 | cut -c1-400; }
+  if [ -n "$SHR" ]; then FJ=$SHR; KLOG=$KS_FAST_LOG; KOUT=$KS_FAST_OUT; KSP=$KS_FAST_PID; PFX=${KS_TAG_PREFIX:-}
+  else FJ=$KW/jobs_follow.txt; : > $FJ; KLOG=$KW/ks_fast.log; KOUT=$KW/out; PFX=""
+  . $R/scripts/keysync/r16/ks_serve.sh; ks_fast_launch $FJ $KW/out $KW/ks_fast.log   # r17: the resident KeySync daemon (KS_SERVE_DIR) when it is up with these settings, else a cold --follow ks_fast (as before)
+  trap '[ -n "${KSP:-}" ] && kill $KSP 2>/dev/null' EXIT; fi   # never leave a --follow ks_fast behind (it would wait for END forever)
+  waitjob() { until grep -q "^KS_JOB {\"tag\": \"$1\"" $KLOG; do kill -0 $KSP 2>/dev/null || { echo "KS: ks_fast died before job $1"; tail -5 $KLOG; return 1; }; sleep 0.5; done; }
+  return 0
+}
 
 if [ "$PH" = all ] || [ "$PH" = prep ]; then   # ==== prep (CPU): master, landmarks, shots, plan, crop, pad, reference
 t master
@@ -101,6 +125,8 @@ t plan; $PY $R/scripts/keysync/r16/ks_e2e_prep.py --mp $KW/master_mp.npz --dub $
 TAGS=$(python3 -c "import json; print(' '.join(f['tag'] for f in json.load(open('$KW/faces.json'))['faces']))")
 [ -n "$TAGS" ] || { echo "KS_FACE_KEEP_SOURCE $ID: no face to lip-sync ($(python3 -c "import json; d=json.load(open('$KW/faces.json')); print(d['mode'], d.get('skipped'))"))"; exit 3; }
 
+# r19 speed (KS_GPU_EARLY=0 = as before): a single-shot run starts its GPU side now, beside the crop below
+if [ "$PH" = all ] && [ -z "${KS_FAST_FJ:-}" ] && [ "${KS_GPU_EARLY:-1}" = 1 ]; then gpu_begin || exit 1; fi
 t crop
 for f in $TAGS; do
   # the r15 static crop (ks_prep rule; another face in the shot: the tight 1.25 / 0.4 box of r15 K m03, so KeySync / SyncNet see one face)
@@ -117,6 +143,11 @@ for f in $TAGS; do
   else
     mv $KW/data/st/videos/$f.mp4 $KW/data/crop_$f.mp4; mv $KW/data/st/box_$f.json $KW/data/box_$f.json
   fi
+  # r19 speed (output-identical, KS_PREP_BG=0 = as before): the crop's MediaPipe landmarks are read by the POST only (ECC, tsmooth; KS_REF=auto reads
+  # them here), so they run in the background beside the pad below and the GPU does not wait for them; post_layer waits (crop_lm_<f>.rc)
+  CLB=0; rm -f $KW/crop_lm_$f.rc $KW/crop_lm_$f.bg
+  if [ "${KS_PREP_BG:-1}" = 1 ] && [ "${KS_REF:-0}" != auto ]; then CLB=1; touch $KW/crop_lm_$f.bg
+    ( $MPY $R/scripts/quality/mp_landmarks.py --video $KW/data/crop_$f.mp4 --out $KW/crop_lm_$f.npz > /dev/null 2>&1; echo $? > $KW/crop_lm_$f.rc ) & fi
   $MPY - $KW/data/crop_$f.mp4 $KW/data/pad_$f.mp4 $PAD <<'PY' >> $KW/crop_$f.log 2>&1 || exit 1
 import subprocess, sys, cv2   # K1 5c07cf7: the last PAD frames mirrored WITHOUT repeating the seam frame (KeySync degenerated on a duplicate)
 src, out, pad = sys.argv[1], sys.argv[2], int(sys.argv[3]); c = cv2.VideoCapture(src); F = []
@@ -130,7 +161,7 @@ p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt
 for f in F: p.stdin.write(f.tobytes())
 p.stdin.close(); p.wait(); print("pad", len(F), "frames")
 PY
-  $MPY $R/scripts/quality/mp_landmarks.py --video $KW/data/crop_$f.mp4 --out $KW/crop_lm_$f.npz > /dev/null 2>&1 || { echo "KS: crop landmarks failed ($f)"; exit 1; }
+  [ $CLB = 1 ] || $MPY $R/scripts/quality/mp_landmarks.py --video $KW/data/crop_$f.mp4 --out $KW/crop_lm_$f.npz > /dev/null 2>&1 || { echo "KS: crop landmarks failed ($f)"; exit 1; }
   REF=${KS_REF:-0}   # Irina 08.11 (m18 clip): ref 0 + the gate = the default; KS_REF=auto = K2 refpick (option)
   if [ "$REF" = auto ]; then   # K2: a frame with the upper teeth showing as KeySync's identity (black-hole mouths roughly halved); 0 if the pick fails
     REF=$($MPY $KT/k2_refpick.py --video $KW/data/crop_$f.mp4 --lm $KW/crop_lm_$f.npz --face-lm $KW/lm_$f.npz --box $KW/data/box_$f.json --out $KW/ref_$f 2> $KW/ref_$f.log | grep "^K2_REFPICK" | python3 -c "import json,sys; print(json.loads(sys.stdin.read()[11:])['pick'])" 2>/dev/null)
@@ -147,22 +178,7 @@ if [ "$PH" = all ] || [ "$PH" = gpu ]; then   # ==== gpu
 # ---- GPU section = ONE hold of the GPU lock (engines, probe, full KeySync, SyncNet checks); released before the CPU post / paste.
 # GPU_RDY (scripts/keysync/r16/gpulock.sh): the caller (e2e.sh with R10_HEAVY_LOCK) already holds the GPU lock since its audio stage -> no second
 # wait in the queue; released here (gpu_release) before the CPU post. Without it this script takes the lock itself. No lock fd is ever inherited.
-. $R/scripts/keysync/r16/gpulock.sh
-SHR=${KS_FAST_FJ:-}   # shared resident ks_fast (ks_shots.sh holds the GPU lock for all shots)
-[ -n "$SHR" ] || [ -n "${KS_IN_SHOT:-}" ] || sync_serve_start $KW/syncsrv   # r17 KS_SYNC_SERVE (a single-shot run owns its server; ks_shots.sh owns the shots')
-[ -n "$SHR" ] || gpu_held || { t wait_gpu; gpu_acquire $$ || { echo "KS: could not take the GPU lock"; exit 1; }; }
-t engines; ENG=$(KS_GPU_LOCK=/dev/null bash $R/scripts/keysync/r16/ks_engines.sh 2> $KW/engines.log | tail -1); [ -d "$ENG" ] || { tail -5 $KW/engines.log; exit 1; }
-LMK=${KS_LMK_CACHE:-$KS/lmk}; mkdir -p $LMK; [ -n "${KS_TORCH_HOME:-}" ] && export TORCH_HOME=$KS_TORCH_HOME   # (image: face_alignment's weights on the volume)
-GATE="${KS_GATE-thr=0.12,cap=0.25,hi=8,lo=2}"
-ksfast() {   # ksfast <jobs> <out> <log>: the resident KeySync-fast worker (fast2: TRT keyframes + 2-step LCM student + the K2 gate, compiled VAE decode)
-  ( cd $KS/code && . ../venv/bin/activate && env KS_DC=2:0 KS_LMK_CACHE=$LMK TORCHINDUCTOR_CACHE_DIR=${TORCHINDUCTOR_CACHE_DIR:-$KS/inductor} ${GATE:+KS_GATE=$GATE} \
-    python $KT/ks_fast.py --jobs $1 --out $2 --cfg _s8 --vae-half --compile unet --trt $ENG --interp-lora $LORA --interp-steps ${KS_INTERP_STEPS:-2} \
-      --vae-batch 8 --vae-compile ) > $3 2>&1 || { tail -5 $3; return 1; }; grep "^KS_JOB" $3 | cut -c1-400; }
-if [ -n "$SHR" ]; then FJ=$SHR; KLOG=$KS_FAST_LOG; KOUT=$KS_FAST_OUT; KSP=$KS_FAST_PID; PFX=${KS_TAG_PREFIX:-}
-else FJ=$KW/jobs_follow.txt; : > $FJ; KLOG=$KW/ks_fast.log; KOUT=$KW/out; PFX=""
-. $R/scripts/keysync/r16/ks_serve.sh; ks_fast_launch $FJ $KW/out $KW/ks_fast.log   # r17: the resident KeySync daemon (KS_SERVE_DIR) when it is up with these settings, else a cold --follow ks_fast (as before)
-trap '[ -n "${KSP:-}" ] && kill $KSP 2>/dev/null' EXIT; fi   # never leave a --follow ks_fast behind (it would wait for END forever)
-waitjob() { until grep -q "^KS_JOB {\"tag\": \"$1\"" $KLOG; do kill -0 $KSP 2>/dev/null || { echo "KS: ks_fast died before job $1"; tail -5 $KLOG; return 1; }; sleep 0.5; done; }
+gpu_begin || exit 1
 PBC=0   # r17 KS_PROBE_BY_CHECK=1 (OFF by default until scripts/keysync/r16/tz/probe_proof.sh): no separate probe render; the delay is verified by the check
 if [ "${KS_PROBE_BY_CHECK:-0}" = 1 ] && [ "${KS_DELAY:-probe}" = probe ] && [ -z "$SHR" ] && [ "$N" -le "$(( ${KS_CHUNK_MIN_S:-90} * 25 ))" ]; then PBC=1; fi
 if [ $PBC = 1 ]; then for f in $TAGS; do DLY[$f]=${KS_PBC_DELAY:-40}; done; echo "KS_PROBE_BY_CHECK: no probe render; delay ${KS_PBC_DELAY:-40} ms, verified after the render"
