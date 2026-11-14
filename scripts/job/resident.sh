@@ -10,7 +10,7 @@
 set -u
 cd "$(dirname "$0")/../.."; R=$(pwd); D=${2:-${DABAI_RESIDENT_DIR:-/data/resident}}; mkdir -p $D
 now() { date +%s.%N; }
-case "${1:?start|stop|status}" in
+case "${1:?start|stop|status|resume}" in
   start)
     rm -f $D/ready; t0=$(now)
     bash scripts/keysync/r16/ks_serve.sh start $D/ks > $D/ks_start.log 2>&1 || { echo "RESIDENT: KeySync daemon failed (see $D/ks_start.log, $D/ks/serve.log)"; tail -5 $D/ks_start.log; exit 1; }
@@ -27,6 +27,9 @@ json.dump(r, open(f"{d}/ready", "w")); print("RESIDENT_READY " + json.dumps(r))
 PY
     ;;
   stop) bash scripts/r9/audio_worker.sh stop $D/audio; bash scripts/keysync/r16/ks_serve.sh stop $D/ks; rm -f $D/ready;;
+  resume)   # r19: start, unless it is up already; one at a time (a long job's audio stage resumes it early, dabai_job.py again at the job's end)
+    exec 9> $D/.resume.lock; flock 9
+    if bash "$0" status $D > /dev/null 2>&1; then echo "RESIDENT already up"; else bash "$0" start $D; fi;;
   status)
     . scripts/keysync/r16/ks_serve.sh; ok=0
     ks_serve_live $D/ks && echo "ks: up $(cat $D/ks/ready)" || { echo "ks: down"; ok=1; }

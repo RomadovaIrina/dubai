@@ -46,6 +46,7 @@ fail() { FL+=("$1"); ER+=("$1: ${3:-}"); [ "$2" = ERROR ] && STATUS=ERROR || { [
 collect() { python scripts/r9/collect.py --id $ID --out $OUT --status $STATUS --flags "${FL[*]:-}" --errors "$(printf '%s\n' "${ER[@]:-}")" --stages $T --nvsmi $W/nvsmi.csv --precheck $W/precheck.json \
     --audio $A/$AT --htd $A/$HT --face $B/$FT --gen $B/$GT --input "$IN" --ks-subst $W/ks/subst.json; }   # r16 TZ 11.2 / 11.3
 finish() {
+  [ -n "${KSX:-}" ] && [ "${KSPRE:-0}" = 1 ] && touch $KSX/go   # (r19: a job that ends inside the audio stage never leaves the pre-started daemon on hold)
   st end; kill $NV $NM 2>/dev/null; wait $NV $NM 2>/dev/null
   collect 2>&1 | tee -a $L/e2e.log
   [ -s $NVML ] && /venv/main/bin/python scripts/r10/gpu_sampler.py --summary $NVML --stages $T --job $ID \
@@ -55,6 +56,8 @@ finish() {
   echo "R9_E2E_DONE $ID $STATUS" | tee -a $L/e2e.log; [ "$STATUS" = ERROR ] && exit 1; exit 0   # (Q audit O3: a failed job exits non-zero)
 }
 
+VEP=""   # r19 speed (output-identical): the accepted-voice environment check (~1 s) runs beside the precheck; its verdict is read before the audio stage, as before
+if [ -z "${DUB_AUDIO_FROM:-}" ]; then ( python3 scripts/voice_env_check.py --python ${DUB_ENV:-/venv/dabai}/bin/python > $W/voice_env.out 2> $W/voice_env.err; echo $? > $W/voice_env.rc ) & VEP=$!; fi
 st precheck
 python scripts/r9/precheck.py --input "$IN" --out $W/precheck.json --work $W > $L/precheck.log 2>&1 || fail precheck_crashed PARTIAL_SUCCESS "see logs/precheck.log"
 tail -1 $L/precheck.log | tee -a $L/e2e.log
@@ -120,21 +123,42 @@ fi
 RPRE=""   # r17 speed (E2E_ROUTE_PRE=1, off by default until the VM guard): the route's dub-independent parts (its 25 fps master + the beard check)
 if [ "${E2E_ROUTE_PRE:-0}" = 1 ] && [ "${E2E_LIPSYNC:-on}" != off ] && [ "${DUB_FACE:-auto}" != latentsync ] && [ "${DUB_ROUTE:-on}" = on ] && [ -z "${DUB_ROUTE_JSON:-}" ]; then
   RPRE=$W/route_pre; mkdir -p $RPRE   # the SAME commands as the face_route stage below, run during the audio stage (CPU)
+  # r19 speed (output-identical, E2E_AS_PREP=0 = as before): the active-speaker detector's own dub-independent CPU inputs (its 25 fps mpeg4 copy of the
+  # master, the jpg frames, the wav, the scene list: r16q_active_speaker.py --prep-only, the same commands) are made here too, beside the beard check
   ( ffmpeg -loglevel error -y -i $SRC -map 0:v:0 -map 0:a:0 -vf fps=25 -c:v libx264 -preset fast -crf 12 -pix_fmt yuv420p -c:a aac $RPRE/master_25fps.mp4 && touch $RPRE/master.done
-    ${DUB_MEDIAPIPE_PY:-/venv/mediapipe/bin/python} scripts/quality/r16q_beard.py $SRC --out $RPRE/beard.json > $RPRE/beard.log 2>&1 && touch $RPRE/beard.done; touch $RPRE/finished ) &
+    ASP=""; [ "${E2E_AS_PREP:-1}" = 1 ] && [ -f $RPRE/master.done ] && { python scripts/quality/r16q_active_speaker.py --video $RPRE/master_25fps.mp4 --prep-only $RPRE/as_prep > $RPRE/as_prep.log 2>&1 & ASP=$!; }
+    ${DUB_MEDIAPIPE_PY:-/venv/mediapipe/bin/python} scripts/quality/r16q_beard.py $SRC --out $RPRE/beard.json > $RPRE/beard.log 2>&1 && touch $RPRE/beard.done
+    [ -n "$ASP" ] && wait $ASP; touch $RPRE/finished ) &
+fi
+# r19 speed (long videos: the TTS stage runs as its own process, R9_ONEPROC=off; E2E_STAGE_DONE=0 = off): when that process has exited, the GPU is free
+# for the rest of the audio stage (its CPU chain) -> scripts/r9/stage_done.sh brings the paused resident worker back and runs the route's
+# active-speaker pass there. Short videos: the audio worker holds the GPU to the end of the stage, nothing changes.
+SDR=""
+if [ "${R9_ONEPROC:-on}" = off ] && [ "${E2E_STAGE_DONE:-1}" = 1 ] && [ -z "${DUB_AUDIO_FROM:-}" ]; then
+  [ -n "${DABAI_RESIDENT_RESUME:-}" ] && [ "${E2E_LIPSYNC:-on}" != off ] && SDR=$DABAI_RESIDENT_RESUME
+  export R9_ON_STAGE_DONE="bash $DUB_ROOT/scripts/r9/stage_done.sh '$RPRE' $A/${AT}pre/runs/${ID}_r4a.manifest.json $L ${DUB_ROUTE_DEVICE:-cuda} $SDR"
 fi
 KSX=""   # r17 VRAM margin (KS_SERVE_AUDIO_EXIT=1, off by default until the VM check): the parked KeySync daemon still holds ~1.5-2 GB (CUDA context),
 if [ "${KS_SERVE_AUDIO_EXIT:-0}" = 1 ] && [ -n "${KS_SERVE_DIR:-}" ] && [ -z "${DUB_AUDIO_FROM:-}" ] && [ -s ${KS_SERVE_DIR}/pid ]; then   # next to the ~30 GB audio peak
-  KSX=$KS_SERVE_DIR; bash scripts/keysync/r16/ks_serve.sh stop $KSX > $L/ks_serve_stop.log 2>&1; echo "== $ID KeySync daemon stopped for the audio stage" | tee -a $L/e2e.log; fi
-if [ -z "${DUB_AUDIO_FROM:-}" ] && ! python3 scripts/voice_env_check.py --python ${DUB_ENV:-/venv/dabai}/bin/python 2>> $L/e2e.log; then   # r16 T: never a wrong voice silently
+  KSX=$KS_SERVE_DIR; bash scripts/keysync/r16/ks_serve.sh stop $KSX > $L/ks_serve_stop.log 2>&1; echo "== $ID KeySync daemon stopped for the audio stage" | tee -a $L/e2e.log
+  # r19 speed (KS_SERVE_PRESTART=0 = as before): the NEW daemon process starts now and does its python imports during the audio stage, but HOLDS before
+  # its first CUDA call (ks_fast.py KS_SERVE_HOLD: no context, no VRAM) until $KSX/go appears after the audio stage: ~5 s less to wait for it then
+  KSPRE=${KS_SERVE_PRESTART:-1}
+  if [ "$KSPRE" = 1 ]; then rm -f $KSX/go; KS_SERVE_HOLD=$KSX/go setsid bash scripts/keysync/r16/ks_serve.sh start $KSX > $L/ks_serve_restart.log 2>&1 < /dev/null & fi
+  [ "$KSPRE" = 1 ] && export R9_GPU_FREE_SIGNAL=$KSX/go   # r19: the resident audio worker writes it once Qwen + the T3 graphs are freed, before its CPU chain (audio_worker.early_free)
+fi
+[ -n "$VEP" ] && { wait $VEP; cat $W/voice_env.err >> $L/e2e.log 2>/dev/null; cat $W/voice_env.out 2>/dev/null; }
+if [ -z "${DUB_AUDIO_FROM:-}" ] && [ "$(cat $W/voice_env.rc 2>/dev/null || echo 1)" != 0 ]; then   # r16 T: never a wrong voice silently
   fail voice_env_mismatch ERROR "the voice environment is not the accepted one (Chatterbox 5de7a54 + noisereduce): see logs/e2e.log"; finish; fi
 if [ -n "${DUB_AUDIO_FROM:-}" ]; then   # r16 T golden test: an ACCEPTED dub (dubbed_16k.wav + final_mix_aac.m4a [+ *.manifest.json]) instead of a new one
   mkdir -p $A/$AT/$ID; cp $DUB_AUDIO_FROM/dubbed_16k.wav $DUB_AUDIO_FROM/final_mix_aac.m4a $A/$AT/$ID/; for m_ in $DUB_AUDIO_FROM/*.manifest.json; do [ -f "$m_" ] && cp "$m_" $A/$AT/$ID/${ID}_${m_##*_}; done   # r16 TZ: renamed to THIS id (<old id>_r4b -> <id>_r4b): the route / subs look up $AD/${ID}_*.manifest.json
   FL+=("audio_reused"); echo "== $ID audio reused from $DUB_AUDIO_FROM" | tee -a $L/e2e.log
 else bash scripts/r8/r8_audio.sh $AT $ID > $L/audio.log 2>&1; fi
-unset R9_ON_MIXSRC
+unset R9_ON_MIXSRC R9_ON_STAGE_DONE R9_GPU_FREE_SIGNAL
+if [ -n "$SDR" ] && [ -f $L/resident_resume.log ]; then export KS_SERVE_DIR=$SDR/ks; echo "== $ID resident worker resumed during the audio stage: KeySync from its daemon ($SDR/ks)" | tee -a $L/e2e.log; fi
 if [ -n "$KSX" ]; then   # back up while the route runs (its own session: it outlives this job, as the resident worker does)
-  setsid bash scripts/keysync/r16/ks_serve.sh start $KSX > $L/ks_serve_restart.log 2>&1 < /dev/null & echo "== $ID KeySync daemon restarting after the audio stage" | tee -a $L/e2e.log; fi
+  if [ "$KSPRE" = 1 ]; then touch $KSX/go; echo "== $ID KeySync daemon (pre-started, on hold) released after the audio stage" | tee -a $L/e2e.log
+  else setsid bash scripts/keysync/r16/ks_serve.sh start $KSX > $L/ks_serve_restart.log 2>&1 < /dev/null & echo "== $ID KeySync daemon restarting after the audio stage" | tee -a $L/e2e.log; fi; fi
 AD=$A/$AT/$ID
 if ! { [ -f $AD/final_mix_aac.m4a ] && [ -f $AD/dubbed_16k.wav ]; }; then   # r13: a clip with no speech (silence / music only) is its own, clear ERROR
   if grep -qs "ASR produced no speech units" $A/${AT}pre/runs/$ID.log $L/audio.log; then fail no_speech ERROR "no speech found in the audio: nothing to dub"
@@ -187,8 +211,15 @@ if [ "${E2E_LIPSYNC:-on}" != off ] && [[ " $PF " != *" no_face "* ]] && [ "$FACE
     ffmpeg -loglevel error -y -i $SRC -map 0:v:0 -map 0:a:0 -vf fps=25 -c:v libx264 -preset fast -crf 12 -pix_fmt yuv420p -c:a aac $RD/master_25fps.mp4; fi; }
   rbeard() { if [ -n "$RPRE" ] && [ -f $RPRE/beard.done ]; then cp $RPRE/beard.json $RD/beard.json && cat $RPRE/beard.log >> $L/face_route.log; else
     ${DUB_MEDIAPIPE_PY:-/venv/mediapipe/bin/python} scripts/quality/r16q_beard.py $SRC --out $RD/beard.json >> $L/face_route.log 2>&1; fi; }
+  ASE=0   # r19: the active-speaker result computed during the audio stage's CPU chain (stage_done.sh), valid when its diarization turns are the final ones
+  if [ -n "$RPRE" ] && [ -f $RPRE/as_early.started ]; then until [ -f $RPRE/as_early.done ] || [ -f $RPRE/as_early.failed ]; do sleep 0.5; done
+    if [ -f $RPRE/as_early.done ] && python3 -c "import json, sys; a, b = (json.load(open(f))['diarization']['turns'] for f in sys.argv[1:3]); sys.exit(0 if a == b else 1)" $RPRE/as_early.manifest.json "$MAN" 2>/dev/null; then
+      ASE=1; cat $L/as_early.log > $L/face_route.log 2>/dev/null; echo "== $ID route: the active-speaker pass of the audio stage is used (same master, same turns)" | tee -a $L/e2e.log; fi; fi
+  ras() { if [ $ASE = 1 ]; then cp $RPRE/as_early.json $RD/as.json; else
+    gpu_run python scripts/quality/r16q_active_speaker.py --video $RD/master_25fps.mp4 --manifest $MAN --out $RD/as.json --device ${DUB_ROUTE_DEVICE:-cuda} \
+          $([ -n "$RPRE" ] && [ -f $RPRE/as_prep/done ] && echo "--prep $RPRE/as_prep") > $L/face_route.log 2>&1; fi; }
   if rmaster \
-     && gpu_run python scripts/quality/r16q_active_speaker.py --video $RD/master_25fps.mp4 --manifest $MAN --out $RD/as.json --device ${DUB_ROUTE_DEVICE:-cuda} > $L/face_route.log 2>&1 \
+     && ras \
      && rbeard \
      && python3 scripts/r16q/face_route.py --active $RD/as.json --beard $RD/beard.json --out $RD/route.json >> $L/face_route.log 2>&1; then
     ROUTE=$RD/route.json; read -r KSA ENG < <(python3 -c "import json; d=json.load(open('$ROUTE')); print(int(bool(d.get('keep_source_all'))), d.get('face_engine') or 'keysync')")
@@ -196,6 +227,7 @@ if [ "${E2E_LIPSYNC:-on}" != off ] && [[ " $PF " != *" no_face "* ]] && [ "$FACE
     [ "$KSA" = 1 ] && FL+=("face_keep_source_no_visible_speaker")   # (made a visible PARTIAL_SUCCESS below)
     pick_engine "$ENG"
   else FL+=("face_route_failed"); echo "== $ID WARN face_route failed (see logs/face_route.log): the dubbed-units mapping is used" | tee -a $L/e2e.log; ROUTE=""; fi
+  [ -n "$RPRE" ] && rm -rf $RPRE/as_prep   # (r19: the detector's frames, ~0.15 MB each)
 fi
 [ "$FACE" = auto ] && FACE=keysync
 if [ "${E2E_LIPSYNC:-on}" = off ]; then FL+=("lipsync_off_by_request")   # r13 interface: the user asked for a voice-only dub

@@ -43,6 +43,11 @@ def main():
     if not a.serve:
         assert a.jobs and a.out, "--jobs and --out are required without --serve"
         os.makedirs(a.out, exist_ok=True)
+    if a.serve and os.environ.get("KS_SERVE_HOLD"):   # r19 speed: the daemon process is started (python + every import) while the audio stage still
+        _h = os.environ["KS_SERVE_HOLD"]; print("KS_SERVE_HOLD waiting for " + _h, flush=True); _t = time.perf_counter()   # owns the GPU; it creates no CUDA
+        while not os.path.exists(_h) and not os.path.exists(os.path.join(a.serve, "stop")): time.sleep(0.05)              # context and loads nothing until this
+        print(f"KS_SERVE_HOLD released after {time.perf_counter() - _t:.1f} s", flush=True)                                # file appears (e2e.sh, after the audio)
+        if os.path.exists(os.path.join(a.serve, "stop")): return
     t0 = time.perf_counter()
     model, _, n_batch = d.load_model(f"scripts/sampling/configs/interpolation{a.cfg}.yaml", "cuda", 14, "latents", "pretrained_models/checkpoints/interpolation_dub.pt")
     model_kf, _, n_batch_kf = d.load_model(f"scripts/sampling/configs/keyframe{a.cfg}.yaml", "cuda", 14, "latents", "pretrained_models/checkpoints/keyframe_dub.pt")
@@ -97,14 +102,44 @@ def main():
     torch.cuda.synchronize(); load_s = time.perf_counter() - t0
     print(json.dumps({"load_s": round(load_s, 1), "cfg": a.cfg, "decoding_t": a.decoding_t, "compile": a.compile, "vae_half": a.vae_half, "cudnn_bench": a.cudnn_bench, "fp8": a.fp8, "vae_cl": a.vae_cl, "KS_DC": os.environ.get("KS_DC", ""),
                       "interp_lora": a.interp_lora, "interp_steps": a.interp_steps if a.interp_lora else None, "lcm_noise": a.lcm_noise if a.interp_lora else None, "trt": a.trt, "KS_ICHUNK": os.environ.get("KS_ICHUNK", ""), "vae_batch": a.vae_batch, "vae_compile": a.vae_compile, "trt_vae": a.trt_vae}), flush=True)
+    _objs = [model, model_kf, hubert, wavlm, vae, lmk]   # (the resident daemon parks these; the look-ahead extractor joins them when it exists)
+    _ahead_q = None
     if os.environ.get("KS_LMK_CACHE"):   # r13 speed lever: landmarks off the critical path (prod: computed during TTS / separation); keyed by the frames' content
-        import hashlib, numpy as _np; _xl = d.extract_video_landmarks; _cd = os.environ["KS_LMK_CACHE"]; os.makedirs(_cd, exist_ok=True)
+        import hashlib, queue, threading, numpy as _np; _xl = d.extract_video_landmarks; _cd = os.environ["KS_LMK_CACHE"]; os.makedirs(_cd, exist_ok=True)
+        _fl, _fll = {}, threading.Lock()   # r19: key -> Event of a landmark pass in flight (the job and the look-ahead thread never compute one video twice)
         def _lmk(video_frames, landmarks_model):
             v = video_frames; key = hashlib.md5((str(tuple(v.shape)) + str(v[:: max(1, len(v) // 16)].float().mean().item()) + str(v[-1].float().sum().item())).encode()).hexdigest()
             f = os.path.join(_cd, key + ".npy")
-            if os.path.exists(f): return _np.load(f, allow_pickle=True)
-            r = _xl(video_frames, landmarks_model); _np.save(f, _np.asarray(r)); return r
+            while True:
+                with _fll:
+                    if os.path.exists(f): return _np.load(f, allow_pickle=True)
+                    ev = _fl.get(key)
+                    if ev is None: ev = _fl[key] = threading.Event(); break
+                ev.wait()   # the other thread is on this very video
+            try:
+                r = _xl(video_frames, landmarks_model); _np.save(f + ".tmp.npy", _np.asarray(r)); os.replace(f + ".tmp.npy", f); return r
+            finally:
+                with _fll: _fl.pop(key, None)
+                ev.set()
         d.extract_video_landmarks = _lmk
+        if os.environ.get("KS_LMK_AHEAD", "0") == "1":   # OFF by default (VM 14.11, long5: the landmark loop is python-bound, so the thread takes from the
+            # sampler what it saves: render sum 746 s without / 757 s with it, and it adds the second extractor's memory). Kept as an option.
+            # r19 speed: a job line "LMK <video>" = this video will be rendered soon: its landmarks (face_alignment, a python loop that leaves the GPU
+            # mostly idle: 6-8 s per 20 s of video, 118 s of long5's renders) are computed NOW by a second extractor in a background thread, while the
+            # GPU samples the job in front; the render then finds them in the cache. The same function on the same frames (d.sample's own read + resize).
+            _ahead_q = queue.Queue(); _lm2 = []; _tq0, _pr0, _at = d.tqdm, print, []
+            d.tqdm = lambda it, *x, **k: it if threading.current_thread() in _at else _tq0(it, *x, **k)   # no progress bar from the look-ahead thread
+            d.print = lambda *x, **k: None if threading.current_thread() in _at else _pr0(*x, **k)         # (its lines would land inside the job's log lines)
+            def _ahead():
+                _at.append(threading.current_thread())
+                while True:
+                    path = _ahead_q.get()
+                    try:
+                        if not _lm2: _lm2.append(d.LandmarksExtractor()); _objs.append(_lm2[0])
+                        t_ = time.perf_counter(); v = d.read_video(path, output_format="TCHW")[0]; v = torch.nn.functional.interpolate(v, (512, 512), mode="bilinear")
+                        _lmk(v, _lm2[0]); sys.stdout.write(f"\nKS_LMK_AHEAD {path} {len(v)} frames {time.perf_counter() - t_:.1f} s\n"); sys.stdout.flush()
+                    except Exception as e: sys.stdout.write("\nKS_LMK_AHEAD failed (the job computes its own): " + repr(e)[:300] + "\n"); sys.stdout.flush()
+            threading.Thread(target=_ahead, daemon=True).start()
     if os.environ.get("KS_KF_AR") or os.environ.get("KS_KF_RR"):   # r16 K2: keyframe guidance split (audio vs reference)
         _g = model_kf.sampler.guider
         if os.environ.get("KS_KF_AR"): _g.audio_ratio = float(os.environ["KS_KF_AR"])
@@ -183,22 +218,45 @@ def main():
             return e_ref + g.audio_ratio * (c_ar - e_ref)
         g.prepare_inputs = prep; g.__call__ = call; model.sampler.guider = g
         type(g).__call__ = lambda self, x, sig: call(x, sig) if self is g else call0.__func__(self, x, sig)
+    def _hint_tail(path, stop):   # r19 KS_LMK_AHEAD: the "LMK <video>" lines of a follow file are read by THIS thread as soon as they are written
+        try:                       # (the job loop below reads a line only when the job in front is done: too late to look ahead)
+            f = open(path); buf = ""; seen = set()
+            while not stop.is_set():
+                ln = f.readline()
+                if not ln or not ln.endswith("\n"): buf += ln; time.sleep(0.2); continue
+                ln, buf = buf + ln, ""
+                if ln.strip() == "END": return
+                if ln.startswith("LMK "):
+                    v = ln.split(None, 1)[1].strip()
+                    if v not in seen: seen.add(v); _ahead_q.put(v)
+        except Exception as e: sys.stdout.write("\nKS_LMK_AHEAD hint reader failed: " + repr(e)[:200] + "\n"); sys.stdout.flush()
+
     def job_lines(path, follow, alive=lambda: True):   # r16 T --follow: the caller appends jobs while this process is resident; "END" stops it
         if not follow:
             yield from open(path); return
-        f = open(path); buf = ""
-        while True:
-            ln = f.readline()
-            if not ln or not ln.endswith("\n"):
-                buf += ln
-                if not alive(): raise RuntimeError("the requesting job is gone (no END)")   # r17 --serve: never wait forever for a dead client
-                time.sleep(0.2); continue
-            ln, buf = buf + ln, ""
-            if ln.strip() == "END": return
-            yield ln
+        f = open(path); buf = ""; stop = None
+        if _ahead_q is not None:
+            import threading as _th
+            stop = _th.Event(); _th.Thread(target=_hint_tail, args=(path, stop), daemon=True).start()
+        try:
+            while True:
+                ln = f.readline()
+                if not ln or not ln.endswith("\n"):
+                    buf += ln
+                    if not alive(): raise RuntimeError("the requesting job is gone (no END)")   # r17 --serve: never wait forever for a dead client
+                    time.sleep(0.2); continue
+                ln, buf = buf + ln, ""
+                if ln.strip() == "END": return
+                if ln.startswith("LMK ") and stop is not None: continue   # (the hint reader has it)
+                yield ln
+        finally:
+            if stop is not None: stop.set()
 
     def run_line(line, out_dir):
         if not line.strip() or line.startswith("#"): return
+        if line.startswith("LMK "):   # r19: a look-ahead hint (see KS_LMK_AHEAD above); ignored when the cache / the look-ahead is off
+            if _ahead_q is not None: _ahead_q.put(line.split(None, 1)[1].strip())
+            return
         tag, vid, aud, *ex = line.split()   # r16 T: an optional 4th column = this job's KeySync reference frame (KS_REF_IDX); default 0
         os.environ["KS_REF_IDX"] = ex[0] if ex else "0"   # (audit #13: no leak of the previous job's reference)
         if os.environ.get("KS_FAULT") == "crash" and not ("p_" in tag.split("_", 1)[-1] or tag.startswith("p_")):   # r16 TZ 11.1 fault injection
@@ -213,15 +271,18 @@ def main():
         torch.cuda.synchronize(); wall = time.perf_counter() - t1
         dur = float(os.popen(f"ffprobe -v error -show_entries format=duration -of csv=p=0 {vid}").read())
         r = {"tag": tag, "video_s": round(dur, 2), "wall_s": round(wall, 1), "s_per_vmin": round(wall / dur * 60, 1), "stages_s": {k: round(v, 1) for k, v in T.items()},
-             "peak_vram_gb": round(torch.cuda.max_memory_allocated() / 2**30, 1)}
-        print("KS_JOB " + json.dumps(r), flush=True)
+             "peak_vram_gb": round(torch.cuda.max_memory_allocated() / 2**30, 1), "peak_reserved_gb": round(torch.cuda.max_memory_reserved() / 2**30, 1)}
+        sys.stdout.write("\nKS_JOB " + json.dumps(r) + "\n"); sys.stdout.flush()   # (r19: one write, at a line start whatever the look-ahead thread printed)
+        if os.environ.get("KS_JOB_EMPTY_CACHE", "1") == "1":   # r19 VRAM: the allocator's cached blocks go back after every job, so the device reading is one job's
+            import gc; gc.collect(); torch.cuda.empty_cache(); torch.cuda.reset_peak_memory_stats()   # peak, not the sum of what several jobs (and the look-ahead thread) left cached
     if a.serve:
         import ks_serve
-        ks_serve.serve(a.serve, load_s, [model, model_kf, hubert, wavlm, vae, lmk], job_lines, run_line)
-        return
+        ks_serve.serve(a.serve, load_s, _objs, job_lines, run_line)
+        sys.stdout.flush(); sys.stderr.flush(); os._exit(0)   # r19 speed: a stopped daemon leaves at once (the interpreter teardown of the parked models took
+        return                                               # seconds while e2e.sh waited for it before the audio stage); nothing is written after KS_SERVE_STOP
     for line in job_lines(a.jobs, a.follow):
         run_line(line, a.out)
-    print("KS_FAST_DONE", flush=True)
+    sys.stdout.write("\nKS_FAST_DONE\n"); sys.stdout.flush()
 
 
 if __name__ == "__main__":

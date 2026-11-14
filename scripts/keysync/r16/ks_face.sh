@@ -40,6 +40,70 @@ sync_off() {   # sync_off <video> <wav> <json>: SyncNet global AV offset of a ra
   sync_run ${J%.json}.log --video $V --audio $A --out $J \
     && python3 -c "import json; print(int(json.load(open('$J'))['global']['av_offset']))" || echo x; }
 
+post_layer() {   # post_layer <face>: this face's post layer, raw KeySync render -> ECC / tsmooth / snap / guard / seam [/ pause] -> $P/layer.txt. CPU only;
+  # r19 speed: a function, so it can start the moment the raw render exists (KS_POST_EARLY, below) - it needs neither the SyncNet check nor the other faces.
+  local f=$1 RAW P RU L RSEAM CJ PW LMP
+  [ "${KS_CMS:-0}" = 1 ] && export KS_CMS   # r16c: KS_CMS=1 = BT.709 colour-managed tsmooth / snap / guard / seam (K1 root cause; drift raw -> seam -2.9 L -> 0). OPT-IN: Irina 10.11 preferred the old look by eye on long5 / m03 / m18
+  RAW=$(ls $KW/out/$f/*.mp4 | head -1); P=$KW/post_$f; mkdir -p $P
+  if [ -f $KW/crop_lm_$f.bg ]; then until [ -f $KW/crop_lm_$f.rc ]; do sleep 0.2; done   # (r19 KS_PREP_BG: the crop landmarks started at the prep)
+    [ "$(cat $KW/crop_lm_$f.rc)" = 0 ] || { echo "KS: crop landmarks failed ($f)"; return 1; }; fi
+  # r18 KS_POST_REUSE (re-paste A/B only, KS_PHASE=post on a finished job): 1 = reuse this face's finished post layer ($P/layer.txt), so two
+  # re-pastes differ ONLY by the paste (the MediaPipe pass of the raw render is not repeatable run to run); seam = reuse up to ks_guard, redo ks_seam.
+  RU=${KS_POST_REUSE:-0}; L=""; RSEAM=1
+  if [ "$RU" = 1 ] && [ -s $P/layer.txt ] && [ -s "$(cat $P/layer.txt)" ] && [ -s $P/raw_lm.npz ] && [ -s $P/ecc.npz ]; then L=$(cat $P/layer.txt); RSEAM=0; echo "KS_POST_REUSE $f: layer $L"
+  elif [ "$RU" = seam ] && [ -s $P/guard.mp4 ] && [ -s $P/raw_lm.npz ] && [ -s $P/ecc.npz ]; then L=$P/guard.mp4; echo "KS_POST_REUSE $f: up to the guard, seam redone"; fi
+  if [ -z "$L" ]; then
+  # r19 speed (output-identical): the MediaPipe pass of the raw render and the ECC alignment read the same file and do not depend on each other ->
+  # side by side (KS_POST_PAR=0 = one after the other, as before)
+  if [ "${KS_POST_PAR:-1}" = 1 ]; then $MPY $R/scripts/quality/mp_landmarks.py --video $RAW --out $P/raw_lm.npz > $P/raw_lm.log 2>&1 & LMP=$!
+  else $MPY $R/scripts/quality/mp_landmarks.py --video $RAW --out $P/raw_lm.npz > $P/raw_lm.log 2>&1 || { tail -3 $P/raw_lm.log; return 1; }; LMP=""; fi
+  $PY $KT/$([ "${KS_ECC_PAR:-1}" = 1 ] && echo "k_ecc_par.py --warm 30" || echo k_ecc.py) --ks $RAW --src $KW/data/pad_$f.mp4 --lm $KW/crop_lm_$f.npz --out $P/ecc.npz > $P/ecc.log 2>&1 || { tail -3 $P/ecc.log; [ -n "$LMP" ] && kill $LMP 2>/dev/null; return 1; }
+  if [ -n "$LMP" ]; then wait $LMP || { tail -3 $P/raw_lm.log; return 1; }; fi
+  L=$RAW
+  if [ "${KS_TSMOOTH:-gate:0.5}" != off ]; then $PY $KT/ks_tsmooth.py --layer $L --lm $P/raw_lm.npz --src-lm $KW/crop_lm_$f.npz --out $P/ts.mp4 --alpha ${KS_TSMOOTH:-gate:0.5} > $P/ts.log 2>&1 \
+    && L=$P/ts.mp4 || { tail -3 $P/ts.log; return 1; }; grep -h "gate:" $P/ts.log | head -1; fi
+  $PY $KT/ks_snap.py --layer $L --lm $P/raw_lm.npz --out $P/snap.mp4 > $P/snap.log 2>&1 && L=$P/snap.mp4 || { tail -3 $P/snap.log; return 1; }
+  $PY $KT/ks_guard.py --layer $L --src $KW/data/pad_$f.mp4 --n $N --out $P/guard.mp4 > $P/guard.log 2>&1 && L=$P/guard.mp4 || { tail -3 $P/guard.log; return 1; }
+  python3 -c "import json, sys; g = json.load(open(sys.argv[1])); json.dump({'tag': sys.argv[2], 'frames': int(sys.argv[3]), 'guard_replaced': len(g.get('fixed_s', []))}, open(sys.argv[4], 'w'))" \
+    $P/guard.mp4.guard.json $f $N $KW/subst_$f.json   # r16 TZ 11.2: the frames substituted on this face (guard), for the 2 % rule
+  fi   # (r18: end of the part KS_POST_REUSE skips)
+  if [ $RSEAM = 1 ]; then
+  if [ "${KS_SEAM:-on}" = on ]; then   # K1 r16-paste2: KeySync's 13-frame segment-boundary jumps spread over 3 transitions (per KeySync run: ks_chunk chunks)
+    CJ=""; [ -s $KW/data/chunks_$f/chunks.json ] && CJ="--chunks $KW/data/chunks_$f/chunks.json"
+    $PY $KT/ks_seam.py --layer $L --src $KW/data/pad_$f.mp4 --out $P/seam.mp4 $CJ ${KS_SEAM_ARGS:-} > $P/seam.log 2>&1 && L=$P/seam.mp4 || { tail -3 $P/seam.log; return 1; }; tail -1 $P/seam.log | cut -c1-200; fi
+  if [ "${KS_PAUSE:-off}" = warp ] || [ -n "${KS_CAP:-}" ]; then   # + r16d KS_CAP=<k>[:q]: cap the generated lip gap at k x the source speaker's q-gap   # K2 pause (b), default OFF until Irina picks it: the lips closed in the dub's pauses (the layer is on the dub timeline: shift 0)
+    PW=$KW/data/dubp_$f.wav; [ -s $PW ] || PW=$KW/dub_$f.wav   # r16d T: the dub the layer was generated on (probe-delayed): m03 +40 ms broke sync with the undelayed one
+    $MPY $KT/k2_pause.py --mode warp --ks $L --ks-lm $P/raw_lm.npz --wav $PW --shift 0 --pause $([ "${KS_PAUSE:-off}" = warp ] && echo 1 || echo 0) --cap $(echo ${KS_CAP:-0} | cut -d: -f1) $([ "${KS_CAP#*:}" != "$KS_CAP" ] && echo "--cap-q ${KS_CAP#*:}") --cap-src-lm $KW/crop_lm_$f.npz --out $P/pause.mp4 > $P/pause.log 2>&1 && L=$P/pause.mp4 || { tail -3 $P/pause.log; return 1; }; fi
+  echo $L > $P/layer.txt
+  fi   # (r18: end of seam / pause, skipped by KS_POST_REUSE=1)
+  return 0
+}
+post_layer_bg() {   # r19 speed: post_layer <face> in the background -> $P/layer.out (its log lines), $P/layer.rc (its exit code), $P/layer.t (start, end);
+  local f=$1 P=$KW/post_$1; rm -rf $P; mkdir -p $P; date +%s.%N > $P/layer.started   # it outlives a KS_PHASE=gpu run: the later KS_PHASE=post run collects it
+  ( post_layer $f > $P/layer.out 2>&1; rc=$?; echo "$(cat $P/layer.started) $(date +%s.%N)" > $P/layer.t; echo $rc > $P/layer.rc ) & }
+gpu_begin() {   # r19 speed: the start of the GPU section as a function (once): the GPU lock, the engines, the KeySync worker launch (the resident
+  # daemon unparks at once). A single-shot run calls it BEFORE the crop (KS_GPU_EARLY=1, default), so these ~6 s overlap the CPU crop / pad;
+  # the multi-shot gpu phase and KS_GPU_EARLY=0 call it at the GPU section, as before. Same commands.
+  [ -z "${GPU_BEGUN:-}" ] || return 0; GPU_BEGUN=1
+  . $R/scripts/keysync/r16/gpulock.sh
+  SHR=${KS_FAST_FJ:-}   # shared resident ks_fast (ks_shots.sh holds the GPU lock for all shots)
+  [ -n "$SHR" ] || [ -n "${KS_IN_SHOT:-}" ] || sync_serve_start $KW/syncsrv   # r17 KS_SYNC_SERVE (a single-shot run owns its server; ks_shots.sh owns the shots')
+  [ -n "$SHR" ] || gpu_held || { t wait_gpu; gpu_acquire $$ || { echo "KS: could not take the GPU lock"; exit 1; }; }
+  t engines; ENG=$(KS_GPU_LOCK=/dev/null bash $R/scripts/keysync/r16/ks_engines.sh 2> $KW/engines.log | tail -1); [ -d "$ENG" ] || { tail -5 $KW/engines.log; exit 1; }
+  LMK=${KS_LMK_CACHE:-$KS/lmk}; mkdir -p $LMK; [ -n "${KS_TORCH_HOME:-}" ] && export TORCH_HOME=$KS_TORCH_HOME   # (image: face_alignment's weights on the volume)
+  GATE="${KS_GATE-thr=0.12,cap=0.25,hi=8,lo=2}"
+  ksfast() {   # ksfast <jobs> <out> <log>: the resident KeySync-fast worker (fast2: TRT keyframes + 2-step LCM student + the K2 gate, compiled VAE decode)
+    ( cd $KS/code && . ../venv/bin/activate && env KS_DC=2:0 KS_LMK_CACHE=$LMK TORCHINDUCTOR_CACHE_DIR=${TORCHINDUCTOR_CACHE_DIR:-$KS/inductor} ${GATE:+KS_GATE=$GATE} \
+      python $KT/ks_fast.py --jobs $1 --out $2 --cfg _s8 --vae-half --compile unet --trt $ENG --interp-lora $LORA --interp-steps ${KS_INTERP_STEPS:-2} \
+        --vae-batch 8 --vae-compile ) > $3 2>&1 || { tail -5 $3; return 1; }; grep "^KS_JOB" $3 | cut -c1-400; }
+  if [ -n "$SHR" ]; then FJ=$SHR; KLOG=$KS_FAST_LOG; KOUT=$KS_FAST_OUT; KSP=$KS_FAST_PID; PFX=${KS_TAG_PREFIX:-}
+  else FJ=$KW/jobs_follow.txt; : > $FJ; KLOG=$KW/ks_fast.log; KOUT=$KW/out; PFX=""
+  . $R/scripts/keysync/r16/ks_serve.sh; ks_fast_launch $FJ $KW/out $KW/ks_fast.log   # r17: the resident KeySync daemon (KS_SERVE_DIR) when it is up with these settings, else a cold --follow ks_fast (as before)
+  trap '[ -n "${KSP:-}" ] && kill $KSP 2>/dev/null' EXIT; fi   # never leave a --follow ks_fast behind (it would wait for END forever)
+  waitjob() { until grep -q "^KS_JOB {\"tag\": \"$1\"" $KLOG; do kill -0 $KSP 2>/dev/null || { echo "KS: ks_fast died before job $1"; tail -5 $KLOG; return 1; }; sleep 0.5; done; }
+  return 0
+}
+
 if [ "$PH" = all ] || [ "$PH" = prep ]; then   # ==== prep (CPU): master, landmarks, shots, plan, crop, pad, reference
 t master
 PRE=""   # r17 speed: e2e.sh's background ks_pre.sh (the same master + landmarks commands, run during the audio stage); waited for, else computed here
@@ -61,6 +125,8 @@ t plan; $PY $R/scripts/keysync/r16/ks_e2e_prep.py --mp $KW/master_mp.npz --dub $
 TAGS=$(python3 -c "import json; print(' '.join(f['tag'] for f in json.load(open('$KW/faces.json'))['faces']))")
 [ -n "$TAGS" ] || { echo "KS_FACE_KEEP_SOURCE $ID: no face to lip-sync ($(python3 -c "import json; d=json.load(open('$KW/faces.json')); print(d['mode'], d.get('skipped'))"))"; exit 3; }
 
+# r19 speed (KS_GPU_EARLY=0 = as before): a single-shot run starts its GPU side now, beside the crop below
+if [ "$PH" = all ] && [ -z "${KS_FAST_FJ:-}" ] && [ "${KS_GPU_EARLY:-1}" = 1 ]; then gpu_begin || exit 1; fi
 t crop
 for f in $TAGS; do
   # the r15 static crop (ks_prep rule; another face in the shot: the tight 1.25 / 0.4 box of r15 K m03, so KeySync / SyncNet see one face)
@@ -77,6 +143,11 @@ for f in $TAGS; do
   else
     mv $KW/data/st/videos/$f.mp4 $KW/data/crop_$f.mp4; mv $KW/data/st/box_$f.json $KW/data/box_$f.json
   fi
+  # r19 speed (output-identical, KS_PREP_BG=0 = as before): the crop's MediaPipe landmarks are read by the POST only (ECC, tsmooth; KS_REF=auto reads
+  # them here), so they run in the background beside the pad below and the GPU does not wait for them; post_layer waits (crop_lm_<f>.rc)
+  CLB=0; rm -f $KW/crop_lm_$f.rc $KW/crop_lm_$f.bg
+  if [ "${KS_PREP_BG:-1}" = 1 ] && [ "${KS_REF:-0}" != auto ]; then CLB=1; touch $KW/crop_lm_$f.bg
+    ( $MPY $R/scripts/quality/mp_landmarks.py --video $KW/data/crop_$f.mp4 --out $KW/crop_lm_$f.npz > /dev/null 2>&1; echo $? > $KW/crop_lm_$f.rc ) & fi
   $MPY - $KW/data/crop_$f.mp4 $KW/data/pad_$f.mp4 $PAD <<'PY' >> $KW/crop_$f.log 2>&1 || exit 1
 import subprocess, sys, cv2   # K1 5c07cf7: the last PAD frames mirrored WITHOUT repeating the seam frame (KeySync degenerated on a duplicate)
 src, out, pad = sys.argv[1], sys.argv[2], int(sys.argv[3]); c = cv2.VideoCapture(src); F = []
@@ -90,7 +161,7 @@ p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt
 for f in F: p.stdin.write(f.tobytes())
 p.stdin.close(); p.wait(); print("pad", len(F), "frames")
 PY
-  $MPY $R/scripts/quality/mp_landmarks.py --video $KW/data/crop_$f.mp4 --out $KW/crop_lm_$f.npz > /dev/null 2>&1 || { echo "KS: crop landmarks failed ($f)"; exit 1; }
+  [ $CLB = 1 ] || $MPY $R/scripts/quality/mp_landmarks.py --video $KW/data/crop_$f.mp4 --out $KW/crop_lm_$f.npz > /dev/null 2>&1 || { echo "KS: crop landmarks failed ($f)"; exit 1; }
   REF=${KS_REF:-0}   # Irina 08.11 (m18 clip): ref 0 + the gate = the default; KS_REF=auto = K2 refpick (option)
   if [ "$REF" = auto ]; then   # K2: a frame with the upper teeth showing as KeySync's identity (black-hole mouths roughly halved); 0 if the pick fails
     REF=$($MPY $KT/k2_refpick.py --video $KW/data/crop_$f.mp4 --lm $KW/crop_lm_$f.npz --face-lm $KW/lm_$f.npz --box $KW/data/box_$f.json --out $KW/ref_$f 2> $KW/ref_$f.log | grep "^K2_REFPICK" | python3 -c "import json,sys; print(json.loads(sys.stdin.read()[11:])['pick'])" 2>/dev/null)
@@ -107,22 +178,7 @@ if [ "$PH" = all ] || [ "$PH" = gpu ]; then   # ==== gpu
 # ---- GPU section = ONE hold of the GPU lock (engines, probe, full KeySync, SyncNet checks); released before the CPU post / paste.
 # GPU_RDY (scripts/keysync/r16/gpulock.sh): the caller (e2e.sh with R10_HEAVY_LOCK) already holds the GPU lock since its audio stage -> no second
 # wait in the queue; released here (gpu_release) before the CPU post. Without it this script takes the lock itself. No lock fd is ever inherited.
-. $R/scripts/keysync/r16/gpulock.sh
-SHR=${KS_FAST_FJ:-}   # shared resident ks_fast (ks_shots.sh holds the GPU lock for all shots)
-[ -n "$SHR" ] || [ -n "${KS_IN_SHOT:-}" ] || sync_serve_start $KW/syncsrv   # r17 KS_SYNC_SERVE (a single-shot run owns its server; ks_shots.sh owns the shots')
-[ -n "$SHR" ] || gpu_held || { t wait_gpu; gpu_acquire $$ || { echo "KS: could not take the GPU lock"; exit 1; }; }
-t engines; ENG=$(KS_GPU_LOCK=/dev/null bash $R/scripts/keysync/r16/ks_engines.sh 2> $KW/engines.log | tail -1); [ -d "$ENG" ] || { tail -5 $KW/engines.log; exit 1; }
-LMK=${KS_LMK_CACHE:-$KS/lmk}; mkdir -p $LMK; [ -n "${KS_TORCH_HOME:-}" ] && export TORCH_HOME=$KS_TORCH_HOME   # (image: face_alignment's weights on the volume)
-GATE="${KS_GATE-thr=0.12,cap=0.25,hi=8,lo=2}"
-ksfast() {   # ksfast <jobs> <out> <log>: the resident KeySync-fast worker (fast2: TRT keyframes + 2-step LCM student + the K2 gate, compiled VAE decode)
-  ( cd $KS/code && . ../venv/bin/activate && env KS_DC=2:0 KS_LMK_CACHE=$LMK TORCHINDUCTOR_CACHE_DIR=${TORCHINDUCTOR_CACHE_DIR:-$KS/inductor} ${GATE:+KS_GATE=$GATE} \
-    python $KT/ks_fast.py --jobs $1 --out $2 --cfg _s8 --vae-half --compile unet --trt $ENG --interp-lora $LORA --interp-steps ${KS_INTERP_STEPS:-2} \
-      --vae-batch 8 --vae-compile ) > $3 2>&1 || { tail -5 $3; return 1; }; grep "^KS_JOB" $3 | cut -c1-400; }
-if [ -n "$SHR" ]; then FJ=$SHR; KLOG=$KS_FAST_LOG; KOUT=$KS_FAST_OUT; KSP=$KS_FAST_PID; PFX=${KS_TAG_PREFIX:-}
-else FJ=$KW/jobs_follow.txt; : > $FJ; KLOG=$KW/ks_fast.log; KOUT=$KW/out; PFX=""
-. $R/scripts/keysync/r16/ks_serve.sh; ks_fast_launch $FJ $KW/out $KW/ks_fast.log   # r17: the resident KeySync daemon (KS_SERVE_DIR) when it is up with these settings, else a cold --follow ks_fast (as before)
-trap '[ -n "${KSP:-}" ] && kill $KSP 2>/dev/null' EXIT; fi   # never leave a --follow ks_fast behind (it would wait for END forever)
-waitjob() { until grep -q "^KS_JOB {\"tag\": \"$1\"" $KLOG; do kill -0 $KSP 2>/dev/null || { echo "KS: ks_fast died before job $1"; tail -5 $KLOG; return 1; }; sleep 0.5; done; }
+gpu_begin || exit 1
 PBC=0   # r17 KS_PROBE_BY_CHECK=1 (OFF by default until scripts/keysync/r16/tz/probe_proof.sh): no separate probe render; the delay is verified by the check
 if [ "${KS_PROBE_BY_CHECK:-0}" = 1 ] && [ "${KS_DELAY:-probe}" = probe ] && [ -z "$SHR" ] && [ "$N" -le "$(( ${KS_CHUNK_MIN_S:-90} * 25 ))" ]; then PBC=1; fi
 if [ $PBC = 1 ]; then for f in $TAGS; do DLY[$f]=${KS_PBC_DELAY:-40}; done; echo "KS_PROBE_BY_CHECK: no probe render; delay ${KS_PBC_DELAY:-40} ms, verified after the render"
@@ -178,7 +234,11 @@ for f in $TAGS; do   # the dub KeySync hears: delayed (or advanced) by the probe
       >> $KW/jobs.txt 2> $KW/chunk_$f.log || { tail -3 $KW/chunk_$f.log; exit 1; }; grep KS_CHUNKS $KW/chunk_$f.log
   else echo "$PFX$f $KW/data/pad_$f.mp4 $KW/data/dubp_$f.wav $(cat $KW/ref_$f.txt)" >> $KW/jobs.txt; fi
 done
-cat $KW/jobs.txt >> $FJ
+# r19 speed (KS_LMK_AHEAD, ks_fast.py): the videos of this run are looked ahead while the jobs in front of them render: the chunks / faces after the first
+# one, and every video of a shot queued behind other shots. A single job that starts at once gets no hint (nothing to overlap: it would only add the
+# second extractor's memory next to the render). OFF by default: no wall-time gain on long5 (see ks_fast.py).
+if [ "${KS_LMK_AHEAD:-0}" = 1 ]; then if [ -n "$SHR" ]; then awk '{print "LMK " $2}' $KW/jobs.txt >> $FJ; else awk 'NR > 1 {print "LMK " $2}' $KW/jobs.txt >> $FJ; fi; fi
+cat $KW/jobs.txt >> $FJ; touch $KW/jobs.sub   # (jobs.sub: ks_shots.sh KS_SHOT_STREAM may queue the next shot)
 if [ -n "$SHR" ]; then waitjob "$(tail -1 $KW/jobs.txt | awk '{print $1}')" || exit 1   # (jobs run in order: the last one done = all done)
 elif [ $PBC = 1 ]; then waitjob "$(tail -1 $KW/jobs.txt | awk '{print $1}')" || exit 1   # (r17 PBC: ks_fast stays up for a re-render)
 else echo END >> $FJ; wait $KSP || { tail -5 $KLOG; exit 1; }; fi
@@ -187,6 +247,9 @@ for f in $TAGS; do
   if [ -d $KW/data/chunks_$f ]; then rm -rf $KW/out/$f; mkdir -p $KW/out/$f
     $PY $KT/ks_chunk.py join --dir $KW/data/chunks_$f --renders $KOUT --out $KW/out/$f/joined.mp4 --tag $PFX$f || exit 1
   elif [ -n "$SHR" ]; then rm -rf $KW/out/$f; ln -sfn $KOUT/$PFX$f $KW/out/$f; fi; done
+# r19 speed (output-identical, KS_POST_EARLY=0 = as before): every face's post layer (CPU) starts NOW, beside the SyncNet check below, instead of
+# after it: the layer depends only on the raw render. The paste still waits for the check (its shift) and runs face by face, as before.
+if [ "${KS_POST_EARLY:-1}" = 1 ]; then for f in $TAGS; do post_layer_bg $f; done; fi
 t check; declare -A SHF CHO
 for f in $TAGS; do   # the raw render vs the ORIGINAL dub (K2): ~0 after the probe delay. KS_PASTE_SHIFT: 0 (default, the probe only) | auto (= -offset) | N
   SH=${KS_PASTE_SHIFT:-0}; O=x
@@ -196,17 +259,38 @@ for f in $TAGS; do   # the raw render vs the ORIGINAL dub (K2): ~0 after the pro
   if [ "$SH" = auto ]; then [ "$O" = x ] && O=0; SH=$(( -O )); fi
   SHF[$f]=$SH; CHO[$f]=$O; echo "KS_CHECK $f delay ${DLY[$f]} ms, raw offset vs the original dub $O, paste shift $SH"
 done
+pbc_window() {   # r19 KS_PBC_WINDOW: pbc_window <face> -> "<offset | x> <conf>" of SyncNet on the PROBE'S OWN WINDOW of the full render: KS_PROBE_S s
+  # from the face's first own speech - 0.5 s (the same rule and whole frames as the probe cut), against the ORIGINAL dub. The 13.11 proof of
+  # KS_PROBE_BY_CHECK failed on q02 only because the confidence over a whole render (2.25) is not the confidence over the probe window (4.92).
+  local f=$1 RAW k0 L O C; RAW=$(ls $KW/out/$f/*.mp4 | head -1); mkdir -p $KW/pbcw
+  read -r k0 L < <($MPY - $KW/dub_$f.wav $N ${KS_PROBE_S:-10} <<'PY'
+import sys, wave, numpy as np
+wav, n, ps = sys.argv[1], int(sys.argv[2]), float(sys.argv[3]); w = wave.open(wav); sr = w.getframerate(); x = np.frombuffer(w.readframes(w.getnframes()), np.int16)
+e = np.sqrt(np.convolve(x.astype(np.float32) ** 2, np.ones(sr // 10) / (sr // 10), "same")); on = np.flatnonzero(e > 0.05 * (e.max() + 1e-6)); L = int(ps * 25)
+print(int(max(0, min(round(((on[0] / sr) - 0.5) * 25) if len(on) else 0, n - L))), min(L, n))
+PY
+  )
+  [ -n "${L:-}" ] || { echo "x 0"; return 0; }
+  ffmpeg -v error -y -i $RAW -vf "select=between(n\,$k0\,$((k0 + L - 1))),setpts=N/25/TB" -r 25 -an -c:v libx264 -crf 10 -pix_fmt yuv420p $KW/pbcw/v_$f.mp4 \
+    && ffmpeg -v error -y -i $KW/data/dubo_$f.wav -af "atrim=start_sample=$((k0 * 640)):end_sample=$(((k0 + L) * 640)),asetpts=PTS-STARTPTS" -ar 16000 -ac 1 $KW/pbcw/a_$f.wav || { echo "x 0"; return 0; }
+  O=$(sync_off $KW/pbcw/v_$f.mp4 $KW/pbcw/a_$f.wav $KW/pbcw/sync_$f.json)
+  C=$(python3 -c "import json; print(json.load(open('$KW/pbcw/sync_$f.json'))['global']['conf'])" 2>/dev/null || echo 0)
+  echo "$O $C"; echo "KS_PBC_WINDOW $f frames $k0..$((k0 + L - 1)): offset $O conf $C" >&2
+}
 if [ $PBC = 1 ]; then   # r17 KS_PROBE_BY_CHECK: the probe decision from the check (scripts/keysync/r16/pbc_decide.py); a re-render only when it differs
   RR=""
-  for f in $TAGS; do C=$(python3 -c "import json; print(json.load(open('$KW/sync_$f.json'))['global']['conf'])" 2>/dev/null || echo 0)
-    read -r ACT ND FLG < <(python3 $KT/pbc_decide.py --check-offset "${CHO[$f]:-x}" --conf "$C" --delay ${DLY[$f]})
-    echo "KS_PROBE $f (by check) check offset ${CHO[$f]:-x} conf $C -> $ACT $ND ms ($FLG)"
+  for f in $TAGS; do C=$(python3 -c "import json; print(json.load(open('$KW/sync_$f.json'))['global']['conf'])" 2>/dev/null || echo 0); OC=${CHO[$f]:-x}
+    if [ "${KS_PBC_WINDOW:-1}" = 1 ]; then read -r OC C < <(pbc_window $f 2>> $KW/pbcw.log); echo "KS_PROBE $f (by check, the probe's window) offset $OC conf $C (whole render: offset ${CHO[$f]:-x})"; fi
+    read -r ACT ND FLG < <(python3 $KT/pbc_decide.py --check-offset "$OC" --conf "$C" --delay ${DLY[$f]})
+    echo "KS_PROBE $f (by check) check offset $OC conf $C -> $ACT $ND ms ($FLG)"
     case $ACT in
       offscreen) flag ks_offscreen_voice "$f: (by check) conf $C < ${KS_OFFSCREEN_CONF:-1.5}: the voice is not this face's (off-screen) -> its source picture"; OFFS="${OFFS:-} $f";;
       rerender) [ "$FLG" != ok ] && flag $FLG "$f: (by check) conf $C, check offset ${CHO[$f]:-x} -> delay $ND"; DLY[$f]=$ND; RR="$RR $f";;
     esac; done
   for f in $RR; do mk_dubp $f ${DLY[$f]} || exit 1; echo "${f}_r $KW/data/pad_$f.mp4 $KW/data/dubp_$f.wav $(cat $KW/ref_$f.txt)" >> $FJ; done
-  for f in $RR; do waitjob ${f}_r || exit 1; rm -rf $KW/out/$f; mv $KW/out/${f}_r $KW/out/$f
+  for f in $RR; do waitjob ${f}_r || exit 1
+    if [ -f $KW/post_$f/layer.started ]; then until [ -f $KW/post_$f/layer.rc ]; do sleep 0.2; done; fi   # (r19: its early post layer read the old render)
+    rm -rf $KW/out/$f; mv $KW/out/${f}_r $KW/out/$f; [ "${KS_POST_EARLY:-1}" = 1 ] && post_layer_bg $f
     SH=${KS_PASTE_SHIFT:-0}; O=$(sync_off $(ls $KW/out/$f/*.mp4 | head -1) $KW/data/dubo_$f.wav $KW/sync_$f.json)
     [ "$O" != x ] && [ "${O#-}" -ge 2 ] && flag ks_check_offset "$f: raw render vs the original dub still $O frames after the delay (re-rendered)"
     if [ "$SH" = auto ]; then [ "$O" = x ] && O=0; SH=$(( -O )); fi
@@ -222,36 +306,16 @@ fi   # ==== end of gpu
 [ "$PH" = post ] && . $KW/state.sh   # ==== post (CPU)
 [ -n "${OFFS:-}" ] && TAGS=$(for f in $TAGS; do [[ " $OFFS " == *" $f "* ]] || echo -n "$f "; done)   # (r16c T: no post / paste for an off-screen-voice face)
 
-[ "${KS_CMS:-0}" = 1 ] && export KS_CMS   # r16c: KS_CMS=1 = BT.709 colour-managed tsmooth / snap / guard / seam (K1 root cause; drift raw -> seam -2.9 L -> 0). OPT-IN: Irina 10.11 preferred the old look by eye on long5 / m03 / m18
+[ "$PH" = post ] && [ "${KS_POST_EARLY:-1}" = test ] && for f in $TAGS; do post_layer_bg $f; done   # (r19 proof hook: a KS_PHASE=post replay through the background path)
 CUR=$KW/master_25fps.mp4; n=0
 for f in $TAGS; do
-  RAW=$(ls $KW/out/$f/*.mp4 | head -1); P=$KW/post_$f; mkdir -p $P
-  # r18 KS_POST_REUSE (re-paste A/B only, KS_PHASE=post on a finished job): 1 = reuse this face's finished post layer ($P/layer.txt), so two
-  # re-pastes differ ONLY by the paste (the MediaPipe pass of the raw render is not repeatable run to run); seam = reuse up to ks_guard, redo ks_seam.
-  RU=${KS_POST_REUSE:-0}; L=""; RSEAM=1
-  if [ "$RU" = 1 ] && [ -s $P/layer.txt ] && [ -s "$(cat $P/layer.txt)" ] && [ -s $P/raw_lm.npz ] && [ -s $P/ecc.npz ]; then L=$(cat $P/layer.txt); RSEAM=0; echo "KS_POST_REUSE $f: layer $L"
-  elif [ "$RU" = seam ] && [ -s $P/guard.mp4 ] && [ -s $P/raw_lm.npz ] && [ -s $P/ecc.npz ]; then L=$P/guard.mp4; echo "KS_POST_REUSE $f: up to the guard, seam redone"; fi
-  if [ -z "$L" ]; then
-  t post_$f
-  $MPY $R/scripts/quality/mp_landmarks.py --video $RAW --out $P/raw_lm.npz > $P/raw_lm.log 2>&1 || { tail -3 $P/raw_lm.log; exit 1; }
-  $PY $KT/$([ "${KS_ECC_PAR:-1}" = 1 ] && echo "k_ecc_par.py --warm 30" || echo k_ecc.py) --ks $RAW --src $KW/data/pad_$f.mp4 --lm $KW/crop_lm_$f.npz --out $P/ecc.npz > $P/ecc.log 2>&1 || { tail -3 $P/ecc.log; exit 1; }
-  L=$RAW
-  if [ "${KS_TSMOOTH:-gate:0.5}" != off ]; then $PY $KT/ks_tsmooth.py --layer $L --lm $P/raw_lm.npz --src-lm $KW/crop_lm_$f.npz --out $P/ts.mp4 --alpha ${KS_TSMOOTH:-gate:0.5} > $P/ts.log 2>&1 \
-    && L=$P/ts.mp4 || { tail -3 $P/ts.log; exit 1; }; grep -h "gate:" $P/ts.log | head -1; fi
-  $PY $KT/ks_snap.py --layer $L --lm $P/raw_lm.npz --out $P/snap.mp4 > $P/snap.log 2>&1 && L=$P/snap.mp4 || { tail -3 $P/snap.log; exit 1; }
-  $PY $KT/ks_guard.py --layer $L --src $KW/data/pad_$f.mp4 --n $N --out $P/guard.mp4 > $P/guard.log 2>&1 && L=$P/guard.mp4 || { tail -3 $P/guard.log; exit 1; }
-  python3 -c "import json, sys; g = json.load(open(sys.argv[1])); json.dump({'tag': sys.argv[2], 'frames': int(sys.argv[3]), 'guard_replaced': len(g.get('fixed_s', []))}, open(sys.argv[4], 'w'))" \
-    $P/guard.mp4.guard.json $f $N $KW/subst_$f.json   # r16 TZ 11.2: the frames substituted on this face (guard), for the 2 % rule
-  fi   # (r18: end of the part KS_POST_REUSE skips)
-  if [ $RSEAM = 1 ]; then
-  if [ "${KS_SEAM:-on}" = on ]; then   # K1 r16-paste2: KeySync's 13-frame segment-boundary jumps spread over 3 transitions (per KeySync run: ks_chunk chunks)
-    CJ=""; [ -s $KW/data/chunks_$f/chunks.json ] && CJ="--chunks $KW/data/chunks_$f/chunks.json"
-    $PY $KT/ks_seam.py --layer $L --src $KW/data/pad_$f.mp4 --out $P/seam.mp4 $CJ ${KS_SEAM_ARGS:-} > $P/seam.log 2>&1 && L=$P/seam.mp4 || { tail -3 $P/seam.log; exit 1; }; tail -1 $P/seam.log | cut -c1-200; fi
-  if [ "${KS_PAUSE:-off}" = warp ] || [ -n "${KS_CAP:-}" ]; then   # + r16d KS_CAP=<k>[:q]: cap the generated lip gap at k x the source speaker's q-gap   # K2 pause (b), default OFF until Irina picks it: the lips closed in the dub's pauses (the layer is on the dub timeline: shift 0)
-    PW=$KW/data/dubp_$f.wav; [ -s $PW ] || PW=$KW/dub_$f.wav   # r16d T: the dub the layer was generated on (probe-delayed): m03 +40 ms broke sync with the undelayed one
-    $MPY $KT/k2_pause.py --mode warp --ks $L --ks-lm $P/raw_lm.npz --wav $PW --shift 0 --pause $([ "${KS_PAUSE:-off}" = warp ] && echo 1 || echo 0) --cap $(echo ${KS_CAP:-0} | cut -d: -f1) $([ "${KS_CAP#*:}" != "$KS_CAP" ] && echo "--cap-q ${KS_CAP#*:}") --cap-src-lm $KW/crop_lm_$f.npz --out $P/pause.mp4 > $P/pause.log 2>&1 && L=$P/pause.mp4 || { tail -3 $P/pause.log; exit 1; }; fi
-  echo $L > $P/layer.txt
-  fi   # (r18: end of seam / pause, skipped by KS_POST_REUSE=1)
+  P=$KW/post_$f; mkdir -p $P; t post_$f
+  if [ -f $P/layer.started ]; then   # r19: started early (KS_POST_EARLY), possibly by this job's KS_PHASE=gpu run -> wait for it, show its lines
+    until [ -f $P/layer.rc ]; do sleep 0.2; done; cat $P/layer.out
+    echo "KS_POST_EARLY $f: layer in $(python3 -c "import sys; a, b = map(float, open(sys.argv[1]).read().split()); print(round(b - a, 1))" $P/layer.t) s, started $(python3 -c "import sys, time; print(round(time.time() - float(open(sys.argv[1]).read().split()[0]), 1))" $P/layer.t) s ago"
+    rc=$(cat $P/layer.rc); rm -f $P/layer.started $P/layer.rc; [ "$rc" = 0 ] || exit 1   # (the markers are consumed: a later KS_PHASE=post re-run computes its own)
+  else post_layer $f || exit 1; fi
+  L=$(cat $P/layer.txt)
   t paste_$f; n=$((n + 1)); NXT=$KW/paste_$n.mp4
   OTH=""; [ -s $KW/others_$f.npz ] && OTH="--others $KW/others_$f.npz --others-grow ${KS_OTHERS_GROW:-1.3}"
   MK=""   # r16c K1 rule 5 (opt-in until Irina's eye): KS_MASK=tight = the tight mask (chin kept) + face parsing (hair / hands / clothes -> source) + shadow-safe colour

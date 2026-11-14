@@ -27,8 +27,83 @@ MIN_FR = int(os.environ.get("AS_MIN_FR", "25")); FPS = 25.0; RESCUE = float(os.e
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--video", required=True, help="the SOURCE video on the 25 fps grid"); ap.add_argument("--audio", default=None, help="default: the video's own track")
-ap.add_argument("--manifest", required=True); ap.add_argument("--out", required=True); ap.add_argument("--device", default="cpu")
+ap.add_argument("--manifest", default=None); ap.add_argument("--out", default=None); ap.add_argument("--device", default="cpu")
+ap.add_argument("--prep-only", default=None, help="r19 speed: write the detector's dub-independent CPU inputs (its 25 fps mpeg4 copy, the jpg frames, the wav, the scene list) "
+                "into this dir and exit: no GPU, no manifest (e2e.sh runs it during the audio stage)")
+ap.add_argument("--prep", default=None, help="r19 speed: a finished --prep-only dir of the SAME --video: the detector reads it instead of making those files again")
 a = ap.parse_args()
+if not a.prep_only and not (a.manifest and a.out): ap.error("--manifest and --out are required (unless --prep-only)")
+
+
+def file_sig(path, chunk=4 << 20):   # size + md5 of the first and last 4 MB
+    import hashlib
+    n = os.path.getsize(path); h = hashlib.md5()
+    with open(path, "rb") as f:
+        h.update(f.read(chunk))
+        if n > chunk: f.seek(max(chunk, n - chunk)); h.update(f.read(chunk))
+    return f"{n}:{h.hexdigest()}"
+
+
+def detector_prep(video, out):
+    """r19 speed: the first, dub-independent CPU steps of SyncNetDetector.__call__ (third_party/latentsync/eval/syncnet_detect.py), the SAME commands:
+    <out>/video/video.mp4 (25 fps mpeg4, qscale 2), <out>/frames/%06d.jpg, <out>/video/audio.wav, + its scene_detect() result as frame numbers
+    (<out>/scenes.json). No GPU, no model: e2e.sh runs it beside the audio stage; detector_run() then starts at the face detection."""
+    LS = spf._ls_root(); sys.path.insert(0, str(LS))
+    from eval.syncnet_detect import SyncNetDetector
+    out = pathlib.Path(out); vd, fd = out / "video", out / "frames"
+    for d in (vd, fd): shutil.rmtree(d, ignore_errors=True); d.mkdir(parents=True)
+    (out / "done").unlink(missing_ok=True); v = str(pathlib.Path(video).resolve())
+    subprocess.run(f"ffmpeg -y -nostdin -loglevel error -i {v} -qscale:v 2 -async 1 -r 25 {vd / 'video.mp4'}", shell=True, stdout=None)
+    subprocess.run(f"ffmpeg -y -nostdin -loglevel error -i {vd / 'video.mp4'} -qscale:v 2 -f image2 {fd / '%06d.jpg'}", shell=True, stdout=None)
+    subprocess.run(f"ffmpeg -y -nostdin -loglevel error -i {vd / 'video.mp4'} -ac 1 -vn -acodec pcm_s16le -ar 16000 {vd / 'audio.wav'}", shell=True, stdout=None)
+    sc = SyncNetDetector.scene_detect(None, str(vd))   # (the method does not use self)
+    json.dump({"video": v, "sig": file_sig(v), "scenes": [[int(x[0].frame_num), int(x[1].frame_num)] for x in sc]}, open(out / "scenes.json", "w"))
+    (out / "done").write_text("1")
+
+
+class _AheadCv2:
+    """r19 speed: the cv2 module as eval.syncnet_detect sees it, with imread() of the detector's numbered jpg frames decoded AHEAD in a thread pool
+    (detect_face / crop_video read them one by one, in order: the jpg decode was 11 s of the 25 s on m03). The same arrays, read earlier."""
+    def __init__(s, cv, workers=8, ahead=24):
+        import concurrent.futures, threading
+        s._cv, s._ex, s._ahead, s._tl, s._names = cv, concurrent.futures.ThreadPoolExecutor(workers), ahead, threading.local(), {}
+    def __getattr__(s, k): return getattr(s._cv, k)
+    def imread(s, fname, *x):
+        d, b = os.path.split(fname); stem, ext = os.path.splitext(b)
+        if x or not stem.isdigit(): return s._cv.imread(fname, *x)
+        if d not in s._names: s._names[d] = set(os.listdir(d))
+        q = s._tl.__dict__.setdefault("q", {}); i = int(stem)   # per reader thread: {file name: future}
+        for j in range(i, i + s._ahead):
+            bj = f"{j:0{len(stem)}d}{ext}"
+            if bj not in q and bj in s._names[d]: q[bj] = s._ex.submit(s._cv.imread, os.path.join(d, bj))
+        for k in [k for k in q if k < b]: del q[k]   # (the readers only move forward)
+        fut = q.pop(b, None)
+        return fut.result() if fut is not None else s._cv.imread(fname)
+
+
+def detector_run(det, video_path, min_track, prep):
+    """= SyncNetDetector.__call__(video_path, min_track) with the files of detector_prep() (same commands, made earlier) instead of making them here;
+    the jpg frames are decoded ahead (_AheadCv2) and the face tracks are cropped side by side (each with its own temp dir): the same files."""
+    import concurrent.futures, eval.syncnet_detect as sd
+    R = pathlib.Path(det.detect_results_dir); crop_dir, temp_dir = R / "crop", R / "temp"; prep = pathlib.Path(prep)
+    shutil.rmtree(R, ignore_errors=True); crop_dir.mkdir(parents=True); temp_dir.mkdir()
+    (R / "video").symlink_to(prep / "video"); (R / "frames").symlink_to(prep / "frames")
+    cv_ = sd.cv2; sd.cv2 = _AheadCv2(cv_)
+    try:
+        faces = det.detect_face(str(R / "frames")); alltracks = []
+        for f0, f1 in json.load(open(prep / "scenes.json"))["scenes"]:
+            if f1 - f0 >= min_track: alltracks.extend(det.track_face(faces[f0:f1], min_track=min_track))
+        def crop(ii):
+            td = temp_dir / ("%05d" % ii); td.mkdir()
+            det.crop_video(alltracks[ii], os.path.join(str(crop_dir), "%05d" % ii), str(R / "frames"), 25, str(td), str(R / "video"))
+        with concurrent.futures.ThreadPoolExecutor(max(1, min(4, len(alltracks)))) as ex: list(ex.map(crop, range(len(alltracks))))
+    finally: sd.cv2 = cv_
+    shutil.rmtree(temp_dir)
+
+
+def prep_ok(prep, video):   # the prep was made from this very file (e2e.sh hands the route a COPY of the master the prep read)
+    try: return (pathlib.Path(prep) / "done").exists() and json.load(open(pathlib.Path(prep) / "scenes.json"))["sig"] == file_sig(video)
+    except Exception: return False
 
 
 def tracks_with_boxes(video, audio, device):
@@ -55,7 +130,8 @@ def tracks_with_boxes(video, audio, device):
             fr = np.asarray(track["frame"]); bb = np.asarray(track["bbox"], np.float32)
             info[pathlib.Path(cropfile).stem] = (int(fr[0]), fr, bb); return orig(track, cropfile, *x, **k)
         det.crop_video = crop_video
-        det(video_path=str(v), min_track=MIN_FR)
+        if a.prep and audio is None and prep_ok(a.prep, v): detector_run(det, str(v), MIN_FR, a.prep); print(f"AS_PREP used: {a.prep}", flush=True)
+        else: det(video_path=str(v), min_track=MIN_FR)
         net = SyncNetEval(device=device); net.loadParameters(str(LS / "checkpoints/auxiliary/syncnet_v2.model")); S = getattr(net, "__S__"); S.eval()
         out = []
         for cf in sorted((work / "detect_results/crop").glob("*.mp4")):
@@ -93,6 +169,8 @@ def conf_of(dd):
     return float(np.median(md) - win[k]), int(OFF_WIN - k)
 
 
+if a.prep_only:
+    detector_prep(a.video, a.prep_only); print("AS_PREP_DONE " + a.prep_only); sys.exit(0)
 tr = tracks_with_boxes(a.video, a.audio, a.device)
 turns = json.load(open(a.manifest))["diarization"]["turns"]
 res = {"thr": {"conf": CONF_MIN, "off_win": OFF_WIN, "min_frames": MIN_FR}, "tracks": [], "speakers": {}, "turns": []}

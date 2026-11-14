@@ -87,6 +87,7 @@ elif [ "${R8_ONEPROC:-on}" = on ]; then   # speed L5: retake -> clause takes -> 
   DUB_TTS_BATCH=${R8_STAGE_TTS_BATCH:-$DUB_TTS_BATCH} DUB_S3_BATCH=${R8_STAGE_TTS_BATCH:-${DUB_S3_BATCH:-0}} \
   PYTHONPATH=$DUB_ROOT/third_party/llama_cuda:${PYTHONPATH:-} python scripts/r8/r8_tts_stage.py --jobs $J > $S/oneproc.log 2>&1 || echo "WARN oneproc (see $S/oneproc.log)"   # r15 T: R8_STAGE_TTS_BATCH=0 (long videos) = the stage's takes one by one
   echo "ONEPROC_DONE $(python3 -c "import time;print(round(time.time()-$t0p,1))") s" >> $S/times.txt
+  [ -n "${R9_ON_STAGE_DONE:-}" ] && { ( eval "$R9_ON_STAGE_DONE" ) < /dev/null > /dev/null 2>&1 & }   # r19 speed: the last GPU-heavy audio process is gone; the chain below is CPU work
 fi
 IDS_CHAIN=""   # the ids whose chain still has to run here (R9_CHAIN_INPROC: done inside the audio process -> skipped)
 for id in $IDS; do [ -f $S/chain_done_$id ] || IDS_CHAIN="$IDS_CHAIN $id"; done
