@@ -5,6 +5,7 @@
 # <pack dir> (scripts/keysync/r16/tz/fps_vm_pack.sh makes it on the laptop):
 #   jobs/<name>.<ext>        full jobs (scripts/job dabai_job.run_job, keep_intermediate) in the image with E2E_FPS_NATIVE=on (fps60 = story-1773579769284, q08 14.97, q09 vertical 29.97)
 #   pairs/<name>/A.mp4 B.mp4 the laptop's class outputs (A = the 25 fps final, B = native fps, same audio): SyncNet only
+# FPS_DEBUG_ENV='{"DUB_ROUTE": "off"}' = the jobs' debug_env (forced face, labelled as such in the report).
 # HOST_GPU_LOCK (a shared VM): the host lock file is the image's gpu.lock and R10_HEAVY_LOCK holds it for the whole GPU part of a job.
 # Per job: B = the job's output; A = the SAME job's 25 fps picture (work/ks_face.mp4, + the old hires_merge on the 25 fps grid when the
 # source was > 1280 px), i.e. exactly what E2E_FPS_NATIVE=off would have shipped, muxed with B's audio -> no second GPU run.
@@ -16,15 +17,17 @@ LK=(); [ -n "${HOST_GPU_LOCK:-}" ] && { touch "$HOST_GPU_LOCK"; LK=(-v "$(readli
 [ -d $PK/jobs ] || [ -d $PK/pairs ] || { echo "no jobs/ or pairs/ in $PK"; exit 2; }
 echo "code $(git -C $C rev-parse --short=12 HEAD 2>/dev/null || echo '?') image $IMG"
 docker run --rm --gpus all --shm-size 16g "${LK[@]}" -v $C/scripts:/workspace/dub/dubai/scripts:ro -v $C/infra:/workspace/dub/dubai/infra:ro \
-  -v $VOL:/workspace/dub/dubai/models -v $PK:/fps/in:ro -v $O:/fps/out -v $O/artifacts:/workspace/dub/artifacts -e E2E_FPS_NATIVE=on -e DABAI_RESIDENT=0 --entrypoint bash $IMG -c '
+  -v $VOL:/workspace/dub/dubai/models -v $PK:/fps/in:ro -v $O:/fps/out -v $O/artifacts:/workspace/dub/artifacts -e E2E_FPS_NATIVE=on -e DABAI_RESIDENT=0 -e FPS_DEBUG_ENV="${FPS_DEBUG_ENV:-}" --entrypoint bash $IMG -c '
 set -u; cd /workspace/dub/dubai; export DUB_PROFILE=clean DUB_ALLOW_NC=0 DUB_ALLOW_NC_BED=0; bash infra/docker/entrypoint.sh true || exit 3
 PY=/venv/dabai/bin/python; T=scripts/keysync/r16/tz; R=/fps/out; mkdir -p $R/pairs $R/clips
 FONT=$(ls /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf 2>/dev/null | head -1)
 fr() { ffprobe -v error -select_streams v:0 -show_entries stream=$2 -of csv=p=0 "$1" | head -1 | cut -d, -f1; }
 cat > /tmp/job.py <<PYEOF
-import sys, json; sys.path.insert(0, "scripts/job"); import dabai_job   # the live backend entry (scripts/job), keep_intermediate for work/
-n, src, out = sys.argv[1:4]
-st = dabai_job.run_job({"job_id": n, "input": src, "out_dir": out, "target_lang": "en", "face": "keysync", "output": {"keep_intermediate": True}})
+import os, sys, json; sys.path.insert(0, "scripts/job"); import dabai_job   # the live backend entry (scripts/job), keep_intermediate for work/
+n, src, out = sys.argv[1:4]; job = {"job_id": n, "input": src, "out_dir": out, "target_lang": "en", "face": "keysync", "output": {"keep_intermediate": True}}
+de = json.loads(os.environ.get("FPS_DEBUG_ENV") or "{}")   # e.g. {"DUB_ROUTE": "off"}: force the face where the route keeps the source (a test of the mechanics only)
+if de: job["debug_env"] = de
+st = dabai_job.run_job(job)
 print("== job", n, st.get("status"), [f for f in st.get("flags") or [] if "fps" in f or "face" in f], (st.get("error") or {}).get("detail", ""))
 PYEOF
 for j in /fps/in/jobs/*; do [ -f "$j" ] || continue; n=$(basename "${j%.*}"); J=$R/jobs/$n; P=$R/pairs/$n; mkdir -p $J $P
