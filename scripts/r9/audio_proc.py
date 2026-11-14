@@ -58,6 +58,7 @@ def _preload_tts(keep):
     CB.from_local = classmethod(from_local)
 
 
+ON_STAGE_DONE = None   # r19: a callable the resident worker sets (audio_worker.early_free): called after the TTS stage, before the in-process CPU chain
 KEEP = {}            # the resident objects of this process: Qwen (load_llm), the TTS QA (+ across videos in the audio worker, scripts/r9/audio_worker.py)
 _SETUP = {"done": False}
 
@@ -123,6 +124,9 @@ def run_job(argv):
     import timeline
     with timeline.mark("stage"): r8_tts_stage.main()
     cj = J.with_name(f"chain_{id_}.json")   # r9 speed C (R9_CHAIN_INPROC=on): the CPU chain after the stage in this process (scripts/r9/chain_inproc.py)
+    if cj.exists() and ON_STAGE_DONE is not None:   # r19: the chain below needs neither Qwen nor the T3 graphs
+        try: ON_STAGE_DONE()
+        except Exception as e: print(f"[oneproc] {id_}: stage-done hook failed ({e!r}): nothing freed early", file=sys.stderr, flush=True)
     if cj.exists():
         import chain_inproc
         t1 = time.perf_counter(); ok = chain_inproc.run(json.loads(cj.read_text()), keep.get("qa"))

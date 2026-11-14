@@ -145,6 +145,7 @@ if [ "${KS_SERVE_AUDIO_EXIT:-0}" = 1 ] && [ -n "${KS_SERVE_DIR:-}" ] && [ -z "${
   # its first CUDA call (ks_fast.py KS_SERVE_HOLD: no context, no VRAM) until $KSX/go appears after the audio stage: ~5 s less to wait for it then
   KSPRE=${KS_SERVE_PRESTART:-1}
   if [ "$KSPRE" = 1 ]; then rm -f $KSX/go; KS_SERVE_HOLD=$KSX/go setsid bash scripts/keysync/r16/ks_serve.sh start $KSX > $L/ks_serve_restart.log 2>&1 < /dev/null & fi
+  [ "$KSPRE" = 1 ] && export R9_GPU_FREE_SIGNAL=$KSX/go   # r19: the resident audio worker writes it once Qwen + the T3 graphs are freed, before its CPU chain (audio_worker.early_free)
 fi
 [ -n "$VEP" ] && { wait $VEP; cat $W/voice_env.err >> $L/e2e.log 2>/dev/null; cat $W/voice_env.out 2>/dev/null; }
 if [ -z "${DUB_AUDIO_FROM:-}" ] && [ "$(cat $W/voice_env.rc 2>/dev/null || echo 1)" != 0 ]; then   # r16 T: never a wrong voice silently
@@ -153,7 +154,7 @@ if [ -n "${DUB_AUDIO_FROM:-}" ]; then   # r16 T golden test: an ACCEPTED dub (du
   mkdir -p $A/$AT/$ID; cp $DUB_AUDIO_FROM/dubbed_16k.wav $DUB_AUDIO_FROM/final_mix_aac.m4a $A/$AT/$ID/; for m_ in $DUB_AUDIO_FROM/*.manifest.json; do [ -f "$m_" ] && cp "$m_" $A/$AT/$ID/${ID}_${m_##*_}; done   # r16 TZ: renamed to THIS id (<old id>_r4b -> <id>_r4b): the route / subs look up $AD/${ID}_*.manifest.json
   FL+=("audio_reused"); echo "== $ID audio reused from $DUB_AUDIO_FROM" | tee -a $L/e2e.log
 else bash scripts/r8/r8_audio.sh $AT $ID > $L/audio.log 2>&1; fi
-unset R9_ON_MIXSRC R9_ON_STAGE_DONE
+unset R9_ON_MIXSRC R9_ON_STAGE_DONE R9_GPU_FREE_SIGNAL
 if [ -n "$SDR" ] && [ -f $L/resident_resume.log ]; then export KS_SERVE_DIR=$SDR/ks; echo "== $ID resident worker resumed during the audio stage: KeySync from its daemon ($SDR/ks)" | tee -a $L/e2e.log; fi
 if [ -n "$KSX" ]; then   # back up while the route runs (its own session: it outlives this job, as the resident worker does)
   if [ "$KSPRE" = 1 ]; then touch $KSX/go; echo "== $ID KeySync daemon (pre-started, on hold) released after the audio stage" | tee -a $L/e2e.log

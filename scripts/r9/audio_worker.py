@@ -114,6 +114,32 @@ def park():
             "torch_alloc_gb": round(torch.cuda.memory_allocated() / 2**30, 2), "torch_reserved_gb": round(torch.cuda.memory_reserved() / 2**30, 2)}
 
 
+def early_free():
+    """r19 speed (R9_WORKER_PARK=1): park()'s two big steps - Qwen freed, the T3 decode graphs dropped - done right after the TTS stage, BEFORE the
+    in-process CPU chain (placement / hush / remix: it uses the TTS QA Whisper only), instead of after it. The card is at ~3-4 GB from here on, so the
+    job's R9_GPU_FREE_SIGNAL file (e2e.sh: the go file of the KeySync daemon held since the start of the audio stage) is written NOW: the daemon
+    loads while the chain runs, not after it (5-9 s per short job). park() at the end of the job does the rest as before. Nothing the chain reads
+    is touched, so the dub is the same file (md5)."""
+    import gc, time, torch, audio_proc
+    t0 = time.time(); done = []; steps = {"start": _gpu_used_gb()}
+    llm = audio_proc.KEEP.pop("llm", None)
+    try:
+        import qwen_batch; qwen_batch._ENGINES.clear()
+    except Exception: pass
+    if llm is not None:
+        try: type(llm[0]).close(llm[0])
+        except Exception: pass
+        del llm; gc.collect(); done.append("qwen_freed")
+    tb = sys.modules.get("t3_batch")
+    if tb is not None and getattr(tb, "_DECODERS", None): tb._DECODERS.clear(); done.append("t3_graphs_freed")
+    gc.collect(); torch.cuda.empty_cache(); steps["end"] = _gpu_used_gb()
+    sig = os.environ.get("R9_GPU_FREE_SIGNAL", ""); mx = float(os.environ.get("R9_GPU_FREE_MAX_GB", "8"))
+    if sig and steps["end"] <= mx:
+        try: open(sig, "w").close(); done.append("signal")
+        except OSError: pass
+    print("[worker] " + json.dumps({"early_free": done, "s": round(time.time() - t0, 2), "steps_gb": steps}), flush=True)
+
+
 def unpark():
     """the inverse of park(), before a job (Qwen is reloaded lazily by the job's own load_llm)"""
     import time, torch, audio_proc
@@ -191,6 +217,7 @@ def main():
             PK = PARK
             if PK and n: print("[worker] " + json.dumps(unpark()), flush=True)
             audio_proc.setup(); cold_reset(); t0 = time.time(); snap = snapshot()   # setup() (the shared QA / Qwen memo) before the snapshot: kept
+            audio_proc.ON_STAGE_DONE = early_free if PK and os.environ.get("R9_EARLY_FREE", "1") == "1" else None
             try: rc = audio_proc.run_job(job["argv"])
             finally:
                 restore(snap)
