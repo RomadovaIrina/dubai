@@ -5,6 +5,13 @@
 # KS_LORA (the LCM student, lora_meta.json next to it)  KS_TRT_MIN_DB (56: TRT_VERIFY PSNR floor)  KS_GPU_LOCK (/workspace/dub/gpu.lock)
 set -o pipefail
 KS=${KS_ROOT:-/workspace/dub/keysync}; CAP=${KS_TRT_CAP:-$KS/trt/cap}; LORA=${KS_LORA:-$KS/student/lora_pick.pt}; LOCK=${KS_GPU_LOCK:-/workspace/dub/gpu.lock}
+# r19 speed: every job calls this before its GPU section (~3 s: the TensorRT import for the cache key, an md5 over ~0.5 GB of LoRA + captures, the
+# verify json, the zero-slot patch). Within one container nothing of that changes, so a finished check leaves a memo (KS_ENGINES_MEMO, default
+# /tmp/ks_engines.memo; "" = no memo): the same LoRA / captures (name, size, mtime), script, driver and settings + the plans still there -> the dir at once.
+MEMO=${KS_ENGINES_MEMO-/tmp/ks_engines.memo}
+SIG="$(stat -c '%n %s %Y' $LORA $CAP/kf.pt $CAP/interp.pt "$0" $KS/code 2>/dev/null | md5sum | cut -c1-16) $(md5sum < /proc/driver/nvidia/version 2>/dev/null | cut -c1-8) ${KS_TRT_CACHE:-} ${KS_TRT_MIN_DB:-56}"
+if [ -n "$MEMO" ] && [ -s "$MEMO" ] && [ "$(sed -n 1p "$MEMO")" = "$SIG" ]; then
+  D=$(sed -n 2p "$MEMO"); [ -n "$D" ] && [ -s $D/eng/kf/full.plan ] && [ -s $D/eng_s/interp/full.plan ] && [ -e $D/eng_s/kf ] && { echo $D/eng_s; exit 0; }; fi
 . $KS/venv/bin/activate
 ( cd $KS/code && python3 $(dirname "$0")/ks_zeroflag.py >&2 ) || { echo "KS_ENGINES_FAIL the KeySync zero-slot fix (ks_zeroflag.py) did not apply" >&2; exit 1; }   # r16c T: every face run gets the scheduler fix (old installs too)
 KEY=$(python - <<'PY'
@@ -40,4 +47,5 @@ if ! { [ -s $D/eng_s/interp/full.plan ] && ok $D/eng_s/interp; }; then
   ok $D/eng_s/interp || { echo "KS_ENGINES_FAIL interp verify" >&2; exit 1; }; echo "== KS engines: interp $(( $(date +%s) - t0 )) s" >&2
 fi
 ln -sfn ../eng/kf $D/eng_s/kf
+[ -n "$MEMO" ] && { printf '%s\n%s\n' "$SIG" "$D" > "$MEMO.$$" && mv -f "$MEMO.$$" "$MEMO"; } 2>/dev/null
 echo $D/eng_s
