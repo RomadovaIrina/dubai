@@ -120,8 +120,12 @@ fi
 RPRE=""   # r17 speed (E2E_ROUTE_PRE=1, off by default until the VM guard): the route's dub-independent parts (its 25 fps master + the beard check)
 if [ "${E2E_ROUTE_PRE:-0}" = 1 ] && [ "${E2E_LIPSYNC:-on}" != off ] && [ "${DUB_FACE:-auto}" != latentsync ] && [ "${DUB_ROUTE:-on}" = on ] && [ -z "${DUB_ROUTE_JSON:-}" ]; then
   RPRE=$W/route_pre; mkdir -p $RPRE   # the SAME commands as the face_route stage below, run during the audio stage (CPU)
+  # r19 speed (output-identical, E2E_AS_PREP=0 = as before): the active-speaker detector's own dub-independent CPU inputs (its 25 fps mpeg4 copy of the
+  # master, the jpg frames, the wav, the scene list: r16q_active_speaker.py --prep-only, the same commands) are made here too, beside the beard check
   ( ffmpeg -loglevel error -y -i $SRC -map 0:v:0 -map 0:a:0 -vf fps=25 -c:v libx264 -preset fast -crf 12 -pix_fmt yuv420p -c:a aac $RPRE/master_25fps.mp4 && touch $RPRE/master.done
-    ${DUB_MEDIAPIPE_PY:-/venv/mediapipe/bin/python} scripts/quality/r16q_beard.py $SRC --out $RPRE/beard.json > $RPRE/beard.log 2>&1 && touch $RPRE/beard.done; touch $RPRE/finished ) &
+    ASP=""; [ "${E2E_AS_PREP:-1}" = 1 ] && [ -f $RPRE/master.done ] && { python scripts/quality/r16q_active_speaker.py --video $RPRE/master_25fps.mp4 --prep-only $RPRE/as_prep > $RPRE/as_prep.log 2>&1 & ASP=$!; }
+    ${DUB_MEDIAPIPE_PY:-/venv/mediapipe/bin/python} scripts/quality/r16q_beard.py $SRC --out $RPRE/beard.json > $RPRE/beard.log 2>&1 && touch $RPRE/beard.done
+    [ -n "$ASP" ] && wait $ASP; touch $RPRE/finished ) &
 fi
 KSX=""   # r17 VRAM margin (KS_SERVE_AUDIO_EXIT=1, off by default until the VM check): the parked KeySync daemon still holds ~1.5-2 GB (CUDA context),
 if [ "${KS_SERVE_AUDIO_EXIT:-0}" = 1 ] && [ -n "${KS_SERVE_DIR:-}" ] && [ -z "${DUB_AUDIO_FROM:-}" ] && [ -s ${KS_SERVE_DIR}/pid ]; then   # next to the ~30 GB audio peak
@@ -188,7 +192,8 @@ if [ "${E2E_LIPSYNC:-on}" != off ] && [[ " $PF " != *" no_face "* ]] && [ "$FACE
   rbeard() { if [ -n "$RPRE" ] && [ -f $RPRE/beard.done ]; then cp $RPRE/beard.json $RD/beard.json && cat $RPRE/beard.log >> $L/face_route.log; else
     ${DUB_MEDIAPIPE_PY:-/venv/mediapipe/bin/python} scripts/quality/r16q_beard.py $SRC --out $RD/beard.json >> $L/face_route.log 2>&1; fi; }
   if rmaster \
-     && gpu_run python scripts/quality/r16q_active_speaker.py --video $RD/master_25fps.mp4 --manifest $MAN --out $RD/as.json --device ${DUB_ROUTE_DEVICE:-cuda} > $L/face_route.log 2>&1 \
+     && gpu_run python scripts/quality/r16q_active_speaker.py --video $RD/master_25fps.mp4 --manifest $MAN --out $RD/as.json --device ${DUB_ROUTE_DEVICE:-cuda} \
+          $([ -n "$RPRE" ] && [ -f $RPRE/as_prep/done ] && echo "--prep $RPRE/as_prep") > $L/face_route.log 2>&1 \
      && rbeard \
      && python3 scripts/r16q/face_route.py --active $RD/as.json --beard $RD/beard.json --out $RD/route.json >> $L/face_route.log 2>&1; then
     ROUTE=$RD/route.json; read -r KSA ENG < <(python3 -c "import json; d=json.load(open('$ROUTE')); print(int(bool(d.get('keep_source_all'))), d.get('face_engine') or 'keysync')")
@@ -196,6 +201,7 @@ if [ "${E2E_LIPSYNC:-on}" != off ] && [[ " $PF " != *" no_face "* ]] && [ "$FACE
     [ "$KSA" = 1 ] && FL+=("face_keep_source_no_visible_speaker")   # (made a visible PARTIAL_SUCCESS below)
     pick_engine "$ENG"
   else FL+=("face_route_failed"); echo "== $ID WARN face_route failed (see logs/face_route.log): the dubbed-units mapping is used" | tee -a $L/e2e.log; ROUTE=""; fi
+  [ -n "$RPRE" ] && rm -rf $RPRE/as_prep   # (r19: the detector's frames, ~0.15 MB each)
 fi
 [ "$FACE" = auto ] && FACE=keysync
 if [ "${E2E_LIPSYNC:-on}" = off ]; then FL+=("lipsync_off_by_request")   # r13 interface: the user asked for a voice-only dub
