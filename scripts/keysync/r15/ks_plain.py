@@ -115,6 +115,30 @@ n = int(subprocess.run(["ffprobe", "-v", "error", "-count_packets", "-select_str
 print(f"plain paste: KeySync {len(K)} frames, master {n}, shift {a.shift}, box {x0},{y0} side {s}", flush=True)
 el = lambda r: cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * max(1, int(r)) + 1,) * 2)
 hull = lambda pts: np.round(cv2.convexHull(pts.astype(np.float32))[:, 0]).astype(np.int32)
+_ELR = {}
+def _el_rects(R):   # the discrete MORPH_ELLIPSE of radius R as a union of centred rectangles (half-width, half-height): every row is one centred run, widest in the middle
+    if R not in _ELR:
+        k = el(R); hw = (k.sum(1).astype(np.int64) - 1) // 2; out = {}
+        for dy in range(R + 1):
+            w = int(hw[R + dy])
+            if hw[R - dy] != w or k[R + dy].sum() != 2 * w + 1 or not (k[R + dy, R - w:R + w + 1] == 1).all(): out = None; break
+            out[w] = max(out.get(w, 0), dy)
+        _ELR[R] = sorted(out.items()) if out is not None and all(h1 >= h2 for (_, h1), (_, h2) in zip(sorted(out.items()), sorted(out.items())[1:])) else None
+    return _ELR[R]
+def dil(m, r):
+    """r19 speed: == cv2.dilate(m, el(r)) bit for bit for a uint8 mask (0 = background), several times faster: only the bounding box of the non-zero
+    pixels + the kernel radius is filtered (the rest stays 0), and the ellipse is applied as the maximum over its centred rectangles (each one a
+    separable O(1) box dilation instead of the generic kernel loop). KS_PLAIN_DIL=cv2 = the plain call."""
+    R = max(1, int(r)); rc = _el_rects(R) if _DIL_FAST else None
+    if rc is None: return cv2.dilate(m, el(r))
+    ys = np.flatnonzero(m.any(1))
+    if len(ys) == 0: return np.zeros_like(m)
+    xs = np.flatnonzero(m.any(0)); y0, y1 = max(0, ys[0] - R), min(m.shape[0], ys[-1] + R + 1); x0, x1 = max(0, xs[0] - R), min(m.shape[1], xs[-1] + R + 1)
+    c = np.ascontiguousarray(m[y0:y1, x0:x1]); o = None
+    for w, h in rc:
+        d = cv2.dilate(c, np.ones((2 * h + 1, 2 * w + 1), np.uint8)); o = d if o is None else np.maximum(o, d)
+    out = np.zeros_like(m); out[y0:y1, x0:x1] = o; return out
+_DIL_FAST = os.environ.get("KS_PLAIN_DIL", "fast") != "cv2"
 def ramp(lo_edge, hi_edge):   # 24 px feather at the box edges, none on a side that lies on the frame border
     i_ = np.arange(s, dtype=np.float32); r = np.ones(s, np.float32)
     if not lo_edge: r = np.minimum(r, i_ / 24.0)
@@ -177,7 +201,7 @@ def mask(k):
         ii = kidx(k); pts = [qs[LIPS], qs[[2, 98, 327]], (qs[[17, 84, 314]] + 0.5 * (qs[[152, 148, 377]] - qs[[17, 84, 314]]))]
         if KLS is not None and 0 <= ii < len(KLS) and np.isfinite(KLS[ii][LIPS + [17, 84, 314, 152, 148, 377]]).all():
             kp_ = KLS[ii]; pts += [kp_[LIPS], kp_[[17, 84, 314]] + 0.5 * (kp_[[152, 148, 377]] - kp_[[17, 84, 314]])]
-        cv2.fillPoly(mk, [hull(np.concatenate(pts))], 1); mk = cv2.dilate(mk, el(0.06 * iod)); own = mk.copy()
+        cv2.fillPoly(mk, [hull(np.concatenate(pts))], 1); mk = dil(mk, 0.06 * iod); own = mk.copy()
     elif a.mask == "tight":   # r16c K1 rule 5: never neck / collar / hair / background
         pts = [qs[OVAL]]
         ii = kidx(k)
@@ -196,7 +220,7 @@ def mask(k):
         # mo = the oval mask (as the else branch); mt = the face contour U the generated jaw (+ --mask-chin-down), NOT dilated, NOT cut (no inner edge to blur);
         # the two SOFT masks are crossfaded by a vertical ramp (see HY below), so there is no notch where the wide oval meets the narrow chin.
         hp = hull(qs[OVAL]); mo = np.zeros((s, s), np.uint8); cv2.fillPoly(mo, [hp], 1); cv2.fillPoly(mo, [hp + np.array([0, int(round(a.down * iod))], np.int32)], 1)
-        mo = cv2.dilate(mo, el(a.dil * iod))
+        mo = dil(mo, a.dil * iod)
         ii = kidx(k); pts = [qs[OVAL]]; low = [qs[JAWLOW]]
         if KLS is not None and 0 <= ii < len(KLS) and np.isfinite(KLS[ii][JAWC]).all(): pts.append(KLS[ii][JAWC]); low.append(KLS[ii][JAWLOW])
         if a.mask_chin_down > 0: pts += [x_ + np.array([0, a.mask_chin_down * iod], np.float32) for x_ in low]
@@ -207,7 +231,7 @@ def mask(k):
     else:
         hp = hull(qs[OVAL]); cv2.fillPoly(mk, [hp], 1); cv2.fillPoly(mk, [hp + np.array([0, int(round(a.down * iod))], np.int32)], 1)
         own = mk.copy()   # r16 K1: the speaker's own face (oval + the room below the chin): the other-face protection must never cover it
-        mk = cv2.dilate(mk, el(a.dil * iod))
+        mk = dil(mk, a.dil * iod)
     if OT is not None:
         for f2 in OT[min(i, len(OT) - 1)]:
             if np.isfinite(f2).all():
@@ -216,8 +240,8 @@ def mask(k):
                     ov_ = f2[OVAL] - BXY(k); cc = ov_.mean(0); g_ = cc + (ov_ - cc) * a.others_grow
                     cv2.fillPoly(om, [hull(np.concatenate([g_, g_ - [0, 0.35 * oi]]))], 1)
                 else:
-                    cv2.fillPoly(om, [hull(f2[OVAL] - BXY(k))], 1); om = cv2.dilate(om, el(0.08 * oi))
-                if a.others_grow > 0: om[cv2.dilate(own, el(0.03 * iod)) > 0] = 0
+                    cv2.fillPoly(om, [hull(f2[OVAL] - BXY(k))], 1); om = dil(om, 0.08 * oi)
+                if a.others_grow > 0: om[dil(own, 0.03 * iod) > 0] = 0
                 mk[om > 0] = 0
                 if HY[0] is not None: HY[0][0][om > 0] = 0; HY[0][1][om > 0] = 0
     m = cv2.GaussianBlur(mk.astype(np.float32), (0, 0), max(1.0, (a.mask_feather if a.mask in ("tight", "mouth") else 0.04) * iod)) * boxf(k)
@@ -243,7 +267,7 @@ def mask(k):
             lz2 = np.zeros((s, s), np.uint8); cv2.fillPoly(lz2, [hull(q[LIPS])], 1)
             ii2 = kidx(k)
             if KL is not None and 0 <= ii2 < len(KL) and np.isfinite(KL[ii2][LIPS]).all(): cv2.fillPoly(lz2, [hull(KL[ii2][LIPS])], 1)
-            lz2 = cv2.GaussianBlur(cv2.dilate(lz2, el(0.12 * iod)).astype(np.float32), (0, 0), max(1.0, 0.03 * iod))
+            lz2 = cv2.GaussianBlur(dil(lz2, 0.12 * iod).astype(np.float32), (0, 0), max(1.0, 0.03 * iod))
             fg_ = cv2.GaussianBlur(fg_, (0, 0), max(1.0, 0.02 * iod))
             m = m * np.maximum(fg_, lz2)
     if PARSE is not None:   # r16c K1: hair / hands / clothes / background inside the mask -> the source (the generated lips stay)
@@ -252,14 +276,14 @@ def mask(k):
             lz = np.zeros((s, s), np.uint8); cv2.fillPoly(lz, [hull(q[LIPS])], 1)
             ii = kidx(k)
             if KL is not None and 0 <= ii < len(KL) and np.isfinite(KL[ii][LIPS]).all(): cv2.fillPoly(lz, [hull(KL[ii][LIPS])], 1)
-            lz = cv2.GaussianBlur(cv2.dilate(lz, el(0.12 * iod)).astype(np.float32), (0, 0), max(1.0, 0.03 * iod))
+            lz = cv2.GaussianBlur(dil(lz, 0.12 * iod).astype(np.float32), (0, 0), max(1.0, 0.03 * iod))
             m = m * np.maximum(fs, lz)
     if OT is not None and a.others_grow > 0:   # the feather of the cut lies OUTSIDE the speaker's face: fully KeySync inside her oval
         m = np.maximum(m, np.clip(2 * cv2.GaussianBlur(own.astype(np.float32), (0, 0), max(1.0, 0.04 * iod)), 0, 1) * boxf(k))
     if LK is not None and k < len(LK) and LK[k] > 0.01:   # r16 K2 pause closure: the source lips through the mask
-        lk = np.zeros((s, s), np.uint8); cv2.fillPoly(lk, [hull(q[LIPS])], 1); lk = cv2.dilate(lk, el(0.10 * iod))
+        lk = np.zeros((s, s), np.uint8); cv2.fillPoly(lk, [hull(q[LIPS])], 1); lk = dil(lk, 0.10 * iod)
         m = m * (1 - LK[k] * cv2.GaussianBlur(lk.astype(np.float32), (0, 0), max(1.0, 0.04 * iod)))
-    lip = np.zeros((s, s), np.uint8); cv2.fillPoly(lip, [hull(q[LIPS])], 1); lip = cv2.dilate(lip, el(0.15 * iod))
+    lip = np.zeros((s, s), np.uint8); cv2.fillPoly(lip, [hull(q[LIPS])], 1); lip = dil(lip, 0.15 * iod)
     last[0] = m; return m, (mk > 0) & (lip == 0)
 
 
@@ -268,7 +292,7 @@ def mouth_zone(k, i, iod):   # source lips at master k  U  KeySync lips at its f
     z_ = np.zeros((s, s), np.uint8); p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)] - BXY(k)
     if np.isfinite(p[LIPS]).all(): cv2.fillPoly(z_, [hull(p[LIPS])], 1)
     if KL is not None and 0 <= i < len(KL) and np.isfinite(KL[i][LIPS]).all(): cv2.fillPoly(z_, [hull(KL[i][LIPS])], 1)
-    return cv2.dilate(z_, el(0.3 * iod)) > 0
+    return dil(z_, 0.3 * iod) > 0
 def lab_of(img): return cv2.cvtColor(np.clip(img, 0, 255).astype(np.float32) / 255, cv2.COLOR_RGB2LAB)
 def hf_energy(y, wm): return float(np.sqrt((cv2.Laplacian(y, cv2.CV_32F)[wm] ** 2).mean())) if wm.sum() > 200 else np.nan
 IODM = float(np.nanmedian(np.linalg.norm(LM[:, 33] - LM[:, 263], axis=1)))
@@ -390,7 +414,7 @@ def fix_ks(kf, i, m, src_crop):   # r15 --cavity / --tex on one KeySync crop (fl
         lx = np.zeros((s, s), np.uint8)
         lp = kp if kp is not None and np.isfinite(kp).all() else LM[min(int(J[min(i + a.shift, len(J) - 1)]), len(LM) - 1)] - BXY(i + a.shift)
         if np.isfinite(lp).all():
-            iod = float(np.linalg.norm(lp[33] - lp[263])); cv2.fillPoly(lx, [hull(lp[LIPS_O])], 1); lx = cv2.dilate(lx, el(a.tex_dil * iod))
+            iod = float(np.linalg.norm(lp[33] - lp[263])); cv2.fillPoly(lx, [hull(lp[LIPS_O])], 1); lx = dil(lx, a.tex_dil * iod)
             lx = cv2.GaussianBlur(lx.astype(np.float32), (0, 0), max(1.0, 0.05 * iod))
         T = m * (1 - lx)
         hp = lambda img: img - cv2.GaussianBlur(img, (0, 0), a.tex)
