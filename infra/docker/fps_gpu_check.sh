@@ -3,27 +3,33 @@
 # 25 fps output (A), on what the laptop could not do: SyncNet, and the REAL 60 / 14.97 fps / vertical sources through the image.
 #   [HOST_GPU_LOCK=/workspace/gpu.lock] bash infra/docker/fps_gpu_check.sh <image> <pack dir> <out dir> [code dir = this checkout]
 # <pack dir> (scripts/keysync/r16/tz/fps_vm_pack.sh makes it on the laptop):
-#   jobs/<name>.<ext>        full e2e jobs in the image with E2E_FPS_NATIVE=on (fps60 = story-1773579769284, q08 14.97, q09 vertical 29.97)
+#   jobs/<name>.<ext>        full jobs (scripts/job dabai_job.run_job, keep_intermediate) in the image with E2E_FPS_NATIVE=on (fps60 = story-1773579769284, q08 14.97, q09 vertical 29.97)
 #   pairs/<name>/A.mp4 B.mp4 the laptop's class outputs (A = the 25 fps final, B = native fps, same audio): SyncNet only
+# HOST_GPU_LOCK (a shared VM): the host lock file is the image's gpu.lock and R10_HEAVY_LOCK holds it for the whole GPU part of a job.
 # Per job: B = the job's output; A = the SAME job's 25 fps picture (work/ks_face.mp4, + the old hires_merge on the 25 fps grid when the
 # source was > 1280 px), i.e. exactly what E2E_FPS_NATIVE=off would have shipped, muxed with B's audio -> no second GPU run.
 # Then for every pair: SyncNet confidence / offset of A and B (scripts/pilot/syncnet_common.py, LatentSync eval), jobs also
 # scripts/keysync/r16/tz/fps_eval_class.py (format, mouth jerk, lip pulse) + 0.5x clips A | B | source. Summary: <out>/fps_gpu_summary.json.
 set -uo pipefail
 IMG=${1:?image}; PK=$(readlink -f "${2:?pack dir}"); O=$(mkdir -p "${3:?out}" && readlink -f "$3"); C=$(readlink -f "${4:-$(dirname "$0")/../..}"); VOL=${VOL:-dabai-models}
-LK=(); [ -n "${HOST_GPU_LOCK:-}" ] && { touch "$HOST_GPU_LOCK"; LK=(-v "$(readlink -f "$HOST_GPU_LOCK")":/workspace/dub/gpu.lock); }   # a shared VM: the image's GPU stages
+LK=(); [ -n "${HOST_GPU_LOCK:-}" ] && { touch "$HOST_GPU_LOCK"; LK=(-v "$(readlink -f "$HOST_GPU_LOCK")":/workspace/dub/gpu.lock -e R10_HEAVY_LOCK=/workspace/dub/gpu.lock); }   # a shared VM: the image's GPU stages
 [ -d $PK/jobs ] || [ -d $PK/pairs ] || { echo "no jobs/ or pairs/ in $PK"; exit 2; }
 echo "code $(git -C $C rev-parse --short=12 HEAD 2>/dev/null || echo '?') image $IMG"
 docker run --rm --gpus all --shm-size 16g "${LK[@]}" -v $C/scripts:/workspace/dub/dubai/scripts:ro -v $C/infra:/workspace/dub/dubai/infra:ro \
-  -v $VOL:/workspace/dub/dubai/models -v $PK:/fps/in:ro -v $O:/fps/out -e E2E_FPS_NATIVE=on --entrypoint bash $IMG -c '
+  -v $VOL:/workspace/dub/dubai/models -v $PK:/fps/in:ro -v $O:/fps/out -v $O/artifacts:/workspace/dub/artifacts -e E2E_FPS_NATIVE=on --entrypoint bash $IMG -c '
 set -u; cd /workspace/dub/dubai; export DUB_PROFILE=clean DUB_ALLOW_NC=0 DUB_ALLOW_NC_BED=0; bash infra/docker/entrypoint.sh true || exit 3
 PY=/venv/dabai/bin/python; T=scripts/keysync/r16/tz; R=/fps/out; mkdir -p $R/pairs $R/clips
 FONT=$(ls /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf 2>/dev/null | head -1)
 fr() { ffprobe -v error -select_streams v:0 -show_entries stream=$2 -of csv=p=0 "$1" | head -1 | cut -d, -f1; }
+cat > /tmp/job.py <<PYEOF
+import sys, json; sys.path.insert(0, "scripts/job"); import dabai_job   # the live backend entry (scripts/job), keep_intermediate for work/
+n, src, out = sys.argv[1:4]
+st = dabai_job.run_job({"job_id": n, "input": src, "out_dir": out, "target_lang": "en", "face": "keysync", "output": {"keep_intermediate": True}})
+print("== job", n, st.get("status"), [f for f in st.get("flags") or [] if "fps" in f or "face" in f], (st.get("error") or {}).get("detail", ""))
+PYEOF
 for j in /fps/in/jobs/*; do [ -f "$j" ] || continue; n=$(basename "${j%.*}"); J=$R/jobs/$n; P=$R/pairs/$n; mkdir -p $J $P
-  [ -f $J/manifest.json ] || { echo "== job $n start $(date +%T)"; ID=$n bash scripts/r9/e2e.sh "$j" $J > $R/jobs/$n.e2e.log 2>&1; echo "== job $n e2e rc=$?"; }
-  python3 -c "import json; m=json.load(open(\"$J/manifest.json\")); print(\"== job $n\", m[\"status\"], [f for f in m.get(\"flags\", []) if \"fps\" in f or \"face\" in f])" 2>&1
-  B=$(ls $J/${n}_DabAI_r9_demucs.mp4 $J/${n}_DabAI_r9_spleeter.mp4 2>/dev/null | head -1); W=$J/work
+  [ -f $J/status.json ] || { echo "== job $n start $(date +%T)"; /venv/api/bin/python /tmp/job.py $n "$j" $J > $R/jobs/$n.job.log 2>&1; grep "^== job" $R/jobs/$n.job.log || tail -3 $R/jobs/$n.job.log; }
+  B=$(ls $J/e2e/${n}_DabAI_r9_demucs.mp4 $J/e2e/${n}_DabAI_r9_spleeter.mp4 2>/dev/null | head -1); W=$J/e2e/work
   [ -n "$B" ] && [ -f $W/ks_face.mp4 ] || { echo "== job $n: no output / no KeySync picture (not a KeySync job?)"; continue; }
   HR=$(ls $W/hires_src.* 2>/dev/null | head -1); AV=$W/ks_face.mp4
   if [ -n "$HR" ] && [ ! -f $P/A_v.mp4 ]; then   # = the e2e.sh face_hires branch (E2E_FPS_NATIVE=off)
