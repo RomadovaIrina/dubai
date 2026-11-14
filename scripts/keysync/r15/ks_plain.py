@@ -24,6 +24,7 @@ ap.add_argument("--cm-shadow", default="", help="r16c K1 + K2 (long5 1:56 blue m
 ap.add_argument("--tail-src", default="", help="r18 (Irina 13.11: the m03 end face; = ks_tailsrc.py's rule, but INSIDE this paste: no second encode, nothing outside the face changes): the dub wav (16 kHz mono) of this face; from the end of its LAST STRONG speech (100 ms RMS > --tail-end-thr x p99) + --tail-hold s the paste mask fades to 0 over --tail-ramp s and the face stays the source to the end. Only when that silent tail is >= --tail-min s (of the WHOLE master: --n-total)")
 ap.add_argument("--hold-mouth", default="", help="r19 (Irina 14.11, old03 end: in the silent tail KeySync presses the lips into a thin line = 'слипание губ'; every hand-over to the source reads as a jump): a json {i_hold: GLOBAL KeySync frame, w: per-GLOBAL-master-frame weights} = ks_tailw.py --mode hold: the mouth zone of the DRAWN layer is replaced by the drawn layer's own frame i_hold (the last natural closed mouth), moved by the similarity of the generated lip landmarks (--ks-lm); no source pixels, no hand-over")
 ap.add_argument("--gate-w", default="", help="r18: per-GLOBAL-master-frame weights 'take the original' in [0, 1] (.npy, or a json with a 'w' list = ks_occl.py --dump: occlusion / strong turn / hand over the mouth): the paste mask is multiplied by (1 - w), INSIDE this single paste pass (Irina 09.11 rules 3-4 without ks_occl.py's second whole-frame encode)")
+ap.add_argument("--tail-quiet", default="0.75:0.05:3", help="r19 (Irina 14.11: old03 end = the drawn face to the end, m03 end = the fade): --tail-src fades to the source ONLY if the SOURCE mouth is quiet in the tail = fewer than N frames with openness (inner-lip gap / mouth width) > THR later than G s after the last strong dub speech (G = the source finishing its own phrase). 'G:THR:N'; off = always fade (r18)")
 ap.add_argument("--tail-hold", type=float, default=0.0); ap.add_argument("--tail-ramp", type=float, default=0.25); ap.add_argument("--tail-min", type=float, default=1.0); ap.add_argument("--tail-end-thr", type=float, default=0.25)
 ap.add_argument("--hybrid-at", type=float, default=0.0, help="r18 hybrid: where the oval -> tight crossfade is centred, as a fraction of the way from the mouth corners (0) to the chin point (1)")
 ap.add_argument("--cavity-p", type=float, default=30.0, help="r19: the percentile of the source open-mouth interior lightness that --cavity lifts toward (30 = r15: with --cavity 0.5 a black cavity moves ~5 L*: no visible change, Irina 14.11)")
@@ -81,7 +82,7 @@ ap.add_argument("--video-only", action="store_true", help="r16 K1 (set by ks_pla
 ap.add_argument("--lip-keep", default="", help="r16 K2: per-master-frame weights (.npy, k2_pause.py): the SOURCE lips (hull + 0.10 IOD) show through the paste mask")
 a = ap.parse_args()
 b = json.load(open(a.box)); x0, y0, s, W, H = b["x"], b["y"], b["side"], b["W"], b["H"]
-z = np.load(a.lm); LM = z["lm"][..., :2].astype(np.float32); J = z["j"] if "j" in z.files else np.arange(len(LM))
+z = np.load(a.lm); LM = z["lm"][..., :2].astype(np.float32); J = z["j"] if "j" in z.files else np.arange(len(LM)); JALL = z["j_all"] if "j_all" in z.files else J   # j_all (ks_plain_par): the WHOLE master -> row map, for decisions on the global timeline (--tail-quiet)
 OT = np.load(a.others)["others"] if a.others else None
 SHW = tuple(float(x) for x in a.cm_shadow.split(':')) if a.cm_shadow else None
 PARSE = None; PGEN = None
@@ -490,7 +491,14 @@ if a.tail_src:   # the same detection as ks_tailsrc.py (20 ms RMS, 100 ms mean, 
     last_ = (np.flatnonzero(st_)[-1] + 1) / 50 if st_.any() else ((np.flatnonzero(on_)[-1] + 1) / 50 if on_.any() else 0.0)
     t0_ = last_ + a.tail_hold; dur_ = NTT / FR_M
     if on_.any() and dur_ - t0_ >= a.tail_min: TS0 = t0_
-    print("KS_TAILFADE " + json.dumps({"last_speech_s": round(last_, 2), "t0_s": round(t0_, 2), "tail_s": round(dur_ - t0_, 2), "ramp_s": a.tail_ramp, "applied": TS0 is not None}), flush=True)
+    TQ = None
+    if TS0 is not None and a.tail_quiet != "off":   # r19: is the SOURCE mouth quiet in the tail? (old03: he says an undubbed phrase 1.5 s after the dub ends -> a fade would show a silently talking source mouth -> keep the drawn face; m03: the source only finishes its phrase within 0.6 s -> fade)
+        g_, th_, nm_ = [float(v) for v in a.tail_quiet.split(":")]; TQ = 0
+        for kg in range(int(np.ceil((TS0 + g_) * FR_M)), NTT):
+            p_ = LM[min(int(JALL[min(kg, len(JALL) - 1)]), len(LM) - 1)]
+            if np.isfinite(p_[[13, 14, 61, 291]]).all() and float(np.linalg.norm(p_[13] - p_[14]) / max(float(np.linalg.norm(p_[61] - p_[291])), 1e-3)) > th_: TQ += 1
+        if TQ >= nm_: TS0 = None
+    print("KS_TAILFADE " + json.dumps({"last_speech_s": round(last_, 2), "t0_s": round(t0_, 2), "tail_s": round(dur_ - t0_, 2), "ramp_s": a.tail_ramp, "quiet_rule": a.tail_quiet, "src_mouth_open_frames": TQ, "applied": TS0 is not None}), flush=True)
 NFADE = 0
 for k, f in enumerate(frames(a.master, W, H)):
     if k < WR[0]: continue
