@@ -102,14 +102,43 @@ def main():
     torch.cuda.synchronize(); load_s = time.perf_counter() - t0
     print(json.dumps({"load_s": round(load_s, 1), "cfg": a.cfg, "decoding_t": a.decoding_t, "compile": a.compile, "vae_half": a.vae_half, "cudnn_bench": a.cudnn_bench, "fp8": a.fp8, "vae_cl": a.vae_cl, "KS_DC": os.environ.get("KS_DC", ""),
                       "interp_lora": a.interp_lora, "interp_steps": a.interp_steps if a.interp_lora else None, "lcm_noise": a.lcm_noise if a.interp_lora else None, "trt": a.trt, "KS_ICHUNK": os.environ.get("KS_ICHUNK", ""), "vae_batch": a.vae_batch, "vae_compile": a.vae_compile, "trt_vae": a.trt_vae}), flush=True)
+    _objs = [model, model_kf, hubert, wavlm, vae, lmk]   # (the resident daemon parks these; the look-ahead extractor joins them when it exists)
+    _ahead_q = None
     if os.environ.get("KS_LMK_CACHE"):   # r13 speed lever: landmarks off the critical path (prod: computed during TTS / separation); keyed by the frames' content
-        import hashlib, numpy as _np; _xl = d.extract_video_landmarks; _cd = os.environ["KS_LMK_CACHE"]; os.makedirs(_cd, exist_ok=True)
+        import hashlib, queue, threading, numpy as _np; _xl = d.extract_video_landmarks; _cd = os.environ["KS_LMK_CACHE"]; os.makedirs(_cd, exist_ok=True)
+        _fl, _fll = {}, threading.Lock()   # r19: key -> Event of a landmark pass in flight (the job and the look-ahead thread never compute one video twice)
         def _lmk(video_frames, landmarks_model):
             v = video_frames; key = hashlib.md5((str(tuple(v.shape)) + str(v[:: max(1, len(v) // 16)].float().mean().item()) + str(v[-1].float().sum().item())).encode()).hexdigest()
             f = os.path.join(_cd, key + ".npy")
-            if os.path.exists(f): return _np.load(f, allow_pickle=True)
-            r = _xl(video_frames, landmarks_model); _np.save(f, _np.asarray(r)); return r
+            while True:
+                with _fll:
+                    if os.path.exists(f): return _np.load(f, allow_pickle=True)
+                    ev = _fl.get(key)
+                    if ev is None: ev = _fl[key] = threading.Event(); break
+                ev.wait()   # the other thread is on this very video
+            try:
+                r = _xl(video_frames, landmarks_model); _np.save(f + ".tmp.npy", _np.asarray(r)); os.replace(f + ".tmp.npy", f); return r
+            finally:
+                with _fll: _fl.pop(key, None)
+                ev.set()
         d.extract_video_landmarks = _lmk
+        if os.environ.get("KS_LMK_AHEAD", "1") == "1":
+            # r19 speed: a job line "LMK <video>" = this video will be rendered soon: its landmarks (face_alignment, a python loop that leaves the GPU
+            # mostly idle: 6-8 s per 20 s of video, 118 s of long5's renders) are computed NOW by a second extractor in a background thread, while the
+            # GPU samples the job in front; the render then finds them in the cache. The same function on the same frames (d.sample's own read + resize).
+            _ahead_q = queue.Queue(); _lm2 = []; _tq0, _pr0, _at = d.tqdm, print, []
+            d.tqdm = lambda it, *x, **k: it if threading.current_thread() in _at else _tq0(it, *x, **k)   # no progress bar from the look-ahead thread
+            d.print = lambda *x, **k: None if threading.current_thread() in _at else _pr0(*x, **k)         # (its lines would land inside the job's log lines)
+            def _ahead():
+                _at.append(threading.current_thread())
+                while True:
+                    path = _ahead_q.get()
+                    try:
+                        if not _lm2: _lm2.append(d.LandmarksExtractor()); _objs.append(_lm2[0])
+                        t_ = time.perf_counter(); v = d.read_video(path, output_format="TCHW")[0]; v = torch.nn.functional.interpolate(v, (512, 512), mode="bilinear")
+                        _lmk(v, _lm2[0]); sys.stdout.write(f"\nKS_LMK_AHEAD {path} {len(v)} frames {time.perf_counter() - t_:.1f} s\n"); sys.stdout.flush()
+                    except Exception as e: sys.stdout.write("\nKS_LMK_AHEAD failed (the job computes its own): " + repr(e)[:300] + "\n"); sys.stdout.flush()
+            threading.Thread(target=_ahead, daemon=True).start()
     if os.environ.get("KS_KF_AR") or os.environ.get("KS_KF_RR"):   # r16 K2: keyframe guidance split (audio vs reference)
         _g = model_kf.sampler.guider
         if os.environ.get("KS_KF_AR"): _g.audio_ratio = float(os.environ["KS_KF_AR"])
@@ -204,6 +233,9 @@ def main():
 
     def run_line(line, out_dir):
         if not line.strip() or line.startswith("#"): return
+        if line.startswith("LMK "):   # r19: a look-ahead hint (see KS_LMK_AHEAD above); ignored when the cache / the look-ahead is off
+            if _ahead_q is not None: _ahead_q.put(line.split(None, 1)[1].strip())
+            return
         tag, vid, aud, *ex = line.split()   # r16 T: an optional 4th column = this job's KeySync reference frame (KS_REF_IDX); default 0
         os.environ["KS_REF_IDX"] = ex[0] if ex else "0"   # (audit #13: no leak of the previous job's reference)
         if os.environ.get("KS_FAULT") == "crash" and not ("p_" in tag.split("_", 1)[-1] or tag.startswith("p_")):   # r16 TZ 11.1 fault injection
@@ -219,15 +251,15 @@ def main():
         dur = float(os.popen(f"ffprobe -v error -show_entries format=duration -of csv=p=0 {vid}").read())
         r = {"tag": tag, "video_s": round(dur, 2), "wall_s": round(wall, 1), "s_per_vmin": round(wall / dur * 60, 1), "stages_s": {k: round(v, 1) for k, v in T.items()},
              "peak_vram_gb": round(torch.cuda.max_memory_allocated() / 2**30, 1)}
-        print("KS_JOB " + json.dumps(r), flush=True)
+        sys.stdout.write("\nKS_JOB " + json.dumps(r) + "\n"); sys.stdout.flush()   # (r19: one write, at a line start whatever the look-ahead thread printed)
     if a.serve:
         import ks_serve
-        ks_serve.serve(a.serve, load_s, [model, model_kf, hubert, wavlm, vae, lmk], job_lines, run_line)
+        ks_serve.serve(a.serve, load_s, _objs, job_lines, run_line)
         sys.stdout.flush(); sys.stderr.flush(); os._exit(0)   # r19 speed: a stopped daemon leaves at once (the interpreter teardown of the parked models took
         return                                               # seconds while e2e.sh waited for it before the audio stage); nothing is written after KS_SERVE_STOP
     for line in job_lines(a.jobs, a.follow):
         run_line(line, a.out)
-    print("KS_FAST_DONE", flush=True)
+    sys.stdout.write("\nKS_FAST_DONE\n"); sys.stdout.flush()
 
 
 if __name__ == "__main__":

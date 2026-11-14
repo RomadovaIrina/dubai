@@ -99,9 +99,9 @@ def serve(spool, load_s, objs, job_lines, run_line):
             try:
                 for line in job_lines(rq["jobs"], True, alive=lambda: owner is None or _alive(owner)):
                     run_line(line, rq["out"])
-                print("KS_FAST_DONE", flush=True)
+                sys.stdout.write("\nKS_FAST_DONE\n"); sys.stdout.flush()   # (r19: at a line start, in one write)
             except Exception:
-                traceback.print_exc(); print("KS_SERVE_ERROR", flush=True)
+                traceback.print_exc(); sys.stdout.write("\nKS_SERVE_ERROR\n"); sys.stdout.flush()
         finally:
             try: print("KS_SERVE_PARKED " + json.dumps({"park_s": park(objs), **_vram()}), flush=True)
             except Exception: traceback.print_exc()
