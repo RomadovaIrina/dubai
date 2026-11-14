@@ -122,7 +122,8 @@ def main():
                 with _fll: _fl.pop(key, None)
                 ev.set()
         d.extract_video_landmarks = _lmk
-        if os.environ.get("KS_LMK_AHEAD", "1") == "1":
+        if os.environ.get("KS_LMK_AHEAD", "0") == "1":   # OFF by default (VM 14.11, long5: the landmark loop is python-bound, so the thread takes from the
+            # sampler what it saves: render sum 746 s without / 757 s with it, and it adds the second extractor's memory). Kept as an option.
             # r19 speed: a job line "LMK <video>" = this video will be rendered soon: its landmarks (face_alignment, a python loop that leaves the GPU
             # mostly idle: 6-8 s per 20 s of video, 118 s of long5's renders) are computed NOW by a second extractor in a background thread, while the
             # GPU samples the job in front; the render then finds them in the cache. The same function on the same frames (d.sample's own read + resize).
@@ -217,19 +218,39 @@ def main():
             return e_ref + g.audio_ratio * (c_ar - e_ref)
         g.prepare_inputs = prep; g.__call__ = call; model.sampler.guider = g
         type(g).__call__ = lambda self, x, sig: call(x, sig) if self is g else call0.__func__(self, x, sig)
+    def _hint_tail(path, stop):   # r19 KS_LMK_AHEAD: the "LMK <video>" lines of a follow file are read by THIS thread as soon as they are written
+        try:                       # (the job loop below reads a line only when the job in front is done: too late to look ahead)
+            f = open(path); buf = ""; seen = set()
+            while not stop.is_set():
+                ln = f.readline()
+                if not ln or not ln.endswith("\n"): buf += ln; time.sleep(0.2); continue
+                ln, buf = buf + ln, ""
+                if ln.strip() == "END": return
+                if ln.startswith("LMK "):
+                    v = ln.split(None, 1)[1].strip()
+                    if v not in seen: seen.add(v); _ahead_q.put(v)
+        except Exception as e: sys.stdout.write("\nKS_LMK_AHEAD hint reader failed: " + repr(e)[:200] + "\n"); sys.stdout.flush()
+
     def job_lines(path, follow, alive=lambda: True):   # r16 T --follow: the caller appends jobs while this process is resident; "END" stops it
         if not follow:
             yield from open(path); return
-        f = open(path); buf = ""
-        while True:
-            ln = f.readline()
-            if not ln or not ln.endswith("\n"):
-                buf += ln
-                if not alive(): raise RuntimeError("the requesting job is gone (no END)")   # r17 --serve: never wait forever for a dead client
-                time.sleep(0.2); continue
-            ln, buf = buf + ln, ""
-            if ln.strip() == "END": return
-            yield ln
+        f = open(path); buf = ""; stop = None
+        if _ahead_q is not None:
+            import threading as _th
+            stop = _th.Event(); _th.Thread(target=_hint_tail, args=(path, stop), daemon=True).start()
+        try:
+            while True:
+                ln = f.readline()
+                if not ln or not ln.endswith("\n"):
+                    buf += ln
+                    if not alive(): raise RuntimeError("the requesting job is gone (no END)")   # r17 --serve: never wait forever for a dead client
+                    time.sleep(0.2); continue
+                ln, buf = buf + ln, ""
+                if ln.strip() == "END": return
+                if ln.startswith("LMK ") and stop is not None: continue   # (the hint reader has it)
+                yield ln
+        finally:
+            if stop is not None: stop.set()
 
     def run_line(line, out_dir):
         if not line.strip() or line.startswith("#"): return
@@ -250,8 +271,10 @@ def main():
         torch.cuda.synchronize(); wall = time.perf_counter() - t1
         dur = float(os.popen(f"ffprobe -v error -show_entries format=duration -of csv=p=0 {vid}").read())
         r = {"tag": tag, "video_s": round(dur, 2), "wall_s": round(wall, 1), "s_per_vmin": round(wall / dur * 60, 1), "stages_s": {k: round(v, 1) for k, v in T.items()},
-             "peak_vram_gb": round(torch.cuda.max_memory_allocated() / 2**30, 1)}
+             "peak_vram_gb": round(torch.cuda.max_memory_allocated() / 2**30, 1), "peak_reserved_gb": round(torch.cuda.max_memory_reserved() / 2**30, 1)}
         sys.stdout.write("\nKS_JOB " + json.dumps(r) + "\n"); sys.stdout.flush()   # (r19: one write, at a line start whatever the look-ahead thread printed)
+        if os.environ.get("KS_JOB_EMPTY_CACHE", "1") == "1":   # r19 VRAM: the allocator's cached blocks go back after every job, so the device reading is one job's
+            import gc; gc.collect(); torch.cuda.empty_cache(); torch.cuda.reset_peak_memory_stats()   # peak, not the sum of what several jobs (and the look-ahead thread) left cached
     if a.serve:
         import ks_serve
         ks_serve.serve(a.serve, load_s, _objs, job_lines, run_line)

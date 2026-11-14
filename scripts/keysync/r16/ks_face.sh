@@ -184,8 +184,6 @@ if [ "${KS_PROBE_BY_CHECK:-0}" = 1 ] && [ "${KS_DELAY:-probe}" = probe ] && [ -z
 if [ $PBC = 1 ]; then for f in $TAGS; do DLY[$f]=${KS_PBC_DELAY:-40}; done; echo "KS_PROBE_BY_CHECK: no probe render; delay ${KS_PBC_DELAY:-40} ms, verified after the render"
 elif [ "${KS_DELAY:-probe}" = probe ]; then
   t probe; : > $KW/probe/jobs.txt; PS=${KS_PROBE_S:-10}; OFFS=""
-  # r19 speed (KS_LMK_AHEAD, ks_fast.py): the full render's landmark pass starts now, beside the probe render (not for a chunked long video: its chunks are hinted below)
-  if [ "${KS_LMK_AHEAD:-1}" = 1 ] && [ "$N" -le "$(( ${KS_CHUNK_MIN_S:-90} * 25 ))" ]; then for f in $TAGS; do echo "LMK $KW/data/pad_$f.mp4" >> $FJ; done; fi
   for f in $TAGS; do   # a FRAME-ALIGNED window of KS_PROBE_S s from the face's first own speech; the same reference (frame 0) + gate as the full run
     $MPY - $KW/dub_$f.wav $KW/data/crop_$f.mp4 $(cat $KW/ref_$f.txt) $PS $KW/probe/v_$f.mp4 $KW/probe/a_$f.wav <<'PY' || exit 1
 import subprocess, sys, wave, numpy as np, cv2
@@ -236,7 +234,10 @@ for f in $TAGS; do   # the dub KeySync hears: delayed (or advanced) by the probe
       >> $KW/jobs.txt 2> $KW/chunk_$f.log || { tail -3 $KW/chunk_$f.log; exit 1; }; grep KS_CHUNKS $KW/chunk_$f.log
   else echo "$PFX$f $KW/data/pad_$f.mp4 $KW/data/dubp_$f.wav $(cat $KW/ref_$f.txt)" >> $KW/jobs.txt; fi
 done
-[ "${KS_LMK_AHEAD:-1}" = 1 ] && awk '{print "LMK " $2}' $KW/jobs.txt >> $FJ   # r19: every video of this run (chunks, faces, a queued shot) is looked ahead while the jobs in front render
+# r19 speed (KS_LMK_AHEAD, ks_fast.py): the videos of this run are looked ahead while the jobs in front of them render: the chunks / faces after the first
+# one, and every video of a shot queued behind other shots. A single job that starts at once gets no hint (nothing to overlap: it would only add the
+# second extractor's memory next to the render). OFF by default: no wall-time gain on long5 (see ks_fast.py).
+if [ "${KS_LMK_AHEAD:-0}" = 1 ]; then if [ -n "$SHR" ]; then awk '{print "LMK " $2}' $KW/jobs.txt >> $FJ; else awk 'NR > 1 {print "LMK " $2}' $KW/jobs.txt >> $FJ; fi; fi
 cat $KW/jobs.txt >> $FJ; touch $KW/jobs.sub   # (jobs.sub: ks_shots.sh KS_SHOT_STREAM may queue the next shot)
 if [ -n "$SHR" ]; then waitjob "$(tail -1 $KW/jobs.txt | awk '{print $1}')" || exit 1   # (jobs run in order: the last one done = all done)
 elif [ $PBC = 1 ]; then waitjob "$(tail -1 $KW/jobs.txt | awk '{print $1}')" || exit 1   # (r17 PBC: ks_fast stays up for a re-render)

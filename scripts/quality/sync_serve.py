@@ -41,6 +41,9 @@ def main():
             traceback.print_exc(); rc = 1
         finally:
             sys.stdout, sys.stderr, sys.argv = out0, err0, argv0; os.chdir(cwd0); os.environ.clear(); os.environ.update(env0); log.close()
+            try:   # r19 VRAM: the allocator cache of this request goes back (the server sat at ~2.4 GB between checks, next to the KeySync worker's renders)
+                import gc; gc.collect(); torch.cuda.empty_cache()
+            except Exception: pass
             (D / "out" / f"{jid}.tmp").write_text(str(rc)); os.replace(D / "out" / f"{jid}.tmp", D / "out" / f"{jid}.rc")
 
 
