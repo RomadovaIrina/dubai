@@ -70,12 +70,23 @@ for k in (\"A\", \"B\"):
     except Exception as e: out[k] = {\"error\": str(e)[-300:]}
 json.dump(out, open(\"$P/syncnet.json\", \"w\")); print(\"== syncnet $n\", json.dumps(out))"; flock -u 9
 done
+for P in $R/pairs/*/; do n=$(basename $P); [ -f $P/syncnet_n25.json ] && continue; [ -e $P/B.mp4 ] || continue
+  # (14.11: LatentSync eval resamples with "ffmpeg -r 25", which on a 30 fps input shows each 25 fps frame ~1 frame LATE vs a 25 fps
+  # A (laptop check old03: best match A(k-1)) -> a spurious +1..+2 offset / lower conf for B. Fair: B -> 25 fps by nearest frame first.)
+  [ -f $P/B_n25.mp4 ] || ffmpeg -nostdin -loglevel error -y -i $P/B.mp4 -map 0:v:0 -map 0:a:0 -vf fps=25 -c:v libx264 -preset fast -crf 12 -pix_fmt yuv420p -c:a copy $P/B_n25.mp4
+  exec 9>> /workspace/dub/gpu.lock; flock 9
+  PYTHONPATH=scripts/pilot $PY -c "
+import json; from syncnet_common import eval_syncnet
+try: r = eval_syncnet(__import__(\"pathlib\").Path(\"$P/B_n25.mp4\")); out = {\"B_n25\": {\"conf\": r[\"confidence\"], \"offset\": r[\"av_offset_frames\"]}}
+except Exception as e: out = {\"B_n25\": {\"error\": str(e)[-300:]}}
+json.dump(out, open(\"$P/syncnet_n25.json\", \"w\")); print(\"== syncnet_n25 $n\", json.dumps(out))"; flock -u 9
+done
 python3 - <<PYEOF
 import json, glob, os
 S = {}
 for p in sorted(glob.glob("/fps/out/pairs/*/")):
     n = os.path.basename(p.rstrip("/")); e = {}
-    for f in ("syncnet", "eval"):
+    for f in ("syncnet", "syncnet_n25", "eval"):
         if os.path.exists(p + f + ".json"): e[f] = json.load(open(p + f + ".json"))
     S[n] = e
 json.dump(S, open("/fps/out/fps_gpu_summary.json", "w"), indent=1); print("FPS_GPU_DONE", len(S), "pairs")
