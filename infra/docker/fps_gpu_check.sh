@@ -16,7 +16,7 @@ LK=(); [ -n "${HOST_GPU_LOCK:-}" ] && { touch "$HOST_GPU_LOCK"; LK=(-v "$(readli
 [ -d $PK/jobs ] || [ -d $PK/pairs ] || { echo "no jobs/ or pairs/ in $PK"; exit 2; }
 echo "code $(git -C $C rev-parse --short=12 HEAD 2>/dev/null || echo '?') image $IMG"
 docker run --rm --gpus all --shm-size 16g "${LK[@]}" -v $C/scripts:/workspace/dub/dubai/scripts:ro -v $C/infra:/workspace/dub/dubai/infra:ro \
-  -v $VOL:/workspace/dub/dubai/models -v $PK:/fps/in:ro -v $O:/fps/out -v $O/artifacts:/workspace/dub/artifacts -e E2E_FPS_NATIVE=on --entrypoint bash $IMG -c '
+  -v $VOL:/workspace/dub/dubai/models -v $PK:/fps/in:ro -v $O:/fps/out -v $O/artifacts:/workspace/dub/artifacts -e E2E_FPS_NATIVE=on -e DABAI_RESIDENT=0 --entrypoint bash $IMG -c '
 set -u; cd /workspace/dub/dubai; export DUB_PROFILE=clean DUB_ALLOW_NC=0 DUB_ALLOW_NC_BED=0; bash infra/docker/entrypoint.sh true || exit 3
 PY=/venv/dabai/bin/python; T=scripts/keysync/r16/tz; R=/fps/out; mkdir -p $R/pairs $R/clips
 FONT=$(ls /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf 2>/dev/null | head -1)
