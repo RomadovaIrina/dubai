@@ -1,7 +1,7 @@
 #!/bin/bash
 # r18 TZ 9.4 on a GPU VM: the native-fps output (E2E_FPS_NATIVE=on, scripts/keysync/r16/tz/fps_native_merge2.py "B4 retime") vs today's
 # 25 fps output (A), on what the laptop could not do: SyncNet, and the REAL 60 / 14.97 fps / vertical sources through the image.
-#   bash infra/docker/fps_gpu_check.sh <image> <pack dir> <out dir> [code dir = this checkout]
+#   [HOST_GPU_LOCK=/workspace/gpu.lock] bash infra/docker/fps_gpu_check.sh <image> <pack dir> <out dir> [code dir = this checkout]
 # <pack dir> (scripts/keysync/r16/tz/fps_vm_pack.sh makes it on the laptop):
 #   jobs/<name>.<ext>        full e2e jobs in the image with E2E_FPS_NATIVE=on (fps60 = story-1773579769284, q08 14.97, q09 vertical 29.97)
 #   pairs/<name>/A.mp4 B.mp4 the laptop's class outputs (A = the 25 fps final, B = native fps, same audio): SyncNet only
@@ -11,9 +11,10 @@
 # scripts/keysync/r16/tz/fps_eval_class.py (format, mouth jerk, lip pulse) + 0.5x clips A | B | source. Summary: <out>/fps_gpu_summary.json.
 set -uo pipefail
 IMG=${1:?image}; PK=$(readlink -f "${2:?pack dir}"); O=$(mkdir -p "${3:?out}" && readlink -f "$3"); C=$(readlink -f "${4:-$(dirname "$0")/../..}"); VOL=${VOL:-dabai-models}
+LK=(); [ -n "${HOST_GPU_LOCK:-}" ] && { touch "$HOST_GPU_LOCK"; LK=(-v "$(readlink -f "$HOST_GPU_LOCK")":/workspace/dub/gpu.lock); }   # a shared VM: the image's GPU stages
 [ -d $PK/jobs ] || [ -d $PK/pairs ] || { echo "no jobs/ or pairs/ in $PK"; exit 2; }
 echo "code $(git -C $C rev-parse --short=12 HEAD 2>/dev/null || echo '?') image $IMG"
-docker run --rm --gpus all --shm-size 16g -v $C/scripts:/workspace/dub/dubai/scripts:ro -v $C/infra:/workspace/dub/dubai/infra:ro \
+docker run --rm --gpus all --shm-size 16g "${LK[@]}" -v $C/scripts:/workspace/dub/dubai/scripts:ro -v $C/infra:/workspace/dub/dubai/infra:ro \
   -v $VOL:/workspace/dub/dubai/models -v $PK:/fps/in:ro -v $O:/fps/out -e E2E_FPS_NATIVE=on --entrypoint bash $IMG -c '
 set -u; cd /workspace/dub/dubai; export DUB_PROFILE=clean DUB_ALLOW_NC=0 DUB_ALLOW_NC_BED=0; bash infra/docker/entrypoint.sh true || exit 3
 PY=/venv/dabai/bin/python; T=scripts/keysync/r16/tz; R=/fps/out; mkdir -p $R/pairs $R/clips
@@ -51,13 +52,14 @@ for t0, w in r[\"windows\"].items():
 done
 for d in /fps/in/pairs/*/; do [ -d "$d" ] || continue; n=$(basename $d); mkdir -p $R/pairs/$n; ln -sf $d/A.mp4 $R/pairs/$n/A.mp4; ln -sf $d/B.mp4 $R/pairs/$n/B.mp4; done
 for P in $R/pairs/*/; do n=$(basename $P); [ -f $P/syncnet.json ] && continue; [ -e $P/A.mp4 ] && [ -e $P/B.mp4 ] || continue
+  exec 9>> /workspace/dub/gpu.lock; flock 9   # SyncNet is on the GPU
   PYTHONPATH=scripts/pilot $PY -c "
 import json, sys; from syncnet_common import eval_syncnet
 out = {}
 for k in (\"A\", \"B\"):
     try: r = eval_syncnet(__import__(\"pathlib\").Path(\"$P/\" + k + \".mp4\")); out[k] = {\"conf\": r[\"confidence\"], \"offset\": r[\"av_offset_frames\"], \"s\": r[\"seconds\"]}
     except Exception as e: out[k] = {\"error\": str(e)[-300:]}
-json.dump(out, open(\"$P/syncnet.json\", \"w\")); print(\"== syncnet $n\", json.dumps(out))"
+json.dump(out, open(\"$P/syncnet.json\", \"w\")); print(\"== syncnet $n\", json.dumps(out))"; flock -u 9
 done
 python3 - <<PYEOF
 import json, glob, os
