@@ -258,11 +258,30 @@ for f in $TAGS; do   # the raw render vs the ORIGINAL dub (K2): ~0 after the pro
   if [ "$SH" = auto ]; then [ "$O" = x ] && O=0; SH=$(( -O )); fi
   SHF[$f]=$SH; CHO[$f]=$O; echo "KS_CHECK $f delay ${DLY[$f]} ms, raw offset vs the original dub $O, paste shift $SH"
 done
+pbc_window() {   # r19 KS_PBC_WINDOW: pbc_window <face> -> "<offset | x> <conf>" of SyncNet on the PROBE'S OWN WINDOW of the full render: KS_PROBE_S s
+  # from the face's first own speech - 0.5 s (the same rule and whole frames as the probe cut), against the ORIGINAL dub. The 13.11 proof of
+  # KS_PROBE_BY_CHECK failed on q02 only because the confidence over a whole render (2.25) is not the confidence over the probe window (4.92).
+  local f=$1 RAW k0 L O C; RAW=$(ls $KW/out/$f/*.mp4 | head -1); mkdir -p $KW/pbcw
+  read -r k0 L < <($MPY - $KW/dub_$f.wav $N ${KS_PROBE_S:-10} <<'PY'
+import sys, wave, numpy as np
+wav, n, ps = sys.argv[1], int(sys.argv[2]), float(sys.argv[3]); w = wave.open(wav); sr = w.getframerate(); x = np.frombuffer(w.readframes(w.getnframes()), np.int16)
+e = np.sqrt(np.convolve(x.astype(np.float32) ** 2, np.ones(sr // 10) / (sr // 10), "same")); on = np.flatnonzero(e > 0.05 * (e.max() + 1e-6)); L = int(ps * 25)
+print(int(max(0, min(round(((on[0] / sr) - 0.5) * 25) if len(on) else 0, n - L))), min(L, n))
+PY
+  )
+  [ -n "${L:-}" ] || { echo "x 0"; return 0; }
+  ffmpeg -v error -y -i $RAW -vf "select=between(n\,$k0\,$((k0 + L - 1))),setpts=N/25/TB" -r 25 -an -c:v libx264 -crf 10 -pix_fmt yuv420p $KW/pbcw/v_$f.mp4 \
+    && ffmpeg -v error -y -i $KW/data/dubo_$f.wav -af "atrim=start_sample=$((k0 * 640)):end_sample=$(((k0 + L) * 640)),asetpts=PTS-STARTPTS" -ar 16000 -ac 1 $KW/pbcw/a_$f.wav || { echo "x 0"; return 0; }
+  O=$(sync_off $KW/pbcw/v_$f.mp4 $KW/pbcw/a_$f.wav $KW/pbcw/sync_$f.json)
+  C=$(python3 -c "import json; print(json.load(open('$KW/pbcw/sync_$f.json'))['global']['conf'])" 2>/dev/null || echo 0)
+  echo "$O $C"; echo "KS_PBC_WINDOW $f frames $k0..$((k0 + L - 1)): offset $O conf $C" >&2
+}
 if [ $PBC = 1 ]; then   # r17 KS_PROBE_BY_CHECK: the probe decision from the check (scripts/keysync/r16/pbc_decide.py); a re-render only when it differs
   RR=""
-  for f in $TAGS; do C=$(python3 -c "import json; print(json.load(open('$KW/sync_$f.json'))['global']['conf'])" 2>/dev/null || echo 0)
-    read -r ACT ND FLG < <(python3 $KT/pbc_decide.py --check-offset "${CHO[$f]:-x}" --conf "$C" --delay ${DLY[$f]})
-    echo "KS_PROBE $f (by check) check offset ${CHO[$f]:-x} conf $C -> $ACT $ND ms ($FLG)"
+  for f in $TAGS; do C=$(python3 -c "import json; print(json.load(open('$KW/sync_$f.json'))['global']['conf'])" 2>/dev/null || echo 0); OC=${CHO[$f]:-x}
+    if [ "${KS_PBC_WINDOW:-1}" = 1 ]; then read -r OC C < <(pbc_window $f 2>> $KW/pbcw.log); echo "KS_PROBE $f (by check, the probe's window) offset $OC conf $C (whole render: offset ${CHO[$f]:-x})"; fi
+    read -r ACT ND FLG < <(python3 $KT/pbc_decide.py --check-offset "$OC" --conf "$C" --delay ${DLY[$f]})
+    echo "KS_PROBE $f (by check) check offset $OC conf $C -> $ACT $ND ms ($FLG)"
     case $ACT in
       offscreen) flag ks_offscreen_voice "$f: (by check) conf $C < ${KS_OFFSCREEN_CONF:-1.5}: the voice is not this face's (off-screen) -> its source picture"; OFFS="${OFFS:-} $f";;
       rerender) [ "$FLG" != ok ] && flag $FLG "$f: (by check) conf $C, check offset ${CHO[$f]:-x} -> delay $ND"; DLY[$f]=$ND; RR="$RR $f";;
