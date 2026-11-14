@@ -52,7 +52,7 @@ N=$(ffprobe -v error -count_packets -select_streams v:0 -show_entries stream=nb_
 t landmarks   # CPU; up to KS_NUM_FACES faces (route.json faces are matched to these tracks)
 if [ -n "${KS_MP_NPZ:-}" ]; then cp "$KS_MP_NPZ" $KW/master_mp.npz   # (ks_shots.sh: the parent's landmarks sliced to this shot)
 elif [ -n "$PRE" ]; then cp $PRE/master_mp.npz $KW/master_mp.npz
-else GLOG_minloglevel=2 OMP_NUM_THREADS=4 $MPY $R/scripts/pilot/mp_landmarks.py $KW/master_25fps.mp4 $KW/master_mp.npz --num-faces ${KS_NUM_FACES:-4} > $KW/mp.log 2>&1 || { tail -3 $KW/mp.log; exit 1; }; fi
+else GLOG_minloglevel=2 OMP_NUM_THREADS=4 $MPY $R/scripts/pilot/mp_landmarks.py $KW/master_25fps.mp4 $KW/master_mp.npz --num-faces ${KS_NUM_FACES:-4} ${KS_MP_TILES:+--tiles $KS_MP_TILES} > $KW/mp.log 2>&1 || { tail -3 $KW/mp.log; exit 1; }; fi
 if [ "${KS_SHOTS:-auto}" != off ] && [ -z "${KS_IN_SHOT:-}" ]; then   # K2 multi-shot: > 1 segment (hard cuts + faceless gaps > 2 s, each cut to its face range) -> ks_shots.sh runs this script per face segment
   t shots; $PY $KT/ks_shots.py detect --video $KW/master_25fps.mp4 --mp $KW/master_mp.npz --out $KW/shots.json | cut -c1-600 || exit 1
   if [ "$(python3 -c "import json; print(len(json.load(open('$KW/shots.json'))['segments']))")" -gt 1 ]; then bash $R/scripts/keysync/r16/ks_shots.sh "$ID" "$AD" "$W" "$OUTV" "$ROUTE" $KW; exit $?; fi
