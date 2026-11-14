@@ -119,8 +119,9 @@ ENV DUB_ROOT=/workspace/dub/dubai DUB_ENV=/venv/dabai VIRTUAL_ENV=/venv/dabai DU
 # KS_TAIL_FADE=on (Irina's blind pick 13.11, the m03 end face): after a face's last strong dub phrase it fades to the source INSIDE the paste (ks_plain
 # --tail-src; not KS_TAIL_SRC, the re-encoding pass, which stays off). KS_HYBRID_UP: 0 = the hybrid of 13.11; 0.60 = the tight boundary up to the nose
 # level (old03: no background pulled into the stubble) - set it here once Irina's blind "в | в-new | б" verdict is in. KS_OCCL=mask (the cup / turn gate
-# as a mask factor, q05) is ON: her blind pick 13.11 ("B менее страшен"). It also returns the face to the source on a strong head turn (ks_occl.py's
-# pose rule, her 09.11 rule 4): long5 has 3 such spans of ~2 s. KS_OCCL_ARGS="--pad 18 --ramp 6" (the wider span around the cup) waits for her pick.
+# as a mask factor, q05) is ON: her blind pick 13.11 ("B менее страшен"). It would also return the face to the source on a strong head turn (ks_occl.py's
+# pose rule) only if KS_OCCL_ARGS re-enables it: the code default is "--pad 18 --ramp 6 --y0 9 --y1 10" = the wider span around the object (her pick 14.11)
+# and the head-turn rule OFF (long5: 3 spans of ~2 s with a Russian mouth while the person talks: not wanted).
 ARG KS_TAIL_SRC=off KS_OCCL=mask KS_PAUSE=off KS_CAP="" KS_CMS=0 KS_MASK=hybrid KS_CM_SHADOW="" KS_TAIL_FADE=on KS_HYBRID_UP=0
 ENV KS_TAIL_SRC=${KS_TAIL_SRC} KS_OCCL=${KS_OCCL} KS_PAUSE=${KS_PAUSE} KS_CAP=${KS_CAP} KS_CMS=${KS_CMS} KS_MASK=${KS_MASK} KS_CM_SHADOW=${KS_CM_SHADOW} KS_TAIL_FADE=${KS_TAIL_FADE} KS_HYBRID_UP=${KS_HYBRID_UP} \
     PATH=/venv/dabai/bin:${PATH}

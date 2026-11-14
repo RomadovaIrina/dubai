@@ -25,6 +25,7 @@ ap.add_argument("--tail-src", default="", help="r18 (Irina 13.11: the m03 end fa
 ap.add_argument("--gate-w", default="", help="r18: per-GLOBAL-master-frame weights 'take the original' in [0, 1] (.npy, or a json with a 'w' list = ks_occl.py --dump: occlusion / strong turn / hand over the mouth): the paste mask is multiplied by (1 - w), INSIDE this single paste pass (Irina 09.11 rules 3-4 without ks_occl.py's second whole-frame encode)")
 ap.add_argument("--tail-hold", type=float, default=0.0); ap.add_argument("--tail-ramp", type=float, default=0.25); ap.add_argument("--tail-min", type=float, default=1.0); ap.add_argument("--tail-end-thr", type=float, default=0.25)
 ap.add_argument("--hybrid-at", type=float, default=0.0, help="r18 hybrid: where the oval -> tight crossfade is centred, as a fraction of the way from the mouth corners (0) to the chin point (1)")
+ap.add_argument("--neck-clamp", type=float, default=0.12, help="r18 (Irina 14.11, long5 head turns: the neck under the chin swells / shrinks): the limit of --neck-follow's vertical warp, x IOD (0.12 = K1's value)")
 ap.add_argument("--hybrid-up", type=float, default=0.0, help="r18 hybrid (Irina 13.11, old03: the oval share left in the crossfade still pulled background into the stubble at the jaw edge by the mouth corners): the crossfade centre this many IOD ABOVE the mouth corners, so the tight boundary already holds at their level and below (0.15 with the 0.12 band = fully tight from 0.03 IOD above the corners)")
 ap.add_argument("--hybrid-band", type=float, default=0.12, help="r18 hybrid: half-height of the crossfade, x IOD")
 ap.add_argument("--mask", default="oval", choices=["oval", "tight", "mouth", "hybrid"], help="r16c K1 rule 5: oval = the r15/r16 mask (oval + 0.15 IOD down + 0.10 IOD dilation: reaches neck / collar / background); tight = strictly INSIDE the face: the cheek / jaw contour (union of the source jaw and KeySync's generated jaw), inset, feathered inwards")
@@ -155,7 +156,7 @@ def neck_warp(roi, k, i):   # r16c K1 option (a): the source neck follows the ge
     def env(pts):   # the jaw polyline as y(x) on the columns it spans (nan outside)
         o_ = np.argsort(pts[:, 0]); x_, y_ = pts[o_, 0], pts[o_, 1]; y = np.interp(xs_, x_, y_); y[(xs_ < x_[0]) | (xs_ > x_[-1])] = np.nan; return y, x_[0], x_[-1]
     ys_, x0_, x1_ = env(q_[JAWLOW]); yg_, _, _ = env(kp[JAWLOW])
-    dy = np.clip(yg_ - ys_, -0.12 * iod, 0.12 * iod); dy[~np.isfinite(dy)] = 0
+    dy = np.clip(yg_ - ys_, -a.neck_clamp * iod, a.neck_clamp * iod); dy[~np.isfinite(dy)] = 0
     wdt = max(x1_ - x0_, 1.0); tp = np.clip(np.minimum(xs_ - x0_, x1_ - xs_) / (0.15 * wdt), 0, 1); dy = dy * (0.5 - 0.5 * np.cos(np.pi * tp))
     ysf = np.where(np.isfinite(ys_), ys_, 1e9).astype(np.float32)[None, :]
     below = np.clip(1 - (GY - ysf) / max(a.neck_follow * iod, 1.0), 0, 1) * (GY >= ysf)
