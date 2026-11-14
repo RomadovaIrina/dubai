@@ -25,6 +25,9 @@ ap.add_argument("--tail-src", default="", help="r18 (Irina 13.11: the m03 end fa
 ap.add_argument("--gate-w", default="", help="r18: per-GLOBAL-master-frame weights 'take the original' in [0, 1] (.npy, or a json with a 'w' list = ks_occl.py --dump: occlusion / strong turn / hand over the mouth): the paste mask is multiplied by (1 - w), INSIDE this single paste pass (Irina 09.11 rules 3-4 without ks_occl.py's second whole-frame encode)")
 ap.add_argument("--tail-hold", type=float, default=0.0); ap.add_argument("--tail-ramp", type=float, default=0.25); ap.add_argument("--tail-min", type=float, default=1.0); ap.add_argument("--tail-end-thr", type=float, default=0.25)
 ap.add_argument("--hybrid-at", type=float, default=0.0, help="r18 hybrid: where the oval -> tight crossfade is centred, as a fraction of the way from the mouth corners (0) to the chin point (1)")
+ap.add_argument("--cavity-p", type=float, default=30.0, help="r19: the percentile of the source open-mouth interior lightness that --cavity lifts toward (30 = r15: with --cavity 0.5 a black cavity moves ~5 L*: no visible change, Irina 14.11)")
+ap.add_argument("--neck-clamp", type=float, default=0.12, help="r18 (Irina 14.11, long5 head turns: the neck under the chin swells / shrinks): the limit of --neck-follow's vertical warp, x IOD (0.12 = K1's value)")
+ap.add_argument("--hybrid-gen", type=int, default=1, help="r19 hybrid (Irina 14.11, long5: the neck under the chin swells / shrinks): 1 = the tight part = the source contour U the GENERATED jaw (its lower edge follows the drawn jaw every frame: the below-chin reach moves 1.4-1.7x more than the 08.11 oval's); 0 = the source contour only (+ --mask-chin-down): an edge that moves with the real jaw")
 ap.add_argument("--hybrid-up", type=float, default=0.0, help="r18 hybrid (Irina 13.11, old03: the oval share left in the crossfade still pulled background into the stubble at the jaw edge by the mouth corners): the crossfade centre this many IOD ABOVE the mouth corners, so the tight boundary already holds at their level and below (0.15 with the 0.12 band = fully tight from 0.03 IOD above the corners)")
 ap.add_argument("--hybrid-band", type=float, default=0.12, help="r18 hybrid: half-height of the crossfade, x IOD")
 ap.add_argument("--mask", default="oval", choices=["oval", "tight", "mouth", "hybrid"], help="r16c K1 rule 5: oval = the r15/r16 mask (oval + 0.15 IOD down + 0.10 IOD dilation: reaches neck / collar / background); tight = strictly INSIDE the face: the cheek / jaw contour (union of the source jaw and KeySync's generated jaw), inset, feathered inwards")
@@ -155,7 +158,7 @@ def neck_warp(roi, k, i):   # r16c K1 option (a): the source neck follows the ge
     def env(pts):   # the jaw polyline as y(x) on the columns it spans (nan outside)
         o_ = np.argsort(pts[:, 0]); x_, y_ = pts[o_, 0], pts[o_, 1]; y = np.interp(xs_, x_, y_); y[(xs_ < x_[0]) | (xs_ > x_[-1])] = np.nan; return y, x_[0], x_[-1]
     ys_, x0_, x1_ = env(q_[JAWLOW]); yg_, _, _ = env(kp[JAWLOW])
-    dy = np.clip(yg_ - ys_, -0.12 * iod, 0.12 * iod); dy[~np.isfinite(dy)] = 0
+    dy = np.clip(yg_ - ys_, -a.neck_clamp * iod, a.neck_clamp * iod); dy[~np.isfinite(dy)] = 0
     wdt = max(x1_ - x0_, 1.0); tp = np.clip(np.minimum(xs_ - x0_, x1_ - xs_) / (0.15 * wdt), 0, 1); dy = dy * (0.5 - 0.5 * np.cos(np.pi * tp))
     ysf = np.where(np.isfinite(ys_), ys_, 1e9).astype(np.float32)[None, :]
     below = np.clip(1 - (GY - ysf) / max(a.neck_follow * iod, 1.0), 0, 1) * (GY >= ysf)
@@ -198,7 +201,7 @@ def mask(k):
         hp = hull(qs[OVAL]); mo = np.zeros((s, s), np.uint8); cv2.fillPoly(mo, [hp], 1); cv2.fillPoly(mo, [hp + np.array([0, int(round(a.down * iod))], np.int32)], 1)
         mo = cv2.dilate(mo, el(a.dil * iod))
         ii = kidx(k); pts = [qs[OVAL]]; low = [qs[JAWLOW]]
-        if KLS is not None and 0 <= ii < len(KLS) and np.isfinite(KLS[ii][JAWC]).all(): pts.append(KLS[ii][JAWC]); low.append(KLS[ii][JAWLOW])
+        if a.hybrid_gen and KLS is not None and 0 <= ii < len(KLS) and np.isfinite(KLS[ii][JAWC]).all(): pts.append(KLS[ii][JAWC]); low.append(KLS[ii][JAWLOW])
         if a.mask_chin_down > 0: pts += [x_ + np.array([0, a.mask_chin_down * iod], np.float32) for x_ in low]
         mt = np.zeros((s, s), np.uint8); cv2.fillPoly(mt, [hull(np.concatenate(pts))], 1)
         yc = float(qs[[61, 291], 1].mean()); yb = yc + a.hybrid_at * (float(qs[152, 1]) - yc) - a.hybrid_up * iod; hw = max(a.hybrid_band * iod, 1.0)
@@ -357,8 +360,8 @@ if need_cm or need_cav or need_sh:   # pass 1: the global colour match on the sk
         h_ = np.array([x for x in HFR if np.isfinite(x).all() and x[1] > 0]); r_ = float(np.median(h_[:, 0] / h_[:, 1])) if len(h_) else 1.0
         SHARP = float(np.clip((r_ - 1) * 1.5, 0, 1.5)); print(f"sharp auto: skin HF source / KeySync {r_:.3f} -> unsharp {SHARP:.2f}", flush=True)
     if need_cav and SC:
-        SC = np.concatenate(SC); CAV = (float(np.percentile(SC[:, 0], 30)), SC[:, 1:].mean(0).astype(np.float32))
-        print(f"source open-mouth interior: L p30 {CAV[0]:.1f}, a/b {CAV[1].round(1).tolist()} ({len(SC)} px)", flush=True)
+        SC = np.concatenate(SC); CAV = (float(np.percentile(SC[:, 0], a.cavity_p)), SC[:, 1:].mean(0).astype(np.float32))
+        print(f"source open-mouth interior: L p{a.cavity_p:g} {CAV[0]:.1f}, a/b {CAV[1].round(1).tolist()} ({len(SC)} px)", flush=True)
 if CMZ is not None:
     if "gain" in CMZ.files and not a.no_cm:
         gain, off = CMZ["gain"].astype(np.float32), CMZ["off"].astype(np.float32); print(f"colour match from {a.cm_file}: gain {gain.round(3).tolist()} offset {off.round(2).tolist()}", flush=True)
@@ -455,9 +458,11 @@ last[0] = None; nk = len(K)
 NKT = a.ks_total if a.ks_total >= 0 else nk; NTT = a.n_total if a.n_total >= 0 else n; SHG = a.k_base - a.ks_base + a.shift   # global KeySync length / master length / shift
 KS_SHORT = NKT - SHG < NTT   # the end fade exists ONLY for a KeySync output that is really shorter than the master (never because a chunk was cut)
 if KS_SHORT: print(f"WARNING: KeySync has {NKT} frames < master {NTT} (+ shift {SHG}): the last {NTT - NKT + SHG} frames fall back to the source with a 1 s fade; pad the KeySync inputs", flush=True)
-GW = None
+GW = GWM = None
 if a.gate_w:
     GW = np.asarray(json.load(open(a.gate_w))["w"] if a.gate_w.endswith(".json") else np.load(a.gate_w), np.float32)
+    if a.gate_w.endswith(".json") and json.load(open(a.gate_w)).get("wm"):   # r19 (Irina 14.11, old03 end): a second, faster 'take the original' weight for the MOUTH zone only (ks_tailw.py --wm)
+        GWM = np.asarray(json.load(open(a.gate_w))["wm"], np.float32); print(f"KS_GATEW mouth zone: {int((GWM > 0.999).sum())} frames the original, {int(((GWM > 0) & (GWM <= 0.999)).sum())} in ramps", flush=True)
     print(f"KS_GATEW {a.gate_w}: {int((GW > 0.999).sum())} frames the original, {int(((GW > 0) & (GW <= 0.999)).sum())} in ramps, of {len(GW)}", flush=True)
 TS0 = None
 if a.tail_src:   # the same detection as ks_tailsrc.py (20 ms RMS, 100 ms mean, the last STRONG speech), on the global timeline
@@ -499,6 +504,8 @@ for k, f in enumerate(frames(a.master, W, H)):
         roi = crop(f, k).astype(np.float32); mm2 = m * fade * (1.0 - wt)
         if a.neck_follow > 0: roi0 = roi; roi = neck_warp(roi, k, i); roi = roi if wt <= 0 else roi0 * wt + roi * (1.0 - wt)   # (the neck warp fades out with the paste)
         p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)]; iod = float(np.linalg.norm(p[33] - p[263])) if np.isfinite(p).all() else IODM
+        if GWM is not None and k + a.k_base < len(GWM) and float(GWM[k + a.k_base]) > wt:   # the mouth zone (source lips U drawn lips, + 0.3 IOD, feathered) is handed to the source ahead of the skin
+            mm2 = mm2 * (1.0 - cv2.GaussianBlur(mouth_zone(k, i, iod).astype(np.float32), (0, 0), max(1.0, 0.08 * iod)) * ((float(GWM[k + a.k_base]) - wt) / max(1.0 - wt, 1e-3)))
         if UP is not None and np.isfinite(p[[33, 263, 133, 362, 152]]).all():
             em = p[[33, 263, 133, 362]].mean(0) - BXY(k); ax = (p[152] - BXY(k)) - em; L2 = float(ax @ ax)
             if L2 > 1:

@@ -96,7 +96,7 @@ if P1:   # phase 1: every GLOBAL estimate from every chunk's samples (exact: the
         print(f"sharp auto (all chunks): skin HF source / KeySync {r_:.3f} -> unsharp {float(G['sharp']):.2f}", flush=True)
     if CAVITY > 0:
         sc = np.concatenate([x["sc"] for x in S0]) if S0 else np.zeros((0, 3))
-        G["cav_l"] = np.float64(np.percentile(sc[:, 0], 30)) if len(sc) else np.float64(-1); G["cav_ab"] = sc[:, 1:].mean(0).astype(np.float32) if len(sc) else np.zeros(2, np.float32)
+        G["cav_l"] = np.float64(np.percentile(sc[:, 0], float(val("--cavity-p", 30)))) if len(sc) else np.float64(-1); print(f"KS_CAVITY tone: source open-mouth interior L p{float(val('--cavity-p', 30)):g} = {float(G['cav_l']):.1f} ({len(sc)} px)", flush=True); G["cav_ab"] = sc[:, 1:].mean(0).astype(np.float32) if len(sc) else np.zeros(2, np.float32)
     np.savez(f"{T}/cm.npz", **G)
 t2 = time.time()
 with cf.ThreadPoolExecutor(len(jobs)) as ex: list(ex.map(lambda j: run(j, (["--cm-file", f"{T}/cm.npz"] if P1 else []) + ["--out", f"{j['dir']}/out.mp4"], "paste.log"), jobs))
