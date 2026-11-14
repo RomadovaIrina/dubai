@@ -55,6 +55,8 @@ ap.add_argument("--others-grow", type=float, default=0.0, help="r16 K1 m03: prot
                 "and stretched up by 0.35 of their IOD (hair), feathered on the speaker side; 0 = the r15 clamp (oval + 0.08 IOD)")
 ap.add_argument("--lfm", type=float, default=0.0, help="r16 K1 #15/#16: per-frame LOW-FREQUENCY Lab match (KeySync -> master skin, normalized blur at 0.35 IOD, mouth zone excluded), "
                 "gaussian-smoothed over time with this sigma in frames, on top of the global gain; 0 = off (one global offset)")
+ap.add_argument("--lfm-ex", type=float, default=0.3, dest="lfm_ex", help="r19 (04): --lfm measures the skin outside lips + this many IOD (0.3 = r16: the whole area around the mouth is unmeasured, the generator's dark-green stubble shade there survives); e.g. 0.06")
+ap.add_argument("--lfm-sg", type=float, default=0.35, dest="lfm_sg", help="r19: the --lfm blur sigma in IOD (0.35 = r16)"); ap.add_argument("--lfm-clip", type=float, default=12.0, dest="lfm_clip", help="r19: the --lfm correction limit in Lab units (12 = r16)")
 ap.add_argument("--sharp", default="0", help="r16 K1 #17: unsharp amount on the KeySync luma (sigma 1 px at 512 scale), or 'auto' = match the source's skin high-frequency energy")
 ap.add_argument("--keep-nose", type=float, default=0.0, help="r16 K1 #8: the source nose pixels (bridge -> alae, columella out), feather sigma in IOD units (e.g. 0.04); 0 = off")
 ap.add_argument("--upper-src", default="", help="r16 K1 #17: 'T0:T1' = the UPPER face from the full-res source (KeySync does not change it; the 512 crop softens eyes / glasses / brows): "
@@ -293,11 +295,11 @@ def mask(k):
 
 
 NOSE = [168, 6, 197, 195, 5, 4, 1, 19, 129, 358, 64, 294, 98, 327, 48, 278, 115, 344]
-def mouth_zone(k, i, iod):   # source lips at master k  U  KeySync lips at its frame i, dilated 0.3 IOD
+def mouth_zone(k, i, iod, ex=0.3):   # source lips at master k  U  KeySync lips at its frame i, dilated 0.3 IOD
     z_ = np.zeros((s, s), np.uint8); p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)] - BXY(k)
     if np.isfinite(p[LIPS]).all(): cv2.fillPoly(z_, [hull(p[LIPS])], 1)
     if KL is not None and 0 <= i < len(KL) and np.isfinite(KL[i][LIPS]).all(): cv2.fillPoly(z_, [hull(KL[i][LIPS])], 1)
-    return dil(z_, 0.3 * iod) > 0
+    return dil(z_, ex * iod) > 0   # r19 release merge: r18-quality's --lfm-ex radius + r19-speed's exact fast dilation
 def lab_of(img): return cv2.cvtColor(np.clip(img, 0, 255).astype(np.float32) / 255, cv2.COLOR_RGB2LAB)
 def hf_energy(y, wm): return float(np.sqrt((cv2.Laplacian(y, cv2.CV_32F)[wm] ** 2).mean())) if wm.sum() > 200 else np.nan
 IODM = float(np.nanmedian(np.linalg.norm(LM[:, 33] - LM[:, 263], axis=1)))
@@ -439,9 +441,9 @@ if a.lfm > 0:   # r16 K1: per-frame low-frequency Lab difference maps (LG x LG),
         m, sk = mask(k)
         if sk is None: continue
         p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)]; iod = float(np.linalg.norm(p[33] - p[263])) if np.isfinite(p).all() else IODM
-        wm = ((m > 0.05) & ~mouth_zone(k, i, iod)).astype(np.float32)
+        wm = ((m > 0.05) & ~mouth_zone(k, i, iod, a.lfm_ex)).astype(np.float32)
         kf = warp_ks(K[i].astype(np.float32), k, i); lk = lab_of(kf) * gain + off; lm_ = lab_of(crop(f, k))
-        sg = 0.35 * iod * LG / s; ds = lambda x: cv2.resize(x, (LG, LG), interpolation=cv2.INTER_AREA)
+        sg = a.lfm_sg * iod * LG / s; ds = lambda x: cv2.resize(x, (LG, LG), interpolation=cv2.INTER_AREA)
         wd = cv2.GaussianBlur(ds(wm), (0, 0), sg); ok_ = wd > 0.02
         dd = (cv2.GaussianBlur(ds(lm_ * wm[..., None]), (0, 0), sg) - cv2.GaussianBlur(ds(lk * wm[..., None]), (0, 0), sg)) / np.maximum(wd, 1e-3)[..., None]
         D[k] = dd * ok_[..., None]; V[k, ..., 0] = ok_
@@ -450,7 +452,7 @@ if a.lfm > 0:   # r16 K1: per-frame low-frequency Lab difference maps (LG x LG),
         xp = np.concatenate([np.repeat(x[:1], r_, 0), x, np.repeat(x[-1:], r_, 0)], 0); o_ = np.zeros_like(x)
         for j_, gj in enumerate(g): o_ += gj * xp[j_: j_ + len(x)]
         return o_
-    LFM = sm(D) / np.maximum(sm(V), 1e-3); LFM = np.clip(LFM, -12, 12).astype(np.float32)
+    LFM = sm(D) / np.maximum(sm(V), 1e-3); LFM = np.clip(LFM, -a.lfm_clip, a.lfm_clip).astype(np.float32)
     print(f"lfm: |D| mean L {np.abs(LFM[..., 0]).mean():.2f} a {np.abs(LFM[..., 1]).mean():.2f} b {np.abs(LFM[..., 2]).mean():.2f} (sigma_t {a.lfm})", flush=True)
 SFX = None
 if a.scale_fix:

@@ -28,6 +28,7 @@ ap.add_argument("--y0", type=float, default=-1); ap.add_argument("--y1", type=fl
 ap.add_argument("--zon", type=float, default=4.0); ap.add_argument("--zspan", type=float, default=4.0)
 ap.add_argument("--hand-on", type=float, default=0.25, dest="hand_on"); ap.add_argument("--lip-on", type=float, default=0.5, dest="lip_on"); ap.add_argument("--lip-tol", type=float, default=8.0, dest="lip_tol")
 ap.add_argument("--pad", type=int, default=3); ap.add_argument("--ramp", type=int, default=4); ap.add_argument("--min-run", type=int, default=4, dest="min_run")
+ap.add_argument("--lip-norm", type=int, default=1, dest="lip_norm", help="r19 (04, a backlit selfie: the lip-colour test fired with nothing over the face): 1 = take this frame's skin colour cast (median a*, b* of the cheeks + nose bridge minus its usual value) off the lip pixels before the match; 0 = the r16 test")
 ap.add_argument("--grow", type=float, default=0.06); ap.add_argument("--no-hands", action="store_true", dest="no_hands"); a = ap.parse_args()
 pr = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0", a.master], capture_output=True, text=True).stdout.strip().split(",")
 W, H = int(pr[0]), int(pr[1]); FB = W * H * 3
@@ -52,6 +53,7 @@ if not a.no_hands:
     import mediapipe as mp
     HANDS = mp.solutions.hands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.4, min_tracking_confidence=0.4)
 LIPS = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185]
+SKIN = [[116, 123, 147, 187, 205, 36, 100, 117], [345, 352, 376, 411, 425, 266, 329, 346], [6, 197, 195, 5, 51, 281]]; SKAB = {}   # r19: cheeks + nose bridge = this frame's skin colour (--lip-norm)
 HULLS = {}; LIPAB = {}   # per frame: the hand hulls (pass 2 keeps the hand pixels original); the lip pixels' a*, b*
 for k, f in enumerate(reader(a.master)):
     if k >= N: break
@@ -60,7 +62,10 @@ for k, f in enumerate(reader(a.master)):
     mw = float(np.linalg.norm(p[61] - p[291]))
     mx0, my0 = p[LIPS].min(0) - 0.3 * mw; mx1, my1 = p[LIPS].max(0) + 0.3 * mw   # the mouth box
     lm_ = cv2.fillPoly(np.zeros((H, W), np.uint8), [cv2.convexHull(p[LIPS].astype(np.float32))[:, 0].astype(np.int32)], 1)
-    lab = cv2.cvtColor(f, cv2.COLOR_RGB2LAB)[lm_ > 0].astype(np.float32); LIPAB[k] = lab[:, 1:] - 128 if len(lab) else np.zeros((0, 2))
+    labf = cv2.cvtColor(f, cv2.COLOR_RGB2LAB); lab = labf[lm_ > 0].astype(np.float32); LIPAB[k] = lab[:, 1:] - 128 if len(lab) else np.zeros((0, 2))
+    if a.lip_norm:
+        sm_ = np.zeros((H, W), np.uint8); [cv2.fillPoly(sm_, [cv2.convexHull(p[r_].astype(np.float32))[:, 0].astype(np.int32)], 1) for r_ in SKIN]; sk_ = labf[sm_ > 0].astype(np.float32)
+        if len(sk_) > 20: SKAB[k] = np.median(sk_[:, 1:], 0) - 128
     if HANDS is not None:
         r = HANDS.process(np.ascontiguousarray(f))
         if r.multi_hand_landmarks:
@@ -77,6 +82,11 @@ pose = np.clip((np.abs(yaw) - a.y0) / max(a.y1 - a.y0, 1e-3), 0, 1); pose[~ok] =
 ks = sorted(LIPAB); clean = [k for k in ks if hand[k] < 0.05 and pose[k] == 0 and len(LIPAB[k]) > 20]
 REFAB = np.median(np.concatenate([LIPAB[k] for k in clean[:: max(1, len(clean) // 200)]]), 0) if clean else np.zeros(2)
 match = np.full(N, np.nan)
+if a.lip_norm and SKAB:   # the lighting cast of each frame, measured on the skin, off the lip pixels (a cup changes the lips, not the cheeks; backlight changes both)
+    cs_ = [k for k in clean if k in SKAB] or sorted(SKAB); SREF = np.median(np.stack([SKAB[k] for k in cs_]), 0)
+    for k in ks:
+        if k in SKAB and len(LIPAB[k]): LIPAB[k] = LIPAB[k] - (SKAB[k] - SREF)
+    REFAB = np.median(np.concatenate([LIPAB[k] for k in clean[:: max(1, len(clean) // 200)]]), 0) if clean else REFAB
 for k in ks:
     if len(LIPAB[k]) > 20: match[k] = float((np.linalg.norm(LIPAB[k] - REFAB, axis=1) < a.lip_tol).mean())
 mref = float(np.nanmedian(match[clean])) if clean else 1.0
