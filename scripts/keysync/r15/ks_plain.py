@@ -27,6 +27,7 @@ ap.add_argument("--tail-hold", type=float, default=0.0); ap.add_argument("--tail
 ap.add_argument("--hybrid-at", type=float, default=0.0, help="r18 hybrid: where the oval -> tight crossfade is centred, as a fraction of the way from the mouth corners (0) to the chin point (1)")
 ap.add_argument("--cavity-p", type=float, default=30.0, help="r19: the percentile of the source open-mouth interior lightness that --cavity lifts toward (30 = r15: with --cavity 0.5 a black cavity moves ~5 L*: no visible change, Irina 14.11)")
 ap.add_argument("--neck-clamp", type=float, default=0.12, help="r18 (Irina 14.11, long5 head turns: the neck under the chin swells / shrinks): the limit of --neck-follow's vertical warp, x IOD (0.12 = K1's value)")
+ap.add_argument("--hybrid-gen", type=int, default=1, help="r19 hybrid (Irina 14.11, long5: the neck under the chin swells / shrinks): 1 = the tight part = the source contour U the GENERATED jaw (its lower edge follows the drawn jaw every frame: the below-chin reach moves 1.4-1.7x more than the 08.11 oval's); 0 = the source contour only (+ --mask-chin-down): an edge that moves with the real jaw")
 ap.add_argument("--hybrid-up", type=float, default=0.0, help="r18 hybrid (Irina 13.11, old03: the oval share left in the crossfade still pulled background into the stubble at the jaw edge by the mouth corners): the crossfade centre this many IOD ABOVE the mouth corners, so the tight boundary already holds at their level and below (0.15 with the 0.12 band = fully tight from 0.03 IOD above the corners)")
 ap.add_argument("--hybrid-band", type=float, default=0.12, help="r18 hybrid: half-height of the crossfade, x IOD")
 ap.add_argument("--mask", default="oval", choices=["oval", "tight", "mouth", "hybrid"], help="r16c K1 rule 5: oval = the r15/r16 mask (oval + 0.15 IOD down + 0.10 IOD dilation: reaches neck / collar / background); tight = strictly INSIDE the face: the cheek / jaw contour (union of the source jaw and KeySync's generated jaw), inset, feathered inwards")
@@ -200,7 +201,7 @@ def mask(k):
         hp = hull(qs[OVAL]); mo = np.zeros((s, s), np.uint8); cv2.fillPoly(mo, [hp], 1); cv2.fillPoly(mo, [hp + np.array([0, int(round(a.down * iod))], np.int32)], 1)
         mo = cv2.dilate(mo, el(a.dil * iod))
         ii = kidx(k); pts = [qs[OVAL]]; low = [qs[JAWLOW]]
-        if KLS is not None and 0 <= ii < len(KLS) and np.isfinite(KLS[ii][JAWC]).all(): pts.append(KLS[ii][JAWC]); low.append(KLS[ii][JAWLOW])
+        if a.hybrid_gen and KLS is not None and 0 <= ii < len(KLS) and np.isfinite(KLS[ii][JAWC]).all(): pts.append(KLS[ii][JAWC]); low.append(KLS[ii][JAWLOW])
         if a.mask_chin_down > 0: pts += [x_ + np.array([0, a.mask_chin_down * iod], np.float32) for x_ in low]
         mt = np.zeros((s, s), np.uint8); cv2.fillPoly(mt, [hull(np.concatenate(pts))], 1)
         yc = float(qs[[61, 291], 1].mean()); yb = yc + a.hybrid_at * (float(qs[152, 1]) - yc) - a.hybrid_up * iod; hw = max(a.hybrid_band * iod, 1.0)
