@@ -3,6 +3,8 @@
 The tail hand-over (drawn face -> source face after the face's last strong dub speech) as per-master-frame weights for ks_plain --gate-w, with a choice of
 WHEN and HOW FAST, decided on the whole video (ks_plain's own --tail-src decides per paste chunk and only knows a linear ramp at a fixed time):
   --mode plain     the ramp starts at t0 = the end of the last strong speech (+ --hold); = ks_plain --tail-src
+  --mode closed    the ramp starts at the first frame >= t0 where BOTH mouths are shut (openness <= --closed-thr); --mode none: zeros (keep the drawn face)
+  --wm tailw.json  a second weights file stored as "wm" = the MOUTH ZONE's own, faster hand-over (ks_plain: the lips go to the source while both mouths are shut, the skin follows slowly)
   --mode similar   the ramp starts at the first frame >= t0, within --search s, where the DRAWN and the SOURCE mouths are alike: |openness_drawn -
                    openness_source| <= --thr for --hold-frames frames in a row (openness = inner-lip gap / mouth width, MediaPipe 13-14 / 61-291);
                    none found -> t0 with --ramp-fallback s
@@ -12,9 +14,9 @@ import argparse, json, wave
 import numpy as np
 ap = argparse.ArgumentParser(); [ap.add_argument("--" + k, required=True) for k in ("dub", "lm", "ks-lm", "out")]
 ap.add_argument("--frames", type=int, required=True); ap.add_argument("--fps", type=float, default=25.0); ap.add_argument("--shift", type=int, default=0)
-ap.add_argument("--mode", default="plain", choices=["plain", "similar"]); ap.add_argument("--hold", type=float, default=0.0); ap.add_argument("--ramp", type=float, default=0.25)
+ap.add_argument("--mode", default="plain", choices=["plain", "similar", "closed", "none"]); ap.add_argument("--hold", type=float, default=0.0); ap.add_argument("--ramp", type=float, default=0.25)
 ap.add_argument("--min-tail", type=float, default=1.0); ap.add_argument("--end-thr", type=float, default=0.25); ap.add_argument("--search", type=float, default=1.5)
-ap.add_argument("--thr", type=float, default=0.06); ap.add_argument("--hold-frames", type=int, default=2); ap.add_argument("--ramp-fallback", type=float, default=1.0); ap.add_argument("--merge", default="")
+ap.add_argument("--thr", type=float, default=0.06); ap.add_argument("--hold-frames", type=int, default=2); ap.add_argument("--ramp-fallback", type=float, default=1.0); ap.add_argument("--merge", default=""); ap.add_argument("--closed-thr", type=float, default=0.02); ap.add_argument("--wm", default="")
 a = ap.parse_args(); N, FPS = a.frames, a.fps
 w_ = wave.open(a.dub); sr = w_.getframerate(); x = np.frombuffer(w_.readframes(w_.getnframes()), np.int16).astype(np.float32); hop = sr // 50; nf = len(x) // hop
 e = np.sqrt((x[:nf * hop].reshape(nf, hop) ** 2).mean(1)) if nf else np.zeros(0); p99 = max(float(np.percentile(e, 99)) if nf else 1.0, 1.0)
@@ -27,11 +29,11 @@ def opn(p):
 os_ = np.array([opn(LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)]) for k in range(N)]); og = np.array([opn(KL[int(np.clip(k - a.shift, 0, len(KL) - 1))]) for k in range(N)])
 info = {"last_speech_s": round(last, 2), "t0_s": round(t0, 2), "tail_s": round(dur - t0, 2), "mode": a.mode, "applied": False}
 w = np.zeros(N, np.float32)
-if on.any() and dur - t0 >= a.min_tail:
+if on.any() and dur - t0 >= a.min_tail and a.mode != "none":
     k0 = min(N - 1, int(np.floor(t0 * FPS))); ks, ramp = k0, a.ramp; d = np.abs(og - os_)
     info["jump_at_t0"] = None if not np.isfinite(d[k0]) else round(float(d[k0]), 3); info["open_drawn_src_at_t0"] = [None if not np.isfinite(v) else round(float(v), 3) for v in (og[k0], os_[k0])]
-    if a.mode == "similar":
-        found = None
+    if a.mode in ("similar", "closed"):
+        found = None; d = d if a.mode == "similar" else np.maximum(og, os_); a.thr = a.thr if a.mode == "similar" else a.closed_thr   # closed: BOTH mouths shut
         for k in range(k0, min(N - a.hold_frames, k0 + int(a.search * FPS))):
             if np.all(np.isfinite(d[k:k + a.hold_frames])) and np.all(d[k:k + a.hold_frames] <= a.thr): found = k; break
         if found is None: ramp = a.ramp_fallback; info["similar"] = "not found within %.1f s -> t0, ramp %.2f s" % (a.search, ramp)
@@ -40,4 +42,6 @@ if on.any() and dur - t0 >= a.min_tail:
     info.update({"applied": True, "start_s": round(ks / FPS, 2), "ramp_s": ramp, "jump_at_start": None if not np.isfinite(d[ks]) else round(float(d[ks]), 3)})
 if a.merge:
     m = np.asarray(json.load(open(a.merge))["w"], np.float32); n_ = min(len(m), N); w[:n_] = np.maximum(w[:n_], m[:n_]); info["merged"] = a.merge
-json.dump({"w": [round(float(v), 4) for v in w], "tail": info}, open(a.out, "w")); print("KS_TAILW " + json.dumps(info))
+o_ = {"w": [round(float(v), 4) for v in w], "tail": info}
+if a.wm: o_["wm"] = json.load(open(a.wm))["w"]; info["mouth_zone"] = json.load(open(a.wm))["tail"]   # the mouth zone's own (faster) weights for ks_plain --gate-w
+json.dump(o_, open(a.out, "w")); print("KS_TAILW " + json.dumps(info))

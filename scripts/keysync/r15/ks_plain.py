@@ -458,9 +458,11 @@ last[0] = None; nk = len(K)
 NKT = a.ks_total if a.ks_total >= 0 else nk; NTT = a.n_total if a.n_total >= 0 else n; SHG = a.k_base - a.ks_base + a.shift   # global KeySync length / master length / shift
 KS_SHORT = NKT - SHG < NTT   # the end fade exists ONLY for a KeySync output that is really shorter than the master (never because a chunk was cut)
 if KS_SHORT: print(f"WARNING: KeySync has {NKT} frames < master {NTT} (+ shift {SHG}): the last {NTT - NKT + SHG} frames fall back to the source with a 1 s fade; pad the KeySync inputs", flush=True)
-GW = None
+GW = GWM = None
 if a.gate_w:
     GW = np.asarray(json.load(open(a.gate_w))["w"] if a.gate_w.endswith(".json") else np.load(a.gate_w), np.float32)
+    if a.gate_w.endswith(".json") and json.load(open(a.gate_w)).get("wm"):   # r19 (Irina 14.11, old03 end): a second, faster 'take the original' weight for the MOUTH zone only (ks_tailw.py --wm)
+        GWM = np.asarray(json.load(open(a.gate_w))["wm"], np.float32); print(f"KS_GATEW mouth zone: {int((GWM > 0.999).sum())} frames the original, {int(((GWM > 0) & (GWM <= 0.999)).sum())} in ramps", flush=True)
     print(f"KS_GATEW {a.gate_w}: {int((GW > 0.999).sum())} frames the original, {int(((GW > 0) & (GW <= 0.999)).sum())} in ramps, of {len(GW)}", flush=True)
 TS0 = None
 if a.tail_src:   # the same detection as ks_tailsrc.py (20 ms RMS, 100 ms mean, the last STRONG speech), on the global timeline
@@ -502,6 +504,8 @@ for k, f in enumerate(frames(a.master, W, H)):
         roi = crop(f, k).astype(np.float32); mm2 = m * fade * (1.0 - wt)
         if a.neck_follow > 0: roi0 = roi; roi = neck_warp(roi, k, i); roi = roi if wt <= 0 else roi0 * wt + roi * (1.0 - wt)   # (the neck warp fades out with the paste)
         p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)]; iod = float(np.linalg.norm(p[33] - p[263])) if np.isfinite(p).all() else IODM
+        if GWM is not None and k + a.k_base < len(GWM) and float(GWM[k + a.k_base]) > wt:   # the mouth zone (source lips U drawn lips, + 0.3 IOD, feathered) is handed to the source ahead of the skin
+            mm2 = mm2 * (1.0 - cv2.GaussianBlur(mouth_zone(k, i, iod).astype(np.float32), (0, 0), max(1.0, 0.08 * iod)) * ((float(GWM[k + a.k_base]) - wt) / max(1.0 - wt, 1e-3)))
         if UP is not None and np.isfinite(p[[33, 263, 133, 362, 152]]).all():
             em = p[[33, 263, 133, 362]].mean(0) - BXY(k); ax = (p[152] - BXY(k)) - em; L2 = float(ax @ ax)
             if L2 > 1:
