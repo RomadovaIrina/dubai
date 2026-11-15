@@ -32,6 +32,7 @@ KT=$KW/kit; PAD=${KS_PAD:-60}
 flag() { echo "$1" >> $KW/flags.txt; echo "KS_FLAG $1 ${2:-}"; }
 t() { echo "KS_T $1 $(date +%s.%N)"; }
 dur() { ffprobe -v error -show_entries format=duration -of csv=p=0 "$1"; }
+pjobs() { echo ${KS_PASTE_JOBS:-$(( $(nproc --all) / 3 > 16 ? 16 : $(nproc --all) / 3 ))}; }   # the parallel paste's chunk count (ks_plain_par --jobs): the paste and its pre-slice use the same
 . $R/scripts/keysync/r16/sync_serve.sh   # r17: sync_run (resident SyncNet process when KS_SYNC_SERVE=1, else the cold call)
 sync_off() {   # sync_off <video> <wav> <json>: SyncNet global AV offset of a raw KeySync render (first KS_SYNC_MAX_S s); prints the offset or "x"
   local V=$1 A=$2 J=$3 MX=${KS_SYNC_MAX_S:-60}
@@ -243,6 +244,12 @@ done
 # second extractor's memory next to the render). OFF by default: no wall-time gain on long5 (see ks_fast.py).
 if [ "${KS_LMK_AHEAD:-0}" = 1 ]; then if [ -n "$SHR" ]; then awk '{print "LMK " $2}' $KW/jobs.txt >> $FJ; else awk 'NR > 1 {print "LMK " $2}' $KW/jobs.txt >> $FJ; fi; fi
 cat $KW/jobs.txt >> $FJ; touch $KW/jobs.sub   # (jobs.sub: ks_shots.sh KS_SHOT_STREAM may queue the next shot)
+# r20 speed (same output; KS_PRESLICE=0 = as before): the first paste works on the 25 fps master, which exists since the prep, so its lossless
+# chunk slices (ks_plain_par --preslice: the same cut as the paste's own) are made NOW, while the GPU renders and the cores idle; the paste finds
+# them ($KW/ksp1) and skips that part of its slicing. A later face pastes onto the previous paste: no pre-slice for it.
+if [ "${KS_PRESLICE:-1}" = 1 ] && [ "${KS_PASTE_JOBS:-0}" != 1 ] && [ -f $KT/ks_plain_par.py ]; then
+  rm -rf $KW/ksp1 $KW/ksp1.rc; mkdir -p $KW/ksp1; touch $KW/ksp1.started
+  ( ( cd $KT && $PY $KT/ks_plain_par.py --jobs $(pjobs) --tmp $KW/ksp1 --preslice --out $KW/paste_1.mp4 -- --master $KW/master_25fps.mp4 ) > $KW/ksp1.log 2>&1; echo $? > $KW/ksp1.rc ) & fi
 if [ -n "$SHR" ]; then waitjob "$(tail -1 $KW/jobs.txt | awk '{print $1}')" || exit 1   # (jobs run in order: the last one done = all done)
 elif [ $PBC = 1 ]; then waitjob "$(tail -1 $KW/jobs.txt | awk '{print $1}')" || exit 1   # (r17 PBC: ks_fast stays up for a re-render)
 else echo END >> $FJ; wait $KSP || { tail -5 $KLOG; exit 1; }; fi
@@ -345,7 +352,10 @@ for f in $TAGS; do
   ARGS="--ks $L --ks-lm $P/raw_lm.npz --master $CUR --box $KW/data/box_$f.json --lm $KW/lm_$f.npz --audio $AD/final_mix_aac.m4a --shift ${SHF[$f]} --absent skip $OTH \
         ${KS_PLAIN_ARGS---lfm 6 --upper-src 0.12:0.32 --keep-nose 0.04 --align 2 --align-ecc $P/ecc.npz --align-scale 0 --tex 2} ${KS_PLAIN_EXTRA:-} $MK"
   if [ "${KS_PASTE_JOBS:-0}" != 1 ] && [ -f $KT/ks_plain_par.py ]; then
-    ( cd $KT && KS_CMS=1 $PY $KT/ks_plain_par.py --jobs ${KS_PASTE_JOBS:-$(( $(nproc --all) / 3 > 16 ? 16 : $(nproc --all) / 3 ))} --out $NXT -- $ARGS ) > $P/plain.log 2>&1 || {   # a failed parallel paste -> the serial one (== by K1 a6ded57)
+    PSL=""   # r20 KS_PRESLICE: the master slices cut during the render (the first paste only; a failed pre-slice = the paste cuts them itself)
+    if [ $n = 1 ] && [ -f $KW/ksp1.started ]; then until [ -f $KW/ksp1.rc ]; do sleep 0.1; done
+      if [ "$(cat $KW/ksp1.rc)" = 0 ]; then PSL="--tmp $KW/ksp1"; else rm -rf $KW/ksp1; fi; rm -f $KW/ksp1.started $KW/ksp1.rc; fi
+    ( cd $KT && KS_CMS=1 $PY $KT/ks_plain_par.py --jobs $(pjobs) $PSL --out $NXT -- $ARGS ) > $P/plain.log 2>&1 || {   # a failed parallel paste -> the serial one (== by K1 a6ded57)
       flag ks_paste_par_retry "$f: parallel paste failed ($(grep -a -E "Error" $P/plain.log | tail -1 | cut -c1-120)) -> serial"; mv $P/plain.log $P/plain_par_failed.log
       ( cd $KT && KS_CMS=1 $PY $KT/ks_plain.py $ARGS --out $NXT ) > $P/plain.log 2>&1 || { tail -5 $P/plain.log; exit 1; }; }
   else ( cd $KT && KS_CMS=1 $PY $KT/ks_plain.py $ARGS --out $NXT ) > $P/plain.log 2>&1 || { tail -5 $P/plain.log; exit 1; }; fi

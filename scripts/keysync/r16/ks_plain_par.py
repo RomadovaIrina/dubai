@@ -14,6 +14,8 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 ap = argparse.ArgumentParser(); ap.add_argument("--jobs", type=int, default=0); ap.add_argument("--out", required=True)
 ap.add_argument("--margin", type=int, default=30); ap.add_argument("--min-chunk", type=int, default=120); ap.add_argument("--tmp", default="")
+ap.add_argument("--preslice", action="store_true", help="r20 speed (same output): only cut the MASTER into this run's chunks (--tmp <dir> -- --master <video>) and exit; the paste started "
+                "later with the same --tmp / --jobs / master finds the slices and skips that cut. ks_face.sh runs it while the GPU renders (the master exists long before the layer)")
 ap.add_argument("rest", nargs=argparse.REMAINDER); a = ap.parse_args()
 R = [x for x in a.rest if x != "--"]
 def val(flag, default=None):
@@ -26,18 +28,33 @@ def setv(args, flag, v):
 nframes = lambda v: int(subprocess.run(["ffprobe", "-v", "error", "-count_packets", "-select_streams", "v:0", "-show_entries", "stream=nb_read_packets", "-of", "csv=p=0", v],
                                        capture_output=True, text=True).stdout.strip())
 t0 = time.time(); MST, KSV, SH = val("--master"), val("--ks"), int(val("--shift", 0))
-n, nk = nframes(MST), nframes(KSV)
+n = nframes(MST); nk = 0 if a.preslice else nframes(KSV)
 J = a.jobs or max(1, (os.cpu_count() or 8) // 6)
 J = max(1, min(J, n // a.min_chunk)); L = math.ceil(n / J)
 T = a.tmp or tempfile.mkdtemp(prefix="ksp_", dir=os.path.dirname(os.path.abspath(a.out))); os.makedirs(T, exist_ok=True)
-print(f"ks_plain_par: {n} master / {nk} KeySync frames, shift {SH}, {J} chunks of {L} (+-{a.margin} context)", flush=True)
-if J == 1:   # short clip: the serial paste
-    sys.exit(subprocess.run([sys.executable, os.path.join(HERE, "ks_plain.py")] + R + ["--out", a.out]).returncode)
+PRE = {"master": os.path.abspath(MST), "size": os.path.getsize(MST), "mtime_ns": os.stat(MST).st_mtime_ns, "n": n, "J": J, "L": L, "margin": a.margin}   # r20: all a master slice depends on
 
 
 def cut(src, k0, cnt, out):   # frames k0 .. k0+cnt-1 of a 25 fps CFR video, losslessly (FFV1)
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{max(0.0, (k0 - 0.5) / 25):.4f}", "-i", src, "-frames:v", str(cnt), "-an", "-c:v", "ffv1", "-level", "3",
                     "-pix_fmt", "yuv420p", "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709", out], check=True)
+
+
+if a.preslice:   # r20 speed: the master slices only, by the very cut() the paste uses; pre.json (written last, whole) = they are complete and what they were cut from
+    def pre(c):
+        wa, wb = c * L, min(n, (c + 1) * L)
+        if wa >= wb: return
+        a0, a1 = max(0, wa - a.margin), min(n, wb + a.margin); os.makedirs(f"{T}/c{c:03d}", exist_ok=True); cut(MST, a0, a1 - a0, f"{T}/c{c:03d}/master.mkv")
+    if J > 1:
+        with cf.ThreadPoolExecutor(J) as ex: list(ex.map(pre, range(J)))
+        json.dump(PRE, open(f"{T}/pre.json.tmp", "w")); os.replace(f"{T}/pre.json.tmp", f"{T}/pre.json")
+    print(f"ks_plain_par --preslice: {n} master frames, {J} chunks of {L} (+-{a.margin} context) in {time.time() - t0:.1f} s -> {T}", flush=True); sys.exit(0)
+PREOK = False
+try: PREOK = json.load(open(f"{T}/pre.json")) == PRE
+except Exception: pass
+print(f"ks_plain_par: {n} master / {nk} KeySync frames, shift {SH}, {J} chunks of {L} (+-{a.margin} context)" + (", master pre-sliced" if PREOK else ""), flush=True)
+if J == 1:   # short clip: the serial paste
+    sys.exit(subprocess.run([sys.executable, os.path.join(HERE, "ks_plain.py")] + R + ["--out", a.out]).returncode)
 
 
 def chunk_args(c):
@@ -46,7 +63,8 @@ def chunk_args(c):
     a0, a1 = max(0, wa - a.margin), min(n, wb + a.margin)
     i0, i1 = max(0, a0 - SH), min(nk, a1 - SH + 1)   # the KeySync frames shown in [a0, a1)
     d = f"{T}/c{c:03d}"; os.makedirs(d, exist_ok=True); args = list(R)
-    cut(MST, a0, a1 - a0, f"{d}/master.mkv"); args = setv(args, "--master", f"{d}/master.mkv")
+    if not (PREOK and os.path.exists(f"{d}/master.mkv") and os.path.getsize(f"{d}/master.mkv") > 0): cut(MST, a0, a1 - a0, f"{d}/master.mkv")   # (r20: --preslice made it)
+    args = setv(args, "--master", f"{d}/master.mkv")
     cut(KSV, i0, i1 - i0, f"{d}/ks.mkv"); args = setv(args, "--ks", f"{d}/ks.mkv")
     args = setv(args, "--shift", SH + i0 - a0)   # local: KeySync frame (k - a0) - shift' == global (k - SH) - i0
     # r16 K1: the source landmarks / others stay WHOLE (they are indexed by the landmark row J[k]); only the master -> row map j is cut, whatever len(lm) is
