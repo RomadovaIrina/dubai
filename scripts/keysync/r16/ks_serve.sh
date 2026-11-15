@@ -27,7 +27,7 @@ ks_serve_live() {   # ks_serve_live <spool>: 0 when a daemon is up, loaded (read
 
 ks_fast_launch() {   # needs ENG LORA LMK GATE KT (as set by ks_face.sh / ks_shots.sh)
   local FJ=$1 OUT=$2 LOG=$3 D=${KS_SERVE_DIR:-}; KS_SERVED=0
-  if [ -n "$D" ] && [ -f $D/starting ]; then local w=0; while [ -f $D/starting ] && [ $w -lt ${KS_SERVE_WAIT_S:-300} ]; do sleep 1; w=$((w + 1)); done; echo "KS_SERVE waited ${w} s for the (re)starting daemon"; fi
+  if [ -n "$D" ] && [ -f $D/starting ]; then local w=0; while [ -f $D/starting ] && [ $w -lt $(( ${KS_SERVE_WAIT_S:-300} * 5 )) ]; do sleep 0.2; w=$((w + 1)); done; echo "KS_SERVE waited $((w / 5)).$((w % 5 * 2)) s for the (re)starting daemon"; fi   # (r20 speed: 0.2 s steps, it was 1 s: this wait is on every job's critical path)
   if ks_serve_live "$D"; then
     local SIG; SIG=$(ks_sig $ENG $LORA $LMK "$GATE")
     if python3 -c "import json, sys; sys.exit(0 if json.load(open('$D/ready')).get('sig') == '$SIG' else 1)" 2>/dev/null; then
@@ -65,7 +65,7 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then   # run directly: start / stop the daemo
       export KS_SERVE_SIG=$(ks_sig $ENG $LORA $LMK "$GATE")
       echo "KS_SERVE start sig $KS_SERVE_SIG engines $ENG"
       ( ks_fast_cmd $D/kit --serve $D ) >> $D/serve.log 2>&1 &
-      for i in $(seq 1800); do [ -s $D/ready ] && { cat $D/ready; echo; exit 0; }; kill -0 $! 2>/dev/null || { tail -20 $D/serve.log; exit 1; }; sleep 1; done
+      for i in $(seq 9000); do [ -s $D/ready ] && { cat $D/ready; echo; exit 0; }; kill -0 $! 2>/dev/null || { tail -20 $D/serve.log; exit 1; }; sleep 0.2; done   # (r20 speed: 0.2 s steps: `starting` goes away with this script, and ks_fast_launch waits for that)
       echo "KS_SERVE: not ready after 30 min"; exit 1;;
   esac
 fi

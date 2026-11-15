@@ -46,6 +46,7 @@ fail() { FL+=("$1"); ER+=("$1: ${3:-}"); [ "$2" = ERROR ] && STATUS=ERROR || { [
 collect() { python scripts/r9/collect.py --id $ID --out $OUT --status $STATUS --flags "${FL[*]:-}" --errors "$(printf '%s\n' "${ER[@]:-}")" --stages $T --nvsmi $W/nvsmi.csv --precheck $W/precheck.json \
     --audio $A/$AT --htd $A/$HT --face $B/$FT --gen $B/$GT --input "$IN" --ks-subst $W/ks/subst.json; }   # r16 TZ 11.2 / 11.3
 finish() {
+  [ -n "${KSX:-}" ] && touch $KSX/cold   # (r20: this job sends the restarted daemon no more requests -> it parks at once, see KS_SERVE_HOT_S below)
   [ -n "${KSX:-}" ] && [ "${KSPRE:-0}" = 1 ] && touch $KSX/go   # (r19: a job that ends inside the audio stage never leaves the pre-started daemon on hold)
   st end; kill $NV $NM 2>/dev/null; wait $NV $NM 2>/dev/null
   collect 2>&1 | tee -a $L/e2e.log
@@ -144,7 +145,12 @@ if [ "${KS_SERVE_AUDIO_EXIT:-0}" = 1 ] && [ -n "${KS_SERVE_DIR:-}" ] && [ -z "${
   # r19 speed (KS_SERVE_PRESTART=0 = as before): the NEW daemon process starts now and does its python imports during the audio stage, but HOLDS before
   # its first CUDA call (ks_fast.py KS_SERVE_HOLD: no context, no VRAM) until $KSX/go appears after the audio stage: ~5 s less to wait for it then
   KSPRE=${KS_SERVE_PRESTART:-1}
-  if [ "$KSPRE" = 1 ]; then rm -f $KSX/go; KS_SERVE_HOLD=$KSX/go setsid bash scripts/keysync/r16/ks_serve.sh start $KSX > $L/ks_serve_restart.log 2>&1 < /dev/null & fi
+  # r20 speed (same output; KS_SERVE_HOT_S=0 = as before): the daemon restarted for THIS job's lip-sync does not park after its load, so the first
+  # request finds the models on the GPU (park 0.75 s + unpark 2.5 s were on the critical path). It parks if no request comes within KS_SERVE_HOT_S
+  # seconds, or at once when this job ends ($KSX/cold, finish()). The GPU is the lip-sync's from the end of the audio stage on, and the daemon is
+  # stopped before the next job's audio stage, as before.
+  KSHOT="KS_SERVE_HOT_S=${KS_SERVE_HOT_S-20} KS_SERVE_COLD_FILE=$KSX/cold"; rm -f $KSX/cold   # (passed to this one daemon start only, never exported)
+  if [ "$KSPRE" = 1 ]; then rm -f $KSX/go; env $KSHOT KS_SERVE_HOLD=$KSX/go setsid bash scripts/keysync/r16/ks_serve.sh start $KSX > $L/ks_serve_restart.log 2>&1 < /dev/null & fi
   [ "$KSPRE" = 1 ] && export R9_GPU_FREE_SIGNAL=$KSX/go   # r19: the resident audio worker writes it once Qwen + the T3 graphs are freed, before its CPU chain (audio_worker.early_free)
 fi
 [ -n "$VEP" ] && { wait $VEP; cat $W/voice_env.err >> $L/e2e.log 2>/dev/null; cat $W/voice_env.out 2>/dev/null; }
@@ -158,7 +164,7 @@ unset R9_ON_MIXSRC R9_ON_STAGE_DONE R9_GPU_FREE_SIGNAL
 if [ -n "$SDR" ] && [ -f $L/resident_resume.log ]; then export KS_SERVE_DIR=$SDR/ks; echo "== $ID resident worker resumed during the audio stage: KeySync from its daemon ($SDR/ks)" | tee -a $L/e2e.log; fi
 if [ -n "$KSX" ]; then   # back up while the route runs (its own session: it outlives this job, as the resident worker does)
   if [ "$KSPRE" = 1 ]; then touch $KSX/go; echo "== $ID KeySync daemon (pre-started, on hold) released after the audio stage" | tee -a $L/e2e.log
-  else setsid bash scripts/keysync/r16/ks_serve.sh start $KSX > $L/ks_serve_restart.log 2>&1 < /dev/null & echo "== $ID KeySync daemon restarting after the audio stage" | tee -a $L/e2e.log; fi; fi
+  else env $KSHOT setsid bash scripts/keysync/r16/ks_serve.sh start $KSX > $L/ks_serve_restart.log 2>&1 < /dev/null & echo "== $ID KeySync daemon restarting after the audio stage" | tee -a $L/e2e.log; fi; fi
 AD=$A/$AT/$ID
 if ! { [ -f $AD/final_mix_aac.m4a ] && [ -f $AD/dubbed_16k.wav ]; }; then   # r13: a clip with no speech (silence / music only) is its own, clear ERROR
   if grep -qs "ASR produced no speech units" $A/${AT}pre/runs/$ID.log $L/audio.log; then fail no_speech ERROR "no speech found in the audio: nothing to dub"

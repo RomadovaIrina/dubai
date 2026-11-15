@@ -78,13 +78,23 @@ def serve(spool, load_s, objs, job_lines, run_line):
             (D / ".alive.tmp").write_text(str(time.time())); os.replace(D / ".alive.tmp", D / "alive"); time.sleep(1)
     threading.Thread(target=beat, daemon=True).start()
     sig = os.environ.get("KS_SERVE_SIG", "")
-    ps = park(objs)
-    (D / "ready").write_text(json.dumps({"load_s": load_s, "park_s": ps, "parked": True, "sig": sig, **_vram()}))
+    # r20 speed (same output): KS_SERVE_HOT_S=<s> = this daemon was (re)started right before its first request (e2e.sh: after the audio stage, the
+    # GPU is the lip-sync's from here on), so it does NOT park after the load: park + the unpark at the first request were ~3.2 s on every job's
+    # critical path (0.75 s + 2.5 s, x20c 14.11). No request within s seconds -> parked as before. Unset / 0 = park at once (the long-lived
+    # resident daemon, which waits through other jobs' audio stages). The weights and the engines are the same objects either way.
+    # KS_SERVE_COLD_FILE: the job that restarted the daemon ended (e2e.sh finish()) -> no request will come: park now.
+    hot = float(os.environ.get("KS_SERVE_HOT_S", "0") or 0); cold = os.environ.get("KS_SERVE_COLD_FILE", ""); t_hot = time.perf_counter()
+    parked = hot <= 0 or bool(cold and os.path.exists(cold))
+    ps = park(objs) if parked else 0.0
+    (D / "ready").write_text(json.dumps({"load_s": load_s, "park_s": ps, "parked": parked, "hot_s": hot, "sig": sig, **_vram()}))
     print("KS_SERVE_READY", (D / "ready").read_text(), flush=True)
     out0, err0, n = sys.stdout, sys.stderr, 0
     while not (D / "stop").exists():
         rs = sorted((D / "req").glob("*.json"), key=lambda p: p.stat().st_mtime)
-        if not rs: time.sleep(0.1); continue
+        if not rs:
+            if not parked and (time.perf_counter() - t_hot > hot or (cold and os.path.exists(cold))):
+                parked = True; print("KS_SERVE_HOT no request (%.0f s of %.0f) -> parked " % (time.perf_counter() - t_hot, hot) + json.dumps({"park_s": park(objs), **_vram()}), flush=True)
+            time.sleep(0.05); continue
         rf = rs[0]
         try: rq = json.loads(rf.read_text())
         except Exception: time.sleep(0.1); continue   # (half written: the client writes atomically, so only a foreign file)
@@ -94,7 +104,7 @@ def serve(spool, load_s, objs, job_lines, run_line):
             if rq.get("sig") != sig:
                 print(f"KS_SERVE_REJECT settings differ: request {rq.get('sig')!r} vs resident {sig!r}", flush=True); continue
             os.environ.update({k: str(v) for k, v in (rq.get("env") or {}).items()})
-            us = unpark(objs); print("KS_SERVE_ACCEPT " + json.dumps({"request": n, "unpark_s": us, **_vram()}), flush=True)
+            us = unpark(objs) if parked else 0.0; print("KS_SERVE_ACCEPT " + json.dumps({"request": n, "unpark_s": us, "hot": not parked, **_vram()}), flush=True)
             os.makedirs(rq["out"], exist_ok=True); owner = rq.get("owner")
             try:
                 for line in job_lines(rq["jobs"], True, alive=lambda: owner is None or _alive(owner)):
@@ -105,5 +115,6 @@ def serve(spool, load_s, objs, job_lines, run_line):
         finally:
             try: print("KS_SERVE_PARKED " + json.dumps({"park_s": park(objs), **_vram()}), flush=True)
             except Exception: traceback.print_exc()
+            parked = True
             os.environ.clear(); os.environ.update(env0); sys.stdout, sys.stderr = out0, err0; log.close(); n += 1
     print("KS_SERVE_STOP", flush=True)
