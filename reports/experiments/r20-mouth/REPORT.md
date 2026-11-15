@@ -70,3 +70,33 @@ With all three: mouth detail 0.73, smear frames 12 % → 4 % of the drawn frames
 
 ## Defaults unchanged (check, 15.11)
 Seeded 12.8 s render of 01 with the new modules in the kit vs without them (ks_lref / ks_quiet / ks_kfout removed): PSNR 48.5 dB; two identical runs: 47.8 dB (TensorRT / compiled-VAE run-to-run floor). Without a plan or KS_KF_MODE the wrappers call the original functions with the original arguments.
+
+## 4. Second leg (15.11 evening): Irina's picks, the safe local reference, the 04 turn
+
+Irina's blind picks: floorv:1 wins on m03 (also "починил дёрганья щеки"), no difference on 01, neutral on old03 ("мигает меньше" in one clip) → the default candidate. Teeth reference: split on m03 → opt-in. 04: rule + local reference wins, but the face warps on the head turn at ~28 s. 05: the fixed tiles are better, "ещё не айс".
+
+**`KS_REF=local` is now safe to leave on** (`ks_lrefpick.py --when bad`, the default of `KS_REF=local`; `KS_LREF_WHEN=always` = a plan in any case):
+- a plan is made only when frame 0 is a bad reference for the clip: its lower-face tone is far (ΔE > 7) from ≥ 25 % of the 169-frame batches, or its eye region differs by > 12 L* from ≥ 2 batches (sunglasses on / off);
+- otherwise `keep0`: ks_face.sh writes reference 0 and nothing else changes;
+- closed-mouth frames only by default (`KS_LREF_MOUTH=closed`; `auto` / `teeth` = the teeth gate, opt-in), so old03's "гнилые зубы" cannot come back.
+
+| clip | frame 0 vs batches: ΔE max / batches over 7 / eye max | decision |
+|---|---|---|
+| 04 | 11.5 / 3 of 8 / 11.4 | plan |
+| 05 (tiles) | 12.8 / 4 of 8 / 25.7 | plan |
+| m03 | 6.5 / 0 of 6 / 3.1 | frame 0 |
+| old03 | 2.6 / 0 of 14 / 4.5 | frame 0 |
+| 01 (shot 0) | 1.2 / 0 of 2 / 2.4 | frame 0 |
+
+Proof (full e2e jobs, floorv:1 + KS_REF=local vs floorv:1): m03, 01, old03 → `ref_f0.txt` = 0, `jobs.txt` identical (md5), the generator input `pad_f0.mp4` identical (md5), no plan line in the generator log; final PSNR vs the floorv arm 48.8 / 59.6 / 46.6 dB = the generator's run-to-run floor (two identical seeded runs: 47.8 dB). m03 is the closest to the threshold (6.5 vs 7).
+
+**The 04 warp at ~28 s** is a head turn (yaw 0.5–0.7) inside one keyframe batch: with a frontal reference the generator draws a frontal lower face on a turned head (a second jaw line, a dark mask; raw render, frames 699–708). `ks_lrefpick.py --kf-yaw 0.15` gives single keyframes whose batch reference differs in yaw a closed-mouth frame with the same yaw from nearby (`kf_refs` in the plan; `ks_lref.py` concatenates the identity latent per keyframe). 04: 16 keyframes overridden; residual jitter (final − source, lower face) at 27 s: now 12.6, local 11.2, pose 10.0; the drawn jaw still sits 11–13 px off the source jaw on turns in every arm. On 05 (68 px face, noisy yaw) the same switch overrode 33 scattered keyframes and made the mouth mushier (smear frames 4 % → 22 %), so **`--kf-yaw` is off by default** (opt-in through `KS_LREF_ARGS="--kf-yaw 0.15"`); blind clips `04_TURN_0-24`, `04_TURN_0-10` decide for 04.
+
+**05 and floorv:** on the 68 px face the rule softens the mouth: smear frames 4 % (fixed tiles without floorv, the clip Irina saw) → 10 % with floorv (mouth detail vs source 0.73 → 0.68; the dark line between the lips is most of what is visible of a mouth at that size). So the 05 recipe runs WITHOUT floorv (`KS_KF_MODE=` empty in that job if the image default sets it). Not checked: whether the same holds for 01's 81 px opening face (Irina saw no difference there).
+
+## Env for the rebuild and the boss run (proposal, 15.11)
+- image defaults: `KS_KF_MODE=floorv:1` (+ r18-quality's `KS_KFOUT=student` once their combined check passes); `KS_REF=local` may be a default too (acts only on clips whose frame 0 is a bad reference), or stay per video;
+- 04: `KS_KF_MODE=floorv:1 KS_REF=local` (+ `KS_LREF_ARGS="--kf-yaw 0.15"` only if Irina picks the pose window in `04_TURN_*`);
+- 05: `KS_MP_TILES=1 DUB_ROUTE=off KS_REF=local KS_TRACK_K=1.25 KS_TRACK_SIGMA=3 KS_QUIET=ar=1.0,gap=0.3,ramp=0.4 KS_KF_MODE=` (floorv off);
+- 01 (her pick: tiles): `KS_MP_TILES=1 DUB_ROUTE=off` + the defaults;
+- every job on a saved dub: `DUB_AUDIO_FROM=<dir>`; `KS_SEED` is a test switch, not for production.
