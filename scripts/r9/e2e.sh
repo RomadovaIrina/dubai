@@ -41,6 +41,14 @@ nvidia-smi --query-gpu=timestamp,memory.used,utilization.gpu --format=csv,nohead
 export R10_JOB=$ID; NVML=${R10_NVML:-$W/nvml.jsonl}; NM=""   # r10: NVML sampler, 100 ms, per-process SM util tagged by R10_JOB (a worker passes its one shared R10_NVML file)
 [ -z "${R10_NVML:-}" ] && [ -x /venv/main/bin/python ] && { rm -f $NVML; /venv/main/bin/python scripts/r10/gpu_sampler.py --out $NVML > $L/gpu_sampler.log 2>&1 & NM=$!; }
 trap 'kill $NV $NM 2>/dev/null' EXIT
+# r20 speed (no effect on the output; E2E_QWEN_PREFETCH=0 = off): the audio stage loads the Qwen 14B GGUF (~10 GB) from the page cache for every
+# job, ~5 s after the job starts (after VAD / ASR / diarization). On a RAM-tight box the lip-sync stage of the previous job pushes the file out of
+# the cache, and the load then reads the disk: translation_load 10.6 / 11.8 s instead of 1.5-3.4 s (VM 14.11, 2 of 5 jobs: the whole 34 <-> 43-45 s
+# spread of the audio stage on 20 s clips). The file is read ahead NOW, at low priority, so it is back in the cache when the load comes; when it
+# is still cached this is ~1.5 s of one idle core.
+if [ -z "${DUB_AUDIO_FROM:-}" ] && [ "${E2E_QWEN_PREFETCH:-1}" = 1 ]; then
+  QG=$(ls $DUB_ROOT/models/qwen2.5-14b-instruct-gguf/*q5_k_m*.gguf 2>/dev/null | head -1)
+  [ -n "$QG" ] && ( nice -n 10 cat "$QG" > /dev/null 2>&1 & ); fi
 st() { echo -e "$1\t$(date +%s.%N)" >> $T; echo "== $ID stage $1 $(date +%T)" | tee -a $L/e2e.log; }   # stage start; the next st (or 'end') closes it
 fail() { FL+=("$1"); ER+=("$1: ${3:-}"); [ "$2" = ERROR ] && STATUS=ERROR || { [ $STATUS = SUCCESS ] && STATUS=$2; }; echo "== $ID $2: $1 ${3:-}" | tee -a $L/e2e.log; }   # fail <flag> <status> [detail]
 collect() { python scripts/r9/collect.py --id $ID --out $OUT --status $STATUS --flags "${FL[*]:-}" --errors "$(printf '%s\n' "${ER[@]:-}")" --stages $T --nvsmi $W/nvsmi.csv --precheck $W/precheck.json \
