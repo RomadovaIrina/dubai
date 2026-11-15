@@ -6,15 +6,47 @@ the final status). One job at a time per worker (allow_parallel_requests=False):
 input video minutes (the client sends "video_minutes"; a missing value counts as 1).
     PYWORKER_REPO=<a public repo with this file + requirements.txt at its root>   (the Serverless template runs `python worker.py`)
 Log readiness: /data/resident/start.log gets "RESIDENT_READY" once the KeySync models are loaded + parked and the audio worker is up."""
-import os
+import math, os
+from dataclasses import dataclass, field
+from typing import Any, Dict
 from vastai import BenchmarkConfig, HandlerConfig, LogActionConfig, Worker, WorkerConfig
+from vastai.serverless.server.lib.data_types import ApiPayload, JsonDataException   # vastai==1.11.0 (requirements.txt)
 
 BENCH_CLIP = os.environ.get("BENCH_CLIP", "/data/bench_5s.mp4")   # start.sh: a 5 s synthetic clip (no face: a fast round trip)
+ROUTING_ONLY = ("video_minutes",)   # read here for the autoscaler, never sent on: the job API rejects unknown fields (422)
 
 
 def bench_payload() -> dict:
     import uuid
     return {"job_id": "bench_" + uuid.uuid4().hex[:8], "input": BENCH_CLIP, "target_lang": "en", "video_minutes": 5 / 60}
+
+
+@dataclass
+class DabaiPayload(ApiPayload):
+    """r20: the generic payload forwards the request body as is, so "video_minutes" reached POST /jobs/sync -> 422 "unknown field:
+    video_minutes" -> every benchmark failed -> Vast destroyed each worker ("No successful responses from benchmark")."""
+    input: Dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def for_test(cls) -> "DabaiPayload":
+        return cls(input=bench_payload())
+
+    @classmethod
+    def from_dict(cls, input: Dict[str, Any]) -> "DabaiPayload":
+        return cls(input=input)
+
+    @classmethod
+    def from_json_msg(cls, json_msg: Dict[str, Any]) -> "DabaiPayload":
+        if not isinstance(json_msg, dict): raise JsonDataException({"data": "payload must be a dictionary"})
+        return cls(input=json_msg)
+
+    def generate_payload_json(self) -> Dict[str, Any]:
+        return {k: v for k, v in self.input.items() if k not in ROUTING_ONLY}
+
+    def count_workload(self) -> float:
+        try: w = float(self.input.get("video_minutes") or 1.0)
+        except (TypeError, ValueError): return 1.0
+        return w if math.isfinite(w) and w > 0 else 1.0
 
 
 worker_config = WorkerConfig(
@@ -26,7 +58,7 @@ worker_config = WorkerConfig(
             route="/jobs/sync",
             allow_parallel_requests=False,           # FIFO, one job in flight (the API queue is the GPU lock of the node)
             max_queue_time=3 * 3600.0,               # a queued job waits, it is not refused (a 5-min video takes ~15-20 min of wall)
-            workload_calculator=lambda p: float(p.get("video_minutes") or 1.0),
+            payload_class=DabaiPayload,              # strips video_minutes before the job API; counts it as the workload
             benchmark_config=BenchmarkConfig(generator=bench_payload, runs=1, concurrency=1),   # one real 10 s job: also warms the TRT / compile caches
         ),
     ],

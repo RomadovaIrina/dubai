@@ -1,1 +1,1 @@
-vastai
+vastai==1.11.0
