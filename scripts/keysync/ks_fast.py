@@ -117,6 +117,8 @@ def main():
     try:   # r20: a time-local reference frame per keyframe batch (ks_lref.py; a pass-through unless a job carries a plan / KS_LREF is set)
         import ks_lref; ks_lref.install(d)
     except ImportError: pass
+    if os.environ.get("KS_QUIET"):   # r20: lower audio guidance on the keyframes that sit in silence (ks_quiet.py; the pressed lips in pauses / the tail)
+        import ks_quiet; ks_quiet.install(d, model_kf)
     for n in ("compute_video_embedding", "get_audio_embeddings", "extract_video_landmarks", "sample_keyframes", "sample_interpolation", "save_audio_video"):
         setattr(d, n, timed(n, getattr(d, n)))
     if a.vae_batch > 1:   # r15: the authors decode one frame per call (decoding_t 1 -> timesteps 1: no temporal mixing); the same math batched N frames per call
@@ -142,6 +144,8 @@ def main():
             if not getattr(m, "_ks_trt_vae", False): m.decode_first_stage = _mkdec(m)
     for m, tag in ((model, "interp"), (model_kf, "kf")):
         m.decode_first_stage = timed(f"vae_decode_{tag}", m.decode_first_stage)
+    if os.environ.get("KS_KFOUT"):   # r20: the segment boundary frames keep the interpolation model's own rendition (ks_kfout.py; the keyframe blink every 13 frames)
+        import ks_kfout; ks_kfout.install(model)
     if os.environ.get("KS_PROFILE"):   # profile UNet calls 40..60 of the interpolation model, print the top CUDA ops
         from torch.profiler import profile, ProfilerActivity
         dm = model.model.diffusion_model; fwd = dm.forward; st = {"n": 0, "p": None}
