@@ -141,6 +141,8 @@ def main():
             if not getattr(m, "_ks_trt_vae", False): m.decode_first_stage = _mkdec(m)
     for m, tag in ((model, "interp"), (model_kf, "kf")):
         m.decode_first_stage = timed(f"vae_decode_{tag}", m.decode_first_stage)
+    if os.environ.get("KS_KFOUT"):   # r20: the segment boundary frames keep the interpolation model's own rendition (ks_kfout.py; the keyframe blink every 13 frames)
+        import ks_kfout; ks_kfout.install(model)
     if os.environ.get("KS_PROFILE"):   # profile UNet calls 40..60 of the interpolation model, print the top CUDA ops
         from torch.profiler import profile, ProfilerActivity
         dm = model.model.diffusion_model; fwd = dm.forward; st = {"n": 0, "p": None}
