@@ -14,6 +14,7 @@ import ks_student
 ST = {"lmk": None, "seg_off": 0, "active": None, "out_shape": None, "calls": 0, "skipped": 0, "hi": 0, "seg": 0}
 cfg = dict(x.split("=") for x in os.environ.get("KS_GATE", "").split(",") if "=" in x)
 THR, CAP, HI, LO = float(cfg.get("thr", 0.12)), float(cfg.get("cap", 0.25)), int(cfg.get("hi", 8)), int(cfg.get("lo", 2))
+LUMA = float(cfg.get("luma", 0.18))   # r20: the dark-pixel luma of the gate (0.18 = r16). With KS_KF_MODE=floorv the cavity is dark red, not black: luma=0.25 flags the same keyframes (04: 14 vs 15 of 104)
 
 
 def gate(samples_x, nf=14):
@@ -27,7 +28,7 @@ def gate(samples_x, nf=14):
         if not np.isfinite(m).all(): continue
         x0, y0 = m.min(0); x1, y1 = m.max(0); w = x1 - x0; y0 -= 0.15 * w; y1 += 0.15 * w
         H, W = g.shape[1:]; sl = g[j, max(0, int(y0)):min(H, int(y1)), max(0, int(x0)):min(W, int(x1))]
-        if sl.size: dark[j] = float((sl < 0.18).mean())
+        if sl.size: dark[j] = float((sl < LUMA).mean())
     wide = dark > THR
     k = max(1, int(math.ceil(CAP * n)))
     if wide.sum() > k: wide = dark >= np.sort(dark)[-k]

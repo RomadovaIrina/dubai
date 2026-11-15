@@ -4,6 +4,12 @@
 #   plan      ks_e2e_prep.py: route.json faces (lipsync with SILENCE outside own speech / source -> --others) or the dubbed-units fallback; no-face rule
 #   crop      KS_CROP=auto: K2 tracked crop (k2_prep_track.py) if the static face share < 0.45 or the head travels > 0.4 face heights, else the r15 static crop + K1 pad: the last KS_PAD (60) frames mirrored, the seam frame not repeated
 #   ref       KS_REF=0 (default, Irina 08.11: frame 0 of this run = of the shot in multi-shot) | auto (K2 k2_refpick.py) | skin (r19 ks_refskin.py) | <frame>
+#             | local (r20 ks_lrefpick.py + ks_lref.py: one reference per 169-frame keyframe batch, lit like that batch, ONLY when frame 0 is a bad reference for the clip
+#               (KS_LREF_WHEN=bad, the default: the light changes or sunglasses come off; else frame 0 = the default path; always = a plan in any case);
+#               KS_LREF_MOUTH closed (default) | auto | teeth (a clean-teeth frame; Irina 15.11: split on m03, opt-in), KS_LREF_ARGS)
+#   r20 (all opt-in, reports/experiments/r20-mouth/REPORT.md): KS_KF_MODE=floorv:1 = the black mouth: the keyframe guidance may not push the dark mouth interior darker than the
+#             conditional prediction (ks_lref.py guide_hook; read by ks_fast from the env); KS_GATE=...,luma=0.25 = the gate's dark-pixel luma (0.18 = r16) if its share should
+#             match under floorv; KS_TRACK_SIGMA = the smoothing of the tracked crop centre (k2_prep_track --sigma, 6 = r16; small faces: KS_TRACK_K=1.25 KS_TRACK_SIGMA=3)
 #   [GPU]     delay probe (KS_DELAY=probe | <ms>): KeySync on KS_PROBE_S (10) s from the face's first own speech, SyncNet AV offset of the raw render
 #             vs the dub it heard -> delay = -offset x 40 ms (old03 0, m03 / m18 40); the full KeySync (fast2 + K2 gate KS_GATE) on the padded crop with
 #             the delayed + padded dub; check: SyncNet of the full raw render -> if still != 0, the paste shift = -offset (K1 fallback)
@@ -32,6 +38,7 @@ KT=$KW/kit; PAD=${KS_PAD:-60}
 flag() { echo "$1" >> $KW/flags.txt; echo "KS_FLAG $1 ${2:-}"; }
 t() { echo "KS_T $1 $(date +%s.%N)"; }
 dur() { ffprobe -v error -show_entries format=duration -of csv=p=0 "$1"; }
+refnum() { python3 -c "import json, sys; s = open(sys.argv[1]).read().strip(); print(s if s.lstrip('-').isdigit() else json.load(open(s))['refs'][0])" "$1"; }   # r20: ref_<f>.txt = a frame, or a ks_lref plan (-> its first frame)
 . $R/scripts/keysync/r16/sync_serve.sh   # r17: sync_run (resident SyncNet process when KS_SYNC_SERVE=1, else the cold call)
 sync_off() {   # sync_off <video> <wav> <json>: SyncNet global AV offset of a raw KeySync render (first KS_SYNC_MAX_S s); prints the offset or "x"
   local V=$1 A=$2 J=$3 MX=${KS_SYNC_MAX_S:-60}
@@ -138,7 +145,7 @@ for f in $TAGS; do
   echo "KS_CROP $f $CR $(python3 -c "import json; b=json.load(open('$KW/data/st/box_$f.json')); print('static face share %.2f, head travel %.2f face heights' % (b['face_h'] / b['side'], b['move'] / b['face_h']))")"
   if [ "$CR" = track ]; then   # K2: constant side, the centre follows the face (smoothed)
     TK=${KS_TRACK_K:-1.8}; [ -s $KW/others_$f.npz ] && TK=${KS_TRACK_K2:-1.25}
-    $MPY $KT/k2_prep_track.py --master $KW/master_25fps.mp4 --lm $KW/lm_$f.npz --out $KW/data/crop_$f --k $TK >> $KW/crop_$f.log 2>&1 || { tail -3 $KW/crop_$f.log; exit 1; }
+    $MPY $KT/k2_prep_track.py --master $KW/master_25fps.mp4 --lm $KW/lm_$f.npz --out $KW/data/crop_$f --k $TK ${KS_TRACK_SIGMA:+--sigma $KS_TRACK_SIGMA} >> $KW/crop_$f.log 2>&1 || { tail -3 $KW/crop_$f.log; exit 1; }
     mv $KW/data/crop_${f}_box.json $KW/data/box_$f.json
   else
     mv $KW/data/st/videos/$f.mp4 $KW/data/crop_$f.mp4; mv $KW/data/st/box_$f.json $KW/data/box_$f.json
@@ -171,6 +178,12 @@ PY
     REF=$($MPY $KT/ks_refskin.py --video $KW/data/crop_$f.mp4 --lm $KW/crop_lm_$f.npz --face-lm $KW/lm_$f.npz 2> $KW/ref_$f.log | tee -a $KW/ref_$f.log | grep "^KS_REFSKIN" | python3 -c "import json,sys; print(json.loads(sys.stdin.read()[11:])['pick'])" 2>/dev/null)
     [ -n "$REF" ] || { echo "KS WARN refskin failed ($f): ref 0"; REF=0; }
   fi
+  if [ "$REF" = local ]; then   # r20: a reference PLAN (json) = a frame per keyframe batch, near that batch in time: its light (04: the band above the lip) and, when the speaker shows clean teeth (the per-video gate), its teeth
+    if $MPY $KT/ks_lrefpick.py --video $KW/data/pad_$f.mp4 --lm $KW/crop_lm_$f.npz --face-lm $KW/lm_$f.npz --n $N --mouth ${KS_LREF_MOUTH:-closed} --when ${KS_LREF_WHEN:-bad} --out $KW/lref_$f.json --sheet $KW/lref_$f.jpg --feat $KW/lref_$f.npz ${KS_LREF_ARGS:-} > $KW/ref_$f.log 2>&1 && [ -s $KW/lref_$f.json ]; then
+      REF=$KW/lref_$f.json; grep "^KS_LREFPICK" $KW/ref_$f.log | cut -c1-400
+      python3 -c "import json, sys; sys.exit(0 if json.load(open(sys.argv[1])).get('keep0') else 1)" $REF && REF=0   # the first frame is a good reference: the default path, untouched
+    else echo "KS WARN lrefpick failed ($f): ref 0"; REF=0; fi
+  fi
   echo $REF > $KW/ref_$f.txt
 done
 fi   # ==== end of prep
@@ -189,7 +202,7 @@ if [ $PBC = 1 ]; then for f in $TAGS; do DLY[$f]=${KS_PBC_DELAY:-40}; done; echo
 elif [ "${KS_DELAY:-probe}" = probe ]; then
   t probe; : > $KW/probe/jobs.txt; PS=${KS_PROBE_S:-10}; OFFS=""
   for f in $TAGS; do   # a FRAME-ALIGNED window of KS_PROBE_S s from the face's first own speech; the same reference (frame 0) + gate as the full run
-    $MPY - $KW/dub_$f.wav $KW/data/crop_$f.mp4 $(cat $KW/ref_$f.txt) $PS $KW/probe/v_$f.mp4 $KW/probe/a_$f.wav <<'PY' || exit 1
+    $MPY - $KW/dub_$f.wav $KW/data/crop_$f.mp4 $(refnum $KW/ref_$f.txt) $PS $KW/probe/v_$f.mp4 $KW/probe/a_$f.wav <<'PY' || exit 1
 import subprocess, sys, wave, numpy as np, cv2
 wav, crop, ref, ps, ov, oa = sys.argv[1], sys.argv[2], int(sys.argv[3]), float(sys.argv[4]), sys.argv[5], sys.argv[6]
 w = wave.open(wav); sr = w.getframerate(); x = np.frombuffer(w.readframes(w.getnframes()), np.int16); spf = sr // 25
@@ -234,8 +247,13 @@ for f in $TAGS; do   # the dub KeySync hears: delayed (or advanced) by the probe
   mk_dubp $f $D || exit 1
   ffmpeg -v error -y -i $KW/dub_$f.wav -af "apad=whole_dur=$PD" -t $PD -ar 16000 -ac 1 $KW/data/dubo_$f.wav || exit 1   # the ORIGINAL timing, for the check
   if [ "$N" -gt "$(( ${KS_CHUNK_MIN_S:-90} * 25 ))" ]; then   # long video: ~KS_CHUNK_S pieces cut at dub pauses, the same reference in each (RAM flat)
-    $PY $KT/ks_chunk.py split --video $KW/data/pad_$f.mp4 --audio $KW/data/dubp_$f.wav --ref $(cat $KW/ref_$f.txt) --chunk-s ${KS_CHUNK_S:-60} --out $KW/data/chunks_$f --tag $PFX$f \
-      >> $KW/jobs.txt 2> $KW/chunk_$f.log || { tail -3 $KW/chunk_$f.log; exit 1; }; grep KS_CHUNKS $KW/chunk_$f.log
+    $PY $KT/ks_chunk.py split --video $KW/data/pad_$f.mp4 --audio $KW/data/dubp_$f.wav --ref $(refnum $KW/ref_$f.txt) --chunk-s ${KS_CHUNK_S:-60} --out $KW/data/chunks_$f --tag $PFX$f \
+      > $KW/jobs_$f.txt 2> $KW/chunk_$f.log || { tail -3 $KW/chunk_$f.log; exit 1; }; grep KS_CHUNKS $KW/chunk_$f.log
+    if [[ "$(cat $KW/ref_$f.txt)" == *.json ]]; then   # r20: a plan per chunk (the chunk clip has its own frame grid), picked from the chunk's own frames
+      if $MPY $KT/ks_lrefpick.py --video $KW/data/pad_$f.mp4 --lm $KW/crop_lm_$f.npz --face-lm $KW/lm_$f.npz --n $N --mouth ${KS_LREF_MOUTH:-closed} --feat $KW/lref_$f.npz --chunks $KW/data/chunks_$f ${KS_LREF_ARGS:-} >> $KW/ref_$f.log 2>&1; then
+        awk '{ p = $2; sub(/\.mp4$/, ".plan.json", p); print $1, $2, $3, p }' $KW/jobs_$f.txt > $KW/jobs_$f.txt.p && mv $KW/jobs_$f.txt.p $KW/jobs_$f.txt; grep "^KS_LREFPICK" $KW/ref_$f.log | tail -1 | cut -c1-400
+      else echo "KS WARN lrefpick --chunks failed ($f): one reference frame"; fi; fi
+    cat $KW/jobs_$f.txt >> $KW/jobs.txt
   else echo "$PFX$f $KW/data/pad_$f.mp4 $KW/data/dubp_$f.wav $(cat $KW/ref_$f.txt)" >> $KW/jobs.txt; fi
 done
 # r19 speed (KS_LMK_AHEAD, ks_fast.py): the videos of this run are looked ahead while the jobs in front of them render: the chunks / faces after the first

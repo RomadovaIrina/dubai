@@ -149,6 +149,11 @@ def main():
         import ks_gate; ks_gate.install(d, model)
     if os.environ.get("KS_NOISE"):   # r16c K2: shared noise across windows / keyframes (ks_noise.py)
         import ks_noise; ks_noise.install(d)
+    try:   # r20: a time-local reference frame per keyframe batch (ks_lref.py; a pass-through unless a job carries a plan / KS_LREF is set)
+        import ks_lref; ks_lref.install(d)
+    except ImportError: pass
+    if os.environ.get("KS_QUIET"):   # r20: lower audio guidance on the keyframes that sit in silence (ks_quiet.py; the pressed lips in pauses / the tail)
+        import ks_quiet; ks_quiet.install(d, model_kf)
     for n in ("compute_video_embedding", "get_audio_embeddings", "extract_video_landmarks", "sample_keyframes", "sample_interpolation", "save_audio_video"):
         setattr(d, n, timed(n, getattr(d, n)))
     if a.vae_batch > 1:   # r15: the authors decode one frame per call (decoding_t 1 -> timesteps 1: no temporal mixing); the same math batched N frames per call
@@ -174,6 +179,8 @@ def main():
             if not getattr(m, "_ks_trt_vae", False): m.decode_first_stage = _mkdec(m)
     for m, tag in ((model, "interp"), (model_kf, "kf")):
         m.decode_first_stage = timed(f"vae_decode_{tag}", m.decode_first_stage)
+    if os.environ.get("KS_KFOUT"):   # r20: the segment boundary frames keep the interpolation model's own rendition (ks_kfout.py; the keyframe blink every 13 frames)
+        import ks_kfout; ks_kfout.install(model)
     if os.environ.get("KS_PROFILE"):   # profile UNet calls 40..60 of the interpolation model, print the top CUDA ops
         from torch.profiler import profile, ProfilerActivity
         dm = model.model.diffusion_model; fwd = dm.forward; st = {"n": 0, "p": None}
@@ -258,9 +265,13 @@ def main():
             if _ahead_q is not None: _ahead_q.put(line.split(None, 1)[1].strip())
             return
         tag, vid, aud, *ex = line.split()   # r16 T: an optional 4th column = this job's KeySync reference frame (KS_REF_IDX); default 0
+        os.environ.pop("KS_LREF", None)
+        for kv in [x for x in ex[1:] if "=" in x]: os.environ[kv.split("=", 1)[0]] = kv.split("=", 1)[1]   # r20 (tests): per-job env after the reference column (K=V ...; stays set for the next jobs unless they reset it)
+        if ex and not ex[0].lstrip("-").isdigit(): os.environ["KS_LREF"] = ex[0]; ex = ["0"]   # r20: a reference PLAN (json, ks_lref.py) instead of one frame
         os.environ["KS_REF_IDX"] = ex[0] if ex else "0"   # (audit #13: no leak of the previous job's reference)
         if os.environ.get("KS_FAULT") == "crash" and not ("p_" in tag.split("_", 1)[-1] or tag.startswith("p_")):   # r16 TZ 11.1 fault injection
             raise RuntimeError(f"KS_FAULT=crash: injected generator failure in job {tag}")
+        if os.environ.get("KS_SEED"): torch.manual_seed(int(os.environ["KS_SEED"])); torch.cuda.manual_seed_all(int(os.environ["KS_SEED"]))   # r20: the same noise for two arms of an A/B (each job starts from the seed)
         T.clear(); a.serve and torch.cuda.reset_peak_memory_stats(); torch.cuda.synchronize(); t1 = time.perf_counter()   # (--serve: the peak per request)
         d.sample(model, model_kf, video_path=vid, audio_path=aud, num_frames=14, resize_size=512, video_folder="videos", latent_folder="videos",
                  landmark_folder="landmarks", audio_folder="audios", audio_emb_folder="audios", fps_id=24, cond_aug=0.0, decoding_t=a.decoding_t,
