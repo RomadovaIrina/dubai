@@ -51,8 +51,8 @@ def chunk_args(c):
     args = setv(args, "--shift", SH + i0 - a0)   # local: KeySync frame (k - a0) - shift' == global (k - SH) - i0
     # r16 K1: the source landmarks / others stay WHOLE (they are indexed by the landmark row J[k]); only the master -> row map j is cut, whatever len(lm) is
     z = np.load(val("--lm")); nl = len(z["lm"]); jj = z["j"] if "j" in z.files else np.arange(nl)
-    jj = np.asarray(jj)[np.minimum(np.arange(a0, a1), len(jj) - 1)]
-    np.savez(f"{d}/lm.npz", **{k: z[k] for k in z.files if k != "j"}, j=jj); args = setv(args, "--lm", f"{d}/lm.npz")
+    jall = np.asarray(jj); jj = jall[np.minimum(np.arange(a0, a1), len(jall) - 1)]   # j_all: the whole map too (ks_plain --tail-quiet decides on the global timeline, the same in every chunk)
+    np.savez(f"{d}/lm.npz", **{k: z[k] for k in z.files if k not in ("j", "j_all")}, j=jj, j_all=jall); args = setv(args, "--lm", f"{d}/lm.npz")
     # KeySync-indexed arrays (--ks-lm rows, the k_ecc M / scale): cut by the KeySync index WHATEVER their length (k_ecc has N rows, KeySync N + 60)
     for fl in ("--ks-lm", "--align-ecc"):
         if val(fl):
@@ -96,7 +96,7 @@ if P1:   # phase 1: every GLOBAL estimate from every chunk's samples (exact: the
         print(f"sharp auto (all chunks): skin HF source / KeySync {r_:.3f} -> unsharp {float(G['sharp']):.2f}", flush=True)
     if CAVITY > 0:
         sc = np.concatenate([x["sc"] for x in S0]) if S0 else np.zeros((0, 3))
-        G["cav_l"] = np.float64(np.percentile(sc[:, 0], 30)) if len(sc) else np.float64(-1); G["cav_ab"] = sc[:, 1:].mean(0).astype(np.float32) if len(sc) else np.zeros(2, np.float32)
+        G["cav_l"] = np.float64(np.percentile(sc[:, 0], float(val("--cavity-p", 30)))) if len(sc) else np.float64(-1); print(f"KS_CAVITY tone: source open-mouth interior L p{float(val('--cavity-p', 30)):g} = {float(G['cav_l']):.1f} ({len(sc)} px)", flush=True); G["cav_ab"] = sc[:, 1:].mean(0).astype(np.float32) if len(sc) else np.zeros(2, np.float32)
     np.savez(f"{T}/cm.npz", **G)
 t2 = time.time()
 # r19 speed (output-identical): a short clip gives few chunks (>= 120 frames each), so most cores idle through the paste: the per-frame work of
@@ -107,6 +107,7 @@ with cf.ThreadPoolExecutor(len(jobs)) as ex: list(ex.map(lambda j: run(j, (["--c
 for j in jobs:   # surface every chunk WARNING (e.g. an end fade) in the parent log
     for ln in open(f"{j['dir']}/paste.log"):
         if "WARNING" in ln: print(f"chunk {j['c']}: {ln.rstrip()}", flush=True)
+        if ln.startswith("KS_TAILFADE") and j is jobs[-1]: print(ln.rstrip(), flush=True)   # the tail decision (global: the same in every chunk)
 t3 = time.time()
 open(f"{T}/list.txt", "w").write("".join(f"file '{j['dir']}/out.mp4'\n" for j in jobs))
 pr = json.loads(subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name:format=duration", "-of", "json", val("--audio")], capture_output=True, text=True).stdout or "{}")

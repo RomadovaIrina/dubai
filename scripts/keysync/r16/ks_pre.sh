@@ -6,6 +6,6 @@
 R=$(cd "$(dirname "$0")/../../.." && pwd); SRC=$1; D=$2; MPY=${DUB_MEDIAPIPE_PY:-/venv/mediapipe/bin/python}; mkdir -p $D; rm -f $D/done $D/failed
 t0=$(date +%s.%N)
 ffmpeg -v error -y -i "$SRC" -map 0:v:0 -an -vf fps=25 -c:v libx264 -preset fast -crf 10 -pix_fmt yuv420p $D/master_25fps.mp4 \
-  && GLOG_minloglevel=2 OMP_NUM_THREADS=4 $MPY $R/scripts/pilot/mp_landmarks.py $D/master_25fps.mp4 $D/master_mp.npz --num-faces ${KS_NUM_FACES:-4} > $D/mp.log 2>&1 \
+  && GLOG_minloglevel=2 OMP_NUM_THREADS=4 $MPY $R/scripts/pilot/mp_landmarks.py $D/master_25fps.mp4 $D/master_mp.npz --num-faces ${KS_NUM_FACES:-4} ${KS_MP_TILES:+--tiles $KS_MP_TILES} > $D/mp.log 2>&1 \
   && { echo "$(python3 -c "import time; print(round(time.time() - $t0, 1))")" > $D/done; exit 0; }
 touch $D/failed; exit 1

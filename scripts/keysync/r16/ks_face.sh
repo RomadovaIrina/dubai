@@ -3,7 +3,7 @@
 # K2 r16-mouth 8d07fc6 / k2_k1chain_tag.sh, Q r16-qa 84031e1 route.json), per speaking face:
 #   plan      ks_e2e_prep.py: route.json faces (lipsync with SILENCE outside own speech / source -> --others) or the dubbed-units fallback; no-face rule
 #   crop      KS_CROP=auto: K2 tracked crop (k2_prep_track.py) if the static face share < 0.45 or the head travels > 0.4 face heights, else the r15 static crop + K1 pad: the last KS_PAD (60) frames mirrored, the seam frame not repeated
-#   ref       KS_REF=0 (default, Irina 08.11: frame 0 of this run = of the shot in multi-shot) | auto (K2 k2_refpick.py) | <frame>
+#   ref       KS_REF=0 (default, Irina 08.11: frame 0 of this run = of the shot in multi-shot) | auto (K2 k2_refpick.py) | skin (r19 ks_refskin.py) | <frame>
 #   [GPU]     delay probe (KS_DELAY=probe | <ms>): KeySync on KS_PROBE_S (10) s from the face's first own speech, SyncNet AV offset of the raw render
 #             vs the dub it heard -> delay = -offset x 40 ms (old03 0, m03 / m18 40); the full KeySync (fast2 + K2 gate KS_GATE) on the padded crop with
 #             the delayed + padded dub; check: SyncNet of the full raw render -> if still != 0, the paste shift = -offset (K1 fallback)
@@ -15,8 +15,8 @@
 #   plan / crop / ref / KeySync / post / paste per shot, nothing smoothed across a cut), concat -c copy + the mix stream-copied. KS_SHOTS=off = one run.
 # Env: KS_SHOTS KS_SHOT_MIN_S KS_DELAY KS_PROBE_S KS_REF KS_CROP KS_PAD KS_GATE KS_TSMOOTH KS_PAUSE KS_PASTE_SHIFT KS_PLAIN_ARGS KS_PLAIN_EXTRA KS_INTERP_STEPS KS_SYNC_MAX_S
 #      KS_MASK (oval | tight = K1 A2 ghost-free | tight_nochin = A3 | tight_chin_legacy) KS_CM_SHADOW KS_OCCL (off|on) KS_OCCL_ARGS KS_TAIL_SRC (off|on) KS_TAIL_SRC_ARGS KS_ZEROFIX KS_OFFSCREEN_CONF KS_EDGE_SNAP
-#      KS_OCCL=mask (r18): the occlusion / turn gate as a factor of the paste mask (no extra encode); KS_OCCL=on = the old re-encoding stage
-#      KS_MASK default = hybrid (r18, Irina 13.11); KS_HYBRID_UP; KS_TAIL_FADE (on|off, default on) KS_TAIL_FADE_ARGS (r18: the tail hand-over inside ks_plain; NOT KS_TAIL_SRC, the re-encoding pass)
+#      KS_OCCL=mask (r18, the default): the occlusion / turn gate as a factor of the paste mask (no extra encode); off = none; on = the old re-encoding stage. KS_OCCL_ARGS default "--pad 18 --ramp 6 --y0 9 --y1 10" = the source face from ~0.7 s before the object reaches the mouth to ~0.7 s after (her pick 14.11), the head-turn (pose) rule off
+#      KS_MASK default = hybrid (r18, Irina 13.11); KS_HYBRID_UP; KS_TAIL_FADE (on|always|off, default on = fade only when the source mouth is quiet in the tail, r19) KS_TAIL_FADE_ARGS (r18: the tail hand-over inside ks_plain; NOT KS_TAIL_SRC, the re-encoding pass)
 #      KS_SEAM_ARGS (r18: "--ratio-full 2.0" = the 08.11 step rule: ratio > 2 -> every 13-frame boundary fully smoothed; default = b2a660b's 2.0 -> 3.0 ramp)
 #      KS_PASTE_JOBS KS_MIN_IOD KS_NUM_FACES KS_PROBE_MIN_CONF KS_PROBE_MAX KS_CHECK; GPU_RDY (gpulock.sh hand-off)
 set -o pipefail
@@ -116,7 +116,7 @@ N=$(ffprobe -v error -count_packets -select_streams v:0 -show_entries stream=nb_
 t landmarks   # CPU; up to KS_NUM_FACES faces (route.json faces are matched to these tracks)
 if [ -n "${KS_MP_NPZ:-}" ]; then cp "$KS_MP_NPZ" $KW/master_mp.npz   # (ks_shots.sh: the parent's landmarks sliced to this shot)
 elif [ -n "$PRE" ]; then cp $PRE/master_mp.npz $KW/master_mp.npz
-else GLOG_minloglevel=2 OMP_NUM_THREADS=4 $MPY $R/scripts/pilot/mp_landmarks.py $KW/master_25fps.mp4 $KW/master_mp.npz --num-faces ${KS_NUM_FACES:-4} > $KW/mp.log 2>&1 || { tail -3 $KW/mp.log; exit 1; }; fi
+else GLOG_minloglevel=2 OMP_NUM_THREADS=4 $MPY $R/scripts/pilot/mp_landmarks.py $KW/master_25fps.mp4 $KW/master_mp.npz --num-faces ${KS_NUM_FACES:-4} ${KS_MP_TILES:+--tiles $KS_MP_TILES} > $KW/mp.log 2>&1 || { tail -3 $KW/mp.log; exit 1; }; fi
 if [ "${KS_SHOTS:-auto}" != off ] && [ -z "${KS_IN_SHOT:-}" ]; then   # K2 multi-shot: > 1 segment (hard cuts + faceless gaps > 2 s, each cut to its face range) -> ks_shots.sh runs this script per face segment
   t shots; $PY $KT/ks_shots.py detect --video $KW/master_25fps.mp4 --mp $KW/master_mp.npz --out $KW/shots.json | cut -c1-600 || exit 1
   if [ "$(python3 -c "import json; print(len(json.load(open('$KW/shots.json'))['segments']))")" -gt 1 ]; then bash $R/scripts/keysync/r16/ks_shots.sh "$ID" "$AD" "$W" "$OUTV" "$ROUTE" $KW; exit $?; fi
@@ -166,6 +166,10 @@ PY
   if [ "$REF" = auto ]; then   # K2: a frame with the upper teeth showing as KeySync's identity (black-hole mouths roughly halved); 0 if the pick fails
     REF=$($MPY $KT/k2_refpick.py --video $KW/data/crop_$f.mp4 --lm $KW/crop_lm_$f.npz --face-lm $KW/lm_$f.npz --box $KW/data/box_$f.json --out $KW/ref_$f 2> $KW/ref_$f.log | grep "^K2_REFPICK" | python3 -c "import json,sys; print(json.loads(sys.stdin.read()[11:])['pick'])" 2>/dev/null)
     [ -n "$REF" ] || { echo "KS WARN refpick failed ($f): ref 0"; REF=0; }
+  fi
+  if [ "$REF" = skin ]; then   # r19 (04: a dark, green first frame -> a drawn band above the lip): a closed-mouth frontal frame whose upper-lip skin is lit like the cheeks; 0 unless it clearly beats frame 0
+    REF=$($MPY $KT/ks_refskin.py --video $KW/data/crop_$f.mp4 --lm $KW/crop_lm_$f.npz --face-lm $KW/lm_$f.npz 2> $KW/ref_$f.log | tee -a $KW/ref_$f.log | grep "^KS_REFSKIN" | python3 -c "import json,sys; print(json.loads(sys.stdin.read()[11:])['pick'])" 2>/dev/null)
+    [ -n "$REF" ] || { echo "KS WARN refskin failed ($f): ref 0"; REF=0; }
   fi
   echo $REF > $KW/ref_$f.txt
 done
@@ -332,11 +336,12 @@ for f in $TAGS; do
     else MK="$MA ${KS_CM_SHADOW---cm-shadow 10:30}"; echo "KS_MASK $f: face_parse unavailable (model $PM) -> ${KS_MASK} without parsing"; fi
     echo "KS_MASK $f ${KS_MASK}: $MK"
   fi
-  if [ "${KS_OCCL:-off}" = mask ]; then   # r18: K2's occlusion / turn / hand-over-mouth scores (ks_occl.py pass 1 only: no composite, no encode) -> the paste mask (ks_plain --gate-w)
-    if ( cd $KT && $MPY $KT/ks_occl.py --master $CUR --paste $CUR --lm $KW/lm_$f.npz --dump $P/occl.json ${KS_OCCL_ARGS:-} ) > $P/occl.log 2>&1 && [ -s $P/occl.json ]; then
+  if [ "${KS_OCCL:-mask}" = mask ]; then   # DEFAULT since Irina's blind pick 13.11 (q05 cup: "B менее страшен"); KS_OCCL=off = no gate   # r18: K2's occlusion / turn / hand-over-mouth scores (ks_occl.py pass 1 only: no composite, no encode) -> the paste mask (ks_plain --gate-w)
+    if ( cd $KT && $MPY $KT/ks_occl.py --master $CUR --paste $CUR --lm $KW/lm_$f.npz --dump $P/occl.json ${KS_OCCL_ARGS---pad 18 --ramp 6 --y0 9 --y1 10} ) > $P/occl.log 2>&1 && [ -s $P/occl.json ]; then   # r18 defaults (Irina 14.11): the source face ~0.7 s around the object (q05 cup, her blind pick B-new); the head-turn rule OFF (--y0 9: long5 turns: not wanted)
       grep -E "^KS_OCCL \{" $P/occl.log | cut -c1-300; MK="$MK --gate-w $P/occl.json"
     else flag ks_occl_failed "$f: the occlusion scores failed ($(tail -1 $P/occl.log | cut -c1-120)) -> the paste without the gate"; fi; fi
-  [ "${KS_TAIL_FADE:-on}" = on ] && [ -s $KW/dub_$f.wav ] && MK="$MK --tail-src $KW/dub_$f.wav ${KS_TAIL_FADE_ARGS:-}"   # r18: after this face's last strong dub phrase the face fades to the source INSIDE the paste (no re-encode). DEFAULT ON: Irina's blind pick 13.11 on the m03 end face ("вариант Б сильно лучше"); checked on old03 / long5 shot ends / q05
+  case "${KS_TAIL_FADE:-on}" in on) TQA="";; always) TQA="--tail-quiet off";; *) TQA=skip;; esac   # r19 (Irina 14.11: old03 end = the drawn face to the end, m03 end = the fade): on = fade ONLY if the source mouth is quiet in the tail (ks_plain --tail-quiet 0.75:0.05:3); always = the r18 rule (fade whenever the silent tail is >= 1 s); off = never
+  [ "$TQA" != skip ] && [ -s $KW/dub_$f.wav ] && MK="$MK --tail-src $KW/dub_$f.wav $TQA ${KS_TAIL_FADE_ARGS:-}"   # r18: after this face's last strong dub phrase the face fades to the source INSIDE the paste (no re-encode). DEFAULT ON: Irina's blind pick 13.11 on the m03 end face ("вариант Б сильно лучше"); checked on old03 / long5 shot ends / q05
   ARGS="--ks $L --ks-lm $P/raw_lm.npz --master $CUR --box $KW/data/box_$f.json --lm $KW/lm_$f.npz --audio $AD/final_mix_aac.m4a --shift ${SHF[$f]} --absent skip $OTH \
         ${KS_PLAIN_ARGS---lfm 6 --upper-src 0.12:0.32 --keep-nose 0.04 --align 2 --align-ecc $P/ecc.npz --align-scale 0 --tex 2} ${KS_PLAIN_EXTRA:-} $MK"
   if [ "${KS_PASTE_JOBS:-0}" != 1 ] && [ -f $KT/ks_plain_par.py ]; then
