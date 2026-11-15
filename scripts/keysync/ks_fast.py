@@ -114,6 +114,8 @@ def main():
         import ks_gate; ks_gate.install(d, model)
     if os.environ.get("KS_NOISE"):   # r16c K2: shared noise across windows / keyframes (ks_noise.py)
         import ks_noise; ks_noise.install(d)
+    if os.environ.get("KS_QUIET"):   # r20: lower audio guidance on the keyframes that sit in silence (ks_quiet.py; the pressed lips in pauses / the tail)
+        import ks_quiet; ks_quiet.install(d, model_kf)
     for n in ("compute_video_embedding", "get_audio_embeddings", "extract_video_landmarks", "sample_keyframes", "sample_interpolation", "save_audio_video"):
         setattr(d, n, timed(n, getattr(d, n)))
     if a.vae_batch > 1:   # r15: the authors decode one frame per call (decoding_t 1 -> timesteps 1: no temporal mixing); the same math batched N frames per call
