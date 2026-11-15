@@ -207,6 +207,7 @@ def main():
         os.environ["KS_REF_IDX"] = ex[0] if ex else "0"   # (audit #13: no leak of the previous job's reference)
         if os.environ.get("KS_FAULT") == "crash" and not ("p_" in tag.split("_", 1)[-1] or tag.startswith("p_")):   # r16 TZ 11.1 fault injection
             raise RuntimeError(f"KS_FAULT=crash: injected generator failure in job {tag}")
+        if os.environ.get("KS_SEED"): torch.manual_seed(int(os.environ["KS_SEED"])); torch.cuda.manual_seed_all(int(os.environ["KS_SEED"]))   # r20: the same noise for two arms of an A/B (each job starts from the seed)
         T.clear(); a.serve and torch.cuda.reset_peak_memory_stats(); torch.cuda.synchronize(); t1 = time.perf_counter()   # (--serve: the peak per request)
         d.sample(model, model_kf, video_path=vid, audio_path=aud, num_frames=14, resize_size=512, video_folder="videos", latent_folder="videos",
                  landmark_folder="landmarks", audio_folder="audios", audio_emb_folder="audios", fps_id=24, cond_aug=0.0, decoding_t=a.decoding_t,

@@ -14,7 +14,7 @@ import numpy as np, torch
 cfg = dict(x.split("=") for x in os.environ.get("KS_QUIET", "").split(",") if "=" in x)
 AR = float(cfg.get("ar", 1.0)); RR = float(cfg["rr"]) if "rr" in cfg else None
 GAP, RAMP, THR = float(cfg.get("gap", 0.3)), float(cfg.get("ramp", 0.4)), float(cfg.get("thr", 0.05))
-ST = {"q": None, "idx": None, "chunk": -1, "sig": None, "in_kf": False, "rows": 0, "quiet": 0.0}
+ST = {"q": None, "idx": None, "chunk": -1, "off": 0, "sig": None, "in_kf": False, "rows": 0, "quiet": 0.0, "at": []}
 
 
 def quiet_curve(path, fps=25.0):
@@ -36,16 +36,16 @@ def install(d, model_kf):
     def sample(*a, **k):
         try: ST["q"] = quiet_curve(k.get("audio_path") or a[3])
         except Exception as ex: ST["q"] = None; print(f"KS_QUIET: no quiet curve ({ex}) -> default guidance", flush=True)
-        ST["rows"] = 0; ST["quiet"] = 0.0
+        ST["rows"] = 0; ST["quiet"] = 0.0; ST["off"] = 0; ST["at"] = []
         r = s0(*a, **k)
-        q = ST["q"]; print("KS_QUIET job: audio frames %d quiet share %.2f | keyframe rows %d, mean q %.2f, ar -> %.1f%s" % (0 if q is None else len(q), 0 if q is None else float((q > 0.5).mean()), ST["rows"], ST["quiet"] / max(ST["rows"], 1), AR, "" if RR is None else f", rr -> {RR}"), flush=True)
+        q = ST["q"]; print("KS_QUIET job: audio frames %d quiet share %.2f | keyframe rows %d, mean q %.2f, ar -> %.1f%s" % (0 if q is None else len(q), 0 if q is None else float((q > 0.5).mean()), ST["rows"], ST["quiet"] / max(ST["rows"], 1), AR, "" if RR is None else f", rr -> {RR}") + " | quiet keyframes at s: " + " ".join("%.1f" % t for t in ST["at"]), flush=True)
         return r
     def cpi(*a, **k):
         r = c0(*a, **k); ST["idx"] = list(r[-1]); ST["rem"] = list(r[8]); return r
     def skf(*a, **k):
         ST["in_kf"] = True; ST["chunk"] = -1; ST["sig"] = None
         try: return k0(*a, **k)
-        finally: ST["in_kf"] = False
+        finally: ST["in_kf"] = False; ST["off"] += ST["chunk"] + 1   # sample_keyframes runs once per 2 batches of 14 keyframes: the slot offset runs on over the whole video (r20-mouth's catch)
     def call(self, x, sigma):
         q_, idx = ST["q"], ST["idx"]
         if self is not g or not ST["in_kf"] or q_ is None or idx is None: return call0(self, x, sigma)
@@ -53,11 +53,11 @@ def install(d, model_kf):
         if ST["sig"] is None or sv > ST["sig"] * 1.0001: ST["chunk"] += 1; new = True   # a new sampling run = the next 14-keyframe chunk
         else: new = False
         ST["sig"] = sv
-        e_uc, e_ref, c = x.chunk(3); n = e_uc.shape[0]; base = ST["chunk"] * n; q = torch.zeros(n)
+        e_uc, e_ref, c = x.chunk(3); n = e_uc.shape[0]; base = (ST["off"] + ST["chunk"]) * n; q = torch.zeros(n)
         for j in range(n):
             s = base + j
             if s < len(idx) and idx[s] is not None and not ST["rem"][s]: q[j] = float(q_[min(int(idx[s]), len(q_) - 1)])
-        if new: ST["rows"] += n; ST["quiet"] += float(q.sum())
+        if new: ST["rows"] += n; ST["quiet"] += float(q.sum()); ST["at"] += [int(idx[base + j]) / 25.0 for j in range(n) if q[j] > 0.5]
         if float(q.max()) <= 0: return call0(self, x, sigma)
         q = q.to(device=x.device, dtype=x.dtype).view(-1, *([1] * (x.dim() - 1)))
         ar = self.audio_ratio + q * (AR - self.audio_ratio); rr = self.ref_ratio if RR is None else self.ref_ratio + q * (RR - self.ref_ratio)
