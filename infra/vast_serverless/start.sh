@@ -14,7 +14,10 @@ curl -fsSL $RAW/worker.py -o /opt/dabai_worker.py && curl -fsSL $RAW/requirement
 # the benchmark input: a 5 s synthetic clip (no face -> the job ends fast with a clear status; the PyWorker only needs a 200 round trip)
 ffmpeg -v error -y -f lavfi -i testsrc=duration=5:size=720x1280:rate=25 -f lavfi -i sine=frequency=440:duration=5 -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest /data/bench_5s.mp4
 if ! bash $R/infra/docker/check.sh --weights-only > /data/weights_check.log 2>&1; then
-  echo "weights missing -> fetch-models"; bash $R/infra/docker/fetch_models.sh > /data/fetch_models.log 2>&1 || echo "RESIDENT: fetch-models failed"; fi
+  # r20: a new host can hit HF CDN read timeouts (10 s default): longer timeouts + 3 tries (fetch_models.sh resumes, as in scripts/r18/vm_setup.sh)
+  export HF_HUB_DOWNLOAD_TIMEOUT=${HF_HUB_DOWNLOAD_TIMEOUT:-60} HF_HUB_ETAG_TIMEOUT=${HF_HUB_ETAG_TIMEOUT:-60}; ok=0
+  for i in 1 2 3; do echo "weights missing -> fetch-models (try $i)"; bash $R/infra/docker/fetch_models.sh > /data/fetch_models_$i.log 2>&1 && { ok=1; break; }; sleep 20; done
+  [ $ok = 1 ] && echo "fetch-models ok (try $i)" || echo "RESIDENT: fetch-models failed 3 times (/data/fetch_models_*.log)"; fi
 ( cd $R && bash infra/docker/entrypoint.sh api > /var/log/portal/api.log 2>&1 & )
 for i in $(seq 180); do curl -sf http://127.0.0.1:8000/health > /dev/null && break; sleep 1; done; echo "api up"
 [ -x /opt/pyworker/bin/python ] || { uv venv -q -p 3.11 /opt/pyworker && uv pip install -q --python /opt/pyworker/bin/python -r /opt/dabai_req.txt; }
