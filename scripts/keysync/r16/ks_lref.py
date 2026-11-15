@@ -50,6 +50,10 @@ def guide_hook(g):
             k = float(mv[1]); T = float(mv[2]) if len(mv) > 2 else -0.3; Wd = float(mv[3]) if len(mv) > 3 else 0.3
             u = e.new_tensor([0.277, 0.416, 0.050, -0.299]).view(1, 4, 1, 1); Ye, Yc = (e * u).sum(1, keepdim=True), (c * u).sum(1, keepdim=True)
             w = ((T - Yc) / Wd).clamp(0, 1) * ((Yc - Ye) / 0.1).clamp(0, 1) * k; e = e - w.clamp(0, 1) * (e - c)
+            # the K2 gate (ks_gate.py) keys on black pixels of the decoded keyframes; the floored cells are the pixels that WOULD have been black: recorded per sampling run
+            if ST.get("fw_sig") is None or sv > ST["fw_sig"] * 1.0001: ST.setdefault("fw_runs", []).append(torch.zeros_like(w[:, 0]))
+            ST["fw_sig"] = sv
+            if sv <= float(os.environ.get("KS_FLOOR_GSIG", "2")): ST["fw_runs"][-1] = torch.maximum(ST["fw_runs"][-1], (Ye[:, 0] < float(os.environ.get("KS_FLOOR_GY", "-0.8"))).to(w.dtype))   # would-be-black: the guided luma BEFORE the pull-back under the gate luma (0.18 of 0..1 = -0.64)
         if m[0] == "rescale":
             w = ((c - e_uc).abs().sum(1, keepdim=True) > 1e-4).to(e.dtype); n = w.sum((1, 2, 3), keepdim=True).clamp_min(1.0) * e.shape[1]
             mu_c = (c * w).sum((1, 2, 3), keepdim=True) / n; mu_e = (e * w).sum((1, 2, 3), keepdim=True) / n
@@ -63,7 +67,7 @@ def install(d):
     cpi0, sk0 = d.create_pipeline_inputs, d.sample_keyframes
 
     def create_pipeline_inputs(video, audio, audio_interpolation, num_frames, video_emb, landmarks, **k):
-        p = os.environ.get("KS_LREF", ""); ST["plan"] = None; ST["b"] = 0
+        p = os.environ.get("KS_LREF", ""); ST["plan"] = None; ST["b"] = 0; ST["fw_last"] = None; ST["fw_chunk"] = None
         if p:
             ST["plan"] = json.load(open(p)); ST.update(emb=video_emb, vid=video, aud=audio, lmk=landmarks, kw=k)
             print("KS_LREF", p, "refs", ST["plan"]["refs"], "slot0", ST["plan"].get("slot0", 0), flush=True)
@@ -79,14 +83,15 @@ def install(d):
             cv2.imwrite(os.path.join(dd, "b%03d_s%02d_f%05d.jpg" % (b, j, 13 * (13 * b + j - 1) if j else 0)), (g[j][..., ::-1] * 255).astype(np.uint8))
 
     def sample_keyframes(model_keyframes, audio_list, gt_list, masks_list, condition, num_frames, fps_id, cond_aug, device, embbedings, *a, **k):
-        P = ST["plan"]; zs, xs = [], []
+        P = ST["plan"]; zs, xs = [], []; ST["fw_runs"] = []; ST["fw_sig"] = None; ST["fw_chunk"] = None
         g = model_keyframes.sampler.guider   # (tests) per-job keyframe guidance: KS_KF_AR / KS_KF_RR / KS_KF_NORM read at every call when KS_KF_LIVE=1
         if os.environ.get("KS_KF_MODE") is not None: guide_hook(g)
         if os.environ.get("KS_KF_LIVE") == "1":
             if "ar0" not in ST: ST["ar0"], ST["rr0"] = g.audio_ratio, g.ref_ratio
             g.audio_ratio = float(os.environ.get("KS_KF_AR") or ST["ar0"]); g.ref_ratio = float(os.environ.get("KS_KF_RR") or ST["rr0"]); g.use_normalized = os.environ.get("KS_KF_NORM") == "1"
         if not P and not os.environ.get("KS_KF_DUMP") and not os.environ.get("KS_KF_ONLY"):
-            return sk0(model_keyframes, audio_list, gt_list, masks_list, condition, num_frames, fps_id, cond_aug, device, embbedings, *a, **k)
+            r_ = sk0(model_keyframes, audio_list, gt_list, masks_list, condition, num_frames, fps_id, cond_aug, device, embbedings, *a, **k)
+            ST["fw_chunk"] = torch.cat(ST["fw_runs"]) if ST["fw_runs"] else None; return r_
         for i in range(audio_list.shape[0]):
             au, gt, mk, cond, emb = audio_list[i:i + 1], gt_list[i:i + 1], masks_list[i:i + 1], condition, embbedings
             if P:
@@ -113,10 +118,22 @@ def install(d):
             finally:
                 if "get_unconditional_conditioning" in cn.__dict__: del cn.__dict__["get_unconditional_conditioning"]
             dump(x, ST["b"]); zs.append(z); xs.append(x); ST["b"] += 1
+        ST["fw_chunk"] = torch.cat(ST["fw_runs"]) if ST["fw_runs"] else None
+        if os.environ.get("KS_KF_DUMP") and ST["fw_chunk"] is not None:
+            import numpy as np; dd_ = os.path.join(os.environ["KS_KF_DUMP"], os.environ.get("KS_KF_TAG", "")); os.makedirs(dd_, exist_ok=True); np.save(os.path.join(dd_, "fw_b%03d.npy" % (ST["b"] - len(ST["fw_runs"]))), ST["fw_chunk"].float().cpu().numpy())
         return torch.cat(zs), torch.cat(xs)
 
     si0 = d.sample_interpolation
     def sample_interpolation(model, samples_z, samples_x, audio_interpolation_list, *a, **k):   # KS_KF_ONLY=1 (tests): keyframes only, black frames instead of the interpolation
+        gm = __import__("sys").modules.get("ks_gate"); fwc = ST.get("fw_chunk")
+        if gm is not None:
+            gm.ST["extra"] = None
+            if fwc is not None:
+                seq = ([ST["fw_last"]] if ST.get("fw_last") is not None and samples_x.shape[0] == fwc.shape[0] + 1 else []) + list(fwc)
+                if len(seq) == samples_x.shape[0]:
+                    tr = k.get("to_remove") or []; kept = [m for i, m in zip(tr, seq) if not i] if len(tr) else seq
+                    gm.ST["extra"] = torch.stack(kept).float().cpu().numpy() if kept else None
+                ST["fw_last"] = seq[-1] if seq else None
         if os.environ.get("KS_KF_ONLY") != "1": return si0(model, samples_z, samples_x, audio_interpolation_list, *a, **k)
         import numpy as np
         return np.zeros((13 * len(audio_interpolation_list) + 1, 3, samples_x.shape[-2], samples_x.shape[-1]), np.uint8)
