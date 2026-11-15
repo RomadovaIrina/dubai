@@ -419,7 +419,8 @@ def _run_job(job: dict, on_event=None, cancel: threading.Event | None = None) ->
                 try: os.killpg(proc.pid, signal.SIGKILL)
                 except ProcessLookupError: pass
                 break
-            time.sleep(3)
+            try: proc.wait(timeout=3)   # r20 speed: the same 3 s poll, but a finished pipeline is seen at once (time.sleep(3) cost every job 0-3 s at its end)
+            except subprocess.TimeoutExpired: pass
         proc.wait(); log.close(); st["peak_rss_mb"] = round(rss_peak)
         if res_restart:   # back in the background: the next jobs run cold until it is ready again (/health resident.state)
             subprocess.Popen(["bash", str(ROOT / "scripts" / "job" / "resident.sh"), "resume"], cwd=ROOT, start_new_session=True,   # (r19: a no-op when e2e.sh resumed it)
