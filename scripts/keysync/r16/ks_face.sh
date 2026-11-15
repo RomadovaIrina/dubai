@@ -5,6 +5,9 @@
 #   crop      KS_CROP=auto: K2 tracked crop (k2_prep_track.py) if the static face share < 0.45 or the head travels > 0.4 face heights, else the r15 static crop + K1 pad: the last KS_PAD (60) frames mirrored, the seam frame not repeated
 #   ref       KS_REF=0 (default, Irina 08.11: frame 0 of this run = of the shot in multi-shot) | auto (K2 k2_refpick.py) | skin (r19 ks_refskin.py) | <frame>
 #             | local (r20 ks_lrefpick.py + ks_lref.py: one reference per 169-frame keyframe batch, lit like that batch; KS_LREF_MOUTH auto|closed|teeth, KS_LREF_ARGS)
+#   r20 (all opt-in, reports/experiments/r20-mouth/REPORT.md): KS_KF_MODE=floorv:1 = the black mouth: the keyframe guidance may not push the dark mouth interior darker than the
+#             conditional prediction (ks_lref.py guide_hook; read by ks_fast from the env); KS_GATE=...,luma=0.25 = the gate's dark-pixel luma (0.18 = r16) if its share should
+#             match under floorv; KS_TRACK_SIGMA = the smoothing of the tracked crop centre (k2_prep_track --sigma, 6 = r16; small faces: KS_TRACK_K=1.25 KS_TRACK_SIGMA=3)
 #   [GPU]     delay probe (KS_DELAY=probe | <ms>): KeySync on KS_PROBE_S (10) s from the face's first own speech, SyncNet AV offset of the raw render
 #             vs the dub it heard -> delay = -offset x 40 ms (old03 0, m03 / m18 40); the full KeySync (fast2 + K2 gate KS_GATE) on the padded crop with
 #             the delayed + padded dub; check: SyncNet of the full raw render -> if still != 0, the paste shift = -offset (K1 fallback)
