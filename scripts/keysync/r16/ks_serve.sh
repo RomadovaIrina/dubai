@@ -12,7 +12,11 @@ ks_kit_md5() {   # the KeySync python the run imports (a daemon started from oth
   cat $R/scripts/keysync/ks_fast.py $R/scripts/keysync/ks_serve.py $R/scripts/keysync/r15/*.py $R/scripts/keysync/r16/ks_gate.py $R/scripts/keysync/r16/ks_noise.py 2>/dev/null | md5sum | cut -c1-12; }
 ks_sig() {   # ks_sig <engine dir> <lora> <lmk cache> <gate>
   echo "cfg=_s8 vae-half compile=unet trt=$1 lora=$2 steps=${KS_INTERP_STEPS:-2} vae-batch=8 vae-compile dc=2:0 lmk=$3 gate=$4 ind=${TORCHINDUCTOR_CACHE_DIR:-$KS/inductor} \
-noise=${KS_NOISE:-} kfar=${KS_KF_AR:-} kfrr=${KS_KF_RR:-} iguide=${KS_IGUIDE:-} ichunk=${KS_ICHUNK:-} kit=$(ks_kit_md5)" | md5sum | cut -c1-16; }
+noise=${KS_NOISE:-} kfar=${KS_KF_AR:-} kfrr=${KS_KF_RR:-} iguide=${KS_IGUIDE:-} ichunk=${KS_ICHUNK:-} kit=$(ks_kit_md5)\
+$( [ -n "${KS_KF_MODE:-}${KS_KFOUT:-}${KS_QUIET:-}${KS_SEED:-}" ] && echo " kfmode=${KS_KF_MODE:-} kfout=${KS_KFOUT:-} quiet=${KS_QUIET:-} seed=${KS_SEED:-}")" | md5sum | cut -c1-16; }
+# r20 release: KS_KF_MODE / KS_KFOUT / KS_QUIET / KS_SEED are read inside the daemon process (ks_lref / ks_kfout / ks_quiet / ks_fast), so they belong
+# in the signature: a job whose values differ from the daemon's runs cold with its own env instead of silently getting the daemon's. All four unset
+# = the same signature as before (old daemons / TRT caches keep matching).
 
 ks_fast_cmd() {   # ks_fast_cmd <kit dir> <extra args...>: the ONE ks_fast command line (cold run and daemon alike)
   local K=$1; shift

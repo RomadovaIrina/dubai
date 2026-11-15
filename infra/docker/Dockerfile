@@ -122,8 +122,13 @@ ENV DUB_ROOT=/workspace/dub/dubai DUB_ENV=/venv/dabai VIRTUAL_ENV=/venv/dabai DU
 # as a mask factor, q05) is ON: her blind pick 13.11 ("B менее страшен"). It would also return the face to the source on a strong head turn (ks_occl.py's
 # pose rule) only if KS_OCCL_ARGS re-enables it: the code default is "--pad 18 --ramp 6 --y0 9 --y1 10" = the wider span around the object (her pick 14.11)
 # and the head-turn rule OFF (long5: 3 spans of ~2 s with a Russian mouth while the person talks: not wanted).
-ARG KS_TAIL_SRC=off KS_OCCL=mask KS_PAUSE=off KS_CAP="" KS_CMS=0 KS_MASK=hybrid KS_CM_SHADOW="" KS_TAIL_FADE=on KS_HYBRID_UP=0
+# r20 (Irina's eye picks, r18-quality combination check passed 15.11): KS_KF_MODE=floorv:1 = the black mouth (the keyframe guidance may not push the dark
+# mouth interior darker than the conditional prediction); KS_KFOUT=student = the segment boundary frames keep the interpolation model's own rendition
+# (the one-frame dark blink every 13 frames; old03 PARTIAL -> SUCCESS). Per job: debug_env {"KS_KF_MODE": ""} turns floorv off (05: a 68 px face).
+# Both are in the resident daemon's signature (ks_serve.sh ks_sig), so a job with other values runs cold with its own env.
+ARG KS_TAIL_SRC=off KS_OCCL=mask KS_PAUSE=off KS_CAP="" KS_CMS=0 KS_MASK=hybrid KS_CM_SHADOW="" KS_TAIL_FADE=on KS_HYBRID_UP=0 KS_KF_MODE=floorv:1 KS_KFOUT=student
 ENV KS_TAIL_SRC=${KS_TAIL_SRC} KS_OCCL=${KS_OCCL} KS_PAUSE=${KS_PAUSE} KS_CAP=${KS_CAP} KS_CMS=${KS_CMS} KS_MASK=${KS_MASK} KS_CM_SHADOW=${KS_CM_SHADOW} KS_TAIL_FADE=${KS_TAIL_FADE} KS_HYBRID_UP=${KS_HYBRID_UP} \
+    KS_KF_MODE=${KS_KF_MODE} KS_KFOUT=${KS_KFOUT} \
     PATH=/venv/dabai/bin:${PATH}
 # r17 (12.11-12.11, VM speed_guard on a 3-shot clip): the wall-time speedups, ON in the image. Verified within the run-to-run floor
 # (flags off vs flags off PSNR 44.04 / 38.55 dB; off vs on 44.16 / 38.61; dubs + route identical): 896 -> 668 s on the clip (KeySync -33 %).
