@@ -74,7 +74,7 @@ for f in $TAGS; do
   echo "KS_CROP $f $CR $(python3 -c "import json; b=json.load(open('$KW/data/st/box_$f.json')); print('static face share %.2f, head travel %.2f face heights' % (b['face_h'] / b['side'], b['move'] / b['face_h']))")"
   if [ "$CR" = track ]; then   # K2: constant side, the centre follows the face (smoothed)
     TK=${KS_TRACK_K:-1.8}; [ -s $KW/others_$f.npz ] && TK=${KS_TRACK_K2:-1.25}
-    $MPY $KT/k2_prep_track.py --master $KW/master_25fps.mp4 --lm $KW/lm_$f.npz --out $KW/data/crop_$f --k $TK >> $KW/crop_$f.log 2>&1 || { tail -3 $KW/crop_$f.log; exit 1; }
+    $MPY $KT/k2_prep_track.py --master $KW/master_25fps.mp4 --lm $KW/lm_$f.npz --out $KW/data/crop_$f --k $TK ${KS_TRACK_SIGMA:+--sigma $KS_TRACK_SIGMA} >> $KW/crop_$f.log 2>&1 || { tail -3 $KW/crop_$f.log; exit 1; }
     mv $KW/data/crop_${f}_box.json $KW/data/box_$f.json
   else
     mv $KW/data/st/videos/$f.mp4 $KW/data/crop_$f.mp4; mv $KW/data/st/box_$f.json $KW/data/box_$f.json

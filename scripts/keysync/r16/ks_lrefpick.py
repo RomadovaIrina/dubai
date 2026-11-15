@@ -16,7 +16,7 @@ ap = argparse.ArgumentParser(); ap.add_argument("--video", required=True); ap.ad
 ap.add_argument("--n", type=int, default=0, help="real frames (without the pad)"); ap.add_argument("--out", default=""); ap.add_argument("--sheet", default="")
 ap.add_argument("--mouth", default="auto", choices=["closed", "teeth", "auto"]); ap.add_argument("--batch", type=int, default=169)
 ap.add_argument("--reach", type=float, default=3.0, help="s around the batch searched first"); ap.add_argument("--keep", type=float, default=0.5)
-ap.add_argument("--slot0", type=int, default=0); ap.add_argument("--teeth-min", type=float, default=0.20, dest="tmin", help="upper-teeth share of a teeth frame")
+ap.add_argument("--lips", type=float, default=1.0, help="weight of the typical-lips term (lip redness and thickness vs the speaker median)"); ap.add_argument("--slot0", type=int, default=0); ap.add_argument("--teeth-min", type=float, default=0.20, dest="tmin", help="upper-teeth share of a teeth frame")
 ap.add_argument("--teeth-min-share", type=float, default=0.02, dest="tshare"); ap.add_argument("--feat", default="", help="save / reuse the per-frame features (npz)")
 ap.add_argument("--chunks", default="", help="a ks_chunk.py split dir: one plan per chunk (c<j>.plan.json) instead of --out")
 ap.add_argument("--global", type=int, default=0, dest="glob", help="1 = ONE frame for the whole clip (the best for the clip median), as KS_REF=<frame>")
@@ -34,7 +34,7 @@ if a.face_lm:   # only frames where THIS face is present in the master track
 hull = lambda p: cv2.convexHull(p.astype(np.float32))[:, 0].astype(np.int32)
 def fill(p, idx):
     m = np.zeros((H, W), np.uint8); cv2.fillPoly(m, [hull(p[idx])], 1); return m
-KEYS = ["open", "yaw", "roll", "sharp", "L", "A", "B", "pL", "pA", "t_up", "t_L", "t_sd", "t_a", "dark", "cx", "cy", "fh", "lipc", "ear"]
+KEYS = ["open", "yaw", "roll", "sharp", "L", "A", "B", "pL", "pA", "t_up", "t_L", "t_sd", "t_a", "dark", "cx", "cy", "fh", "lipc", "ear", "lth"]
 F = np.full((N, len(KEYS)), np.nan, np.float32)
 if a.feat and os.path.exists(a.feat) and np.load(a.feat)["F"].shape == F.shape: F = np.load(a.feat)["F"]
 else:
@@ -58,7 +58,8 @@ else:
         dark = float((L[inner > 0] < 15).mean()) if inner.sum() > 15 else 0.0
         lh = fill(p, LIPS) & (1 - fill(p, INNER)); lipc = float(np.median(A[lh > 0]) - s[1]) if lh.sum() > 20 else 0.0
         ear = 0.5 * float(np.linalg.norm(p[159] - p[145]) / max(np.linalg.norm(p[33] - p[133]), 1) + np.linalg.norm(p[386] - p[374]) / max(np.linalg.norm(p[362] - p[263]), 1))
-        F[k] = [op, yaw, roll, sharp, s[0], s[1], s[2], q[0], q[1], t_up, t_L, t_sd, t_a, dark, p[:, 0].mean(), p[:, 1].mean(), float(np.linalg.norm(p[10] - p[152])), lipc, ear]
+        F[k] = [op, yaw, roll, sharp, s[0], s[1], s[2], q[0], q[1], t_up, t_L, t_sd, t_a, dark, p[:, 0].mean(), p[:, 1].mean(), float(np.linalg.norm(p[10] - p[152])), lipc, ear,
+                float(np.linalg.norm(p[0] - p[13]) + np.linalg.norm(p[14] - p[17])) / max(mw, 1)]
     p_.kill()
     if a.feat: np.savez_compressed(a.feat, F=F, keys=KEYS)
 f = {k: F[:, i] for i, k in enumerate(KEYS)}; V = np.isfinite(F).all(1)
@@ -73,6 +74,9 @@ closed = V & (f["open"] < max(0.05, o10 + 0.02)) & (f["lipc"] > 0.5 * mlc)
 # clean teeth: slightly open, the upper half of the opening is teeth, the teeth bright and even (not a dark / speckled row), little black cavity
 tclean = V & (f["open"] > 0.07) & (f["open"] < 0.30) & (f["t_up"] >= a.tmin) & (f["t_L"] > 0.80) & (f["t_sd"] < 9.0) & (f["dark"] < 0.25) & (f["lipc"] > 0.5 * mlc)
 tsh = float(tclean.sum()) / max(int(speech.sum()), 1)
+# the TYPICAL lips of the speaker (04: a reference with redder / fuller-looking lips than usual made the drawn lips fuller and pinker for the whole video)
+mad = lambda v: max(float(np.median(np.abs(v - np.median(v)))), 1e-3)
+cl_ = closed if closed.sum() >= 10 else V; lc0, lcs = float(np.median(f["lipc"][cl_])), mad(f["lipc"][cl_]); lt0, lts = float(np.median(f["lth"][cl_])), mad(f["lth"][cl_])
 mode = a.mouth if a.mouth != "auto" else ("teeth" if tsh >= a.tshare and tclean.sum() >= 5 else "closed")
 
 
@@ -92,6 +96,7 @@ def make_plan(origin, lo, hi):
             dE = float(np.linalg.norm(np.array([f["L"][k], f["A"][k], f["B"][k]]) - tone)); dP = float(np.hypot(f["pL"][k] - ton2[0], f["pA"][k] - ton2[1]))
             pos = float(np.hypot(f["cx"][k] - cx, f["cy"][k] - cy)) / max(fh, 1)
             sc = -dE / 3.0 - dP / 4.0 - 10 * abs(f["yaw"][k] - yw) - 6 * abs(f["yaw"][k]) - 6 * max(0.0, pos - 0.05) - 3 * abs(f["fh"][k] / max(fh, 1) - 1) + 0.5 * min(f["sharp"][k] / max(ms, 1e-6), 1.5)
+            sc -= a.lips * (min(abs(f["lipc"][k] - lc0) / (1.4826 * lcs), 3.0) + (min(abs(f["lth"][k] - lt0) / (1.4826 * lts), 3.0) if not tclean[k] else 0.0)) / 2
             if mode == "teeth" and tclean[k]: sc += 1.0 * min(f["t_up"][k], 0.8) - 2.0 * f["dark"][k] - 4 * abs(f["open"][k] - 0.15)
             return float(sc)
         pick, why = None, ""
@@ -108,7 +113,7 @@ def make_plan(origin, lo, hi):
         if pick is None: pick, why = (prev if prev is not None else int(B[0])), "fallback"
         k = int(pick); prev = k; refs.append(k - origin)
         rows.append({"b": b, "frames": [int(s0), int(s1 - 1)], "ref": k - origin, "src": k, "t": round(k / 25, 2), "why": why, "open": round(float(f["open"][k]), 3), "t_up": round(float(f["t_up"][k]), 2),
-                     "dE": round(float(np.linalg.norm(np.array([f["L"][k], f["A"][k], f["B"][k]]) - tone)), 1), "yaw": round(float(f["yaw"][k]), 3), "s_first": round(score(lo), 2) if V[lo] else None, "s_best": round(bs0, 2)})
+                     "dE": round(float(np.linalg.norm(np.array([f["L"][k], f["A"][k], f["B"][k]]) - tone)), 1), "yaw": round(float(f["yaw"][k]), 3), "lipc": round(float(f["lipc"][k]), 1), "lth": round(float(f["lth"][k]), 3), "s_first": round(score(lo), 2) if V[lo] else None, "s_best": round(bs0, 2)})
         if a.glob: refs = refs * nb; break
     return refs, rows
 
