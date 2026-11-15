@@ -14,13 +14,15 @@ import ks_student
 ST = {"lmk": None, "seg_off": 0, "active": None, "out_shape": None, "calls": 0, "skipped": 0, "hi": 0, "seg": 0}
 cfg = dict(x.split("=") for x in os.environ.get("KS_GATE", "").split(",") if "=" in x)
 THR, CAP, HI, LO = float(cfg.get("thr", 0.12)), float(cfg.get("cap", 0.25)), int(cfg.get("hi", 8)), int(cfg.get("lo", 2))
-LUMA = float(cfg.get("luma", 0.18))   # r20: the dark-pixel luma of the gate (0.18 = r16). With KS_KF_MODE=floorv the cavity is dark red, not black: luma=0.25 flags the same keyframes (04: 14 vs 15 of 104)
+FLOORW = float(cfg.get("floorw", 0.5)); LUMA = float(cfg.get("luma", 0.18))   # r20: the dark-pixel luma of the gate (0.18 = r16). With KS_KF_MODE=floorv the cavity is dark red, not black: luma=0.25 flags the same keyframes (04: 14 vs 15 of 104)
 
 
 def gate(samples_x, nf=14):
     """samples_x: decoded keyframes (n_kf, 3, H, W) in [-1, 1]; returns hi flags per segment (n_kf - 1)."""
     L = ST["lmk"]; n = samples_x.shape[0]; dark = np.zeros(n)
     g = ((samples_x.float() + 1) / 2).clamp(0, 1); g = (0.299 * g[:, 0] + 0.587 * g[:, 1] + 0.114 * g[:, 2]).cpu().numpy()
+    E = ST.pop("extra", None)   # r20 (KS_KF_MODE=floorv, ks_lref.py): the latent cells the dark-floor rule pulled back = the pixels that would have been black; counted as dark, so the gate picks the same segments as without the rule
+    if E is not None and (cfg.get("floor", "0") != "1" or len(E) != n or E.shape[-1] * 8 != g.shape[-1]): E = None   # OPT-IN (KS_GATE=...,floor=1): the floorv picks were made on renders with the plain gate (it fires about half as often there)
     for j in range(n):
         fi = (ST["seg_off"] + j) * (nf - 1)
         if L is None: continue
@@ -28,11 +30,15 @@ def gate(samples_x, nf=14):
         if not np.isfinite(m).all(): continue
         x0, y0 = m.min(0); x1, y1 = m.max(0); w = x1 - x0; y0 -= 0.15 * w; y1 += 0.15 * w
         H, W = g.shape[1:]; sl = g[j, max(0, int(y0)):min(H, int(y1)), max(0, int(x0)):min(W, int(x1))]
-        if sl.size: dark[j] = float((sl < LUMA).mean())
+        if sl.size:
+            dk = sl < LUMA
+            if E is not None: dk = dk | (np.repeat(np.repeat(E[j], 8, 0), 8, 1)[max(0, int(y0)):min(H, int(y1)), max(0, int(x0)):min(W, int(x1))] > FLOORW)
+            dark[j] = float(dk.mean())
     wide = dark > THR
     k = max(1, int(math.ceil(CAP * n)))
     if wide.sum() > k: wide = dark >= np.sort(dark)[-k]
     hi = wide[:-1] | wide[1:]
+    if os.environ.get("KS_GATE_LOG") == "1": print("KS_GATE_SEG off %d hi %s" % (ST["seg_off"], np.flatnonzero(hi).tolist()), flush=True)
     ST["seg_off"] += n - 1; ST["hi"] += int(hi.sum()); ST["seg"] += len(hi)
     return hi
 

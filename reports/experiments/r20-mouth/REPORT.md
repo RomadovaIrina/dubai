@@ -100,3 +100,16 @@ Proof (full e2e jobs, floorv:1 + KS_REF=local vs floorv:1): m03, 01, old03 → `
 - 05: `KS_MP_TILES=1 DUB_ROUTE=off KS_REF=local KS_TRACK_K=1.25 KS_TRACK_SIGMA=3 KS_QUIET=ar=1.0,gap=0.3,ramp=0.4 KS_KF_MODE=` (floorv off);
 - 01 (her pick: tiles): `KS_MP_TILES=1 DUB_ROUTE=off` + the defaults;
 - every job on a saved dub: `DUB_AUDIO_FROM=<dir>`; `KS_SEED` is a test switch, not for production.
+
+## 5. The K2 gate under floorv (15.11 late)
+The gate (8 interpolation steps on wide-open segments) keys on black pixels of the decoded keyframes, so under floorv it fires less: m03 19 → 10 of 101 segments, 04 19 → 8 of 127, old03 8 → 0 of 197. The blind picks of floorv by Irina (m03, 01, old03) were made on exactly these renders, and mouth-opening fidelity vs the release is unchanged, so **the plain gate stays the default with floorv**.
+
+Opt-in `KS_GATE=thr=0.12,cap=0.25,hi=8,lo=2,floor=1`: the hook records, per keyframe, the latent cells whose guided luma BEFORE the pull-back is below `KS_FLOOR_GY` (-0.8) in the last steps (sigma <= `KS_FLOOR_GSIG`, 2), and the gate counts them as dark. Calibrated on keyframes (flagged keyframes release / floorv: m03 10 / 19, 04 15 / 11, old03 5 / 5). Full seeded jobs, 8-step segments release vs floorv + floor=1 (`KS_GATE_LOG=1`, `segcmp2.py`):
+
+| video | release | floorv + floor=1 | in common | SyncNet release / floorv + floor=1 |
+|---|---|---|---|---|
+| m03 | 19 | 28 | 18 | 7.41 / 7.31 |
+| old03 | 8 | 6 | 2 | 5.56 / 5.58 |
+| 04 | 19 | 29 | not listed | 3.60 / 3.42 |
+
+Close on m03 (18 of 19 covered, 10 extra), not on old03 (few, borderline moments). An exact match needs the release keyframes themselves, i.e. a second, unfloored keyframe pass with the same noise only for the gate (about +9 % generator time); not built.
