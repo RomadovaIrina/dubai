@@ -279,6 +279,12 @@ cat $KW/jobs.txt >> $FJ; touch $KW/jobs.sub   # (jobs.sub: ks_shots.sh KS_SHOT_S
 if [ "${KS_PRESLICE:-1}" = 1 ] && [ "${KS_PASTE_JOBS:-0}" != 1 ] && [ -f $KT/ks_plain_par.py ]; then
   rm -rf $KW/ksp1 $KW/ksp1.rc; mkdir -p $KW/ksp1; touch $KW/ksp1.started
   ( ( cd $KT && $PY $KT/ks_plain_par.py --jobs $(pjobs) --tmp $KW/ksp1 --preslice --out $KW/paste_1.mp4 -- --master $KW/master_25fps.mp4 ) > $KW/ksp1.log 2>&1; echo $? > $KW/ksp1.rc ) & fi
+# r20 speed (same output; KS_OCCL_EARLY=0 = as before): the occlusion scores of the FIRST pasted face (ks_occl.py --dump: MediaPipe Hands + the lip
+# colour test on every frame, seconds between the post layer and the paste) read only the master and the source landmarks, so they are computed
+# NOW, during the render, by the very command the paste section runs; the paste takes them if they are for its face ($KW/occl1.started names it).
+# A later face is scored on the previous paste: in place, as before.
+if [ "${KS_OCCL:-mask}" = mask ] && [ "${KS_OCCL_EARLY:-1}" = 1 ]; then f=${TAGS%% *}; rm -f $KW/occl1.rc $KW/occl1.json; echo "$f" > $KW/occl1.started
+  ( ( cd $KT && $MPY $KT/ks_occl.py --master $KW/master_25fps.mp4 --paste $KW/master_25fps.mp4 --lm $KW/lm_$f.npz --dump $KW/occl1.json ${KS_OCCL_ARGS---pad 18 --ramp 6 --y0 9 --y1 10} ) > $KW/occl1.log 2>&1; echo $? > $KW/occl1.rc ) & fi
 if [ -n "$SHR" ]; then waitjob "$(tail -1 $KW/jobs.txt | awk '{print $1}')" || exit 1   # (jobs run in order: the last one done = all done)
 elif [ $PBC = 1 ]; then waitjob "$(tail -1 $KW/jobs.txt | awk '{print $1}')" || exit 1   # (r17 PBC: ks_fast stays up for a re-render)
 else echo END >> $FJ; wait $KSP || { tail -5 $KLOG; exit 1; }; fi
@@ -373,7 +379,12 @@ for f in $TAGS; do
     echo "KS_MASK $f ${KS_MASK}: $MK"
   fi
   if [ "${KS_OCCL:-mask}" = mask ]; then   # DEFAULT since Irina's blind pick 13.11 (q05 cup: "B менее страшен"); KS_OCCL=off = no gate   # r18: K2's occlusion / turn / hand-over-mouth scores (ks_occl.py pass 1 only: no composite, no encode) -> the paste mask (ks_plain --gate-w)
-    if ( cd $KT && $MPY $KT/ks_occl.py --master $CUR --paste $CUR --lm $KW/lm_$f.npz --dump $P/occl.json ${KS_OCCL_ARGS---pad 18 --ramp 6 --y0 9 --y1 10} ) > $P/occl.log 2>&1 && [ -s $P/occl.json ]; then   # r18 defaults (Irina 14.11): the source face ~0.7 s around the object (q05 cup, her blind pick B-new); the head-turn rule OFF (--y0 9: long5 turns: not wanted)
+    OCE=0   # r20 KS_OCCL_EARLY: the first paste's scores computed during the render, for this very face (else, or if that failed: computed here)
+    if [ $n = 1 ] && [ -f $KW/occl1.started ]; then
+      if [ "$(cat $KW/occl1.started)" = "$f" ]; then until [ -f $KW/occl1.rc ]; do sleep 0.1; done
+        if [ "$(cat $KW/occl1.rc)" = 0 ] && [ -s $KW/occl1.json ]; then cp $KW/occl1.json $P/occl.json; cp $KW/occl1.log $P/occl.log; OCE=1; fi; fi
+      rm -f $KW/occl1.started $KW/occl1.rc; fi
+    if { [ $OCE = 1 ] || ( cd $KT && $MPY $KT/ks_occl.py --master $CUR --paste $CUR --lm $KW/lm_$f.npz --dump $P/occl.json ${KS_OCCL_ARGS---pad 18 --ramp 6 --y0 9 --y1 10} ) > $P/occl.log 2>&1; } && [ -s $P/occl.json ]; then   # r18 defaults (Irina 14.11): the source face ~0.7 s around the object (q05 cup, her blind pick B-new); the head-turn rule OFF (--y0 9: long5 turns: not wanted)
       grep -E "^KS_OCCL \{" $P/occl.log | cut -c1-300; MK="$MK --gate-w $P/occl.json"
     else flag ks_occl_failed "$f: the occlusion scores failed ($(tail -1 $P/occl.log | cut -c1-120)) -> the paste without the gate"; fi; fi
   case "${KS_TAIL_FADE:-on}" in on) TQA="";; always) TQA="--tail-quiet off";; *) TQA=skip;; esac   # r19 (Irina 14.11: old03 end = the drawn face to the end, m03 end = the fade): on = fade ONLY if the source mouth is quiet in the tail (ks_plain --tail-quiet 0.75:0.05:3); always = the r18 rule (fade whenever the silent tail is >= 1 s); off = never
