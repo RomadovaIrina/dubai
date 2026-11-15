@@ -4,7 +4,9 @@
 #   plan      ks_e2e_prep.py: route.json faces (lipsync with SILENCE outside own speech / source -> --others) or the dubbed-units fallback; no-face rule
 #   crop      KS_CROP=auto: K2 tracked crop (k2_prep_track.py) if the static face share < 0.45 or the head travels > 0.4 face heights, else the r15 static crop + K1 pad: the last KS_PAD (60) frames mirrored, the seam frame not repeated
 #   ref       KS_REF=0 (default, Irina 08.11: frame 0 of this run = of the shot in multi-shot) | auto (K2 k2_refpick.py) | skin (r19 ks_refskin.py) | <frame>
-#             | local (r20 ks_lrefpick.py + ks_lref.py: one reference per 169-frame keyframe batch, lit like that batch; KS_LREF_MOUTH auto|closed|teeth, KS_LREF_ARGS)
+#             | local (r20 ks_lrefpick.py + ks_lref.py: one reference per 169-frame keyframe batch, lit like that batch, ONLY when frame 0 is a bad reference for the clip
+#               (KS_LREF_WHEN=bad, the default: the light changes or sunglasses come off; else frame 0 = the default path; always = a plan in any case);
+#               KS_LREF_MOUTH closed (default) | auto | teeth (a clean-teeth frame; Irina 15.11: split on m03, opt-in), KS_LREF_ARGS)
 #   r20 (all opt-in, reports/experiments/r20-mouth/REPORT.md): KS_KF_MODE=floorv:1 = the black mouth: the keyframe guidance may not push the dark mouth interior darker than the
 #             conditional prediction (ks_lref.py guide_hook; read by ks_fast from the env); KS_GATE=...,luma=0.25 = the gate's dark-pixel luma (0.18 = r16) if its share should
 #             match under floorv; KS_TRACK_SIGMA = the smoothing of the tracked crop centre (k2_prep_track --sigma, 6 = r16; small faces: KS_TRACK_K=1.25 KS_TRACK_SIGMA=3)
@@ -106,8 +108,9 @@ PY
     [ -n "$REF" ] || { echo "KS WARN refskin failed ($f): ref 0"; REF=0; }
   fi
   if [ "$REF" = local ]; then   # r20: a reference PLAN (json) = a frame per keyframe batch, near that batch in time: its light (04: the band above the lip) and, when the speaker shows clean teeth (the per-video gate), its teeth
-    if $MPY $KT/ks_lrefpick.py --video $KW/data/pad_$f.mp4 --lm $KW/crop_lm_$f.npz --face-lm $KW/lm_$f.npz --n $N --mouth ${KS_LREF_MOUTH:-auto} --out $KW/lref_$f.json --sheet $KW/lref_$f.jpg --feat $KW/lref_$f.npz ${KS_LREF_ARGS:-} > $KW/ref_$f.log 2>&1 && [ -s $KW/lref_$f.json ]; then
+    if $MPY $KT/ks_lrefpick.py --video $KW/data/pad_$f.mp4 --lm $KW/crop_lm_$f.npz --face-lm $KW/lm_$f.npz --n $N --mouth ${KS_LREF_MOUTH:-closed} --when ${KS_LREF_WHEN:-bad} --out $KW/lref_$f.json --sheet $KW/lref_$f.jpg --feat $KW/lref_$f.npz ${KS_LREF_ARGS:-} > $KW/ref_$f.log 2>&1 && [ -s $KW/lref_$f.json ]; then
       REF=$KW/lref_$f.json; grep "^KS_LREFPICK" $KW/ref_$f.log | cut -c1-400
+      python3 -c "import json, sys; sys.exit(0 if json.load(open(sys.argv[1])).get('keep0') else 1)" $REF && REF=0   # the first frame is a good reference: the default path, untouched
     else echo "KS WARN lrefpick failed ($f): ref 0"; REF=0; fi
   fi
   echo $REF > $KW/ref_$f.txt
@@ -191,7 +194,7 @@ for f in $TAGS; do   # the dub KeySync hears: delayed (or advanced) by the probe
     $PY $KT/ks_chunk.py split --video $KW/data/pad_$f.mp4 --audio $KW/data/dubp_$f.wav --ref $(refnum $KW/ref_$f.txt) --chunk-s ${KS_CHUNK_S:-60} --out $KW/data/chunks_$f --tag $PFX$f \
       > $KW/jobs_$f.txt 2> $KW/chunk_$f.log || { tail -3 $KW/chunk_$f.log; exit 1; }; grep KS_CHUNKS $KW/chunk_$f.log
     if [[ "$(cat $KW/ref_$f.txt)" == *.json ]]; then   # r20: a plan per chunk (the chunk clip has its own frame grid), picked from the chunk's own frames
-      if $MPY $KT/ks_lrefpick.py --video $KW/data/pad_$f.mp4 --lm $KW/crop_lm_$f.npz --face-lm $KW/lm_$f.npz --n $N --mouth ${KS_LREF_MOUTH:-auto} --feat $KW/lref_$f.npz --chunks $KW/data/chunks_$f ${KS_LREF_ARGS:-} >> $KW/ref_$f.log 2>&1; then
+      if $MPY $KT/ks_lrefpick.py --video $KW/data/pad_$f.mp4 --lm $KW/crop_lm_$f.npz --face-lm $KW/lm_$f.npz --n $N --mouth ${KS_LREF_MOUTH:-closed} --feat $KW/lref_$f.npz --chunks $KW/data/chunks_$f ${KS_LREF_ARGS:-} >> $KW/ref_$f.log 2>&1; then
         awk '{ p = $2; sub(/\.mp4$/, ".plan.json", p); print $1, $2, $3, p }' $KW/jobs_$f.txt > $KW/jobs_$f.txt.p && mv $KW/jobs_$f.txt.p $KW/jobs_$f.txt; grep "^KS_LREFPICK" $KW/ref_$f.log | tail -1 | cut -c1-400
       else echo "KS WARN lrefpick --chunks failed ($f): one reference frame"; fi; fi
     cat $KW/jobs_$f.txt >> $KW/jobs.txt

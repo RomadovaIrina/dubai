@@ -19,6 +19,9 @@ ap.add_argument("--reach", type=float, default=3.0, help="s around the batch sea
 ap.add_argument("--lips", type=float, default=1.0, help="weight of the typical-lips term (lip redness and thickness vs the speaker median)"); ap.add_argument("--slot0", type=int, default=0); ap.add_argument("--teeth-min", type=float, default=0.20, dest="tmin", help="upper-teeth share of a teeth frame")
 ap.add_argument("--teeth-min-share", type=float, default=0.02, dest="tshare"); ap.add_argument("--feat", default="", help="save / reuse the per-frame features (npz)")
 ap.add_argument("--chunks", default="", help="a ks_chunk.py split dir: one plan per chunk (c<j>.plan.json) instead of --out")
+ap.add_argument("--when", default="always", choices=["always", "bad"], help="bad = a plan ONLY when the first frame (the default reference) is a bad reference for this clip: its lower-face tone is far from >= --bad-share of the batches (dE > --bad-de: the light changes, 04) or its eye region differs (sunglasses on / off, 05); otherwise keep0 = the caller stays on frame 0, bit-identical to the default")
+ap.add_argument("--bad-de", type=float, default=7.0, dest="bad_de"); ap.add_argument("--bad-share", type=float, default=0.25, dest="bad_share"); ap.add_argument("--bad-eye", type=float, default=12.0, dest="bad_eye")
+ap.add_argument("--kf-yaw", type=float, default=0.15, dest="kf_yaw", help="per KEYFRAME (every 13th frame): if the batch reference differs from the keyframe in yaw by more than this, that keyframe gets a pose-matched frame from nearby (04 at 28 s: a head turn inside one batch; a frontal reference draws a second jaw line). 0 = off")
 ap.add_argument("--global", type=int, default=0, dest="glob", help="1 = ONE frame for the whole clip (the best for the clip median), as KS_REF=<frame>")
 a = ap.parse_args()
 INNER = [78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308, 415, 310, 311, 312, 13, 82, 81, 80, 191]
@@ -34,7 +37,7 @@ if a.face_lm:   # only frames where THIS face is present in the master track
 hull = lambda p: cv2.convexHull(p.astype(np.float32))[:, 0].astype(np.int32)
 def fill(p, idx):
     m = np.zeros((H, W), np.uint8); cv2.fillPoly(m, [hull(p[idx])], 1); return m
-KEYS = ["open", "yaw", "roll", "sharp", "L", "A", "B", "pL", "pA", "t_up", "t_L", "t_sd", "t_a", "dark", "cx", "cy", "fh", "lipc", "ear", "lth"]
+KEYS = ["open", "yaw", "roll", "sharp", "L", "A", "B", "pL", "pA", "t_up", "t_L", "t_sd", "t_a", "dark", "cx", "cy", "fh", "lipc", "ear", "lth", "eyeL"]
 F = np.full((N, len(KEYS)), np.nan, np.float32)
 if a.feat and os.path.exists(a.feat) and np.load(a.feat)["F"].shape == F.shape: F = np.load(a.feat)["F"]
 else:
@@ -59,13 +62,14 @@ else:
         lh = fill(p, LIPS) & (1 - fill(p, INNER)); lipc = float(np.median(A[lh > 0]) - s[1]) if lh.sum() > 20 else 0.0
         ear = 0.5 * float(np.linalg.norm(p[159] - p[145]) / max(np.linalg.norm(p[33] - p[133]), 1) + np.linalg.norm(p[386] - p[374]) / max(np.linalg.norm(p[362] - p[263]), 1))
         F[k] = [op, yaw, roll, sharp, s[0], s[1], s[2], q[0], q[1], t_up, t_L, t_sd, t_a, dark, p[:, 0].mean(), p[:, 1].mean(), float(np.linalg.norm(p[10] - p[152])), lipc, ear,
-                float(np.linalg.norm(p[0] - p[13]) + np.linalg.norm(p[14] - p[17])) / max(mw, 1)]
+                float(np.linalg.norm(p[0] - p[13]) + np.linalg.norm(p[14] - p[17])) / max(mw, 1),
+                float(np.median(L[(fill(p, [33, 133, 159, 145, 160, 144, 158, 153]) | fill(p, [362, 263, 386, 374, 385, 380, 387, 373])) > 0]) - s[0])]   # eye region L minus the skin L: sunglasses on / off between the reference and the batch
     p_.kill()
     if a.feat: np.savez_compressed(a.feat, F=F, keys=KEYS)
 f = {k: F[:, i] for i, k in enumerate(KEYS)}; V = np.isfinite(F).all(1)
 def done(plan, msg):
     if a.out: json.dump(plan, open(a.out, "w"), indent=1)
-    print("KS_LREFPICK " + json.dumps({k: v for k, v in plan.items() if k != "rows"}) + " " + msg); sys.exit(0)
+    print("KS_LREFPICK " + json.dumps({k: v for k, v in plan.items() if k not in ("rows", "kf_refs")}) + " " + msg); sys.exit(0)
 if not V.any(): done({"refs": [0], "slot0": a.slot0, "mode": "none"}, "no usable frame")
 speech = V & (f["open"] > 0.07)
 V = V & (f["ear"] > 0.6 * np.nanmedian(f["ear"]))   # no blink frames
@@ -115,17 +119,50 @@ def make_plan(origin, lo, hi):
         rows.append({"b": b, "frames": [int(s0), int(s1 - 1)], "ref": k - origin, "src": k, "t": round(k / 25, 2), "why": why, "open": round(float(f["open"][k]), 3), "t_up": round(float(f["t_up"][k]), 2),
                      "dE": round(float(np.linalg.norm(np.array([f["L"][k], f["A"][k], f["B"][k]]) - tone)), 1), "yaw": round(float(f["yaw"][k]), 3), "lipc": round(float(f["lipc"][k]), 1), "lth": round(float(f["lth"][k]), 3), "s_first": round(score(lo), 2) if V[lo] else None, "s_best": round(bs0, 2)})
         if a.glob: refs = refs * nb; break
-    return refs, rows
+    kf = None
+    if a.kf_yaw > 0 and not a.glob:   # keyframe j of batch b = job-clip frame 13 (13 b + j - 1), j = 1 .. 13; slot 0 = the anchor
+        ysm = np.array([np.nanmedian(f["yaw"][max(0, k - 3):k + 4]) if np.isfinite(f["yaw"][max(0, k - 3):k + 4]).any() else np.nan for k in range(N)]); kf = []; n_over = 0; hold = None
+        for b in range(len(refs)):
+            row = []
+            for j in range(1, 14):
+                k = origin + 13 * (13 * b + j - 1); rb = refs[b] + origin; pick = rb
+                if lo <= k < hi and np.isfinite(ysm[k]) and V[rb] and abs(f["yaw"][rb] - ysm[k]) > a.kf_yaw:
+                    if hold is not None and abs(f["yaw"][hold] - ysm[k]) <= 0.6 * a.kf_yaw and abs(hold - k) < 8 * 25: pick = hold   # the override of the previous keyframe still fits
+                    else:
+                        C = I[closed[I] & (np.abs(I - k) < a.reach * 25) & (np.abs(f["yaw"][I] - ysm[k]) < 0.6 * a.kf_yaw)]
+                        if len(C):
+                            tone = np.array([np.nanmedian(f[c][max(lo, k - 25):min(hi, k + 26)]) for c in ("L", "A", "B")])
+                            sc = [-float(np.linalg.norm(np.array([f["L"][q], f["A"][q], f["B"][q]]) - tone)) / 3.0 - 10 * abs(f["yaw"][q] - ysm[k]) + 0.5 * min(f["sharp"][q] / max(ms, 1e-6), 1.5)
+                                  - a.lips * min(abs(f["lipc"][q] - lc0) / (1.4826 * lcs), 3.0) / 2 for q in C]
+                            pick = int(C[int(np.argmax(sc))])
+                    hold = pick if pick != rb else None
+                else: hold = None
+                n_over += int(pick != rb); row.append(int(pick) - origin)
+            kf.append([row[0]] + row)
+        if n_over == 0: kf = None
+        else: rows.append({"kf_overrides": n_over})
+    return refs, rows, kf
 
 
-meta = {"slot0": a.slot0, "mode": mode, "batch": a.batch, "teeth_share": round(tsh, 3), "clean_teeth_frames": int(tclean.sum()), "closed_frames": int(closed.sum())}
+# the first frame as the reference of every batch: tone distance, eye-region difference (m03 max 6.5 / 3.1, old03 2.6 / 4.5, 01 1.2 / 2.4: good; 04 11.5 / 11.4 with 3 of 8 batches > 7, 05 12.8 / 25.7: bad)
+R0 = []
+if V0[0] if (V0 := np.isfinite(F).all(1)).any() else False:
+    for b in range(max(1, -(-N // a.batch))):
+        B = np.flatnonzero(V0[b * a.batch:(b + 1) * a.batch]) + b * a.batch
+        if len(B): R0.append((float(np.linalg.norm(np.array([f[c][0] - np.median(f[c][B]) for c in ("L", "A", "B")]))), float(abs(f["eyeL"][0] - np.median(f["eyeL"][B])))))
+n_de = sum(1 for d, e in R0 if d > a.bad_de); n_eye = sum(1 for d, e in R0 if e > a.bad_eye)
+bad0 = (not R0) or n_de >= max(1.0, a.bad_share * len(R0)) or n_eye >= 2
+ref0 = {"batches": len(R0), "de_max": round(max([d for d, e in R0], default=0.0), 1), "de_over": n_de, "eye_max": round(max([e for d, e in R0], default=0.0), 1), "eye_over": n_eye, "bad": bool(bad0)}
+if a.when == "bad" and not bad0:
+    done({"refs": [0], "slot0": a.slot0, "mode": mode, "keep0": True, "ref0": ref0}, "the first frame is a good reference for the whole clip: kept")
+meta = {"ref0": ref0, "slot0": a.slot0, "mode": mode, "batch": a.batch, "teeth_share": round(tsh, 3), "clean_teeth_frames": int(tclean.sum()), "closed_frames": int(closed.sum())}
 if a.chunks:   # ks_chunk.py chunks: the job clip = [the reference] + source frames a .. a + in_frames - 2 -> its frame j = source frame a - 1 + j
     CJ = json.load(open(a.chunks + "/chunks.json")); src = []
     for ch in CJ["chunks"]:
-        refs, rows = make_plan(ch["a"] - 1, ch["a"], min(N, ch["a"] + ch["in_frames"] - 1))
-        json.dump(dict(meta, refs=refs, rows=rows), open("%s/c%02d.plan.json" % (a.chunks, ch["j"]), "w"), indent=1); src.append([r["src"] for r in rows])
+        refs, rows, kf = make_plan(ch["a"] - 1, ch["a"], min(N, ch["a"] + ch["in_frames"] - 1))
+        json.dump(dict(meta, refs=refs, rows=rows, **({"kf_refs": kf} if kf else {})), open("%s/c%02d.plan.json" % (a.chunks, ch["j"]), "w"), indent=1); src.append([r["src"] for r in rows if "src" in r])
     print("KS_LREFPICK " + json.dumps(dict(meta, chunks=src))); sys.exit(0)
-refs, rows = make_plan(0, 0, N); plan = dict(meta, refs=refs, rows=rows)
+refs, rows, kf = make_plan(0, 0, N); plan = dict(meta, refs=refs, rows=rows, **({"kf_refs": kf} if kf else {})); kfo = rows.pop() if rows and "kf_overrides" in rows[-1] else None; plan["kf_overrides"] = kfo["kf_overrides"] if kfo else 0
 if a.sheet:
     c = cv2.VideoCapture(a.video); tiles = []
     for r in rows:

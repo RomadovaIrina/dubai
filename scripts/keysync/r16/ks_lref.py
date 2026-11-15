@@ -7,6 +7,7 @@ Only the keyframe model sees the identity frame (the interpolation model is cond
 KS_LREF=<plan.json> (ks_fast.py: a non-numeric 4th job column):
   {"refs": [r0, r1, ...]}   the reference frame (index in the job clip) of keyframe batch b = frames [169 b, 169 b + 168]; the last entry repeats
   "slot0": 1                 the anchor slot of every batch (the authors put frame 0 there: add_zero_flag) = the batch reference instead of frame 0
+  "kf_refs": [[14 frames] per batch]   a reference per keyframe slot (ks_lrefpick --kf-yaw: pose-matched frames on head turns)
 No plan = the pipeline untouched. KS_KF_DUMP=<dir>: the decoded keyframes as jpg (debug)."""
 import json, os
 import torch
@@ -96,7 +97,21 @@ def install(d):
                     gt[0, 0] = ST["emb"][r].to(gt); au[0, 0] = ST["aud"][r].to(au)
                     mk[0, 0] = d.load_landmarks(ST["lmk"][r:r + 1], ST["vid"].shape[-2:], r, target_size=(64, 64), is_dub=True,
                                                 what_mask=ST["kw"].get("what_mask", "box"), nose_index=ST["kw"].get("nose_index", 28))[0].to(mk)
-            z, x = sk0(model_keyframes, au, gt, mk, cond, num_frames, fps_id, cond_aug, device, emb, *a, **k)
+            KR = (P.get("kf_refs") or [None])[min(ST["b"], len(P["kf_refs"]) - 1)] if P and P.get("kf_refs") else None
+            cn = model_keyframes.conditioner; g0 = cn.get_unconditional_conditioning
+            if KR and len(set(KR)) > 1:   # a reference PER KEYFRAME: the identity latent is concatenated per frame (DubbingWrapper takes (t c) channels), so each keyframe can carry its own pose-matched frame
+                def guc(batch, batch_uc=None, force_uc_zero_embeddings=None, **kw):
+                    c_, uc_ = g0(batch, batch_uc=batch_uc, force_uc_zero_embeddings=force_uc_zero_embeddings, **kw); cats = {}
+                    for r_ in set(KR):
+                        b2 = dict(batch); rr_ = max(0, min(int(r_), len(ST["emb"]) - 1)); b2["cond_frames"] = ST["emb"][rr_].unsqueeze(0).to(batch["cond_frames"])
+                        if "cond_frames_without_noise" in b2: b2["cond_frames_without_noise"] = ST["vid"][rr_].unsqueeze(0).to(batch["cond_frames_without_noise"])
+                        cats[r_] = g0(b2, batch_uc=batch_uc, force_uc_zero_embeddings=force_uc_zero_embeddings, **kw)[0]["concat"]
+                    c_["concat"] = torch.cat([cats[r_] for r_ in KR[:num_frames]], dim=1); uc_["concat"] = torch.cat([uc_["concat"]] * num_frames, dim=1)
+                    return c_, uc_
+                cn.get_unconditional_conditioning = guc
+            try: z, x = sk0(model_keyframes, au, gt, mk, cond, num_frames, fps_id, cond_aug, device, emb, *a, **k)
+            finally:
+                if "get_unconditional_conditioning" in cn.__dict__: del cn.__dict__["get_unconditional_conditioning"]
             dump(x, ST["b"]); zs.append(z); xs.append(x); ST["b"] += 1
         return torch.cat(zs), torch.cat(xs)
 
