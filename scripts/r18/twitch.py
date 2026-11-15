@@ -10,14 +10,15 @@ Prints the top peaks per region, 5 s means, the 13 / 14-frame phase profile (gen
 import argparse, json
 import numpy as np, cv2
 ap = argparse.ArgumentParser(); [ap.add_argument("--" + k, required=True) for k in ("src", "res", "lm")]
-ap.add_argument("--k0", type=int, default=0, help="first master frame of --res (a shot cut)"); ap.add_argument("--json", default=""); ap.add_argument("--npz", default=""); ap.add_argument("--top", type=int, default=12); ap.add_argument("--iod", type=float, default=110.0, help="work scale: the face is resized to this inter-ocular distance")
+ap.add_argument("--k0", type=int, default=0, help="first master frame of --res (a shot cut)"); ap.add_argument("--json", default=""); ap.add_argument("--npz", default=""); ap.add_argument("--top", type=int, default=12); ap.add_argument("--lm-fps", type=float, default=0.0, help="the landmarks' frame rate when --src / --res run at another (native-fps finals: 25)"); ap.add_argument("--periods", default="13,14"); ap.add_argument("--iod", type=float, default=110.0, help="work scale: the face is resized to this inter-ocular distance")
 a = ap.parse_args()
 z = np.load(a.lm); LM = z["lm"][..., :2].astype(np.float32); J_ = z["j"] if "j" in z.files else np.arange(len(LM))
 OVAL = [234, 93, 132, 58, 172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365, 397, 288, 361, 323, 454]; JAW = OVAL[3:-3]
 LIPS = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185]
 cs, cr = cv2.VideoCapture(a.src), cv2.VideoCapture(a.res); cs.set(cv2.CAP_PROP_POS_FRAMES, a.k0)
-n = int(min(cs.get(cv2.CAP_PROP_FRAME_COUNT) - a.k0, cr.get(cv2.CAP_PROP_FRAME_COUNT), len(J_) - a.k0)); fps = cr.get(cv2.CAP_PROP_FPS) or 25.0
+fps = cr.get(cv2.CAP_PROP_FPS) or 25.0; n = int(min(cs.get(cv2.CAP_PROP_FRAME_COUNT) - a.k0, cr.get(cv2.CAP_PROP_FRAME_COUNT), (len(J_) - a.k0) if not a.lm_fps else 1e9)); PER = [int(x) for x in a.periods.split(",")]
 names = ["face", "neck", "mouth", "bg"]; NR = len(names); out = np.full((n, NR), np.nan, np.float32); amp = np.full((n, NR), np.nan, np.float32)
+Mo = np.full((n, NR), np.nan, np.float32); Js = np.full((n, NR), np.nan, np.float32); Jr = np.full((n, NR), np.nan, np.float32); SH = np.full((n, 2), np.nan, np.float32)
 def masks(p, shape, iod):
     m = np.zeros((NR,) + shape, np.uint8); cv2.fillConvexPoly(m[2], cv2.convexHull(p[LIPS].astype(np.int32)), 1)
     m[2] = cv2.dilate(m[2], cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * int(0.12 * iod) + 1,) * 2))
@@ -43,18 +44,24 @@ buf = [rd(), rd()]
 for k in range(1, n - 1):
     buf.append(rd())
     if buf[-1] is None: n = k + 1; break
-    p = LM[min(int(J_[a.k0 + k]), len(LM) - 1)]
+    kl = a.k0 + k if not a.lm_fps else int((a.k0 + k) * a.lm_fps / fps + 0.5); p = LM[min(int(J_[min(kl, len(J_) - 1)]), len(LM) - 1)]
     if np.isfinite(p[[33, 263, 4, 152]]).all():
         iod = float(np.linalg.norm(p[33] - p[263])); H, W = buf[1][0].shape[:2]; q = p[np.isfinite(p).all(1)]
         x0, y0 = np.maximum(q.min(0) - 0.6 * iod, 0).astype(int); x1, y1 = np.minimum(q.max(0) + 0.8 * iod, [W, H]).astype(int); sc = min(1.0, a.iod / max(iod, 1.0))
         if x1 - x0 > 16 and y1 - y0 > 16:
-            box = (x0, y0, x1, y1); S = [crop(b[0], box, sc) for b in buf]; O = [crop(b[1], box, sc) for b in buf]; R = [O[1] - S[1]]
+            box = (x0, y0, x1, y1); S = [crop(b[0], box, sc) for b in buf]; O = [crop(b[1], box, sc) for b in buf]; R = [O[1] - S[1]]; WS = [S[1]]; WO = [O[1]]
             u8 = lambda x: np.clip(x, 0, 255).astype(np.uint8)
             for j in (0, 2):
-                fl = cv2.calcOpticalFlowFarneback(u8(S[1]), u8(S[j]), None, **FB); R.append(warp(O[j], fl) - warp(S[j], fl))
+                fl = cv2.calcOpticalFlowFarneback(u8(S[1]), u8(S[j]), None, **FB); WO.append(warp(O[j], fl)); WS.append(warp(S[j], fl)); R.append(WO[-1] - WS[-1])
             d2 = np.abs(R[1] + R[2] - 2 * R[0]); M = masks((p - np.float32([x0, y0])) * sc, S[1].shape, iod * sc)
+            ds = np.abs(WS[1] + WS[2] - 2 * WS[0]); do = np.abs(WO[1] + WO[2] - 2 * WO[0])
             for i in range(NR):
-                if M[i].sum() > 50: out[k, i] = d2[M[i]].mean(); amp[k, i] = np.abs(R[0])[M[i]].mean()
+                if M[i].sum() > 50: out[k, i] = d2[M[i]].mean(); amp[k, i] = np.abs(R[0])[M[i]].mean(); Mo[k, i] = R[0][M[i]].mean(); Js[k, i] = ds[M[i]].mean(); Jr[k, i] = do[M[i]].mean()
+            ys, xs = np.nonzero(M[0] | M[2])
+            if len(ys) > 200:
+                a0, a1, b0, b1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1; hw = cv2.createHanningWindow((int(b1 - b0), int(a1 - a0)), cv2.CV_32F)
+                gr = lambda x: cv2.Laplacian(cv2.GaussianBlur(x[a0:a1, b0:b1], (0, 0), 1.5), cv2.CV_32F)
+                (dx, dy), _ = cv2.phaseCorrelate(gr(S[1]), gr(O[1]), hw); SH[k] = (dx / sc, dy / sc)
     buf.pop(0)
 rep = {"frames": n, "fps": fps}
 for i, nm in enumerate(names):
@@ -64,11 +71,19 @@ for i, nm in enumerate(names):
     for k in order:
         if len(peaks) >= a.top or not np.isfinite(s[k]): break
         if all(abs(k - q) > int(0.6 * fps) for q in peaks): peaks.append(int(k))
-    ph = {L: [round(float(np.nanmean(s[c::L])), 2) for c in range(L)] for L in (13, 14)}
+    ph = {L: [round(float(np.nanmean(s[c::L])), 2) for c in range(L)] for L in PER}
     w5 = [round(float(np.nanmean(s[int(t * fps):int((t + 5) * fps)])), 2) for t in range(0, int(n / fps), 5)]
     rep[nm] = {"median": round(med, 2), "p95": round(p95, 2), "amp_median": round(float(np.nanmedian(amp[:, i])), 2), "peaks_s": [[round((a.k0 + k) / fps, 2), round(float(s[k]), 1)] for k in sorted(peaks)],
-               "phase13_max_over_median": round(max(ph[13]) / max(float(np.median(ph[13])), 1e-6), 2), "phase14_max_over_median": round(max(ph[14]) / max(float(np.median(ph[14])), 1e-6), 2), "phase13": ph[13], "mean_per_5s": w5}
-    print("TWITCH %-5s J median %.2f p95 %.2f | D %.2f | phase13 x%.2f phase14 x%.2f | peaks " % (nm, med, p95, rep[nm]["amp_median"], rep[nm]["phase13_max_over_median"], rep[nm]["phase14_max_over_median"]) + " ".join("%.2f(%.0f)" % (t, v_) for t, v_ in rep[nm]["peaks_s"]))
+               "phase_max_over_median": {L: round(max(ph[L]) / max(float(np.median(ph[L])), 1e-6), 2) for L in PER}, "phase": ph, "mean_per_5s": w5}
+    print("TWITCH %-5s J median %.2f p95 %.2f | D %.2f | phase " % (nm, med, p95, rep[nm]["amp_median"]) + " ".join("%d:x%.2f" % (L, rep[nm]["phase_max_over_median"][L]) for L in PER) + " | peaks " + " ".join("%.2f(%.0f)" % (t, v_) for t, v_ in rep[nm]["peaks_s"]))
     print("       per 5 s: " + " ".join("%.1f" % x for x in w5))
+d2s = lambda x: np.abs(x[2:] + x[:-2] - 2 * x[1:-1])
+for i, nm in enumerate(names):
+    if np.isfinite(Mo[:, i]).sum() > 30:
+        fl_ = d2s(Mo[:, i]); rep[nm + "_x"] = {"pump_median": round(float(np.nanmedian(fl_)), 3), "pump_p95": round(float(np.nanpercentile(fl_, 95)), 3), "J_src": round(float(np.nanmedian(Js[:, i])), 2), "J_res": round(float(np.nanmedian(Jr[:, i])), 2)}
+        print("TWITCH %-5s brightness pump (2nd diff of the mean offset) median %.3f p95 %.3f | own jerk: result %.2f source %.2f" % (nm, rep[nm + "_x"]["pump_median"], rep[nm + "_x"]["pump_p95"], rep[nm + "_x"]["J_res"], rep[nm + "_x"]["J_src"]))
+if np.isfinite(SH[:, 0]).sum() > 30:
+    j2 = np.hypot(d2s(SH[:, 0]), d2s(SH[:, 1])); mag = np.hypot(SH[:, 0], SH[:, 1]); rep["shift"] = {"median_px": round(float(np.nanmedian(mag)), 3), "jitter_median_px": round(float(np.nanmedian(j2)), 3), "jitter_p95_px": round(float(np.nanpercentile(j2, 95)), 3)}
+    pk = np.argsort(-np.nan_to_num(j2, nan=-1))[:10]; print("TWITCH patch shift vs the head: |shift| median %.2f px, jitter (2nd diff) median %.3f p95 %.3f px | phase " % (rep["shift"]["median_px"], rep["shift"]["jitter_median_px"], rep["shift"]["jitter_p95_px"]) + " ".join("%d:x%.2f" % (L, max(np.nanmean(j2[c::L]) for c in range(L)) / max(np.nanmedian([np.nanmean(j2[c::L]) for c in range(L)]), 1e-6)) for L in PER) + " | worst s " + " ".join("%.2f" % ((a.k0 + k + 1) / fps) for k in sorted(pk)))
 if a.json: json.dump(rep, open(a.json, "w"))
-if a.npz: np.savez_compressed(a.npz, j=out, amp=amp)
+if a.npz: np.savez_compressed(a.npz, j=out, amp=amp, mo=Mo, js=Js, jr=Jr, sh=SH)
