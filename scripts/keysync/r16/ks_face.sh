@@ -153,7 +153,9 @@ for f in $TAGS; do
   # r19 speed (output-identical, KS_PREP_BG=0 = as before): the crop's MediaPipe landmarks are read by the POST only (ECC, tsmooth; KS_REF=auto reads
   # them here), so they run in the background beside the pad below and the GPU does not wait for them; post_layer waits (crop_lm_<f>.rc)
   CLB=0; rm -f $KW/crop_lm_$f.rc $KW/crop_lm_$f.bg
-  if [ "${KS_PREP_BG:-1}" = 1 ] && [ "${KS_REF:-0}" != auto ]; then CLB=1; touch $KW/crop_lm_$f.bg
+  # r20 release: every reference PICKER reads them right below (auto, skin = r18-quality, local = r20-mouth), so only a fixed frame number goes to the
+  # background (r19-speed's merge kept only "auto": KS_REF=local / skin found no crop_lm_<f>.npz -> "lrefpick failed: ref 0" on 04 / 05)
+  if [ "${KS_PREP_BG:-1}" = 1 ] && [[ "${KS_REF:-0}" =~ ^[0-9]+$ ]]; then CLB=1; touch $KW/crop_lm_$f.bg
     ( $MPY $R/scripts/quality/mp_landmarks.py --video $KW/data/crop_$f.mp4 --out $KW/crop_lm_$f.npz > /dev/null 2>&1; echo $? > $KW/crop_lm_$f.rc ) & fi
   $MPY - $KW/data/crop_$f.mp4 $KW/data/pad_$f.mp4 $PAD <<'PY' >> $KW/crop_$f.log 2>&1 || exit 1
 import subprocess, sys, cv2   # K1 5c07cf7: the last PAD frames mirrored WITHOUT repeating the seam frame (KeySync degenerated on a duplicate)
