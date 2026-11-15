@@ -234,6 +234,12 @@ PY
     echo "${PFX}p_$f $KW/probe/v_$f.mp4 $KW/probe/a_$f.wav 0" >> $FJ
   done
   for f in $TAGS; do waitjob ${PFX}p_$f || exit 1; done; grep "^KS_JOB {\"tag\": \"${PFX}p_" $KLOG | cut -c1-400
+  # r20 speed (KS_LMK_PROBE=0 = as before): the probe renders are done and the worker now idles for the 4-5 s the SyncNet below takes (another
+  # process). A hint "LMK <padded crop>" lets it compute the full render's face landmarks meanwhile (ks_fast.py: the same extractor, the same
+  # function on the same frames, result in the landmark cache); the full job then finds them (6.3 s of a 20 s clip's render, 12 s of m03's).
+  # Only when the full job renders this very file (a video over KS_CHUNK_MIN_S is rendered in chunks: other files), and never in a multi-shot run.
+  if [ "${KS_LMK_PROBE:-1}" = 1 ] && [ -z "$SHR" ] && [ -z "${KS_IN_SHOT:-}" ] && [ "$N" -le "$(( ${KS_CHUNK_MIN_S:-90} * 25 ))" ]; then
+    for f in $TAGS; do pad_wait $f || exit 1; echo "LMK $KW/data/pad_$f.mp4" >> $FJ; done; fi
   for f in $TAGS; do   # delay = -offset x 40 ms; |offset| clamped to KS_PROBE_MAX (2) frames; SyncNet conf < KS_PROBE_MIN_CONF (3) or no result -> 0 + a flag
     O=$(sync_off $(ls $KOUT/${PFX}p_$f/*.mp4 | head -1) $KW/probe/a_$f.wav $KW/probe/sync_$f.json)
     C=$(python3 -c "import json; print(json.load(open('$KW/probe/sync_$f.json'))['global']['conf'])" 2>/dev/null || echo 0)

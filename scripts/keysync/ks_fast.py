@@ -107,6 +107,7 @@ def main():
     if os.environ.get("KS_LMK_CACHE"):   # r13 speed lever: landmarks off the critical path (prod: computed during TTS / separation); keyed by the frames' content
         import hashlib, queue, threading, numpy as _np; _xl = d.extract_video_landmarks; _cd = os.environ["KS_LMK_CACHE"]; os.makedirs(_cd, exist_ok=True)
         _fl, _fll = {}, threading.Lock()   # r19: key -> Event of a landmark pass in flight (the job and the look-ahead thread never compute one video twice)
+        _xlk = {}   # r20: one lock per extractor (the job and the look-ahead thread may share the ONE extractor: never two passes through it at once)
         def _lmk(video_frames, landmarks_model):
             v = video_frames; key = hashlib.md5((str(tuple(v.shape)) + str(v[:: max(1, len(v) // 16)].float().mean().item()) + str(v[-1].float().sum().item())).encode()).hexdigest()
             f = os.path.join(_cd, key + ".npy")
@@ -117,12 +118,18 @@ def main():
                     if ev is None: ev = _fl[key] = threading.Event(); break
                 ev.wait()   # the other thread is on this very video
             try:
-                r = _xl(video_frames, landmarks_model); _np.save(f + ".tmp.npy", _np.asarray(r)); os.replace(f + ".tmp.npy", f); return r
+                with _fll: lk_ = _xlk.setdefault(id(landmarks_model), threading.Lock())
+                with lk_: r = _xl(video_frames, landmarks_model)
+                _np.save(f + ".tmp.npy", _np.asarray(r)); os.replace(f + ".tmp.npy", f); return r
             finally:
                 with _fll: _fl.pop(key, None)
                 ev.set()
         d.extract_video_landmarks = _lmk
-        if os.environ.get("KS_LMK_AHEAD", "0") == "1":   # OFF by default (VM 14.11, long5: the landmark loop is python-bound, so the thread takes from the
+        # r20 speed (KS_LMK_PROBE=0 = off): the same look-ahead thread also serves ONE hint that costs the sampler nothing: ks_face.sh writes
+        # "LMK <padded crop>" when the delay probe's render is done, i.e. while this worker idles for the 4-5 s of the probe's SyncNet (another
+        # process). In this mode the thread uses the job's own extractor (no second model, no extra VRAM; _xlk keeps the two from overlapping).
+        _am = os.environ.get("KS_LMK_AHEAD", "0")
+        if _am == "1" or os.environ.get("KS_LMK_PROBE", "1") == "1":   # KS_LMK_AHEAD=1 is OFF by default (VM 14.11, long5: the landmark loop is python-bound, so the thread takes from the
             # sampler what it saves: render sum 746 s without / 757 s with it, and it adds the second extractor's memory). Kept as an option.
             # r19 speed: a job line "LMK <video>" = this video will be rendered soon: its landmarks (face_alignment, a python loop that leaves the GPU
             # mostly idle: 6-8 s per 20 s of video, 118 s of long5's renders) are computed NOW by a second extractor in a background thread, while the
@@ -135,9 +142,9 @@ def main():
                 while True:
                     path = _ahead_q.get()
                     try:
-                        if not _lm2: _lm2.append(d.LandmarksExtractor()); _objs.append(_lm2[0])
+                        if _am == "1" and not _lm2: _lm2.append(d.LandmarksExtractor()); _objs.append(_lm2[0])   # (KS_LMK_AHEAD=1: its own extractor, beside the sampler)
                         t_ = time.perf_counter(); v = d.read_video(path, output_format="TCHW")[0]; v = torch.nn.functional.interpolate(v, (512, 512), mode="bilinear")
-                        _lmk(v, _lm2[0]); sys.stdout.write(f"\nKS_LMK_AHEAD {path} {len(v)} frames {time.perf_counter() - t_:.1f} s\n"); sys.stdout.flush()
+                        _lmk(v, _lm2[0] if _lm2 else lmk); sys.stdout.write(f"\nKS_LMK_AHEAD {path} {len(v)} frames {time.perf_counter() - t_:.1f} s\n"); sys.stdout.flush()
                     except Exception as e: sys.stdout.write("\nKS_LMK_AHEAD failed (the job computes its own): " + repr(e)[:300] + "\n"); sys.stdout.flush()
             threading.Thread(target=_ahead, daemon=True).start()
     if os.environ.get("KS_KF_AR") or os.environ.get("KS_KF_RR"):   # r16 K2: keyframe guidance split (audio vs reference)
