@@ -6,6 +6,8 @@
 set -uo pipefail
 SHA=${1:-experiment/r16-docker}; RAW=https://raw.githubusercontent.com/RomadovaIrina/dubai/$SHA/infra/vast_serverless
 R=/workspace/dub/dubai; export DUB_PROFILE=${DUB_PROFILE:-clean} DABAI_RESIDENT=${DABAI_RESIDENT:-1} DUB_ROOT=$R
+# r20: the Vast PyWorker listens on WORKER_PORT and reports VAST_TCP_PORT_$WORKER_PORT; Vast Serverless maps 3000 (VAST_TCP_PORT_3000) but sets no WORKER_PORT
+export WORKER_PORT=${WORKER_PORT:-3000}
 mkdir -p /data/resident /data/jobs /var/log/portal; L=/var/log/portal/dabai_start.log; exec >> $L 2>&1
 echo "== $(date -u +%FT%TZ) start ($SHA)"
 curl -fsSL $RAW/worker.py -o /opt/dabai_worker.py && curl -fsSL $RAW/requirements.txt -o /opt/dabai_req.txt || echo "RESIDENT: cannot fetch worker.py"
