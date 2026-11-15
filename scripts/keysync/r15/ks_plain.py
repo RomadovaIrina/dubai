@@ -8,7 +8,7 @@ x the box-edge feather (24 px, none on a frame border). ONE global colour match:
 the mask (lips excluded) over every 5th frame -> a constant gain / offset per channel (no per-frame colour match). After KeySync's output
 ends, a fade to the master over 8 frames. Colour-managed I/O (ks_cms, BT.709).
     KS_CMS=1 python ks_plain.py --ks KS.mp4 --master master_25fps.mp4 --box box.json --lm source_lm_F.npz [--others faces2.npz] --shift 1 --audio MIX --out OUT.mp4"""
-import argparse, collections, json, math, os, subprocess, sys, threading
+import argparse, collections, json, math, os, subprocess, sys, threading, time
 import concurrent.futures as _cf
 import numpy as np, cv2
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -75,6 +75,8 @@ ap.add_argument("--cavity", type=float, default=0.0, help="r15 black-hole mouth:
                 "interior tone (L 30th percentile + mean a / b of the source's open frames); 0 = off")
 ap.add_argument("--cm-file", default="", help="r16 T (parallel paste, ks_plain_par.py): the global colour match: loaded (gain / off) if the file exists, else computed and saved with its sufficient statistics (Lab sums of the sampled skin pixels, so chunks combine exactly)")
 ap.add_argument("--cm-only", action="store_true", help="r16 T: compute --cm-file over --write-range and exit")
+ap.add_argument("--cm-stats", default="", help="r20 speed (ks_plain_par, same output): both phases in ONE process: this chunk's sufficient statistics (what --cm-only writes) go to this file, "
+                "then the run waits for --cm-file (the parent's combined estimate) and pastes with it, exactly as a second run with --cm-file would")
 ap.add_argument("--write-range", default="", help="r16 T: 'A:B' = process and write only master frames A <= k < B (a chunk; the frames around it are context)")
 ap.add_argument("--absent", default="hold", choices=["hold", "skip"], help="r16 T: a master frame with no source landmarks (NaN): hold = paste with the last mask (r15), skip = leave the source frame (e2e: the face is absent there - a cutaway / outside its presence; ks_e2e_prep bridges short gaps)")
 ap.add_argument("--k-base", type=int, default=0, help="r16 K1 (set by ks_plain_par): the GLOBAL master index of this run's frame 0 (the k %% 3 / 5 / 10 sampling grids follow the global index)")
@@ -377,7 +379,7 @@ def warp_ks(kf, k, i):
     return cv2.warpAffine(kf, M, (s, s), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
 gain = np.ones(3, np.float32); off = np.zeros(3, np.float32); CAV = None
 is_open = lambda p: np.isfinite(p).all() and np.linalg.norm(p[61] - p[291]) > 5 and np.linalg.norm(p[13] - p[14]) / np.linalg.norm(p[61] - p[291]) > 0.15
-CMF = bool(a.cm_file) and os.path.exists(a.cm_file) and not a.cm_only
+CMF = bool(a.cm_file) and os.path.exists(a.cm_file) and not a.cm_only and not a.cm_stats
 CMZ = np.load(a.cm_file) if CMF else None
 WR = tuple(int(x) for x in a.write_range.split(":")) if a.write_range else (0, 1 << 30)
 need_cm = not a.no_cm and (CMZ is None or "gain" not in CMZ.files)
@@ -400,14 +402,20 @@ if need_cm or need_cav or need_sh:   # pass 1: the global colour match on the sk
         if need_sh and (k + a.k_base) % 10 == 0:
             core = sk & (cv2.erode(sk.astype(np.uint8), el(0.1 * IODM)) > 0)
             HFR.append((hf_energy(cv2.cvtColor(crop(f, k), cv2.COLOR_RGB2GRAY).astype(np.float32), core), hf_energy(cv2.cvtColor(K[kidx(k)], cv2.COLOR_RGB2GRAY).astype(np.float32), core)))
-    if a.cm_only:   # r16 K1: the sufficient statistics of EVERY global estimate (colour match sums, sharp-auto pairs, cavity samples): the parent combines them exactly
+    if a.cm_only or a.cm_stats:   # r16 K1: the sufficient statistics of EVERY global estimate (colour match sums, sharp-auto pairs, cavity samples): the parent combines them exactly
         ex_ = {"hfr": np.array(HFR, np.float64).reshape(-1, 2), "sc": (np.concatenate(SC) if SC else np.zeros((0, 3), np.float32))}
+        sf_ = a.cm_file if a.cm_only else a.cm_stats + ".tmp.npz"
         if SK:
             SK, SM = np.concatenate(SK), np.concatenate(SM)
-            np.savez(a.cm_file, n=len(SK), s1k=SK.sum(0, dtype=np.float64), s2k=(SK.astype(np.float64) ** 2).sum(0), s1m=SM.sum(0, dtype=np.float64), s2m=(SM.astype(np.float64) ** 2).sum(0), **ex_)
-        else: np.savez(a.cm_file, n=0, **ex_)
-        sys.exit(0)
-    if need_cm and SK:
+            np.savez(sf_, n=len(SK), s1k=SK.sum(0, dtype=np.float64), s2k=(SK.astype(np.float64) ** 2).sum(0), s1m=SM.sum(0, dtype=np.float64), s2m=(SM.astype(np.float64) ** 2).sum(0), **ex_)
+        else: np.savez(sf_, n=0, **ex_)
+        if a.cm_only: sys.exit(0)
+        os.replace(sf_, a.cm_stats); SK = SM = SC = HFR = None; need_cm = need_cav = need_sh = False; t_ = time.time()   # r20 --cm-stats: the parent reads it (written whole), combines all chunks and writes --cm-file; no local estimate below
+        while not os.path.exists(a.cm_file):
+            if time.time() - t_ > 900: sys.exit(f"--cm-stats: no {a.cm_file} after 900 s")
+            time.sleep(0.02)
+        CMZ = np.load(a.cm_file)   # -> the block below, as in a run started with a finished --cm-file
+    elif need_cm and SK:
         SK, SM = np.concatenate(SK), np.concatenate(SM)
         gain = np.clip(SM.std(0) / np.maximum(SK.std(0), 1e-3), 0.9, 1.1).astype(np.float32); off = (SM.mean(0) - SK.mean(0) * gain).astype(np.float32)
         print(f"global colour match (Lab): gain {gain.round(3).tolist()} offset {off.round(2).tolist()}", flush=True)

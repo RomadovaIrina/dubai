@@ -80,8 +80,7 @@ with cf.ThreadPoolExecutor(J) as ex: jobs = [j for j in ex.map(chunk_args, range
 t1 = time.time()
 NOCM, CAVITY, SHARP_AUTO = "--no-cm" in R, float(val("--cavity", 0)), val("--sharp", "0") == "auto"
 P1 = (not NOCM) or CAVITY > 0 or SHARP_AUTO
-if P1:   # phase 1: every GLOBAL estimate from every chunk's samples (exact: the same sampled pixels / pairs as the serial run, on the global k grids)
-    with cf.ThreadPoolExecutor(len(jobs)) as ex: list(ex.map(lambda j: run(j, ["--cm-only", "--cm-file", f"{j['dir']}/cm.npz", "--out", f"{j['dir']}/none.mp4"], "cm.log"), jobs))
+def combine():   # every GLOBAL estimate from every chunk's statistics (<chunk>/cm.npz) -> T/cm.npz, written whole (the chunks may be waiting for it)
     S0 = [np.load(f"{j['dir']}/cm.npz") for j in jobs]; S = [x for x in S0 if int(x["n"]) > 0]; N_ = sum(int(x["n"]) for x in S); G = {}
     if not NOCM and N_ > 0:
         mk = sum(x["s1k"] for x in S) / N_; mm = sum(x["s1m"] for x in S) / N_
@@ -97,13 +96,38 @@ if P1:   # phase 1: every GLOBAL estimate from every chunk's samples (exact: the
     if CAVITY > 0:
         sc = np.concatenate([x["sc"] for x in S0]) if S0 else np.zeros((0, 3))
         G["cav_l"] = np.float64(np.percentile(sc[:, 0], float(val("--cavity-p", 30)))) if len(sc) else np.float64(-1); print(f"KS_CAVITY tone: source open-mouth interior L p{float(val('--cavity-p', 30)):g} = {float(G['cav_l']):.1f} ({len(sc)} px)", flush=True); G["cav_ab"] = sc[:, 1:].mean(0).astype(np.float32) if len(sc) else np.zeros(2, np.float32)
-    np.savez(f"{T}/cm.npz", **G)
-t2 = time.time()
+    np.savez(f"{T}/cm.tmp.npz", **G); os.replace(f"{T}/cm.tmp.npz", f"{T}/cm.npz")
+
+
 # r19 speed (output-identical): a short clip gives few chunks (>= 120 frames each), so most cores idle through the paste: the per-frame work of
 # every chunk then runs on a few threads (ks_plain --threads; the frames reach each chunk's encoder in the same order). KS_PASTE_THREADS=<n> sets
 # it, 1 = off; default: the cores the chunks leave (2 per chunk are theirs already), at most 4; 1 inside a multi-shot run (several pastes at once).
 PT = int(os.environ.get("KS_PASTE_THREADS", "0")) or (1 if os.environ.get("KS_IN_SHOT") else max(1, min(4, (os.cpu_count() or 8) // (2 * len(jobs)))))
-with cf.ThreadPoolExecutor(len(jobs)) as ex: list(ex.map(lambda j: run(j, (["--cm-file", f"{T}/cm.npz"] if P1 else []) + ["--threads", str(PT), "--out", f"{j['dir']}/out.mp4"], "paste.log"), jobs))
+if P1 and os.environ.get("KS_PASTE_CM_MERGE", "1") == "1":
+    # r20 speed (output-identical; KS_PASTE_CM_MERGE=0 = the two runs below): ONE process per chunk for both phases (ks_plain --cm-stats). It was
+    # a --cm-only run and then a second run of every chunk: python + cv2 start, the KeySync slice and the arrays loaded twice. Now each chunk
+    # writes its statistics, waits for the combined estimate written here, and pastes with it: the same numbers reach the same paste code.
+    env = {**os.environ, "OMP_NUM_THREADS": "2", "OPENCV_NUM_THREADS": "2"}
+    procs = [subprocess.Popen([sys.executable, os.path.join(HERE, "ks_plain.py")] + j["args"] + ["--write-range", j["wr"], "--cm-stats", f"{j['dir']}/cm.npz", "--cm-file", f"{T}/cm.npz",
+                               "--threads", str(PT), "--out", f"{j['dir']}/out.mp4"], stdout=open(f"{j['dir']}/paste.log", "w"), stderr=subprocess.STDOUT, env=env) for j in jobs]
+    def bad(j, p):
+        for q in procs: q.kill()
+        raise RuntimeError(f"chunk {j['c']} paste.log rc {p.returncode}: {open(j['dir'] + '/paste.log').read()[-800:]}")
+    while True:
+        left = [j for j in jobs if not os.path.exists(f"{j['dir']}/cm.npz")]
+        for j, p in zip(jobs, procs):
+            if p.poll() is not None and (p.returncode or j in left): bad(j, p)   # (a chunk that ended before its statistics)
+        if not left: break
+        time.sleep(0.02)
+    combine(); t2 = time.time()
+    for j, p in zip(jobs, procs):
+        if p.wait(): bad(j, p)
+else:
+    if P1:   # phase 1: every GLOBAL estimate from every chunk's samples (exact: the same sampled pixels / pairs as the serial run, on the global k grids)
+        with cf.ThreadPoolExecutor(len(jobs)) as ex: list(ex.map(lambda j: run(j, ["--cm-only", "--cm-file", f"{j['dir']}/cm.npz", "--out", f"{j['dir']}/none.mp4"], "cm.log"), jobs))
+        combine()
+    t2 = time.time()
+    with cf.ThreadPoolExecutor(len(jobs)) as ex: list(ex.map(lambda j: run(j, (["--cm-file", f"{T}/cm.npz"] if P1 else []) + ["--threads", str(PT), "--out", f"{j['dir']}/out.mp4"], "paste.log"), jobs))
 for j in jobs:   # surface every chunk WARNING (e.g. an end fade) in the parent log
     for ln in open(f"{j['dir']}/paste.log"):
         if "WARNING" in ln: print(f"chunk {j['c']}: {ln.rstrip()}", flush=True)
