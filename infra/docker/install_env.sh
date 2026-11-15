@@ -36,7 +36,9 @@ latentsync(){
 }
 llama_cuda(){
   local O=$DUB_ROOT/third_party/llama_cuda; mkdir -p $O; log "llama-cpp-python 0.3.35 CUDA sm_120 -> $O ($(${CUDACXX:-/usr/local/cuda/bin/nvcc} --version | tail -1))"
-  CUDACXX=${CUDACXX:-/usr/local/cuda/bin/nvcc} CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=120" CMAKE_BUILD_PARALLEL_LEVEL=${JOBS:-16} FORCE_CMAKE=1 \
+  # r20: GGML_NATIVE=OFF + an AVX2 baseline. The default (native) built AVX-512 code on the build VM (Zen 5); on a Zen 2 Vast worker the Qwen load
+  # died with "Illegal instruction". Every layer is on the GPU (n_gpu_layers=-1), so the CPU path is only glue.
+  CUDACXX=${CUDACXX:-/usr/local/cuda/bin/nvcc} CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=120 -DGGML_NATIVE=OFF -DGGML_AVX=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON -DGGML_BMI2=ON -DGGML_AVX512=OFF" CMAKE_BUILD_PARALLEL_LEVEL=${JOBS:-16} FORCE_CMAKE=1 \
     uv pip install --python $V/dabai/bin/python --target $O --no-deps --reinstall llama-cpp-python==0.3.35
 }
 api(){
