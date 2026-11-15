@@ -46,6 +46,7 @@ post_layer() {   # post_layer <face>: this face's post layer, raw KeySync render
   local f=$1 RAW P RU L RSEAM CJ PW LMP
   [ "${KS_CMS:-0}" = 1 ] && export KS_CMS   # r16c: KS_CMS=1 = BT.709 colour-managed tsmooth / snap / guard / seam (K1 root cause; drift raw -> seam -2.9 L -> 0). OPT-IN: Irina 10.11 preferred the old look by eye on long5 / m03 / m18
   RAW=$(ls $KW/out/$f/*.mp4 | head -1); P=$KW/post_$f; mkdir -p $P
+  pad_wait $f || return 1   # (r20 KS_PAD_BG: long done by now; a no-op otherwise)
   if [ -f $KW/crop_lm_$f.bg ]; then until [ -f $KW/crop_lm_$f.rc ]; do sleep 0.2; done   # (r19 KS_PREP_BG: the crop landmarks started at the prep)
     [ "$(cat $KW/crop_lm_$f.rc)" = 0 ] || { echo "KS: crop landmarks failed ($f)"; return 1; }; fi
   # r18 KS_POST_REUSE (re-paste A/B only, KS_PHASE=post on a finished job): 1 = reuse this face's finished post layer ($P/layer.txt), so two
@@ -126,8 +127,7 @@ t plan; $PY $R/scripts/keysync/r16/ks_e2e_prep.py --mp $KW/master_mp.npz --dub $
 TAGS=$(python3 -c "import json; print(' '.join(f['tag'] for f in json.load(open('$KW/faces.json'))['faces']))")
 [ -n "$TAGS" ] || { echo "KS_FACE_KEEP_SOURCE $ID: no face to lip-sync ($(python3 -c "import json; d=json.load(open('$KW/faces.json')); print(d['mode'], d.get('skipped'))"))"; exit 3; }
 
-# r19 speed (KS_GPU_EARLY=0 = as before): a single-shot run starts its GPU side now, beside the crop below
-if [ "$PH" = all ] && [ -z "${KS_FAST_FJ:-}" ] && [ "${KS_GPU_EARLY:-1}" = 1 ]; then gpu_begin || exit 1; fi
+crop_all() {   # the crop / pad / reference of every face (r20: a function, so it can run beside gpu_begin; its results are files only)
 t crop
 for f in $TAGS; do
   # the r15 static crop (ks_prep rule; another face in the shot: the tight 1.25 / 0.4 box of r15 K m03, so KeySync / SyncNet see one face)
@@ -149,7 +149,10 @@ for f in $TAGS; do
   CLB=0; rm -f $KW/crop_lm_$f.rc $KW/crop_lm_$f.bg
   if [ "${KS_PREP_BG:-1}" = 1 ] && [ "${KS_REF:-0}" != auto ]; then CLB=1; touch $KW/crop_lm_$f.bg
     ( $MPY $R/scripts/quality/mp_landmarks.py --video $KW/data/crop_$f.mp4 --out $KW/crop_lm_$f.npz > /dev/null 2>&1; echo $? > $KW/crop_lm_$f.rc ) & fi
-  $MPY - $KW/data/crop_$f.mp4 $KW/data/pad_$f.mp4 $PAD <<'PY' >> $KW/crop_$f.log 2>&1 || exit 1
+  # r20 speed (same output; KS_PAD_BG=0 = as before): the padded crop is read by the full render, its chunk split and the post, NOT by the delay
+  # probe (it cuts the crop itself), so with a probe ahead it is encoded in the background: the probe starts ~1 s sooner. pad_wait (below)
+  # is called before the first reader. The same command, the same file.
+  mkpad() { $MPY - $KW/data/crop_$1.mp4 $KW/data/pad_$1.mp4 $PAD <<'PY' >> $KW/crop_$1.log 2>&1
 import subprocess, sys, cv2   # K1 5c07cf7: the last PAD frames mirrored WITHOUT repeating the seam frame (KeySync degenerated on a duplicate)
 src, out, pad = sys.argv[1], sys.argv[2], int(sys.argv[3]); c = cv2.VideoCapture(src); F = []
 while True:
@@ -162,6 +165,10 @@ p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt
 for f in F: p.stdin.write(f.tobytes())
 p.stdin.close(); p.wait(); print("pad", len(F), "frames")
 PY
+  }
+  rm -f $KW/pad_$f.rc $KW/pad_$f.bg
+  if [ "${KS_PAD_BG:-1}" = 1 ] && [ "$PH" = all ] && [ "${KS_DELAY:-probe}" = probe ] && [ "${KS_PROBE_BY_CHECK:-0}" != 1 ]; then touch $KW/pad_$f.bg; ( mkpad $f; echo $? > $KW/pad_$f.rc ) &
+  else mkpad $f || exit 1; fi
   [ $CLB = 1 ] || $MPY $R/scripts/quality/mp_landmarks.py --video $KW/data/crop_$f.mp4 --out $KW/crop_lm_$f.npz > /dev/null 2>&1 || { echo "KS: crop landmarks failed ($f)"; exit 1; }
   REF=${KS_REF:-0}   # Irina 08.11 (m18 clip): ref 0 + the gate = the default; KS_REF=auto = K2 refpick (option)
   if [ "$REF" = auto ]; then   # K2: a frame with the upper teeth showing as KeySync's identity (black-hole mouths roughly halved); 0 if the pick fails
@@ -174,7 +181,22 @@ PY
   fi
   echo $REF > $KW/ref_$f.txt
 done
+}
+# r19 speed (KS_GPU_EARLY=0 = as before): a single-shot run starts its GPU side now, beside the crop.
+# r20 speed (same output; KS_CROP_BG=0 = the crop after gpu_begin, as in r19): gpu_begin itself waits (the GPU lock, the engines check, the
+# daemon's accept: 3.2 s on x20c 14.11) and the crop after it took 2.5 s more before the probe could be queued: now the crop runs in a subshell
+# WHILE gpu_begin waits. The crop writes files only (crop / pad / box / ref / landmarks), the same commands.
+CRBG=""
+if [ "$PH" = all ] && [ -z "${KS_FAST_FJ:-}" ] && [ "${KS_GPU_EARLY:-1}" = 1 ]; then
+  if [ "${KS_CROP_BG:-1}" = 1 ]; then ( crop_all ) & CRBG=$!; fi
+  gpu_begin || exit 1
+  if [ -n "$CRBG" ]; then wait $CRBG || exit 1; fi
+fi
+[ -n "$CRBG" ] || crop_all
 fi   # ==== end of prep
+pad_wait() {   # r20 KS_PAD_BG: pad_wait <face>: the background pad encode of this face is finished (no-op when it ran in the foreground)
+  [ -f $KW/pad_$1.bg ] || return 0; until [ -f $KW/pad_$1.rc ]; do sleep 0.1; done
+  [ "$(cat $KW/pad_$1.rc)" = 0 ] || { echo "KS: the pad encode failed ($1)"; tail -3 $KW/crop_$1.log; return 1; }; }
 [ "$PH" = prep ] && { echo "KS_PHASE_DONE prep $ID"; exit 0; }
 N=$(ffprobe -v error -count_packets -select_streams v:0 -show_entries stream=nb_read_packets -of csv=p=0 $KW/master_25fps.mp4)
 TAGS=$(python3 -c "import json; print(' '.join(f['tag'] for f in json.load(open('$KW/faces.json'))['faces']))")
@@ -231,6 +253,7 @@ mk_dubp() {   # mk_dubp <face> <delay ms>: the dub KeySync hears (r17: a functio
   ffmpeg -v error -y -i $KW/dub_$f.wav -af "$AF" -t $PD -ar 16000 -ac 1 $KW/data/dubp_$f.wav; }
 t keysync; : > $KW/jobs.txt
 for f in $TAGS; do   # the dub KeySync hears: delayed (or advanced) by the probe, padded with silence to the padded crop (the final mix is never touched)
+  pad_wait $f || exit 1   # (r20 KS_PAD_BG)
   D=${DLY[$f]}; PD=$(python3 -c "print(($N + $PAD) / 25)")
   mk_dubp $f $D || exit 1
   ffmpeg -v error -y -i $KW/dub_$f.wav -af "apad=whole_dur=$PD" -t $PD -ar 16000 -ac 1 $KW/data/dubo_$f.wav || exit 1   # the ORIGINAL timing, for the check
