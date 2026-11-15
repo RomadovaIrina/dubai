@@ -211,7 +211,6 @@ def main():
         for kv in [x for x in ex[1:] if "=" in x]: os.environ[kv.split("=", 1)[0]] = kv.split("=", 1)[1]   # r20 (tests): per-job env after the reference column (K=V ...; stays set for the next jobs unless they reset it)
         if ex and not ex[0].lstrip("-").isdigit(): os.environ["KS_LREF"] = ex[0]; ex = ["0"]   # r20: a reference PLAN (json, ks_lref.py) instead of one frame
         os.environ["KS_REF_IDX"] = ex[0] if ex else "0"   # (audit #13: no leak of the previous job's reference)
-        if os.environ.get("KS_SEED"): torch.manual_seed(int(os.environ["KS_SEED"]))   # r20 (A/B only): the same noise for two arms
         if os.environ.get("KS_FAULT") == "crash" and not ("p_" in tag.split("_", 1)[-1] or tag.startswith("p_")):   # r16 TZ 11.1 fault injection
             raise RuntimeError(f"KS_FAULT=crash: injected generator failure in job {tag}")
         if os.environ.get("KS_SEED"): torch.manual_seed(int(os.environ["KS_SEED"])); torch.cuda.manual_seed_all(int(os.environ["KS_SEED"]))   # r20: the same noise for two arms of an A/B (each job starts from the seed)
