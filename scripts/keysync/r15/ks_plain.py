@@ -69,6 +69,8 @@ ap.add_argument("--tex", type=float, default=2.0, help="r15 stubble / pores: the
                 "geometry, replace KeySync's inside the face mask outside the generated lips (dilated 0.15 IOD); 0 = off")
 ap.add_argument("--det", type=float, default=0.0, help="r21 (Irina 16.11: the drawn lower face is soft / soapy and flickers): FRAME-space detail from the source. After the composite, the detail finer than this sigma (px of the frame) is taken from the SOURCE pixels themselves (no warp, no resampling: --tex warps the source by a per-frame DIS flow = blur + shimmer) wherever the drawn picture agrees with the source at low frequency; the generator keeps its own detail in the lips zone and where it differs (--det-lo / --det-hi). 0 = off")
 ap.add_argument("--det-lo", type=float, default=5.0, help="r21 --det: low-frequency luma difference (levels) up to which the source detail is used in full"); ap.add_argument("--det-hi", type=float, default=14.0, help="... and from which the generator keeps its own")
+ap.add_argument("--det-lf", type=float, default=0.0, help="r21 (Irina 16.11 on --det: \"мигает, но уже меньше мерцает\"): low-frequency lock. Where the drawn picture agrees with the source at this larger sigma (px; same --det-lo / --det-hi test), its brightness / colour coarser than this sigma is the SOURCE's (the generator's frame-to-frame brightness pumping goes; the mouth zone grown by --det-lf-lip x IOD and real changes keep the generator's). 0 = off; needs --det")
+ap.add_argument("--det-lf-lip", type=float, default=0.10); ap.add_argument("--det-lf-w", type=float, default=1.0)
 ap.add_argument("--det-lip", type=float, default=0.05, help="r21 --det: the lips zone (source lips U drawn lips) grown by this x IOD keeps the generator's detail (teeth, lip line)")
 ap.add_argument("--tex-rgb", type=int, default=0, help="r16b K1 texture-keep: 1 = the source high frequencies on all 3 channels (beard / skin colour boil), 0 = luma only")
 ap.add_argument("--tex-flow", type=int, default=1, help="r16b K1: 1 = DIS-warp the source texture onto KeySync's geometry (per frame), 0 = no warp (box / ECC aligned only)")
@@ -591,7 +593,14 @@ for k, f in enumerate(frames(a.master, W, H)):
             wd_ = (1.0 - np.clip((dl_ - a.det_lo) / max(a.det_hi - a.det_lo, 1e-3), 0, 1)) * np.clip(mm2 * 4.0, 0, 1)
             wd_ = wd_ * (1.0 - cv2.GaussianBlur(mouth_zone(k, i, iod, a.det_lip).astype(np.float32), (0, 0), max(1.0, 0.03 * iod)))
             wd_ = cv2.GaussianBlur(wd_.astype(np.float32), (0, 0), max(1.0, 0.5 * a.det))
-            comp = np.clip(comp + wd_[..., None] * ((rs_ - lr_) - (comp - lc_)), 0, 255); NT[1] += 1
+            add_ = wd_[..., None] * ((rs_ - lr_) - (comp - lc_))
+            if a.det_lf > 0:
+                lr2_ = cv2.GaussianBlur(rs_, (0, 0), a.det_lf); lc2_ = cv2.GaussianBlur(comp, (0, 0), a.det_lf); d2_ = np.abs((lc2_ - lr2_) @ np.float32([0.299, 0.587, 0.114]))
+                wl_ = (1.0 - np.clip((d2_ - a.det_lo) / max(a.det_hi - a.det_lo, 1e-3), 0, 1)) * np.clip(mm2 * 4.0, 0, 1)
+                wl_ = wl_ * (1.0 - cv2.GaussianBlur(mouth_zone(k, i, iod, a.det_lf_lip).astype(np.float32), (0, 0), max(1.0, 0.05 * iod)))
+                wl_ = cv2.GaussianBlur(wl_.astype(np.float32), (0, 0), max(1.0, 0.5 * a.det_lf)) * a.det_lf_w
+                add_ = add_ + wl_[..., None] * (lr2_ - lc2_)
+            comp = np.clip(comp + add_, 0, 255); NT[1] += 1
         if a.diag and k % 2 == 0:
             mz = mouth_zone(k, i, iod); band = (mm2 > 0.5) & (mm2 < 0.92) & ~mz; core = (mm2 > 0.97) & ~mz
             if band.sum() > 200:
