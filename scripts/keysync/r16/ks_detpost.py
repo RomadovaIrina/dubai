@@ -21,10 +21,10 @@ import numpy as np, cv2
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import ks_cms
 ap = argparse.ArgumentParser(); [ap.add_argument("--" + k, required=True) for k in ("master", "paste", "out")]; ap.add_argument("--lm", action="append", required=True)
-ap.add_argument("--det", type=float, default=8.0); ap.add_argument("--flow", type=float, default=0.12); ap.add_argument("--tw", type=int, default=9); ap.add_argument("--lf", type=float, default=8.0)
-ap.add_argument("--lo", type=float, default=5.0); ap.add_argument("--hi", type=float, default=14.0); ap.add_argument("--lip", type=float, default=0.06); ap.add_argument("--lip-lf", type=float, default=0.12)
+ap.add_argument("--det", type=float, default=12.0); ap.add_argument("--flow", type=float, default=0.12); ap.add_argument("--tw", type=int, default=9); ap.add_argument("--lf", type=float, default=8.0)
+ap.add_argument("--lo", type=float, default=5.0); ap.add_argument("--hi", type=float, default=14.0); ap.add_argument("--lip", type=float, default=0.04); ap.add_argument("--lip-lf", type=float, default=0.12)
 ap.add_argument("--lm-fps", type=float, default=0.0); ap.add_argument("--lm-size", default=""); ap.add_argument("--chin", type=float, default=0.0)
-ap.add_argument("--sharp", type=float, default=0.0, help="r22 (\"если мылить не будет\"): unsharp mask of this amount (sigma --sharp-s px) ONLY where the patch kept the generator's own detail (the lips zone, real changes): there is no source detail to use there, so the drawn mouth is brought to the sharpness of the skin around it"); ap.add_argument("--sharp-s", type=float, default=1.2)
+ap.add_argument("--sharp", type=float, default=0.8, help="r22 (\"если мылить не будет\"): unsharp mask of this amount (sigma --sharp-s px) ONLY where the patch kept the generator's own detail (the lips zone, real changes): there is no source detail to use there, so the drawn mouth is brought to the sharpness of the skin around it"); ap.add_argument("--sharp-s", type=float, default=1.2)
 ap.add_argument("--flicker", type=float, default=1.0, help="share of the fast brightness difference removed (0 = off)"); ap.add_argument("--crf", default=os.environ.get("KS_PLAIN_CRF", "16")); ap.add_argument("--preset", default="medium")
 ap.add_argument("--threads", type=int, default=min(16, max(2, (os.cpu_count() or 8) // 2)))
 a = ap.parse_args(); t_start = time.time()
