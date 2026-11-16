@@ -71,6 +71,8 @@ ap.add_argument("--det", type=float, default=0.0, help="r21 (Irina 16.11: the dr
 ap.add_argument("--det-lo", type=float, default=5.0, help="r21 --det: low-frequency luma difference (levels) up to which the source detail is used in full"); ap.add_argument("--det-hi", type=float, default=14.0, help="... and from which the generator keeps its own")
 ap.add_argument("--det-lf", type=float, default=0.0, help="r21 (Irina 16.11 on --det: \"мигает, но уже меньше мерцает\"): low-frequency lock. Where the drawn picture agrees with the source at this larger sigma (px; same --det-lo / --det-hi test), its brightness / colour coarser than this sigma is the SOURCE's (the generator's frame-to-frame brightness pumping goes; the mouth zone grown by --det-lf-lip x IOD and real changes keep the generator's). 0 = off; needs --det")
 ap.add_argument("--det-flow", type=float, default=0.0, help="r21 (Irina 16.11 on --det + --det-lf: \"как будто рот статичен, а губы двигаются, как будто на лицо налепили\"): the source detail FOLLOWS the drawn jaw. The source crop is first moved onto the drawn geometry by a SMOOTH flow (DIS on blurred half-size frames, the field blurred by this x IOD, cubic resampling), so stubble moves with the drawn chin instead of staying where the source chin was. 0 = off (the source pixels in place)")
+ap.add_argument("--det-sharp", type=float, default=0.0, help="r21 (Irina 16.11, 03 ending: the lips are smeared; the pack's 2-step / 4-step / full KeySync all draw the mouth zone at ~half the source's sharpness): unsharp mask of this amount (sigma --det-sharp-s px) ONLY where the drawn patch kept the generator's own detail (the lips zone and real changes); the skin already has the source's detail. 0 = off; needs --det")
+ap.add_argument("--det-sharp-s", type=float, default=1.5)
 ap.add_argument("--det-gain", type=int, default=0, help="r21: 1 = per frame ONE brightness / colour offset for the whole drawn patch (mean of the source minus mean of the composite over the drawn skin outside the mouth zone): the pumping goes, no shape is pulled to the source (use instead of --det-lf, which freezes the jaw shading)")
 ap.add_argument("--det-lf-lip", type=float, default=0.10); ap.add_argument("--det-lf-w", type=float, default=1.0)
 ap.add_argument("--det-lip", type=float, default=0.05, help="r21 --det: the lips zone (source lips U drawn lips) grown by this x IOD keeps the generator's detail (teeth, lip line)")
@@ -612,6 +614,9 @@ for k, f in enumerate(frames(a.master, W, H)):
                 wl_ = cv2.GaussianBlur(wl_.astype(np.float32), (0, 0), max(1.0, 0.5 * a.det_lf)) * a.det_lf_w
                 add_ = add_ + wl_[..., None] * (lr2_ - lc2_)
             comp = np.clip(comp + add_, 0, 255); NT[1] += 1
+            if a.det_sharp > 0:
+                ws_ = (np.clip(mm2 * 2.0 - 1.0, 0, 1) * (1.0 - wd_))[..., None]
+                comp = np.clip(comp + a.det_sharp * ws_ * (comp - cv2.GaussianBlur(comp, (0, 0), a.det_sharp_s)), 0, 255)
         if a.diag and k % 2 == 0:
             mz = mouth_zone(k, i, iod); band = (mm2 > 0.5) & (mm2 < 0.92) & ~mz; core = (mm2 > 0.97) & ~mz
             if band.sum() > 200:
