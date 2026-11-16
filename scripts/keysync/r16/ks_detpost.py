@@ -24,6 +24,7 @@ ap = argparse.ArgumentParser(); [ap.add_argument("--" + k, required=True) for k 
 ap.add_argument("--det", type=float, default=8.0); ap.add_argument("--flow", type=float, default=0.12); ap.add_argument("--tw", type=int, default=9); ap.add_argument("--lf", type=float, default=8.0)
 ap.add_argument("--lo", type=float, default=5.0); ap.add_argument("--hi", type=float, default=14.0); ap.add_argument("--lip", type=float, default=0.06); ap.add_argument("--lip-lf", type=float, default=0.12)
 ap.add_argument("--lm-fps", type=float, default=0.0); ap.add_argument("--lm-size", default=""); ap.add_argument("--chin", type=float, default=0.0)
+ap.add_argument("--sharp", type=float, default=0.0, help="r22 (\"если мылить не будет\"): unsharp mask of this amount (sigma --sharp-s px) ONLY where the patch kept the generator's own detail (the lips zone, real changes): there is no source detail to use there, so the drawn mouth is brought to the sharpness of the skin around it"); ap.add_argument("--sharp-s", type=float, default=1.2)
 ap.add_argument("--flicker", type=float, default=1.0, help="share of the fast brightness difference removed (0 = off)"); ap.add_argument("--crf", default=os.environ.get("KS_PLAIN_CRF", "16")); ap.add_argument("--preset", default="medium")
 ap.add_argument("--threads", type=int, default=min(16, max(2, (os.cpu_count() or 8) // 2)))
 a = ap.parse_args(); t_start = time.time()
@@ -79,7 +80,9 @@ class Track:
         O2 = O - a.flicker * wl[..., None] * fast
         lr, lc = cv2.GaussianBlur(Sw, (0, 0), a.det), cv2.GaussianBlur(O2, (0, 0), a.det); dl = np.abs((lc - lr) @ LUM)
         wd = (1.0 - np.clip((dl - a.lo) / max(a.hi - a.lo, 1e-3), 0, 1)) * pres * (1.0 - s.zone(p, LIPS, a.lip * iod, 0.03 * iod)); wd = cv2.GaussianBlur(wd.astype(np.float32), (0, 0), max(1.0, 0.5 * a.det))
-        O3 = np.clip(O2 + wd[..., None] * ((Sw - lr) - (O2 - lc)) + 0.5, 0, 255).astype(np.uint8)
+        O3 = O2 + wd[..., None] * ((Sw - lr) - (O2 - lc))
+        if a.sharp > 0: O3 = O3 + a.sharp * (pres * (1.0 - wd))[..., None] * (O3 - cv2.GaussianBlur(O3, (0, 0), a.sharp_s))
+        O3 = np.clip(O3 + 0.5, 0, 255).astype(np.uint8)
         ST["flow"].append(float(np.abs(fl).max())); ST["fl_fast"].append(float(np.abs(e["fl"] - fl).mean())); ST["d_fast"].append(float(np.abs(fast @ LUM)[wl > 0.5].mean()) if (wl > 0.5).sum() > 50 else 0.0)
         return O3
 ST = {"flow": [], "fl_fast": [], "d_fast": [], "act": 0}

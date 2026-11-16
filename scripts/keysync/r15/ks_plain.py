@@ -67,6 +67,7 @@ ap.add_argument("--align", type=float, default=0.0, help="r16 K1 smart paste: pe
 ap.add_argument("--ks-lm", default="", help="landmarks of the raw KeySync output (512 grid, its frame index): the GENERATED lips for --tex / --cavity")
 ap.add_argument("--tex", type=float, default=2.0, help="r15 stubble / pores: the source's luma high frequencies (gaussian sigma px), DIS-flow-warped onto KeySync's "
                 "geometry, replace KeySync's inside the face mask outside the generated lips (dilated 0.15 IOD); 0 = off")
+ap.add_argument("--warp-interp", default="linear", choices=["linear", "cubic", "lanczos"], help="r22 (Irina / boss 16.11: \"если мылить не будет\"): resampling of the generated crop in the two paste warps (ECC align, lower-face scale); linear = r16 (each bilinear pass softens the drawn mouth)")
 ap.add_argument("--det", type=float, default=0.0, help="r21 (Irina 16.11: the drawn lower face is soft / soapy and flickers): FRAME-space detail from the source. After the composite, the detail finer than this sigma (px of the frame) is taken from the SOURCE pixels themselves (no warp, no resampling: --tex warps the source by a per-frame DIS flow = blur + shimmer) wherever the drawn picture agrees with the source at low frequency; the generator keeps its own detail in the lips zone and where it differs (--det-lo / --det-hi). 0 = off")
 ap.add_argument("--det-lo", type=float, default=5.0, help="r21 --det: low-frequency luma difference (levels) up to which the source detail is used in full"); ap.add_argument("--det-hi", type=float, default=14.0, help="... and from which the generator keeps its own")
 ap.add_argument("--det-lf", type=float, default=0.0, help="r21 (Irina 16.11 on --det: \"мигает, но уже меньше мерцает\"): low-frequency lock. Where the drawn picture agrees with the source at this larger sigma (px; same --det-lo / --det-hi test), its brightness / colour coarser than this sigma is the SOURCE's (the generator's frame-to-frame brightness pumping goes; the mouth zone grown by --det-lf-lip x IOD and real changes keep the generator's). 0 = off; needs --det")
@@ -352,11 +353,12 @@ if KL is not None and len(KL):
     if ok_.any() and not ok_.all():
         for d in range(2): KC[~ok_, d] = np.interp(np.flatnonzero(~ok_), np.flatnonzero(ok_), KC[ok_, d])
     elif not ok_.any(): KC = None
+WINT = {"linear": cv2.INTER_LINEAR, "cubic": cv2.INTER_CUBIC, "lanczos": cv2.INTER_LANCZOS4}[a.warp_interp]
 def warp_ks(kf, k, i):
     if AT is None or not (0 <= i < len(KL)): return kf
     tx, ty, ds, th = AT[k]; c0 = KC[i] if KC is not None else np.array([s / 2, s / 2])
     M = cv2.getRotationMatrix2D((float(c0[0]), float(c0[1])), float(np.degrees(-th)), float(1 + ds)); M[:, 2] += [tx, ty]
-    return cv2.warpAffine(kf, M, (s, s), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+    return cv2.warpAffine(kf, M, (s, s), flags=WINT, borderMode=cv2.BORDER_REPLICATE)
 gain = np.ones(3, np.float32); off = np.zeros(3, np.float32); CAV = None
 is_open = lambda p: np.isfinite(p).all() and np.linalg.norm(p[61] - p[291]) > 5 and np.linalg.norm(p[13] - p[14]) / np.linalg.norm(p[61] - p[291]) > 0.15
 CMF = bool(a.cm_file) and os.path.exists(a.cm_file) and not a.cm_only
@@ -473,7 +475,7 @@ def scale_fix(kf, k):
     p = LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)]
     if not np.isfinite(p[LOWC]).all(): return kf
     c_ = p[LOWC].mean(0) - BXY(k); M = cv2.getRotationMatrix2D((float(c_[0]), float(c_[1])), 0.0, float(SFX[k]))
-    return cv2.warpAffine(kf, M, (s, s), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+    return cv2.warpAffine(kf, M, (s, s), flags=WINT, borderMode=cv2.BORDER_REPLICATE)
 DG = []
 fps_m = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=r_frame_rate", "-of", "csv=p=0", a.master], capture_output=True, text=True).stdout.strip()
 def audio_probe(audio):
