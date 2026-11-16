@@ -224,6 +224,7 @@ def main():
     ap.add_argument("--watermark", help="PNG path, or text:<mark> for a rendered text mark"); ap.add_argument("--wm-corner", choices=["tl", "tr", "bl", "br"], default="br")
     ap.add_argument("--wm-opacity", type=float, default=0.6); ap.add_argument("--t", type=float, default=15.0)
     ap.add_argument("--no-subs", action="store_true")
+    ap.add_argument("--crf", type=int, default=int(os.environ.get("E2E_SUBS_CRF", "12")), help="r22: the burn is the LAST encode of the picture the viewer gets; crf 18 took ~10 %% of the face's sharpness (03: chin 223 -> 202, lips 90 -> 80, even the untouched cheeks 173 -> 161); default 12 (E2E_SUBS_CRF)")
     ap.add_argument("--dub-audio", help="the final dub track (default: dubbed_16k.wav next to the manifest)"); ap.add_argument("--align", choices=["auto", "off"], default="auto")
     a = ap.parse_args()
     ass = None
@@ -241,7 +242,7 @@ def main():
         print(f"ass {ass}: {len(words)} words, placements by method {st}", file=sys.stderr)
     if a.watermark and a.watermark.startswith("text:"):  # --watermark text:DabAI = the default text mark, no asset needed
         a.watermark = text_watermark(a.out + ".wm.png", a.watermark[5:] or "DabAI")
-    if a.cmd == "burn": burn(a.video, a.out, ass, a.watermark, a.wm_corner, a.wm_opacity)
+    if a.cmd == "burn": burn(a.video, a.out, ass, a.watermark, a.wm_corner, a.wm_opacity, crf=a.crf)
     elif a.cmd == "preview": burn(a.video, a.out, ass, a.watermark, a.wm_corner, a.wm_opacity, preview_t=a.t)
 
 
