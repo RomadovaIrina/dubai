@@ -70,6 +70,8 @@ ap.add_argument("--tex", type=float, default=2.0, help="r15 stubble / pores: the
 ap.add_argument("--det", type=float, default=0.0, help="r21 (Irina 16.11: the drawn lower face is soft / soapy and flickers): FRAME-space detail from the source. After the composite, the detail finer than this sigma (px of the frame) is taken from the SOURCE pixels themselves (no warp, no resampling: --tex warps the source by a per-frame DIS flow = blur + shimmer) wherever the drawn picture agrees with the source at low frequency; the generator keeps its own detail in the lips zone and where it differs (--det-lo / --det-hi). 0 = off")
 ap.add_argument("--det-lo", type=float, default=5.0, help="r21 --det: low-frequency luma difference (levels) up to which the source detail is used in full"); ap.add_argument("--det-hi", type=float, default=14.0, help="... and from which the generator keeps its own")
 ap.add_argument("--det-lf", type=float, default=0.0, help="r21 (Irina 16.11 on --det: \"мигает, но уже меньше мерцает\"): low-frequency lock. Where the drawn picture agrees with the source at this larger sigma (px; same --det-lo / --det-hi test), its brightness / colour coarser than this sigma is the SOURCE's (the generator's frame-to-frame brightness pumping goes; the mouth zone grown by --det-lf-lip x IOD and real changes keep the generator's). 0 = off; needs --det")
+ap.add_argument("--det-flow", type=float, default=0.0, help="r21 (Irina 16.11 on --det + --det-lf: \"как будто рот статичен, а губы двигаются, как будто на лицо налепили\"): the source detail FOLLOWS the drawn jaw. The source crop is first moved onto the drawn geometry by a SMOOTH flow (DIS on blurred half-size frames, the field blurred by this x IOD, cubic resampling), so stubble moves with the drawn chin instead of staying where the source chin was. 0 = off (the source pixels in place)")
+ap.add_argument("--det-gain", type=int, default=0, help="r21: 1 = per frame ONE brightness / colour offset for the whole drawn patch (mean of the source minus mean of the composite over the drawn skin outside the mouth zone): the pumping goes, no shape is pulled to the source (use instead of --det-lf, which freezes the jaw shading)")
 ap.add_argument("--det-lf-lip", type=float, default=0.10); ap.add_argument("--det-lf-w", type=float, default=1.0)
 ap.add_argument("--det-lip", type=float, default=0.05, help="r21 --det: the lips zone (source lips U drawn lips) grown by this x IOD keeps the generator's detail (teeth, lip line)")
 ap.add_argument("--tex-rgb", type=int, default=0, help="r16b K1 texture-keep: 1 = the source high frequencies on all 3 channels (beard / skin colour boil), 0 = luma only")
@@ -110,8 +112,8 @@ IODM = float(np.nanmedian(np.linalg.norm(LM[:, 33] - LM[:, 263], axis=1)))
 KL = np.load(a.ks_lm)["lm"][..., :2].astype(np.float32) * (s / 512.0) if a.ks_lm else None
 LIPS_O = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185]
 INNER = [78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308, 415, 310, 311, 312, 13, 82, 81, 80, 191]
-DIS = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM) if a.tex > 0 else None
-GX, GY = np.meshgrid(np.arange(s, dtype=np.float32), np.arange(s, dtype=np.float32))
+DIS = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM) if (a.tex > 0 or a.det_flow > 0) else None
+GX, GY = np.meshgrid(np.arange(s, dtype=np.float32), np.arange(s, dtype=np.float32)); FLS = []
 
 
 def frames(path, w, h, vf=None):
@@ -588,7 +590,16 @@ for k, f in enumerate(frames(a.master, W, H)):
                 kf = np.clip(cv2.cvtColor(lk_, cv2.COLOR_LAB2RGB) * 255, 0, 255)
         mm = mm2[..., None]; comp = np.clip(roi * (1 - mm) + kf * mm + 0.5, 0, 255)
         if a.det > 0:   # r21: source detail in frame space
-            rs_ = crop(f, k).astype(np.float32); lr_ = cv2.GaussianBlur(rs_, (0, 0), a.det); lc_ = cv2.GaussianBlur(comp, (0, 0), a.det)
+            rs_ = crop(f, k).astype(np.float32)
+            if a.det_gain:   # one offset per frame: the drawn skin's mean -> the source's
+                wg_ = np.clip(mm2 * 2.0, 0, 1) * (1.0 - cv2.GaussianBlur(mouth_zone(k, i, iod, 0.10).astype(np.float32), (0, 0), max(1.0, 0.05 * iod)))
+                if float(wg_.sum()) > 50: comp = np.clip(comp + mm * (((rs_ - comp) * wg_[..., None]).sum((0, 1)) / float(wg_.sum())), 0, 255)
+            if a.det_flow > 0:   # the source moved onto the drawn geometry by a smooth flow
+                h2_ = max(16, s // 2); u8_ = lambda x: cv2.resize(cv2.cvtColor(np.clip(cv2.GaussianBlur(x, (0, 0), 2.0), 0, 255).astype(np.uint8), cv2.COLOR_RGB2GRAY), (h2_, h2_), interpolation=cv2.INTER_AREA)
+                fl_ = DIS.calc(u8_(comp), u8_(rs_), None); fl_ = cv2.GaussianBlur(fl_, (0, 0), max(1.0, a.det_flow * iod * h2_ / s))
+                fl_ = np.clip(cv2.resize(fl_, (s, s), interpolation=cv2.INTER_LINEAR) * (s / h2_), -0.2 * iod, 0.2 * iod) * np.clip(mm2 * 3.0, 0, 1)[..., None]
+                rs_ = cv2.remap(rs_, GX + fl_[..., 0], GY + fl_[..., 1], cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE); FLS.append(float(np.abs(fl_).max()))
+            lr_ = cv2.GaussianBlur(rs_, (0, 0), a.det); lc_ = cv2.GaussianBlur(comp, (0, 0), a.det)
             dl_ = np.abs((lc_ - lr_) @ np.float32([0.299, 0.587, 0.114]))
             wd_ = (1.0 - np.clip((dl_ - a.det_lo) / max(a.det_hi - a.det_lo, 1e-3), 0, 1)) * np.clip(mm2 * 4.0, 0, 1)
             wd_ = wd_ * (1.0 - cv2.GaussianBlur(mouth_zone(k, i, iod, a.det_lip).astype(np.float32), (0, 0), max(1.0, 0.03 * iod)))
@@ -615,4 +626,4 @@ if a.diag and DG:
             "drift_std_L": round(float(slow[6:-6, 0].std()), 3), "drift_std_ab": round(float(np.linalg.norm(slow[6:-6, 1:3].std(0))), 3), "hf_ratio_core": round(float(np.nanmedian(dg[:, 4])), 3)}
     json.dump(out_, open(a.diag, "w")); print("diag", json.dumps(out_), flush=True)
 if NFADE: print(f"WARNING: end fade KeySync -> source on {NFADE} frames (global KeySync {NKT} frames, master {NTT}, shift {SHG})", flush=True)
-w.stdin.close(); w.wait(); print(f"plain paste -> {a.out} ({n} frames; cavity lifted in {NT[0]}, texture on {NT[1]})", flush=True)
+w.stdin.close(); w.wait(); print(f"plain paste -> {a.out} ({n} frames; cavity lifted in {NT[0]}, texture on {NT[1]})" + (f"; det flow max px: median {np.median(FLS):.1f} p95 {np.percentile(FLS, 95):.1f}" if FLS else ""), flush=True)
