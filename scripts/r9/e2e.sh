@@ -304,7 +304,7 @@ if [ -n "${KS25:-}" ] && [ "$VID" != "$SRC" ] && [ "${E2E_FPS_NATIVE:-on}" != of
   HI=${HIRES:-$SRC}; SFPS=$(ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate -of csv=p=0 "$HI")   # every source frame gets the mouth at its
   if python3 -c "import sys; n, d = sys.argv[1].split('/'); sys.exit(0 if abs(float(n) / float(d) - 25) > 0.01 else 1)" "$SFPS" 2>/dev/null; then   # audio time); 25 fps
     st face_fps   # sources keep the 25 fps path below. Subtitles / watermark re-encode after this step -> near-lossless here (an extra lossy generation shimmers, 13.11)
-    if [ "${E2E_SUBS:-off}" != off ] || [ -n "${E2E_WATERMARK:-}" ]; then FQ="--crf 10 --preset veryfast"; else FQ="--crf ${E2E_FPS_CRF:-18} --preset ${E2E_FPS_PRESET:-medium}"; fi
+    if [ "${E2E_SUBS:-off}" != off ] || [ -n "${E2E_WATERMARK:-}" ] || [ "${E2E_DETPOST:-on}" != off ]; then FQ="--crf 10 --preset veryfast"; else FQ="--crf ${E2E_FPS_CRF:-18} --preset ${E2E_FPS_PRESET:-medium}"; fi
     if python scripts/keysync/r16/tz/fps_native_merge2.py --hi $HI --lo-src $KS25 --lo-comp $VID --out $W/face_fps.mp4 --json $W/face_fps.json $FQ --threads ${HIRES_THREADS:-16} > $L/face_fps.log 2>&1; then
       VID=$W/face_fps.mp4; FPSN=1; FL+=("fps_native"); tail -1 $L/face_fps.log | tee -a $L/e2e.log
     else FL+=("fps_native_failed"); echo "== $ID WARN fps_native failed (see logs/face_fps.log): the 25 fps output" | tee -a $L/e2e.log; fi
@@ -322,6 +322,34 @@ if [ -n "$HIRES" ] && [ $FPSN = 0 ]; then   # r15 T: the face work was downscale
   fi
 fi
 
+SUBS_ON=0; { [ "${E2E_SUBS:-off}" != off ] || [ -n "${E2E_WATERMARK:-}" ]; } && SUBS_ON=1
+# r22 (Irina 16.11, 03 / 04: the pasted face is soft and trembles ~10 times a second; her picks A_1 -> A_2): source skin detail + temporal
+# low-pass of the drawn face's brightness, on the picture the viewer gets = AFTER the native-fps retime (it puts the ripple back: cheeks
+# 7-12 Hz share 0.10 at 25 fps -> 0.29 after it) and BEFORE the subtitle burn. scripts/keysync/r16/ks_detpost.py, every face track of every
+# shot in one pass. DEFAULT ON (E2E_DETPOST=off = the old picture; then ks_face.sh pastes with --tex 2 again). E2E_DETPOST_ARGS = its options.
+if [ -n "${KS25:-}" ] && [ "$VID" != "$SRC" ] && [ "${E2E_DETPOST:-on}" != off ]; then
+  if [ $FPSN = 1 ]; then DSRC=${HIRES:-$SRC}; DLF="--lm-fps 25"; elif [ "$VID" = "$W/face_hires.mp4" ]; then DSRC=$HI; DLF=""; else DSRC=$KS25; DLF=""; fi
+  LMS=$(python3 - $W <<'PY'
+import glob, json, os, sys
+W = sys.argv[1]; out = []
+if glob.glob(W + "/shots/s*/ks/lm_f*.npz"):   # multi-shot: each shot's landmarks start at the shot's first master frame
+    seg = json.load(open(W + "/ks/shots.json"))["segments"]
+    for d in sorted(glob.glob(W + "/shots/s*")):
+        i = int(os.path.basename(d)[1:])
+        out += ["--lm %s:%d" % (f, seg[i][0]) for f in sorted(glob.glob(d + "/ks/lm_f*.npz")) if i < len(seg)]
+else: out = ["--lm %s:0" % f for f in sorted(glob.glob(W + "/ks/lm_f*.npz"))]
+print(" ".join(out))
+PY
+)
+  if [ -n "$LMS" ]; then st face_detpost
+    MSZ=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x $KS25)
+    if [ "$SUBS_ON" = 1 ]; then DQ="--crf 10 --preset veryfast"; else DQ="--crf ${E2E_FPS_CRF:-18} --preset ${E2E_FPS_PRESET:-medium}"; fi
+    DCM=$([ "$(ffprobe -v error -select_streams v:0 -show_entries stream=color_space -of csv=p=0 $VID)" = bt709 ] && echo 1 || echo 0)   # (explicit BT.709 conversions only for a BT.709-tagged picture)
+    if KS_CMS=$DCM python scripts/keysync/r16/ks_detpost.py --master $DSRC --paste $VID $LMS $DLF --lm-size $MSZ --out $W/face_detpost.mp4 $DQ --threads ${HIRES_THREADS:-16} ${E2E_DETPOST_ARGS:-} > $L/face_detpost.log 2>&1 && [ -s $W/face_detpost.mp4 ]; then
+      VID=$W/face_detpost.mp4; FL+=("detpost"); grep "^KS_DETPOST" $L/face_detpost.log | cut -c1-400 | tee -a $L/e2e.log
+    else FL+=("detpost_failed"); echo "== $ID WARN the detail post step failed (see logs/face_detpost.log): the picture without it" | tee -a $L/e2e.log; fi
+  fi
+fi
 SUBS=${E2E_SUBS:-off}; WM=${E2E_WATERMARK:-}   # r13 spec block 9: burned subtitles (ASS, word timing on the stretched dub, 4 styles + karaoke) and / or a watermark; default off
 if [ "$SUBS" != off ] || [ -n "$WM" ]; then   # E2E_SUBS=on E2E_SUBS_LANG=dub|src E2E_SUBS_STYLE=white|yellow|trendy|outline E2E_SUBS_KARAOKE=on|off; E2E_WATERMARK=<png>|text:DabAI E2E_WM_CORNER E2E_WM_OPACITY
   st subs   # CPU (libass + libx264 at the source size / fps); the picture is re-encoded ONCE, then muxed with each bed below
