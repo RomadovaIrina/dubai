@@ -67,6 +67,9 @@ ap.add_argument("--align", type=float, default=0.0, help="r16 K1 smart paste: pe
 ap.add_argument("--ks-lm", default="", help="landmarks of the raw KeySync output (512 grid, its frame index): the GENERATED lips for --tex / --cavity")
 ap.add_argument("--tex", type=float, default=2.0, help="r15 stubble / pores: the source's luma high frequencies (gaussian sigma px), DIS-flow-warped onto KeySync's "
                 "geometry, replace KeySync's inside the face mask outside the generated lips (dilated 0.15 IOD); 0 = off")
+ap.add_argument("--det", type=float, default=0.0, help="r21 (Irina 16.11: the drawn lower face is soft / soapy and flickers): FRAME-space detail from the source. After the composite, the detail finer than this sigma (px of the frame) is taken from the SOURCE pixels themselves (no warp, no resampling: --tex warps the source by a per-frame DIS flow = blur + shimmer) wherever the drawn picture agrees with the source at low frequency; the generator keeps its own detail in the lips zone and where it differs (--det-lo / --det-hi). 0 = off")
+ap.add_argument("--det-lo", type=float, default=5.0, help="r21 --det: low-frequency luma difference (levels) up to which the source detail is used in full"); ap.add_argument("--det-hi", type=float, default=14.0, help="... and from which the generator keeps its own")
+ap.add_argument("--det-lip", type=float, default=0.05, help="r21 --det: the lips zone (source lips U drawn lips) grown by this x IOD keeps the generator's detail (teeth, lip line)")
 ap.add_argument("--tex-rgb", type=int, default=0, help="r16b K1 texture-keep: 1 = the source high frequencies on all 3 channels (beard / skin colour boil), 0 = luma only")
 ap.add_argument("--tex-flow", type=int, default=1, help="r16b K1: 1 = DIS-warp the source texture onto KeySync's geometry (per frame), 0 = no warp (box / ECC aligned only)")
 ap.add_argument("--tex-dil", type=float, default=0.15, help="r16b K1: the generated-lip keep zone = the outer-lip hull dilated by this x IOD (soft edge 0.05 IOD)")
@@ -582,6 +585,13 @@ for k, f in enumerate(frames(a.master, W, H)):
                 else: lk_ += dLab_[None, None, :] * wb_[..., None]
                 kf = np.clip(cv2.cvtColor(lk_, cv2.COLOR_LAB2RGB) * 255, 0, 255)
         mm = mm2[..., None]; comp = np.clip(roi * (1 - mm) + kf * mm + 0.5, 0, 255)
+        if a.det > 0:   # r21: source detail in frame space
+            rs_ = crop(f, k).astype(np.float32); lr_ = cv2.GaussianBlur(rs_, (0, 0), a.det); lc_ = cv2.GaussianBlur(comp, (0, 0), a.det)
+            dl_ = np.abs((lc_ - lr_) @ np.float32([0.299, 0.587, 0.114]))
+            wd_ = (1.0 - np.clip((dl_ - a.det_lo) / max(a.det_hi - a.det_lo, 1e-3), 0, 1)) * np.clip(mm2 * 4.0, 0, 1)
+            wd_ = wd_ * (1.0 - cv2.GaussianBlur(mouth_zone(k, i, iod, a.det_lip).astype(np.float32), (0, 0), max(1.0, 0.03 * iod)))
+            wd_ = cv2.GaussianBlur(wd_.astype(np.float32), (0, 0), max(1.0, 0.5 * a.det))
+            comp = np.clip(comp + wd_[..., None] * ((rs_ - lr_) - (comp - lc_)), 0, 255); NT[1] += 1
         if a.diag and k % 2 == 0:
             mz = mouth_zone(k, i, iod); band = (mm2 > 0.5) & (mm2 < 0.92) & ~mz; core = (mm2 > 0.97) & ~mz
             if band.sum() > 200:
