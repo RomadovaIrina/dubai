@@ -18,6 +18,7 @@ ap = argparse.ArgumentParser(); [ap.add_argument("--" + k, required=True) for k 
 ap.add_argument("--det", type=float, default=8.0); ap.add_argument("--flow", type=float, default=0.12); ap.add_argument("--tw", type=int, default=5); ap.add_argument("--lf", type=float, default=12.0)
 ap.add_argument("--lo", type=float, default=5.0); ap.add_argument("--hi", type=float, default=14.0); ap.add_argument("--lip", type=float, default=0.06); ap.add_argument("--lip-lf", type=float, default=0.12)
 ap.add_argument("--lm-fps", type=float, default=0.0, help="the landmarks' frame rate when the videos run at another (the native-fps final: 25); 0 = one landmark row per frame")
+ap.add_argument("--chin", type=float, default=0.0, help="r22 (Irina: the mouth moves while the face around it stands still): 0..1 = how much the zone from the lips down to the chin is left to the generator's own brightness motion (no temporal smoothing there), feathered; 0 = off")
 ap.add_argument("--flicker", type=float, default=1.0, help="share of the fast brightness difference removed (0 = off)"); ap.add_argument("--crf", default=os.environ.get("KS_PLAIN_CRF", "16"))
 a = ap.parse_args()
 def probe(p):
@@ -42,6 +43,10 @@ def u8(x): return cv2.resize(cv2.cvtColor(np.clip(cv2.GaussianBlur(x, (0, 0), 2.
 def lips(p, ex, iod):
     m = np.zeros((h, w), np.uint8); cv2.fillConvexPoly(m, cv2.convexHull((p[LIPS] - np.float32([x0, y0])).astype(np.int32)), 1)
     m = cv2.dilate(m, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * max(1, int(ex * iod)) + 1,) * 2)); return cv2.GaussianBlur(m.astype(np.float32), (0, 0), max(1.0, 0.03 * iod))
+CHIN = [61, 291, 176, 148, 152, 377, 400, 149, 378, 17, 84, 314]
+def chinz(p, iod):
+    m = np.zeros((h, w), np.uint8); cv2.fillConvexPoly(m, cv2.convexHull((p[CHIN] - np.float32([x0, y0])).astype(np.int32)), 1)
+    m = cv2.dilate(m, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * max(1, int(0.03 * iod)) + 1,) * 2)); return cv2.GaussianBlur(m.astype(np.float32), (0, 0), max(1.0, 0.07 * iod))
 buf = []; ST = {"act": 0, "flow": [], "fl_fast": [], "d_fast": []}
 def analyse(k, fm, fp):
     e = {"f": fp, "act": False}
@@ -63,6 +68,7 @@ def finish(c):   # the centre entry buf[c] with its neighbours buf[c-R .. c+R]
     S, O, p, iod, pres = e["S"], e["O"], e["p"], e["iod"], e["pres"]
     Sw = cv2.remap(S, GX + fl[..., 0], GY + fl[..., 1], cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
     fast = e["D"] - Db; wl = pres * (1.0 - lips(p, a.lip_lf, iod)) * (1.0 - np.clip((np.abs(Db @ LUM) - a.hi) / a.hi, 0, 1))
+    if a.chin > 0: wl = wl * (1.0 - a.chin * chinz(p, iod))
     O2 = O - a.flicker * wl[..., None] * fast
     lr, lc = cv2.GaussianBlur(Sw, (0, 0), a.det), cv2.GaussianBlur(O2, (0, 0), a.det); dl = np.abs((lc - lr) @ LUM)
     wd = (1.0 - np.clip((dl - a.lo) / max(a.hi - a.lo, 1e-3), 0, 1)) * pres * (1.0 - lips(p, a.lip, iod)); wd = cv2.GaussianBlur(wd.astype(np.float32), (0, 0), max(1.0, 0.5 * a.det))
