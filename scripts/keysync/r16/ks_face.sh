@@ -370,6 +370,10 @@ for f in $TAGS; do
       ( cd $KT && KS_CMS=1 $PY $KT/ks_plain.py $ARGS --out $NXT ) > $P/plain.log 2>&1 || { tail -5 $P/plain.log; exit 1; }; }
   else ( cd $KT && KS_CMS=1 $PY $KT/ks_plain.py $ARGS --out $NXT ) > $P/plain.log 2>&1 || { tail -5 $P/plain.log; exit 1; }; fi
   echo "KS_PASTE $f delay ${DLY[$f]} ms shift ${SHF[$f]} ref $(cat $KW/ref_$f.txt) $(grep -E 'plain paste:' $P/plain.log | head -1)"
+  if [ -n "${KS_DETPOST:-}" ]; then   # r22 (Irina 16.11: the paste trembles / flickers ~10 times a second on the full 03): source detail + flicker removal as a post step with look-ahead (ks_detpost.py: the alignment flow and the brightness difference field are smoothed over time); opt-in, KS_DETPOST = its arguments, e.g. "--det 8 --flow 0.12 --tw 5 --lf 12"; use with KS_PLAIN_EXTRA="--tex 0"
+    if ( cd $KT && KS_CMS=1 $PY $KT/ks_detpost.py --master $KW/master_25fps.mp4 --paste $NXT --lm $KW/lm_$f.npz --out $KW/detpost_$n.mp4 $KS_DETPOST ) > $P/detpost.log 2>&1 && [ -s $KW/detpost_$n.mp4 ]; then
+      grep -E "^KS_DETPOST" $P/detpost.log | cut -c1-300; NXT=$KW/detpost_$n.mp4
+    else flag ks_detpost_failed "$f: the detail post step failed ($(tail -1 $P/detpost.log | cut -c1-120)) -> the paste as is"; fi; fi
   if [ "${KS_OCCL:-off}" = on ]; then   # r16c T: K2 ks_occl.py occlusion guard + pose gate (Irina 09.11 rules 3-4) on this face's paste; default off (Irina pending)
     if ( cd $KT && $MPY $KT/ks_occl.py --master $CUR --paste $NXT --lm $KW/lm_$f.npz --out $KW/occl_$n.mp4 --dump $P/occl.json ${KS_OCCL_ARGS:-} ) > $P/occl.log 2>&1 && [ -s $KW/occl_$n.mp4 ]; then
       grep -E "^KS_OCCL (\{|pose)" $P/occl.log | cut -c1-300; NXT=$KW/occl_$n.mp4
