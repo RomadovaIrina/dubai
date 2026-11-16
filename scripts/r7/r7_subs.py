@@ -224,7 +224,7 @@ def main():
     ap.add_argument("--watermark", help="PNG path, or text:<mark> for a rendered text mark"); ap.add_argument("--wm-corner", choices=["tl", "tr", "bl", "br"], default="br")
     ap.add_argument("--wm-opacity", type=float, default=0.6); ap.add_argument("--t", type=float, default=15.0)
     ap.add_argument("--no-subs", action="store_true")
-    ap.add_argument("--crf", type=int, default=int(os.environ.get("E2E_SUBS_CRF", "12")), help="r22: the burn is the LAST encode of the picture the viewer gets; crf 18 took ~10 %% of the face's sharpness (03: chin 223 -> 202, lips 90 -> 80, even the untouched cheeks 173 -> 161); default 12 (E2E_SUBS_CRF)")
+    ap.add_argument("--crf", type=int, default=int(os.environ.get("E2E_SUBS_CRF", "14")), help="r22: the burn is the LAST encode of the picture the viewer gets; crf 18 took ~10 %% of the face's sharpness (03: chin 223 -> 202, lips 90 -> 80, even the untouched cheeks 173 -> 161); default 14 (E2E_SUBS_CRF): crf 14 keeps most of it (chin 211, lips 85) at +55 %% file size; 12 = chin 215 at 2x the size")
     ap.add_argument("--dub-audio", help="the final dub track (default: dubbed_16k.wav next to the manifest)"); ap.add_argument("--align", choices=["auto", "off"], default="auto")
     a = ap.parse_args()
     ass = None
