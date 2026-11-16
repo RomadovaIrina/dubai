@@ -83,7 +83,7 @@ def plan(B, act, c, n, rule):
         if i == 0: cost[0] = bc; continue
         g0 = ca - B[i - 1][5]
         gmin = 0 if kind in ("split", "dsplit") else min(g0, rule["ugmin"] if kind == "unit" else rule["gmin"])
-        gmax = g0 + (rule["split_gap"] if kind == "split" else rule["dsplit_gap"] if kind == "dsplit" else rule["grow"] if kind == "r6" else rule["grow_unit"])
+        gmax = g0 + (rule["split_gap"] if kind == "split" else rule["dsplit_gap"] if kind == "dsplit" else rule["grow"] if kind == "r6" else rule["grow_f"] if kind == "r6f" else rule["grow_unit"])
         for j, k in enumerate(sh):
             if not np.isfinite(bc[j]): continue
             lo, hi = max(-K, k + g0 - gmax), min(K, k + g0 - gmin)
@@ -99,11 +99,11 @@ FUNC = {"the", "a", "an", "and", "or", "but", "to", "of", "in", "on", "at", "for
         "our", "my", "you", "they", "he", "she", "as", "by", "from", "which", "who", "will", "would", "can", "have", "has", "very", "just", "really"}
 
 
-def split_candidates(dub16, man, L, ref, blocks, dbg=None, quiet_rel_db=-25.0, inside=False):
+def split_candidates(dub16, man, L, ref, blocks, dbg=None, quiet_rel_db=-25.0, inside=False, words=None):
     """logical English boundaries inside blocks: [(frame of the quietest point between the two words, class)]; inside = also word boundaries
     with no punctuation (class 'INSIDE'), never right after a function word ("the |", "we are |")"""
     import r4_pause_logic as pl, difflib
-    W = pl.whisper_words(dub16); S = pl.script_tokens(man)
+    W = words if words is not None else pl.whisper_words(dub16); S = pl.script_tokens(man)
     sm = difflib.SequenceMatcher(None, [pl.norm(s[0]) for s in S], [pl.norm(w[0]) for w in W], autojunk=False); w2s = {}
     for a, b, k in sm.get_matching_blocks():
         for q in range(k): w2s[b + q] = a + q
@@ -125,7 +125,7 @@ def split_candidates(dub16, man, L, ref, blocks, dbg=None, quiet_rel_db=-25.0, i
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--work", required=True); ap.add_argument("--out", required=True); ap.add_argument("--manifest", required=True)
     ap.add_argument("--face"); ap.add_argument("--max-shift", type=float, default=1.0); ap.add_argument("--split-shift", type=float, default=2.5)
-    ap.add_argument("--lam", type=float, default=0.15); ap.add_argument("--w-off", type=float, default=0.0); ap.add_argument("--grow", type=float, default=0.35); ap.add_argument("--grow-unit", type=float, default=0.8)
+    ap.add_argument("--lam", type=float, default=0.15); ap.add_argument("--w-off", type=float, default=0.0); ap.add_argument("--grow", type=float, default=0.35); ap.add_argument("--grow-func", type=float, default=0.0, help="r22 (Irina 16.11, the end of 03: \"...hoping for, so | 0.9 s | let's move forward together\"): how much a pause of the take may GROW when the word before it is a function word with no punctuation (so / and / to / the ...): the take paused 0.1 s after \"so\" and --grow opened it to 0.6-0.9 s to reach the speaker's last burst. 0 = such a pause keeps its length (the two blocks move together); = --grow -> the r8 behaviour"); ap.add_argument("--grow-unit", type=float, default=0.8)
     ap.add_argument("--split-gap", type=float, default=1.5); ap.add_argument("--min-piece", type=float, default=0.6); ap.add_argument("--split-gain", type=float, default=0.3); ap.add_argument("--max-splits", type=int, default=12)
     ap.add_argument("--splits", choices=["on", "off"], default="on")
     ap.add_argument("--pace", choices=["on", "off"], default="off", help="r8: onset anchor + unit gap floor + gate blocks + dictation splits (defaults below)")
@@ -168,15 +168,26 @@ def main():
         first = int(f0 + nz[0]) if len(nz) else f0; src_on[u["id"]] = (first, np.unique(np.concatenate([[first], ons[(ons > first) & (ons < fe)]])))
     anchor = bool(a.onset_early or a.onset_late or a.onset_inner)
     mx, ms = int(round(a.max_shift / FR)), int(round(a.split_shift / FR)); B = []
+    WW = None; NF = 0
+    if a.grow_func < a.grow:   # the dub's own word times (the same Whisper pass the splits use)
+        import r4_pause_logic as pl_
+        try: WW = pl_.whisper_words(W / "dubbed_16k.wav")
+        except Exception as ex: print(f"lip_place: no word times ({ex}): --grow-func off", file=sys.stderr)
+    def after_func(i):   # is the word that ends right before block i a bare function word?
+        if WW is None: return False
+        t = cores[i][0] * FR + 0.06; prev = [w_ for w_ in WW if w_[2] <= t]
+        if not prev: return False
+        wd = str(prev[-1][0]).strip(); return bool(wd) and wd[-1] not in ",.;:!?—-" and pl_.norm(wd) in FUNC
     for i, (b0, b1) in enumerate(blocks):
         uid = unit_at(*cores[i]); kind = "r6" if i and uid == unit_at(*cores[i - 1]) and uid is not None else "unit"
+        if kind == "r6" and after_func(i): kind = "r6f"; NF += 1
         B.append([b0, b1, mx, kind, *cores[i], src_on.get(uid) if kind == "unit" and anchor else None])
-    rule = {"lam": a.lam, "gmin": int(round(0.15 / FR)), "ugmin": int(round(a.unit_gmin / FR)), "grow": int(round(a.grow / FR)), "split_gap": int(round(a.split_gap / FR)),
+    rule = {"lam": a.lam, "gmin": int(round(0.15 / FR)), "ugmin": int(round(a.unit_gmin / FR)), "grow": int(round(a.grow / FR)), "grow_f": int(round(min(a.grow, a.grow_func) / FR)), "split_gap": int(round(a.split_gap / FR)),
             "grow_unit": int(round(a.grow_unit / FR)), "dsplit_gap": int(round(a.dsplit_gap / FR)),
             "onset": (a.onset_early, a.onset_late, int(round(a.onset_tol / FR)), w, ons, int(round(a.inner_gap / FR)), a.onset_inner, int(round(a.inner_cap / FR))) if anchor else None}
     shifts, best = plan(B, act, c, n, rule); base = best; splits = []; dbg = []
     if a.splits == "on" and fv.any():
-        allc = split_candidates(W / "dubbed_16k.wav", man, L, ref, cores, dbg := [], inside=a.dsplit == "on")
+        allc = split_candidates(W / "dubbed_16k.wav", man, L, ref, cores, dbg := [], inside=a.dsplit == "on", words=WW)
         Sl = np.zeros(n, bool)   # source pauses >= dsplit_src_pause (a dictation split must face one)
         d_ = np.diff(np.concatenate([[0], (~S).astype(np.int8), [0]]))
         for p0, p1 in zip(np.flatnonzero(d_ == 1), np.flatnonzero(d_ == -1)):
@@ -243,7 +254,7 @@ def main():
                 if "t" in q: q["t"] = round(q["t"] + shift_at(q["t"]), 3)
         if "track_start" in al and al.get("placements"): al["track_start"] = round(al["track_start"] + shift_at(al["track_start"] + 0.05), 3)
     d = np.diff(np.concatenate([[0], D1.astype(np.int8), [0]]))
-    rep = {"blocks": len(B), "splits": splits, "off_early_moves": off_moves, "moved_blocks": int(sum(1 for k in shifts if k)), "shift_abs_mean_s": round(float(np.mean(np.abs(shifts))) * FR, 3),
+    rep = {"blocks": len(B), "func_no_grow_boundaries": NF, "grow_func_s": a.grow_func, "splits": splits, "off_early_moves": off_moves, "moved_blocks": int(sum(1 for k in shifts if k)), "shift_abs_mean_s": round(float(np.mean(np.abs(shifts))) * FR, 3),
            "shift_abs_max_s": round(float(np.max(np.abs(shifts))) * FR, 3), "face_visible_frac": fvis,
            "mismatch_face_visible_s_before": err(D0), "mismatch_face_visible_s_after": err(D1), "cost_shift_only": round(base * FR, 2), "cost_new": round(best * FR, 2),
            "params": {k: getattr(a, k) for k in ("max_shift", "split_shift", "lam", "w_off", "grow", "grow_unit", "split_gap", "min_piece", "split_gain", "max_splits", "splits", "pace", "onset_early", "onset_late", "onset_inner", "inner_gap", "inner_cap", "onset_tol", "unit_gmin", "gate_blocks", "dsplit", "dsplit_src_pause", "dsplit_cost", "dsplit_gap")}, "gate_runs": gate_runs,
