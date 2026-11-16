@@ -12,11 +12,12 @@ through. Audio is stream-copied from the paste.
     ks_detpost.py --master master_25fps.mp4 --paste paste.mp4 --lm lm_f0.npz --out out.mp4 [--det 8 --flow 0.12 --tw 5 --lf 12]"""
 import argparse, json, os, subprocess, sys
 import numpy as np, cv2
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import ks_cms
 ap = argparse.ArgumentParser(); [ap.add_argument("--" + k, required=True) for k in ("master", "paste", "lm", "out")]
 ap.add_argument("--det", type=float, default=8.0); ap.add_argument("--flow", type=float, default=0.12); ap.add_argument("--tw", type=int, default=5); ap.add_argument("--lf", type=float, default=12.0)
 ap.add_argument("--lo", type=float, default=5.0); ap.add_argument("--hi", type=float, default=14.0); ap.add_argument("--lip", type=float, default=0.06); ap.add_argument("--lip-lf", type=float, default=0.12)
+ap.add_argument("--lm-fps", type=float, default=0.0, help="the landmarks' frame rate when the videos run at another (the native-fps final: 25); 0 = one landmark row per frame")
 ap.add_argument("--flicker", type=float, default=1.0, help="share of the fast brightness difference removed (0 = off)"); ap.add_argument("--crf", default=os.environ.get("KS_PLAIN_CRF", "16"))
 a = ap.parse_args()
 def probe(p):
@@ -24,7 +25,7 @@ def probe(p):
     return int(r["width"]), int(r["height"]), r["r_frame_rate"], int(r["nb_read_packets"])
 W, H, fps, n = probe(a.paste); Wm, Hm, _, nm = probe(a.master); assert (W, H) == (Wm, Hm), "master and paste differ in size"; n = min(n, nm)
 z = np.load(a.lm); LM = z["lm"][..., :2].astype(np.float32); J = z["j"] if "j" in z.files else np.arange(len(LM))
-lmk = lambda k: LM[min(int(J[min(k, len(J) - 1)]), len(LM) - 1)]
+FPSV = eval(fps); lmk = lambda k: LM[min(int(J[min(k if not a.lm_fps else int(k * a.lm_fps / FPSV + 0.5), len(J) - 1)]), len(LM) - 1)]
 ok = np.array([np.isfinite(lmk(k)).all() for k in range(n)])
 if not ok.any(): print("KS_DETPOST no face landmarks: the paste is copied"); subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", a.paste, "-c", "copy", a.out], check=True); sys.exit(0)
 P_ = np.stack([lmk(k) for k in np.flatnonzero(ok)]); iodm = float(np.median(np.linalg.norm(P_[:, 33] - P_[:, 263], axis=1)))
