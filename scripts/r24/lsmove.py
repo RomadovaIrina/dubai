@@ -83,7 +83,7 @@ if a.voice:   # sticking: the dub voice is on (frame RMS > 15 % of its p95) but 
     STK = {"voice_on_share": round(float(on.mean()), 3), "stuck_share_of_voice": round(float(st_.sum() / max(on.sum(), 1)), 3), "stuck_runs_ge3": len(runs),
            "stuck_runs_s": [[round(s_ / fps, 2), round(e_ / fps, 2)] for s_, e_ in runs][:12], "corr_opening_voice": round(float(np.corrcoef(oF[mm], rms[mm])[0, 1]), 3),
            "opening_when_voice_p50": round(float(np.nanmedian(oF[on])), 1), "opening_when_silent_p50": round(float(np.nanmedian(oF[~on])), 1)}
-drawn = DM > max(4.0, 2.0 * float(np.nanpercentile(DM, 20)))   # frames where the generator's mouth is on screen (elsewhere the source is kept)
+drawn = DM > 4.0   # (encode noise ~2) frames where the generator's mouth is on screen (elsewhere the source is kept)
 drawn = np.convolve(drawn.astype(float), np.ones(5) / 5, mode="same") > 0.2
 for X_ in (J_in, J_out, SL_in, SL_out, FL, FLOW, TWF, TWS): X_[~drawn] = np.nan
 t = np.arange(n) / fps; ph = np.floor(t * a.gen_fps + 1e-6).astype(int)
