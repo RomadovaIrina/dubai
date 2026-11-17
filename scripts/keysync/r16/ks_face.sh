@@ -47,6 +47,12 @@ sync_off() {   # sync_off <video> <wav> <json>: SyncNet global AV offset of a ra
   sync_run ${J%.json}.log --video $V --audio $A --out $J \
     && python3 -c "import json; print(int(json.load(open('$J'))['global']['av_offset']))" || echo x; }
 
+vin() { [ -s $KW/data/vpad_$1.mp4 ] && echo $KW/data/vpad_$1.mp4 || echo $KW/data/pad_$1.mp4; }   # r24: KeySync's input = the scale-adaptive crop when KS_SCROP made one
+scrop_back() {   # r24 scrop_back <face>: the render (scale-adaptive crop geometry) -> the constant box's 512 geometry, in place; the original kept in out_v/
+  local f=$1 v; [ -s $KW/data/vbox_$f.json ] || return 0; mkdir -p $KW/out_v/$f
+  for v in $KW/out/$f/*.mp4; do [ -s "$v" ] || continue; mv "$v" $KW/out_v/$f/
+    $PY $KT/ks_scrop.py back --raw $KW/out_v/$f/$(basename "$v") --vbox $KW/data/vbox_$f.json --box $KW/data/box_$f.json --pad-src $KW/data/pad_$f.mp4 --out "$v" > $KW/scrop_back_$f.log 2>&1 || { tail -3 $KW/scrop_back_$f.log; return 1; }
+    grep "^KS_SCROP_BACK" $KW/scrop_back_$f.log | sed "s/^/$f /"; done; }
 post_layer() {   # post_layer <face>: this face's post layer, raw KeySync render -> ECC / tsmooth / snap / guard / seam [/ pause] -> $P/layer.txt. CPU only;
   # r19 speed: a function, so it can start the moment the raw render exists (KS_POST_EARLY, below) - it needs neither the SyncNet check nor the other faces.
   local f=$1 RAW P RU L RSEAM CJ PW LMP
@@ -170,6 +176,9 @@ p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt
 for f in F: p.stdin.write(f.tobytes())
 p.stdin.close(); p.wait(); print("pad", len(F), "frames")
 PY
+  if [ "${KS_SCROP:-off}" = on ]; then   # r24 (Irina 17.11: smeared mouths on close-ups, mush when far): KeySync's input crop follows the face size per frame (ks_scrop.py); the post / paste keep the constant box. OPT-IN: KS_SCROP=on, KS_SCROP_K (1.8), KS_SCROP_SIGMA (6)
+    if $PY $KT/ks_scrop.py make --master $KW/master_25fps.mp4 --lm $KW/lm_$f.npz --box $KW/data/box_$f.json --pad $PAD --out-video $KW/data/vpad_$f.mp4 --out-box $KW/data/vbox_$f.json --k ${KS_SCROP_K:-1.8} --sigma ${KS_SCROP_SIGMA:-6} >> $KW/crop_$f.log 2>&1; then grep "^KS_SCROP" $KW/crop_$f.log | tail -1
+    else rm -f $KW/data/vpad_$f.mp4 $KW/data/vbox_$f.json; flag ks_scrop_failed "$f: the scale-adaptive crop failed -> the constant crop"; fi; fi
   [ $CLB = 1 ] || $MPY $R/scripts/quality/mp_landmarks.py --video $KW/data/crop_$f.mp4 --out $KW/crop_lm_$f.npz > /dev/null 2>&1 || { echo "KS: crop landmarks failed ($f)"; exit 1; }
   REF=${KS_REF:-0}   # Irina 08.11 (m18 clip): ref 0 + the gate = the default; KS_REF=auto = K2 refpick (option)
   if [ "$REF" = auto ]; then   # K2: a frame with the upper teeth showing as KeySync's identity (black-hole mouths roughly halved); 0 if the pick fails
@@ -249,14 +258,14 @@ for f in $TAGS; do   # the dub KeySync hears: delayed (or advanced) by the probe
   mk_dubp $f $D || exit 1
   ffmpeg -v error -y -i $KW/dub_$f.wav -af "apad=whole_dur=$PD" -t $PD -ar 16000 -ac 1 $KW/data/dubo_$f.wav || exit 1   # the ORIGINAL timing, for the check
   if [ "$N" -gt "$(( ${KS_CHUNK_MIN_S:-90} * 25 ))" ]; then   # long video: ~KS_CHUNK_S pieces cut at dub pauses, the same reference in each (RAM flat)
-    $PY $KT/ks_chunk.py split --video $KW/data/pad_$f.mp4 --audio $KW/data/dubp_$f.wav --ref $(refnum $KW/ref_$f.txt) --chunk-s ${KS_CHUNK_S:-60} --out $KW/data/chunks_$f --tag $PFX$f \
+    $PY $KT/ks_chunk.py split --video $(vin $f) --audio $KW/data/dubp_$f.wav --ref $(refnum $KW/ref_$f.txt) --chunk-s ${KS_CHUNK_S:-60} --out $KW/data/chunks_$f --tag $PFX$f \
       > $KW/jobs_$f.txt 2> $KW/chunk_$f.log || { tail -3 $KW/chunk_$f.log; exit 1; }; grep KS_CHUNKS $KW/chunk_$f.log
     if [[ "$(cat $KW/ref_$f.txt)" == *.json ]]; then   # r20: a plan per chunk (the chunk clip has its own frame grid), picked from the chunk's own frames
       if $MPY $KT/ks_lrefpick.py --video $KW/data/pad_$f.mp4 --lm $KW/crop_lm_$f.npz --face-lm $KW/lm_$f.npz --n $N --mouth ${KS_LREF_MOUTH:-closed} --feat $KW/lref_$f.npz --chunks $KW/data/chunks_$f ${KS_LREF_ARGS:-} >> $KW/ref_$f.log 2>&1; then
         awk '{ p = $2; sub(/\.mp4$/, ".plan.json", p); print $1, $2, $3, p }' $KW/jobs_$f.txt > $KW/jobs_$f.txt.p && mv $KW/jobs_$f.txt.p $KW/jobs_$f.txt; grep "^KS_LREFPICK" $KW/ref_$f.log | tail -1 | cut -c1-400
       else echo "KS WARN lrefpick --chunks failed ($f): one reference frame"; fi; fi
     cat $KW/jobs_$f.txt >> $KW/jobs.txt
-  else echo "$PFX$f $KW/data/pad_$f.mp4 $KW/data/dubp_$f.wav $(cat $KW/ref_$f.txt)" >> $KW/jobs.txt; fi
+  else echo "$PFX$f $(vin $f) $KW/data/dubp_$f.wav $(cat $KW/ref_$f.txt)" >> $KW/jobs.txt; fi
 done
 # r19 speed (KS_LMK_AHEAD, ks_fast.py): the videos of this run are looked ahead while the jobs in front of them render: the chunks / faces after the first
 # one, and every video of a shot queued behind other shots. A single job that starts at once gets no hint (nothing to overlap: it would only add the
@@ -270,7 +279,8 @@ grep "^KS_JOB" $KLOG | grep -v "\"tag\": \"${PFX}p_" | grep "\"tag\": \"$PFX" | 
 for f in $TAGS; do
   if [ -d $KW/data/chunks_$f ]; then rm -rf $KW/out/$f; mkdir -p $KW/out/$f
     $PY $KT/ks_chunk.py join --dir $KW/data/chunks_$f --renders $KOUT --out $KW/out/$f/joined.mp4 --tag $PFX$f || exit 1
-  elif [ -n "$SHR" ]; then rm -rf $KW/out/$f; ln -sfn $KOUT/$PFX$f $KW/out/$f; fi; done
+  elif [ -n "$SHR" ]; then rm -rf $KW/out/$f; ln -sfn $KOUT/$PFX$f $KW/out/$f; fi
+  scrop_back $f || exit 1; done
 # r19 speed (output-identical, KS_POST_EARLY=0 = as before): every face's post layer (CPU) starts NOW, beside the SyncNet check below, instead of
 # after it: the layer depends only on the raw render. The paste still waits for the check (its shift) and runs face by face, as before.
 if [ "${KS_POST_EARLY:-1}" = 1 ]; then for f in $TAGS; do post_layer_bg $f; done; fi
@@ -311,10 +321,10 @@ if [ $PBC = 1 ]; then   # r17 KS_PROBE_BY_CHECK: the probe decision from the che
       offscreen) flag ks_offscreen_voice "$f: (by check) conf $C < ${KS_OFFSCREEN_CONF:-1.5}: the voice is not this face's (off-screen) -> its source picture"; OFFS="${OFFS:-} $f";;
       rerender) [ "$FLG" != ok ] && flag $FLG "$f: (by check) conf $C, check offset ${CHO[$f]:-x} -> delay $ND"; DLY[$f]=$ND; RR="$RR $f";;
     esac; done
-  for f in $RR; do mk_dubp $f ${DLY[$f]} || exit 1; echo "${f}_r $KW/data/pad_$f.mp4 $KW/data/dubp_$f.wav $(cat $KW/ref_$f.txt)" >> $FJ; done
+  for f in $RR; do mk_dubp $f ${DLY[$f]} || exit 1; echo "${f}_r $(vin $f) $KW/data/dubp_$f.wav $(cat $KW/ref_$f.txt)" >> $FJ; done
   for f in $RR; do waitjob ${f}_r || exit 1
     if [ -f $KW/post_$f/layer.started ]; then until [ -f $KW/post_$f/layer.rc ]; do sleep 0.2; done; fi   # (r19: its early post layer read the old render)
-    rm -rf $KW/out/$f; mv $KW/out/${f}_r $KW/out/$f; [ "${KS_POST_EARLY:-1}" = 1 ] && post_layer_bg $f
+    rm -rf $KW/out/$f; mv $KW/out/${f}_r $KW/out/$f; scrop_back $f || exit 1; [ "${KS_POST_EARLY:-1}" = 1 ] && post_layer_bg $f
     SH=${KS_PASTE_SHIFT:-0}; O=$(sync_off $(ls $KW/out/$f/*.mp4 | head -1) $KW/data/dubo_$f.wav $KW/sync_$f.json)
     [ "$O" != x ] && [ "${O#-}" -ge 2 ] && flag ks_check_offset "$f: raw render vs the original dub still $O frames after the delay (re-rendered)"
     if [ "$SH" = auto ]; then [ "$O" = x ] && O=0; SH=$(( -O )); fi
@@ -361,7 +371,7 @@ for f in $TAGS; do
       grep -E "^KS_OCCL \{" $P/occl.log | cut -c1-300; MK="$MK --gate-w $P/occl.json"
     else flag ks_occl_failed "$f: the occlusion scores failed ($(tail -1 $P/occl.log | cut -c1-120)) -> the paste without the gate"; fi; fi
   if [ "${KS_FITGATE:-on}" != off ]; then   # r23 (Irina 17.11, new_1755: smeared lips when the camera comes close): frames where the face does not fit KeySync's crop (> 0.95 of it, cut by the frame / crop edge, < 0.3 of it) fade to the source face, merged with the cup gate; DEFAULT ON, KS_FITGATE=off = no gate, KS_FITGATE_ARGS = ks_fitgate.py options
-    if $MPY $KT/ks_fitgate.py --lm $KW/lm_$f.npz --box $KW/data/box_$f.json --out $P/gate.json $([ -s $P/occl.json ] && echo "--merge $P/occl.json") ${KS_FITGATE_ARGS:-} > $P/fitgate.log 2>&1 && [ -s $P/gate.json ]; then
+    if $MPY $KT/ks_fitgate.py --lm $KW/lm_$f.npz --box $KW/data/box_$f.json --out $P/gate.json $([ -s $P/occl.json ] && echo "--merge $P/occl.json") $([ -s $KW/data/vbox_$f.json ] && echo "--big 9 --small 0") ${KS_FITGATE_ARGS:-} > $P/fitgate.log 2>&1 && [ -s $P/gate.json ]; then
       grep -E "^KS_FITGATE" $P/fitgate.log | cut -c1-300; MK="${MK/--gate-w $P\/occl.json/} --gate-w $P/gate.json"
     else flag ks_fitgate_failed "$f: the fit gate failed ($(tail -1 $P/fitgate.log | cut -c1-120)) -> without it"; fi; fi
   case "${KS_TAIL_FADE:-on}" in on) TQA="";; always) TQA="--tail-quiet off";; *) TQA=skip;; esac   # r19 (Irina 14.11: old03 end = the drawn face to the end, m03 end = the fade): on = fade ONLY if the source mouth is quiet in the tail (ks_plain --tail-quiet 0.75:0.05:3); always = the r18 rule (fade whenever the silent tail is >= 1 s); off = never
