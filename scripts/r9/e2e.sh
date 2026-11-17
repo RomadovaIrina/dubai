@@ -335,6 +335,7 @@ W = sys.argv[1]; out = []
 if glob.glob(W + "/shots/s*/ks/lm_f*.npz"):   # multi-shot: each shot's landmarks start at the shot's first master frame
     seg = json.load(open(W + "/ks/shots.json"))["segments"]
     for d in sorted(glob.glob(W + "/shots/s*")):
+        if not (os.path.isdir(d) and os.path.basename(d)[1:].isdigit()): continue   # (shots/ also holds src_<i>.mp4 etc.)
         i = int(os.path.basename(d)[1:])
         out += ["--lm %s:%d" % (f, seg[i][0]) for f in sorted(glob.glob(d + "/ks/lm_f*.npz")) if i < len(seg)]
 else: out = ["--lm %s:0" % f for f in sorted(glob.glob(W + "/ks/lm_f*.npz"))]
