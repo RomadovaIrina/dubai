@@ -14,13 +14,35 @@ import argparse, json
 import numpy as np
 ap = argparse.ArgumentParser(); ap.add_argument("--lm", required=True); ap.add_argument("--box", required=True); ap.add_argument("--out", required=True); ap.add_argument("--merge", default="")
 ap.add_argument("--big", type=float, default=0.95); ap.add_argument("--small", type=float, default=0.30); ap.add_argument("--edge", type=float, default=0.02)
+ap.add_argument("--yaw", type=float, default=0.0, help="r24 hard-angle rule (0 = off): |yaw index| above this -> the source face; yaw index = (nose-to-left-cheek - nose-to-right-cheek) / their sum, ~0.5 = a strong profile")
+ap.add_argument("--pitch", type=float, default=0.0, help="r24 (0 = off): |pitch index - the video's median| above this; pitch index = (nose tip y - eye line y) / (chin y - eye line y)")
+ap.add_argument("--blur", type=float, default=0.0, help="r24 (0 = off): the face's Laplacian variance below this x the video's median -> the source face (motion blur / far mush); needs --master")
+ap.add_argument("--master", default="")
 ap.add_argument("--ramp", type=float, default=0.25); ap.add_argument("--min-run", type=int, default=3); ap.add_argument("--fps", type=float, default=25.0)
 a = ap.parse_args()
 z = np.load(a.lm); LM = z["lm"][..., :2].astype(np.float32); J = z["j"] if "j" in z.files else np.arange(len(LM)); n = len(J)
 B = json.load(open(a.box)); side = float(B["side"]); W, H = float(B.get("W", 1e9)), float(B.get("H", 1e9))
 xs = B.get("xs"); ys = B.get("ys")
 LOW = [152, 148, 176, 149, 150, 136, 172, 58, 132, 377, 400, 378, 379, 365, 397, 288, 361, 61, 291, 17, 0, 13, 14]
-bad = np.zeros(n, bool); why = {"big": 0, "cut": 0, "small": 0, "no_face": 0}
+bad = np.zeros(n, bool); why = {"big": 0, "cut": 0, "small": 0, "no_face": 0, "yaw": 0, "pitch": 0, "blur": 0}
+YAW = np.full(n, np.nan); PIT = np.full(n, np.nan); LAP = np.full(n, np.nan)
+for k in range(n):
+    p = LM[min(int(J[k]), len(LM) - 1)]
+    if not np.isfinite(p).all(): continue
+    dl, dr = abs(p[1, 0] - p[234, 0]), abs(p[454, 0] - p[1, 0]); YAW[k] = (dl - dr) / max(dl + dr, 1e-3)
+    ey = (p[33, 1] + p[263, 1]) / 2; PIT[k] = (p[1, 1] - ey) / max(p[152, 1] - ey, 1e-3)
+if a.blur > 0 and a.master:
+    import cv2
+    c = cv2.VideoCapture(a.master)
+    for k in range(n):
+        ok_, f = c.read()
+        if not ok_: break
+        p = LM[min(int(J[k]), len(LM) - 1)]
+        if not np.isfinite(p).all(): continue
+        x0_, y0_ = np.maximum(p[[234, 10]].min(0) if False else p.min(0), 0).astype(int); x1_, y1_ = p.max(0).astype(int)
+        g_ = cv2.cvtColor(f[max(0, y0_):max(y0_ + 2, y1_), max(0, x0_):max(x0_ + 2, x1_)], cv2.COLOR_BGR2GRAY)
+        if g_.size > 400: sc_ = 160.0 / max(g_.shape); g_ = cv2.resize(g_, None, fx=sc_, fy=sc_, interpolation=cv2.INTER_AREA); LAP[k] = cv2.Laplacian(g_, cv2.CV_32F).var()   # (at a fixed face size: blur, not distance)
+PMED = float(np.nanmedian(PIT)) if np.isfinite(PIT).any() else 0.0; LMED = float(np.nanmedian(LAP)) if np.isfinite(LAP).any() else 0.0
 for k in range(n):
     p = LM[min(int(J[k]), len(LM) - 1)]
     if not np.isfinite(p).all(): why["no_face"] += 1; continue   # (no face: the paste already skips it)
@@ -32,6 +54,9 @@ for k in range(n):
     if fh > a.big * side or fw > a.big * side: bad[k] = True; why["big"] += 1
     elif cut: bad[k] = True; why["cut"] += 1
     elif fh < a.small * side: bad[k] = True; why["small"] += 1
+    elif a.yaw > 0 and abs(YAW[k]) > a.yaw: bad[k] = True; why["yaw"] += 1
+    elif a.pitch > 0 and abs(PIT[k] - PMED) > a.pitch: bad[k] = True; why["pitch"] += 1
+    elif a.blur > 0 and np.isfinite(LAP[k]) and LAP[k] < a.blur * LMED: bad[k] = True; why["blur"] += 1
 d = np.diff(np.concatenate([[0], bad.astype(np.int8), [0]])); runs = [(int(s), int(e)) for s, e in zip(np.flatnonzero(d == 1), np.flatnonzero(d == -1)) if e - s >= a.min_run]
 w = np.zeros(n, np.float32); R = max(1, int(round(a.ramp * a.fps)))
 for s, e in runs:
@@ -41,7 +66,10 @@ for s, e in runs:
         if s - i >= 0: w[s - i] = max(w[s - i], v)
         if e - 1 + i < n: w[e - 1 + i] = max(w[e - 1 + i], v)
 info = {"frames": n, "side": side, "gated_frames": int((w > 0.999).sum()), "ramp_frames": int(((w > 0) & (w <= 0.999)).sum()), "why": why,
-        "runs_s": [[round(s / a.fps, 2), round(e / a.fps, 2)] for s, e in runs], "big": a.big, "small": a.small}
+        "runs_s": [[round(s / a.fps, 2), round(e / a.fps, 2)] for s, e in runs], "big": a.big, "small": a.small, "yaw_rule": a.yaw, "pitch_rule": a.pitch, "blur_rule": a.blur,
+        "yaw_abs_p50_p90_p99": [round(float(np.nanpercentile(np.abs(YAW), q)), 3) for q in (50, 90, 99)] if np.isfinite(YAW).any() else None,
+        "pitch_med_dev_p90_p99": [round(PMED, 3)] + ([round(float(np.nanpercentile(np.abs(PIT - PMED), q)), 3) for q in (90, 99)] if np.isfinite(PIT).any() else []),
+        "lap_rel_p01_p10": [round(float(np.nanpercentile(LAP / max(LMED, 1e-6), q)), 3) for q in (1, 10)] if np.isfinite(LAP).any() else None}
 out = {"w": [round(float(v), 3) for v in w], "fit": info}
 if a.merge:
     try:
