@@ -289,6 +289,7 @@ else
       FBL=${FBL}la; FBA="$FBA $LCX"; export REP_LABEL=${REP_LABEL:-rep2}la REP2_FB_ARGS="$(cat reports/experiments/r8-face/fb7.args) $LCX"   # (< 0.45 of the source AND < 0.6 x
       FL+=("face_clean_lipcon")   # the video's +-1 s median, <= 3 % of the frames) is re-drawn by the layer repair, re-scored after it (2nd pass); CPU only. Default OFF until F's gates pass
     fi
+    if [ "${E2E_LS_LOCK:-on}" != off ]; then export LT_ARGS="${LT_ARGS:---mode both --radius 5 --mradius 2}"; FL+=("ls_lip_lock"); fi   # r24 (Irina 17.11, LatentSync again: the twitching): the r15 lip colour lock + flow median on the layer (05.11 eye: "almost no flicker"); DEFAULT ON, E2E_LS_LOCK=off
     SKIP_SCORE=1 TAG=$FT SRC_TAG=$GT CFD=$CFDV SR=srt1 SR_EXTRA="--batch 8 --mask down2" FB=$FBL FB_ARGS="$FBA" EXTRA="--tex-tau 1000 --tex-sigma 2.5 $SYX" \
       bash scripts/r7/r7_m7_comp.sh $ID > $L/face_comp.log 2>&1
     [ -f $B/$FT/${ID}_$FT.mp4 ] && VID=$B/$FT/${ID}_$FT.mp4 || fail face_comp_failed PARTIAL_SUCCESS "see logs/face_comp.log: source picture used"
