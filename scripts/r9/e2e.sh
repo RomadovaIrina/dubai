@@ -328,6 +328,16 @@ SUBS_ON=0; { [ "${E2E_SUBS:-off}" != off ] || [ -n "${E2E_WATERMARK:-}" ]; } && 
 # low-pass of the drawn face's brightness, on the picture the viewer gets = AFTER the native-fps retime (it puts the ripple back: cheeks
 # 7-12 Hz share 0.10 at 25 fps -> 0.29 after it) and BEFORE the subtitle burn. scripts/keysync/r16/ks_detpost.py, every face track of every
 # shot in one pass. DEFAULT ON (E2E_DETPOST=off = the old picture; then ks_face.sh pastes with --tex 2 again). E2E_DETPOST_ARGS = its options.
+LSLM=$A/sep/$ID/source_mediapipe.npz   # r24: the LatentSync path has the source's own MediaPipe pass (audio stage), one row per source frame
+if [ -z "${KS25:-}" ] && [ "$VID" != "$SRC" ] && [ "${E2E_DETPOST_LS:-on}" != off ] && [ "${E2E_DETPOST:-on}" != off ] && [ -s $LSLM ] && [[ " ${FL[*]} " != *" lipsync_off_by_request "* ]]; then   # r24 (LatentSync again, Irina 17.11: twitching): the same post-step on the LS composite
+  st face_detpost
+  LSZ=$(python3 -c "import numpy as np, sys; z = np.load(sys.argv[1]); print('%dx%d' % tuple(z['wh']) if 'wh' in z.files else '')" $LSLM 2>/dev/null)
+  if [ "$SUBS_ON" = 1 ]; then DQ="--crf 10 --preset veryfast"; else DQ="--crf ${E2E_FPS_CRF:-18} --preset ${E2E_FPS_PRESET:-medium}"; fi
+  DCM=$([ "$(ffprobe -v error -select_streams v:0 -show_entries stream=color_space -of csv=p=0 $VID)" = bt709 ] && echo 1 || echo 0)
+  if KS_CMS=$DCM python scripts/keysync/r16/ks_detpost.py --master ${HIRES:-$SRC} --paste $VID --lm $LSLM:0 ${LSZ:+--lm-size $LSZ} --out $W/face_detpost.mp4 $DQ --threads ${HIRES_THREADS:-16} ${E2E_DETPOST_ARGS:-} > $L/face_detpost.log 2>&1 && [ -s $W/face_detpost.mp4 ]; then
+    VID=$W/face_detpost.mp4; FL+=("detpost"); grep "^KS_DETPOST" $L/face_detpost.log | cut -c1-400 | tee -a $L/e2e.log
+  else FL+=("detpost_failed"); echo "== $ID WARN the detail post step failed (see logs/face_detpost.log): the picture without it" | tee -a $L/e2e.log; fi
+fi
 if [ -n "${KS25:-}" ] && [ "$VID" != "$SRC" ] && [ "${E2E_DETPOST:-on}" != off ]; then
   if [ $FPSN = 1 ]; then DSRC=${HIRES:-$SRC}; DLF="--lm-fps 25"; elif [ "$VID" = "$W/face_hires.mp4" ]; then DSRC=$HI; DLF=""; else DSRC=$KS25; DLF=""; fi
   LMS=$(python3 - $W <<'PY'
